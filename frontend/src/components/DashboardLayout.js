@@ -30,6 +30,7 @@ import {
     ClipboardList,
     CreditCard,
     Truck,
+    Factory,
 } from 'lucide-react';
 
 const navItems = [
