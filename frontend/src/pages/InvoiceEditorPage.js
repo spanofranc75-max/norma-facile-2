@@ -356,7 +356,7 @@ export default function InvoiceEditorPage() {
 
                 {/* Document Header */}
                 <Card className="border-gray-200">
-                    <CardHeader className="pb-4">
+                    <CardHeader className="pb-4 bg-blue-50 border-b border-gray-200">
                         <CardTitle className="text-lg font-semibold">Intestazione</CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -470,7 +470,7 @@ export default function InvoiceEditorPage() {
 
                 {/* Line Items */}
                 <Card className="border-gray-200">
-                    <CardHeader className="pb-4">
+                    <CardHeader className="pb-4 bg-blue-50 border-b border-gray-200">
                         <div className="flex items-center justify-between">
                             <CardTitle className="text-lg font-semibold">Righe Documento</CardTitle>
                             <Button
@@ -600,7 +600,7 @@ export default function InvoiceEditorPage() {
                 <div className="grid grid-cols-2 gap-6">
                     {/* Tax Settings */}
                     <Card className="border-gray-200">
-                        <CardHeader className="pb-4">
+                        <CardHeader className="pb-4 bg-blue-50 border-b border-gray-200">
                             <CardTitle className="text-lg font-semibold">Impostazioni Fiscali</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -686,7 +686,7 @@ export default function InvoiceEditorPage() {
 
                     {/* Totals */}
                     <Card className="border-gray-200">
-                        <CardHeader className="pb-4">
+                        <CardHeader className="pb-4 bg-blue-50 border-b border-gray-200">
                             <CardTitle className="text-lg font-semibold flex items-center gap-2">
                                 <Calculator className="h-5 w-5" />
                                 Riepilogo
