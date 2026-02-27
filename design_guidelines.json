@@ -1,0 +1,174 @@
+{
+  "design_system": {
+    "brand": {
+      "name": "Norma Facile 2.0",
+      "identity": "Italian LegalTech SaaS",
+      "tone": "Authoritative, Precise, Efficient, Modern",
+      "archetype": "Swiss & High-Contrast (Modified for Trust)",
+      "theme_mode": "light"
+    },
+    "typography": {
+      "font_family": {
+        "headings": "Libre Baskerville, serif",
+        "body": "Inter, sans-serif",
+        "mono": "JetBrains Mono, monospace"
+      },
+      "import_url": "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Libre+Baskerville:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap",
+      "usage": {
+        "h1": "font-serif text-4xl md:text-5xl font-bold tracking-tight text-slate-900",
+        "h2": "font-serif text-3xl font-bold tracking-tight text-slate-900",
+        "h3": "font-serif text-2xl font-bold text-slate-900",
+        "h4": "font-sans text-lg font-semibold tracking-tight text-slate-900",
+        "body": "font-sans text-base text-slate-600 leading-relaxed",
+        "body_small": "font-sans text-sm text-slate-500",
+        "label": "font-sans text-xs font-semibold uppercase tracking-wider text-slate-500"
+      }
+    },
+    "colors": {
+      "palette": {
+        "primary": {
+          "DEFAULT": "#0F172A",
+          "foreground": "#F8FAFC",
+          "hover": "#1E293B"
+        },
+        "secondary": {
+          "DEFAULT": "#F1F5F9",
+          "foreground": "#0F172A",
+          "hover": "#E2E8F0"
+        },
+        "accent": {
+          "DEFAULT": "#B45309",
+          "foreground": "#FFFFFF",
+          "hover": "#92400E"
+        },
+        "background": "#F8FAFC",
+        "surface": "#FFFFFF",
+        "border": "#E2E8F0",
+        "muted": "#64748B",
+        "success": "#166534",
+        "warning": "#B45309",
+        "error": "#991B1B"
+      },
+      "gradients": {
+        "hero_mesh": "radial-gradient(at 0% 0%, hsla(215,90%,95%,1) 0, transparent 50%), radial-gradient(at 100% 0%, hsla(35,80%,95%,1) 0, transparent 50%)",
+        "subtle_glow": "linear-gradient(to bottom right, #FFFFFF, #F8FAFC)"
+      }
+    },
+    "layout": {
+      "spacing_scale": {
+        "section_padding": "py-24",
+        "container_padding": "px-6 md:px-12",
+        "card_padding": "p-6 md:p-8",
+        "element_gap": "gap-6"
+      },
+      "grids": {
+        "dashboard": "grid grid-cols-1 md:grid-cols-12 gap-6",
+        "landing_features": "grid grid-cols-1 md:grid-cols-3 gap-8",
+        "bento_main": "col-span-12 md:col-span-8 lg:col-span-9",
+        "bento_sidebar": "col-span-12 md:col-span-4 lg:col-span-3"
+      },
+      "border_radius": {
+        "default": "rounded-md",
+        "card": "rounded-lg",
+        "button": "rounded-md"
+      }
+    },
+    "components": {
+      "buttons": {
+        "primary": "bg-slate-900 text-white hover:bg-slate-800 shadow-sm transition-all duration-200 font-medium px-6 py-2.5 rounded-md",
+        "secondary": "bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 shadow-sm transition-all duration-200 font-medium px-6 py-2.5 rounded-md",
+        "accent": "bg-amber-700 text-white hover:bg-amber-800 shadow-sm transition-all duration-200 font-medium px-6 py-2.5 rounded-md",
+        "ghost": "text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all duration-200 font-medium px-4 py-2 rounded-md"
+      },
+      "cards": {
+        "default": "bg-white border border-slate-200 shadow-sm rounded-lg hover:shadow-md transition-shadow duration-300",
+        "interactive": "group cursor-pointer bg-white border border-slate-200 shadow-sm rounded-lg hover:border-slate-300 hover:shadow-md transition-all duration-300"
+      },
+      "inputs": {
+        "default": "h-11 bg-white border border-slate-200 rounded-md focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all duration-200"
+      },
+      "navigation": {
+        "sidebar": "w-64 bg-slate-900 text-slate-300 h-screen fixed left-0 top-0 border-r border-slate-800",
+        "sidebar_link": "flex items-center gap-3 px-4 py-3 rounded-md transition-colors hover:text-white hover:bg-white/10",
+        "sidebar_link_active": "flex items-center gap-3 px-4 py-3 rounded-md bg-white text-slate-900 font-medium shadow-sm"
+      }
+    },
+    "motion": {
+      "transitions": {
+        "default": "transition-all duration-200 ease-in-out",
+        "slow": "transition-all duration-500 ease-out"
+      },
+      "animations": {
+        "fade_in": "animate-in fade-in duration-500",
+        "slide_up": "animate-in slide-in-from-bottom-4 duration-500",
+        "pulse_subtle": "animate-pulse"
+      }
+    },
+    "assets": {
+      "images": [
+        {
+          "category": "hero_office",
+          "url": "https://images.pexels.com/photos/7841450/pexels-photo-7841450.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+          "description": "Professional lawyer workspace, light and modern",
+          "usage": "Landing page hero background or feature section"
+        },
+        {
+          "category": "document_signing",
+          "url": "https://images.pexels.com/photos/48148/document-agreement-documents-sign-48148.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+          "description": "Close up of signing legal document",
+          "usage": "Document generation feature section"
+        },
+        {
+          "category": "meeting",
+          "url": "https://images.unsplash.com/photo-1755551636128-2385f552d7ec?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBsYXd5ZXIlMjBvZmZpY2UlMjBtaW5pbWFsaXN0fGVufDB8fHx8MTc3MjE3MzY0Nnww&ixlib=rb-4.1.0&q=85",
+          "description": "Empty modern conference room",
+          "usage": "About section or background for quotes"
+        }
+      ],
+      "icons": {
+        "library": "lucide-react",
+        "style": "stroke-1.5"
+      }
+    }
+  },
+  "page_instructions": {
+    "landing_page": {
+      "layout": "Grid Tetris Mode A",
+      "sections": [
+        "Hero: High trust, clean typography, 'Start for free' CTA",
+        "Features: 3-column grid highlighting AI generation, Chatbot, Storage",
+        "Trust: 'Trusted by 500+ Italian Law Firms' (social proof)",
+        "Footer: Simple, legal grey"
+      ],
+      "visuals": "Use 'hero_mesh' gradient background. Use 'hero_office' image with slight overlay."
+    },
+    "dashboard": {
+      "layout": "Sidebar Layout + Bento Grid Mode B",
+      "widgets": [
+        "Recent Documents (List)",
+        "Quick Actions (Create New, Ask AI)",
+        "Storage Usage (Progress bar)",
+        "Latest Legal Updates (Feed)"
+      ],
+      "style": "Clean white cards on slate-50 background. High density data but breathable padding."
+    },
+    "document_generator": {
+      "layout": "Split Screen (Form Left, Preview Right)",
+      "interaction": "Step-by-step wizard or long-form intelligent inputs. Real-time preview if possible."
+    },
+    "chat_assistant": {
+      "layout": "Centralized Chat Interface",
+      "style": "Like ChatGPT but 'Legal Professional'. Message bubbles: User (Slate-100), AI (Slate-900 text-white)."
+    }
+  },
+  "universal_guidelines": [
+    "Use 'Libre Baskerville' for all H1-H3 headings to establish legal authority.",
+    "Use 'Inter' for all UI text, inputs, and data.",
+    "Do NOT use gradients for buttons. Use solid Navy Blue (#0F172A).",
+    "Ensure all borders are subtle (slate-200), never harsh black.",
+    "Use 'sonner' for all notifications.",
+    "All interactive elements must have `data-testid` attributes.",
+    "For the 'Italian' feel, keep UI copy formal and elegant (even if in English for now, structure it for long words).",
+    "Never use pure black (#000000). Use Slate-950 (#020617) or Slate-900 (#0F172A)."
+  ]
+}
