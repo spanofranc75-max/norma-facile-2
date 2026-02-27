@@ -84,6 +84,21 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
   - Fallback template professionale se AI non disponibile
   - Editabile + inclusa nel PDF perizia
   - Testing: 10/10 backend, 100% frontend (iteration_29)
+- **Codici Danno Tag System** (Phase 21c): Database di 7 codici danno con tag selezionabili
+  - S1-DEF (Deformazione EN 1090-2), S2-WELD (Cricca saldatura EN 1090-2)
+  - A1-ANCH (Tassello ETAG 001), A2-CONC (Crepa cemento NTC 2018)
+  - P1-ZINC (Zincatura ISO 1461/12944), G1-GAP (Distanze EN 13241), M1-FORCE (Motore EN 12453)
+  - Generazione costi smart basata sui codici selezionati (non solo tipo_danno)
+  - Frontend: tag pill-shaped colorati per categoria, "Norme attivate" dinamiche
+  - Testing: 16/16 backend, 100% frontend (iteration_30)
+
+### Archivio Sinistri Dashboard (Phase 22) — 2026-02-27
+- Dashboard riepilogo perizie: KPI cards (totali, volume, importo medio, codici usati)
+- Grafico andamento mensile (Recharts BarChart)
+- Grafico stato perizie (PieChart donut)
+- Breakdown per tipo danno con progress bar
+- Frequenza codici danno con badges
+- Testing: incluso in iteration_30
 - Testing: 22/22 backend, 100% frontend
 
 - `/api/perizie/` (CRUD + analyze-photos + recalc + PDF)
