@@ -44,8 +44,10 @@ import {
     User,
     Landmark,
     Ruler,
+    FolderOpen,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
+import EmptyState from '../components/EmptyState';
 
 const CLIENT_TYPES = {
     azienda: { label: 'Azienda', icon: Building2 },
@@ -225,8 +227,14 @@ export default function ClientsPage() {
                                     </TableRow>
                                 ) : clients.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                                            Nessun cliente trovato
+                                        <TableCell colSpan={6} className="p-0">
+                                            <EmptyState
+                                                type="clients"
+                                                title="Nessun cliente registrato"
+                                                description="Aggiungi il tuo primo cliente per iniziare a creare rilievi, preventivi e fatture."
+                                                actionLabel="Crea il primo Cliente"
+                                                onAction={() => handleOpenDialog()}
+                                            />
                                         </TableCell>
                                     </TableRow>
                                 ) : (
