@@ -272,6 +272,113 @@ async def check_compliance(prev_id: str, user: dict = Depends(get_current_user))
     return compliance
 
 
+
+# ── Convert to Invoice ───────────────────────────────────────────
+
+@router.post("/{prev_id}/convert-to-invoice")
+async def convert_to_invoice(prev_id: str, user: dict = Depends(get_current_user)):
+    """Convert an accepted preventivo into a Fattura (invoice).
+    Imports all lines, client, and notes automatically.
+    """
+    doc = await db.preventivi.find_one(
+        {"preventivo_id": prev_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "Preventivo non trovato")
+
+    if doc.get("converted_to"):
+        raise HTTPException(409, f"Preventivo gia convertito in fattura {doc['converted_to']}")
+
+    # Verify client exists
+    client_id = doc.get("client_id")
+    if not client_id:
+        raise HTTPException(422, "Preventivo senza cliente. Assegnare un cliente prima della conversione.")
+
+    client = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(422, "Cliente non trovato")
+
+    now = datetime.now(timezone.utc)
+    invoice_id = f"inv_{uuid.uuid4().hex[:12]}"
+    year = now.year
+
+    # Get next invoice number
+    count = await db.invoices.count_documents(
+        {"user_id": user["user_id"], "document_type": "fattura"}
+    )
+    doc_number = f"FT-{year}/{count + 1:04d}"
+
+    # Map preventivo lines to invoice lines
+    invoice_lines = []
+    for idx, line in enumerate(doc.get("lines", [])):
+        invoice_lines.append({
+            "line_id": f"ln_{uuid.uuid4().hex[:8]}",
+            "code": line.get("line_id", ""),
+            "description": line.get("description", ""),
+            "quantity": float(line.get("quantity", 1)),
+            "unit_price": float(line.get("unit_price", 0)),
+            "discount_percent": 0,
+            "vat_rate": line.get("vat_rate", "22"),
+            "line_total": float(line.get("line_total", 0)),
+            "vat_amount": round(float(line.get("line_total", 0)) * float(line.get("vat_rate", 22)) / 100, 2),
+        })
+
+    # Build totals
+    subtotal = sum(row.get("line_total", 0) for row in invoice_lines)
+    total_vat = sum(row.get("vat_amount", 0) for row in invoice_lines)
+
+    invoice_doc = {
+        "invoice_id": invoice_id,
+        "user_id": user["user_id"],
+        "document_type": "fattura",
+        "document_number": doc_number,
+        "client_id": client_id,
+        "issue_date": now.strftime("%Y-%m-%d"),
+        "due_date": None,
+        "status": "bozza",
+        "payment_method": "bonifico",
+        "payment_terms": doc.get("payment_terms", "30gg"),
+        "tax_settings": {
+            "apply_rivalsa_inps": False, "rivalsa_inps_rate": 4.0,
+            "apply_cassa": False, "cassa_type": None, "cassa_rate": 4.0,
+            "apply_ritenuta": False, "ritenuta_rate": 20.0, "ritenuta_base": "imponibile",
+        },
+        "lines": invoice_lines,
+        "totals": {
+            "subtotal": round(subtotal, 2),
+            "taxable_amount": round(subtotal, 2),
+            "total_vat": round(total_vat, 2),
+            "total_document": round(subtotal + total_vat, 2),
+            "total_due": round(subtotal + total_vat, 2),
+        },
+        "notes": f"Riferimento preventivo {doc.get('number', prev_id)}. {doc.get('notes', '') or ''}".strip(),
+        "internal_notes": None,
+        "created_at": now,
+        "updated_at": now,
+        "converted_from": prev_id,
+        "converted_to": None,
+    }
+
+    await db.invoices.insert_one(invoice_doc)
+
+    # Update preventivo: mark as accepted and link to invoice
+    await db.preventivi.update_one(
+        {"preventivo_id": prev_id},
+        {"$set": {
+            "status": "accettato",
+            "converted_to": invoice_id,
+            "updated_at": now,
+        }}
+    )
+
+    logger.info(f"Preventivo {prev_id} converted to invoice {invoice_id} ({doc_number})")
+    return {
+        "message": f"Preventivo convertito in Fattura {doc_number}",
+        "invoice_id": invoice_id,
+        "document_number": doc_number,
+    }
+
+
 # ── PDF Generation ───────────────────────────────────────────────
 
 @router.get("/{prev_id}/pdf")
