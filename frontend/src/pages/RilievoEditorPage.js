@@ -556,14 +556,14 @@ export default function RilievoEditorPage() {
                                     <div>
                                         <Label className="text-base">Cliente *</Label>
                                         <Select
-                                            value={formData.client_id || "none"}
-                                            onValueChange={(v) => updateField('client_id', v === "none" ? "" : v)}
+                                            value={formData.client_id || "__none__"}
+                                            onValueChange={(v) => updateField('client_id', v === "__none__" ? "" : v)}
                                         >
                                             <SelectTrigger data-testid="select-client" className="h-14 text-base">
                                                 <SelectValue placeholder="Seleziona cliente..." />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="none" disabled>Seleziona cliente...</SelectItem>
+                                                <SelectItem value="__none__">-- Seleziona cliente --</SelectItem>
                                                 {clients.map(c => (
                                                     <SelectItem key={c.client_id} value={c.client_id}>
                                                         {c.business_name}
