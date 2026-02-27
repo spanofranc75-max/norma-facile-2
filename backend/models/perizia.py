@@ -4,6 +4,84 @@ from typing import Optional, List
 from datetime import datetime
 
 
+# ── Codici Danno Database ──
+
+CODICI_DANNO = [
+    {
+        "codice": "S1-DEF",
+        "categoria": "Struttura",
+        "label": "Deformazione plastica profilo",
+        "norma": "EN 1090-2",
+        "implicazione": "Snervamento acciaio. La raddrizzatura altera le proprieta meccaniche del materiale invalidando la certificazione originale.",
+        "azione": "Sostituzione integrale del modulo.",
+        "icon": "shield-alert",
+        "color": "red",
+    },
+    {
+        "codice": "S2-WELD",
+        "categoria": "Struttura",
+        "label": "Cricca/rottura saldatura",
+        "norma": "EN 1090-2",
+        "implicazione": "Cedimento giunto strutturale. Saldatura in opera non certificata comporta decadenza della Marcatura CE.",
+        "azione": "Sostituzione (sconsigliata riparazione in opera).",
+        "icon": "shield-alert",
+        "color": "red",
+    },
+    {
+        "codice": "A1-ANCH",
+        "categoria": "Ancoraggio",
+        "label": "Tassello sfilato/allentato",
+        "norma": "ETAG 001",
+        "implicazione": "Perdita tenuta meccanica dell'ancorante. Rischio ribaltamento sotto carico vento.",
+        "azione": "Rifacimento fori e ancorante chimico certificato ETA.",
+        "icon": "anchor",
+        "color": "orange",
+    },
+    {
+        "codice": "A2-CONC",
+        "categoria": "Ancoraggio",
+        "label": "Crepa nel cordolo/cemento",
+        "norma": "NTC 2018",
+        "implicazione": "Degrado del supporto strutturale. Compromessa la capacita portante del basamento.",
+        "azione": "Ripristino con malta tixotropica strutturale e nuovo ancoraggio.",
+        "icon": "anchor",
+        "color": "orange",
+    },
+    {
+        "codice": "P1-ZINC",
+        "categoria": "Protezione",
+        "label": "Zincatura esposta/fratturata",
+        "norma": "ISO 1461 / ISO 12944",
+        "implicazione": "Perdita protezione galvanica. Esposizione acciaio a fenomeni ossidativi non riparabili con verniciatura in loco.",
+        "azione": "Trattamento industriale (non ritocco a mano). Ripristino ciclo anticorrosivo.",
+        "icon": "paint-bucket",
+        "color": "blue",
+    },
+    {
+        "codice": "G1-GAP",
+        "categoria": "Sicurezza",
+        "label": "Alterazione distanze anti-cesoiamento",
+        "norma": "EN 13241",
+        "implicazione": "Rischio schiacciamento. Le distanze di sicurezza non rispettano piu i requisiti della norma prodotto.",
+        "azione": "Riallineamento millimetrico e test spazi. Aggiornamento DoP.",
+        "icon": "ruler",
+        "color": "yellow",
+    },
+    {
+        "codice": "M1-FORCE",
+        "categoria": "Automazione",
+        "label": "Sforzo anomalo motore/braccio",
+        "norma": "EN 12453",
+        "implicazione": "Sicurezza in uso compromessa. Forze di impatto fuori norma possono causare lesioni.",
+        "azione": "Test delle forze con strumento certificato. Sostituzione componenti se fuori tolleranza.",
+        "icon": "zap",
+        "color": "purple",
+    },
+]
+
+CODICI_DANNO_MAP = {c["codice"]: c for c in CODICI_DANNO}
+
+
 class ModuloDanneggiato(BaseModel):
     """A single damaged module with dimensions."""
     descrizione: str = ""
@@ -33,29 +111,19 @@ class Localizzazione(BaseModel):
 
 class PeriziaCreate(BaseModel):
     client_id: Optional[str] = None
-    # Location
     localizzazione: Optional[Localizzazione] = None
-    # Damage info
     tipo_danno: str = Field(default="strutturale", description="strutturale, estetico, automatismi")
     descrizione_utente: str = ""
-    # Reference pricing
+    codici_danno: List[str] = []  # Selected damage codes e.g. ["S1-DEF", "P1-ZINC"]
     prezzo_ml_originale: float = 0
     coefficiente_maggiorazione: float = 20
-    # Modules
     moduli: List[ModuloDanneggiato] = []
-    # Photos (base64 list)
     foto: List[str] = []
-    # AI analysis
     ai_analysis: str = ""
-    # Stato di fatto
     stato_di_fatto: str = ""
-    # Nota tecnica
     nota_tecnica: str = ""
-    # Cost items
     voci_costo: List[VoceCosto] = []
-    # Lettera di accompagnamento tecnica
     lettera_accompagnamento: str = ""
-    # Notes
     notes: str = ""
 
 
@@ -64,6 +132,7 @@ class PeriziaUpdate(BaseModel):
     localizzazione: Optional[Localizzazione] = None
     tipo_danno: Optional[str] = None
     descrizione_utente: Optional[str] = None
+    codici_danno: Optional[List[str]] = None
     prezzo_ml_originale: Optional[float] = None
     coefficiente_maggiorazione: Optional[float] = None
     moduli: Optional[List[ModuloDanneggiato]] = None
