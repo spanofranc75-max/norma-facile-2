@@ -159,7 +159,7 @@ def generate_dop_ce_pdf(cert: dict, company: dict = None) -> BytesIO:
 
         th_data = [
             ["Parametro", "Valore"],
-            ["Vetro", f"{specs.get('thermal_glass_label', '-')} (Ug = {specs.get('thermal_uw', '-')})"],
+            ["Vetro", f"{specs.get('thermal_glass_label', '-')}"],
             ["Telaio", f"{specs.get('thermal_frame_label', '-')}"],
             ["Canalina distanziale", f"{specs.get('thermal_spacer_label', '-')}"],
             ["Dimensioni (H x L)", f"{specs.get('thermal_height_mm', '-')} x {specs.get('thermal_width_mm', '-')} mm"],
