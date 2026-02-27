@@ -174,6 +174,24 @@ def generate_perizia_pdf(doc: dict, company: dict = None) -> BytesIO:
         elements.append(Paragraph("NOTE AGGIUNTIVE", section_style))
         elements.append(Paragraph(doc["notes"], body_style))
 
+    # ── Lettera di Accompagnamento ──
+    lettera = doc.get("lettera_accompagnamento", "")
+    if lettera:
+        elements.append(Spacer(1, 8 * mm))
+        elements.append(Paragraph("LETTERA DI ACCOMPAGNAMENTO TECNICA", title_style))
+        elements.append(Spacer(1, 2 * mm))
+        for para in lettera.split("\n"):
+            txt = para.strip()
+            if not txt:
+                elements.append(Spacer(1, 2 * mm))
+                continue
+            # Detect section headers (all caps or numbered)
+            if txt.isupper() or (len(txt) < 100 and (txt.startswith("1.") or txt.startswith("2.") or txt.startswith("3.") or txt.startswith("Oggetto:"))):
+                elements.append(Paragraph(txt, bold_style))
+            else:
+                elements.append(Paragraph(txt, body_style))
+            elements.append(Spacer(1, 1 * mm))
+
     # ── Signature block ──
     elements.append(Spacer(1, 12 * mm))
     sig_data = [
