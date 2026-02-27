@@ -553,11 +553,11 @@ async def extract_articoli(
             words = re.sub(r'[^a-zA-Z0-9\s]', '', desc).upper().split()[:3]
             codice = "-".join(words) if words else f"ART-{uuid.uuid4().hex[:4].upper()}"
 
-        um = linea.get("unita_misura", "pz").lower()
+        um = (linea.get("unita_misura") or "pz").lower()
         if um not in ["pz", "ml", "mq", "kg", "h", "corpo", "lt"]:
             um = "pz"
 
-        iva = linea.get("aliquota_iva", "22").replace('.00', '')
+        iva = (linea.get("aliquota_iva") or "22").replace('.00', '')
 
         # Check existing
         existing = await db.articoli.find_one(
