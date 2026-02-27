@@ -24,6 +24,7 @@ from routes.certificazioni import router as certificazioni_router
 from routes.sicurezza import router as sicurezza_router
 from routes.dashboard import router as dashboard_router
 from routes.catalogo import router as catalogo_router
+from routes.vendor_api import router as vendor_router
 
 # Configure logging
 logging.basicConfig(
@@ -73,6 +74,7 @@ app.include_router(certificazioni_router, prefix="/api")
 app.include_router(sicurezza_router, prefix="/api")
 app.include_router(dashboard_router, prefix="/api")
 app.include_router(catalogo_router, prefix="/api")
+app.include_router(vendor_router, prefix="/api")
 
 
 @app.get("/api/")
