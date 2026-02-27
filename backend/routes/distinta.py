@@ -271,6 +271,58 @@ async def get_lista_taglio_pdf(distinta_id: str, user: dict = Depends(get_curren
     )
 
 
+# ── Ottimizzatore di Taglio Avanzato ─────────────────────────────
+
+@router.post("/{distinta_id}/ottimizza-taglio", response_model=OptimizerResponse)
+async def ottimizza_taglio(
+    distinta_id: str,
+    params: OptimizerRequest = OptimizerRequest(),
+    user: dict = Depends(get_current_user),
+):
+    """Run the advanced cutting optimizer (FFD bin-packing) on the BOM."""
+    doc = await db.distinte.find_one(
+        {"distinta_id": distinta_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "Distinta non trovata")
+
+    items = doc.get("items", [])
+    if not items:
+        raise HTTPException(400, "La distinta non contiene materiali da ottimizzare")
+
+    result = optimize_cutting(items, params.bar_length_mm, params.kerf_mm)
+    return OptimizerResponse(**result)
+
+
+@router.get("/{distinta_id}/ottimizza-taglio-pdf")
+async def get_ottimizza_taglio_pdf(
+    distinta_id: str,
+    bar_length_mm: int = Query(6000, ge=1000, le=18000),
+    kerf_mm: float = Query(3, ge=0, le=10),
+    user: dict = Depends(get_current_user),
+):
+    """Generate the optimized cutting plan PDF."""
+    doc = await db.distinte.find_one(
+        {"distinta_id": distinta_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "Distinta non trovata")
+
+    items = doc.get("items", [])
+    if not items:
+        raise HTTPException(400, "La distinta non contiene materiali")
+
+    result = optimize_cutting(items, bar_length_mm, kerf_mm)
+    pdf_buffer = generate_optimizer_pdf(doc, result)
+
+    filename = f"taglio_ottimizzato_{doc.get('name', distinta_id).replace(' ', '_')}.pdf"
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 
 # ── Import from Rilievo ──────────────────────────────────────────
 
