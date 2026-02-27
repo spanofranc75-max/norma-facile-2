@@ -136,11 +136,29 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
   - AUT.01/02 (M1-FORCE), SIC.01 (G1-GAP €180), NOR.01 (€150), SMA.01 (€90)
   - Recalc endpoint verified, PDF generation, Archivio stats
   - Testing: 16/16 backend (iteration_32), 100% frontend, pytest suite at /app/backend/tests/test_sinistro_smart_algorithm.py
+- [x] Catalogo Articoli — DONE (Phase 25) — 2026-02-27
+  - Pagina dedicata /articoli con CRUD completo
+  - Ricerca per codice/descrizione/fornitore, filtro categoria
+  - Storico prezzi con tracciamento fonte (manuale/fattura fornitore)
+  - Bulk import per fatture ricevute
+  - Testing: 23/23 backend (iteration_33), 100% frontend
+- [x] Tracciamento Pagamenti (Scadenze) — DONE (Phase 25) — 2026-02-27
+  - Colonne Pagato/Da Pagare nella lista fatture
+  - KPI cards: Totale Fatturato, Incassato, Da Incassare
+  - Modale Scadenze con registrazione pagamenti parziali/totali
+  - Stato automatico: non_pagata → parzialmente_pagata → pagata
+  - Duplica fattura
+  - Testing: 23/23 backend (iteration_33), 100% frontend
+- [x] Ricerca Articoli in Fattura — DONE (Phase 25) — 2026-02-27
+  - Autocomplete nel campo codice delle righe fattura
+  - Auto-popolamento: codice, descrizione, prezzo, IVA dal catalogo
 
 ### P1
+- [ ] Fatture Ricevute (Fornitori + SDI) — modulo fatture passive
+- [ ] Estrazione voci da fatture ricevute per catalogo articoli
+- [ ] Integrazione SDI diretta (import XML fatture elettroniche)
 - [ ] Registro DDT (numerazione automatica e reportistica mensile spedizioni)
 - [ ] Quick Fill: fatture auto-popola da cliente (stesso pattern preventivi)
-- [ ] SDI direct integration
 - [ ] Recurring invoices / email reminders
 
 ### P2
