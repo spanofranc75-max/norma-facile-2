@@ -333,6 +333,9 @@ async def update_perizia(perizia_id: str, data: PeriziaUpdate, user: dict = Depe
         if val is not None:
             upd[field] = val
 
+    if data.codici_danno is not None:
+        upd["codici_danno"] = data.codici_danno
+
     if data.localizzazione is not None:
         upd["localizzazione"] = data.localizzazione.model_dump()
     if data.moduli is not None:
