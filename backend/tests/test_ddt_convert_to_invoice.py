@@ -11,7 +11,7 @@ import os
 import uuid
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
-SESSION_TOKEN = os.environ.get('DDT_TEST_SESSION_TOKEN', 'test_session_ddt_convert_' + str(uuid.uuid4().hex[:8]))
+SESSION_TOKEN = os.environ.get('DDT_TEST_SESSION_TOKEN', 'test_session_ddt_conv_1772207156664')
 
 
 @pytest.fixture(scope="module")
