@@ -32,6 +32,7 @@ import PeriziaEditorPage from './pages/PeriziaEditorPage';
 import ArchivioSinistriPage from './pages/ArchivioSinistriPage';
 import ArticoliPage from './pages/ArticoliPage';
 import FattureRicevutePage from './pages/FattureRicevutePage';
+import CoreEnginePage from './pages/CoreEnginePage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -188,6 +189,8 @@ function AppRouter() {
             <Route path="/articoli" element={<ProtectedRoute><ArticoliPage /></ProtectedRoute>} />
             {/* Fatture Ricevute */}
             <Route path="/fatture-ricevute" element={<ProtectedRoute><FattureRicevutePage /></ProtectedRoute>} />
+            {/* Core Engine */}
+            <Route path="/core-engine" element={<ProtectedRoute><CoreEnginePage /></ProtectedRoute>} />
         </Routes>
     );
 }
