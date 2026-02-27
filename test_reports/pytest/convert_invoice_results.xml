@@ -1,92 +1,13 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="9" skipped="0" tests="15" time="5.172" timestamp="2026-02-27T13:19:21.518928+00:00" hostname="agent-env-9e84553e-dff7-4271-9682-4ed6ebbe8d69"><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_convert_basic_preventivo" time="0.702" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_lines_mapping" time="0.298"><failure message="assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_convert_to_invoice.py:198: in test_invoice_lines_mapping
-    assert invoice_response.status_code == 200
-E   assert 500 == 200
-E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_totals_calculation" time="0.410"><failure message="assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_convert_to_invoice.py:250: in test_invoice_totals_calculation
-    assert invoice_response.status_code == 200
-E   assert 500 == 200
-E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_preventivo_marked_as_accettato" time="0.383" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_converted_from_link" time="0.297"><failure message="assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_convert_to_invoice.py:310: in test_invoice_converted_from_link
-    assert invoice_response.status_code == 200
-E   assert 500 == 200
-E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_appears_in_list" time="0.272"><failure message="assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_convert_to_invoice.py:337: in test_invoice_appears_in_list
-    assert list_response.status_code == 200
-E   assert 500 == 200
-E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_notes_include_preventivo_reference" time="0.282"><failure message="assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_convert_to_invoice.py:371: in test_invoice_notes_include_preventivo_reference
-    assert invoice_response.status_code == 200
-E   assert 500 == 200
-E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceErrors" name="test_convert_without_client_returns_422" time="0.178" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceErrors" name="test_duplicate_conversion_returns_409" time="0.312" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceErrors" name="test_convert_nonexistent_preventivo_returns_404" time="0.111" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceErrors" name="test_convert_requires_authentication" time="0.145" /><testcase classname="backend.tests.test_convert_to_invoice.TestInvoiceProperties" name="test_invoice_document_type_is_fattura" time="0.277"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
-    return complexjson.loads(self.text, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/__init__.py:346: in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:337: in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-
-During handling of the above exception, another exception occurred:
-backend/tests/test_convert_to_invoice.py:464: in test_invoice_document_type_is_fattura
-    invoice = auth_session.get(f'{BASE_URL}/api/invoices/{invoice_id}').json()
-              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
-    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
-E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestInvoiceProperties" name="test_invoice_status_is_bozza" time="0.289"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
-    return complexjson.loads(self.text, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/__init__.py:346: in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:337: in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-
-During handling of the above exception, another exception occurred:
-backend/tests/test_convert_to_invoice.py:481: in test_invoice_status_is_bozza
-    invoice = auth_session.get(f'{BASE_URL}/api/invoices/{invoice_id}').json()
-              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
-    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
-E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestInvoiceProperties" name="test_invoice_payment_method_is_bonifico" time="0.299"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
-    return complexjson.loads(self.text, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/__init__.py:346: in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:337: in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-
-During handling of the above exception, another exception occurred:
-backend/tests/test_convert_to_invoice.py:498: in test_invoice_payment_method_is_bonifico
-    invoice = auth_session.get(f'{BASE_URL}/api/invoices/{invoice_id}').json()
-              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
-    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
-E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestInvoiceProperties" name="test_invoice_client_id_matches" time="0.699"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
-    return complexjson.loads(self.text, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/__init__.py:346: in loads
-    return _default_decoder.decode(s)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:337: in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
-    raise JSONDecodeError("Expecting value", s, err.value) from None
-E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
-
-During handling of the above exception, another exception occurred:
-backend/tests/test_convert_to_invoice.py:515: in test_invoice_client_id_matches
-    invoice = auth_session.get(f'{BASE_URL}/api/invoices/{invoice_id}').json()
-              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
-    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
-E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase></testsuite></testsuites>
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="15" time="5.456" timestamp="2026-02-27T13:19:49.540245+00:00" hostname="agent-env-9e84553e-dff7-4271-9682-4ed6ebbe8d69"><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_convert_basic_preventivo" time="0.702" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_lines_mapping" time="0.332" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_totals_calculation" time="0.288" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_preventivo_marked_as_accettato" time="0.378" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_converted_from_link" time="0.289" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_appears_in_list" time="0.288"><failure message="AssertionError: Expected document_type 'fattura', got FT&#10;assert 'FT' == 'fattura'&#10;  &#10;  - fattura&#10;  + FT">backend/tests/test_convert_to_invoice.py:346: in test_invoice_appears_in_list
+    assert our_invoice['document_type'] == 'fattura', f"Expected document_type 'fattura', got {our_invoice['document_type']}"
+E   AssertionError: Expected document_type 'fattura', got FT
+E   assert 'FT' == 'fattura'
+E     
+E     - fattura
+E     + FT</failure></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_notes_include_preventivo_reference" time="0.275" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceErrors" name="test_convert_without_client_returns_422" time="0.168" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceErrors" name="test_duplicate_conversion_returns_409" time="0.334" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceErrors" name="test_convert_nonexistent_preventivo_returns_404" time="0.128" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceErrors" name="test_convert_requires_authentication" time="0.133" /><testcase classname="backend.tests.test_convert_to_invoice.TestInvoiceProperties" name="test_invoice_document_type_is_fattura" time="0.299"><failure message="AssertionError: Expected document_type 'fattura', got FT&#10;assert 'FT' == 'fattura'&#10;  &#10;  - fattura&#10;  + FT">backend/tests/test_convert_to_invoice.py:465: in test_invoice_document_type_is_fattura
+    assert invoice['document_type'] == 'fattura', f"Expected document_type 'fattura', got {invoice['document_type']}"
+E   AssertionError: Expected document_type 'fattura', got FT
+E   assert 'FT' == 'fattura'
+E     
+E     - fattura
+E     + FT</failure></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestInvoiceProperties" name="test_invoice_status_is_bozza" time="0.295" /><testcase classname="backend.tests.test_convert_to_invoice.TestInvoiceProperties" name="test_invoice_payment_method_is_bonifico" time="0.285" /><testcase classname="backend.tests.test_convert_to_invoice.TestInvoiceProperties" name="test_invoice_client_id_matches" time="1.174" /></testsuite></testsuites>
