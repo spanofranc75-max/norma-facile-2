@@ -213,7 +213,12 @@ class RilievoPDFService:
                         max_height=60*mm
                     )
                     if img:
-                        cell_content = [img, Paragraph(photo_name, styles['SmallText'])]
+                        # Create a vertical layout with image and caption
+                        cell_content = Table([[img], [Paragraph(photo_name, styles['SmallText'])]])
+                        cell_content.setStyle(TableStyle([
+                            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                        ]))
                         current_row.append(cell_content)
                         
                         if len(current_row) == 2:
@@ -223,7 +228,7 @@ class RilievoPDFService:
             # Add remaining photos
             if current_row:
                 while len(current_row) < 2:
-                    current_row.append([Paragraph('', styles['SmallText']), Paragraph('', styles['SmallText'])])
+                    current_row.append(Paragraph('', styles['SmallText']))
                 photo_rows.append(current_row)
             
             if photo_rows:
