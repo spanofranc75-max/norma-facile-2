@@ -92,6 +92,17 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
   - Frontend: tag pill-shaped colorati per categoria, "Norme attivate" dinamiche
   - Testing: 16/16 backend, 100% frontend (iteration_30)
 
+### Sopralluogo Rapido Wizard (Phase 23) — 2026-02-27
+- Complete UX redesign: PeriziaEditorPage rewritten as mobile-first 5-step wizard
+- Step 1 (Cantiere): Auto-GPS geolocation + reverse geocoding (Nominatim) + address + map + client
+- Step 2 (Foto): Camera Smart con "Foto Panoramica" (blu) e "Dettaglio Danno" (rosso) + AI analysis GPT-4o + tag suggestions auto-parsed
+- Step 3 (Diagnosi): Large bubble tag selector grouped by severity (rosso/arancio/blu/giallo/viola) with ring selection + norme attivate
+- Step 4 (Misure): Slider bars per lunghezza (0.5-12ml) e altezza (0.5-3m) + prezzi + toggle smaltimento/accesso difficile
+- Step 5 (Riepilogo): Total prominente + computo metrico + quick actions (Genera Preventivo, Lettera Perito EN 1090/13241, PDF, Invia WhatsApp/Email)
+- Step validation: avanti disabled fino a soddisfazione requisiti per step
+- navigator.share() API per condivisione nativa
+- Testing: 100% backend + frontend (iteration_31)
+
 ### Archivio Sinistri Dashboard (Phase 22) — 2026-02-27
 - Dashboard riepilogo perizie: KPI cards (totali, volume, importo medio, codici usati)
 - Grafico andamento mensile (Recharts BarChart)
