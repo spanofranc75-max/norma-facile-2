@@ -281,3 +281,136 @@ async def get_ddt_pdf(ddt_id: str, user: dict = Depends(get_current_user)):
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# ── Convert DDT to Invoice ──
+
+@router.post("/{ddt_id}/convert-to-invoice")
+async def convert_ddt_to_invoice(ddt_id: str, user: dict = Depends(get_current_user)):
+    """Convert a DDT into a Fattura (invoice). Maps lines, client, and totals."""
+    doc = await db[COLLECTION].find_one(
+        {"ddt_id": ddt_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "DDT non trovato")
+
+    if doc.get("converted_to"):
+        raise HTTPException(409, f"DDT già convertito in fattura {doc['converted_to']}")
+
+    client_id = doc.get("client_id")
+    if not client_id:
+        raise HTTPException(422, "DDT senza cliente. Assegnare un cliente prima della conversione.")
+
+    client = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(422, "Cliente non trovato")
+
+    now = datetime.now(timezone.utc)
+    invoice_id = f"inv_{uuid.uuid4().hex[:12]}"
+    year = now.year
+
+    # Next invoice number
+    count = await db.invoices.count_documents(
+        {"user_id": user["user_id"], "document_type": "FT"}
+    )
+    doc_number = f"FT-{year}/{count + 1:04d}"
+
+    # Map DDT lines to invoice lines
+    invoice_lines = []
+    for line in doc.get("lines", []):
+        lt = float(line.get("line_total", 0))
+        invoice_lines.append({
+            "line_id": f"ln_{uuid.uuid4().hex[:8]}",
+            "code": line.get("codice_articolo", ""),
+            "description": line.get("description", ""),
+            "quantity": float(line.get("quantity", 0)),
+            "unit_price": float(line.get("prezzo_netto") or line.get("unit_price", 0)),
+            "discount_percent": 0,
+            "vat_rate": line.get("vat_rate", "22"),
+            "line_total": lt,
+            "vat_amount": round(lt * float(line.get("vat_rate", 22)) / 100, 2),
+        })
+
+    # Build totals
+    sg = float(doc.get("sconto_globale", 0))
+    subtotal = sum(row.get("line_total", 0) for row in invoice_lines)
+    sconto_val = round(subtotal * sg / 100, 2) if sg else 0
+    taxable = subtotal - sconto_val
+    total_vat = sum(row.get("vat_amount", 0) for row in invoice_lines)
+    if sg:
+        total_vat = round(total_vat * (1 - sg / 100), 2)
+
+    # Map payment from DDT
+    payment_label = (doc.get("payment_type_label") or "").lower()
+    if "riba" in payment_label:
+        payment_method = "riba"
+    elif "contanti" in payment_label:
+        payment_method = "contanti"
+    elif "carta" in payment_label:
+        payment_method = "carta"
+    elif "assegno" in payment_label:
+        payment_method = "assegno"
+    else:
+        payment_method = "bonifico"
+
+    if "immediat" in payment_label:
+        payment_terms = "immediato"
+    elif "90" in payment_label:
+        payment_terms = "90gg"
+    elif "60" in payment_label:
+        payment_terms = "60gg"
+    elif "fm" in payment_label or "fine mese" in payment_label:
+        payment_terms = "fm+30" if "30" in payment_label else "fine_mese"
+    else:
+        payment_terms = "30gg"
+
+    invoice_doc = {
+        "invoice_id": invoice_id,
+        "user_id": user["user_id"],
+        "document_type": "FT",
+        "document_number": doc_number,
+        "client_id": client_id,
+        "issue_date": now.strftime("%Y-%m-%d"),
+        "due_date": None,
+        "status": "bozza",
+        "payment_method": payment_method,
+        "payment_terms": payment_terms,
+        "tax_settings": {
+            "apply_rivalsa_inps": False, "rivalsa_inps_rate": 4.0,
+            "apply_cassa": False, "cassa_type": None, "cassa_rate": 4.0,
+            "apply_ritenuta": False, "ritenuta_rate": 20.0, "ritenuta_base": "imponibile",
+        },
+        "lines": invoice_lines,
+        "totals": {
+            "subtotal": round(subtotal, 2),
+            "taxable_amount": round(taxable, 2),
+            "total_vat": round(total_vat, 2),
+            "total_document": round(taxable + total_vat, 2),
+            "total_due": round(taxable + total_vat, 2),
+        },
+        "notes": f"Rif. DDT {doc.get('number', ddt_id)}. {doc.get('notes', '') or ''}".strip(),
+        "internal_notes": None,
+        "created_at": now,
+        "updated_at": now,
+        "converted_from": ddt_id,
+        "converted_to": None,
+    }
+
+    await db.invoices.insert_one(invoice_doc)
+
+    # Update DDT: mark as fatturato and link to invoice
+    await db[COLLECTION].update_one(
+        {"ddt_id": ddt_id},
+        {"$set": {
+            "status": "fatturato",
+            "converted_to": invoice_id,
+            "updated_at": now,
+        }}
+    )
+
+    logger.info(f"DDT {ddt_id} converted to invoice {invoice_id} ({doc_number})")
+    return {
+        "message": f"DDT convertito in Fattura {doc_number}",
+        "invoice_id": invoice_id,
+        "document_number": doc_number,
+    }
