@@ -8,9 +8,8 @@ module.exports = {
     theme: {
         extend: {
             fontFamily: {
-                serif: ['Libre Baskerville', 'serif'],
-                sans: ['Inter', 'sans-serif'],
-                mono: ['JetBrains Mono', 'monospace'],
+                sans: ['Inter', 'Roboto', 'sans-serif'],
+                mono: ['JetBrains Mono', 'Roboto Mono', 'monospace'],
             },
             borderRadius: {
                 lg: 'var(--radius)',
@@ -58,25 +57,16 @@ module.exports = {
                     '4': 'hsl(var(--chart-4))',
                     '5': 'hsl(var(--chart-5))'
                 },
-                // Custom colors for Norma Facile
-                navy: {
-                    DEFAULT: '#0F172A',
-                    50: '#F8FAFC',
-                    100: '#F1F5F9',
-                    200: '#E2E8F0',
-                    300: '#CBD5E1',
-                    400: '#94A3B8',
-                    500: '#64748B',
-                    600: '#475569',
+                // Industrial Blue Theme Colors
+                industrial: {
+                    blue: '#0055FF',
+                    'blue-dark': '#0044CC',
+                    'blue-light': '#3377FF',
+                },
+                slate: {
                     700: '#334155',
                     800: '#1E293B',
                     900: '#0F172A',
-                    950: '#020617'
-                },
-                amber: {
-                    DEFAULT: '#B45309',
-                    700: '#B45309',
-                    800: '#92400E'
                 }
             },
             keyframes: {

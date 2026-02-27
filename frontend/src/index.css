@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Libre+Baskerville:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@300;400;500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,31 +6,40 @@
 
 @layer base {
     :root {
-        --background: 210 40% 98%;
-        --foreground: 222 47% 11%;
+        /* Industrial Blue Theme */
+        --background: 210 20% 98%;
+        --foreground: 215 25% 27%;
         --card: 0 0% 100%;
-        --card-foreground: 222 47% 11%;
+        --card-foreground: 215 25% 27%;
         --popover: 0 0% 100%;
-        --popover-foreground: 222 47% 11%;
-        --primary: 222 47% 11%;
-        --primary-foreground: 210 40% 98%;
+        --popover-foreground: 215 25% 27%;
+        --primary: 220 100% 50%;
+        --primary-foreground: 0 0% 100%;
         --secondary: 210 40% 96%;
-        --secondary-foreground: 222 47% 11%;
+        --secondary-foreground: 215 25% 27%;
         --muted: 210 40% 96%;
         --muted-foreground: 215 16% 47%;
-        --accent: 32 95% 44%;
-        --accent-foreground: 0 0% 100%;
+        --accent: 214 100% 97%;
+        --accent-foreground: 220 100% 50%;
         --destructive: 0 72% 51%;
-        --destructive-foreground: 210 40% 98%;
+        --destructive-foreground: 0 0% 100%;
         --border: 214 32% 91%;
         --input: 214 32% 91%;
-        --ring: 222 47% 11%;
-        --radius: 0.5rem;
-        --chart-1: 12 76% 61%;
+        --ring: 220 100% 50%;
+        --radius: 0.375rem;
+        --chart-1: 220 100% 50%;
         --chart-2: 173 58% 39%;
         --chart-3: 197 37% 24%;
         --chart-4: 43 74% 66%;
         --chart-5: 27 87% 67%;
+        
+        /* Industrial Blue specific */
+        --industrial-blue: #0055FF;
+        --industrial-blue-dark: #0044CC;
+        --industrial-blue-light: #3377FF;
+        --sidebar-bg: #1E293B;
+        --text-primary: #334155;
+        --text-secondary: #64748B;
     }
 }
 
@@ -40,31 +49,84 @@
     }
     body {
         @apply bg-background text-foreground font-sans;
+        color: var(--text-primary);
     }
-    h1, h2, h3 {
-        @apply font-serif;
+    h1, h2, h3, h4, h5, h6 {
+        @apply font-sans font-bold;
+        color: #1E293B;
     }
 }
 
-/* Custom scrollbar for modern look */
+/* Industrial Blue Theme - Custom Styles */
+@layer components {
+    /* Buttons - Flat, no shadows */
+    .btn-industrial {
+        @apply bg-[#0055FF] text-white font-medium rounded-md px-4 py-2;
+        @apply hover:bg-[#0044CC] active:bg-[#003399];
+        @apply transition-colors duration-150;
+        box-shadow: none !important;
+    }
+    
+    /* Cards with blue header */
+    .card-industrial {
+        @apply bg-white border border-gray-200 rounded-md overflow-hidden;
+        box-shadow: none;
+    }
+    
+    .card-industrial-header {
+        @apply bg-blue-50 border-b border-gray-200 px-4 py-3;
+    }
+    
+    /* Data numbers - monospace, blue */
+    .data-number {
+        @apply font-mono text-[#0055FF] font-semibold;
+    }
+    
+    .data-number-lg {
+        @apply font-mono text-[#0055FF] font-bold text-2xl;
+    }
+    
+    /* Table headers - Industrial style */
+    .table-header-industrial {
+        @apply bg-[#1E293B] text-white font-medium;
+    }
+    
+    /* Sidebar active state */
+    .sidebar-active {
+        @apply bg-[#0055FF] text-white;
+    }
+    
+    /* Badge industrial */
+    .badge-industrial {
+        @apply bg-blue-50 text-[#0055FF] border border-blue-200;
+    }
+}
+
+/* Custom scrollbar */
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-    @apply bg-slate-100;
+    @apply bg-gray-100;
 }
 
 ::-webkit-scrollbar-thumb {
-    @apply bg-slate-300 rounded-full;
+    @apply bg-gray-300 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-400;
+    @apply bg-gray-400;
 }
 
-/* Debug wrapper styles */
+/* Loading spinner */
+.loading-spinner {
+    @apply animate-spin rounded-full border-2 border-gray-200;
+    border-top-color: #0055FF;
+}
+
+/* Debug wrapper */
 @layer base {
     [data-debug-wrapper="true"] {
         display: contents !important;
