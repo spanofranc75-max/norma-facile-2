@@ -11,6 +11,8 @@ import Dashboard from './pages/Dashboard';
 import ClientsPage from './pages/ClientsPage';
 import InvoicesPage from './pages/InvoicesPage';
 import InvoiceEditorPage from './pages/InvoiceEditorPage';
+import RilieviPage from './pages/RilieviPage';
+import RilievoEditorPage from './pages/RilievoEditorPage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
@@ -70,6 +72,31 @@ function AppRouter() {
                 element={
                     <ProtectedRoute>
                         <InvoiceEditorPage />
+                    </ProtectedRoute>
+                }
+            />
+            {/* Rilievi */}
+            <Route
+                path="/rilievi"
+                element={
+                    <ProtectedRoute>
+                        <RilieviPage />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/rilievi/new"
+                element={
+                    <ProtectedRoute>
+                        <RilievoEditorPage />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/rilievi/:rilievoId"
+                element={
+                    <ProtectedRoute>
+                        <RilievoEditorPage />
                     </ProtectedRoute>
                 }
             />
