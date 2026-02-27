@@ -25,7 +25,7 @@ import { toast } from 'sonner';
 import {
     Shield, BookOpen, Layers, Cpu, Pencil, Trash2, Plus, Database,
     CheckCircle2, XCircle, AlertTriangle, ChevronRight, Zap,
-    Thermometer, Wind, Droplets, GaugeCircle,
+    Thermometer, Wind, Droplets, GaugeCircle, FileDown, FolderArchive,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
