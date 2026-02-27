@@ -15,6 +15,8 @@ import RilieviPage from './pages/RilieviPage';
 import RilievoEditorPage from './pages/RilievoEditorPage';
 import DistintePage from './pages/DistintePage';
 import DistintaEditorPage from './pages/DistintaEditorPage';
+import CertificazioniPage from './pages/CertificazioniPage';
+import CertificazioneWizardPage from './pages/CertificazioneWizardPage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
@@ -136,28 +138,28 @@ function AppRouter() {
                     </ProtectedRoute>
                 }
             />
-            {/* Placeholder routes for Phase 2 */}
+            {/* Certificazioni CE */}
             <Route
-                path="/documents/*"
+                path="/certificazioni"
                 element={
                     <ProtectedRoute>
-                        <Dashboard />
+                        <CertificazioniPage />
                     </ProtectedRoute>
                 }
             />
             <Route
-                path="/chat"
+                path="/certificazioni/new"
                 element={
                     <ProtectedRoute>
-                        <Dashboard />
+                        <CertificazioneWizardPage />
                     </ProtectedRoute>
                 }
             />
             <Route
-                path="/archive"
+                path="/certificazioni/:certId"
                 element={
                     <ProtectedRoute>
-                        <Dashboard />
+                        <CertificazioneWizardPage />
                     </ProtectedRoute>
                 }
             />
