@@ -16,7 +16,6 @@ import {
 import {
     Scale,
     FileText,
-    MessageSquare,
     LogOut,
     User,
     Sparkles,
@@ -25,6 +24,7 @@ import {
     Settings,
     Ruler,
     Package,
+    Shield,
 } from 'lucide-react';
 
 const navItems = [
@@ -33,8 +33,7 @@ const navItems = [
     { path: '/clients', label: 'Clienti', icon: Users },
     { path: '/rilievi', label: 'Rilievi', icon: Ruler },
     { path: '/distinte', label: 'Distinte', icon: Package },
-    { path: '/documents', label: 'Documenti', icon: FileText },
-    { path: '/chat', label: 'Assistente', icon: MessageSquare },
+    { path: '/certificazioni', label: 'Certificazioni CE', icon: Shield },
     { path: '/settings', label: 'Impostazioni', icon: Settings },
 ];
 
