@@ -78,7 +78,7 @@ class ClientCreate(ClientBase):
 class ClientUpdate(BaseModel):
     """Model for updating a client — all optional."""
     business_name: Optional[str] = None
-    client_type: Optional[ClientType] = None
+    client_type: Optional[str] = None
     persona_fisica: Optional[bool] = None
     titolo: Optional[str] = None
     cognome: Optional[str] = None
