@@ -31,6 +31,7 @@ import {
     CreditCard,
     Truck,
     Factory,
+    ShieldAlert,
 } from 'lucide-react';
 
 const navItems = [
