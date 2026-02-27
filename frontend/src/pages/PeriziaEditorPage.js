@@ -556,6 +556,47 @@ export default function PeriziaEditorPage() {
                                 />
                             </CardContent>
                         </Card>
+
+                        {/* Lettera di Accompagnamento Tecnica */}
+                        <Card className="border-gray-200 border-l-4 border-l-amber-500">
+                            <CardHeader className="pb-3">
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="text-sm font-semibold text-[#1E293B] flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-amber-600" /> 4. Lettera di Accompagnamento Tecnica
+                                    </CardTitle>
+                                    {!isNew && (
+                                        <Button
+                                            data-testid="btn-genera-lettera"
+                                            onClick={handleGeneraLettera}
+                                            disabled={generatingLetter}
+                                            className="h-8 text-xs bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600"
+                                        >
+                                            <FileText className="h-3.5 w-3.5 mr-1.5" />
+                                            {generatingLetter ? 'Generazione AI...' : 'Genera Diffida Tecnica per Perito'}
+                                        </Button>
+                                    )}
+                                </div>
+                                <p className="text-[11px] text-slate-500 mt-1">
+                                    Lettera formale per l'ufficio sinistri che sposta il focus dal prezzo alla responsabilita normativa (EN 1090, EN 13241, ISO 12944)
+                                </p>
+                            </CardHeader>
+                            <CardContent>
+                                <Textarea
+                                    data-testid="input-lettera"
+                                    value={letteraAccompagnamento}
+                                    onChange={e => setLetteraAccompagnamento(e.target.value)}
+                                    placeholder="Clicca 'Genera Diffida Tecnica per Perito' per generare automaticamente la lettera con i dati della perizia, oppure scrivi manualmente..."
+                                    rows={letteraAccompagnamento ? 18 : 4}
+                                    className="text-sm font-serif leading-relaxed"
+                                />
+                                {letteraAccompagnamento && (
+                                    <p className="text-[10px] text-amber-600 mt-2 flex items-center gap-1">
+                                        <ShieldAlert className="h-3 w-3" />
+                                        La lettera sara inclusa nel PDF della perizia. Modifica liberamente prima di esportare.
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
                     </div>
 
                     {/* Right Column (1/3) — Sidebar */}
