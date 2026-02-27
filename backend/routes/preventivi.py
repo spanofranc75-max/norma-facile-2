@@ -85,17 +85,28 @@ class PreventivoUpdate(BaseModel):
 def calc_line(line: dict) -> dict:
     qty = float(line.get("quantity", 1))
     price = float(line.get("unit_price", 0))
-    line["line_total"] = round(qty * price, 2)
+    s1 = float(line.get("sconto_1", 0))
+    s2 = float(line.get("sconto_2", 0))
+    # Apply cascading discounts
+    net = price * (1 - s1 / 100) * (1 - s2 / 100)
+    line["prezzo_netto"] = round(net, 4)
+    line["line_total"] = round(qty * net, 2)
     return line
 
 
-def calc_totals(lines: list) -> dict:
+def calc_totals(lines: list, sconto_globale: float = 0, acconto: float = 0) -> dict:
     subtotal = sum(item.get("line_total", 0) for item in lines)
+    sconto_val = round(subtotal * sconto_globale / 100, 2) if sconto_globale else 0
+    imponibile = round(subtotal - sconto_val, 2)
     vat_groups = {}
     for item in lines:
         rate = item.get("vat_rate", "22")
         vat_groups.setdefault(rate, 0)
-        vat_groups[rate] += item.get("line_total", 0)
+        net_line = item.get("line_total", 0)
+        # Proportional global discount
+        if subtotal > 0 and sconto_val > 0:
+            net_line = net_line * (1 - sconto_globale / 100)
+        vat_groups[rate] += net_line
     total_vat = 0
     for rate, base in vat_groups.items():
         try:
@@ -103,10 +114,17 @@ def calc_totals(lines: list) -> dict:
             total_vat += round(base * pct / 100, 2)
         except ValueError:
             pass
+    total = round(imponibile + total_vat, 2)
+    da_pagare = round(total - float(acconto or 0), 2)
     return {
         "subtotal": round(subtotal, 2),
+        "sconto_globale_pct": sconto_globale,
+        "sconto_val": sconto_val,
+        "imponibile": imponibile,
         "total_vat": round(total_vat, 2),
-        "total": round(subtotal + total_vat, 2),
+        "total": total,
+        "acconto": round(float(acconto or 0), 2),
+        "da_pagare": da_pagare,
         "line_count": len(lines),
     }
 
