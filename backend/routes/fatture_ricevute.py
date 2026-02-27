@@ -547,7 +547,7 @@ async def extract_articoli(
             continue
 
         prezzo = abs(linea.get("prezzo_unitario", 0))
-        codice = linea.get("codice_articolo", "").strip()
+        codice = (linea.get("codice_articolo") or "").strip()
         if not codice:
             # Generate code from first 3 words of description
             words = re.sub(r'[^a-zA-Z0-9\s]', '', desc).upper().split()[:3]
