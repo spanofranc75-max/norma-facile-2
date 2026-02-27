@@ -20,6 +20,8 @@ import CertificazioneWizardPage from './pages/CertificazioneWizardPage';
 import SicurezzaPage from './pages/SicurezzaPage';
 import PosWizardPage from './pages/PosWizardPage';
 import CatalogoPage from './pages/CatalogoPage';
+import PreventiviPage from './pages/PreventiviPage';
+import PreventivoEditorPage from './pages/PreventivoEditorPage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
@@ -151,6 +153,10 @@ function AppRouter() {
             <Route path="/sicurezza/:posId" element={<ProtectedRoute><PosWizardPage /></ProtectedRoute>} />
             {/* Catalogo Profili */}
             <Route path="/catalogo" element={<ProtectedRoute><CatalogoPage /></ProtectedRoute>} />
+            {/* Preventivi */}
+            <Route path="/preventivi" element={<ProtectedRoute><PreventiviPage /></ProtectedRoute>} />
+            <Route path="/preventivi/new" element={<ProtectedRoute><PreventivoEditorPage /></ProtectedRoute>} />
+            <Route path="/preventivi/:prevId" element={<ProtectedRoute><PreventivoEditorPage /></ProtectedRoute>} />
         </Routes>
     );
 }
