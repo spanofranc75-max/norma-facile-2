@@ -582,19 +582,19 @@ export default function DistintaEditorPage() {
                         <div className="grid grid-cols-4 gap-6">
                             <div className="text-center p-4 bg-slate-50 rounded-lg">
                                 <Package className="h-6 w-6 mx-auto mb-2 text-slate-600" />
-                                <p className="text-2xl font-bold text-slate-900">{totals.total_items}</p>
+                                <p className="text-2xl font-mono font-bold text-[#0055FF]">{totals.total_items}</p>
                                 <p className="text-sm text-slate-500">Articoli</p>
                             </div>
                             <div className="text-center p-4 bg-slate-50 rounded-lg">
                                 <div className="h-6 w-6 mx-auto mb-2 text-slate-600 font-bold">m</div>
-                                <p className="text-2xl font-bold text-slate-900">
+                                <p className="text-2xl font-mono font-bold text-[#0055FF]">
                                     {totals.total_length_m?.toFixed(2)}
                                 </p>
                                 <p className="text-sm text-slate-500">Lunghezza Tot.</p>
                             </div>
                             <div className="text-center p-4 bg-slate-50 rounded-lg">
                                 <Weight className="h-6 w-6 mx-auto mb-2 text-slate-600" />
-                                <p className="text-2xl font-bold text-slate-900">
+                                <p className="text-2xl font-mono font-bold text-[#0055FF]">
                                     {totals.total_weight_kg?.toFixed(2)}
                                 </p>
                                 <p className="text-sm text-slate-500">Peso (kg)</p>
