@@ -6,6 +6,7 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 ## Core Architecture
 - **Norma Core Engine** (`backend/core/engine/`) — Single Source of Truth
   - `climate_zones.py`, `thermal.py`, `safety.py`, `ce.py`, `router.py`
+- **Optimizer Service** (`backend/services/optimizer.py`) — FFD bin-packing
 
 ## Implemented Modules
 
@@ -29,17 +30,23 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 - Smart Quotes with thermal compliance, PDF with technical annex
 - Converti in Fattura, Workflow Timeline (PRV->Accettato->FT->Pagata)
 
-### Import Rilievo -> Distinta (Phase 14) — NEW
-- **The Bridge:** Split-screen dialog in Distinta editor
-- **Dimension Parser:** Extracts measurements from rilievo notes (H=2200, 1500x900, standalone mm) and sketch dimension fields
-- **Interactive UI:** Left panel shows rilievo data with clickable dimension chips, right panel shows BOM rows
-- **Apply Dimension:** Click chip -> applies value_mm to selected BOM row's length, or creates new row
-- **Link Rilievo:** Connects rilievo to distinta, auto-sets client_id, appends reference note
-- Endpoints: GET /rilievo-data/{id} (parse), POST /{id}/import-rilievo/{id} (link)
+### Import Rilievo -> Distinta (Phase 14)
+- The Bridge: Split-screen dialog, dimension parser, interactive UI
+
+### Ottimizzatore di Taglio Avanzato (Phase 15) — NEW (2026-02-27)
+- **FFD Algorithm:** First Fit Decreasing 1D bin-packing in `services/optimizer.py`
+- **API Endpoints:** POST `/{id}/ottimizza-taglio`, GET `/{id}/ottimizza-taglio-pdf`
+- **Frontend Modal:** Graphical bar visualization with colored cuts, waste indicators
+- **Parameters:** Configurable bar length (default 6000mm) and blade kerf (default 3mm)
+- **Per-profile sections:** Collapsible with badges (bars needed, cuts, waste %)
+- **PDF Export:** "Scheda Taglio Ottimizzata" with visual bar drawings via ReportLab
+- **Testing:** 100% pass (13/13 backend, all frontend verified)
 
 ## API Endpoints
 - `/api/auth/`, `/api/clients/`, `/api/invoices/`, `/api/company/settings`
 - `/api/rilievi/`, `/api/distinte/` + `/rilievo-data/{id}` + `/{id}/import-rilievo/{id}`
+- `/api/distinte/{id}/ottimizza-taglio` (POST — run FFD optimizer)
+- `/api/distinte/{id}/ottimizza-taglio-pdf` (GET — optimized cutting plan PDF)
 - `/api/certificazioni/` + `/thermal/` + `/router/`
 - `/api/sicurezza/`
 - `/api/dashboard/stats`
@@ -48,7 +55,7 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 ## Prioritized Backlog
 
 ### P1
-- [ ] Advanced bar optimizer (bin-packing algorithm)
+- [x] Advanced bar optimizer (FFD bin-packing algorithm) — DONE 2026-02-27
 - [ ] SDI direct integration
 - [ ] Recurring invoices / email reminders
 
