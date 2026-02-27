@@ -100,13 +100,14 @@ def run_compliance(lines: list) -> dict:
         td = item.get("thermal_data")
         if not td or not td.get("glass_id"):
             continue
+        # Use 'or' to handle both missing keys AND explicit None values
         inp = ThermalInput(
-            height_mm=td.get("height_mm", 2100),
-            width_mm=td.get("width_mm", 1200),
-            frame_width_mm=td.get("frame_width_mm", 80),
-            glass_id=td.get("glass_id", "doppio_be_argon"),
-            frame_id=td.get("frame_id", "acciaio_standard"),
-            spacer_id=td.get("spacer_id", "alluminio"),
+            height_mm=td.get("height_mm") or 2100,
+            width_mm=td.get("width_mm") or 1200,
+            frame_width_mm=td.get("frame_width_mm") or 80,
+            glass_id=td.get("glass_id") or "doppio_be_argon",
+            frame_id=td.get("frame_id") or "acciaio_standard",
+            spacer_id=td.get("spacer_id") or "alluminio",
         )
         calc = ThermalValidator.calculate(inp)
         zone = td.get("zone", "E")
