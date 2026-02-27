@@ -165,6 +165,10 @@ function AppRouter() {
             <Route path="/preventivi" element={<ProtectedRoute><PreventiviPage /></ProtectedRoute>} />
             <Route path="/preventivi/new" element={<ProtectedRoute><PreventivoEditorPage /></ProtectedRoute>} />
             <Route path="/preventivi/:prevId" element={<ProtectedRoute><PreventivoEditorPage /></ProtectedRoute>} />
+            {/* DDT */}
+            <Route path="/ddt" element={<ProtectedRoute><DDTListPage /></ProtectedRoute>} />
+            <Route path="/ddt/new" element={<ProtectedRoute><DDTEditorPage /></ProtectedRoute>} />
+            <Route path="/ddt/:ddtId" element={<ProtectedRoute><DDTEditorPage /></ProtectedRoute>} />
         </Routes>
     );
 }

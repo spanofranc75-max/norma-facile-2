@@ -29,6 +29,7 @@ import {
     Warehouse,
     ClipboardList,
     CreditCard,
+    Truck,
 } from 'lucide-react';
 
 const navItems = [
