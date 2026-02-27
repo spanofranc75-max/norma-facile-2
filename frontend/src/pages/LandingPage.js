@@ -69,14 +69,14 @@ export default function LandingPage() {
                 <section className="container mx-auto px-6 py-24 text-center">
                     <div className="max-w-3xl mx-auto animate-fade-in">
                         <span className="inline-block px-4 py-1.5 mb-6 text-xs font-semibold uppercase tracking-wider text-[#0055FF] bg-blue-50 rounded-full">
-                            LegalTech per Professionisti
+                            CRM per Fabbri e Carpenterie
                         </span>
                         <h1 className="font-sans text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 mb-6">
-                            Il Diritto, <span className="text-[#0055FF]">Semplificato</span>
+                            Il Ferro, <span className="text-[#0055FF]">Organizzato</span>
                         </h1>
                         <p className="text-lg text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
-                            Genera documenti legali professionali, ottieni risposte immediate 
-                            alle tue domande giuridiche e gestisci il tuo archivio in un'unica piattaforma.
+                            Gestisci commesse, distinte materiali, certificazioni CE
+                            e fatturazione in un'unica piattaforma pensata per chi lavora il metallo.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                             <Button
