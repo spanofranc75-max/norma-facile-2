@@ -13,6 +13,8 @@ import InvoicesPage from './pages/InvoicesPage';
 import InvoiceEditorPage from './pages/InvoiceEditorPage';
 import RilieviPage from './pages/RilieviPage';
 import RilievoEditorPage from './pages/RilievoEditorPage';
+import DistintePage from './pages/DistintePage';
+import DistintaEditorPage from './pages/DistintaEditorPage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
@@ -97,6 +99,31 @@ function AppRouter() {
                 element={
                     <ProtectedRoute>
                         <RilievoEditorPage />
+                    </ProtectedRoute>
+                }
+            />
+            {/* Distinte */}
+            <Route
+                path="/distinte"
+                element={
+                    <ProtectedRoute>
+                        <DistintePage />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/distinte/new"
+                element={
+                    <ProtectedRoute>
+                        <DistintaEditorPage />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/distinte/:distintaId"
+                element={
+                    <ProtectedRoute>
+                        <DistintaEditorPage />
                     </ProtectedRoute>
                 }
             />

@@ -24,6 +24,7 @@ import {
     Users,
     Settings,
     Ruler,
+    Package,
 } from 'lucide-react';
 
 const navItems = [
@@ -31,6 +32,7 @@ const navItems = [
     { path: '/invoices', label: 'Fatturazione', icon: Receipt },
     { path: '/clients', label: 'Clienti', icon: Users },
     { path: '/rilievi', label: 'Rilievi', icon: Ruler },
+    { path: '/distinte', label: 'Distinte', icon: Package },
     { path: '/documents', label: 'Documenti', icon: FileText },
     { path: '/chat', label: 'Assistente', icon: MessageSquare },
     { path: '/settings', label: 'Impostazioni', icon: Settings },
