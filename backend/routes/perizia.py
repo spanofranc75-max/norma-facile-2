@@ -398,6 +398,13 @@ async def analyze_photos(perizia_id: str, user: dict = Depends(get_current_user)
     descrizione = doc.get("descrizione_utente", "")
     localizzazione = doc.get("localizzazione", {})
     indirizzo = localizzazione.get("indirizzo", "non specificato")
+    codici = doc.get("codici_danno", [])
+    codici_desc = []
+    for c in codici:
+        cd = CODICI_DANNO_MAP.get(c)
+        if cd:
+            codici_desc.append(f"[{c}] {cd['label']} ({cd['norma']}): {cd['implicazione']}")
+    codici_text = "\n".join(codici_desc) if codici_desc else "Nessun codice danno specifico selezionato."
 
     prompt = f"""Sei un perito tecnico specializzato in carpenteria metallica, recinzioni e cancelli.
 Analizza le foto allegate di un sinistro (urto da veicolo) su una recinzione/cancello metallico.
@@ -406,6 +413,8 @@ CONTESTO:
 - Tipo danno classificato: {tipo_label}
 - Localizzazione: {indirizzo}
 - Descrizione dell'utente: {descrizione or 'Non fornita'}
+- Codici danno rilevati dall'operatore:
+{codici_text}
 
 COMPITO:
 1. DESCRIZIONE STATO DI FATTO: Descrivi tecnicamente e in modo asciutto lo stato dei danni visibili. 
