@@ -84,7 +84,7 @@ def test_client(auth_session):
         'business_name': 'TEST_Client for Conversion',
         'vat_number': 'IT12345678901',
         'tax_code': 'TSTCNV80A01H501X',
-        'client_type': 'business',
+        'client_type': 'azienda',  # Valid values: 'azienda', 'privato', 'pa'
         'address': 'Via Test 123',
         'city': 'Milano',
         'province': 'MI',
