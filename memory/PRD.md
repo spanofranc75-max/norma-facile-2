@@ -51,9 +51,11 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 - Line items with cascading discounts (sconto_1, sconto_2)
 - Auto-causale based on DDT type
 - PDF generation with stampa_prezzi toggle
-- Backend: CRUD + PDF endpoint, calc_line/calc_totals
-- Frontend: DDTListPage (filters, search, badges) + DDTEditorPage (sidebar tabs, Quick Fill)
-- Testing: 20/20 backend, 100% frontend
+- **Converti DDT in Fattura**: one-click conversion mapping lines, client, totals → creates invoice in bozza
+  - DDT status → fatturato, bidirectional link (converted_to / converted_from)
+  - "Vai alla Fattura" button after conversion
+  - Duplicate conversion protection (409)
+- Testing: 20/20 + 18/18 backend, 100% frontend
 
 ### Fornitori (Suppliers) Module (Phase 20) — 2026-02-27
 - Dedicated /fornitori page with same tab-based UI as Clienti
