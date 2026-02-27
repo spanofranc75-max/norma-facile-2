@@ -341,9 +341,9 @@ class TestConvertToInvoiceHappyPath:
         invoice_ids = [inv['invoice_id'] for inv in invoices_data['invoices']]
         assert invoice_id in invoice_ids, f"Invoice {invoice_id} not found in list"
         
-        # Verify document type is 'fattura'
+        # Verify document type is 'FT' (fattura enum value)
         our_invoice = next(inv for inv in invoices_data['invoices'] if inv['invoice_id'] == invoice_id)
-        assert our_invoice['document_type'] == 'fattura', f"Expected document_type 'fattura', got {our_invoice['document_type']}"
+        assert our_invoice['document_type'] == 'FT', f"Expected document_type 'FT', got {our_invoice['document_type']}"
         
         print(f"✓ Invoice {doc_number} appears in GET /api/invoices/ list")
     
