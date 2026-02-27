@@ -168,6 +168,15 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
   - Estrazione voci in Catalogo Articoli con storico prezzi
   - Matching automatico fornitore per P.IVA
   - Testing: 21/21 backend (iteration_34), 100% frontend
+- [x] Core Engine Normativo — DONE (Phase 27) — 2026-02-27
+  - NormaConfig data-driven: ogni norma è un JSON, zero code changes per nuove norme
+  - Seed: EN 1090-1 (strutture acciaio), EN 13241 (cancelli), UNI EN 14351-1 (finestre)
+  - Componenti CRUD: 8 vetri, 8 telai, 5 distanziatori con Ug/Uf/Ψ
+  - Calcolo Uw ISO 10077-1: formula (Ag*Ug + Af*Uf + lg*Ψ) / (Ag+Af)
+  - Validazione regole dinamiche con BLOCK_CE_MARKING/WARN
+  - Semaforo zone climatiche A-F, suggerimenti upgrade componenti
+  - Frontend: /core-engine con 3 tab (Configuratore, Norme, Componenti)
+  - Testing: 30/30 backend (iteration_35), 100% frontend
 
 ### P1
 - [ ] Integrazione SDI diretta con provider (API keys da configurare)
