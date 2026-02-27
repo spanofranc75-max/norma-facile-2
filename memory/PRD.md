@@ -77,7 +77,13 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
   - Automatismi: 4 voci (smontaggio, componenti, collaudo EN 12453, smaltimento)
 - Editable cost table with real-time total recalculation + "Ricalcola" server-side
 - Professional PDF: Stato di Fatto, Computo Metrico Estimativo, Nota Tecnica per il Perito
-- Endpoints: CRUD + /analyze-photos + /recalc + /pdf
+- Endpoints: CRUD + /analyze-photos + /recalc + /genera-lettera + /pdf
+- **Lettera di Accompagnamento Tecnica** (Phase 21b): Generazione AI di lettera formale per ufficio sinistri
+  - Cita EN 1090-2, EN 13241, ISO 12944 per spostare focus da prezzo a responsabilita
+  - 3 punti vincolanti: Decadenza Marcatura CE, Integrita Ciclo Anticorrosivo, Sicurezza Fissaggi
+  - Fallback template professionale se AI non disponibile
+  - Editabile + inclusa nel PDF perizia
+  - Testing: 10/10 backend, 100% frontend (iteration_29)
 - Testing: 22/22 backend, 100% frontend
 
 - `/api/perizie/` (CRUD + analyze-photos + recalc + PDF)
