@@ -273,10 +273,21 @@ async def update_preventivo(prev_id: str, data: PreventivoUpdate, user: dict = D
         raise HTTPException(404, "Preventivo non trovato")
 
     upd = {"updated_at": datetime.now(timezone.utc)}
-    for field in ["client_id", "subject", "validity_days", "payment_terms", "notes", "status"]:
+    simple_fields = [
+        "client_id", "subject", "validity_days", "notes", "status",
+        "payment_type_id", "payment_type_label", "destinazione_merce",
+        "iban", "banca", "note_pagamento", "riferimento",
+    ]
+    for field in simple_fields:
         val = getattr(data, field, None)
         if val is not None:
             upd[field] = val
+
+    # Handle numeric fields that can be 0
+    if data.acconto is not None:
+        upd["acconto"] = data.acconto
+    if data.sconto_globale is not None:
+        upd["sconto_globale"] = data.sconto_globale
 
     if data.lines is not None:
         lines = []
@@ -286,7 +297,9 @@ async def update_preventivo(prev_id: str, data: PreventivoUpdate, user: dict = D
                 d["line_id"] = f"ln_{uuid.uuid4().hex[:8]}"
             lines.append(calc_line(d))
         upd["lines"] = lines
-        upd["totals"] = calc_totals(lines)
+        sg = data.sconto_globale if data.sconto_globale is not None else existing.get("sconto_globale", 0)
+        ac = data.acconto if data.acconto is not None else existing.get("acconto", 0)
+        upd["totals"] = calc_totals(lines, sg, ac)
         compliance = run_compliance(lines)
         upd["compliance_status"] = compliance["all_compliant"]
         upd["compliance_detail"] = compliance
