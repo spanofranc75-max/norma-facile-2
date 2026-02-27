@@ -28,9 +28,13 @@ import {
 } from '../components/ui/dialog';
 import { Separator } from '../components/ui/separator';
 import { toast } from 'sonner';
+import { Badge } from '../components/ui/badge';
+import { Progress } from '../components/ui/progress';
+import { ScrollArea } from '../components/ui/scroll-area';
 import {
     Save, ArrowLeft, Plus, Trash2, Import, Package,
     Weight, Calculator, FileDown, BarChart3, Ruler,
+    Scissors, ChevronDown, ChevronUp, Settings2,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
