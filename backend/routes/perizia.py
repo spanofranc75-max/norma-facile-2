@@ -274,6 +274,7 @@ async def create_perizia(data: PeriziaCreate, user: dict = Depends(get_current_u
         "prezzo_ml_originale": data.prezzo_ml_originale,
         "coefficiente_maggiorazione": data.coefficiente_maggiorazione,
         "moduli": moduli_dicts,
+        "codici_danno": data.codici_danno,
     })
 
     total_perizia = sum(v.get("totale", 0) for v in voci)
