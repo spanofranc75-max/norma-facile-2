@@ -17,12 +17,21 @@ router = APIRouter(prefix="/clients", tags=["clients"])
 @router.get("/", response_model=ClientListResponse)
 async def get_clients(
     search: Optional[str] = Query(None, description="Search by name or P.IVA"),
+    client_type: Optional[str] = Query(None, description="Filter by client_type: cliente, fornitore, cliente_fornitore"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     user: dict = Depends(get_current_user)
 ):
-    """Get all clients for current user with optional search."""
+    """Get all clients for current user with optional search and type filter."""
     query = {"user_id": user["user_id"]}
+    
+    if client_type:
+        if client_type == "fornitore":
+            query["client_type"] = {"$in": ["fornitore", "cliente_fornitore"]}
+        elif client_type == "cliente":
+            query["client_type"] = {"$in": ["cliente", "cliente_fornitore"]}
+        else:
+            query["client_type"] = client_type
     
     if search:
         query["$or"] = [
