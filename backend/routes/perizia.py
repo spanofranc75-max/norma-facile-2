@@ -273,7 +273,7 @@ async def archivio_stats(user: dict = Depends(get_current_user)):
             monthly[key]["count"] += 1
             monthly[key]["amount"] += p.get("total_perizia", 0)
 
-    by_month = [{"month": k, **v} for k, v in sorted(monthly.items())[-12:]
+    by_month = [{"month": k, **v} for k, v in sorted(monthly.items())][-12:]
 
     # Codici danno frequency
     codici_freq = defaultdict(int)
