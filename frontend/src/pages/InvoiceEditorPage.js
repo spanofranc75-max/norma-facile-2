@@ -338,7 +338,7 @@ export default function InvoiceEditorPage() {
                             Indietro
                         </Button>
                         <div>
-                            <h1 className="font-serif text-2xl font-bold text-slate-900">
+                            <h1 className="font-sans text-2xl font-bold text-slate-900">
                                 {isEditing ? 'Modifica Documento' : 'Nuovo Documento'}
                             </h1>
                         </div>

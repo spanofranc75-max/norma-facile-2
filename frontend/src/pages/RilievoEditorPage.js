@@ -490,7 +490,7 @@ export default function RilievoEditorPage() {
                             Indietro
                         </Button>
                         <div>
-                            <h1 className="font-serif text-2xl font-bold text-slate-900">
+                            <h1 className="font-sans text-2xl font-bold text-slate-900">
                                 {isEditing ? 'Modifica Rilievo' : 'Nuovo Rilievo'}
                             </h1>
                         </div>
@@ -626,7 +626,7 @@ export default function RilievoEditorPage() {
                     <TabsContent value="sketches">
                         <Card className="border-slate-200">
                             <CardHeader className="flex flex-row items-center justify-between">
-                                <CardTitle className="font-serif text-xl">Schizzi e Misure</CardTitle>
+                                <CardTitle className="font-sans text-xl">Schizzi e Misure</CardTitle>
                                 <Button
                                     data-testid="btn-add-sketch"
                                     onClick={() => {
@@ -717,7 +717,7 @@ export default function RilievoEditorPage() {
                     <TabsContent value="photos">
                         <Card className="border-slate-200">
                             <CardHeader className="flex flex-row items-center justify-between">
-                                <CardTitle className="font-serif text-xl">Foto Sopralluogo</CardTitle>
+                                <CardTitle className="font-sans text-xl">Foto Sopralluogo</CardTitle>
                                 <Button
                                     data-testid="btn-add-photo"
                                     onClick={() => photoInputRef.current?.click()}
@@ -792,7 +792,7 @@ export default function RilievoEditorPage() {
             <Dialog open={sketchDialogOpen} onOpenChange={setSketchDialogOpen}>
                 <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle className="font-serif text-xl">
+                        <DialogTitle className="font-sans text-xl">
                             {editingSketch ? 'Modifica Schizzo' : 'Nuovo Schizzo'}
                         </DialogTitle>
                         <DialogDescription>

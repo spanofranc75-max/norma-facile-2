@@ -169,7 +169,7 @@ export default function ClientsPage() {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="font-serif text-3xl font-bold text-slate-900">
+                        <h1 className="font-sans text-3xl font-bold text-slate-900">
                             Anagrafica Clienti
                         </h1>
                         <p className="text-slate-600">
@@ -303,7 +303,7 @@ export default function ClientsPage() {
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle className="font-serif">
+                        <DialogTitle className="font-sans">
                             {editingClient ? 'Modifica Cliente' : 'Nuovo Cliente'}
                         </DialogTitle>
                         <DialogDescription>
@@ -496,7 +496,7 @@ export default function ClientsPage() {
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle className="font-serif">Elimina Cliente</DialogTitle>
+                        <DialogTitle className="font-sans">Elimina Cliente</DialogTitle>
                         <DialogDescription>
                             Sei sicuro di voler eliminare <strong>{clientToDelete?.business_name}</strong>?
                             Questa azione non può essere annullata.

@@ -71,7 +71,7 @@ export default function LandingPage() {
                         <span className="inline-block px-4 py-1.5 mb-6 text-xs font-semibold uppercase tracking-wider text-[#0055FF] bg-blue-50 rounded-full">
                             LegalTech per Professionisti
                         </span>
-                        <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 mb-6">
+                        <h1 className="font-sans text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 mb-6">
                             Il Diritto, <span className="text-[#0055FF]">Semplificato</span>
                         </h1>
                         <p className="text-lg text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
@@ -105,7 +105,7 @@ export default function LandingPage() {
             <section className="py-24 bg-white">
                 <div className="container mx-auto px-6">
                     <div className="text-center mb-16">
-                        <h2 className="font-serif text-3xl font-bold tracking-tight text-slate-900 mb-4">
+                        <h2 className="font-sans text-3xl font-bold tracking-tight text-slate-900 mb-4">
                             Tutto ciò che ti serve
                         </h2>
                         <p className="text-slate-600 max-w-xl mx-auto">
@@ -124,7 +124,7 @@ export default function LandingPage() {
                                 <div className="w-12 h-12 mb-6 flex items-center justify-center bg-[#0055FF] text-white rounded-lg group-hover:bg-[#0044CC] transition-colors duration-300">
                                     <feature.icon className="h-6 w-6" strokeWidth={1.5} />
                                 </div>
-                                <h3 className="font-serif text-xl font-bold text-slate-900 mb-3">
+                                <h3 className="font-sans text-xl font-bold text-slate-900 mb-3">
                                     {feature.title}
                                 </h3>
                                 <p className="text-slate-600 leading-relaxed">
@@ -157,7 +157,7 @@ export default function LandingPage() {
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                         <div className="flex items-center gap-2">
                             <Scale className="h-6 w-6 text-slate-400" strokeWidth={1.5} />
-                            <span className="font-serif text-lg text-slate-600">Norma Facile</span>
+                            <span className="font-sans text-lg text-slate-600">Norma Facile</span>
                         </div>
                         <p className="text-sm text-slate-500">
                             © 2026 Norma Facile. Tutti i diritti riservati.

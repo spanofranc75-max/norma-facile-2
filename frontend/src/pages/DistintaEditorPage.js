@@ -326,7 +326,7 @@ export default function DistintaEditorPage() {
                             Indietro
                         </Button>
                         <div>
-                            <h1 className="font-serif text-2xl font-bold text-slate-900">
+                            <h1 className="font-sans text-2xl font-bold text-slate-900">
                                 {isEditing ? 'Modifica Distinta' : 'Nuova Distinta'}
                             </h1>
                         </div>
@@ -635,7 +635,7 @@ export default function DistintaEditorPage() {
             <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle className="font-serif">Importa da Rilievo</DialogTitle>
+                        <DialogTitle className="font-sans">Importa da Rilievo</DialogTitle>
                         <DialogDescription>
                             Seleziona un rilievo per importare automaticamente i materiali 
                             basati sulle dimensioni degli schizzi.

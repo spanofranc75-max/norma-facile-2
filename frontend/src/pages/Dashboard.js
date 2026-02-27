@@ -131,7 +131,7 @@ export default function Dashboard() {
         <DashboardLayout>
             {/* Header */}
             <div className="mb-8">
-                <h1 className="font-serif text-3xl font-bold text-slate-900 mb-2">
+                <h1 className="font-sans text-3xl font-bold text-slate-900 mb-2">
                     Bentornato, {currentUser.name?.split(' ')[0]}
                 </h1>
                 <p className="text-slate-600">
@@ -231,7 +231,7 @@ export default function Dashboard() {
             <Card className="border-slate-200">
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
-                        <CardTitle className="font-serif text-xl">Documenti Recenti</CardTitle>
+                        <CardTitle className="font-sans text-xl">Documenti Recenti</CardTitle>
                         <CardDescription>Le tue ultime fatture e preventivi</CardDescription>
                     </div>
                     <Button
