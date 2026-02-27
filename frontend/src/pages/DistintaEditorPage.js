@@ -421,6 +421,9 @@ export default function DistintaEditorPage() {
                     <div className="flex items-center gap-3">
                         {isEditing && (
                             <>
+                                <Button data-testid="btn-ottimizza-taglio" variant="outline" onClick={handleOttimizzaTaglio} disabled={optimizerLoading} className="h-10 border-emerald-500 text-emerald-600 hover:bg-emerald-50 font-semibold">
+                                    <Scissors className="h-4 w-4 mr-2" /> {optimizerLoading ? 'Calcolo...' : 'Ottimizza Taglio'}
+                                </Button>
                                 <Button data-testid="btn-calcola-barre" variant="outline" onClick={handleCalcolaBarre} className="h-10 border-[#0055FF] text-[#0055FF] hover:bg-blue-50">
                                     <BarChart3 className="h-4 w-4 mr-2" /> Calcola Barre
                                 </Button>
