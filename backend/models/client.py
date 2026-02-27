@@ -121,7 +121,7 @@ class ClientResponse(BaseModel):
 
     client_id: str
     business_name: str
-    client_type: ClientType = ClientType.CLIENTE
+    client_type: str = "cliente"  # String for backward compat
     persona_fisica: bool = False
     titolo: str = ""
     cognome: str = ""
