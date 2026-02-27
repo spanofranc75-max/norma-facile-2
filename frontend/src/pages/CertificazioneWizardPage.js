@@ -53,6 +53,7 @@ export default function CertificazioneWizardPage() {
     const [thermalRef, setThermalRef] = useState({ glass_types: [], frame_types: [], spacer_types: [], zone_limits: {} });
     const [thermalResult, setThermalResult] = useState(null);
     const [thermalCalcing, setThermalCalcing] = useState(false);
+    const [comparisons, setComparisons] = useState([]);
 
     const [formData, setFormData] = useState({
         project_name: '',
