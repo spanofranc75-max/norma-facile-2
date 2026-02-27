@@ -263,7 +263,7 @@ export default function SettingsPage() {
 
                     <TabsContent value="bank">
                         <Card className="border-gray-200">
-                            <CardHeader>
+                            <CardHeader className="bg-blue-50 border-b border-gray-200">
                                 <CardTitle>Coordinate Bancarie</CardTitle>
                                 <CardDescription>
                                     Questi dati appariranno in fondo alle fatture
