@@ -92,11 +92,12 @@ class RilievoAPITester:
         self.log_test("GET /api/clients/ (initial)", success, f"Total: {data.get('total', 0)}")
         
         # Test CREATE client
+        unique_id = str(int(time.time()))[-8:]  # Use timestamp for uniqueness
         client_data = {
             "business_name": "Test Client SRL",
             "client_type": "azienda",
-            "partita_iva": "IT12345678901",
-            "codice_fiscale": "TSTCLN123456789",
+            "partita_iva": f"IT{unique_id}901",
+            "codice_fiscale": f"TSTCLN{unique_id}",
             "codice_sdi": "ABC1234",
             "address": "Via Roma 123",
             "cap": "00100",
@@ -104,7 +105,7 @@ class RilievoAPITester:
             "province": "RM",
             "country": "IT",
             "phone": "+39 06 1234567",
-            "email": "test@client.it",
+            "email": f"test{unique_id}@client.it",
             "notes": "Test client for automated testing"
         }
         
