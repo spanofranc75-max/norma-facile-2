@@ -37,6 +37,22 @@ const TIPO_DANNO_OPTIONS = [
     { value: 'automatismi', label: 'Danno Automatismi (EN 12453)', icon: Zap, color: 'text-purple-600 border-purple-200 bg-purple-50', desc: 'Verifiche impianto motorizzato' },
 ];
 
+const CODICE_COLORS = {
+    red: 'border-red-300 bg-red-50 text-red-800 hover:bg-red-100',
+    orange: 'border-orange-300 bg-orange-50 text-orange-800 hover:bg-orange-100',
+    blue: 'border-blue-300 bg-blue-50 text-blue-800 hover:bg-blue-100',
+    yellow: 'border-yellow-300 bg-yellow-50 text-yellow-800 hover:bg-yellow-100',
+    purple: 'border-purple-300 bg-purple-50 text-purple-800 hover:bg-purple-100',
+};
+
+const CODICE_SELECTED = {
+    red: 'border-red-500 bg-red-100 text-red-900 ring-2 ring-red-300',
+    orange: 'border-orange-500 bg-orange-100 text-orange-900 ring-2 ring-orange-300',
+    blue: 'border-blue-500 bg-blue-100 text-blue-900 ring-2 ring-blue-300',
+    yellow: 'border-yellow-500 bg-yellow-100 text-yellow-900 ring-2 ring-yellow-300',
+    purple: 'border-purple-500 bg-purple-100 text-purple-900 ring-2 ring-purple-300',
+};
+
 const API = process.env.REACT_APP_BACKEND_URL;
 
 function LocationPicker({ position, onSelect }) {
