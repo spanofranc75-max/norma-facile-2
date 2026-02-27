@@ -27,10 +27,12 @@ import {
     Shield,
     HardHat,
     Warehouse,
+    ClipboardList,
 } from 'lucide-react';
 
 const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: Sparkles },
+    { path: '/preventivi', label: 'Preventivi', icon: ClipboardList },
     { path: '/invoices', label: 'Fatturazione', icon: Receipt },
     { path: '/clients', label: 'Clienti', icon: Users },
     { path: '/rilievi', label: 'Rilievi', icon: Ruler },
