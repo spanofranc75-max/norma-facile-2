@@ -149,6 +149,9 @@ async def get_fascicolo_pdf(cert_id: str, user: dict = Depends(get_current_user)
     filename = f"fascicolo_CE_{doc.get('project_name', cert_id).replace(' ', '_')}.pdf"
     return StreamingResponse(
         pdf_buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 # ── Thermal Calculator ───────────────────────────────────────────
@@ -169,7 +172,3 @@ async def calculate_thermal(inp: ThermalInput):
     """Calculate Uw thermal transmittance."""
     result = calculate_uw(inp)
     return result.model_dump()
-
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
