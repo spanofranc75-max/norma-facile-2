@@ -17,6 +17,8 @@ import DistintePage from './pages/DistintePage';
 import DistintaEditorPage from './pages/DistintaEditorPage';
 import CertificazioniPage from './pages/CertificazioniPage';
 import CertificazioneWizardPage from './pages/CertificazioneWizardPage';
+import SicurezzaPage from './pages/SicurezzaPage';
+import PosWizardPage from './pages/PosWizardPage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
@@ -139,30 +141,13 @@ function AppRouter() {
                 }
             />
             {/* Certificazioni CE */}
-            <Route
-                path="/certificazioni"
-                element={
-                    <ProtectedRoute>
-                        <CertificazioniPage />
-                    </ProtectedRoute>
-                }
-            />
-            <Route
-                path="/certificazioni/new"
-                element={
-                    <ProtectedRoute>
-                        <CertificazioneWizardPage />
-                    </ProtectedRoute>
-                }
-            />
-            <Route
-                path="/certificazioni/:certId"
-                element={
-                    <ProtectedRoute>
-                        <CertificazioneWizardPage />
-                    </ProtectedRoute>
-                }
-            />
+            <Route path="/certificazioni" element={<ProtectedRoute><CertificazioniPage /></ProtectedRoute>} />
+            <Route path="/certificazioni/new" element={<ProtectedRoute><CertificazioneWizardPage /></ProtectedRoute>} />
+            <Route path="/certificazioni/:certId" element={<ProtectedRoute><CertificazioneWizardPage /></ProtectedRoute>} />
+            {/* Sicurezza Cantieri */}
+            <Route path="/sicurezza" element={<ProtectedRoute><SicurezzaPage /></ProtectedRoute>} />
+            <Route path="/sicurezza/new" element={<ProtectedRoute><PosWizardPage /></ProtectedRoute>} />
+            <Route path="/sicurezza/:posId" element={<ProtectedRoute><PosWizardPage /></ProtectedRoute>} />
         </Routes>
     );
 }
