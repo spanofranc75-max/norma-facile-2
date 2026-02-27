@@ -177,6 +177,13 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
   - Semaforo zone climatiche A-F, suggerimenti upgrade componenti
   - Frontend: /core-engine con 3 tab (Configuratore, Norme, Componenti)
   - Testing: 30/30 backend (iteration_35), 100% frontend
+- [x] Generazione Fascicolo Automatica — DONE (Phase 28) — 2026-02-27
+  - DOP con prestazioni dichiarate da NormaConfig JSON (dinamiche, non hardcoded)
+  - Dettaglio calcolo Uw + tabella compliance zone climatiche con CONFORME/NON CONFORME
+  - Etichetta CE ritagliabile con prestazioni obbligatorie
+  - Manuale d'Uso e Manutenzione specifico per norma (manutenzione diversa cancello/finestra)
+  - Output: PDF singolo o ZIP (PDF + JSON machine-readable)
+  - Testing: 12/12 backend (iteration_36), 100% frontend
 
 ### P1
 - [ ] Integrazione SDI diretta con provider (API keys da configurare)
