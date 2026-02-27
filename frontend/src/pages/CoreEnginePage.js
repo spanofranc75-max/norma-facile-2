@@ -630,6 +630,59 @@ export default function CoreEnginePage() {
                 </Tabs>
             </div>
 
+            {/* Fascicolo Generation Dialog */}
+            <Dialog open={fascicoloDialog} onOpenChange={setFascicoloDialog}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <FolderArchive className="h-5 w-5 text-[#0055FF]" />
+                            Genera Fascicolo CE
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <p className="text-sm text-slate-600">
+                            Stai per generare il fascicolo completo per <strong>{selectedProduct}</strong> secondo la norma <strong>{configResult?.norme?.[0]?.standard_ref}</strong>.
+                        </p>
+                        <div>
+                            <Label className="text-xs">Descrizione prodotto (opzionale)</Label>
+                            <Input
+                                data-testid="input-fascicolo-desc"
+                                value={fascicoloDesc}
+                                onChange={(e) => setFascicoloDesc(e.target.value)}
+                                placeholder={`es. ${selectedProduct} su misura per cliente Rossi`}
+                            />
+                        </div>
+                        <div className="bg-slate-50 rounded-lg p-3 text-sm space-y-1">
+                            <p className="font-semibold">Il fascicolo conterra':</p>
+                            <p>1. Dichiarazione di Prestazione (DOP)</p>
+                            <p>2. Etichetta CE (ritagliabile)</p>
+                            <p>3. Manuale d'Uso e Manutenzione</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button
+                                data-testid="btn-download-pdf"
+                                onClick={() => generateFascicolo('pdf')}
+                                disabled={generatingFascicolo}
+                                className="flex-1 bg-[#0055FF] text-white hover:bg-[#0044CC]"
+                            >
+                                <FileDown className="h-4 w-4 mr-2" />
+                                {generatingFascicolo ? 'Generazione...' : 'Scarica PDF'}
+                            </Button>
+                            <Button
+                                data-testid="btn-download-zip"
+                                variant="outline"
+                                onClick={() => generateFascicolo('zip')}
+                                disabled={generatingFascicolo}
+                                className="flex-1"
+                            >
+                                <FolderArchive className="h-4 w-4 mr-2" />
+                                Scarica ZIP
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             {/* Component Dialog */}
             <Dialog open={compDialog} onOpenChange={setCompDialog}>
                 <DialogContent className="max-w-md">
