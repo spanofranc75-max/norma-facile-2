@@ -666,6 +666,7 @@ async def recalculate_costs(perizia_id: str, user: dict = Depends(get_current_us
         "prezzo_ml_originale": doc.get("prezzo_ml_originale", 0),
         "coefficiente_maggiorazione": doc.get("coefficiente_maggiorazione", 20),
         "moduli": doc.get("moduli", []),
+        "codici_danno": doc.get("codici_danno", []),
     })
     total_perizia = round(sum(v.get("totale", 0) for v in voci), 2)
 
