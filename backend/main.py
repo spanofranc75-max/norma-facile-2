@@ -21,6 +21,7 @@ from routes.company import router as company_router
 from routes.rilievi import router as rilievi_router
 from routes.distinta import router as distinta_router
 from routes.certificazioni import router as certificazioni_router
+from routes.sicurezza import router as sicurezza_router
 
 # Configure logging
 logging.basicConfig(
@@ -67,6 +68,7 @@ app.include_router(company_router, prefix="/api")
 app.include_router(rilievi_router, prefix="/api")
 app.include_router(distinta_router, prefix="/api")
 app.include_router(certificazioni_router, prefix="/api")
+app.include_router(sicurezza_router, prefix="/api")
 
 
 @app.get("/api/")
