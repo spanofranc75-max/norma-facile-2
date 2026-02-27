@@ -195,6 +195,23 @@ export default function CertificazioneWizardPage() {
         }
     }, [formData.technical_specs]);
 
+    const handleAddComparison = () => {
+        if (!thermalResult) return;
+        setComparisons(prev => [...prev, {
+            id: Date.now(),
+            uw: thermalResult.uw,
+            glass: thermalResult.glass_label,
+            frame: thermalResult.frame_label,
+            spacer: thermalResult.spacer_label,
+            ecobonus_e: thermalResult.ecobonus_eligible?.E,
+        }]);
+        toast.success('Configurazione aggiunta al confronto');
+    };
+
+    const handleRemoveComparison = (id) => setComparisons(prev => prev.filter(c => c.id !== id));
+
+    const bestUw = comparisons.length > 0 ? Math.min(...comparisons.map(c => c.uw)) : null;
+
     const handleSave = async () => {
         if (!formData.project_name.trim()) {
             toast.error('Inserisci il nome del progetto');
