@@ -34,12 +34,14 @@ import {
     ShieldAlert,
     BarChart3,
     BoxIcon,
+    FileInput,
 } from 'lucide-react';
 
 const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: Sparkles },
     { path: '/preventivi', label: 'Preventivi', icon: ClipboardList },
     { path: '/invoices', label: 'Fatturazione', icon: Receipt },
+    { path: '/fatture-ricevute', label: 'Fatture Ricevute', icon: FileInput },
     { path: '/clients', label: 'Clienti', icon: Users },
     { path: '/fornitori', label: 'Fornitori', icon: Factory },
     { path: '/articoli', label: 'Catalogo Articoli', icon: BoxIcon },
