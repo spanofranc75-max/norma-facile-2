@@ -411,6 +411,41 @@ async def convert_to_invoice(prev_id: str, user: dict = Depends(get_current_user
     if sg:
         total_vat = round(total_vat * (1 - sg / 100), 2)
 
+    # Map payment_type_label to valid enum values
+    payment_label = (doc.get("payment_type_label") or "").lower()
+    # Determine payment_method from label
+    if "riba" in payment_label or payment_label.startswith("rb"):
+        payment_method = "riba"
+    elif "contanti" in payment_label or "con " in payment_label:
+        payment_method = "contanti"
+    elif "carta" in payment_label:
+        payment_method = "carta"
+    elif "assegno" in payment_label:
+        payment_method = "assegno"
+    else:
+        payment_method = "bonifico"  # Default
+    
+    # Determine payment_terms from label
+    if "immediat" in payment_label or "imm " in payment_label:
+        payment_terms = "immediato"
+    elif "30-60-90" in payment_label or "30/60/90" in payment_label:
+        payment_terms = "30-60-90gg"
+    elif "30-60" in payment_label or "30/60" in payment_label:
+        payment_terms = "30-60gg"
+    elif "90" in payment_label:
+        payment_terms = "90gg"
+    elif "60" in payment_label:
+        payment_terms = "60gg"
+    elif "fm" in payment_label or "fine mese" in payment_label:
+        if "30" in payment_label:
+            payment_terms = "fm+30"
+        else:
+            payment_terms = "fine_mese"
+    elif "30" in payment_label:
+        payment_terms = "30gg"
+    else:
+        payment_terms = "30gg"  # Default
+
     invoice_doc = {
         "invoice_id": invoice_id,
         "user_id": user["user_id"],
@@ -420,8 +455,8 @@ async def convert_to_invoice(prev_id: str, user: dict = Depends(get_current_user
         "issue_date": now.strftime("%Y-%m-%d"),
         "due_date": None,
         "status": "bozza",
-        "payment_method": doc.get("payment_type_label") or "bonifico",
-        "payment_terms": doc.get("payment_type_label") or "30gg",
+        "payment_method": payment_method,
+        "payment_terms": payment_terms,
         "tax_settings": {
             "apply_rivalsa_inps": False, "rivalsa_inps_rate": 4.0,
             "apply_cassa": False, "cassa_type": None, "cassa_rate": 4.0,
