@@ -8,7 +8,7 @@ import logging
 from datetime import datetime, timezone
 from core.security import get_current_user
 from core.database import db
-from models.perizia import PeriziaCreate, PeriziaUpdate
+from models.perizia import PeriziaCreate, PeriziaUpdate, CODICI_DANNO, CODICI_DANNO_MAP
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/perizie", tags=["perizie"])
@@ -21,6 +21,14 @@ TIPO_DANNO_LABELS = {
     "estetico": "Danno Estetico",
     "automatismi": "Danno Automatismi (EN 12453)",
 }
+
+
+# ── Reference data ──
+
+@router.get("/codici-danno")
+async def get_codici_danno():
+    """Return the damage codes database for tag selection."""
+    return {"codici_danno": CODICI_DANNO}
 
 
 async def next_perizia_number(user_id: str) -> str:
