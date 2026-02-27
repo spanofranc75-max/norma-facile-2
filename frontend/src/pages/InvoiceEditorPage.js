@@ -37,6 +37,7 @@ import {
     Calculator,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
+import ArticleSearch from '../components/ArticleSearch';
 
 const DOC_TYPES = [
     { value: 'FT', label: 'Fattura' },
