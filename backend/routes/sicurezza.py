@@ -161,7 +161,7 @@ PROGETTO: {doc.get('project_name', '-')}
 CANTIERE: {doc.get('cantiere', {}).get('address', '-')}, {doc.get('cantiere', {}).get('city', '-')}
 
 LAVORAZIONI PREVISTE:
-{chr(10).join(f'- {l}' for l in risk_labels)}
+{chr(10).join(f'- {label}' for label in risk_labels)}
 
 MACCHINE/ATTREZZATURE:
 {chr(10).join(f'- {m}' for m in machine_labels) if machine_labels else '- Non specificate'}
