@@ -1,0 +1,63 @@
+{
+  "summary": "Tested NEW Catalogo Profili Personalizzato module. All 17 backend API tests passed (100%). Frontend UI tests passed - page loads with table, search, filters, add/edit dialogs, and bulk price dialog all working. Merged catalog correctly shows 43 standard profiles (source='standard') plus user's custom profiles (source='custom'). CRUD operations verified: create, read, update, delete, duplicate rejection (409). Bulk price update works with percentage and category filter.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "backend": {
+      "GET /api/catalogo/ (unauth)": "PASS - Returns 401 without auth",
+      "GET /api/catalogo/ (auth)": "PASS - Returns user's custom profiles list",
+      "POST /api/catalogo/": "PASS - Creates new custom profile with all fields",
+      "POST /api/catalogo/ (duplicate)": "PASS - Rejects duplicate codes with 409",
+      "GET /api/catalogo/{profile_id}": "PASS - Returns single profile",
+      "PUT /api/catalogo/{profile_id}": "PASS - Updates profile fields",
+      "DELETE /api/catalogo/{profile_id}": "PASS - Deletes profile, returns 404 on subsequent GET",
+      "POST /api/catalogo/bulk-price-update": "PASS - Updates all prices by percentage",
+      "POST /api/catalogo/bulk-price-update (category filter)": "PASS - Only updates specified category",
+      "GET /api/catalogo/merged/all": "PASS - Returns 43 standard + custom profiles",
+      "merged/all source field": "PASS - Standard profiles have source='standard', custom have source='custom'"
+    },
+    "frontend": {
+      "/catalogo page load": "PASS - data-testid='catalogo-page' visible",
+      "Sidebar nav 'Catalogo Profili'": "PASS - Warehouse icon, data-testid='nav-catalogo'",
+      "Profile table": "PASS - Shows code, description, category, weight, surface, price, supplier columns",
+      "Search box": "PASS - data-testid='search-profiles', filters by code/description/supplier",
+      "Category filter": "PASS - data-testid='filter-category' dropdown works",
+      "Source filter": "PASS - data-testid='filter-source' shows Standard/Personalizzati",
+      "'Nuovo Profilo' button": "PASS - Opens profile-dialog with all fields",
+      "Add dialog fields": "PASS - code, description, category, weight, surface, price, supplier all present",
+      "'Aggiorna Prezzi' button": "PASS - Opens bulk-price-dialog",
+      "Edit/Delete buttons": "PASS - Only appear for custom profiles (source='custom')"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_catalogo_profili.py",
+    "/app/test_reports/pytest/catalogo_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "catalogo.py CRUD is well-implemented with proper auth checks using get_current_user",
+    "Duplicate code check happens on both create and update (when code changes)",
+    "Bulk price update correctly filters by price_m > 0 and optional category",
+    "merged/all endpoint correctly merges STANDARD_PROFILES from profiles_data.py with user's custom profiles",
+    "Frontend CatalogoPage.js has all data-testid attributes for testability"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_catalogo_profili.py"
+  ],
+  "success_rate": {
+    "backend": "100% (17/17 tests passed)",
+    "frontend": "100% (14/14 UI tests passed)"
+  },
+  "test_credentials": "Created temp test user via MongoDB (catalogo_session_*), cleaned up after tests",
+  "seed_data_creation": "None - all test data cleaned up",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Catalogo Profili module fully tested. 43 standard profiles from profiles_data.py. Categories: ferro, alluminio, accessori, verniciatura, altro. Bulk price update only affects profiles with price_m > 0. Standard profiles have price_m=null and source='standard'. Frontend uses /api/catalogo/merged/all to show combined catalog. Edit/delete buttons only shown for custom profiles."
+}
