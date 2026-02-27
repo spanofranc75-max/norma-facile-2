@@ -419,7 +419,7 @@ export default function DistintaEditorPage() {
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader>
-                                <TableRow className="bg-slate-900 hover:bg-slate-900">
+                                <TableRow className="bg-[#1E293B] hover:bg-[#1E293B]">
                                     <TableHead className="text-white font-semibold w-[100px]">Cat.</TableHead>
                                     <TableHead className="text-white font-semibold w-[80px]">Codice</TableHead>
                                     <TableHead className="text-white font-semibold">Nome</TableHead>

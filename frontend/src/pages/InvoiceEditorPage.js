@@ -487,7 +487,7 @@ export default function InvoiceEditorPage() {
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader>
-                                <TableRow className="bg-slate-900 hover:bg-slate-900">
+                                <TableRow className="bg-[#1E293B] hover:bg-[#1E293B]">
                                     <TableHead className="text-white font-semibold w-[80px]">Cod.</TableHead>
                                     <TableHead className="text-white font-semibold">Descrizione</TableHead>
                                     <TableHead className="text-white font-semibold w-[80px] text-right">Q.tà</TableHead>
