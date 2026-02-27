@@ -67,17 +67,30 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with:
 ### Phase 6 - Certificazioni CE (Feb 27, 2026)
 - Full CRUD for certifications (DOP / CE Label / Manuale d'Uso e Manutenzione)
 - Support for EN 1090-1 (Structural) and EN 13241 (Gates/Doors)
-- 3-step wizard: Project → Standard → Technical Specs
+- 3-step wizard: Project -> Standard -> Technical Specs
 - PDF generation: DOP + CE Label + Manuale d'Uso e Manutenzione (3 pages)
 - Auto-generated declaration numbers
 
 ### Phase 7 - Sicurezza Cantieri / POS Generator (Feb 27, 2026)
 - Predefined risk database: 13 risks, 14 machines, 13 DPI for metalworkers
-- 3-step wizard: Cantiere → Lavorazioni → Macchine & DPI
+- 3-step wizard: Cantiere -> Lavorazioni -> Macchine & DPI
 - AI-powered risk assessment via GPT-4o (Emergent LLM Key)
 - POS PDF generation (8 sections: cover, company, site, risks, machines, DPI, AI assessment, emergencies)
 - Auto-fill committente from client selection
-- Landing page rebranded to "CRM per Fabbri" — "Il Ferro, Organizzato"
+- Landing page rebranded to "CRM per Fabbri" -- "Il Ferro, Organizzato"
+
+### Phase 8 - Smart CE Calculator (Feb 27, 2026)
+- Thermal transmittance (Uw) calculation per EN ISO 10077-1
+- Formula: Uw = (Ag*Ug + Af*Uf + lg*Psi) / (Ag + Af)
+- 8 glass types, 8 frame types, 5 spacer types
+- 6 climate zones (A-F) with Ecobonus limits
+- 4th step added to Certificazioni wizard
+- Real-time calculation with visual result
+- Red warning when Uw > 1.3 (Zone E non-eligible for Ecobonus)
+- Green badge when eligible
+- Zone compliance badges (A-F with OK/NO)
+- Thermal data included in generated PDF
+- Backend: /api/certificazioni/thermal/reference-data, /api/certificazioni/thermal/calculate
 
 ## API Endpoints
 - `/api/auth/` - Google OAuth
@@ -94,7 +107,9 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with:
 - `/api/distinte/profiles` - Standard metal profiles catalog
 - `/api/distinte/{id}/calcola-barre` - Bar optimization
 - `/api/certificazioni/` - Certificazioni CE CRUD
-- `/api/certificazioni/{id}/fascicolo-pdf` - DOP + CE Label + Manuale d'Uso PDF
+- `/api/certificazioni/{id}/fascicolo-pdf` - DOP + CE Label + Manuale PDF
+- `/api/certificazioni/thermal/reference-data` - Glass/frame/spacer reference data
+- `/api/certificazioni/thermal/calculate` - Uw thermal calculation
 - `/api/sicurezza/` - POS CRUD
 - `/api/sicurezza/rischi` - Risk/Machine/DPI reference data
 - `/api/sicurezza/{id}/genera-rischi` - AI risk assessment (GPT-4o)
@@ -105,7 +120,6 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with:
 ### P0 - Next
 - [ ] Custom profiles catalog (user can add their own profiles)
 - [ ] Dashboard redesign for metalworkers (recent BOMs, weight stats)
-- [ ] Landing page update to reflect "CRM per Fabbri" identity
 
 ### P1
 - [ ] Real "Importa da Rilievo" (parse sketch dimensions into BOM items)
@@ -124,5 +138,6 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with:
 - **Backend:** FastAPI, MongoDB, ReportLab (PDF), uvicorn
 - **Frontend:** React, TailwindCSS, Shadcn/UI, react-canvas-draw
 - **Auth:** Emergent-managed Google OAuth
+- **AI:** OpenAI GPT-4o via emergentintegrations library
 - **Hosting:** Kubernetes (preview environment)
 - **Theme:** Industrial Blue (#0055FF, #1E293B, #334155)
