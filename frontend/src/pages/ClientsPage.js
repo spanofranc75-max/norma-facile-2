@@ -178,9 +178,9 @@ export default function ClientsPage() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="font-sans text-2xl font-bold text-[#1E293B] flex items-center gap-2">
-                            <Users2 className="h-6 w-6 text-[#0055FF]" /> Clienti / Fornitori
+                            <Users2 className="h-6 w-6 text-[#0055FF]" /> Clienti
                         </h1>
-                        <p className="text-sm text-slate-500 mt-1">Anagrafica completa con contatti e condizioni pagamento</p>
+                        <p className="text-sm text-slate-500 mt-1">Anagrafica clienti con contatti e condizioni pagamento</p>
                     </div>
                     <Button data-testid="btn-new-client" onClick={() => handleOpenDialog(null)} className="h-10 bg-[#0055FF] hover:bg-[#0044CC] text-white">
                         <Plus className="h-4 w-4 mr-2" /> Nuovo
