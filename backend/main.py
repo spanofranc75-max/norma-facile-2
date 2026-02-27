@@ -72,6 +72,7 @@ app.include_router(distinta_router, prefix="/api")
 app.include_router(certificazioni_router, prefix="/api")
 app.include_router(sicurezza_router, prefix="/api")
 app.include_router(dashboard_router, prefix="/api")
+app.include_router(catalogo_router, prefix="/api")
 
 
 @app.get("/api/")
