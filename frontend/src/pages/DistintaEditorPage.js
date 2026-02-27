@@ -93,7 +93,7 @@ export default function DistintaEditorPage() {
     useEffect(() => {
         const fetchProfiles = async () => {
             try {
-                const data = await apiRequest('/api/distinte/profiles');
+                const data = await apiRequest('/distinte/profiles');
                 setProfiles(data.profiles || []);
                 setProfileTypes(data.types || []);
             } catch { /* ignore */ }
@@ -105,7 +105,7 @@ export default function DistintaEditorPage() {
     useEffect(() => {
         const fetchClients = async () => {
             try {
-                const data = await apiRequest('/api/clients/');
+                const data = await apiRequest('/clients/');
                 setClients(data.clients || []);
             } catch { /* ignore */ }
         };
@@ -116,7 +116,7 @@ export default function DistintaEditorPage() {
     useEffect(() => {
         const fetchRilievi = async () => {
             try {
-                const data = await apiRequest('/api/rilievi/');
+                const data = await apiRequest('/rilievi/');
                 setRilievi(data.rilievi || []);
             } catch { /* ignore */ }
         };
