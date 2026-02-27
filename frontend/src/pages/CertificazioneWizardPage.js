@@ -624,6 +624,64 @@ export default function CertificazioneWizardPage() {
                                 </div>
                             )}
 
+                            {/* Add to comparison button */}
+                            {thermalResult && (
+                                <Button data-testid="btn-add-comparison" variant="outline" onClick={handleAddComparison} className="border-[#0055FF] text-[#0055FF] hover:bg-blue-50">
+                                    <BarChart3 className="h-4 w-4 mr-2" /> Salva per Confronto
+                                </Button>
+                            )}
+
+                            {/* Comparison Table */}
+                            {comparisons.length > 0 && (
+                                <div data-testid="comparison-table" className="border-2 border-[#0055FF] rounded-lg overflow-hidden">
+                                    <div className="bg-[#1E293B] px-5 py-3 flex items-center gap-2">
+                                        <BarChart3 className="h-4 w-4 text-white" />
+                                        <span className="text-sm font-semibold text-white">Confronta Serramenti ({comparisons.length})</span>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="bg-slate-50 border-b">
+                                                    <th className="text-left px-4 py-2 text-slate-500 font-medium">#</th>
+                                                    <th className="text-left px-4 py-2 text-slate-500 font-medium">Vetro</th>
+                                                    <th className="text-left px-4 py-2 text-slate-500 font-medium">Telaio</th>
+                                                    <th className="text-left px-4 py-2 text-slate-500 font-medium">Canalina</th>
+                                                    <th className="text-center px-4 py-2 text-slate-500 font-medium">Uw</th>
+                                                    <th className="text-center px-4 py-2 text-slate-500 font-medium">Ecobonus E</th>
+                                                    <th className="w-10"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {comparisons.map((c, i) => (
+                                                    <tr key={c.id} className={`border-b last:border-b-0 ${c.uw === bestUw ? 'bg-emerald-50' : ''}`}>
+                                                        <td className="px-4 py-2 font-mono text-slate-400">{i + 1}</td>
+                                                        <td className="px-4 py-2 text-[#1E293B]">{c.glass}</td>
+                                                        <td className="px-4 py-2 text-[#1E293B]">{c.frame}</td>
+                                                        <td className="px-4 py-2 text-[#1E293B]">{c.spacer}</td>
+                                                        <td className="px-4 py-2 text-center">
+                                                            <span className={`font-mono font-bold ${c.uw === bestUw ? 'text-emerald-600' : c.uw > 1.3 ? 'text-red-600' : 'text-[#0055FF]'}`}>
+                                                                {c.uw}
+                                                            </span>
+                                                            {c.uw === bestUw && <Badge className="ml-2 bg-emerald-100 text-emerald-700 text-xs">Migliore</Badge>}
+                                                        </td>
+                                                        <td className="px-4 py-2 text-center">
+                                                            <Badge className={c.ecobonus_e ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}>
+                                                                {c.ecobonus_e ? 'SI' : 'NO'}
+                                                            </Badge>
+                                                        </td>
+                                                        <td className="px-2 py-2">
+                                                            <button onClick={() => handleRemoveComparison(c.id)} className="p-1 text-slate-400 hover:text-red-500">
+                                                                <Trash2 className="h-3 w-3" />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
                             <Separator />
 
                             <div className="flex justify-between items-center">
