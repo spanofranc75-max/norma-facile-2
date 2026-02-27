@@ -196,7 +196,7 @@ export default function Dashboard() {
                     <Card
                         key={action.label}
                         data-testid={action.testId}
-                        className={`group border-slate-200 transition-all duration-300 ${
+                        className={`group border-gray-200 transition-all duration-300 ${
                             action.disabled 
                                 ? 'opacity-50 cursor-not-allowed' 
                                 : 'cursor-pointer hover:shadow-md hover:border-slate-300'
@@ -267,7 +267,7 @@ export default function Dashboard() {
                                 <div
                                     key={inv.invoice_id}
                                     data-testid={`recent-invoice-${inv.invoice_id}`}
-                                    className="flex items-center justify-between p-4 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer"
+                                    className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-slate-50 transition-colors cursor-pointer"
                                     onClick={() => navigate(`/invoices/${inv.invoice_id}`)}
                                 >
                                     <div className="flex items-center gap-4">
