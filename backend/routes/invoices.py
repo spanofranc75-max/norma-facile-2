@@ -720,8 +720,10 @@ async def duplicate_invoice(
     now = datetime.now(timezone.utc)
     year = datetime.now().year
 
-    doc_type = original.get("document_type", "FT")
-    document_number = await invoice_service.get_next_number(user["user_id"], doc_type, year)
+    doc_type_str = original.get("document_type", "FT")
+    # Convert string to DocumentType enum for get_next_number
+    doc_type_enum = DocumentType(doc_type_str)
+    document_number = await invoice_service.get_next_number(user["user_id"], doc_type_enum, year)
 
     new_doc = {
         **original,
