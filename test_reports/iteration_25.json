@@ -1,0 +1,78 @@
+{
+  "summary": "Comprehensive testing of DDT (Documento di Trasporto) module - Backend CRUD (20/20 tests passed), PDF generation, line calculations with cascading discounts, and frontend UI verification. One bug fixed: auto-causale logic for conto_lavoro and rientro types.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [],
+    "bugs_fixed": [
+      {
+        "issue": "Auto-causale not setting correctly for conto_lavoro and rientro_conto_lavoro DDT types",
+        "root_cause": "DDTCreate model has default causale_trasporto='Vendita', so the auto-set logic 'if not causale' never triggered for non-vendita types",
+        "fix": "Modified routes/ddt.py to check: if not causale OR (causale=='Vendita' AND ddt_type!='vendita') then auto-set causale",
+        "file": "/app/backend/routes/ddt.py"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "backend_api": {
+      "GET /api/ddt/causali": "PASS - Returns 7 causali (Vendita, Conto Lavoro, Reso Conto Lavoro, etc.)",
+      "POST /api/ddt/ vendita": "PASS - Creates DDT with DDT-{year}-{seq} number, status=non_fatturato",
+      "POST /api/ddt/ conto_lavoro": "PASS - Creates DDT with CL-{year}-{seq} prefix, auto-causale='Conto Lavoro'",
+      "POST /api/ddt/ rientro_conto_lavoro": "PASS - Creates DDT with RCL-{year}-{seq} prefix, auto-causale='Reso Conto Lavoro'",
+      "GET /api/ddt/": "PASS - Lists DDTs with optional filters (ddt_type, status, search)",
+      "GET /api/ddt/{ddt_id}": "PASS - Returns single DDT, 404 for non-existent",
+      "PUT /api/ddt/{ddt_id}": "PASS - Updates DDT, recalculates totals when lines/sconto_globale/acconto change",
+      "DELETE /api/ddt/{ddt_id}": "PASS - Deletes DDT, 404 for non-existent",
+      "GET /api/ddt/{ddt_id}/pdf": "PASS - Generates PDF (application/pdf, content-disposition attachment)",
+      "calc_line cascading discounts": "PASS - prezzo_netto = price × (1-sconto_1/100) × (1-sconto_2/100), verified 100×0.9×0.95=85.5",
+      "calc_totals": "PASS - Correctly computes subtotal, sconto_val, imponibile, total_vat (multiple rates), total, da_pagare"
+    },
+    "frontend_ui": {
+      "DDT nav link in sidebar": "PASS - Truck icon, highlighted when active",
+      "DDTListPage data-testid": "PASS - ddt-list-page, btn-new-ddt, filter-all/vendita/conto_lavoro/rientro_conto_lavoro, search-ddt",
+      "DDTListPage table": "PASS - Columns: Numero, Tipo (badge), Cliente, Causale, Totale, Stato (badge), Data, actions",
+      "DDTListPage empty state": "PASS - Shows 'Nessun DDT trovato' with 'Crea il primo DDT' button",
+      "DDTEditorPage data-testid": "PASS - ddt-editor, select-ddt-type, select-client, input-subject, btn-add-line, btn-save-ddt, btn-download-pdf",
+      "DDTEditorPage sidebar 4 tabs": "PASS - Trasporto, Destin., Pagam., Note - all clickable with correct content",
+      "DDTEditorPage lines table": "PASS - Columns: #, Codice, Descrizione, UdM, Q.tà, Prezzo, Sc.1%, Sc.2%, Totale, IVA",
+      "DDTEditorPage totals": "PASS - Totale senza IVA, Imponibile, Totale IVA, TOTALE displayed correctly",
+      "Create DDT flow": "PASS - Fill form → Save → Toast 'DDT creato' → Redirect to /ddt/{ddt_id} → PDF button visible",
+      "Edit DDT flow": "PASS - Page title 'Modifica DDT', DDT number shown (DDT-2026-0001), status badge"
+    },
+    "sidebar_tabs_content": {
+      "Trasporto": "Causale Trasporto, Aspetto Beni, Porto, Mezzo, Vettore, Data/Ora Trasporto, Colli, P. Lordo, P. Netto",
+      "Destinazione": "Ragione Sociale, Indirizzo, CAP, Località, Prov., Telefono, Cellulare",
+      "Pagamento": "Condizioni Pagamento, Sconto Globale %, Acconto, 'Stampa prezzi in PDF' checkbox",
+      "Note": "Notes textarea"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_ddt.py",
+    "/app/test_reports/pytest/ddt_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "calc_line correctly implements cascading discounts formula",
+    "calc_totals properly handles multiple VAT rates per line",
+    "PDF service uses ReportLab with proper formatting and supports stampa_prezzi toggle",
+    "Frontend calculations mirror backend exactly - good consistency",
+    "All interactive elements have proper data-testid attributes"
+  ],
+  "updated_files": [
+    "/app/backend/routes/ddt.py",
+    "/app/backend/tests/test_ddt.py"
+  ],
+  "success_rate": {
+    "backend": "100% (20/20 tests passed)",
+    "frontend": "100% (all UI elements verified)"
+  },
+  "test_credentials": "Created test user via MongoDB (test-ddt-*), cleaned up after tests",
+  "seed_data_creation": "Test DDTs created during backend tests, cleaned up in fixture teardown",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "DDT module fully tested. Key features: 1) Three DDT types (vendita, conto_lavoro, rientro_conto_lavoro) with auto-number prefix (DDT, CL, RCL). 2) Auto-causale based on type. 3) Cascading line discounts (sconto_1, sconto_2). 4) Global discount and acconto in totals. 5) PDF generation with stampa_prezzi toggle. 6) Invoicex-style editor with 4 sidebar tabs. BUG FIXED: Auto-causale logic now correctly handles non-vendita types."
+}
