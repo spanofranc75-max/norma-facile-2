@@ -94,12 +94,20 @@ export default function CertificazioneWizardPage() {
         fetch();
     }, []);
 
-    // Fetch thermal reference data
+    // Fetch thermal reference data + vendor profiles
     useEffect(() => {
         const fetchThermal = async () => {
             try {
-                const data = await apiRequest('/certificazioni/thermal/reference-data');
-                setThermalRef(data);
+                const [refData, vendorData] = await Promise.all([
+                    apiRequest('/certificazioni/thermal/reference-data'),
+                    apiRequest('/vendor/thermal-profiles').catch(() => ({ frame_types: [] })),
+                ]);
+                // Merge vendor frame profiles into reference data
+                const vendorFrames = (vendorData.frame_types || []).filter(f => f.source !== 'builtin');
+                setThermalRef({
+                    ...refData,
+                    frame_types: [...refData.frame_types, ...vendorFrames],
+                });
             } catch { /* ignore */ }
         };
         fetchThermal();
