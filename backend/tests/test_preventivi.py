@@ -447,11 +447,15 @@ class TestThermalCompliance:
                     'glass_id': 'doppio_be_argon',
                     'frame_id': 'acciaio_standard',
                     'spacer_id': 'alluminio',
+                    'height_mm': 2100,
+                    'width_mm': 1200,
+                    'frame_width_mm': 80,
                     'zone': 'E'
                 }
             }]
         }
         create_resp = auth_session.post(f'{BASE_URL}/api/preventivi/', json=payload)
+        assert create_resp.status_code == 201, f"Expected 201, got {create_resp.status_code}: {create_resp.text}"
         prev_id = create_resp.json()['preventivo_id']
         
         response = auth_session.post(f'{BASE_URL}/api/preventivi/{prev_id}/check-compliance')
