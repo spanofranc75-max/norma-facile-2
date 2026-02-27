@@ -74,6 +74,7 @@ export default function PeriziaEditorPage() {
     const [notaTecnica, setNotaTecnica] = useState('');
     const [vociCosto, setVociCosto] = useState([]);
     const [notes, setNotes] = useState('');
+    const [letteraAccompagnamento, setLetteraAccompagnamento] = useState('');
 
     // Map state
     const [mapPos, setMapPos] = useState(null); // {lat, lng}
