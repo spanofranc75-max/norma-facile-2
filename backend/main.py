@@ -1,6 +1,6 @@
 """
 Norma Facile 2.0 - Main Application Entry Point
-LegalTech SaaS for Italian legal professionals.
+CRM/ERP per Fabbri (Metalworkers).
 """
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
@@ -20,6 +20,7 @@ from routes.invoices import router as invoices_router
 from routes.company import router as company_router
 from routes.rilievi import router as rilievi_router
 from routes.distinta import router as distinta_router
+from routes.certificazioni import router as certificazioni_router
 
 # Configure logging
 logging.basicConfig(
@@ -42,7 +43,7 @@ async def lifespan(app: FastAPI):
 # Create FastAPI application
 app = FastAPI(
     title="Norma Facile 2.0",
-    description="Piattaforma LegalTech per professionisti legali italiani",
+    description="CRM/ERP per Fabbri - Gestione commesse, fatturazione e certificazioni CE",
     version="2.0.1",
     lifespan=lifespan
 )
@@ -65,6 +66,7 @@ app.include_router(invoices_router, prefix="/api")
 app.include_router(company_router, prefix="/api")
 app.include_router(rilievi_router, prefix="/api")
 app.include_router(distinta_router, prefix="/api")
+app.include_router(certificazioni_router, prefix="/api")
 
 
 @app.get("/api/")
