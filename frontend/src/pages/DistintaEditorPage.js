@@ -1,6 +1,6 @@
 /**
- * Distinta Editor Page - Bill of Materials Editor
- * Table editor with auto-calculating totals.
+ * Distinta Editor Page - Smart BOM for Fabbri
+ * Profile selection with auto-calculated weight and surface.
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -13,77 +13,46 @@ import { Textarea } from '../components/ui/textarea';
 import {
     Select,
     SelectContent,
+    SelectGroup,
     SelectItem,
+    SelectLabel,
     SelectTrigger,
     SelectValue,
 } from '../components/ui/select';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+    Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../components/ui/table';
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
+    Dialog, DialogContent, DialogDescription, DialogFooter,
+    DialogHeader, DialogTitle,
 } from '../components/ui/dialog';
 import { Separator } from '../components/ui/separator';
 import { toast } from 'sonner';
 import {
-    Save,
-    ArrowLeft,
-    Plus,
-    Trash2,
-    Import,
-    Package,
-    Weight,
-    Euro,
-    Calculator,
+    Save, ArrowLeft, Plus, Trash2, Import, Package,
+    Weight, Calculator, FileDown, BarChart3, Ruler,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
-const CATEGORIES = [
-    { value: 'profilo', label: 'Profilo' },
-    { value: 'accessorio', label: 'Accessorio' },
-    { value: 'ferramenta', label: 'Ferramenta' },
-    { value: 'vetro', label: 'Vetro' },
-    { value: 'guarnizione', label: 'Guarnizione' },
-    { value: 'altro', label: 'Altro' },
-];
+const formatNumber = (v, dec = 2) =>
+    new Intl.NumberFormat('it-IT', { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(v || 0);
+const formatCurrency = (v) =>
+    new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
 
-const UNITS = [
-    { value: 'pz', label: 'pz' },
-    { value: 'm', label: 'm' },
-    { value: 'm²', label: 'm²' },
-    { value: 'kg', label: 'kg' },
-];
-
-const emptyItem = {
+const emptyItem = () => ({
     item_id: '',
     category: 'profilo',
     code: '',
     name: '',
-    description: '',
+    profile_id: '',
+    profile_label: '',
     length_mm: 0,
     quantity: 1,
-    unit: 'pz',
-    weight_per_unit: 0,
+    weight_per_meter: 0,
+    surface_per_meter: 0,
     cost_per_unit: 0,
     notes: '',
-};
-
-const formatCurrency = (value) => {
-    return new Intl.NumberFormat('it-IT', {
-        style: 'currency',
-        currency: 'EUR',
-    }).format(value || 0);
-};
+});
 
 export default function DistintaEditorPage() {
     const navigate = useNavigate();
@@ -94,10 +63,15 @@ export default function DistintaEditorPage() {
 
     const [loading, setLoading] = useState(isEditing);
     const [saving, setSaving] = useState(false);
+    const [profiles, setProfiles] = useState([]);
+    const [profileTypes, setProfileTypes] = useState([]);
+    const [clients, setClients] = useState([]);
     const [rilievi, setRilievi] = useState([]);
     const [importDialogOpen, setImportDialogOpen] = useState(false);
     const [selectedRilievoForImport, setSelectedRilievoForImport] = useState('');
-    
+    const [barResults, setBarResults] = useState(null);
+    const [barDialogOpen, setBarDialogOpen] = useState(false);
+
     const [formData, setFormData] = useState({
         name: '',
         rilievo_id: rilievoIdFromUrl || '',
@@ -111,193 +85,228 @@ export default function DistintaEditorPage() {
         total_items: 0,
         total_length_m: 0,
         total_weight_kg: 0,
+        total_surface_mq: 0,
         total_cost: 0,
-        by_category: {},
     });
 
-    // Fetch rilievi for import dropdown
+    // Fetch profiles catalog
+    useEffect(() => {
+        const fetchProfiles = async () => {
+            try {
+                const data = await apiRequest('/api/distinte/profiles');
+                setProfiles(data.profiles || []);
+                setProfileTypes(data.types || []);
+            } catch { /* ignore */ }
+        };
+        fetchProfiles();
+    }, []);
+
+    // Fetch clients
+    useEffect(() => {
+        const fetchClients = async () => {
+            try {
+                const data = await apiRequest('/api/clients/');
+                setClients(data.clients || []);
+            } catch { /* ignore */ }
+        };
+        fetchClients();
+    }, []);
+
+    // Fetch rilievi
     useEffect(() => {
         const fetchRilievi = async () => {
             try {
-                const data = await apiRequest('/rilievi/?limit=100');
-                setRilievi(data.rilievi);
-            } catch (error) {
-                console.error('Error loading rilievi:', error);
-            }
+                const data = await apiRequest('/api/rilievi/');
+                setRilievi(data.rilievi || []);
+            } catch { /* ignore */ }
         };
         fetchRilievi();
     }, []);
 
-    // Fetch distinta if editing
+    // Calculate totals from items
+    const recalculateTotals = useCallback((items) => {
+        let tl = 0, tw = 0, ts = 0, tc = 0;
+        items.forEach(it => {
+            const lm = (it.length_mm || 0) / 1000;
+            const q = it.quantity || 1;
+            const rw = lm * q * (it.weight_per_meter || 0);
+            const rs = lm * q * (it.surface_per_meter || 0);
+            const rc = (it.cost_per_unit || 0) * q;
+            tl += lm * q;
+            tw += rw;
+            ts += rs;
+            tc += rc;
+        });
+        setTotals({
+            total_items: items.length,
+            total_length_m: Math.round(tl * 1000) / 1000,
+            total_weight_kg: Math.round(tw * 1000) / 1000,
+            total_surface_mq: Math.round(ts * 1000) / 1000,
+            total_cost: Math.round(tc * 100) / 100,
+        });
+    }, []);
+
+    // Fetch existing distinta
     useEffect(() => {
         if (!isEditing) return;
-        
         const fetchDistinta = async () => {
             try {
-                const data = await apiRequest(`/distinte/${distintaId}`);
+                const data = await apiRequest(`/api/distinte/${distintaId}`);
                 setFormData({
-                    name: data.name,
+                    name: data.name || '',
                     rilievo_id: data.rilievo_id || '',
                     client_id: data.client_id || '',
-                    status: data.status,
+                    status: data.status || 'bozza',
                     notes: data.notes || '',
                     items: data.items || [],
                 });
-                setTotals(data.totals || {});
-            } catch (error) {
-                toast.error('Distinta non trovata');
+                recalculateTotals(data.items || []);
+            } catch {
+                toast.error('Errore nel caricamento della distinta');
                 navigate('/distinte');
             } finally {
                 setLoading(false);
             }
         };
         fetchDistinta();
-    }, [distintaId, isEditing, navigate]);
+    }, [isEditing, distintaId, navigate, recalculateTotals]);
 
-    // Calculate totals when items change
-    const calculateTotals = useCallback(() => {
-        let totalLength = 0;
-        let totalWeight = 0;
-        let totalCost = 0;
-        const byCategory = {};
-
-        formData.items.forEach(item => {
-            const quantity = parseFloat(item.quantity) || 0;
-            const lengthMm = parseFloat(item.length_mm) || 0;
-            const weightPerUnit = parseFloat(item.weight_per_unit) || 0;
-            const costPerUnit = parseFloat(item.cost_per_unit) || 0;
-            const unit = item.unit || 'pz';
-
-            let itemLength = 0;
-            let itemWeight = 0;
-            let itemCost = 0;
-
-            if (unit === 'm') {
-                itemLength = quantity;
-                itemWeight = weightPerUnit * quantity;
-                itemCost = costPerUnit * quantity;
-            } else if (unit === 'm²') {
-                const widthMm = parseFloat(item.width_mm) || 0;
-                const areaSqM = (lengthMm * widthMm) / 1_000_000 * quantity;
-                itemWeight = weightPerUnit * areaSqM;
-                itemCost = costPerUnit * areaSqM;
-            } else {
-                itemLength = (lengthMm * quantity) / 1000;
-                itemWeight = weightPerUnit * quantity;
-                itemCost = costPerUnit * quantity;
-            }
-
-            totalLength += itemLength;
-            totalWeight += itemWeight;
-            totalCost += itemCost;
-
-            const category = item.category || 'altro';
-            if (!byCategory[category]) {
-                byCategory[category] = { count: 0, weight: 0, cost: 0 };
-            }
-            byCategory[category].count += 1;
-            byCategory[category].weight += itemWeight;
-            byCategory[category].cost += itemCost;
-        });
-
-        setTotals({
-            total_items: formData.items.length,
-            total_length_m: Math.round(totalLength * 1000) / 1000,
-            total_weight_kg: Math.round(totalWeight * 1000) / 1000,
-            total_cost: Math.round(totalCost * 100) / 100,
-            by_category: byCategory,
-        });
-    }, [formData.items]);
-
-    useEffect(() => {
-        calculateTotals();
-    }, [formData.items, calculateTotals]);
-
-    const updateField = (field, value) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
-    };
-
-    const updateItem = (index, field, value) => {
-        setFormData(prev => {
-            const newItems = [...prev.items];
-            newItems[index] = { ...newItems[index], [field]: value };
-            return { ...prev, items: newItems };
-        });
-    };
-
+    // Item manipulation
     const addItem = () => {
-        setFormData(prev => ({
-            ...prev,
-            items: [...prev.items, { ...emptyItem, item_id: `temp_${Date.now()}` }],
-        }));
+        const items = [...formData.items, emptyItem()];
+        setFormData(prev => ({ ...prev, items }));
+        recalculateTotals(items);
     };
 
     const removeItem = (index) => {
-        setFormData(prev => ({
-            ...prev,
-            items: prev.items.filter((_, i) => i !== index),
-        }));
+        const items = formData.items.filter((_, i) => i !== index);
+        setFormData(prev => ({ ...prev, items }));
+        recalculateTotals(items);
     };
 
+    const updateItem = (index, field, value) => {
+        const items = [...formData.items];
+        items[index] = { ...items[index], [field]: value };
+        setFormData(prev => ({ ...prev, items }));
+        recalculateTotals(items);
+    };
+
+    const selectProfile = (index, profileId) => {
+        const profile = profiles.find(p => p.profile_id === profileId);
+        if (!profile) return;
+        const items = [...formData.items];
+        items[index] = {
+            ...items[index],
+            profile_id: profile.profile_id,
+            profile_label: profile.label,
+            name: profile.label,
+            weight_per_meter: profile.weight_per_meter,
+            surface_per_meter: profile.surface_per_meter,
+        };
+        setFormData(prev => ({ ...prev, items }));
+        recalculateTotals(items);
+    };
+
+    // Row calculations
+    const getRowWeight = (item) => {
+        const lm = (item.length_mm || 0) / 1000;
+        return lm * (item.quantity || 1) * (item.weight_per_meter || 0);
+    };
+    const getRowSurface = (item) => {
+        const lm = (item.length_mm || 0) / 1000;
+        return lm * (item.quantity || 1) * (item.surface_per_meter || 0);
+    };
+
+    // Save
     const handleSave = async () => {
         if (!formData.name.trim()) {
             toast.error('Inserisci il nome della distinta');
             return;
         }
-
+        setSaving(true);
         try {
-            setSaving(true);
-            
+            const payload = {
+                name: formData.name,
+                rilievo_id: formData.client_id ? formData.rilievo_id : formData.rilievo_id,
+                client_id: formData.client_id || null,
+                notes: formData.notes,
+                items: formData.items.map(it => ({
+                    ...it,
+                    length_mm: parseFloat(it.length_mm) || 0,
+                    quantity: parseFloat(it.quantity) || 1,
+                    weight_per_meter: parseFloat(it.weight_per_meter) || 0,
+                    surface_per_meter: parseFloat(it.surface_per_meter) || 0,
+                    cost_per_unit: parseFloat(it.cost_per_unit) || 0,
+                })),
+            };
             if (isEditing) {
-                await apiRequest(`/distinte/${distintaId}`, {
-                    method: 'PUT',
-                    body: JSON.stringify(formData),
-                });
+                payload.status = formData.status;
+                await apiRequest(`/api/distinte/${distintaId}`, { method: 'PUT', body: payload });
                 toast.success('Distinta aggiornata');
             } else {
-                const result = await apiRequest('/distinte/', {
-                    method: 'POST',
-                    body: JSON.stringify(formData),
-                });
+                const res = await apiRequest('/api/distinte/', { method: 'POST', body: payload });
                 toast.success('Distinta creata');
-                navigate(`/distinte/${result.distinta_id}`);
+                navigate(`/distinte/${res.distinta_id}`);
             }
-        } catch (error) {
-            toast.error(error.message);
+        } catch (err) {
+            toast.error(err.message || 'Errore nel salvataggio');
         } finally {
             setSaving(false);
         }
     };
 
-    const handleImportFromRilievo = async () => {
-        if (!selectedRilievoForImport) {
-            toast.error('Seleziona un rilievo');
-            return;
-        }
-
+    // Calcola Barre
+    const handleCalcolaBarre = async () => {
         if (!isEditing) {
-            toast.error('Salva prima la distinta');
+            toast.error('Salva la distinta prima di calcolare le barre');
             return;
         }
-
         try {
-            const result = await apiRequest(
-                `/distinte/${distintaId}/import-rilievo/${selectedRilievoForImport}`,
+            await handleSave();
+            const data = await apiRequest(`/api/distinte/${distintaId}/calcola-barre`, { method: 'POST' });
+            setBarResults(data);
+            setBarDialogOpen(true);
+        } catch (err) {
+            toast.error(err.message || 'Errore nel calcolo barre');
+        }
+    };
+
+    // Download Lista Taglio PDF
+    const handleDownloadPdf = async () => {
+        if (!isEditing) {
+            toast.error('Salva la distinta prima di scaricare il PDF');
+            return;
+        }
+        try {
+            await handleSave();
+            const backendUrl = process.env.REACT_APP_BACKEND_URL;
+            window.open(`${backendUrl}/api/distinte/${distintaId}/lista-taglio-pdf`, '_blank');
+        } catch (err) {
+            toast.error(err.message || 'Errore nel download PDF');
+        }
+    };
+
+    // Import from rilievo
+    const handleImportFromRilievo = async () => {
+        if (!isEditing || !selectedRilievoForImport) return;
+        try {
+            const data = await apiRequest(
+                `/api/distinte/${distintaId}/import-rilievo/${selectedRilievoForImport}`,
                 { method: 'POST' }
             );
-            
             setFormData({
-                ...formData,
-                rilievo_id: result.rilievo_id,
-                client_id: result.client_id,
-                items: result.items,
+                name: data.name || formData.name,
+                rilievo_id: data.rilievo_id || '',
+                client_id: data.client_id || '',
+                status: data.status || 'bozza',
+                notes: data.notes || '',
+                items: data.items || [],
             });
-            setTotals(result.totals);
-            
-            toast.success('Materiali importati dal rilievo');
+            recalculateTotals(data.items || []);
             setImportDialogOpen(false);
-        } catch (error) {
-            toast.error(error.message);
+            toast.success('Dati importati dal rilievo');
+        } catch (err) {
+            toast.error(err.message || 'Errore nell\'importazione');
         }
     };
 
@@ -305,373 +314,316 @@ export default function DistintaEditorPage() {
         return (
             <DashboardLayout>
                 <div className="flex items-center justify-center h-64">
-                    <div className="w-8 h-8 loading-spinner" />
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0055FF]" />
                 </div>
             </DashboardLayout>
         );
     }
 
+    // Group profiles by type for dropdown
+    const profilesByType = {};
+    profiles.forEach(p => {
+        if (!profilesByType[p.type]) profilesByType[p.type] = [];
+        profilesByType[p.type].push(p);
+    });
+
     return (
         <DashboardLayout>
-            <div className="space-y-6 max-w-6xl">
+            <div className="space-y-6" data-testid="distinta-editor">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate('/distinte')}
-                        >
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Indietro
+                        <Button data-testid="btn-back" variant="outline" onClick={() => navigate('/distinte')} className="h-10">
+                            <ArrowLeft className="h-4 w-4 mr-2" /> Indietro
                         </Button>
-                        <div>
-                            <h1 className="font-sans text-2xl font-bold text-slate-900">
-                                {isEditing ? 'Modifica Distinta' : 'Nuova Distinta'}
-                            </h1>
-                        </div>
+                        <h1 className="font-sans text-2xl font-bold text-[#1E293B]">
+                            {isEditing ? 'Modifica Distinta' : 'Nuova Distinta Materiali'}
+                        </h1>
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex items-center gap-3">
                         {isEditing && (
-                            <Button
-                                variant="outline"
-                                onClick={() => setImportDialogOpen(true)}
-                            >
-                                <Import className="h-4 w-4 mr-2" />
-                                Importa da Rilievo
-                            </Button>
+                            <>
+                                <Button data-testid="btn-calcola-barre" variant="outline" onClick={handleCalcolaBarre} className="h-10 border-[#0055FF] text-[#0055FF] hover:bg-blue-50">
+                                    <BarChart3 className="h-4 w-4 mr-2" /> Calcola Barre
+                                </Button>
+                                <Button data-testid="btn-download-pdf" variant="outline" onClick={handleDownloadPdf} className="h-10 border-[#0055FF] text-[#0055FF] hover:bg-blue-50">
+                                    <FileDown className="h-4 w-4 mr-2" /> Stampa Lista Taglio
+                                </Button>
+                            </>
                         )}
-                        <Button
-                            data-testid="btn-save-distinta"
-                            onClick={handleSave}
-                            disabled={saving}
-                            className="bg-[#0055FF] text-white hover:bg-[#0044CC]"
-                        >
-                            <Save className="h-4 w-4 mr-2" />
-                            {saving ? 'Salvataggio...' : 'Salva'}
+                        <Button data-testid="btn-save" onClick={handleSave} disabled={saving} className="h-10 bg-[#0055FF] text-white hover:bg-[#0044CC]">
+                            <Save className="h-4 w-4 mr-2" /> {saving ? 'Salvataggio...' : 'Salva'}
                         </Button>
                     </div>
                 </div>
 
-                {/* Info Section */}
+                {/* Info Card */}
                 <Card className="border-gray-200">
                     <CardHeader className="pb-4 bg-blue-50 border-b border-gray-200">
-                        <CardTitle className="text-lg font-semibold">Informazioni</CardTitle>
+                        <CardTitle className="text-lg font-semibold">Informazioni Progetto</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-3 gap-4">
-                            <div className="col-span-2">
-                                <Label htmlFor="name">Nome Distinta *</Label>
-                                <Input
-                                    id="name"
-                                    data-testid="input-distinta-name"
-                                    value={formData.name}
-                                    onChange={(e) => updateField('name', e.target.value)}
-                                    placeholder="Es: Serramenti appartamento Rossi"
-                                />
+                    <CardContent className="pt-4">
+                        <div className="grid grid-cols-4 gap-4">
+                            <div>
+                                <Label>Nome Distinta *</Label>
+                                <Input data-testid="input-name" value={formData.name} onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))} placeholder="es. Cancello Via Roma" className="mt-1" />
                             </div>
                             <div>
-                                <Label>Rilievo Collegato</Label>
-                                <Select
-                                    value={formData.rilievo_id || "none"}
-                                    onValueChange={(v) => updateField('rilievo_id', v === "none" ? "" : v)}
-                                >
-                                    <SelectTrigger data-testid="select-rilievo">
-                                        <SelectValue placeholder="Nessuno" />
-                                    </SelectTrigger>
+                                <Label>Cliente</Label>
+                                <Select value={formData.client_id || 'none'} onValueChange={(v) => setFormData(p => ({ ...p, client_id: v === 'none' ? '' : v }))}>
+                                    <SelectTrigger data-testid="select-client" className="mt-1"><SelectValue placeholder="Seleziona..." /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="none">Nessuno</SelectItem>
-                                        {rilievi.map(r => (
-                                            <SelectItem key={r.rilievo_id} value={r.rilievo_id}>
-                                                {r.project_name}
-                                            </SelectItem>
-                                        ))}
+                                        <SelectItem value="none">Nessun cliente</SelectItem>
+                                        {clients.map(c => <SelectItem key={c.client_id} value={c.client_id}>{c.business_name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="col-span-3">
-                                <Label htmlFor="notes">Note</Label>
-                                <Textarea
-                                    id="notes"
-                                    value={formData.notes}
-                                    onChange={(e) => updateField('notes', e.target.value)}
-                                    placeholder="Note sulla distinta..."
-                                    rows={2}
-                                />
+                            <div>
+                                <Label>Rilievo Collegato</Label>
+                                <div className="flex gap-2 mt-1">
+                                    <Select value={formData.rilievo_id || 'none'} onValueChange={(v) => setFormData(p => ({ ...p, rilievo_id: v === 'none' ? '' : v }))}>
+                                        <SelectTrigger data-testid="select-rilievo"><SelectValue placeholder="Nessuno" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none">Nessun rilievo</SelectItem>
+                                            {rilievi.map(r => <SelectItem key={r.rilievo_id} value={r.rilievo_id}>{r.project_name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    {isEditing && (
+                                        <Button data-testid="btn-import-rilievo" variant="outline" onClick={() => setImportDialogOpen(true)} className="shrink-0" title="Importa da Rilievo">
+                                            <Import className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
+                            {isEditing && (
+                                <div>
+                                    <Label>Stato</Label>
+                                    <Select value={formData.status} onValueChange={(v) => setFormData(p => ({ ...p, status: v }))}>
+                                        <SelectTrigger data-testid="select-status" className="mt-1"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="bozza">Bozza</SelectItem>
+                                            <SelectItem value="confermata">Confermata</SelectItem>
+                                            <SelectItem value="ordinata">Ordinata</SelectItem>
+                                            <SelectItem value="completata">Completata</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
                         </div>
+                        {formData.notes !== undefined && (
+                            <div className="mt-4">
+                                <Label>Note</Label>
+                                <Textarea data-testid="input-notes" value={formData.notes || ''} onChange={(e) => setFormData(p => ({ ...p, notes: e.target.value }))} placeholder="Note aggiuntive..." rows={2} className="mt-1" />
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 
-                {/* Materials Table */}
+                {/* Materials Grid */}
                 <Card className="border-gray-200">
                     <CardHeader className="flex flex-row items-center justify-between pb-4 bg-blue-50 border-b border-gray-200">
                         <CardTitle className="text-lg font-semibold">Materiali</CardTitle>
-                        <Button
-                            data-testid="btn-add-item"
-                            onClick={addItem}
-                            variant="outline"
-                        >
-                            <Plus className="h-4 w-4 mr-2" />
-                            Aggiungi Riga
+                        <Button data-testid="btn-add-item" onClick={addItem} className="bg-[#0055FF] text-white hover:bg-[#0044CC]">
+                            <Plus className="h-4 w-4 mr-2" /> Aggiungi Riga
                         </Button>
                     </CardHeader>
                     <CardContent className="p-0">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="bg-[#1E293B] hover:bg-[#1E293B]">
-                                    <TableHead className="text-white font-semibold w-[100px]">Cat.</TableHead>
-                                    <TableHead className="text-white font-semibold w-[80px]">Codice</TableHead>
-                                    <TableHead className="text-white font-semibold">Nome</TableHead>
-                                    <TableHead className="text-white font-semibold w-[80px] text-right">Lung. mm</TableHead>
-                                    <TableHead className="text-white font-semibold w-[60px] text-right">Q.tà</TableHead>
-                                    <TableHead className="text-white font-semibold w-[60px]">Unità</TableHead>
-                                    <TableHead className="text-white font-semibold w-[80px] text-right">Peso/u</TableHead>
-                                    <TableHead className="text-white font-semibold w-[80px] text-right">Costo/u</TableHead>
-                                    <TableHead className="text-white font-semibold w-[90px] text-right">Totale</TableHead>
-                                    <TableHead className="w-[40px]"></TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {formData.items.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={10} className="text-center py-12 text-slate-500">
-                                            <Package className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                                            <p>Nessun materiale ancora</p>
-                                            <Button
-                                                className="mt-4"
-                                                variant="outline"
-                                                onClick={addItem}
-                                            >
-                                                <Plus className="h-4 w-4 mr-2" />
-                                                Aggiungi Prima Riga
-                                            </Button>
-                                        </TableCell>
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-[#1E293B] hover:bg-[#1E293B]">
+                                        <TableHead className="text-white font-medium w-[40px]">#</TableHead>
+                                        <TableHead className="text-white font-medium w-[280px]">Profilo</TableHead>
+                                        <TableHead className="text-white font-medium w-[110px] text-right">Lung. (mm)</TableHead>
+                                        <TableHead className="text-white font-medium w-[80px] text-right">Q.ta</TableHead>
+                                        <TableHead className="text-white font-medium w-[110px] text-right">Peso/m (kg)</TableHead>
+                                        <TableHead className="text-white font-medium w-[110px] text-right">Sup./m (mq)</TableHead>
+                                        <TableHead className="text-white font-medium w-[100px] text-right">Peso (kg)</TableHead>
+                                        <TableHead className="text-white font-medium w-[100px] text-right">Sup. (mq)</TableHead>
+                                        <TableHead className="text-white font-medium w-[40px]"></TableHead>
                                     </TableRow>
-                                ) : (
-                                    formData.items.map((item, index) => {
-                                        // Calculate line total
-                                        const qty = parseFloat(item.quantity) || 0;
-                                        const cost = parseFloat(item.cost_per_unit) || 0;
-                                        const lineTotal = qty * cost;
-                                        
+                                </TableHeader>
+                                <TableBody>
+                                    {formData.items.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={9} className="text-center py-12 text-slate-400">
+                                                <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                                <p>Nessun materiale. Clicca "Aggiungi Riga" per iniziare.</p>
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : formData.items.map((item, idx) => {
+                                        const rowW = getRowWeight(item);
+                                        const rowS = getRowSurface(item);
                                         return (
-                                            <TableRow key={item.item_id || index} className="hover:bg-slate-50">
+                                            <TableRow key={idx} className="hover:bg-blue-50/30">
+                                                <TableCell className="p-1 text-center font-mono text-sm text-slate-400">{idx + 1}</TableCell>
                                                 <TableCell className="p-1">
-                                                    <Select
-                                                        value={item.category}
-                                                        onValueChange={(v) => updateItem(index, 'category', v)}
-                                                    >
-                                                        <SelectTrigger className="h-8 text-sm">
-                                                            <SelectValue />
+                                                    <Select value={item.profile_id || 'custom'} onValueChange={(v) => v === 'custom' ? updateItem(idx, 'profile_id', '') : selectProfile(idx, v)}>
+                                                        <SelectTrigger data-testid={`select-profile-${idx}`} className="h-8 text-sm">
+                                                            <SelectValue placeholder="Seleziona profilo..." />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            {CATEGORIES.map(c => (
-                                                                <SelectItem key={c.value} value={c.value}>
-                                                                    {c.label}
-                                                                </SelectItem>
+                                                            <SelectItem value="custom">-- Manuale --</SelectItem>
+                                                            {profileTypes.map(pt => (
+                                                                <SelectGroup key={pt.value}>
+                                                                    <SelectLabel className="text-[#0055FF] font-semibold">{pt.label}</SelectLabel>
+                                                                    {(profilesByType[pt.value] || []).map(p => (
+                                                                        <SelectItem key={p.profile_id} value={p.profile_id}>
+                                                                            {p.label} ({p.weight_per_meter} kg/m)
+                                                                        </SelectItem>
+                                                                    ))}
+                                                                </SelectGroup>
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
+                                                    {!item.profile_id && (
+                                                        <Input data-testid={`input-name-${idx}`} value={item.name} onChange={(e) => updateItem(idx, 'name', e.target.value)} placeholder="Nome manuale" className="mt-1 h-7 text-sm" />
+                                                    )}
                                                 </TableCell>
                                                 <TableCell className="p-1">
-                                                    <Input
-                                                        value={item.code}
-                                                        onChange={(e) => updateItem(index, 'code', e.target.value)}
-                                                        className="h-8 text-sm"
-                                                        placeholder="COD"
-                                                    />
+                                                    <Input data-testid={`input-length-${idx}`} type="number" value={item.length_mm || ''} onChange={(e) => updateItem(idx, 'length_mm', parseFloat(e.target.value) || 0)} className="h-8 text-right font-mono text-sm" />
                                                 </TableCell>
                                                 <TableCell className="p-1">
-                                                    <Input
-                                                        value={item.name}
-                                                        onChange={(e) => updateItem(index, 'name', e.target.value)}
-                                                        className="h-8 text-sm"
-                                                        placeholder="Nome materiale"
-                                                    />
+                                                    <Input data-testid={`input-qty-${idx}`} type="number" value={item.quantity || ''} onChange={(e) => updateItem(idx, 'quantity', parseFloat(e.target.value) || 1)} className="h-8 text-right font-mono text-sm" min={1} />
                                                 </TableCell>
                                                 <TableCell className="p-1">
-                                                    <Input
-                                                        type="number"
-                                                        value={item.length_mm}
-                                                        onChange={(e) => updateItem(index, 'length_mm', e.target.value)}
-                                                        className="h-8 text-sm text-right"
-                                                        min="0"
-                                                    />
+                                                    <Input type="number" value={item.weight_per_meter || ''} onChange={(e) => updateItem(idx, 'weight_per_meter', parseFloat(e.target.value) || 0)} className="h-8 text-right font-mono text-sm" disabled={!!item.profile_id} step="0.01" />
                                                 </TableCell>
                                                 <TableCell className="p-1">
-                                                    <Input
-                                                        type="number"
-                                                        value={item.quantity}
-                                                        onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                                                        className="h-8 text-sm text-right"
-                                                        min="0"
-                                                        step="0.01"
-                                                    />
-                                                </TableCell>
-                                                <TableCell className="p-1">
-                                                    <Select
-                                                        value={item.unit}
-                                                        onValueChange={(v) => updateItem(index, 'unit', v)}
-                                                    >
-                                                        <SelectTrigger className="h-8 text-sm w-16">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {UNITS.map(u => (
-                                                                <SelectItem key={u.value} value={u.value}>
-                                                                    {u.label}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </TableCell>
-                                                <TableCell className="p-1">
-                                                    <Input
-                                                        type="number"
-                                                        value={item.weight_per_unit}
-                                                        onChange={(e) => updateItem(index, 'weight_per_unit', e.target.value)}
-                                                        className="h-8 text-sm text-right"
-                                                        min="0"
-                                                        step="0.01"
-                                                        placeholder="kg"
-                                                    />
-                                                </TableCell>
-                                                <TableCell className="p-1">
-                                                    <Input
-                                                        type="number"
-                                                        value={item.cost_per_unit}
-                                                        onChange={(e) => updateItem(index, 'cost_per_unit', e.target.value)}
-                                                        className="h-8 text-sm text-right"
-                                                        min="0"
-                                                        step="0.01"
-                                                        placeholder="€"
-                                                    />
+                                                    <Input type="number" value={item.surface_per_meter || ''} onChange={(e) => updateItem(idx, 'surface_per_meter', parseFloat(e.target.value) || 0)} className="h-8 text-right font-mono text-sm" disabled={!!item.profile_id} step="0.001" />
                                                 </TableCell>
                                                 <TableCell className="p-1 text-right font-mono font-semibold text-[#0055FF] bg-slate-50">
-                                                    {formatCurrency(lineTotal)}
+                                                    {formatNumber(rowW, 2)}
+                                                </TableCell>
+                                                <TableCell className="p-1 text-right font-mono font-semibold text-[#0055FF] bg-slate-50">
+                                                    {formatNumber(rowS, 3)}
                                                 </TableCell>
                                                 <TableCell className="p-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => removeItem(index)}
-                                                        className="h-8 w-8 p-0 text-slate-400 hover:text-red-600"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
+                                                    <Button data-testid={`btn-remove-${idx}`} variant="ghost" size="icon" onClick={() => removeItem(idx)} className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50">
+                                                        <Trash2 className="h-3.5 w-3.5" />
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>
                                         );
-                                    })
-                                )}
-                            </TableBody>
-                        </Table>
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </CardContent>
                 </Card>
 
-                {/* Totals */}
+                {/* Riepilogo */}
                 <Card className="border-gray-200">
                     <CardHeader className="pb-4 bg-blue-50 border-b border-gray-200">
                         <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                            <Calculator className="h-5 w-5" />
-                            Riepilogo
+                            <Calculator className="h-5 w-5" /> Riepilogo
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-4 gap-6">
+                    <CardContent className="pt-6">
+                        <div className="grid grid-cols-5 gap-6">
                             <div className="text-center p-4 bg-slate-50 rounded-lg">
                                 <Package className="h-6 w-6 mx-auto mb-2 text-slate-600" />
-                                <p className="text-2xl font-mono font-bold text-[#0055FF]">{totals.total_items}</p>
+                                <p data-testid="total-items" className="text-2xl font-mono font-bold text-[#0055FF]">{totals.total_items}</p>
                                 <p className="text-sm text-slate-500">Articoli</p>
                             </div>
                             <div className="text-center p-4 bg-slate-50 rounded-lg">
-                                <div className="h-6 w-6 mx-auto mb-2 text-slate-600 font-bold">m</div>
-                                <p className="text-2xl font-mono font-bold text-[#0055FF]">
-                                    {totals.total_length_m?.toFixed(2)}
-                                </p>
-                                <p className="text-sm text-slate-500">Lunghezza Tot.</p>
-                            </div>
-                            <div className="text-center p-4 bg-slate-50 rounded-lg">
-                                <Weight className="h-6 w-6 mx-auto mb-2 text-slate-600" />
-                                <p className="text-2xl font-mono font-bold text-[#0055FF]">
-                                    {totals.total_weight_kg?.toFixed(2)}
-                                </p>
-                                <p className="text-sm text-slate-500">Peso (kg)</p>
+                                <Ruler className="h-6 w-6 mx-auto mb-2 text-slate-600" />
+                                <p data-testid="total-length" className="text-2xl font-mono font-bold text-[#0055FF]">{formatNumber(totals.total_length_m, 2)}</p>
+                                <p className="text-sm text-slate-500">Lunghezza (m)</p>
                             </div>
                             <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-                                <Euro className="h-6 w-6 mx-auto mb-2 text-[#0055FF]" />
-                                <p className="text-2xl font-mono font-bold text-[#0055FF]">
-                                    {formatCurrency(totals.total_cost)}
-                                </p>
-                                <p className="text-sm text-blue-600">Costo Totale</p>
+                                <Weight className="h-6 w-6 mx-auto mb-2 text-[#0055FF]" />
+                                <p data-testid="total-weight" className="text-2xl font-mono font-bold text-[#0055FF]">{formatNumber(totals.total_weight_kg, 2)}</p>
+                                <p className="text-sm text-blue-600">Peso Totale (kg)</p>
+                            </div>
+                            <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <BarChart3 className="h-6 w-6 mx-auto mb-2 text-[#0055FF]" />
+                                <p data-testid="total-surface" className="text-2xl font-mono font-bold text-[#0055FF]">{formatNumber(totals.total_surface_mq, 3)}</p>
+                                <p className="text-sm text-blue-600">Superficie (mq)</p>
+                            </div>
+                            <div className="text-center p-4 bg-slate-50 rounded-lg">
+                                <Calculator className="h-6 w-6 mx-auto mb-2 text-slate-600" />
+                                <p data-testid="total-cost" className="text-2xl font-mono font-bold text-[#0055FF]">{formatCurrency(totals.total_cost)}</p>
+                                <p className="text-sm text-slate-500">Costo Totale</p>
                             </div>
                         </div>
-
-                        {/* Category Breakdown */}
-                        {Object.keys(totals.by_category || {}).length > 0 && (
-                            <>
-                                <Separator className="my-6" />
-                                <h4 className="font-semibold text-slate-900 mb-3">Per Categoria</h4>
-                                <div className="grid grid-cols-3 gap-4">
-                                    {Object.entries(totals.by_category || {}).map(([category, data]) => (
-                                        <div key={category} className="p-3 border border-gray-200 rounded-lg">
-                                            <p className="font-medium text-slate-900 capitalize">{category}</p>
-                                            <div className="flex justify-between text-sm text-slate-500 mt-1">
-                                                <span>{data.count} art.</span>
-                                                <span>{data.weight?.toFixed(2)} kg</span>
-                                                <span>{formatCurrency(data.cost)}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </>
-                        )}
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Bar Calculation Dialog */}
+            <Dialog open={barDialogOpen} onOpenChange={setBarDialogOpen}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="font-sans text-xl text-[#1E293B] flex items-center gap-2">
+                            <BarChart3 className="h-5 w-5 text-[#0055FF]" /> Calcolo Barre (6m)
+                        </DialogTitle>
+                        <DialogDescription>
+                            Quante barre da 6 metri servono per ogni profilo.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {barResults && (
+                        <div className="space-y-4">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-[#1E293B] hover:bg-[#1E293B]">
+                                        <TableHead className="text-white font-medium">Profilo</TableHead>
+                                        <TableHead className="text-white font-medium text-right">Lung. Tot.</TableHead>
+                                        <TableHead className="text-white font-medium text-right">Barre 6m</TableHead>
+                                        <TableHead className="text-white font-medium text-right">Sfrido</TableHead>
+                                        <TableHead className="text-white font-medium text-right">%</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {barResults.results.map((r, i) => (
+                                        <TableRow key={i}>
+                                            <TableCell className="font-medium">{r.profile_label}</TableCell>
+                                            <TableCell className="text-right font-mono">{formatNumber(r.total_length_m)} m</TableCell>
+                                            <TableCell className="text-right font-mono font-bold text-[#0055FF]">{r.bars_needed}</TableCell>
+                                            <TableCell className="text-right font-mono text-sm">{formatNumber(r.waste_mm, 0)} mm</TableCell>
+                                            <TableCell className={`text-right font-mono text-sm ${r.waste_percent > 30 ? 'text-red-500' : 'text-emerald-600'}`}>
+                                                {formatNumber(r.waste_percent, 1)}%
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                            <Separator />
+                            <div className="flex justify-between items-center text-lg font-bold">
+                                <span className="text-[#1E293B]">Totale Barre da Acquistare:</span>
+                                <span data-testid="total-bars" className="font-mono text-[#0055FF]">{barResults.total_bars}</span>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setBarDialogOpen(false)}>Chiudi</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Import from Rilievo Dialog */}
             <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle className="font-sans">Importa da Rilievo</DialogTitle>
+                        <DialogTitle className="font-sans text-xl text-[#1E293B]">Importa da Rilievo</DialogTitle>
                         <DialogDescription>
-                            Seleziona un rilievo per importare automaticamente i materiali 
-                            basati sulle dimensioni degli schizzi.
+                            Seleziona un rilievo per importare le misure nella distinta.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="py-4">
-                        <Label>Rilievo</Label>
-                        <Select
-                            value={selectedRilievoForImport}
-                            onValueChange={setSelectedRilievoForImport}
-                        >
-                            <SelectTrigger data-testid="select-import-rilievo">
-                                <SelectValue placeholder="Seleziona rilievo..." />
-                            </SelectTrigger>
+                    <div className="space-y-4 py-4">
+                        <Select value={selectedRilievoForImport} onValueChange={setSelectedRilievoForImport}>
+                            <SelectTrigger data-testid="import-rilievo-select"><SelectValue placeholder="Seleziona rilievo..." /></SelectTrigger>
                             <SelectContent>
                                 {rilievi.map(r => (
-                                    <SelectItem key={r.rilievo_id} value={r.rilievo_id}>
-                                        {r.project_name} - {r.client_name}
-                                    </SelectItem>
+                                    <SelectItem key={r.rilievo_id} value={r.rilievo_id}>{r.project_name} - {r.client_name || 'Senza cliente'}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
-                        <p className="text-sm text-slate-500 mt-2">
-                            Nota: I materiali verranno aggiunti a quelli esistenti.
-                        </p>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
-                            Annulla
-                        </Button>
-                        <Button
-                            onClick={handleImportFromRilievo}
-                            className="bg-[#0055FF] text-white hover:bg-[#0044CC]"
-                        >
-                            <Import className="h-4 w-4 mr-2" />
-                            Importa
+                        <Button variant="outline" onClick={() => setImportDialogOpen(false)}>Annulla</Button>
+                        <Button data-testid="btn-confirm-import" onClick={handleImportFromRilievo} disabled={!selectedRilievoForImport} className="bg-[#0055FF] text-white hover:bg-[#0044CC]">
+                            <Import className="h-4 w-4 mr-2" /> Importa
                         </Button>
                     </DialogFooter>
                 </DialogContent>
