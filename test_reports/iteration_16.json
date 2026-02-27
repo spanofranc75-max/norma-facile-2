@@ -1,0 +1,66 @@
+{
+  "summary": "Tested NEW Norma Router and Vendor API features. All 30 backend API tests passed (100%). Frontend UI tests passed - thermal calculator frame dropdown correctly shows vendor profiles with [Vendor] prefix. Norma Router correctly maps 10 product types to standards (EN 13241, EN 14351-1, EN 1090-1) with mandatory fields. Vendor API multi-key system works: key creation, catalog import (NF-Standard JSON), upsert, merged thermal-profiles, and key revocation all verified.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "norma_router": {
+      "GET /api/certificazioni/router/product-types": "PASS - Returns 10 product types with id, label, standards, has_thermal",
+      "GET /api/certificazioni/router/cancello": "PASS - Returns EN 13241 with mandatory: product_type, mechanical_resistance, safe_opening, durability",
+      "GET /api/certificazioni/router/finestra": "PASS - Returns EN 14351-1 with ThermalValidator required, thermal_uw mandatory",
+      "GET /api/certificazioni/router/tettoia": "PASS - Returns EN 1090-1 with execution_class mandatory",
+      "GET /api/certificazioni/router/unknown_type": "PASS - Defaults to structural (EN 1090-1)",
+      "Router public (no auth)": "PASS - Router endpoints accessible without authentication"
+    },
+    "vendor_api": {
+      "POST /api/vendor/import_catalog (no header)": "PASS - Returns 422 (missing x-vendor-key)",
+      "POST /api/vendor/import_catalog (invalid key)": "PASS - Returns 403",
+      "POST /api/vendor/keys": "PASS - Creates vendor key with nf_vk_ prefix",
+      "GET /api/vendor/keys": "PASS - Lists keys with api_key_masked field",
+      "POST /api/vendor/import_catalog (valid key)": "PASS - Imports NF-Standard catalog",
+      "POST /api/vendor/import_catalog (upsert)": "PASS - Same vendor+system updates existing catalog",
+      "GET /api/vendor/catalogs": "PASS - Lists imported catalogs",
+      "GET /api/vendor/catalogs/{catalog_id}": "PASS - Returns single catalog with profiles",
+      "GET /api/vendor/catalogs/{vendor_name}/profiles": "PASS - Returns vendor's profiles",
+      "GET /api/vendor/thermal-profiles": "PASS - Returns merged frames (8 builtin + vendor profiles with source='vendor')",
+      "DELETE /api/vendor/keys/{key_id}": "PASS - Revokes (deactivates) key",
+      "Import after revoke": "PASS - Returns 403 with revoked key"
+    },
+    "frontend": {
+      "Thermal calculator frame dropdown": "PASS - Shows [Vendor] prefix for vendor profiles",
+      "Vendor profiles displayed": "3 Schuco AWS 75 profiles with [Vendor] badge",
+      "Uw calculation": "PASS - Calculates correctly with zone compliance badges"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_norma_router_vendor_api.py",
+    "/app/test_reports/pytest/norma_router_vendor_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "NormaRouter in router.py correctly implements ProductType enum with 10 types and ROUTING_TABLE mapping",
+    "vendor_api.py uses verify_vendor_key dependency with X-Vendor-Key header middleware properly",
+    "Upsert logic in import_catalog correctly checks vendor+system combination before insert/update",
+    "Merged thermal-profiles correctly combines builtin FRAME_TYPES + vendor profiles (with uf) + custom user profiles",
+    "Frontend CertificazioneWizardPage.js properly fetches /vendor/thermal-profiles and merges with reference data",
+    "Frontend displays [Vendor] prefix for source='vendor' profiles in dropdown"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_norma_router_vendor_api.py"
+  ],
+  "success_rate": {
+    "backend": "100% (30/30 tests passed)",
+    "frontend": "100% (6/6 UI tests passed)"
+  },
+  "test_credentials": "Created temp test users via MongoDB (vendor_session_*, frontend_vendor_session_*, router_vendor_session_*), all cleaned up after tests",
+  "seed_data_creation": "None - all test data cleaned up",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Norma Router + Vendor API fully tested. Router maps: cancello/portone -> EN 13241, finestra/portafinestra -> EN 14351-1 (thermal required), tettoia/scala/soppalco/ringhiera/pensilina/recinzione -> EN 1090-1 (structural). Vendor API uses X-Vendor-Key header (not Bearer auth). Keys are per-user (owner_id). Catalog import uses NF-Standard JSON format: {vendor, system, profiles: [{code, type, uf, weight, ...}]}. Merged thermal-profiles returns builtin + vendor (source='vendor') + custom (source='custom') frames."
+}
