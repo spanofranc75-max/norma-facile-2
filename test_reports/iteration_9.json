@@ -1,0 +1,72 @@
+{
+  "summary": "Certificazioni CE Module (EN 1090 / EN 13241) - Complete testing of backend CRUD + PDF generation and frontend 3-step wizard. All 15 backend tests passed. All frontend features verified working: landing page updated to 'CRM per Fabbri', sidebar shows 'Certificazioni CE', wizard steps navigate correctly, EN 1090 and EN 13241 show different technical spec fields, save creates certification, PDF download works.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "LandingPage features section",
+        "issues": ["Text 'lavoro legale quotidiano' was inconsistent with metalworking CRM theme - FIXED"]
+      }
+    ]
+  },
+  "features_verified": {
+    "backend": {
+      "GET /api/certificazioni/": "PASS - Returns list with pagination and status filter",
+      "POST /api/certificazioni/": "PASS - Creates certification with auto-generated declaration number",
+      "GET /api/certificazioni/{cert_id}": "PASS - Returns single certification",
+      "PUT /api/certificazioni/{cert_id}": "PASS - Updates certification fields and status",
+      "DELETE /api/certificazioni/{cert_id}": "PASS - Deletes certification and returns 404 on subsequent GET",
+      "GET /api/certificazioni/{cert_id}/fascicolo-pdf": "PASS - Returns application/pdf with DOP + CE Label content",
+      "EN 1090-1 declaration number": "PASS - Format DOP-YYYY-XXXXXX",
+      "EN 13241 declaration number": "PASS - Format DOP-G-YYYY-XXXXXX (gate prefix)",
+      "Technical specs defaults": "PASS - EXC2, Classe C3, A1 fire reaction",
+      "All execution classes": "PASS - EXC1, EXC2, EXC3, EXC4 accepted"
+    },
+    "frontend": {
+      "Landing page badge": "PASS - Shows 'CRM per Fabbri e Carpenterie'",
+      "Landing page heading": "PASS - Shows 'Il Ferro, Organizzato'",
+      "Feature cards": "PASS - Shows Distinta Materiali, Rilievi in Cantiere, Certificazioni CE",
+      "Sidebar Certificazioni CE link": "PASS - Shows Shield icon with 'Certificazioni CE' text",
+      "Certificazioni list page": "PASS - Shows table with columns Progetto, Norma, Tipo Prodotto, N. DOP, Cliente, Stato",
+      "Empty state": "PASS - Shows 'Nessuna certificazione trovata' with create button",
+      "Wizard Step 1": "PASS - Project name, client select, distinta select, product type, description",
+      "Wizard Step 2": "PASS - EN 1090-1 (Strutturale) and EN 13241 (Cancelli/Porte) cards",
+      "Wizard Step 3 EN 1090": "PASS - Shows Execution Class, Reaction to Fire, NO gate-specific fields",
+      "Wizard Step 3 EN 13241": "PASS - Shows Mechanical Resistance, Safe Opening, Air Permeability, Water Tightness, Wind Resistance",
+      "Save certification": "PASS - Creates certification and shows success message",
+      "Generate PDF button": "PASS - Visible after save, opens PDF in new tab",
+      "Dropdown menu": "PASS - Shows Modifica, Scarica PDF, Elimina options"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_certificazioni.py",
+    "/app/test_reports/pytest/certificazioni_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "bugs_found_and_fixed": [
+    {
+      "issue": "Landing page features section mentioned 'lavoro legale' (legal work) instead of metalworking",
+      "fix": "Changed text to 'gestione della tua officina' (workshop management)",
+      "file": "/app/frontend/src/pages/LandingPage.js"
+    }
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_certificazioni.py",
+    "/app/frontend/src/pages/LandingPage.js"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 tests passed)",
+    "frontend": "100% (all features verified)"
+  },
+  "seed_data_creation": "Created temporary test users and sessions for both pytest and Playwright testing, cleaned up after tests",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Certificazioni CE Module fully tested and working. Backend CRUD + PDF generation all pass. Frontend wizard with 3 steps works correctly - EN 1090-1 shows execution class/fire reaction fields, EN 13241 shows gate-specific fields (air permeability, water tightness, wind resistance). Minor text fix on landing page. No API mocking used - all integrations are real.",
+  "mocked_api_note": "None - all APIs are fully implemented"
+}
