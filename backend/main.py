@@ -18,6 +18,7 @@ from routes.chat import router as chat_router
 from routes.clients import router as clients_router
 from routes.invoices import router as invoices_router
 from routes.company import router as company_router
+from routes.rilievi import router as rilievi_router
 
 # Configure logging
 logging.basicConfig(
@@ -61,6 +62,7 @@ app.include_router(chat_router, prefix="/api")
 app.include_router(clients_router, prefix="/api")
 app.include_router(invoices_router, prefix="/api")
 app.include_router(company_router, prefix="/api")
+app.include_router(rilievi_router, prefix="/api")
 
 
 @app.get("/api/")

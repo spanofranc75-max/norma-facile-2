@@ -9,3 +9,7 @@ from .invoice import (
     DocumentType, InvoiceStatus, PaymentMethod, PaymentTerms
 )
 from .company import CompanySettings, CompanySettingsUpdate
+from .rilievo import (
+    Rilievo, RilievoCreate, RilievoUpdate, RilievoResponse, RilievoListResponse,
+    RilievoStatus, SketchData, PhotoData
+)
