@@ -421,9 +421,9 @@ async def convert_to_invoice(prev_id: str, user: dict = Depends(get_current_user
         "lines": invoice_lines,
         "totals": {
             "subtotal": round(subtotal, 2),
-            "taxable_amount": round(subtotal, 2),
+            "taxable_amount": round(taxable, 2),
             "total_vat": round(total_vat, 2),
-            "total_document": round(subtotal + total_vat, 2),
+            "total_document": round(taxable + total_vat, 2),
             "total_due": round(subtotal + total_vat, 2),
         },
         "notes": f"Riferimento preventivo {doc.get('number', prev_id)}. {doc.get('notes', '') or ''}".strip(),
