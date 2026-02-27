@@ -8,6 +8,10 @@ import { Toaster } from './components/ui/sonner';
 import LandingPage from './pages/LandingPage';
 import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
+import ClientsPage from './pages/ClientsPage';
+import InvoicesPage from './pages/InvoicesPage';
+import InvoiceEditorPage from './pages/InvoiceEditorPage';
+import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
@@ -32,6 +36,49 @@ function AppRouter() {
                 element={
                     <ProtectedRoute>
                         <Dashboard />
+                    </ProtectedRoute>
+                }
+            />
+            {/* Clients */}
+            <Route
+                path="/clients"
+                element={
+                    <ProtectedRoute>
+                        <ClientsPage />
+                    </ProtectedRoute>
+                }
+            />
+            {/* Invoices */}
+            <Route
+                path="/invoices"
+                element={
+                    <ProtectedRoute>
+                        <InvoicesPage />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/invoices/new"
+                element={
+                    <ProtectedRoute>
+                        <InvoiceEditorPage />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/invoices/:invoiceId"
+                element={
+                    <ProtectedRoute>
+                        <InvoiceEditorPage />
+                    </ProtectedRoute>
+                }
+            />
+            {/* Settings */}
+            <Route
+                path="/settings"
+                element={
+                    <ProtectedRoute>
+                        <SettingsPage />
                     </ProtectedRoute>
                 }
             />
