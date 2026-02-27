@@ -43,6 +43,7 @@ import {
     FileCode,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
+import EmptyState from '../components/EmptyState';
 
 const DOC_TYPES = {
     FT: { label: 'Fattura', color: 'bg-blue-100 text-blue-800' },
@@ -282,8 +283,14 @@ export default function InvoicesPage() {
                                     </TableRow>
                                 ) : invoices.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="text-center py-8 text-slate-500">
-                                            Nessun documento trovato
+                                        <TableCell colSpan={8} className="p-0">
+                                            <EmptyState
+                                                type="invoices"
+                                                title="Nessun documento trovato"
+                                                description="Crea la tua prima fattura per iniziare a gestire la contabilità della tua officina."
+                                                actionLabel="Crea la prima Fattura"
+                                                onAction={() => navigate('/invoices/new')}
+                                            />
                                         </TableCell>
                                     </TableRow>
                                 ) : (
