@@ -33,10 +33,13 @@ class ThermalData(BaseModel):
 class QuoteLine(BaseModel):
     line_id: Optional[str] = None
     description: str = ""
+    codice_articolo: Optional[str] = None
     dimensions: Optional[str] = None
     quantity: float = 1
     unit: str = "pz"
     unit_price: float = 0
+    sconto_1: float = 0  # Discount 1 (%)
+    sconto_2: float = 0  # Discount 2 (%)
     vat_rate: str = "22"
     thermal_data: Optional[ThermalData] = None
     notes: Optional[str] = None
@@ -46,8 +49,16 @@ class PreventivoCreate(BaseModel):
     client_id: Optional[str] = None
     subject: str = ""
     validity_days: int = 30
-    payment_terms: str = "30gg"
+    payment_type_id: Optional[str] = None
+    payment_type_label: Optional[str] = None
+    destinazione_merce: Optional[str] = None
+    iban: Optional[str] = None
+    banca: Optional[str] = None
     notes: Optional[str] = None
+    note_pagamento: Optional[str] = None
+    riferimento: Optional[str] = None
+    acconto: float = 0
+    sconto_globale: float = 0
     lines: List[QuoteLine] = []
 
 
@@ -55,8 +66,16 @@ class PreventivoUpdate(BaseModel):
     client_id: Optional[str] = None
     subject: Optional[str] = None
     validity_days: Optional[int] = None
-    payment_terms: Optional[str] = None
+    payment_type_id: Optional[str] = None
+    payment_type_label: Optional[str] = None
+    destinazione_merce: Optional[str] = None
+    iban: Optional[str] = None
+    banca: Optional[str] = None
     notes: Optional[str] = None
+    note_pagamento: Optional[str] = None
+    riferimento: Optional[str] = None
+    acconto: Optional[float] = None
+    sconto_globale: Optional[float] = None
     lines: Optional[List[QuoteLine]] = None
     status: Optional[str] = None
 
