@@ -34,6 +34,18 @@ class TechnicalSpecs(BaseModel):
     wind_resistance: Optional[str] = None
     mechanical_resistance: Optional[str] = None
     safe_opening: Optional[str] = "Conforme"
+    # Thermal data (Uw calculation)
+    thermal_enabled: bool = False
+    thermal_uw: Optional[float] = None
+    thermal_glass_id: Optional[str] = None
+    thermal_frame_id: Optional[str] = None
+    thermal_spacer_id: Optional[str] = None
+    thermal_height_mm: Optional[float] = None
+    thermal_width_mm: Optional[float] = None
+    thermal_frame_width_mm: Optional[float] = None
+    thermal_glass_label: Optional[str] = None
+    thermal_frame_label: Optional[str] = None
+    thermal_spacer_label: Optional[str] = None
     # Custom notes
     additional_notes: Optional[str] = None
 
