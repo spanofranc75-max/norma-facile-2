@@ -32,6 +32,7 @@ import {
     Truck,
     Factory,
     ShieldAlert,
+    BarChart3,
 } from 'lucide-react';
 
 const navItems = [
