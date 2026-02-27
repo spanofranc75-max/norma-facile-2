@@ -109,6 +109,8 @@ export default function PeriziaEditorPage() {
     const [notes, setNotes] = useState('');
     const [needsSmaltimento, setNeedsSmaltimento] = useState(true);
     const [accessoDifficile, setAccessoDifficile] = useState(false);
+    const [scontoCortesia, setScontoCortesia] = useState(0);
+    const [openTooltip, setOpenTooltip] = useState(null);
 
     // Geo
     const [mapPos, setMapPos] = useState(null);
