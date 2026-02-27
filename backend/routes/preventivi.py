@@ -232,7 +232,7 @@ async def create_preventivo(data: PreventivoCreate, user: dict = Depends(get_cur
             d["line_id"] = f"ln_{uuid.uuid4().hex[:8]}"
         lines.append(calc_line(d))
 
-    totals = calc_totals(lines)
+    totals = calc_totals(lines, data.sconto_globale, data.acconto)
     compliance = run_compliance(lines)
 
     doc = {
@@ -242,8 +242,16 @@ async def create_preventivo(data: PreventivoCreate, user: dict = Depends(get_cur
         "client_id": data.client_id,
         "subject": data.subject,
         "validity_days": data.validity_days,
-        "payment_terms": data.payment_terms,
+        "payment_type_id": data.payment_type_id,
+        "payment_type_label": data.payment_type_label,
+        "destinazione_merce": data.destinazione_merce,
+        "iban": data.iban,
+        "banca": data.banca,
         "notes": data.notes,
+        "note_pagamento": data.note_pagamento,
+        "riferimento": data.riferimento,
+        "acconto": data.acconto,
+        "sconto_globale": data.sconto_globale,
         "lines": lines,
         "totals": totals,
         "compliance_status": compliance["all_compliant"],
