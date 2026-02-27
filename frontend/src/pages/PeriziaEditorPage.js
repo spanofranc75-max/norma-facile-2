@@ -270,6 +270,28 @@ export default function PeriziaEditorPage() {
         finally { setRecalcing(false); }
     };
 
+    // Generate cover letter
+    const handleGeneraLettera = async () => {
+        if (isNew) { toast.error('Salva prima la perizia'); return; }
+        setGeneratingLetter(true);
+        try {
+            // Save current data first
+            await apiRequest(`/perizie/${periziaId}`, {
+                method: 'PUT',
+                body: {
+                    stato_di_fatto: statoDiFatto,
+                    nota_tecnica: notaTecnica,
+                    descrizione_utente: descrizione,
+                    tipo_danno: tipoDanno,
+                },
+            });
+            const res = await apiRequest(`/perizie/${periziaId}/genera-lettera`, { method: 'POST' });
+            setLetteraAccompagnamento(res.lettera_accompagnamento || '');
+            toast.success('Lettera di accompagnamento generata');
+        } catch (e) { toast.error(e.message); }
+        finally { setGeneratingLetter(false); }
+    };
+
     return (
         <DashboardLayout>
             <div className="space-y-4" data-testid="perizia-editor-page">
