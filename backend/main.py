@@ -23,6 +23,7 @@ from routes.distinta import router as distinta_router
 from routes.certificazioni import router as certificazioni_router
 from routes.sicurezza import router as sicurezza_router
 from routes.dashboard import router as dashboard_router
+from routes.catalogo import router as catalogo_router
 
 # Configure logging
 logging.basicConfig(
