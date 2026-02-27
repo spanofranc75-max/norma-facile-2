@@ -236,18 +236,18 @@ class TestWorkflowTimelineBackend:
         assert get_response.json()['linked_invoice']['status'] == 'bozza'
         print(f"✓ Initial invoice status is 'bozza'")
         
-        # Update invoice status to 'emessa'
-        update_response = api_client.put(f"{BASE_URL}/api/invoices/{invoice_id}", json={"status": "emessa"})
-        assert update_response.status_code == 200
+        # Update invoice status to 'emessa' using PATCH endpoint (correct endpoint for status changes)
+        update_response = api_client.patch(f"{BASE_URL}/api/invoices/{invoice_id}/status", json={"status": "emessa"})
+        assert update_response.status_code == 200, f"Failed to update status: {update_response.text}"
         
         # Verify status propagates to linked_invoice
         get_response2 = api_client.get(f"{BASE_URL}/api/preventivi/{prev_id}")
         assert get_response2.json()['linked_invoice']['status'] == 'emessa'
         print(f"✓ Invoice status 'emessa' propagates to linked_invoice")
         
-        # Update to 'pagata'
-        update_response2 = api_client.put(f"{BASE_URL}/api/invoices/{invoice_id}", json={"status": "pagata"})
-        assert update_response2.status_code == 200
+        # Update to 'pagata' (bozza -> emessa -> pagata is valid transition)
+        update_response2 = api_client.patch(f"{BASE_URL}/api/invoices/{invoice_id}/status", json={"status": "pagata"})
+        assert update_response2.status_code == 200, f"Failed to update to pagata: {update_response2.text}"
         
         # Verify 'pagata' status
         get_response3 = api_client.get(f"{BASE_URL}/api/preventivi/{prev_id}")
