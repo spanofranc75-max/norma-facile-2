@@ -541,12 +541,12 @@ async def delete_invoice(
 
 # ── Scadenze / Payment Tracking ─────────────────────────────────
 
-from pydantic import BaseModel as PydanticBaseModel
+from pydantic import BaseModel as PydanticBaseModel, Field as PydanticField
 
 
 class ScadenzaPayment(PydanticBaseModel):
     """Record a payment against an invoice."""
-    importo: float = Field(..., gt=0)
+    importo: float = PydanticField(..., gt=0)
     data_pagamento: str  # ISO date
     metodo: Optional[str] = None
     note: Optional[str] = None
