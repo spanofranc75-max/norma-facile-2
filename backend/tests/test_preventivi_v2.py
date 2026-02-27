@@ -665,10 +665,11 @@ class TestConvertToInvoiceV2:
         assert invoice_response.status_code == 200
         
         invoice = invoice_response.json()
-        # payment_method should contain the label
-        assert 'RB30' in invoice.get('payment_method', '') or 'Ri.Ba' in invoice.get('payment_terms', ''), f"Payment type not carried over: {invoice.get('payment_method')}, {invoice.get('payment_terms')}"
+        # payment_method should be mapped to "riba" from "RB30 - Ri.Ba 30gg"
+        assert invoice.get('payment_method') == 'riba', f"Expected payment_method='riba', got {invoice.get('payment_method')}"
+        assert invoice.get('payment_terms') == '30gg', f"Expected payment_terms='30gg', got {invoice.get('payment_terms')}"
         
-        print(f"✓ Convert carries payment_method: {invoice.get('payment_method')}")
+        print(f"✓ Convert carries payment_method: {invoice.get('payment_method')}, payment_terms: {invoice.get('payment_terms')}")
 
     def test_convert_with_global_discount(self, auth_session, test_client):
         """Convert applies sconto_globale proportionally."""
