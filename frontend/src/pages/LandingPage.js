@@ -51,8 +51,8 @@ export default function LandingPage() {
                 <header className="container mx-auto px-6 py-6">
                     <nav className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <Scale className="h-8 w-8 text-slate-900" strokeWidth={1.5} />
-                            <span className="font-serif text-xl font-bold text-slate-900">
+                            <Scale className="h-8 w-8 text-[#0055FF]" strokeWidth={1.5} />
+                            <span className="font-sans text-xl font-bold text-slate-900">
                                 Norma Facile
                             </span>
                         </div>

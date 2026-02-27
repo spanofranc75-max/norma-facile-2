@@ -59,8 +59,8 @@ export default function DashboardLayout({ children }) {
             <aside className="fixed left-0 top-0 h-screen w-64 bg-[#1E293B] text-slate-300 border-r border-slate-700 z-50">
                 <div className="p-6">
                     <div className="flex items-center gap-2 mb-10">
-                        <Scale className="h-7 w-7 text-white" strokeWidth={1.5} />
-                        <span className="font-serif text-lg font-bold text-white">
+                        <Scale className="h-7 w-7 text-[#0055FF]" strokeWidth={1.5} />
+                        <span className="font-sans text-lg font-bold text-white">
                             Norma Facile
                         </span>
                     </div>
