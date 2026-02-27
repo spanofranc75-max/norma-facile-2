@@ -109,7 +109,7 @@ export default function LandingPage() {
                             Tutto ciò che ti serve
                         </h2>
                         <p className="text-slate-600 max-w-xl mx-auto">
-                            Strumenti avanzati per semplificare il lavoro legale quotidiano.
+                            Strumenti avanzati per semplificare la gestione della tua officina.
                         </p>
                     </div>
 
