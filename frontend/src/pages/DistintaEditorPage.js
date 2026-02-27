@@ -151,7 +151,7 @@ export default function DistintaEditorPage() {
         if (!isEditing) return;
         const fetchDistinta = async () => {
             try {
-                const data = await apiRequest(`/api/distinte/${distintaId}`);
+                const data = await apiRequest(`/distinte/${distintaId}`);
                 setFormData({
                     name: data.name || '',
                     rilievo_id: data.rilievo_id || '',
@@ -241,10 +241,10 @@ export default function DistintaEditorPage() {
             };
             if (isEditing) {
                 payload.status = formData.status;
-                await apiRequest(`/api/distinte/${distintaId}`, { method: 'PUT', body: payload });
+                await apiRequest(`/distinte/${distintaId}`, { method: 'PUT', body: payload });
                 toast.success('Distinta aggiornata');
             } else {
-                const res = await apiRequest('/api/distinte/', { method: 'POST', body: payload });
+                const res = await apiRequest('/distinte/', { method: 'POST', body: payload });
                 toast.success('Distinta creata');
                 navigate(`/distinte/${res.distinta_id}`);
             }
@@ -263,7 +263,7 @@ export default function DistintaEditorPage() {
         }
         try {
             await handleSave();
-            const data = await apiRequest(`/api/distinte/${distintaId}/calcola-barre`, { method: 'POST' });
+            const data = await apiRequest(`/distinte/${distintaId}/calcola-barre`, { method: 'POST' });
             setBarResults(data);
             setBarDialogOpen(true);
         } catch (err) {
@@ -291,7 +291,7 @@ export default function DistintaEditorPage() {
         if (!isEditing || !selectedRilievoForImport) return;
         try {
             const data = await apiRequest(
-                `/api/distinte/${distintaId}/import-rilievo/${selectedRilievoForImport}`,
+                `/distinte/${distintaId}/import-rilievo/${selectedRilievoForImport}`,
                 { method: 'POST' }
             );
             setFormData({
