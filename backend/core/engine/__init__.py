@@ -6,10 +6,12 @@ from core.engine.climate_zones import ClimateZone, ZONE_LIMITS
 from core.engine.thermal import ThermalValidator, ThermalInput, ThermalResult
 from core.engine.safety import SafetyValidator
 from core.engine.ce import CEValidator, CEValidationResult
+from core.engine.router import NormaRouter, ProductType, RegulationStandard, RouteResult
 
 __all__ = [
     "ClimateZone", "ZONE_LIMITS",
     "ThermalValidator", "ThermalInput", "ThermalResult",
     "SafetyValidator",
     "CEValidator", "CEValidationResult",
+    "NormaRouter", "ProductType", "RegulationStandard", "RouteResult",
 ]
