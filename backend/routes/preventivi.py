@@ -289,6 +289,8 @@ async def update_preventivo(prev_id: str, data: PreventivoUpdate, user: dict = D
     if data.sconto_globale is not None:
         upd["sconto_globale"] = data.sconto_globale
 
+    # Determine lines to use for totals calculation
+    lines_for_calc = None
     if data.lines is not None:
         lines = []
         for line in data.lines:
@@ -297,12 +299,19 @@ async def update_preventivo(prev_id: str, data: PreventivoUpdate, user: dict = D
                 d["line_id"] = f"ln_{uuid.uuid4().hex[:8]}"
             lines.append(calc_line(d))
         upd["lines"] = lines
-        sg = data.sconto_globale if data.sconto_globale is not None else existing.get("sconto_globale", 0)
-        ac = data.acconto if data.acconto is not None else existing.get("acconto", 0)
-        upd["totals"] = calc_totals(lines, sg, ac)
+        lines_for_calc = lines
         compliance = run_compliance(lines)
         upd["compliance_status"] = compliance["all_compliant"]
         upd["compliance_detail"] = compliance
+    else:
+        # Use existing lines for recalculation if only sconto_globale or acconto changed
+        lines_for_calc = existing.get("lines", [])
+
+    # Recalculate totals if lines, sconto_globale, or acconto changed
+    if data.lines is not None or data.sconto_globale is not None or data.acconto is not None:
+        sg = data.sconto_globale if data.sconto_globale is not None else existing.get("sconto_globale", 0)
+        ac = data.acconto if data.acconto is not None else existing.get("acconto", 0)
+        upd["totals"] = calc_totals(lines_for_calc, sg, ac)
 
     await db.preventivi.update_one({"preventivo_id": prev_id}, {"$set": upd})
     updated = await db.preventivi.find_one({"preventivo_id": prev_id}, {"_id": 0})
