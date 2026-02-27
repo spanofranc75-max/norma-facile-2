@@ -11,10 +11,8 @@ from models.certificazione import (
     CertificazioneListResponse, CertStatus,
 )
 from services.certificazione_pdf_service import generate_dop_ce_pdf
-from services.thermal_calc import (
-    ThermalInput, calculate_uw,
-    GLASS_TYPES, FRAME_TYPES, SPACER_TYPES, ZONE_LIMITS,
-)
+from core.engine.thermal import ThermalValidator, ThermalInput
+from core.engine.ce import CEValidator
 import logging
 
 logger = logging.getLogger(__name__)
