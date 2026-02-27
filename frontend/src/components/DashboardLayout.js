@@ -25,6 +25,7 @@ import {
     Ruler,
     Package,
     Shield,
+    HardHat,
 } from 'lucide-react';
 
 const navItems = [
@@ -34,6 +35,7 @@ const navItems = [
     { path: '/rilievi', label: 'Rilievi', icon: Ruler },
     { path: '/distinte', label: 'Distinte', icon: Package },
     { path: '/certificazioni', label: 'Certificazioni CE', icon: Shield },
+    { path: '/sicurezza', label: 'Sicurezza (POS)', icon: HardHat },
     { path: '/settings', label: 'Impostazioni', icon: Settings },
 ];
 
