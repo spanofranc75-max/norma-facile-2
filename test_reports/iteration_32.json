@@ -1,0 +1,102 @@
+{
+  "summary": "Complete testing of 'Sinistro Smart' algorithm and Perizia Sinistro 5-step wizard. Backend: 16/16 tests PASS including cost calculation formulas, recalc endpoint, PDF generation, and archivio stats. Frontend: All 5 wizard steps verified with correct UI elements and interactions.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "backend_sinistro_smart_algorithm": {
+      "GET /api/perizie/codici-danno": "PASS - Returns 7 damage codes (S1-DEF, S2-WELD, A1-ANCH, A2-CONC, P1-ZINC, G1-GAP, M1-FORCE)",
+      "POST /api/perizie/": "PASS - Creates perizia with auto-calculated voci_costo using Sinistro Smart algorithm",
+      "MAT.01 formula": "PASS - prezzo_ml × (1 + coeff/100) × total_ml (170 × 1.20 × 6 = 1224)",
+      "TRA.01 formula": "PASS - €120 for >2.5m, €60 for ≤2.5m",
+      "MAN.01 formula": "PASS - €40/ml for smontaggio",
+      "MAN.02 formula": "PASS - €50/ml for montaggio (structural codes)",
+      "AUT.01/02": "PASS - Generated for M1-FORCE damage code",
+      "SIC.01": "PASS - €180 fixed for G1-GAP (sicurezza)",
+      "NOR.01": "PASS - €150 fixed for certifications",
+      "SMA.01": "PASS - €90 fixed for smaltimento",
+      "POST /api/perizie/{id}/recalc": "PASS - Recalculates costs after module/code changes",
+      "GET /api/perizie/{id}": "PASS - Returns perizia with all fields",
+      "GET /api/perizie/{id}/pdf": "PASS - Returns valid PDF document",
+      "GET /api/perizie/archivio/stats": "PASS - Returns aggregated statistics"
+    },
+    "frontend_wizard_step1_cantiere": {
+      "GPS Auto button": "PASS - data-testid='btn-auto-gps'",
+      "Map container": "PASS - Leaflet OpenStreetMap renders correctly",
+      "Address fields": "PASS - Via/Piazza, Comune, Provincia inputs",
+      "Client selector": "PASS - data-testid='select-client'",
+      "Description textarea": "PASS - data-testid='input-descrizione'"
+    },
+    "frontend_wizard_step2_foto": {
+      "Foto Panoramica button": "PASS - Blue button with ImagePlus icon",
+      "Dettaglio Danno button": "PASS - Red button with Focus icon",
+      "Photo counter": "PASS - Shows '0/5 foto caricate'"
+    },
+    "frontend_wizard_step3_diagnosi": {
+      "5 severity groups": "PASS - STRUTTURALE, ANCORAGGIO, ESTETICO/PROTETTIVO, SICUREZZA, AUTOMAZIONE",
+      "7 damage tags": "PASS - S1-DEF, S2-WELD, A1-ANCH, A2-CONC, P1-ZINC, G1-GAP, M1-FORCE",
+      "Tag selection ring effect": "PASS - Selected tags show ring-4 effect and check icon",
+      "Norme attivate section": "PASS - Shows EN 1090-2, ISO 1461/ISO 12944 badges"
+    },
+    "frontend_wizard_step4_misure": {
+      "Module sliders": "PASS - Lunghezza 0.5-12ml, Altezza 0.5-3m",
+      "Prezzo input": "PASS - data-testid='input-prezzo-ml'",
+      "Maggiorazione input": "PASS - data-testid='input-coeff'",
+      "Prezzo maggiorato display": "PASS - Shows calculated 204.00 EUR/ml",
+      "Toggle smaltimento": "PASS - data-testid='toggle-smaltimento'",
+      "Toggle accesso difficile": "PASS - data-testid='toggle-accesso'"
+    },
+    "frontend_wizard_step5_riepilogo": {
+      "TOTALE PERIZIA display": "PASS - Large display shows 2124,00 EUR (data-testid='total-perizia')",
+      "Computo metrico table": "PASS - 6 cost items with codice, descrizione, quantita×prezzo, totale",
+      "Cost codes present": "PASS - MAT.01 (1224), TRA.01 (120), MAN.01 (240), MAN.02 (300), NOR.01 (150), SMA.01 (90)",
+      "Ricalcola button": "PASS - data-testid='btn-recalc'",
+      "Genera Preventivo button": "PASS - data-testid='btn-genera-preventivo'",
+      "Lettera Perito button": "PASS - data-testid='btn-genera-lettera'",
+      "PDF button": "PASS - data-testid='btn-pdf'",
+      "Share button": "PASS - data-testid='btn-share'"
+    },
+    "frontend_perizia_list_page": {
+      "Table columns": "PASS - Numero, Data, Cliente, Tipo Danno, Totale, Stato",
+      "Nuova Perizia button": "PASS - data-testid='btn-new-perizia'",
+      "Search input": "PASS - data-testid='search-perizie'",
+      "Row actions": "PASS - View, PDF download, Delete buttons"
+    },
+    "frontend_archivio_sinistri_page": {
+      "KPI cards": "PASS - Perizie Totali, Volume Totale, Importo Medio, Codici Danno Usati",
+      "Andamento Mensile chart": "PASS - Bar chart showing monthly trend",
+      "Stato Perizie chart": "PASS - Pie chart showing status distribution",
+      "Per Tipo di Danno": "PASS - Progress bar by damage type",
+      "Codici Danno Frequenti": "PASS - S1-DEF (1), P1-ZINC (1)"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_sinistro_smart_algorithm.py",
+    "/app/test_reports/pytest/sinistro_smart_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "calc_voci_costo function correctly implements Sinistro Smart algorithm with category-based formulas",
+    "Frontend wizard step validation properly enforces required fields before navigation",
+    "All data-testid attributes correctly applied for testing",
+    "Cost table displays quantita × prezzo_unitario formula correctly"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_sinistro_smart_algorithm.py"
+  ],
+  "success_rate": {
+    "backend": "100% (16/16 tests passed)",
+    "frontend": "100% (all wizard steps and pages verified)"
+  },
+  "test_credentials": "test_session_wizard_1772212116510",
+  "seed_data_creation": "Created test perizia PER-2026/0001 with S1-DEF and P1-ZINC codes, total 2124.00 EUR",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Sinistro Smart algorithm fully tested and verified. Key implementation details: 1) calc_voci_costo generates cost items based on codici_danno: MAT.01 (material with markup), TRA.01 (transport €60/€120), MAN.01 (smontaggio €40/ml), MAN.02 (montaggio €50/ml), AUT.01/02 (for M1-FORCE), SIC.01 (for G1-GAP €180), NOR.01 (certifications €150), SMA.01 (disposal €90). 2) Frontend wizard has 5 steps: Cantiere (GPS/map), Foto (panoramica/dettaglio), Diagnosi (7 tags in 5 groups), Misure (sliders/pricing), Riepilogo (cost table/actions). 3) All endpoints tested: codici-danno, CRUD, recalc, PDF, archivio/stats. 4) ArchivioSinistriPage shows KPIs and charts."
+}
