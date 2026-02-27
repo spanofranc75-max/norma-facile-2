@@ -696,7 +696,7 @@ export default function InvoiceEditorPage() {
                             <div className="space-y-3">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-slate-600">Imponibile:</span>
-                                    <span className="font-medium">{formatCurrency(totals.subtotal)}</span>
+                                    <span className="font-mono font-semibold text-[#0055FF]">{formatCurrency(totals.subtotal)}</span>
                                 </div>
 
                                 {Object.entries(totals.vat_breakdown).map(([rate, values]) => (
@@ -704,29 +704,29 @@ export default function InvoiceEditorPage() {
                                         <span className="text-slate-600">
                                             IVA {rate}% su {formatCurrency(values.imponibile)}:
                                         </span>
-                                        <span className="font-medium">{formatCurrency(values.imposta)}</span>
+                                        <span className="font-mono font-semibold text-[#0055FF]">{formatCurrency(values.imposta)}</span>
                                     </div>
                                 ))}
 
                                 {totals.rivalsa_inps > 0 && (
                                     <div className="flex justify-between text-sm">
                                         <span className="text-slate-600">Rivalsa INPS:</span>
-                                        <span className="font-medium">{formatCurrency(totals.rivalsa_inps)}</span>
+                                        <span className="font-mono font-semibold text-[#0055FF]">{formatCurrency(totals.rivalsa_inps)}</span>
                                     </div>
                                 )}
 
                                 {totals.cassa > 0 && (
                                     <div className="flex justify-between text-sm">
                                         <span className="text-slate-600">Cassa Previdenza:</span>
-                                        <span className="font-medium">{formatCurrency(totals.cassa)}</span>
+                                        <span className="font-mono font-semibold text-[#0055FF]">{formatCurrency(totals.cassa)}</span>
                                     </div>
                                 )}
 
                                 <Separator />
 
-                                <div className="flex justify-between font-semibold text-lg">
+                                <div className="flex justify-between font-bold text-lg">
                                     <span>TOTALE DOCUMENTO:</span>
-                                    <span>{formatCurrency(totals.total_document)}</span>
+                                    <span className="font-mono text-[#0055FF]">{formatCurrency(totals.total_document)}</span>
                                 </div>
 
                                 {totals.ritenuta > 0 && (
@@ -735,9 +735,9 @@ export default function InvoiceEditorPage() {
                                             <span>Ritenuta d'acconto:</span>
                                             <span>- {formatCurrency(totals.ritenuta)}</span>
                                         </div>
-                                        <div className="flex justify-between font-bold text-lg text-slate-900 pt-2 border-t">
+                                        <div className="flex justify-between font-bold text-lg text-[#1E293B] pt-2 border-t">
                                             <span>NETTO A PAGARE:</span>
-                                            <span>{formatCurrency(totals.total_to_pay)}</span>
+                                            <span className="font-mono text-[#0055FF]">{formatCurrency(totals.total_to_pay)}</span>
                                         </div>
                                     </>
                                 )}
