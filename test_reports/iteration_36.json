@@ -1,0 +1,88 @@
+{
+  "summary": "Completed Phase 4 testing: Fascicolo CE generation. Backend: 12/12 tests PASSED (auth protection, PDF generation with various configs, ZIP generation with PDF+JSON, norm not found handling, company settings integration, different product types - finestra/cancello). Frontend: All UI components verified - Step 5 'Genera Fascicolo' card appears after calculation, dialog opens with description input, PDF/ZIP download buttons, content list (DOP, Etichetta CE, Manuale). Both PDF and ZIP downloads work correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Fascicolo Dialog",
+        "issues": ["Console warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent} - minor accessibility issue"]
+      }
+    ]
+  },
+  "features_verified": {
+    "backend_auth": {
+      "generate_fascicolo_requires_auth": "PASS - Returns 401 without session cookie"
+    },
+    "backend_pdf_generation": {
+      "basic_pdf_generation": "PASS - Returns valid PDF (>5KB, correct headers, PDF magic bytes)",
+      "pdf_with_calc_results": "PASS - Uses pre-calculated Uw values",
+      "pdf_recalculates_without_results": "PASS - Re-calculates when calc_results not provided",
+      "pdf_for_cancello": "PASS - Generates fascicolo for EN_13241 (gate-specific maintenance)",
+      "pdf_with_custom_declaration": "PASS - Accepts custom declaration_number"
+    },
+    "backend_zip_generation": {
+      "zip_contains_pdf_and_json": "PASS - ZIP has 2 files: fascicolo_CE.pdf + data.json",
+      "json_has_required_fields": "PASS - declaration_number, norma, manufacturer, product, calculation_results"
+    },
+    "backend_error_handling": {
+      "norm_not_found": "PASS - Returns 404 for non-existent norma_id"
+    },
+    "backend_company_settings": {
+      "uses_company_settings": "PASS - Reads manufacturer info from company_settings collection"
+    },
+    "backend_norm_specific_maintenance": {
+      "finestra_maintenance": "PASS - Includes guarnizioni, drenaggio maintenance items",
+      "cancello_maintenance": "PASS - Includes fotocellule, sicurezza, bilanciamento molle items"
+    },
+    "frontend_fascicolo_card": {
+      "appears_after_calculation": "PASS - Step 5 'Genera Fascicolo CE' card shows after running calculation",
+      "description_text": "PASS - Shows 'DOP + Etichetta CE + Manuale d'Uso e Manutenzione'",
+      "button_data_testid": "PASS - btn-fascicolo-pdf"
+    },
+    "frontend_fascicolo_dialog": {
+      "opens_on_click": "PASS - Dialog opens when clicking 'Genera Fascicolo' button",
+      "description_input": "PASS - data-testid='input-fascicolo-desc' - optional description field",
+      "pdf_button": "PASS - data-testid='btn-download-pdf' - 'Scarica PDF' button",
+      "zip_button": "PASS - data-testid='btn-download-zip' - 'Scarica ZIP' button",
+      "content_list": "PASS - Shows numbered list: 1. DOP, 2. Etichetta CE, 3. Manuale d'Uso"
+    },
+    "frontend_downloads": {
+      "pdf_download": "PASS - Triggers download of fascicolo_CE_finestra.pdf",
+      "zip_download": "PASS - Triggers download of fascicolo_CE_finestra.zip"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_fascicolo_generation.py",
+    "/app/test_reports/pytest/fascicolo_results.xml"
+  ],
+  "action_items": [
+    "Minor: Add aria-describedby to DialogContent for accessibility (console warning)"
+  ],
+  "critical_code_review_comments": [
+    "Fascicolo generator correctly reads NormaConfig JSON to populate DOP dynamically",
+    "required_performances from JSON become rows in declared performances table",
+    "CE Label correctly shows mandatory performances only",
+    "User Manual is norm-specific (different maintenance for cancello vs finestra)",
+    "PDF generation uses reportlab with proper styling (A4, tables, CE mark)",
+    "ZIP contains both machine-readable JSON and human-readable PDF",
+    "Re-calculation logic works when calc_results not provided",
+    "All data-testids in place for automated testing"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_fascicolo_generation.py"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 tests passed)",
+    "frontend": "100% (all UI components verified, downloads work)"
+  },
+  "test_credentials": "test_session_fascicolo_1772217663745",
+  "seed_data_creation": "Used existing seed data from iteration_35 (3 norms, 21 components)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phase 4 Fascicolo generation fully tested. Endpoint: POST /api/engine/generate-fascicolo. Request body includes norma_id, product_type, dimensions, components, specs, optional calc_results, output (pdf/zip). PDF contains 3 pages: DOP (with Uw calculation detail, zone compliance table), CE Label (mandatory performances), User Manual (norm-specific maintenance). ZIP contains PDF + JSON data. Frontend: Step 5 card appears after calculation, dialog has description input and two download buttons. All data-testids documented in features_verified."
+}
