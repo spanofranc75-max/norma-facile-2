@@ -23,29 +23,32 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 
 ### Norma Core Engine + Catalogo + Vendor API (Phase 10-12)
 - ThermalValidator, SafetyValidator, CEValidator, NormaRouter
-- Custom profiles CRUD, merged catalog, bulk price update
-- Multi-key vendor system, NF-Standard JSON import
+- Custom profiles, merged catalog, bulk price update, multi-key vendor system
 
 ### Preventivi Commerciali (Phase 13)
 - Smart Quotes with thermal compliance, PDF with technical annex
-- Converti in Fattura (PRV -> FT one-click conversion)
-- **Workflow Timeline:** Visual 4-step progress bar (Preventivo -> Accettato -> Fattura -> Pagata) with clickable invoice link and real-time status propagation
+- Converti in Fattura, Workflow Timeline (PRV->Accettato->FT->Pagata)
+
+### Import Rilievo -> Distinta (Phase 14) — NEW
+- **The Bridge:** Split-screen dialog in Distinta editor
+- **Dimension Parser:** Extracts measurements from rilievo notes (H=2200, 1500x900, standalone mm) and sketch dimension fields
+- **Interactive UI:** Left panel shows rilievo data with clickable dimension chips, right panel shows BOM rows
+- **Apply Dimension:** Click chip -> applies value_mm to selected BOM row's length, or creates new row
+- **Link Rilievo:** Connects rilievo to distinta, auto-sets client_id, appends reference note
+- Endpoints: GET /rilievo-data/{id} (parse), POST /{id}/import-rilievo/{id} (link)
 
 ## API Endpoints
 - `/api/auth/`, `/api/clients/`, `/api/invoices/`, `/api/company/settings`
-- `/api/rilievi/`, `/api/distinte/`
+- `/api/rilievi/`, `/api/distinte/` + `/rilievo-data/{id}` + `/{id}/import-rilievo/{id}`
 - `/api/certificazioni/` + `/thermal/` + `/router/`
 - `/api/sicurezza/`
 - `/api/dashboard/stats`
-- `/api/catalogo/` + `/merged/all` + `/bulk-price-update`
-- `/api/vendor/keys` + `/import_catalog` + `/catalogs` + `/thermal-profiles`
-- `/api/preventivi/` — CRUD + check-compliance + PDF + convert-to-invoice
+- `/api/catalogo/`, `/api/vendor/`, `/api/preventivi/`
 
 ## Prioritized Backlog
 
 ### P1
-- [ ] Real "Importa da Rilievo" (parse sketch -> BOM)
-- [ ] Advanced bar optimizer (bin-packing)
+- [ ] Advanced bar optimizer (bin-packing algorithm)
 - [ ] SDI direct integration
 - [ ] Recurring invoices / email reminders
 
