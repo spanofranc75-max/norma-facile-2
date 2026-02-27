@@ -138,10 +138,11 @@ async def create_ddt(data: DDTCreate, user: dict = Depends(get_current_user)):
 
     totals = calc_totals(lines, data.sconto_globale, data.acconto)
 
-    # Auto-set causale based on type
+    # Auto-set causale based on type (if not explicitly provided or if default "Vendita" for non-vendita types)
     causale = data.causale_trasporto
-    if not causale:
-        causale = {"vendita": "Vendita", "conto_lavoro": "Conto Lavoro", "rientro_conto_lavoro": "Reso Conto Lavoro"}.get(data.ddt_type, "Vendita")
+    causale_defaults = {"vendita": "Vendita", "conto_lavoro": "Conto Lavoro", "rientro_conto_lavoro": "Reso Conto Lavoro"}
+    if not causale or (causale == "Vendita" and data.ddt_type != "vendita"):
+        causale = causale_defaults.get(data.ddt_type, "Vendita")
 
     doc = {
         "ddt_id": ddt_id,
