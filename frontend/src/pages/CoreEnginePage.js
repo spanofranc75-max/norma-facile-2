@@ -520,6 +520,35 @@ export default function CoreEnginePage() {
                                         </CardContent>
                                     </Card>
                                 )}
+
+                                {/* Step 5: Generate Fascicolo */}
+                                {calcResult && (
+                                    <Card className="border-gray-200 border-dashed border-2">
+                                        <CardContent className="pt-6">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <p className="font-semibold text-slate-900 flex items-center gap-2">
+                                                        <FolderArchive className="h-5 w-5 text-[#0055FF]" />
+                                                        5. Genera Fascicolo CE
+                                                    </p>
+                                                    <p className="text-sm text-slate-500 mt-1">
+                                                        DOP + Etichetta CE + Manuale d'Uso e Manutenzione
+                                                    </p>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        data-testid="btn-fascicolo-pdf"
+                                                        onClick={() => setFascicoloDialog(true)}
+                                                        className="bg-[#0055FF] text-white hover:bg-[#0044CC]"
+                                                    >
+                                                        <FileDown className="h-4 w-4 mr-2" />
+                                                        Genera Fascicolo
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                )}
                             </>
                         )}
                     </TabsContent>
