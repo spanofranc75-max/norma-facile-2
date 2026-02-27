@@ -64,6 +64,16 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with:
 - Data numbers: font-mono, blue #0055FF
 - Typography: Inter/Roboto (font-sans), NO serif fonts
 
+### Phase 6 - Certificazioni CE (Feb 27, 2026)
+- Full CRUD for certifications (DOP / CE Label)
+- Support for EN 1090-1 (Structural) and EN 13241 (Gates/Doors)
+- 3-step wizard: Project → Standard → Technical Specs
+- Adaptive form: EN 1090 shows Execution Class/Fire Reaction; EN 13241 shows gate-specific fields
+- PDF generation: Professional DOP + CE Label ready to print and stick on product
+- Auto-generated declaration numbers (DOP-YEAR-CODE / DOP-G-YEAR-CODE)
+- Link to Distinta and Client
+- Landing page rebranded to "CRM per Fabbri" with metalworking features
+
 ## API Endpoints
 - `/api/auth/` - Google OAuth
 - `/api/clients/` - Client CRUD
@@ -78,7 +88,8 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with:
 - `/api/distinte/` - Distinta CRUD
 - `/api/distinte/profiles` - Standard metal profiles catalog
 - `/api/distinte/{id}/calcola-barre` - Bar optimization
-- `/api/distinte/{id}/lista-taglio-pdf` - Cutting list PDF
+- `/api/certificazioni/` - Certificazioni CE CRUD
+- `/api/certificazioni/{id}/fascicolo-pdf` - DOP + CE Label PDF
 
 ## Prioritized Backlog
 
