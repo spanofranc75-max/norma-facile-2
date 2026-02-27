@@ -23,12 +23,14 @@ import {
     Receipt,
     Users,
     Settings,
+    Ruler,
 } from 'lucide-react';
 
 const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: Sparkles },
     { path: '/invoices', label: 'Fatturazione', icon: Receipt },
     { path: '/clients', label: 'Clienti', icon: Users },
+    { path: '/rilievi', label: 'Rilievi', icon: Ruler },
     { path: '/documents', label: 'Documenti', icon: FileText },
     { path: '/chat', label: 'Assistente', icon: MessageSquare },
     { path: '/settings', label: 'Impostazioni', icon: Settings },
