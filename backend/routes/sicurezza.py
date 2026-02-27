@@ -217,3 +217,34 @@ async def get_pos_pdf(pos_id: str, user: dict = Depends(get_current_user)):
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# ── Safety Validation ────────────────────────────────────────────
+
+@router.post("/{pos_id}/validate")
+async def validate_pos(pos_id: str, user: dict = Depends(get_current_user)):
+    """Validate POS: check that all required DPI are selected for the chosen risks."""
+    doc = await db.pos_documents.find_one({"pos_id": pos_id, "user_id": user["user_id"]}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "POS non trovato")
+
+    result = SafetyValidator.validate_pos(
+        selected_risks=doc.get("selected_risks", []),
+        selected_dpi=doc.get("selected_dpi", []),
+    )
+    return result
+
+
+@router.post("/{pos_id}/suggest-dpi")
+async def suggest_dpi(pos_id: str, user: dict = Depends(get_current_user)):
+    """Get suggested DPI and machines based on selected risks."""
+    doc = await db.pos_documents.find_one({"pos_id": pos_id, "user_id": user["user_id"]}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "POS non trovato")
+
+    risks = doc.get("selected_risks", [])
+    return {
+        "required_dpi": SafetyValidator.get_required_dpi(risks),
+        "suggested_machines": SafetyValidator.get_suggested_machines(risks),
+    }
+
