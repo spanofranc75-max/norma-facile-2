@@ -47,6 +47,7 @@ const navItems = [
     { path: '/sicurezza', label: 'Sicurezza (POS)', icon: HardHat },
     { path: '/ddt', label: 'DDT', icon: Truck },
     { path: '/perizie', label: 'Perizie Sinistro', icon: ShieldAlert },
+    { path: '/archivio-sinistri', label: 'Archivio Sinistri', icon: BarChart3 },
     { path: '/impostazioni/pagamenti', label: 'Tipi Pagamento', icon: CreditCard },
     { path: '/settings', label: 'Impostazioni', icon: Settings },
 ];
