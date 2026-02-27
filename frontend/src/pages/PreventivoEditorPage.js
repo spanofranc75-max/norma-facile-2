@@ -23,7 +23,7 @@ import { Separator } from '../components/ui/separator';
 import { toast } from 'sonner';
 import {
     Plus, Trash2, Save, ArrowLeft, FileDown, CheckCircle2, XCircle,
-    Thermometer, ShieldCheck, Settings2, ArrowRightLeft,
+    Thermometer, ShieldCheck, Settings2, ArrowRightLeft, Euro,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
