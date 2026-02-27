@@ -1,0 +1,111 @@
+{
+  "summary": "Complete testing of 3 P0 features: 1) Catalogo Articoli CRUD, 2) Payment Tracking (Scadenze), 3) Invoice Duplicate. Backend: 23/23 tests PASS (fixed duplicate_invoice bug). Frontend: All pages and components verified working.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "ArticoliPage dialog", "issues": ["Console warning: Missing Description or aria-describedby for DialogContent (accessibility)"]}
+    ]
+  },
+  "features_verified": {
+    "backend_articoli_crud": {
+      "GET /api/articoli/": "PASS - Returns list with total count",
+      "POST /api/articoli/": "PASS - Creates articolo with storico_prezzi",
+      "GET /api/articoli/{id}": "PASS - Returns articolo with price history",
+      "PUT /api/articoli/{id}": "PASS - Updates and adds to storico_prezzi when price changes",
+      "DELETE /api/articoli/{id}": "PASS - Deletes articolo, returns 404 on re-fetch",
+      "GET /api/articoli/search?q=xxx": "PASS - Returns matching articles for autocomplete",
+      "POST /api/articoli/bulk-import": "PASS - Creates/updates multiple articoli"
+    },
+    "backend_payment_tracking": {
+      "GET /api/invoices/{id}/scadenze": "PASS - Returns total, pagato, residuo, payment_status",
+      "POST /api/invoices/{id}/scadenze/pagamento": "PASS - Records payment, updates status",
+      "DELETE /api/invoices/{id}/scadenze/pagamento/{id}": "PASS - Deletes payment, updates status",
+      "partial_payment": "PASS - Status becomes 'parzialmente_pagata'",
+      "full_payment": "PASS - Status becomes 'pagata'"
+    },
+    "backend_invoice_duplicate": {
+      "POST /api/invoices/{id}/duplicate": "PASS - Creates new invoice as bozza with reset payment fields"
+    },
+    "backend_auth": {
+      "unauthenticated_requests": "PASS - Return 401 for all protected endpoints"
+    },
+    "frontend_articoli_page": {
+      "header": "PASS - 'Catalogo Articoli' title",
+      "search_field": "PASS - data-testid='search-articoli'",
+      "category_filter": "PASS - data-testid='filter-categoria'",
+      "new_button": "PASS - data-testid='btn-new-articolo'",
+      "table_columns": "PASS - Codice, Descrizione, Categoria, U.M., Prezzo, IVA, Fornitore",
+      "row_actions": "PASS - History, Edit, Delete buttons with data-testid"
+    },
+    "frontend_articoli_dialog": {
+      "title": "PASS - 'Nuovo Articolo' / 'Modifica Articolo'",
+      "fields": "PASS - codice, descrizione, categoria, unita_misura, prezzo_unitario, aliquota_iva, fornitore_nome, note",
+      "save_button": "PASS - data-testid='btn-save-articolo'",
+      "create_flow": "PASS - Toast 'Articolo creato', dialog closes, table updates"
+    },
+    "frontend_invoices_page": {
+      "kpi_cards": "PASS - Totale Fatturato, Incassato, Da Incassare with data-testid",
+      "filters": "PASS - Type, Status, Year dropdowns with data-testid",
+      "table_columns": "PASS - Includes 'Pagato' and 'Da Pagare' columns",
+      "footer_totals": "PASS - Shows Totale, Pagato, Residuo sums"
+    },
+    "frontend_invoices_dropdown": {
+      "menu_items": "PASS - Visualizza, Duplica, Scarica PDF, Esporta XML, Gestisci Pagamenti"
+    },
+    "frontend_payment_dialog": {
+      "summary": "PASS - Totale, Pagato, Residuo cards",
+      "payment_history": "PASS - List of previous payments with delete option",
+      "payment_form": "PASS - Importo, Data, Metodo, Note fields",
+      "buttons": "PASS - 'Saldo Completo', 'Registra Pagamento'"
+    },
+    "frontend_invoice_editor": {
+      "article_search": "PASS - Search icon visible in code field",
+      "autocomplete": "PASS - Dropdown shows matching articles when typing",
+      "line_fields": "PASS - code, description, quantity, price with data-testid"
+    },
+    "frontend_sidebar": {
+      "catalogo_articoli": "PASS - Nav item present between Fornitori and Rilievi",
+      "data_testid": "PASS - data-testid='nav-articoli'"
+    },
+    "frontend_route": {
+      "/articoli": "PASS - Loads ArticoliPage"
+    }
+  },
+  "bugs_fixed": [
+    {
+      "file": "/app/backend/routes/invoices.py",
+      "line": 724,
+      "issue": "duplicate_invoice endpoint returned 500 due to doc_type being string instead of DocumentType enum",
+      "fix": "Added DocumentType(doc_type_str) conversion before calling get_next_number()"
+    }
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_articoli_payments.py",
+    "/app/test_reports/pytest/articoli_payments_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "All 3 P0 features fully implemented and working",
+    "Fixed duplicate_invoice bug - doc_type string to enum conversion",
+    "Payment tracking correctly updates invoice status (non_pagata → parzialmente_pagata → pagata)",
+    "ArticleSearch component integrates seamlessly in InvoiceEditorPage"
+  ],
+  "updated_files": [
+    "/app/backend/routes/invoices.py",
+    "/app/backend/tests/test_articoli_payments.py"
+  ],
+  "success_rate": {
+    "backend": "100% (23/23 tests passed after fix)",
+    "frontend": "100% (all pages and components verified)"
+  },
+  "test_credentials": "test_session_articoli_1772213744502",
+  "seed_data_creation": "Created test articolo UI_TEST_001 during UI test (cleaned up after)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "P0 features fully tested: 1) ArticoliPage with CRUD + search + bulk-import, 2) InvoicesPage with KPI cards and Pagato/Da Pagare columns, payment dialog (Scadenze), 3) InvoiceEditorPage with ArticleSearch autocomplete component. Fixed bug in duplicate_invoice where doc_type string was passed to get_next_number instead of DocumentType enum. All data-testids in place for testing."
+}
