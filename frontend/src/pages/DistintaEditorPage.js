@@ -298,6 +298,44 @@ export default function DistintaEditorPage() {
         }
     };
 
+    // Ottimizzatore di Taglio Avanzato
+    const handleOttimizzaTaglio = async () => {
+        if (!isEditing) {
+            toast.error('Salva la distinta prima di ottimizzare');
+            return;
+        }
+        setOptimizerLoading(true);
+        try {
+            await handleSave();
+            const data = await apiRequest(`/distinte/${distintaId}/ottimizza-taglio`, {
+                method: 'POST',
+                body: optimizerParams,
+            });
+            setOptimizerResult(data);
+            setOptimizerOpen(true);
+            // Auto-expand first profile
+            if (data.profiles?.length > 0) {
+                setExpandedProfiles({ [data.profiles[0].profile_id]: true });
+            }
+        } catch (err) {
+            toast.error(err.message || 'Errore nell\'ottimizzazione');
+        } finally {
+            setOptimizerLoading(false);
+        }
+    };
+
+    const handleDownloadOptimizerPdf = () => {
+        const backendUrl = process.env.REACT_APP_BACKEND_URL;
+        window.open(
+            `${backendUrl}/api/distinte/${distintaId}/ottimizza-taglio-pdf?bar_length_mm=${optimizerParams.bar_length_mm}&kerf_mm=${optimizerParams.kerf_mm}`,
+            '_blank'
+        );
+    };
+
+    const toggleProfileExpanded = (pid) => {
+        setExpandedProfiles(prev => ({ ...prev, [pid]: !prev[pid] }));
+    };
+
     // Import from rilievo
     const handleImportFromRilievo = async () => {
         if (!isEditing || !selectedRilievoForImport) return;
