@@ -33,6 +33,7 @@ import {
     Factory,
     ShieldAlert,
     BarChart3,
+    BoxIcon,
 } from 'lucide-react';
 
 const navItems = [
@@ -41,6 +42,7 @@ const navItems = [
     { path: '/invoices', label: 'Fatturazione', icon: Receipt },
     { path: '/clients', label: 'Clienti', icon: Users },
     { path: '/fornitori', label: 'Fornitori', icon: Factory },
+    { path: '/articoli', label: 'Catalogo Articoli', icon: BoxIcon },
     { path: '/rilievi', label: 'Rilievi', icon: Ruler },
     { path: '/distinte', label: 'Distinte', icon: Package },
     { path: '/catalogo', label: 'Catalogo Profili', icon: Warehouse },
