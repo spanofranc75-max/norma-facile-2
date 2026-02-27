@@ -306,11 +306,39 @@ export default function DistintaEditorPage() {
                 items: data.items || [],
             });
             recalculateTotals(data.items || []);
-            setImportDialogOpen(false);
-            toast.success('Dati importati dal rilievo');
+            toast.success('Rilievo collegato alla distinta');
         } catch (err) {
             toast.error(err.message || 'Errore nell\'importazione');
         }
+    };
+
+    const handleSelectRilievoForImport = async (rilievoId) => {
+        setSelectedRilievoForImport(rilievoId);
+        if (!rilievoId) { setRilievoImportData(null); return; }
+        setLoadingImportData(true);
+        try {
+            const data = await apiRequest(`/distinte/rilievo-data/${rilievoId}`);
+            setRilievoImportData(data);
+        } catch {
+            setRilievoImportData(null);
+        } finally {
+            setLoadingImportData(false);
+        }
+    };
+
+    const handleApplyDimension = (valueMm) => {
+        if (targetRowIdx === null || targetRowIdx >= formData.items.length) {
+            // No row selected — add new row with this dimension
+            const newItem = { ...emptyItem(), length_mm: valueMm };
+            const items = [...formData.items, newItem];
+            setFormData(prev => ({ ...prev, items }));
+            recalculateTotals(items);
+            toast.success(`${valueMm} mm aggiunto come nuova riga`);
+        } else {
+            updateItem(targetRowIdx, 'length_mm', valueMm);
+            toast.success(`${valueMm} mm applicato alla riga ${targetRowIdx + 1}`);
+        }
+        setTargetRowIdx(null);
     };
 
     if (loading) {
