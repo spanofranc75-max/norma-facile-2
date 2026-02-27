@@ -150,8 +150,8 @@ export default function Dashboard() {
                                     {loadingStats ? '-' : stats.totalInvoices}
                                 </p>
                             </div>
-                            <div className="w-12 h-12 flex items-center justify-center bg-blue-100 rounded-lg">
-                                <Receipt className="h-6 w-6 text-blue-600" />
+                            <div className="w-12 h-12 flex items-center justify-center bg-blue-50 rounded-lg">
+                                <Receipt className="h-6 w-6 text-[#0055FF]" />
                             </div>
                         </div>
                     </CardContent>
@@ -166,8 +166,8 @@ export default function Dashboard() {
                                     {loadingStats ? '-' : stats.totalClients}
                                 </p>
                             </div>
-                            <div className="w-12 h-12 flex items-center justify-center bg-purple-100 rounded-lg">
-                                <Users className="h-6 w-6 text-purple-600" />
+                            <div className="w-12 h-12 flex items-center justify-center bg-blue-50 rounded-lg">
+                                <Users className="h-6 w-6 text-[#0055FF]" />
                             </div>
                         </div>
                     </CardContent>
@@ -182,7 +182,7 @@ export default function Dashboard() {
                                     {loadingStats ? '-' : formatCurrency(stats.monthlyTotal)}
                                 </p>
                             </div>
-                            <div className="w-12 h-12 flex items-center justify-center bg-emerald-100 rounded-lg">
+                            <div className="w-12 h-12 flex items-center justify-center bg-emerald-50 rounded-lg">
                                 <TrendingUp className="h-6 w-6 text-emerald-600" />
                             </div>
                         </div>
