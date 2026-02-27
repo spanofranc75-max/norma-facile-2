@@ -31,7 +31,7 @@ class ClientBase(BaseModel):
     """Base client model — scheda completa."""
     # Anagrafica
     business_name: str = Field(..., description="Ragione sociale / Nome")
-    client_type: ClientType = ClientType.CLIENTE
+    client_type: str = Field(default="cliente", description="cliente, fornitore, cliente_fornitore")
     persona_fisica: bool = False
     titolo: str = ""
     cognome: str = ""
