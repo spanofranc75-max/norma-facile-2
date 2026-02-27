@@ -211,6 +211,7 @@ export default function PeriziaEditorPage() {
             stato_di_fatto: statoDiFatto,
             nota_tecnica: notaTecnica,
             voci_costo: vociCosto,
+            lettera_accompagnamento: letteraAccompagnamento,
             notes,
         };
         try {
