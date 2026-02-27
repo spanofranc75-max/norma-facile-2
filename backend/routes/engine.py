@@ -700,6 +700,131 @@ def _get_num(ctx: dict, key: str) -> float:
         return 0.0
 
 
+
+# ══════════════════════════════════════════════════════════════════
+# 4. FASCICOLO GENERATION — DOP + CE Label + User Manual
+# ══════════════════════════════════════════════════════════════════
+
+class FascicoloRequest(BaseModel):
+    """Request to generate a complete fascicolo from Core Engine data."""
+    norma_id: str
+    product_type: str
+    description: str = ""
+    declaration_number: Optional[str] = None
+    # Dimensions
+    height_mm: float = 0
+    width_mm: float = 0
+    frame_width_mm: float = 80
+    # Components
+    vetro_id: Optional[str] = None
+    telaio_id: Optional[str] = None
+    distanziatore_id: Optional[str] = None
+    zona_climatica: Optional[str] = None
+    # Product specs (performances from mandatory_fields)
+    specs: dict = {}
+    # Pre-calculated results (optional - will re-calculate if not provided)
+    calc_results: Optional[dict] = None
+    # Output format
+    output: str = "pdf"  # "pdf" or "zip"
+
+
+@router.post("/generate-fascicolo")
+async def generate_fascicolo(
+    req: FascicoloRequest,
+    user: dict = Depends(get_current_user)
+):
+    """Generate a complete CE fascicolo (DOP + CE Label + User Manual)."""
+    # Get norm config
+    norma = await db.norme_config.find_one({"norma_id": req.norma_id}, {"_id": 0})
+    if not norma:
+        raise HTTPException(404, f"Norma '{req.norma_id}' non trovata")
+
+    # Get company settings
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+
+    # Run calculation if not pre-provided
+    if req.calc_results:
+        calc = req.calc_results
+    else:
+        calc_req = CalculateRequest(
+            norma_id=req.norma_id,
+            product_type=req.product_type,
+            height_mm=req.height_mm,
+            width_mm=req.width_mm,
+            frame_width_mm=req.frame_width_mm,
+            vetro_id=req.vetro_id,
+            telaio_id=req.telaio_id,
+            distanziatore_id=req.distanziatore_id,
+            zona_climatica=req.zona_climatica,
+            specs=req.specs,
+        )
+        # Re-use the calculate logic
+        calc = {}
+        results = {}
+        warnings_list = []
+        suggestions_list = []
+
+        calc_methods = norma.get("calculation_methods", [])
+        if "ISO_10077_1" in calc_methods and req.height_mm > 0 and req.width_mm > 0:
+            uw_result = await _calc_uw(calc_req)
+            results["thermal"] = uw_result
+            warnings_list.extend(uw_result.get("warnings", []))
+            suggestions_list.extend(uw_result.get("suggestions", []))
+        if "EN_12210" in calc_methods:
+            results["air_permeability"] = _classify_air_permeability(req.specs)
+        if "EN_12211" in calc_methods:
+            results["wind_resistance"] = _classify_wind_resistance(req.specs)
+        if "EN_12208" in calc_methods:
+            results["water_tightness"] = _classify_water_tightness(req.specs)
+
+        validation = _run_validation_rules(
+            norma.get("validation_rules", []),
+            {**req.specs, "product_height": req.height_mm, "product_width": req.width_mm},
+            results,
+        )
+        calc = {
+            "results": results,
+            "validation": validation,
+            "warnings": warnings_list,
+            "suggestions": suggestions_list,
+            "compliant": validation["compliant"],
+        }
+
+    # Generate declaration number
+    decl_num = req.declaration_number
+    if not decl_num:
+        year = datetime.now().strftime("%Y")
+        uid = uuid.uuid4().hex[:6].upper()
+        decl_num = f"DOP-{year}-{uid}"
+
+    product_config = {
+        "product_type": req.product_type,
+        "description": req.description or req.product_type,
+        "declaration_number": decl_num,
+        "zona_climatica": req.zona_climatica,
+        "height_mm": req.height_mm,
+        "width_mm": req.width_mm,
+        "specs": req.specs,
+    }
+
+    if req.output == "zip":
+        zip_buf = generate_fascicolo_zip(norma, calc, product_config, company)
+        filename = f"fascicolo_CE_{req.product_type}_{decl_num}.zip".replace("/", "-")
+        return StreamingResponse(
+            zip_buf,
+            media_type="application/zip",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    else:
+        pdf_buf = generate_fascicolo_pdf(norma, calc, product_config, company)
+        filename = f"fascicolo_CE_{req.product_type}_{decl_num}.pdf".replace("/", "-")
+        return StreamingResponse(
+            pdf_buf,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+
 # ══════════════════════════════════════════════════════════════════
 # SEED DATA
 # ══════════════════════════════════════════════════════════════════
