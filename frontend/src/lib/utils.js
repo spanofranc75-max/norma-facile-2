@@ -1,6 +1,15 @@
 /**
- * Utility functions for API calls
+ * Utility functions for Norma Facile 2.0
  */
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+/**
+ * Merge class names with Tailwind CSS support
+ */
+export function cn(...inputs) {
+    return twMerge(clsx(inputs));
+}
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API_BASE = `${BACKEND_URL}/api`;
