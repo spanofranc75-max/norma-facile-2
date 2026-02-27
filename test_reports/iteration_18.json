@@ -1,0 +1,74 @@
+{
+  "summary": "Tested NEW 'Converti in Fattura' feature for Preventivi module - 15 backend tests passed (100%), all frontend UI tests passed. Fixed a bug in convert-to-invoice endpoint where document_type was set to 'fattura' instead of 'FT' (correct enum value).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [],
+    "fixed_by_testing_agent": [
+      {
+        "file": "/app/backend/routes/preventivi.py",
+        "issue": "convert-to-invoice endpoint saved document_type='fattura' instead of 'FT' causing InvoiceResponse validation error",
+        "line": "333",
+        "fix": "Changed document_type from 'fattura' to 'FT' (the correct DocumentType.FATTURA enum value)"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "backend_api": {
+      "POST /api/preventivi/{prev_id}/convert-to-invoice": "PASS - Creates invoice from preventivo",
+      "Document number format": "PASS - Generates FT-YYYY/NNNN format",
+      "Line mapping": "PASS - Maps description, quantity, unit_price, vat_rate from preventivo lines to invoice lines",
+      "Preventivo status update": "PASS - Sets status to 'accettato' and stores converted_to invoice_id",
+      "Invoice converted_from link": "PASS - Invoice has converted_from = preventivo_id",
+      "Response format": "PASS - Returns invoice_id, document_number, message",
+      "No client rejection": "PASS - Returns 422 when preventivo has no client_id",
+      "Duplicate rejection": "PASS - Returns 409 when preventivo already converted",
+      "Invoice totals": "PASS - Correct subtotal, total_vat, total_document calculation",
+      "Invoice in list": "PASS - Converted invoice appears in GET /api/invoices/",
+      "Invoice properties": "PASS - document_type='FT', status='bozza', payment_method='bonifico'",
+      "Invoice notes": "PASS - Notes include 'Riferimento preventivo PRV-YYYY-NNNN'"
+    },
+    "frontend": {
+      "Converti in Fattura button": "PASS - Visible on saved preventivo (btn-convert-invoice)",
+      "Button location": "PASS - In header next to PDF and Salva buttons",
+      "Button state": "PASS - Enabled when preventivo is saved",
+      "Confirmation dialog": "PASS - Shows confirmation before conversion",
+      "Navigation after conversion": "PASS - Navigates to /invoices/{invoice_id}",
+      "Toast notification": "PASS - Shows 'Preventivo convertito in Fattura FT-YYYY/NNNN'",
+      "Invoice editor loads": "PASS - Shows imported lines, client, notes, and totals"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_convert_to_invoice.py",
+    "/app/test_reports/pytest/convert_invoice_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Bug fix applied: document_type must use enum value 'FT' not string 'fattura'",
+    "InvoiceResponse model uses DocumentType enum which expects 'FT', 'PRV', 'DDT', or 'NC'",
+    "Conversion correctly copies all line data including VAT rates",
+    "Notes field properly references the source preventivo number"
+  ],
+  "updated_files": [
+    "/app/backend/routes/preventivi.py",
+    "/app/backend/tests/test_convert_to_invoice.py"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 tests passed)",
+    "frontend": "100% (all UI flows verified)"
+  },
+  "test_credentials": "Created temp test users via MongoDB (test-conv-*, test-ui-conv-*), all cleaned up after tests",
+  "seed_data_creation": "None - all test data cleaned up",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Convert-to-Invoice feature fully tested. Key flows: 1) Create preventivo with client and lines, 2) Save preventivo, 3) Click 'Converti in Fattura' button, 4) Confirm dialog, 5) Navigate to invoice editor. The invoice has document_type='FT', status='bozza', payment_method='bonifico'. Error cases: 422 for no client, 409 for duplicate conversion. The bug fix changed document_type from 'fattura' to 'FT' in preventivi.py line 333.",
+  "rca_of_the_issue": {
+    "root_cause": "The convert-to-invoice endpoint in preventivi.py was saving document_type='fattura' (human-readable string) but InvoiceResponse model expects the enum value 'FT' (DocumentType.FATTURA.value)",
+    "reproduction_steps": "1) Create preventivo with client, 2) Call POST /api/preventivi/{id}/convert-to-invoice, 3) Call GET /api/invoices/{invoice_id} - this returns 500 due to Pydantic validation error",
+    "mitigation": "Changed line 333 from document_type: 'fattura' to document_type: 'FT'"
+  }
+}
