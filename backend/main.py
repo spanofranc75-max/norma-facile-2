@@ -43,7 +43,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Norma Facile 2.0",
     description="Piattaforma LegalTech per professionisti legali italiani",
-    version="2.0.0",
+    version="2.0.1",
     lifespan=lifespan
 )
 
@@ -72,7 +72,7 @@ async def root():
     """Health check endpoint."""
     return {
         "message": "Benvenuto a Norma Facile 2.0",
-        "version": "2.0.0",
+        "version": "2.0.1",
         "status": "operativo"
     }
 
@@ -83,5 +83,5 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "Norma Facile 2.0",
-        "version": "2.0.0"
+        "version": "2.0.1"
     }
