@@ -1,0 +1,79 @@
+{
+  "summary": "Tested NEW Preventivi Commerciali (Smart Quote) module - 18 backend tests passed (100%), all frontend UI tests passed. Fixed a bug in run_compliance() where None values for height_mm/width_mm caused 500 errors. Full CRUD, thermal compliance validation with NormaCore ThermalValidator, and PDF generation all working correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [],
+    "fixed_by_testing_agent": [
+      {
+        "file": "/app/backend/routes/preventivi.py",
+        "issue": "run_compliance() used .get(key, default) which doesn't handle explicit None values - changed to 'or' fallback",
+        "line": "103-109",
+        "fix": "Changed td.get('height_mm', 2100) to td.get('height_mm') or 2100 for all thermal parameters"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Thermal Drawer",
+        "issues": ["Minor: Console warning about missing Description for DialogContent (accessibility)"]
+      }
+    ]
+  },
+  "features_verified": {
+    "backend_api": {
+      "GET /api/preventivi/": "PASS - Returns empty list for new user, requires auth (401 without)",
+      "POST /api/preventivi/": "PASS - Creates preventivo with auto-generated PRV-YYYY-NNNN number, calculates totals, auto-calculates compliance_status",
+      "GET /api/preventivi/{prev_id}": "PASS - Returns preventivo with totals and compliance details",
+      "PUT /api/preventivi/{prev_id}": "PASS - Updates lines and recalculates totals/compliance",
+      "DELETE /api/preventivi/{prev_id}": "PASS - Deletes preventivo, returns 404 on subsequent GET",
+      "POST /api/preventivi/{prev_id}/check-compliance": "PASS - Validates thermal lines against zone limits",
+      "GET /api/preventivi/{prev_id}/pdf": "PASS - Returns PDF with commercial offer + technical annex"
+    },
+    "thermal_compliance": {
+      "doppio_be_argon Zone E": "PASS - Returns NOT compliant (Uw ~2.17 > limit 1.30)",
+      "triplo_be_argon Zone E": "PASS - Returns compliant with improved Uw",
+      "singolo Zone E": "PASS - Returns NOT compliant (very high Uw)",
+      "no thermal data": "PASS - Returns checked_lines=0, all_compliant=null",
+      "compliance results fields": "PASS - Returns line_id, description, uw, zone, limit, compliant, glass_label, frame_label"
+    },
+    "frontend": {
+      "Preventivi nav item": "PASS - Shows in sidebar with ClipboardList icon",
+      "/preventivi page": "PASS - Loads with data-testid='preventivi-page', shows 'Nuovo Preventivo' button",
+      "Preventivo editor": "PASS - Has subject, client, validity, payment fields, lines table",
+      "Lines table": "PASS - Has description, dimensions, qty, price, vat, total columns",
+      "Thermal button": "PASS - Thermometer icon opens thermal drawer",
+      "Thermal drawer": "PASS - Has glass/frame/spacer/zone dropdowns, confirms/removes thermal data",
+      "Verifica Compliance button": "PASS - Triggers compliance check",
+      "Compliance banner": "PASS - Shows red banner with 'Uw troppo alto!' for non-compliant",
+      "Compliance detail table": "PASS - Shows Voce, Vetro, Telaio, Uw, Zona, Limite, Esito columns",
+      "PDF download": "PASS - Downloads PDF with correct filename"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_preventivi.py",
+    "/app/test_reports/pytest/preventivi_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "ThermalData model correctly defines optional fields with defaults for zone='E' and frame_width_mm=80",
+    "run_compliance() now correctly handles None values with 'or' fallback pattern",
+    "PDF generation includes technical annex when compliance_detail has results",
+    "Frontend correctly implements thermal drawer with all NormaCore reference data"
+  ],
+  "updated_files": [
+    "/app/backend/routes/preventivi.py",
+    "/app/backend/tests/test_preventivi.py"
+  ],
+  "success_rate": {
+    "backend": "100% (18/18 tests passed)",
+    "frontend": "100% (all UI flows verified)"
+  },
+  "test_credentials": "Created temp test users via MongoDB (test-prev-*, test-ui-prev-*), all cleaned up after tests",
+  "seed_data_creation": "None - all test data cleaned up",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Preventivi module fully tested. Key flows: 1) Create preventivo with lines, 2) Add thermal_data to line via drawer (glass/frame/spacer/zone), 3) Save triggers auto-compliance calculation, 4) Check-compliance endpoint validates against zone limits (Zone E = 1.30 W/m2K), 5) doppio_be_argon + steel frame gives Uw ~2.17 (NOT compliant), triplo_be_argon + PVC gives lower Uw (potentially compliant). PDF generation includes technical annex when compliance results exist."
+}
