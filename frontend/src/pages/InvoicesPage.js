@@ -204,7 +204,7 @@ export default function InvoicesPage() {
                 </div>
 
                 {/* Filters */}
-                <Card className="border-slate-200">
+                <Card className="border-gray-200">
                     <CardContent className="pt-6">
                         <div className="flex gap-4">
                             <Select
@@ -258,7 +258,7 @@ export default function InvoicesPage() {
                 </Card>
 
                 {/* Table */}
-                <Card className="border-slate-200">
+                <Card className="border-gray-200">
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader>
@@ -307,7 +307,7 @@ export default function InvoicesPage() {
                                             <TableCell>
                                                 {inv.due_date ? formatDateIT(inv.due_date) : '-'}
                                             </TableCell>
-                                            <TableCell className="text-right font-medium">
+                                            <TableCell className="text-right font-mono font-semibold text-[#0055FF]">
                                                 {formatCurrency(inv.totals?.total_document)}
                                             </TableCell>
                                             <TableCell>
