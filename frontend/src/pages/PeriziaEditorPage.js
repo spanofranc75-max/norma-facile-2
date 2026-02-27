@@ -378,6 +378,57 @@ export default function PeriziaEditorPage() {
                         <Card className="border-gray-200">
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-sm font-semibold text-[#1E293B] flex items-center gap-2">
+                                    <ShieldAlert className="h-4 w-4 text-red-500" /> Codici Danno Rilevati
+                                </CardTitle>
+                                <p className="text-[11px] text-slate-500">Seleziona i codici danno dal sopralluogo. Ogni tag genera automaticamente le voci di costo e le norme citate.</p>
+                            </CardHeader>
+                            <CardContent>
+                                {(() => {
+                                    const grouped = {};
+                                    codiciDannoDb.forEach(c => {
+                                        if (!grouped[c.categoria]) grouped[c.categoria] = [];
+                                        grouped[c.categoria].push(c);
+                                    });
+                                    return Object.entries(grouped).map(([cat, codes]) => (
+                                        <div key={cat} className="mb-3">
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">{cat}</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {codes.map(cd => {
+                                                    const sel = codiciDanno.includes(cd.codice);
+                                                    const cls = sel ? CODICE_SELECTED[cd.color] || CODICE_SELECTED.blue : CODICE_COLORS[cd.color] || CODICE_COLORS.blue;
+                                                    return (
+                                                        <button
+                                                            key={cd.codice}
+                                                            data-testid={`tag-${cd.codice}`}
+                                                            onClick={() => setCodiciDanno(prev => sel ? prev.filter(c => c !== cd.codice) : [...prev, cd.codice])}
+                                                            className={`px-3 py-1.5 rounded-full border text-xs font-medium transition-all cursor-pointer ${cls}`}
+                                                        >
+                                                            <span className="font-mono font-bold mr-1">{cd.codice}</span>
+                                                            {cd.label}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ));
+                                })()}
+                                {codiciDanno.length > 0 && (
+                                    <div className="mt-3 p-2 bg-slate-50 rounded-lg">
+                                        <p className="text-[10px] font-bold text-slate-600 mb-1">Norme attivate:</p>
+                                        <div className="flex flex-wrap gap-1">
+                                            {[...new Set(codiciDanno.map(c => codiciDannoDb.find(cd => cd.codice === c)?.norma).filter(Boolean))].map(n => (
+                                                <Badge key={n} className="bg-[#0055FF]/10 text-[#0055FF] text-[10px]">{n}</Badge>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Map + Location (original) */}
+                        <Card className="border-gray-200">
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-sm font-semibold text-[#1E293B] flex items-center gap-2">
                                     <MapPin className="h-4 w-4 text-[#0055FF]" /> Localizzazione Sinistro
                                 </CardTitle>
                             </CardHeader>
