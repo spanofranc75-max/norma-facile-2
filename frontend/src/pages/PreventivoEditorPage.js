@@ -78,6 +78,13 @@ export default function PreventivoEditorPage() {
                 lines: data.lines?.length ? data.lines : [emptyLine()],
             });
             if (data.compliance_detail) setCompliance(data.compliance_detail);
+            setWorkflow({
+                status: data.status || 'bozza',
+                number: data.number,
+                created_at: data.created_at,
+                converted_to: data.converted_to,
+                linked_invoice: data.linked_invoice || null,
+            });
         }).catch(() => toast.error('Preventivo non trovato'));
     }, [prevId, isNew]);
 
