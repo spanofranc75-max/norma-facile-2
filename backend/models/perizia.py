@@ -53,6 +53,8 @@ class PeriziaCreate(BaseModel):
     nota_tecnica: str = ""
     # Cost items
     voci_costo: List[VoceCosto] = []
+    # Lettera di accompagnamento tecnica
+    lettera_accompagnamento: str = ""
     # Notes
     notes: str = ""
 
@@ -70,5 +72,6 @@ class PeriziaUpdate(BaseModel):
     stato_di_fatto: Optional[str] = None
     nota_tecnica: Optional[str] = None
     voci_costo: Optional[List[VoceCosto]] = None
+    lettera_accompagnamento: Optional[str] = None
     notes: Optional[str] = None
     status: Optional[str] = None
