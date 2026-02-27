@@ -33,13 +33,11 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 - Client_type: Cliente / Fornitore / Cliente-Fornitore
 
 ### Preventivo Avanzato v2 — Invoicex Style (Phase 18) — 2026-02-27
-- **Sidebar Tabs:** Riferimento (sconto globale, acconto), Pagamento (condizioni, IBAN, banca), Destinazione merce, Note
-- **Line Items Enhanced:** Codice articolo, Sconto 1%, Sconto 2% (cascading), Prezzo netto calcolato, UdM dropdown (pz/m/mq/kg/h/corpo)
-- **Quick Fill:** Selezione cliente auto-compila: payment_type, IBAN, banca, destinazione merce dall'anagrafica
-- **Totals Dettagliati:** Totale senza IVA → Sconto globale → Imponibile → Totale IVA → TOTALE → Acconto → DA PAGARE
-- **Converti in Fattura v2:** Porta sconti, prezzo netto, tipo pagamento nella fattura
-- **Backend:** calc_line con sconti cascata, calc_totals(lines, sconto_globale, acconto), payment_type mapping per enum fattura
-- **Testing:** Backend 22/22, Frontend 100%
+- Sidebar Tabs: Riferimento, Pagamento, Destinazione merce, Note
+- Line Items Enhanced with cascading discounts
+- Quick Fill from client data
+- Totals block: subtotal, sconto globale, imponibile, IVA, totale, acconto, da pagare
+- Converti in Fattura v2
 
 ## Ottimizzatore di Taglio (Phase 15)
 - FFD Algorithm, API + PDF export, frontend modal
@@ -47,21 +45,42 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 ## Import Rilievo -> Distinta (Phase 14)
 - Split-screen bridge UI
 
+### DDT (Documento di Trasporto) Module (Phase 19) — 2026-02-27
+- 3 types: Vendita (DDT-), Conto Lavoro (CL-), Rientro (RCL-)
+- Invoicex-style editor with 4 sidebar tabs (Trasporto, Destinazione, Pagamento, Note)
+- Line items with cascading discounts (sconto_1, sconto_2)
+- Auto-causale based on DDT type
+- PDF generation with stampa_prezzi toggle
+- Backend: CRUD + PDF endpoint, calc_line/calc_totals
+- Frontend: DDTListPage (filters, search, badges) + DDTEditorPage (sidebar tabs, Quick Fill)
+- Testing: 20/20 backend, 100% frontend
+
+### Fornitori (Suppliers) Module (Phase 20) — 2026-02-27
+- Dedicated /fornitori page with same tab-based UI as Clienti
+- Uses existing /api/clients/ endpoint with client_type=fornitore filter
+- Backend filter: $in query includes both 'fornitore' and 'cliente_fornitore'
+- Sidebar: separate "Clienti" and "Fornitori" nav items
+- Dialog: 5 tabs (Anagrafica, Indirizzo, Contatti, Pagamento, Note)
+- Contact persons with document preferences (DDT, Preventivi, Fatture, etc.)
+- Testing: 16/16 backend, 100% frontend
+
 ## API Endpoints
-- `/api/auth/`, `/api/clients/`, `/api/invoices/`, `/api/company/settings`
+- `/api/auth/`, `/api/clients/` (with client_type filter), `/api/invoices/`, `/api/company/settings`
 - `/api/rilievi/`, `/api/distinte/` + optimizer endpoints
 - `/api/certificazioni/` + `/thermal/` + `/router/`
 - `/api/sicurezza/`, `/api/dashboard/stats`, `/api/dashboard/fascicolo/{client_id}`
 - `/api/catalogo/`, `/api/vendor/`, `/api/preventivi/`
 - `/api/payment-types/` (CRUD + `seed-defaults`)
+- `/api/ddt/` (CRUD + PDF + causali)
 
 ## Prioritized Backlog
 
-### P0 — In Progress
-- [x] Quick Fill: preventivi auto-popola da cliente — DONE
-- [ ] Quick Fill: fatture auto-popola da cliente (stesso pattern)
+### P0 — Completed
+- [x] DDT Module — DONE (Phase 19)
+- [x] Fornitori Module — DONE (Phase 20)
 
 ### P1
+- [ ] Quick Fill: fatture auto-popola da cliente (stesso pattern preventivi)
 - [ ] SDI direct integration
 - [ ] Recurring invoices / email reminders
 
