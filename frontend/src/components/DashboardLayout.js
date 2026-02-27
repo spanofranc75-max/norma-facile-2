@@ -26,6 +26,7 @@ import {
     Package,
     Shield,
     HardHat,
+    Warehouse,
 } from 'lucide-react';
 
 const navItems = [
@@ -34,6 +35,7 @@ const navItems = [
     { path: '/clients', label: 'Clienti', icon: Users },
     { path: '/rilievi', label: 'Rilievi', icon: Ruler },
     { path: '/distinte', label: 'Distinte', icon: Package },
+    { path: '/catalogo', label: 'Catalogo Profili', icon: Warehouse },
     { path: '/certificazioni', label: 'Certificazioni CE', icon: Shield },
     { path: '/sicurezza', label: 'Sicurezza (POS)', icon: HardHat },
     { path: '/settings', label: 'Impostazioni', icon: Settings },
