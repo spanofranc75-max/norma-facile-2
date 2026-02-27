@@ -1,21 +1,19 @@
 # Norma Facile 2.0 - Product Requirements Document
 
 ## Original Problem Statement
-Build Norma Facile 2.0 - a LegalTech SaaS for Italian legal professionals with:
+Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with:
 - React Frontend + FastAPI Backend + MongoDB
 - Modular monolith backend architecture
 - Google OAuth & JWT authentication
-- AI-powered document generation (OpenAI GPT-4o) - Pending
-- Legal Assistant Chatbot - Pending
-- **Invoicing Module (Invoicex-style)** - COMPLETE
-- **Rilievo Misure (On-Site Survey Tool)** - COMPLETE
-- **Distinta Materiali (BOM)** - COMPLETE (skeleton)
-- **Industrial Blue UI Theme** - COMPLETE
+- Invoicing Module (Invoicex-style for Italian market)
+- On-Site Survey Tool ("Rilievo Misure") for field measurements
+- Smart Bill of Materials ("Distinta Materiali") with auto-calculated weight/surface
+- "Industrial Blue" UI theme for a "Precision Engineering" aesthetic
 
 ## User Personas
-1. **Italian Lawyers** - Need legal document generation and invoicing
-2. **Law Firms** - Require document management, client database, and billing
-3. **Surveyors/Technicians** - Need on-site measurement tools with sketch capabilities
+1. **Fabbri / Metalworkers** - Need BOM calculations, cutting lists, weight/surface tracking
+2. **Small Metal Workshops** - Require client management, invoicing, and project tracking
+3. **Field Technicians** - Need on-site measurement tools with sketch capabilities
 
 ## Core Requirements (Static)
 - Italian language UI
@@ -26,7 +24,7 @@ Build Norma Facile 2.0 - a LegalTech SaaS for Italian legal professionals with:
 
 ## What's Been Implemented
 
-### Phase 1 - Auth Skeleton (Feb 27, 2026)
+### Phase 1 - Auth (Feb 27, 2026)
 - Backend modular architecture
 - Emergent Google OAuth integration
 - Session management with httpOnly cookies
@@ -62,12 +60,9 @@ Build Norma Facile 2.0 - a LegalTech SaaS for Italian legal professionals with:
 ### Phase 5 - Industrial Blue Theme (Feb 27, 2026)
 - Primary buttons: #0055FF (Electric Blue), flat, no shadows
 - Sidebar/Table headers: #1E293B (Slate 800)
-- Active nav items: #0055FF blue highlight
 - Cards: white bg, border-gray-200, bg-blue-50 header sections
-- Data numbers: font-mono, blue #0055FF (prices, quantities, stats)
+- Data numbers: font-mono, blue #0055FF
 - Typography: Inter/Roboto (font-sans), NO serif fonts
-- Headers: Bold, Slate 800 (#1E293B)
-- Applied consistently across ALL 10+ pages and editors
 
 ## API Endpoints
 - `/api/auth/` - Google OAuth
@@ -81,25 +76,27 @@ Build Norma Facile 2.0 - a LegalTech SaaS for Italian legal professionals with:
 - `/api/rilievi/{id}/photo` - Add photo
 - `/api/rilievi/{id}/pdf` - PDF export
 - `/api/distinte/` - Distinta CRUD
+- `/api/distinte/profiles` - Standard metal profiles catalog
+- `/api/distinte/{id}/calcola-barre` - Bar optimization
+- `/api/distinte/{id}/lista-taglio-pdf` - Cutting list PDF
 
 ## Prioritized Backlog
 
 ### P0 - Next
-- [ ] AI Document generation with GPT-4o
-- [ ] Legal chatbot assistant
-- [ ] Document templates library
+- [ ] Custom profiles catalog (user can add their own profiles)
+- [ ] Dashboard redesign for metalworkers (recent BOMs, weight stats)
+- [ ] Landing page update to reflect "CRM per Fabbri" identity
 
 ### P1
-- [ ] BOM: Profile catalog management (add custom profiles)
-- [ ] BOM: Real "Importa da Rilievo" (parse sketch dimensions)
-- [ ] BOM: Advanced bar optimizer (bin-packing algorithm)
+- [ ] Real "Importa da Rilievo" (parse sketch dimensions into BOM items)
+- [ ] Advanced bar optimizer (bin-packing algorithm)
 - [ ] SDI direct integration
 - [ ] Recurring invoices
 - [ ] Email reminders for overdue invoices
 
 ### P2 - Future
 - [ ] Team collaboration
-- [ ] Advanced reporting/analytics
+- [ ] Advanced reporting/analytics (monthly weight, cost trends)
 - [ ] Client portal
 - [ ] Mobile app (React Native)
 
