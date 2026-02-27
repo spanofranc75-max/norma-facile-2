@@ -1,0 +1,119 @@
+{
+  "summary": "Complete testing of Core Engine module. Backend: 30/30 tests PASSED (auth protection, NormaConfig CRUD, Componenti CRUD, seed operations, configure, calculate, validate). Frontend: All UI components verified - 3 tabs, product configurator with 10 types, calculation with Uw display, zone compliance grid (6 zones), suggestions, Norme tab with seed data, Componenti tab with 3 tables (Vetri/Telai/Distanziatori).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "backend_auth": {
+      "all_endpoints_require_auth": "PASS - All engine endpoints return 401 without session cookie"
+    },
+    "backend_norme_crud": {
+      "GET /api/engine/norme": "PASS - Returns list of norms (active_only filter works)",
+      "GET /api/engine/norme/{norma_id}": "PASS - Returns single norm config",
+      "POST /api/engine/norme": "PASS - Creates new norm config",
+      "PUT /api/engine/norme/{norma_id}": "PASS - Updates norm config",
+      "DELETE /api/engine/norme/{norma_id}": "PASS - Deletes norm, returns 404 on re-fetch",
+      "POST /api/engine/norme/seed": "PASS - Seeds EN_1090_1, EN_13241, UNI_EN_14351_1"
+    },
+    "backend_componenti_crud": {
+      "GET /api/engine/componenti": "PASS - Returns list with tipo filter (vetro, telaio, distanziatore)",
+      "GET /api/engine/componenti/{comp_id}": "PASS - Returns single component",
+      "POST /api/engine/componenti": "PASS - Creates new component with comp_id",
+      "PUT /api/engine/componenti/{comp_id}": "PASS - Updates component",
+      "DELETE /api/engine/componenti/{comp_id}": "PASS - Deletes component",
+      "POST /api/engine/componenti/seed": "PASS - Seeds 8 vetri, 8 telai, 5 distanziatori (21 total)"
+    },
+    "backend_configure": {
+      "POST /api/engine/configure (finestra)": "PASS - Returns UNI_EN_14351_1 norm, has_thermal_calc=true",
+      "POST /api/engine/configure (cancello)": "PASS - Returns EN_13241 norm",
+      "POST /api/engine/configure (tettoia)": "PASS - Returns EN_1090_1 norm",
+      "returns_components": "PASS - vetri, telai, distanziatori arrays",
+      "returns_zone_limits": "PASS - Zone limits for Ecobonus"
+    },
+    "backend_calculate": {
+      "POST /api/engine/calculate": "PASS - Returns Uw calculation result",
+      "uw_formula_correct": "PASS - Uw = (Ag*Ug + Af*Uf + lg*Psi) / (Ag+Af) verified",
+      "zone_compliance_grid": "PASS - Returns compliance for all 6 zones (A-F)",
+      "zone_limits_correct": "PASS - A=2.6, B=2.6, C=1.75, D=1.67, E=1.3, F=1.0"
+    },
+    "backend_validate": {
+      "POST /api/engine/validate": "PASS - Validates against norm rules",
+      "missing_mandatory_fields": "PASS - Returns field_errors",
+      "block_ce_marking_rule": "PASS - product_height > 4000 blocks CE marking for EN_13241",
+      "warning_rule": "PASS - product_height > 2500 triggers warning"
+    },
+    "backend_suggestions": {
+      "upgrade_glass_suggestion": "PASS - Generated when Uw exceeds zone limit and Ug > 1.5",
+      "upgrade_spacer_suggestion": "PASS - Generated when psi > 0.05"
+    },
+    "frontend_page": {
+      "route": "PASS - /core-engine loads CoreEnginePage",
+      "title": "PASS - 'Core Engine' with CPU icon",
+      "subtitle": "PASS - 'Motore normativo universale — Configurazione, calcolo e validazione'"
+    },
+    "frontend_tabs": {
+      "configurator": "PASS - data-testid='tab-configurator'",
+      "norme": "PASS - data-testid='tab-norme'",
+      "componenti": "PASS - data-testid='tab-componenti'"
+    },
+    "frontend_configurator": {
+      "product_types": "PASS - 10 product type buttons (cancello, portone, finestra, etc.)",
+      "norme_applicabili": "PASS - Shows applicable norms with performances badges",
+      "dimension_inputs": "PASS - Height, width, frame width inputs with data-testid",
+      "component_selectors": "PASS - Vetro, telaio, distanziatore, zona selectors",
+      "calculate_button": "PASS - data-testid='btn-calculate'",
+      "results_display": "PASS - Shows Uw value, zone compliance grid (6 zones), warnings, suggestions",
+      "compliance_indicators": "PASS - Green checkmark/red X per zone"
+    },
+    "frontend_norme_tab": {
+      "seed_button": "PASS - data-testid='btn-seed-norme'",
+      "norm_cards": "PASS - Shows EN 1090-1, EN 13241, EN 14351-1 with product types and performances"
+    },
+    "frontend_componenti_tab": {
+      "seed_button": "PASS - data-testid='btn-seed-componenti'",
+      "new_button": "PASS - data-testid='btn-new-componente'",
+      "vetri_table": "PASS - 8 vetri with Ug values (0.5-5.8)",
+      "telai_table": "PASS - 8 telai with Uf values (1.3-7.0)",
+      "distanziatori_table": "PASS - 5 distanziatori with Psi values (0.00-0.08)"
+    },
+    "frontend_component_dialog": {
+      "opens": "PASS - Click new button opens dialog",
+      "fields": "PASS - codice, label, tipo, thermal values, produttore",
+      "save_button": "PASS - data-testid='btn-save-comp'"
+    },
+    "frontend_sidebar": {
+      "nav_item": "PASS - 'Core Engine' nav item with Shield icon",
+      "data_testid": "PASS - data-testid='nav-core-engine'",
+      "active_state": "PASS - Blue background when on /core-engine"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_core_engine.py",
+    "/app/test_reports/pytest/core_engine_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Core Engine module fully implemented and working",
+    "Uw calculation formula correctly implements ISO 10077-1",
+    "Zone limits updated to Draft 2025/2026 restrictive limits",
+    "Validation rules engine properly evaluates conditions and fires BLOCK_CE_MARKING/WARN actions",
+    "Suggestions generated dynamically based on component performance vs zone limits",
+    "Data-driven architecture: adding new norm = adding new JSON config, zero code changes"
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100% (30/30 tests passed)",
+    "frontend": "100% (all pages and components verified)"
+  },
+  "test_credentials": "test_session_engine_1772216928850",
+  "seed_data_creation": "Seeded 3 norms (EN_1090_1, EN_13241, UNI_EN_14351_1) and 21 components (8 vetri, 8 telai, 5 distanziatori) during tests",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Core Engine module fully tested: Backend CRUD for norme and componenti, seed operations, configure/calculate/validate endpoints. Frontend CoreEnginePage with 3 tabs working. Uw formula verified: Uw = (Ag*Ug + Af*Uf + lg*Psi) / (Ag+Af). Zone limits: A=2.6, B=2.6, C=1.75, D=1.67, E=1.3, F=1.0. BLOCK_CE_MARKING fires when product_height > 4000 for EN_13241. All data-testids in place."
+}
