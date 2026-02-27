@@ -299,13 +299,13 @@ class RilievoAPITester:
         # For now, just report what was created
         if self.client_id:
             self.log_test("Test client created", None, f"ID: {self.client_id}")
-        if self.invoice_id:
-            self.log_test("Test invoice created", None, f"ID: {self.invoice_id}")
+        if self.rilievo_id:
+            self.log_test("Test rilievo created", None, f"ID: {self.rilievo_id}")
 
     def run_all_tests(self):
         """Run the complete test suite"""
-        print("🚀 Starting Norma Facile 2.0 Backend API Test Suite")
-        print("=" * 60)
+        print("🚀 Starting Norma Facile 2.0 Rilievo Misure Backend API Test Suite")
+        print("=" * 70)
         
         start_time = time.time()
         
@@ -313,17 +313,15 @@ class RilievoAPITester:
         test_results = []
         test_results.append(self.test_auth())
         test_results.append(self.test_clients_crud())
-        test_results.append(self.test_invoices_crud())
-        test_results.append(self.test_pdf_generation())
-        test_results.append(self.test_company_settings())
-        test_results.append(self.test_document_conversion())
+        test_results.append(self.test_rilievi_crud())
+        test_results.append(self.test_rilievo_pdf_generation())
         
         # Cleanup
         self.cleanup_test_data()
         
         # Final results
         elapsed = time.time() - start_time
-        print("\n" + "=" * 60)
+        print("\n" + "=" * 70)
         print(f"📊 TEST RESULTS SUMMARY")
         print(f"Tests Run: {self.tests_run}")
         print(f"Tests Passed: {self.tests_passed}")
@@ -340,7 +338,7 @@ class RilievoAPITester:
 
 def main():
     """Main test runner"""
-    tester = NormaFacileAPITester()
+    tester = RilievoAPITester()
     return tester.run_all_tests()
 
 if __name__ == "__main__":
