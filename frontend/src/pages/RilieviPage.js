@@ -133,7 +133,7 @@ export default function RilieviPage() {
                             ? `/rilievi/new?client_id=${clientIdFilter}` 
                             : '/rilievi/new'
                         )}
-                        className="bg-slate-900 text-white hover:bg-slate-800"
+                        className="bg-[#0055FF] text-white hover:bg-[#0044CC]"
                     >
                         <Plus className="h-4 w-4 mr-2" />
                         Nuovo Rilievo
@@ -200,7 +200,7 @@ export default function RilieviPage() {
                                             <Ruler className="h-12 w-12 mx-auto mb-4 text-slate-300" />
                                             <p>Nessun rilievo trovato</p>
                                             <Button
-                                                className="mt-4 bg-slate-900 text-white hover:bg-slate-800"
+                                                className="mt-4 bg-[#0055FF] text-white hover:bg-[#0044CC]"
                                                 onClick={() => navigate('/rilievi/new')}
                                             >
                                                 <Plus className="h-4 w-4 mr-2" />

@@ -120,7 +120,7 @@ export default function DistintePage() {
                             ? `/distinte/new?rilievo_id=${rilievoIdFilter}` 
                             : '/distinte/new'
                         )}
-                        className="bg-slate-900 text-white hover:bg-slate-800"
+                        className="bg-[#0055FF] text-white hover:bg-[#0044CC]"
                     >
                         <Plus className="h-4 w-4 mr-2" />
                         Nuova Distinta
@@ -188,7 +188,7 @@ export default function DistintePage() {
                                             <Package className="h-12 w-12 mx-auto mb-4 text-slate-300" />
                                             <p>Nessuna distinta trovata</p>
                                             <Button
-                                                className="mt-4 bg-slate-900 text-white hover:bg-slate-800"
+                                                className="mt-4 bg-[#0055FF] text-white hover:bg-[#0044CC]"
                                                 onClick={() => navigate('/distinte/new')}
                                             >
                                                 <Plus className="h-4 w-4 mr-2" />

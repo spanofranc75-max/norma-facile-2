@@ -347,7 +347,7 @@ export default function InvoiceEditorPage() {
                         data-testid="btn-save-invoice"
                         onClick={handleSave}
                         disabled={saving}
-                        className="bg-slate-900 text-white hover:bg-slate-800"
+                        className="bg-[#0055FF] text-white hover:bg-[#0044CC]"
                     >
                         <Save className="h-4 w-4 mr-2" />
                         {saving ? 'Salvataggio...' : 'Salva'}

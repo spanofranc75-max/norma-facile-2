@@ -196,7 +196,7 @@ export default function InvoicesPage() {
                     <Button
                         data-testid="btn-new-invoice"
                         onClick={() => navigate('/invoices/new')}
-                        className="bg-slate-900 text-white hover:bg-slate-800"
+                        className="bg-[#0055FF] text-white hover:bg-[#0044CC]"
                     >
                         <Plus className="h-4 w-4 mr-2" />
                         Nuovo Documento

@@ -259,7 +259,7 @@ function SketchEditor({ sketch, onSave, onCancel }) {
                 <Button
                     type="button"
                     onClick={handleSave}
-                    className="h-12 px-8 bg-slate-900 text-white hover:bg-slate-800"
+                    className="h-12 px-8 bg-[#0055FF] text-white hover:bg-[#0044CC]"
                 >
                     <Check className="h-4 w-4 mr-2" />
                     Salva Schizzo
@@ -510,7 +510,7 @@ export default function RilievoEditorPage() {
                             data-testid="btn-save-rilievo"
                             onClick={handleSave}
                             disabled={saving}
-                            className="h-12 px-8 bg-slate-900 text-white hover:bg-slate-800 text-base"
+                            className="h-12 px-8 bg-[#0055FF] text-white hover:bg-[#0044CC] text-base"
                         >
                             <Save className="h-5 w-5 mr-2" />
                             {saving ? 'Salvataggio...' : 'Salva'}
@@ -633,7 +633,7 @@ export default function RilievoEditorPage() {
                                         setEditingSketch(null);
                                         setSketchDialogOpen(true);
                                     }}
-                                    className="h-12 px-6 bg-slate-900 text-white hover:bg-slate-800"
+                                    className="h-12 px-6 bg-[#0055FF] text-white hover:bg-[#0044CC]"
                                 >
                                     <Plus className="h-5 w-5 mr-2" />
                                     Nuovo Schizzo
@@ -651,7 +651,7 @@ export default function RilievoEditorPage() {
                                                 setEditingSketch(null);
                                                 setSketchDialogOpen(true);
                                             }}
-                                            className="h-14 px-8 bg-slate-900 text-white hover:bg-slate-800"
+                                            className="h-14 px-8 bg-[#0055FF] text-white hover:bg-[#0044CC]"
                                         >
                                             <Plus className="h-5 w-5 mr-2" />
                                             Crea Primo Schizzo
@@ -721,7 +721,7 @@ export default function RilievoEditorPage() {
                                 <Button
                                     data-testid="btn-add-photo"
                                     onClick={() => photoInputRef.current?.click()}
-                                    className="h-12 px-6 bg-slate-900 text-white hover:bg-slate-800"
+                                    className="h-12 px-6 bg-[#0055FF] text-white hover:bg-[#0044CC]"
                                 >
                                     <Camera className="h-5 w-5 mr-2" />
                                     Scatta / Carica Foto
@@ -745,7 +745,7 @@ export default function RilievoEditorPage() {
                                         </p>
                                         <Button
                                             onClick={() => photoInputRef.current?.click()}
-                                            className="h-14 px-8 bg-slate-900 text-white hover:bg-slate-800"
+                                            className="h-14 px-8 bg-[#0055FF] text-white hover:bg-[#0044CC]"
                                         >
                                             <Camera className="h-5 w-5 mr-2" />
                                             Scatta / Carica Prima Foto

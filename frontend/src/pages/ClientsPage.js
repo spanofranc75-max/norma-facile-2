@@ -179,7 +179,7 @@ export default function ClientsPage() {
                     <Button
                         data-testid="btn-new-client"
                         onClick={() => handleOpenDialog()}
-                        className="bg-slate-900 text-white hover:bg-slate-800"
+                        className="bg-[#0055FF] text-white hover:bg-[#0044CC]"
                     >
                         <Plus className="h-4 w-4 mr-2" />
                         Nuovo Cliente
@@ -484,7 +484,7 @@ export default function ClientsPage() {
                             data-testid="btn-save-client"
                             onClick={handleSave}
                             disabled={saving}
-                            className="bg-slate-900 text-white hover:bg-slate-800"
+                            className="bg-[#0055FF] text-white hover:bg-[#0044CC]"
                         >
                             {saving ? 'Salvataggio...' : 'Salva'}
                         </Button>
