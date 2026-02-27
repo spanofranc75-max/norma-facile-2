@@ -22,6 +22,7 @@ from routes.rilievi import router as rilievi_router
 from routes.distinta import router as distinta_router
 from routes.certificazioni import router as certificazioni_router
 from routes.sicurezza import router as sicurezza_router
+from routes.dashboard import router as dashboard_router
 
 # Configure logging
 logging.basicConfig(
