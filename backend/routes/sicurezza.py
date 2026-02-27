@@ -13,6 +13,7 @@ from models.sicurezza import (
     RISCHI_LAVORAZIONI, MACCHINE_ATTREZZATURE, DPI_LIST,
 )
 from services.pos_pdf_service import generate_pos_pdf
+from core.engine.safety import SafetyValidator
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 logger = logging.getLogger(__name__)
