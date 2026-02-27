@@ -45,6 +45,7 @@ const navItems = [
     { path: '/certificazioni', label: 'Certificazioni CE', icon: Shield },
     { path: '/sicurezza', label: 'Sicurezza (POS)', icon: HardHat },
     { path: '/ddt', label: 'DDT', icon: Truck },
+    { path: '/perizie', label: 'Perizie Sinistro', icon: ShieldAlert },
     { path: '/impostazioni/pagamenti', label: 'Tipi Pagamento', icon: CreditCard },
     { path: '/settings', label: 'Impostazioni', icon: Settings },
 ];
