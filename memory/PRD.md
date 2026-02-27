@@ -73,7 +73,7 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 - `/api/sicurezza/`, `/api/dashboard/stats`, `/api/dashboard/fascicolo/{client_id}`
 - `/api/catalogo/`, `/api/vendor/`, `/api/preventivi/`
 - `/api/payment-types/` (CRUD + `seed-defaults`)
-- `/api/ddt/` (CRUD + PDF + causali)
+- `/api/ddt/` (CRUD + PDF + causali + convert-to-invoice)
 
 ## Prioritized Backlog
 
