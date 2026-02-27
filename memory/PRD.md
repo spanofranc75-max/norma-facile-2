@@ -5,11 +5,7 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 
 ## Core Architecture
 - **Norma Core Engine** (`backend/core/engine/`) — Single Source of Truth
-  - `climate_zones.py` — ClimateZone enum + ENEA limits (Draft 2025/2026)
-  - `thermal.py` — ThermalValidator (EN ISO 10077-1)
-  - `safety.py` — SafetyValidator (D.Lgs. 81/2008 POS)
-  - `ce.py` — CEValidator (EN 1090-1, EN 13241, EN 14351-1)
-  - `router.py` — NormaRouter (ProductType -> RegulationStandard)
+  - `climate_zones.py`, `thermal.py`, `safety.py`, `ce.py`, `router.py`
 
 ## Implemented Modules
 
@@ -28,21 +24,15 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 ### Norma Core Engine (Phase 10)
 - ThermalValidator, SafetyValidator, CEValidator, Draft 2025/2026 ENEA limits
 
-### Catalogo Profili Personalizzato (Phase 11)
+### Catalogo Profili + Norma Router + Vendor API (Phase 11-12)
 - Custom profiles CRUD, merged catalog, bulk price update
-
-### Norma Router + Vendor API (Phase 12)
 - 10 ProductTypes -> RegulationStandards, multi-key vendor system, NF-Standard JSON
 
-### Preventivi Commerciali (Phase 13) — NEW
-- Smart Quotes with thermal compliance integration
-- CRUD with auto-generated PRV-YYYY-NNNN numbers
-- Line items with optional thermal_data (glass/frame/spacer/zone per line)
-- "Verifica Compliance" button runs NormaCore ThermalValidator on all thermal lines
-- Green/red compliance banner and detailed compliance table per line
-- Technical Details drawer (Sheet) per line item for thermal config
-- PDF: commercial offer + technical annex "Prestazioni Termiche Calcolate"
-- Auto-calculated totals (subtotal, IVA, total)
+### Preventivi Commerciali (Phase 13)
+- Smart Quotes with thermal compliance, PDF with technical annex
+- **Converti in Fattura:** One-click conversion PRV -> FT with all lines/client/notes imported
+  - Auto-marks preventivo as "accettato", links to invoice
+  - Blocks duplicate conversions (409), requires client (422)
 
 ## API Endpoints
 - `/api/auth/`, `/api/clients/`, `/api/invoices/`, `/api/company/settings`
@@ -52,7 +42,7 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 - `/api/dashboard/stats`
 - `/api/catalogo/` + `/merged/all` + `/bulk-price-update`
 - `/api/vendor/keys` + `/import_catalog` + `/catalogs` + `/thermal-profiles`
-- `/api/preventivi/` — CRUD + check-compliance + PDF (NEW)
+- `/api/preventivi/` — CRUD + check-compliance + PDF + convert-to-invoice
 
 ## DB Collections
 - users, clients, invoices, rilievi, distinte, certificazioni, pos_documents
