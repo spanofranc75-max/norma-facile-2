@@ -193,3 +193,19 @@ async def validate_certificazione(cert_id: str, user: dict = Depends(get_current
         project_name=doc.get("project_name", ""),
     )
     return result.model_dump()
+
+
+# ── Norma Router ─────────────────────────────────────────────────
+
+@router.get("/router/product-types")
+async def get_product_types():
+    """Get all supported product types with their regulation info."""
+    return {"product_types": NormaRouter.get_all_product_types()}
+
+
+@router.get("/router/{product_type}")
+async def route_product(product_type: str):
+    """Get required standards, validators, and mandatory fields for a product type."""
+    result = NormaRouter.route(product_type)
+    return result.model_dump()
+
