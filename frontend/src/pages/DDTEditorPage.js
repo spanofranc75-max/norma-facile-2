@@ -237,6 +237,16 @@ export default function DDTEditorPage() {
                     </div>
                     <div className="flex gap-2">
                         {!isNew && <Button data-testid="btn-download-pdf" variant="outline" onClick={handleDownloadPdf} className="border-[#0055FF] text-[#0055FF] hover:bg-blue-50 h-9 text-xs"><FileDown className="h-3.5 w-3.5 mr-1.5" /> PDF</Button>}
+                        {!isNew && ddtInfo.status !== 'fatturato' && !ddtInfo.converted_to && (
+                            <Button data-testid="btn-convert-invoice" variant="outline" onClick={handleConvertToInvoice} disabled={converting} className="border-amber-500 text-amber-600 hover:bg-amber-50 h-9 text-xs">
+                                <ArrowRightLeft className="h-3.5 w-3.5 mr-1.5" /> {converting ? 'Conversione...' : 'Converti in Fattura'}
+                            </Button>
+                        )}
+                        {!isNew && ddtInfo.status === 'fatturato' && ddtInfo.converted_to && (
+                            <Button data-testid="btn-go-to-invoice" variant="outline" onClick={() => navigate(`/invoices/${ddtInfo.converted_to}`)} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9 text-xs">
+                                <ArrowRightLeft className="h-3.5 w-3.5 mr-1.5" /> Vai alla Fattura
+                            </Button>
+                        )}
                         <Button data-testid="btn-save-ddt" onClick={handleSave} disabled={saving} className="bg-[#0055FF] text-white hover:bg-[#0044CC] h-9 text-xs"><Save className="h-3.5 w-3.5 mr-1.5" /> {saving ? 'Salvataggio...' : 'Salva'}</Button>
                     </div>
                 </div>
