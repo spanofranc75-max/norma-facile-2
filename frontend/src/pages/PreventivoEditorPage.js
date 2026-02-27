@@ -49,6 +49,7 @@ export default function PreventivoEditorPage() {
     const [compliance, setCompliance] = useState(null);
     const [saving, setSaving] = useState(false);
     const [checking, setChecking] = useState(false);
+    const [converting, setConverting] = useState(false);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [activeLineIdx, setActiveLineIdx] = useState(null);
 
