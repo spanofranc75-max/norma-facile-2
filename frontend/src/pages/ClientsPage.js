@@ -413,10 +413,10 @@ export default function ClientsPage() {
                             <div className="space-y-4">
                                 <div>
                                     <Label className="flex items-center gap-1"><CreditCard className="h-3.5 w-3.5" /> Condizioni Pagamento</Label>
-                                    <Select value={formData.payment_type_id || ''} onValueChange={handlePaymentTypeChange}>
+                                    <Select value={formData.payment_type_id || '__none__'} onValueChange={(v) => handlePaymentTypeChange(v === '__none__' ? '' : v)}>
                                         <SelectTrigger data-testid="select-payment-type"><SelectValue placeholder="Seleziona tipo pagamento..." /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">-- Nessuno --</SelectItem>
+                                            <SelectItem value="__none__">-- Nessuno --</SelectItem>
                                             {paymentTypes.map(pt => (
                                                 <SelectItem key={pt.payment_type_id} value={pt.payment_type_id}>
                                                     <span className="font-mono text-xs mr-2">{pt.codice}</span> {pt.descrizione}
