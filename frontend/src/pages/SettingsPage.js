@@ -128,7 +128,7 @@ export default function SettingsPage() {
 
                     <TabsContent value="company">
                         <Card className="border-gray-200">
-                            <CardHeader>
+                            <CardHeader className="bg-blue-50 border-b border-gray-200">
                                 <CardTitle>Dati Aziendali</CardTitle>
                                 <CardDescription>
                                     Questi dati appariranno nell'intestazione delle fatture
