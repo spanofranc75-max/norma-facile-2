@@ -48,10 +48,15 @@ Build Norma Facile 2.0 - a LegalTech SaaS for Italian legal professionals with:
 - Client Integration
 - Tablet-First UI
 
-### Phase 4 - Distinta Materiali (Feb 27, 2026)
-- BOM CRUD (skeleton)
-- Materials table editor
-- Auto-calculating totals
+### Phase 4 - Distinta Materiali Smart BOM (Feb 27, 2026)
+- BOM CRUD with auto-calculated weight and surface
+- Standard metal profiles database (43 profiles: Tubolari, Piatti, Angolari, Tondi)
+- Profile selection dropdown with auto-fill weight_per_meter and surface_per_meter
+- Smart calculations: Row Weight = Length(m) x Qty x weight_per_meter
+- Smart calculations: Row Surface = Length(m) x Qty x surface_per_meter
+- "Calcola Barre" - bar optimization (6m standard bars with waste calculation)
+- "Stampa Lista Taglio" - PDF cutting list for workshop
+- Footer: Total Weight (kg), Total Surface (mq), Total Cost
 - Import from Rilievo (mock)
 
 ### Phase 5 - Industrial Blue Theme (Feb 27, 2026)
@@ -85,8 +90,9 @@ Build Norma Facile 2.0 - a LegalTech SaaS for Italian legal professionals with:
 - [ ] Document templates library
 
 ### P1
-- [ ] BOM module enhancements (smart calculation, material catalog, import from rilievo)
-- [ ] BOM PDF export
+- [ ] BOM: Profile catalog management (add custom profiles)
+- [ ] BOM: Real "Importa da Rilievo" (parse sketch dimensions)
+- [ ] BOM: Advanced bar optimizer (bin-packing algorithm)
 - [ ] SDI direct integration
 - [ ] Recurring invoices
 - [ ] Email reminders for overdue invoices
