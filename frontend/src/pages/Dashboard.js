@@ -141,12 +141,12 @@ export default function Dashboard() {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <Card className="border-slate-200">
+                <Card className="border-gray-200">
                     <CardContent className="pt-6">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-slate-500">Documenti</p>
-                                <p className="text-3xl font-bold text-slate-900">
+                                <p className="text-3xl font-mono font-bold text-[#0055FF]">
                                     {loadingStats ? '-' : stats.totalInvoices}
                                 </p>
                             </div>
@@ -157,12 +157,12 @@ export default function Dashboard() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-slate-200">
+                <Card className="border-gray-200">
                     <CardContent className="pt-6">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-slate-500">Clienti</p>
-                                <p className="text-3xl font-bold text-slate-900">
+                                <p className="text-3xl font-mono font-bold text-[#0055FF]">
                                     {loadingStats ? '-' : stats.totalClients}
                                 </p>
                             </div>
@@ -173,12 +173,12 @@ export default function Dashboard() {
                     </CardContent>
                 </Card>
 
-                <Card className="border-slate-200">
+                <Card className="border-gray-200">
                     <CardContent className="pt-6">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-slate-500">Fatturato Anno</p>
-                                <p className="text-2xl font-bold text-slate-900">
+                                <p className="text-2xl font-mono font-bold text-[#0055FF]">
                                     {loadingStats ? '-' : formatCurrency(stats.monthlyTotal)}
                                 </p>
                             </div>
@@ -228,8 +228,8 @@ export default function Dashboard() {
             </div>
 
             {/* Recent Invoices */}
-            <Card className="border-slate-200">
-                <CardHeader className="flex flex-row items-center justify-between">
+            <Card className="border-gray-200">
+                <CardHeader className="flex flex-row items-center justify-between bg-blue-50 border-b border-gray-200">
                     <div>
                         <CardTitle className="font-sans text-xl">Documenti Recenti</CardTitle>
                         <CardDescription>Le tue ultime fatture e preventivi</CardDescription>
