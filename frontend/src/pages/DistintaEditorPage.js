@@ -548,7 +548,7 @@ export default function DistintaEditorPage() {
                                                         placeholder="€"
                                                     />
                                                 </TableCell>
-                                                <TableCell className="p-1 text-right font-medium bg-slate-50">
+                                                <TableCell className="p-1 text-right font-mono font-semibold text-[#0055FF] bg-slate-50">
                                                     {formatCurrency(lineTotal)}
                                                 </TableCell>
                                                 <TableCell className="p-1">
