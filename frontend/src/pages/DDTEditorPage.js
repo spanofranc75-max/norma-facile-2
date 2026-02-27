@@ -105,7 +105,7 @@ export default function DDTEditorPage() {
                 notes: data.notes || '',
                 lines: data.lines?.length ? data.lines : [emptyLine()],
             });
-            setDdtInfo({ number: data.number, status: data.status || 'non_fatturato' });
+            setDdtInfo({ number: data.number, status: data.status || 'non_fatturato', converted_to: data.converted_to || null });
         }).catch(() => toast.error('DDT non trovato'));
     }, [ddtId, isNew]);
 
