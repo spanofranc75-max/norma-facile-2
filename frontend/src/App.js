@@ -24,6 +24,8 @@ import PreventiviPage from './pages/PreventiviPage';
 import PreventivoEditorPage from './pages/PreventivoEditorPage';
 import FascicoloCantierePage from './pages/FascicoloCantierePage';
 import PaymentTypesPage from './pages/PaymentTypesPage';
+import DDTListPage from './pages/DDTListPage';
+import DDTEditorPage from './pages/DDTEditorPage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';

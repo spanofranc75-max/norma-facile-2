@@ -41,6 +41,7 @@ const navItems = [
     { path: '/catalogo', label: 'Catalogo Profili', icon: Warehouse },
     { path: '/certificazioni', label: 'Certificazioni CE', icon: Shield },
     { path: '/sicurezza', label: 'Sicurezza (POS)', icon: HardHat },
+    { path: '/ddt', label: 'DDT', icon: Truck },
     { path: '/impostazioni/pagamenti', label: 'Tipi Pagamento', icon: CreditCard },
     { path: '/settings', label: 'Impostazioni', icon: Settings },
 ];
