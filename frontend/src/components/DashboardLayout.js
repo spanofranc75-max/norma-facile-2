@@ -45,6 +45,7 @@ const navItems = [
     { path: '/clients', label: 'Clienti', icon: Users },
     { path: '/fornitori', label: 'Fornitori', icon: Factory },
     { path: '/articoli', label: 'Catalogo Articoli', icon: BoxIcon },
+    { path: '/core-engine', label: 'Core Engine', icon: Shield },
     { path: '/rilievi', label: 'Rilievi', icon: Ruler },
     { path: '/distinte', label: 'Distinte', icon: Package },
     { path: '/catalogo', label: 'Catalogo Profili', icon: Warehouse },
