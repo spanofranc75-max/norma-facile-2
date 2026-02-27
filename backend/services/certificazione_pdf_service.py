@@ -147,6 +147,45 @@ def generate_dop_ce_pdf(cert: dict, company: dict = None) -> BytesIO:
     ]))
     elements.append(pt)
 
+    # Thermal transmittance section (if calculated)
+    thermal_uw = specs.get("thermal_uw")
+    if thermal_uw is not None and specs.get("thermal_enabled"):
+        elements.append(Paragraph("7b. Trasmittanza termica (Uw) - EN ISO 10077-1", subtitle_style))
+        uw_color = colors.HexColor("#DC2626") if thermal_uw > 1.3 else BLUE
+        uw_style = ParagraphStyle("UwVal", parent=normal, fontSize=14, fontName="Helvetica-Bold", textColor=uw_color)
+
+        elements.append(Paragraph(f"Uw = {thermal_uw} W/m<super>2</super>K", uw_style))
+        elements.append(Spacer(1, 2 * mm))
+
+        th_data = [
+            ["Parametro", "Valore"],
+            ["Vetro", f"{specs.get('thermal_glass_label', '-')} (Ug = {specs.get('thermal_uw', '-')})"],
+            ["Telaio", f"{specs.get('thermal_frame_label', '-')}"],
+            ["Canalina distanziale", f"{specs.get('thermal_spacer_label', '-')}"],
+            ["Dimensioni (H x L)", f"{specs.get('thermal_height_mm', '-')} x {specs.get('thermal_width_mm', '-')} mm"],
+        ]
+        tht = Table(th_data, colWidths=[60 * mm, 100 * mm])
+        tht.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), BLUE),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.Color(0.8, 0.8, 0.8)),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        elements.append(tht)
+
+        if thermal_uw > 1.3:
+            warn = ParagraphStyle("WarnUw", parent=normal, fontSize=10, textColor=colors.HexColor("#DC2626"), fontName="Helvetica-Bold")
+            elements.append(Spacer(1, 2 * mm))
+            elements.append(Paragraph("ATTENZIONE: Uw supera 1.30 W/m2K (limite Zona E). NON detraibile per Ecobonus.", warn))
+        else:
+            ok = ParagraphStyle("OkUw", parent=normal, fontSize=10, textColor=colors.HexColor("#059669"), fontName="Helvetica-Bold")
+            elements.append(Spacer(1, 2 * mm))
+            elements.append(Paragraph(f"Conforme per detrazione Ecobonus fino a Zona E (limite 1.30 W/m2K).", ok))
+
     # Section 8: Description
     elements.append(Paragraph("8. Descrizione del prodotto", subtitle_style))
     elements.append(Paragraph(cert.get("product_description", "-") or "-", normal))
