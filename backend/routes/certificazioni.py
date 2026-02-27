@@ -135,12 +135,21 @@ async def delete_certificazione(cert_id: str, user: dict = Depends(get_current_u
 
 @router.get("/{cert_id}/fascicolo-pdf")
 async def get_fascicolo_pdf(cert_id: str, user: dict = Depends(get_current_user)):
-    """Generate DOP + CE Label PDF."""
+    """Generate DOP + CE Label PDF. Validates before generating."""
     doc = await db.certificazioni.find_one({"cert_id": cert_id, "user_id": user["user_id"]}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Certificazione non trovata")
 
-    # Get company settings
+    # Validate before generating
+    validation = CEValidator.validate(
+        standard=doc.get("standard", ""),
+        product_type=doc.get("product_type", ""),
+        technical_specs=doc.get("technical_specs", {}),
+        project_name=doc.get("project_name", ""),
+    )
+    if not validation.valid:
+        raise HTTPException(422, detail=f"Certificazione incompleta: {'; '.join(validation.errors)}")
+
     company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0})
 
     pdf_buffer = generate_dop_ce_pdf(doc, company)
