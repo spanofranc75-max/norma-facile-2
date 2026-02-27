@@ -1,34 +1,55 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+/* Additional styles for Norma Facile 2.0 */
+
+/* Hero mesh gradient background */
+.hero-mesh {
+    background: 
+        radial-gradient(at 0% 0%, hsla(215, 90%, 95%, 1) 0, transparent 50%),
+        radial-gradient(at 100% 0%, hsla(35, 80%, 95%, 1) 0, transparent 50%);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+/* Subtle glow effect */
+.subtle-glow {
+    background: linear-gradient(to bottom right, #FFFFFF, #F8FAFC);
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+/* Card hover effect */
+.card-interactive {
+    @apply transition-all duration-300;
 }
 
-.App-link {
-    color: #61dafb;
+.card-interactive:hover {
+    @apply shadow-md border-slate-300;
+    transform: translateY(-2px);
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+/* Sidebar active link */
+.sidebar-link-active {
+    @apply bg-white text-slate-900 font-medium shadow-sm;
 }
+
+/* Loading animation */
+.loading-spinner {
+    @apply animate-spin rounded-full border-2 border-slate-200 border-t-slate-900;
+}
+
+/* Chat message bubbles */
+.chat-bubble-user {
+    @apply bg-slate-100 text-slate-900 rounded-2xl rounded-br-md;
+}
+
+.chat-bubble-assistant {
+    @apply bg-slate-900 text-white rounded-2xl rounded-bl-md;
+}
+
+/* Document preview */
+.document-preview {
+    @apply bg-white border border-slate-200 rounded-lg shadow-sm;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Animation delays for staggered reveals */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
