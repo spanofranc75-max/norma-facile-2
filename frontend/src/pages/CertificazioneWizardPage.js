@@ -16,7 +16,7 @@ import { Separator } from '../components/ui/separator';
 import { Badge } from '../components/ui/badge';
 import { toast } from 'sonner';
 import {
-    Save, ArrowLeft, ArrowRight, Shield, FileDown, CheckCircle2, Thermometer, AlertTriangle,
+    Save, ArrowLeft, ArrowRight, Shield, FileDown, CheckCircle2, Thermometer, AlertTriangle, Trash2, BarChart3,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
