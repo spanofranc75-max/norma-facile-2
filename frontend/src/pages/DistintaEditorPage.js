@@ -355,7 +355,7 @@ export default function DistintaEditorPage() {
 
                 {/* Info Section */}
                 <Card className="border-gray-200">
-                    <CardHeader className="pb-4">
+                    <CardHeader className="pb-4 bg-blue-50 border-b border-gray-200">
                         <CardTitle className="text-lg font-semibold">Informazioni</CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -405,7 +405,7 @@ export default function DistintaEditorPage() {
 
                 {/* Materials Table */}
                 <Card className="border-gray-200">
-                    <CardHeader className="flex flex-row items-center justify-between pb-4">
+                    <CardHeader className="flex flex-row items-center justify-between pb-4 bg-blue-50 border-b border-gray-200">
                         <CardTitle className="text-lg font-semibold">Materiali</CardTitle>
                         <Button
                             data-testid="btn-add-item"
@@ -572,7 +572,7 @@ export default function DistintaEditorPage() {
 
                 {/* Totals */}
                 <Card className="border-gray-200">
-                    <CardHeader className="pb-4">
+                    <CardHeader className="pb-4 bg-blue-50 border-b border-gray-200">
                         <CardTitle className="text-lg font-semibold flex items-center gap-2">
                             <Calculator className="h-5 w-5" />
                             Riepilogo
