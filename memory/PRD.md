@@ -41,85 +41,63 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with:
 ### Phase 3 - Rilievi Module (Feb 27, 2026)
 - Rilievo CRUD
 - Sketch Pad with react-canvas-draw
-- Photo Gallery
-- PDF Export
-- Client Integration
-- Tablet-First UI
+- Photo Gallery, PDF Export, Client Integration, Tablet-First UI
 
 ### Phase 4 - Distinta Materiali Smart BOM (Feb 27, 2026)
 - BOM CRUD with auto-calculated weight and surface
-- Standard metal profiles database (43 profiles: Tubolari, Piatti, Angolari, Tondi)
-- Profile selection dropdown with auto-fill weight_per_meter and surface_per_meter
-- Smart calculations: Row Weight = Length(m) x Qty x weight_per_meter
-- Smart calculations: Row Surface = Length(m) x Qty x surface_per_meter
-- "Calcola Barre" - bar optimization (6m standard bars with waste calculation)
-- "Stampa Lista Taglio" - PDF cutting list for workshop
+- Standard metal profiles database (43 profiles)
+- "Calcola Barre" bar optimization, "Stampa Lista Taglio" PDF cutting list
 - Footer: Total Weight (kg), Total Surface (mq), Total Cost
-- Import from Rilievo (mock)
 
 ### Phase 5 - Industrial Blue Theme (Feb 27, 2026)
-- Primary buttons: #0055FF (Electric Blue), flat, no shadows
-- Sidebar/Table headers: #1E293B (Slate 800)
-- Cards: white bg, border-gray-200, bg-blue-50 header sections
-- Data numbers: font-mono, blue #0055FF
-- Typography: Inter/Roboto (font-sans), NO serif fonts
+- Primary #0055FF, Sidebar #1E293B, Cards white with blue headers
 
 ### Phase 6 - Certificazioni CE (Feb 27, 2026)
-- Full CRUD for certifications (DOP / CE Label / Manuale d'Uso e Manutenzione)
-- Support for EN 1090-1 (Structural) and EN 13241 (Gates/Doors)
-- 3-step wizard: Project -> Standard -> Technical Specs
-- PDF generation: DOP + CE Label + Manuale d'Uso e Manutenzione (3 pages)
-- Auto-generated declaration numbers
+- Full CRUD (DOP / CE Label / Manuale d'Uso e Manutenzione)
+- EN 1090-1 (Structural) and EN 13241 (Gates/Doors)
+- 3-step wizard + PDF generation
 
 ### Phase 7 - Sicurezza Cantieri / POS Generator (Feb 27, 2026)
-- Predefined risk database: 13 risks, 14 machines, 13 DPI for metalworkers
-- 3-step wizard: Cantiere -> Lavorazioni -> Macchine & DPI
-- AI-powered risk assessment via GPT-4o (Emergent LLM Key)
-- POS PDF generation (8 sections: cover, company, site, risks, machines, DPI, AI assessment, emergencies)
-- Auto-fill committente from client selection
-- Landing page rebranded to "CRM per Fabbri" -- "Il Ferro, Organizzato"
+- 13 risks, 14 machines, 13 DPI database
+- 3-step wizard with AI risk assessment (GPT-4o)
+- POS PDF generation
 
 ### Phase 8 - Smart CE Calculator (Feb 27, 2026)
-- Thermal transmittance (Uw) calculation per EN ISO 10077-1
-- Formula: Uw = (Ag*Ug + Af*Uf + lg*Psi) / (Ag + Af)
-- 8 glass types, 8 frame types, 5 spacer types
-- 6 climate zones (A-F) with Ecobonus limits
-- 4th step added to Certificazioni wizard
-- Real-time calculation with visual result
-- Red warning when Uw > 1.3 (Zone E non-eligible for Ecobonus)
-- Green badge when eligible
-- Zone compliance badges (A-F with OK/NO)
+- Thermal transmittance (Uw) per EN ISO 10077-1
+- 8 glass types, 8 frame types, 5 spacer types, 6 climate zones
+- 4th step in Certificazioni wizard with real-time calculation
+- Red/green Ecobonus eligibility display, zone compliance badges
 - Thermal data included in generated PDF
-- Backend: /api/certificazioni/thermal/reference-data, /api/certificazioni/thermal/calculate
+
+### Phase 9 - Workshop Dashboard "Cruscotto Officina" (Feb 27, 2026)
+- 4 KPI cards: Ferro in Lavorazione (kg), Cantieri Attivi, POS Generati, Fatturato Mese
+- Quick Actions: Nuovo Rilievo, Nuova Distinta, Stampa POS
+- Widgets: Prossime Scadenze, Materiale da Ordinare (bars needed), Documenti Recenti
+- Backend aggregation endpoint: /api/dashboard/stats
+
+### Phase 10 - Confronta Serramenti (Feb 27, 2026)
+- Save multiple thermal configs for side-by-side comparison
+- Comparison table with Uw values, glass/frame/spacer details
+- Best configuration highlighted with "Migliore" badge
+- Ecobonus eligibility per configuration
 
 ## API Endpoints
 - `/api/auth/` - Google OAuth
 - `/api/clients/` - Client CRUD
-- `/api/invoices/` - Invoice CRUD + status + convert
-- `/api/invoices/{id}/pdf` - PDF download
-- `/api/invoices/{id}/xml` - XML export
+- `/api/invoices/` - Invoice CRUD + status + convert + PDF + XML
 - `/api/company/settings` - Company/bank settings
-- `/api/rilievi/` - Rilievo CRUD
-- `/api/rilievi/{id}/sketch` - Add sketch
-- `/api/rilievi/{id}/photo` - Add photo
-- `/api/rilievi/{id}/pdf` - PDF export
-- `/api/distinte/` - Distinta CRUD
-- `/api/distinte/profiles` - Standard metal profiles catalog
-- `/api/distinte/{id}/calcola-barre` - Bar optimization
-- `/api/certificazioni/` - Certificazioni CE CRUD
-- `/api/certificazioni/{id}/fascicolo-pdf` - DOP + CE Label + Manuale PDF
-- `/api/certificazioni/thermal/reference-data` - Glass/frame/spacer reference data
-- `/api/certificazioni/thermal/calculate` - Uw thermal calculation
-- `/api/sicurezza/` - POS CRUD
-- `/api/sicurezza/rischi` - Risk/Machine/DPI reference data
-- `/api/sicurezza/{id}/genera-rischi` - AI risk assessment (GPT-4o)
-- `/api/sicurezza/{id}/pdf` - POS PDF download
+- `/api/rilievi/` - Rilievo CRUD + sketch + photo + PDF
+- `/api/distinte/` - Distinta CRUD + profiles + bar calculation
+- `/api/certificazioni/` - Certificazioni CE CRUD + PDF
+- `/api/certificazioni/thermal/reference-data` - Glass/frame/spacer data
+- `/api/certificazioni/thermal/calculate` - Uw calculation
+- `/api/sicurezza/` - POS CRUD + AI risk assessment + PDF
+- `/api/dashboard/stats` - Workshop dashboard aggregation
 
 ## Prioritized Backlog
 
 ### P0 - Next
 - [ ] Custom profiles catalog (user can add their own profiles)
-- [ ] Dashboard redesign for metalworkers (recent BOMs, weight stats)
 
 ### P1
 - [ ] Real "Importa da Rilievo" (parse sketch dimensions into BOM items)
