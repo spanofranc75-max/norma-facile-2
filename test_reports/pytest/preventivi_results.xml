@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="3" skipped="0" tests="18" time="4.005" timestamp="2026-02-27T13:11:18.858284+00:00" hostname="agent-env-9e84553e-dff7-4271-9682-4ed6ebbe8d69"><testcase classname="backend.tests.test_preventivi.TestPreventiviAuth" name="test_list_preventivi_requires_auth" time="0.275" /><testcase classname="backend.tests.test_preventivi.TestPreventiviAuth" name="test_create_preventivo_requires_auth" time="0.158" /><testcase classname="backend.tests.test_preventivi.TestPreventiviCRUD" name="test_list_preventivi_empty" time="0.519" /><testcase classname="backend.tests.test_preventivi.TestPreventiviCRUD" name="test_create_preventivo_basic" time="0.163" /><testcase classname="backend.tests.test_preventivi.TestPreventiviCRUD" name="test_create_preventivo_with_thermal_data" time="0.132" /><testcase classname="backend.tests.test_preventivi.TestPreventiviCRUD" name="test_get_preventivo" time="0.225" /><testcase classname="backend.tests.test_preventivi.TestPreventiviCRUD" name="test_get_preventivo_not_found" time="0.112" /><testcase classname="backend.tests.test_preventivi.TestPreventiviCRUD" name="test_update_preventivo" time="0.165" /><testcase classname="backend.tests.test_preventivi.TestPreventiviCRUD" name="test_delete_preventivo" time="0.221" /><testcase classname="backend.tests.test_preventivi.TestThermalCompliance" name="test_check_compliance_doppio_be_argon_zone_e" time="0.158" /><testcase classname="backend.tests.test_preventivi.TestThermalCompliance" name="test_check_compliance_triplo_be_argon_zone_e" time="0.165" /><testcase classname="backend.tests.test_preventivi.TestThermalCompliance" name="test_check_compliance_singolo_zone_e" time="0.162" /><testcase classname="backend.tests.test_preventivi.TestThermalCompliance" name="test_check_compliance_no_thermal_lines" time="0.171" /><testcase classname="backend.tests.test_preventivi.TestThermalCompliance" name="test_compliance_results_fields" time="0.136"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_preventivi.py:455: in test_compliance_results_fields
+    prev_id = create_resp.json()['preventivo_id']
+              ^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_preventivi.TestPDFGeneration" name="test_download_pdf_basic" time="0.198" /><testcase classname="backend.tests.test_preventivi.TestPDFGeneration" name="test_download_pdf_with_compliance" time="0.121"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_preventivi.py:517: in test_download_pdf_with_compliance
+    prev_id = create_resp.json()['preventivo_id']
+              ^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_preventivi.TestPDFGeneration" name="test_pdf_not_found" time="0.106" /><testcase classname="backend.tests.test_preventivi.TestComplianceFlow" name="test_update_glass_and_recheck" time="0.525"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_preventivi.py:561: in test_update_glass_and_recheck
+    prev_id = create_resp.json()['preventivo_id']
+              ^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase></testsuite></testsuites>
