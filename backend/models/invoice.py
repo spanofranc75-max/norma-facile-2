@@ -224,6 +224,12 @@ class InvoiceResponse(BaseModel):
     
     converted_from: Optional[str] = None
     converted_to: Optional[List[str]] = None
+    
+    # Payment tracking fields
+    pagamenti: Optional[List[dict]] = []
+    totale_pagato: Optional[float] = 0.0
+    residuo: Optional[float] = 0.0
+    payment_status: Optional[str] = "non_pagata"
 
 
 class InvoiceListResponse(BaseModel):
