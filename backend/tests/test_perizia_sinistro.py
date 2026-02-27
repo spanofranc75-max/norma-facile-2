@@ -8,36 +8,54 @@ import os
 import uuid
 from datetime import datetime, timezone
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
+# Use localhost for internal tests (external URL uses same MongoDB)
+BASE_URL = "http://localhost:8001"
 
-# Create a unique session for this test run
 from pymongo import MongoClient
 
 
 def create_test_session():
-    """Create a test session in MongoDB and return the session token."""
+    """Create a test user and session in MongoDB."""
     client = MongoClient("mongodb://localhost:27017")
     db = client["test_database"]
     
-    session_id = f"test_perizia_{uuid.uuid4().hex[:12]}"
-    user_id = f"usr_perizia_{uuid.uuid4().hex[:8]}"
+    session_token = f"test_perizia_{uuid.uuid4().hex[:12]}"
+    user_id = f"user_perizia_{uuid.uuid4().hex[:8]}"
+    email = f"{user_id}@test.com"
     
-    db.sessions.insert_one({
-        "session_id": session_id,
-        "user_id": user_id,
-        "email": f"{user_id}@test.com",
-        "name": "Perizia Test User",
-        "picture": "",
-        "created_at": datetime.now(timezone.utc),
-        "expires_at": datetime(2030, 1, 1, tzinfo=timezone.utc),
-    })
+    # Create user in 'users' collection
+    db.users.update_one(
+        {"user_id": user_id},
+        {"$set": {
+            "user_id": user_id,
+            "email": email,
+            "name": "Perizia Test User",
+            "picture": "",
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }},
+        upsert=True
+    )
+    
+    # Create session in 'user_sessions' collection
+    db.user_sessions.update_one(
+        {"session_token": session_token},
+        {"$set": {
+            "user_id": user_id,
+            "session_token": session_token,
+            "expires_at": datetime(2030, 1, 1, tzinfo=timezone.utc),
+            "created_at": datetime.now(timezone.utc),
+        }},
+        upsert=True
+    )
+    
     client.close()
-    return session_id, user_id
+    return session_token, user_id
 
 
 # Create session at module load
 SESSION_TOKEN, USER_ID = create_test_session()
-print(f"Created test session: {SESSION_TOKEN}")
+print(f"Created test session: {SESSION_TOKEN} for user {USER_ID}")
 
 
 @pytest.fixture(scope="module")
@@ -67,12 +85,13 @@ def cleanup_perizie():
             session.delete(f"{BASE_URL}/api/perizie/{perizia_id}")
         except:
             pass
-    # Cleanup session
+    # Cleanup test data
     try:
         client = MongoClient("mongodb://localhost:27017")
         db = client["test_database"]
-        db.sessions.delete_many({"session_id": SESSION_TOKEN})
+        db.user_sessions.delete_many({"session_token": SESSION_TOKEN})
         db.perizie.delete_many({"user_id": USER_ID})
+        db.users.delete_many({"user_id": USER_ID})
         client.close()
     except:
         pass
