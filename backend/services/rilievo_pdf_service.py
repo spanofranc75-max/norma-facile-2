@@ -223,7 +223,7 @@ class RilievoPDFService:
             # Add remaining photos
             if current_row:
                 while len(current_row) < 2:
-                    current_row.append(['', ''])
+                    current_row.append([Paragraph('', styles['SmallText']), Paragraph('', styles['SmallText'])])
                 photo_rows.append(current_row)
             
             if photo_rows:
