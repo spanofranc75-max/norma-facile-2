@@ -22,7 +22,7 @@ import { toast } from 'sonner';
 import {
     Save, ArrowLeft, ArrowRight, Camera, Brain, MapPin, ShieldAlert,
     Wrench, Zap, PaintBucket, X, FileText, FileDown, Send, Ruler,
-    Plus, Trash2, RefreshCw, Check, Locate, ImagePlus, Focus,
+    Plus, Trash2, RefreshCw, Check, Locate, ImagePlus, Focus, Info, Percent,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
