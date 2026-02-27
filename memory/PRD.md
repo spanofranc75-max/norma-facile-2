@@ -18,16 +18,13 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 - Auth (Google OAuth), Invoicing, Rilievi, Distinta Smart BOM, Industrial Blue Theme
 
 ### Phase 6 — Certificazioni CE (Feb 27, 2026)
-- 4-step wizard (DOP + CE Label + Manuale d'Uso)
-- EN 1090-1 & EN 13241 support
+- 4-step wizard, EN 1090-1 & EN 13241, DOP + CE Label + Manuale d'Uso PDF
 
 ### Phase 7 — Sicurezza Cantieri / POS (Feb 27, 2026)
-- 3-step wizard, AI risk assessment (GPT-4o), PDF generation
+- 3-step wizard, AI risk assessment (GPT-4o), POS PDF generation
 
 ### Phase 8 — Smart CE Calculator (Feb 27, 2026)
-- Thermal transmittance Uw (EN ISO 10077-1)
-- 8 glass, 8 frame, 5 spacer types
-- Zone compliance badges, Ecobonus validation
+- Thermal transmittance Uw (EN ISO 10077-1), 8 glass/8 frame/5 spacer types, 6 zones
 
 ### Phase 9 — Workshop Dashboard (Feb 27, 2026)
 - 4 KPIs, Quick Actions, Scadenze/Materiale/Fatture widgets
@@ -35,14 +32,17 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 ### Phase 10 — Confronta Serramenti (Feb 27, 2026)
 - Side-by-side thermal config comparison with "Migliore" badge
 
-### Phase 11 — Norma Core Engine Refactoring (Feb 27, 2026)
-- Created `backend/core/engine/` as Single Source of Truth
-- ThermalValidator, SafetyValidator, CEValidator classes
-- Updated ENEA limits to Draft 2025/2026 (A/B: 2.6, C: 1.75, D: 1.67, E: 1.30, F: 1.00)
-- CEValidator gates PDF generation (422 for incomplete certs)
-- SafetyValidator auto-suggests DPI per risk selection
-- New endpoints: validate cert, validate POS, suggest DPI
-- services/thermal_calc.py → thin wrapper (backward compatible)
+### Phase 11 — Norma Core Engine (Feb 27, 2026)
+- ThermalValidator, SafetyValidator, CEValidator as Single Source of Truth
+- Draft 2025/2026 ENEA limits, PDF generation blocked for incomplete certs (422)
+
+### Phase 12 — Catalogo Profili Personalizzato (Feb 27, 2026)
+- User custom profiles CRUD (code, description, category, weight/surface/price per meter, supplier)
+- Categories: Ferro, Alluminio, Accessori, Verniciatura, Altro
+- Searchable merged catalog (43 standard + custom profiles)
+- Bulk price update (increase/decrease all by X%, optional category filter)
+- Integration with Distinta module via `/api/catalogo/merged/all`
+- Frontend: Table view, search, category/source filters, add/edit/delete dialogs
 
 ## API Endpoints
 - `/api/auth/` — Google OAuth
@@ -51,19 +51,19 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 - `/api/company/settings` — Company settings
 - `/api/rilievi/` — Rilievo CRUD + sketch + photo + PDF
 - `/api/distinte/` — Distinta CRUD + profiles + bar calc
-- `/api/certificazioni/` — CE CRUD + PDF
-- `/api/certificazioni/{id}/validate` — CE validation (NEW)
-- `/api/certificazioni/thermal/reference-data` — Glass/frame/spacer data
-- `/api/certificazioni/thermal/calculate` — Uw calculation
-- `/api/sicurezza/` — POS CRUD + AI risk + PDF
-- `/api/sicurezza/{id}/validate` — POS DPI validation (NEW)
-- `/api/sicurezza/{id}/suggest-dpi` — Auto-suggest DPI (NEW)
+- `/api/certificazioni/` — CE CRUD + validation + PDF
+- `/api/certificazioni/thermal/` — Thermal reference data + calculation
+- `/api/sicurezza/` — POS CRUD + AI risk + validation + suggest-dpi + PDF
 - `/api/dashboard/stats` — Workshop dashboard aggregation
+- `/api/catalogo/` — Custom profiles CRUD
+- `/api/catalogo/merged/all` — Merged catalog (standard + custom)
+- `/api/catalogo/bulk-price-update` — Bulk price update
 
 ## Prioritized Backlog
 
 ### P0 - Next
-- [ ] Custom profiles catalog (user adds own profiles to Distinta)
+- [ ] Norma Router (ProductType → RegulationStandard mapping)
+- [ ] Vendor API (NF-Standard JSON import for manufacturers)
 
 ### P1
 - [ ] Real "Importa da Rilievo" (parse sketch → BOM)
@@ -74,8 +74,7 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 ### P2 - Future
 - [ ] Team collaboration
 - [ ] Advanced reporting/analytics
-- [ ] Client portal
-- [ ] Mobile app
+- [ ] Client portal, Mobile app
 
 ## Technical Stack
 - **Backend:** FastAPI, MongoDB, ReportLab, uvicorn
