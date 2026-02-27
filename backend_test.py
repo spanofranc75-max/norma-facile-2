@@ -13,8 +13,8 @@ from datetime import datetime, date, timedelta
 class RilievoAPITester:
     def __init__(self, base_url="https://legal-easy-1.preview.emergentagent.com"):
         self.base_url = base_url
-        self.session_token = "test_session_1772176345185"  # From auth setup
-        self.user_id = "test-user-1772176345185"
+        self.session_token = "test_session_1772176450581"  # From auth setup
+        self.user_id = "test-user-1772176450581"
         self.tests_run = 0
         self.tests_passed = 0
         self.client_id = None
