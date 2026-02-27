@@ -16,7 +16,7 @@ import { Badge } from '../components/ui/badge';
 import { toast } from 'sonner';
 import {
     Save, ArrowLeft, FileDown, Plus, Trash2, Camera, Brain, RefreshCw,
-    MapPin, ShieldAlert, Wrench, Zap, PaintBucket, X,
+    MapPin, ShieldAlert, Wrench, Zap, PaintBucket, X, FileText,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
