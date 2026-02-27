@@ -716,7 +716,7 @@ export default function RilievoEditorPage() {
                     {/* Photos Tab */}
                     <TabsContent value="photos">
                         <Card className="border-gray-200">
-                            <CardHeader className="flex flex-row items-center justify-between">
+                            <CardHeader className="flex flex-row items-center justify-between bg-blue-50 border-b border-gray-200">
                                 <CardTitle className="font-sans text-xl">Foto Sopralluogo</CardTitle>
                                 <Button
                                     data-testid="btn-add-photo"
