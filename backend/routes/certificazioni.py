@@ -157,16 +157,29 @@ async def get_fascicolo_pdf(cert_id: str, user: dict = Depends(get_current_user)
 @router.get("/thermal/reference-data")
 async def get_thermal_reference_data():
     """Get glass, frame, spacer types and zone limits for thermal calculator."""
-    return {
-        "glass_types": GLASS_TYPES,
-        "frame_types": FRAME_TYPES,
-        "spacer_types": SPACER_TYPES,
-        "zone_limits": ZONE_LIMITS,
-    }
+    return ThermalValidator.get_reference_data()
 
 
 @router.post("/thermal/calculate")
 async def calculate_thermal(inp: ThermalInput):
     """Calculate Uw thermal transmittance."""
-    result = calculate_uw(inp)
+    result = ThermalValidator.calculate(inp)
+    return result.model_dump()
+
+
+# ── CE Validation ────────────────────────────────────────────────
+
+@router.post("/{cert_id}/validate")
+async def validate_certificazione(cert_id: str, user: dict = Depends(get_current_user)):
+    """Validate a certification before PDF generation."""
+    doc = await db.certificazioni.find_one({"cert_id": cert_id, "user_id": user["user_id"]}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Certificazione non trovata")
+
+    result = CEValidator.validate(
+        standard=doc.get("standard", ""),
+        product_type=doc.get("product_type", ""),
+        technical_specs=doc.get("technical_specs", {}),
+        project_name=doc.get("project_name", ""),
+    )
     return result.model_dump()
