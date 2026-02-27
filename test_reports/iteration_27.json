@@ -1,0 +1,68 @@
+{
+  "summary": "Comprehensive testing of 'Converti DDT in Fattura' feature - Backend API (18/18 tests passed) and Frontend UI (all features verified). The feature correctly converts DDT documents to invoices, mapping lines, client data, and totals automatically.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "backend_api": {
+      "POST /api/ddt/{ddt_id}/convert-to-invoice": "PASS - Creates new invoice from DDT",
+      "Invoice document_type": "PASS - Returns 'FT' (Fattura)",
+      "Invoice document_number format": "PASS - Follows 'FT-{year}/{seq}' pattern",
+      "Invoice status": "PASS - Created with status='bozza'",
+      "Invoice lines mapping": "PASS - code, description, quantity, unit_price (prezzo_netto), vat_rate, line_total, vat_amount",
+      "Invoice totals calculation": "PASS - subtotal, total_vat, total_document",
+      "Global discount applied": "PASS - sconto_globale from DDT applied to invoice taxable",
+      "DDT status update": "PASS - DDT status changes to 'fatturato'",
+      "DDT converted_to field": "PASS - Set to invoice_id after conversion",
+      "Invoice converted_from field": "PASS - Set to ddt_id",
+      "Invoice notes": "PASS - Contains 'Rif. DDT {ddt_number}'",
+      "Payment method mapping": "PASS - RiBa detected from payment_type_label",
+      "Payment terms mapping": "PASS - 60gg detected from payment_type_label",
+      "Error 409 (duplicate)": "PASS - Returns 409 for already-converted DDT",
+      "Error 422 (no client)": "PASS - Returns 422 for DDT without client",
+      "Error 404 (not found)": "PASS - Returns 404 for non-existent DDT",
+      "Auth required": "PASS - Returns 401/403 without auth"
+    },
+    "frontend_ui": {
+      "DDT editor 'Converti in Fattura' button": "PASS - Visible when status != 'fatturato' and no converted_to",
+      "DDT editor 'Vai alla Fattura' button": "PASS - Visible when status == 'fatturato' and converted_to exists",
+      "Button styling": "PASS - Convert button has amber border, Vai alla Fattura has emerald/green",
+      "Confirmation dialog": "PASS - Shows 'Convertire questo DDT in Fattura?' with details",
+      "Navigation after conversion": "PASS - Redirects to /invoices/{invoice_id}",
+      "Toast notification": "PASS - Shows 'DDT convertito in Fattura {doc_number}'",
+      "DDT list status badges": "PASS - Shows 'Fatturato' (green) or 'Non Fatt.' (gray)"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_ddt_convert_to_invoice.py",
+    "/app/test_reports/pytest/ddt_convert_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Convert endpoint correctly uses prezzo_netto (cascaded discount price) for invoice line unit_price",
+    "Payment method/terms inference from payment_type_label works correctly (riba, bonifico, 30gg, 60gg, etc.)",
+    "DDT status properly updated to 'fatturato' with converted_to link after conversion",
+    "Invoice created with converted_from link back to DDT for bidirectional tracking",
+    "Duplicate conversion protection (409) prevents accidental double-invoicing",
+    "Client validation (422) ensures invoices always have a valid client",
+    "All interactive elements have proper data-testid attributes for testing"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_ddt_convert_to_invoice.py"
+  ],
+  "success_rate": {
+    "backend": "100% (18/18 tests passed)",
+    "frontend": "100% (all UI elements and flows verified)"
+  },
+  "test_credentials": "test_session_ddt_conv_1772207156664 (created in MongoDB)",
+  "seed_data_creation": "Test clients, DDTs, and invoices created and cleaned up during testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "DDT Convert to Invoice feature fully tested. Key details: 1) POST /api/ddt/{ddt_id}/convert-to-invoice creates invoice with document_type='FT'. 2) Invoice lines use prezzo_netto from DDT (cascaded discount price). 3) DDT status changes to 'fatturato' with converted_to set to invoice_id. 4) Frontend shows 'Converti in Fattura' (amber) for non-fatturato, 'Vai alla Fattura' (green) for fatturato DDTs. 5) Confirmation dialog required before conversion. 6) Previous DDT tests in iteration_25 (20/20 pass)."
+}
