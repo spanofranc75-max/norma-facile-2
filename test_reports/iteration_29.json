@@ -1,0 +1,74 @@
+{
+  "summary": "Complete testing of new 'Genera Diffida Tecnica per Perito' feature in Perizia Sinistro module. Backend API (10/10 tests passed) and Frontend UI (all features verified). The feature correctly generates formal technical cover letters using GPT-4o AI that reference EN 1090, EN 13241, and ISO 12944 norms to shift focus from price to liability/responsibility.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "PeriziaEditorPage cost table",
+        "issues": ["React hydration warning: <span> inside <tbody> - minor DOM nesting issue from dynamic rendering, inherited from previous iteration, does not affect functionality"]
+      }
+    ]
+  },
+  "features_verified": {
+    "backend_api": {
+      "POST /api/perizie/{id}/genera-lettera success": "PASS - Generates lettera_accompagnamento with norm references",
+      "genera-lettera contains EN 1090": "PASS - Letter references EN 1090-2 standards",
+      "genera-lettera contains EN 13241": "PASS - Letter references EN 13241 norm",
+      "genera-lettera contains ISO 12944": "PASS - Letter references ISO 12944 standard",
+      "genera-lettera saved to perizia": "PASS - Letter persists in lettera_accompagnamento field",
+      "genera-lettera requires auth": "PASS - Returns 401/403 without session",
+      "genera-lettera 404 invalid id": "PASS - Returns 404 for non-existent perizia",
+      "PUT accepts lettera_accompagnamento": "PASS - Updates field via PUT /api/perizie/{id}",
+      "POST accepts lettera_accompagnamento": "PASS - Creates perizia with letter in payload",
+      "GET returns lettera_accompagnamento": "PASS - Field included in GET response"
+    },
+    "frontend_ui": {
+      "Section 4 card visible": "PASS - '4. Lettera di Accompagnamento Tecnica' card present",
+      "Amber left border styling": "PASS - Card has border-l-amber-500 class",
+      "Genera Diffida button visible": "PASS - Button appears after perizia is saved (not on new)",
+      "Button amber/orange gradient": "PASS - bg-gradient-to-r from-amber-500 to-orange-500",
+      "Button text correct": "PASS - 'Genera Diffida Tecnica per Perito'",
+      "Descriptive subtitle": "PASS - Shows norm references EN 1090, EN 13241, ISO 12944",
+      "Textarea rows=4 empty": "PASS - Default 4 rows when no content",
+      "Textarea rows=18 with content": "PASS - Expands to 18 rows when letter generated",
+      "Letter generation works": "PASS - Generated 2807 char letter via AI",
+      "Letter contains norms": "PASS - EN 1090, EN 13241, ISO 12944 all present",
+      "PDF info text visible": "PASS - 'La lettera sara inclusa nel PDF' shown when letter present",
+      "Lettera is editable": "PASS - Textarea accepts user edits",
+      "Save includes lettera": "PASS - Save persists edited letter to backend"
+    },
+    "pdf_export": {
+      "PDF includes lettera": "PASS - PDF contains 'LETTERA DI ACCOMPAGNAMENTO TECNICA' section"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_genera_lettera.py",
+    "/app/test_reports/pytest/genera_lettera_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "genera-lettera endpoint correctly saves perizia data before AI call",
+    "Fallback template _generate_lettera_template() works when LLM_KEY missing - provides professional template with placeholders filled from perizia data",
+    "Letter generation properly references all three norms: EN 1090-2, EN 13241, ISO 12944",
+    "PDF service includes lettera section after Notes with proper formatting",
+    "Frontend Section 4 has correct amber styling and expandable textarea",
+    "Button only appears after perizia is saved (correct UX)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_genera_lettera.py"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 tests passed)",
+    "frontend": "100% (all UI elements and flows verified)"
+  },
+  "test_credentials": "test_session_lettera, test_session_ui_lettera (created in MongoDB)",
+  "seed_data_creation": "Test perizie created and cleaned up during testing. UI test perizia PER-2026/0001 created with generated letter.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Genera Diffida Tecnica per Perito feature fully tested. Key details: 1) POST /api/perizie/{id}/genera-lettera generates AI letter using GPT-4o. 2) Letter references EN 1090-2, EN 13241, ISO 12944. 3) Fallback template available when LLM_KEY missing. 4) Frontend Section 4 with amber border, expandable textarea (rows=4 empty, rows=18 with content). 5) PDF service includes letter after Notes section. 6) Previous features tested: DDT (iter_25), Fornitori (iter_26), DDT Convert (iter_27), Perizia CRUD (iter_28)."
+}
