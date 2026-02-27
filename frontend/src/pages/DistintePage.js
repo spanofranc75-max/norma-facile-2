@@ -225,7 +225,7 @@ export default function DistintePage() {
                                                     {distinta.totals?.total_weight_kg?.toFixed(2) || '0.00'}
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-right font-medium">
+                                            <TableCell className="text-right font-mono font-semibold text-[#0055FF]">
                                                 {formatCurrency(distinta.totals?.total_cost)}
                                             </TableCell>
                                             <TableCell>

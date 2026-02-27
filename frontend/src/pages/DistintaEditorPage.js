@@ -601,7 +601,7 @@ export default function DistintaEditorPage() {
                             </div>
                             <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
                                 <Euro className="h-6 w-6 mx-auto mb-2 text-[#0055FF]" />
-                                <p className="text-2xl font-bold text-[#0055FF]">
+                                <p className="text-2xl font-mono font-bold text-[#0055FF]">
                                     {formatCurrency(totals.total_cost)}
                                 </p>
                                 <p className="text-sm text-blue-600">Costo Totale</p>
