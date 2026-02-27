@@ -29,6 +29,11 @@ export async function apiRequest(endpoint, options = {}) {
         },
     };
     
+    // Stringify body if it's an object
+    if (options.body && typeof options.body === 'object') {
+        config.body = JSON.stringify(options.body);
+    }
+    
     const response = await fetch(url, config);
     
     if (!response.ok) {
