@@ -29,6 +29,7 @@ import DDTEditorPage from './pages/DDTEditorPage';
 import FornitoriPage from './pages/FornitoriPage';
 import PeriziaListPage from './pages/PeriziaListPage';
 import PeriziaEditorPage from './pages/PeriziaEditorPage';
+import ArchivioSinistriPage from './pages/ArchivioSinistriPage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
@@ -178,6 +179,8 @@ function AppRouter() {
             <Route path="/perizie" element={<ProtectedRoute><PeriziaListPage /></ProtectedRoute>} />
             <Route path="/perizie/new" element={<ProtectedRoute><PeriziaEditorPage /></ProtectedRoute>} />
             <Route path="/perizie/:periziaId" element={<ProtectedRoute><PeriziaEditorPage /></ProtectedRoute>} />
+            {/* Archivio Sinistri */}
+            <Route path="/archivio-sinistri" element={<ProtectedRoute><ArchivioSinistriPage /></ProtectedRoute>} />
         </Routes>
     );
 }
