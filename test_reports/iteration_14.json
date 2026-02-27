@@ -1,0 +1,60 @@
+{
+  "summary": "Tested Norma Core Engine refactoring. All 17 backend tests passed (100%). Draft 2025/2026 zone limits verified (A/B: 2.6, C: 1.75, D: 1.67, E: 1.30, F: 1.00). New validation endpoints working: POST /api/certificazioni/{id}/validate, POST /api/sicurezza/{id}/validate, POST /api/sicurezza/{id}/suggest-dpi. CEValidator correctly rejects incomplete certs with 422 on PDF generation. SafetyValidator correctly identifies missing DPI for selected risks. Frontend 4-step Certificazioni wizard loads with thermal calculator showing correct zone limits and warnings.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "backend": {
+      "GET /api/certificazioni/thermal/reference-data": "PASS - Returns Draft 2025/2026 zone limits (A: 2.6, B: 2.6, C: 1.75, D: 1.67, E: 1.30, F: 1.00)",
+      "POST /api/certificazioni/thermal/calculate with Uw~2.3": "PASS - D: False, E: False (new stricter limits)",
+      "POST /api/certificazioni/thermal/calculate triplo_be_argon": "PASS - Uw=0.84, all zones compliant",
+      "POST /api/certificazioni/thermal/calculate singolo glass": "PASS - Uw=6.29, all zones fail with warnings",
+      "POST /api/certificazioni/{cert_id}/validate (incomplete)": "PASS - Returns 3 errors for missing fields",
+      "GET /api/certificazioni/{cert_id}/fascicolo-pdf (incomplete)": "PASS - Returns 422 'Certificazione incompleta'",
+      "POST /api/certificazioni/{cert_id}/validate (complete)": "PASS - Returns valid=true, errors=[]",
+      "POST /api/sicurezza/{pos_id}/validate": "PASS - Returns missing_dpi list for incomplete POS",
+      "POST /api/sicurezza/{pos_id}/suggest-dpi": "PASS - Returns required_dpi and suggested_machines",
+      "CRUD certificazioni": "PASS - List, Create, Read, Update, Delete all working"
+    },
+    "frontend": {
+      "Landing page": "PASS - 'Il Ferro, Organizzato' visible",
+      "Dashboard after auth": "PASS - Workshop Dashboard loads with KPIs",
+      "Certificazioni CE 4-step wizard": "PASS - Steps: Progetto, Norma, Specifiche, Calcolo Termico",
+      "Step 4 Thermal Calculator": "PASS - EN ISO 10077-1 formula displayed",
+      "Thermal calc with default values": "PASS - Uw=1.74 W/m2K calculated",
+      "Zone compliance badges": "PASS - Shows A:OK(2.6), B:OK(2.6), C:OK(1.75), D:NO(1.67), E:NO(1.3), F:NO(1)",
+      "Ecobonus warning": "PASS - Red 'NON detraibile Ecobonus' badge and warning text",
+      "Salva per Confronto button": "PASS - Comparison feature present"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_norma_core_engine.py",
+    "/app/test_reports/pytest/norma_core_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Core engine architecture well organized - ZONE_LIMITS is Single Source of Truth in climate_zones.py",
+    "services/thermal_calc.py correctly serves as thin wrapper preserving backward compatibility",
+    "CEValidator properly checks standard-specific mandatory fields (EN 1090-1 vs EN 13241)",
+    "SafetyValidator RISK_DPI_MAP is comprehensive for common metalworking risks"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_norma_core_engine.py"
+  ],
+  "success_rate": {
+    "backend": "100% (17/17 tests passed)",
+    "frontend": "100% (All thermal calculator and dashboard features verified)"
+  },
+  "test_credentials": "Created temp test users via MongoDB, cleaned up after tests",
+  "seed_data_creation": "None - all test data cleaned up",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Norma Core Engine refactoring complete and verified. Draft 2025/2026 zone limits in effect (D was 1.80 now 1.67, C was 2.10 now 1.75, A/B was 3.20 now 2.60). CEValidator gates PDF generation for incomplete certs (422 error). SafetyValidator provides DPI suggestions based on selected risks. Thermal endpoints are PUBLIC, validation endpoints require auth. services/thermal_calc.py is now a thin wrapper over core.engine.thermal.",
+  "mocked_api_note": "None - all APIs are real"
+}
