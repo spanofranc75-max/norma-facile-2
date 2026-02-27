@@ -1,49 +1,92 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="12" failures="0" skipped="0" tests="15" time="3.108" timestamp="2026-02-27T13:19:04.341264+00:00" hostname="agent-env-9e84553e-dff7-4271-9682-4ed6ebbe8d69"><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_convert_basic_preventivo" time="0.692"><error message="failed on setup with &quot;AssertionError: Failed to create client: {&quot;detail&quot;:[{&quot;type&quot;:&quot;enum&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;client_type&quot;],&quot;msg&quot;:&quot;Input should be 'azienda', 'privato' or 'pa'&quot;,&quot;input&quot;:&quot;business&quot;,&quot;ctx&quot;:{&quot;expected&quot;:&quot;'azienda', 'privato' or 'pa'&quot;},&quot;url&quot;:&quot;https://errors.pydantic.dev/2.12/v/enum&quot;}]}&#10;assert 422 == 201&#10; +  where 422 = &lt;Response [422]&gt;.status_code&quot;">backend/tests/test_convert_to_invoice.py:95: in test_client
-    assert response.status_code == 201, f"Failed to create client: {response.text}"
-E   AssertionError: Failed to create client: {"detail":[{"type":"enum","loc":["body","client_type"],"msg":"Input should be 'azienda', 'privato' or 'pa'","input":"business","ctx":{"expected":"'azienda', 'privato' or 'pa'"},"url":"https://errors.pydantic.dev/2.12/v/enum"}]}
-E   assert 422 == 201
-E    +  where 422 = &lt;Response [422]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_lines_mapping" time="0.135"><error message="failed on setup with &quot;AssertionError: Failed to create client: {&quot;detail&quot;:[{&quot;type&quot;:&quot;enum&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;client_type&quot;],&quot;msg&quot;:&quot;Input should be 'azienda', 'privato' or 'pa'&quot;,&quot;input&quot;:&quot;business&quot;,&quot;ctx&quot;:{&quot;expected&quot;:&quot;'azienda', 'privato' or 'pa'&quot;},&quot;url&quot;:&quot;https://errors.pydantic.dev/2.12/v/enum&quot;}]}&#10;assert 422 == 201&#10; +  where 422 = &lt;Response [422]&gt;.status_code&quot;">backend/tests/test_convert_to_invoice.py:95: in test_client
-    assert response.status_code == 201, f"Failed to create client: {response.text}"
-E   AssertionError: Failed to create client: {"detail":[{"type":"enum","loc":["body","client_type"],"msg":"Input should be 'azienda', 'privato' or 'pa'","input":"business","ctx":{"expected":"'azienda', 'privato' or 'pa'"},"url":"https://errors.pydantic.dev/2.12/v/enum"}]}
-E   assert 422 == 201
-E    +  where 422 = &lt;Response [422]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_totals_calculation" time="0.128"><error message="failed on setup with &quot;AssertionError: Failed to create client: {&quot;detail&quot;:[{&quot;type&quot;:&quot;enum&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;client_type&quot;],&quot;msg&quot;:&quot;Input should be 'azienda', 'privato' or 'pa'&quot;,&quot;input&quot;:&quot;business&quot;,&quot;ctx&quot;:{&quot;expected&quot;:&quot;'azienda', 'privato' or 'pa'&quot;},&quot;url&quot;:&quot;https://errors.pydantic.dev/2.12/v/enum&quot;}]}&#10;assert 422 == 201&#10; +  where 422 = &lt;Response [422]&gt;.status_code&quot;">backend/tests/test_convert_to_invoice.py:95: in test_client
-    assert response.status_code == 201, f"Failed to create client: {response.text}"
-E   AssertionError: Failed to create client: {"detail":[{"type":"enum","loc":["body","client_type"],"msg":"Input should be 'azienda', 'privato' or 'pa'","input":"business","ctx":{"expected":"'azienda', 'privato' or 'pa'"},"url":"https://errors.pydantic.dev/2.12/v/enum"}]}
-E   assert 422 == 201
-E    +  where 422 = &lt;Response [422]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_preventivo_marked_as_accettato" time="0.118"><error message="failed on setup with &quot;AssertionError: Failed to create client: {&quot;detail&quot;:[{&quot;type&quot;:&quot;enum&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;client_type&quot;],&quot;msg&quot;:&quot;Input should be 'azienda', 'privato' or 'pa'&quot;,&quot;input&quot;:&quot;business&quot;,&quot;ctx&quot;:{&quot;expected&quot;:&quot;'azienda', 'privato' or 'pa'&quot;},&quot;url&quot;:&quot;https://errors.pydantic.dev/2.12/v/enum&quot;}]}&#10;assert 422 == 201&#10; +  where 422 = &lt;Response [422]&gt;.status_code&quot;">backend/tests/test_convert_to_invoice.py:95: in test_client
-    assert response.status_code == 201, f"Failed to create client: {response.text}"
-E   AssertionError: Failed to create client: {"detail":[{"type":"enum","loc":["body","client_type"],"msg":"Input should be 'azienda', 'privato' or 'pa'","input":"business","ctx":{"expected":"'azienda', 'privato' or 'pa'"},"url":"https://errors.pydantic.dev/2.12/v/enum"}]}
-E   assert 422 == 201
-E    +  where 422 = &lt;Response [422]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_converted_from_link" time="0.136"><error message="failed on setup with &quot;AssertionError: Failed to create client: {&quot;detail&quot;:[{&quot;type&quot;:&quot;enum&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;client_type&quot;],&quot;msg&quot;:&quot;Input should be 'azienda', 'privato' or 'pa'&quot;,&quot;input&quot;:&quot;business&quot;,&quot;ctx&quot;:{&quot;expected&quot;:&quot;'azienda', 'privato' or 'pa'&quot;},&quot;url&quot;:&quot;https://errors.pydantic.dev/2.12/v/enum&quot;}]}&#10;assert 422 == 201&#10; +  where 422 = &lt;Response [422]&gt;.status_code&quot;">backend/tests/test_convert_to_invoice.py:95: in test_client
-    assert response.status_code == 201, f"Failed to create client: {response.text}"
-E   AssertionError: Failed to create client: {"detail":[{"type":"enum","loc":["body","client_type"],"msg":"Input should be 'azienda', 'privato' or 'pa'","input":"business","ctx":{"expected":"'azienda', 'privato' or 'pa'"},"url":"https://errors.pydantic.dev/2.12/v/enum"}]}
-E   assert 422 == 201
-E    +  where 422 = &lt;Response [422]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_appears_in_list" time="0.111"><error message="failed on setup with &quot;AssertionError: Failed to create client: {&quot;detail&quot;:[{&quot;type&quot;:&quot;enum&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;client_type&quot;],&quot;msg&quot;:&quot;Input should be 'azienda', 'privato' or 'pa'&quot;,&quot;input&quot;:&quot;business&quot;,&quot;ctx&quot;:{&quot;expected&quot;:&quot;'azienda', 'privato' or 'pa'&quot;},&quot;url&quot;:&quot;https://errors.pydantic.dev/2.12/v/enum&quot;}]}&#10;assert 422 == 201&#10; +  where 422 = &lt;Response [422]&gt;.status_code&quot;">backend/tests/test_convert_to_invoice.py:95: in test_client
-    assert response.status_code == 201, f"Failed to create client: {response.text}"
-E   AssertionError: Failed to create client: {"detail":[{"type":"enum","loc":["body","client_type"],"msg":"Input should be 'azienda', 'privato' or 'pa'","input":"business","ctx":{"expected":"'azienda', 'privato' or 'pa'"},"url":"https://errors.pydantic.dev/2.12/v/enum"}]}
-E   assert 422 == 201
-E    +  where 422 = &lt;Response [422]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_notes_include_preventivo_reference" time="0.146"><error message="failed on setup with &quot;AssertionError: Failed to create client: {&quot;detail&quot;:[{&quot;type&quot;:&quot;enum&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;client_type&quot;],&quot;msg&quot;:&quot;Input should be 'azienda', 'privato' or 'pa'&quot;,&quot;input&quot;:&quot;business&quot;,&quot;ctx&quot;:{&quot;expected&quot;:&quot;'azienda', 'privato' or 'pa'&quot;},&quot;url&quot;:&quot;https://errors.pydantic.dev/2.12/v/enum&quot;}]}&#10;assert 422 == 201&#10; +  where 422 = &lt;Response [422]&gt;.status_code&quot;">backend/tests/test_convert_to_invoice.py:95: in test_client
-    assert response.status_code == 201, f"Failed to create client: {response.text}"
-E   AssertionError: Failed to create client: {"detail":[{"type":"enum","loc":["body","client_type"],"msg":"Input should be 'azienda', 'privato' or 'pa'","input":"business","ctx":{"expected":"'azienda', 'privato' or 'pa'"},"url":"https://errors.pydantic.dev/2.12/v/enum"}]}
-E   assert 422 == 201
-E    +  where 422 = &lt;Response [422]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceErrors" name="test_convert_without_client_returns_422" time="0.162" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceErrors" name="test_duplicate_conversion_returns_409" time="0.106"><error message="failed on setup with &quot;AssertionError: Failed to create client: {&quot;detail&quot;:[{&quot;type&quot;:&quot;enum&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;client_type&quot;],&quot;msg&quot;:&quot;Input should be 'azienda', 'privato' or 'pa'&quot;,&quot;input&quot;:&quot;business&quot;,&quot;ctx&quot;:{&quot;expected&quot;:&quot;'azienda', 'privato' or 'pa'&quot;},&quot;url&quot;:&quot;https://errors.pydantic.dev/2.12/v/enum&quot;}]}&#10;assert 422 == 201&#10; +  where 422 = &lt;Response [422]&gt;.status_code&quot;">backend/tests/test_convert_to_invoice.py:95: in test_client
-    assert response.status_code == 201, f"Failed to create client: {response.text}"
-E   AssertionError: Failed to create client: {"detail":[{"type":"enum","loc":["body","client_type"],"msg":"Input should be 'azienda', 'privato' or 'pa'","input":"business","ctx":{"expected":"'azienda', 'privato' or 'pa'"},"url":"https://errors.pydantic.dev/2.12/v/enum"}]}
-E   assert 422 == 201
-E    +  where 422 = &lt;Response [422]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceErrors" name="test_convert_nonexistent_preventivo_returns_404" time="0.102" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceErrors" name="test_convert_requires_authentication" time="0.155" /><testcase classname="backend.tests.test_convert_to_invoice.TestInvoiceProperties" name="test_invoice_document_type_is_fattura" time="0.139"><error message="failed on setup with &quot;AssertionError: Failed to create client: {&quot;detail&quot;:[{&quot;type&quot;:&quot;enum&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;client_type&quot;],&quot;msg&quot;:&quot;Input should be 'azienda', 'privato' or 'pa'&quot;,&quot;input&quot;:&quot;business&quot;,&quot;ctx&quot;:{&quot;expected&quot;:&quot;'azienda', 'privato' or 'pa'&quot;},&quot;url&quot;:&quot;https://errors.pydantic.dev/2.12/v/enum&quot;}]}&#10;assert 422 == 201&#10; +  where 422 = &lt;Response [422]&gt;.status_code&quot;">backend/tests/test_convert_to_invoice.py:95: in test_client
-    assert response.status_code == 201, f"Failed to create client: {response.text}"
-E   AssertionError: Failed to create client: {"detail":[{"type":"enum","loc":["body","client_type"],"msg":"Input should be 'azienda', 'privato' or 'pa'","input":"business","ctx":{"expected":"'azienda', 'privato' or 'pa'"},"url":"https://errors.pydantic.dev/2.12/v/enum"}]}
-E   assert 422 == 201
-E    +  where 422 = &lt;Response [422]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestInvoiceProperties" name="test_invoice_status_is_bozza" time="0.121"><error message="failed on setup with &quot;AssertionError: Failed to create client: {&quot;detail&quot;:[{&quot;type&quot;:&quot;enum&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;client_type&quot;],&quot;msg&quot;:&quot;Input should be 'azienda', 'privato' or 'pa'&quot;,&quot;input&quot;:&quot;business&quot;,&quot;ctx&quot;:{&quot;expected&quot;:&quot;'azienda', 'privato' or 'pa'&quot;},&quot;url&quot;:&quot;https://errors.pydantic.dev/2.12/v/enum&quot;}]}&#10;assert 422 == 201&#10; +  where 422 = &lt;Response [422]&gt;.status_code&quot;">backend/tests/test_convert_to_invoice.py:95: in test_client
-    assert response.status_code == 201, f"Failed to create client: {response.text}"
-E   AssertionError: Failed to create client: {"detail":[{"type":"enum","loc":["body","client_type"],"msg":"Input should be 'azienda', 'privato' or 'pa'","input":"business","ctx":{"expected":"'azienda', 'privato' or 'pa'"},"url":"https://errors.pydantic.dev/2.12/v/enum"}]}
-E   assert 422 == 201
-E    +  where 422 = &lt;Response [422]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestInvoiceProperties" name="test_invoice_payment_method_is_bonifico" time="0.119"><error message="failed on setup with &quot;AssertionError: Failed to create client: {&quot;detail&quot;:[{&quot;type&quot;:&quot;enum&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;client_type&quot;],&quot;msg&quot;:&quot;Input should be 'azienda', 'privato' or 'pa'&quot;,&quot;input&quot;:&quot;business&quot;,&quot;ctx&quot;:{&quot;expected&quot;:&quot;'azienda', 'privato' or 'pa'&quot;},&quot;url&quot;:&quot;https://errors.pydantic.dev/2.12/v/enum&quot;}]}&#10;assert 422 == 201&#10; +  where 422 = &lt;Response [422]&gt;.status_code&quot;">backend/tests/test_convert_to_invoice.py:95: in test_client
-    assert response.status_code == 201, f"Failed to create client: {response.text}"
-E   AssertionError: Failed to create client: {"detail":[{"type":"enum","loc":["body","client_type"],"msg":"Input should be 'azienda', 'privato' or 'pa'","input":"business","ctx":{"expected":"'azienda', 'privato' or 'pa'"},"url":"https://errors.pydantic.dev/2.12/v/enum"}]}
-E   assert 422 == 201
-E    +  where 422 = &lt;Response [422]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestInvoiceProperties" name="test_invoice_client_id_matches" time="0.543"><error message="failed on setup with &quot;AssertionError: Failed to create client: {&quot;detail&quot;:[{&quot;type&quot;:&quot;enum&quot;,&quot;loc&quot;:[&quot;body&quot;,&quot;client_type&quot;],&quot;msg&quot;:&quot;Input should be 'azienda', 'privato' or 'pa'&quot;,&quot;input&quot;:&quot;business&quot;,&quot;ctx&quot;:{&quot;expected&quot;:&quot;'azienda', 'privato' or 'pa'&quot;},&quot;url&quot;:&quot;https://errors.pydantic.dev/2.12/v/enum&quot;}]}&#10;assert 422 == 201&#10; +  where 422 = &lt;Response [422]&gt;.status_code&quot;">backend/tests/test_convert_to_invoice.py:95: in test_client
-    assert response.status_code == 201, f"Failed to create client: {response.text}"
-E   AssertionError: Failed to create client: {"detail":[{"type":"enum","loc":["body","client_type"],"msg":"Input should be 'azienda', 'privato' or 'pa'","input":"business","ctx":{"expected":"'azienda', 'privato' or 'pa'"},"url":"https://errors.pydantic.dev/2.12/v/enum"}]}
-E   assert 422 == 201
-E    +  where 422 = &lt;Response [422]&gt;.status_code</error></testcase></testsuite></testsuites>
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="9" skipped="0" tests="15" time="5.172" timestamp="2026-02-27T13:19:21.518928+00:00" hostname="agent-env-9e84553e-dff7-4271-9682-4ed6ebbe8d69"><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_convert_basic_preventivo" time="0.702" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_lines_mapping" time="0.298"><failure message="assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_convert_to_invoice.py:198: in test_invoice_lines_mapping
+    assert invoice_response.status_code == 200
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_totals_calculation" time="0.410"><failure message="assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_convert_to_invoice.py:250: in test_invoice_totals_calculation
+    assert invoice_response.status_code == 200
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_preventivo_marked_as_accettato" time="0.383" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_converted_from_link" time="0.297"><failure message="assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_convert_to_invoice.py:310: in test_invoice_converted_from_link
+    assert invoice_response.status_code == 200
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_appears_in_list" time="0.272"><failure message="assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_convert_to_invoice.py:337: in test_invoice_appears_in_list
+    assert list_response.status_code == 200
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceHappyPath" name="test_invoice_notes_include_preventivo_reference" time="0.282"><failure message="assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_convert_to_invoice.py:371: in test_invoice_notes_include_preventivo_reference
+    assert invoice_response.status_code == 200
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceErrors" name="test_convert_without_client_returns_422" time="0.178" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceErrors" name="test_duplicate_conversion_returns_409" time="0.312" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceErrors" name="test_convert_nonexistent_preventivo_returns_404" time="0.111" /><testcase classname="backend.tests.test_convert_to_invoice.TestConvertToInvoiceErrors" name="test_convert_requires_authentication" time="0.145" /><testcase classname="backend.tests.test_convert_to_invoice.TestInvoiceProperties" name="test_invoice_document_type_is_fattura" time="0.277"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_convert_to_invoice.py:464: in test_invoice_document_type_is_fattura
+    invoice = auth_session.get(f'{BASE_URL}/api/invoices/{invoice_id}').json()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestInvoiceProperties" name="test_invoice_status_is_bozza" time="0.289"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_convert_to_invoice.py:481: in test_invoice_status_is_bozza
+    invoice = auth_session.get(f'{BASE_URL}/api/invoices/{invoice_id}').json()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestInvoiceProperties" name="test_invoice_payment_method_is_bonifico" time="0.299"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_convert_to_invoice.py:498: in test_invoice_payment_method_is_bonifico
+    invoice = auth_session.get(f'{BASE_URL}/api/invoices/{invoice_id}').json()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase><testcase classname="backend.tests.test_convert_to_invoice.TestInvoiceProperties" name="test_invoice_client_id_matches" time="0.699"><failure message="requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)">/root/.venv/lib/python3.11/site-packages/requests/models.py:976: in json
+    return complexjson.loads(self.text, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:337: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/json/decoder.py:355: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_convert_to_invoice.py:515: in test_invoice_client_id_matches
+    invoice = auth_session.get(f'{BASE_URL}/api/invoices/{invoice_id}').json()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/models.py:980: in json
+    raise RequestsJSONDecodeError(e.msg, e.doc, e.pos)
+E   requests.exceptions.JSONDecodeError: Expecting value: line 1 column 1 (char 0)</failure></testcase></testsuite></testsuites>
