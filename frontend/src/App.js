@@ -26,6 +26,7 @@ import FascicoloCantierePage from './pages/FascicoloCantierePage';
 import PaymentTypesPage from './pages/PaymentTypesPage';
 import DDTListPage from './pages/DDTListPage';
 import DDTEditorPage from './pages/DDTEditorPage';
+import FornitoriPage from './pages/FornitoriPage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
@@ -169,6 +170,8 @@ function AppRouter() {
             <Route path="/ddt" element={<ProtectedRoute><DDTListPage /></ProtectedRoute>} />
             <Route path="/ddt/new" element={<ProtectedRoute><DDTEditorPage /></ProtectedRoute>} />
             <Route path="/ddt/:ddtId" element={<ProtectedRoute><DDTEditorPage /></ProtectedRoute>} />
+            {/* Fornitori */}
+            <Route path="/fornitori" element={<ProtectedRoute><FornitoriPage /></ProtectedRoute>} />
         </Routes>
     );
 }
