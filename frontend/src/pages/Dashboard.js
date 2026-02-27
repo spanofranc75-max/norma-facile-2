@@ -208,7 +208,7 @@ export default function Dashboard() {
                                 <div className={`w-12 h-12 flex items-center justify-center rounded-lg transition-colors duration-300 ${
                                     action.disabled 
                                         ? 'bg-slate-100 text-slate-400' 
-                                        : 'bg-slate-900 text-white group-hover:bg-amber-700'
+                                        : 'bg-[#0055FF] text-white group-hover:bg-[#0044CC]'
                                 }`}>
                                     <action.icon className="h-6 w-6" strokeWidth={1.5} />
                                 </div>
@@ -254,7 +254,7 @@ export default function Dashboard() {
                             <p className="text-slate-500">Nessun documento ancora</p>
                             <Button
                                 data-testid="btn-create-first-invoice"
-                                className="mt-4 bg-slate-900 text-white hover:bg-slate-800"
+                                className="mt-4 bg-[#0055FF] text-white hover:bg-[#0044CC]"
                                 onClick={() => navigate('/invoices/new')}
                             >
                                 <Plus className="h-4 w-4 mr-2" />
