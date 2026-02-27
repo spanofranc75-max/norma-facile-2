@@ -56,7 +56,7 @@ export default function DashboardLayout({ children }) {
     return (
         <div className="min-h-screen bg-slate-50">
             {/* Sidebar */}
-            <aside className="fixed left-0 top-0 h-screen w-64 bg-slate-900 text-slate-300 border-r border-slate-800 z-50">
+            <aside className="fixed left-0 top-0 h-screen w-64 bg-[#1E293B] text-slate-300 border-r border-slate-700 z-50">
                 <div className="p-6">
                     <div className="flex items-center gap-2 mb-10">
                         <Scale className="h-7 w-7 text-white" strokeWidth={1.5} />
@@ -76,7 +76,7 @@ export default function DashboardLayout({ children }) {
                                     data-testid={`nav-${item.path.slice(1)}`}
                                     className={`flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${
                                         active
-                                            ? 'bg-white text-slate-900 font-medium shadow-sm'
+                                            ? 'bg-[#0055FF] text-white font-medium'
                                             : 'hover:text-white hover:bg-white/10'
                                     }`}
                                 >
@@ -89,7 +89,7 @@ export default function DashboardLayout({ children }) {
                 </div>
 
                 {/* User menu at bottom */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-800">
+                <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-700">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button
@@ -98,7 +98,7 @@ export default function DashboardLayout({ children }) {
                             >
                                 <Avatar className="h-9 w-9">
                                     <AvatarImage src={user?.picture} alt={user?.name} />
-                                    <AvatarFallback className="bg-amber-700 text-white text-sm">
+                                    <AvatarFallback className="bg-[#0055FF] text-white text-sm">
                                         {user?.name?.charAt(0) || 'U'}
                                     </AvatarFallback>
                                 </Avatar>
