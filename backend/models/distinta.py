@@ -134,3 +134,54 @@ class BarCalculationResult(BaseModel):
 class BarCalculationResponse(BaseModel):
     results: List[BarCalculationResult] = []
     total_bars: int = 0
+
+
+# ── Optimizer Models ─────────────────────────────────────────────
+
+class OptimizerRequest(BaseModel):
+    bar_length_mm: int = 6000
+    kerf_mm: float = 3
+
+
+class CutPlacement(BaseModel):
+    length_mm: float
+    offset_mm: float = 0
+
+
+class OptimizedBar(BaseModel):
+    bar_index: int
+    cuts: List[CutPlacement] = []
+    used_mm: float = 0
+    kerf_mm: float = 0
+    waste_mm: float = 0
+    waste_percent: float = 0
+    fill_percent: float = 0
+
+
+class OptimizedProfile(BaseModel):
+    profile_id: str
+    profile_label: str
+    weight_per_meter: float = 0
+    total_cuts: int = 0
+    bars_needed: int = 0
+    bar_length_mm: int = 6000
+    bars: List[OptimizedBar] = []
+    total_used_mm: float = 0
+    total_waste_mm: float = 0
+    waste_percent: float = 0
+    estimated_weight_kg: float = 0
+
+
+class OptimizerSummary(BaseModel):
+    total_bars: int = 0
+    total_used_mm: float = 0
+    total_waste_mm: float = 0
+    waste_percent: float = 0
+    total_cuts: int = 0
+
+
+class OptimizerResponse(BaseModel):
+    bar_length_mm: int = 6000
+    kerf_mm: float = 3
+    profiles: List[OptimizedProfile] = []
+    summary: OptimizerSummary = Field(default_factory=OptimizerSummary)

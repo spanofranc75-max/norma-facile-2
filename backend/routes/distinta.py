@@ -8,13 +8,16 @@ from core.security import get_current_user
 from core.database import db
 from models.distinta import (
     DistintaCreate, DistintaUpdate, DistintaResponse, DistintaListResponse,
-    DistintaStatus, DistintaTotals, MaterialItem, BarCalculationResponse, BarCalculationResult
+    DistintaStatus, DistintaTotals, MaterialItem, BarCalculationResponse, BarCalculationResult,
+    OptimizerRequest, OptimizerResponse,
 )
 from services.profiles_data import (
     STANDARD_PROFILES, PROFILE_TYPES,
     get_profiles_by_type, get_profile_by_id, calculate_bars_needed,
 )
 from services.distinta_pdf_service import generate_cutting_list_pdf
+from services.optimizer import optimize_cutting
+from services.optimizer_pdf_service import generate_optimizer_pdf
 import logging
 
 logger = logging.getLogger(__name__)
