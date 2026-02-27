@@ -69,6 +69,9 @@ export default function DistintaEditorPage() {
     const [rilievi, setRilievi] = useState([]);
     const [importDialogOpen, setImportDialogOpen] = useState(false);
     const [selectedRilievoForImport, setSelectedRilievoForImport] = useState('');
+    const [rilievoImportData, setRilievoImportData] = useState(null);
+    const [loadingImportData, setLoadingImportData] = useState(false);
+    const [targetRowIdx, setTargetRowIdx] = useState(null);
     const [barResults, setBarResults] = useState(null);
     const [barDialogOpen, setBarDialogOpen] = useState(false);
 
