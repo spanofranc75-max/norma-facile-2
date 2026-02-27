@@ -80,6 +80,8 @@ export default function PeriziaEditorPage() {
     const [clientSearch, setClientSearch] = useState('');
     const [clients, setClients] = useState([]);
     const [tipoDanno, setTipoDanno] = useState('strutturale');
+    const [codiciDanno, setCodiciDanno] = useState([]);
+    const [codiciDannoDb, setCodiciDannoDb] = useState([]);
     const [descrizione, setDescrizione] = useState('');
     const [prezzoMl, setPrezzoMl] = useState(0);
     const [coeffMagg, setCoeffMagg] = useState(20);
