@@ -208,14 +208,14 @@ export default function InvoicesPage() {
                     <CardContent className="pt-6">
                         <div className="flex gap-4">
                             <Select
-                                value={filters.document_type}
-                                onValueChange={(v) => setFilters(f => ({ ...f, document_type: v }))}
+                                value={filters.document_type || "all"}
+                                onValueChange={(v) => setFilters(f => ({ ...f, document_type: v === "all" ? "" : v }))}
                             >
                                 <SelectTrigger data-testid="filter-type" className="w-[180px]">
                                     <SelectValue placeholder="Tipo documento" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">Tutti i tipi</SelectItem>
+                                    <SelectItem value="all">Tutti i tipi</SelectItem>
                                     <SelectItem value="FT">Fattura</SelectItem>
                                     <SelectItem value="PRV">Preventivo</SelectItem>
                                     <SelectItem value="DDT">DDT</SelectItem>
@@ -224,14 +224,14 @@ export default function InvoicesPage() {
                             </Select>
 
                             <Select
-                                value={filters.status}
-                                onValueChange={(v) => setFilters(f => ({ ...f, status: v }))}
+                                value={filters.status || "all"}
+                                onValueChange={(v) => setFilters(f => ({ ...f, status: v === "all" ? "" : v }))}
                             >
                                 <SelectTrigger data-testid="filter-status" className="w-[180px]">
                                     <SelectValue placeholder="Stato" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">Tutti gli stati</SelectItem>
+                                    <SelectItem value="all">Tutti gli stati</SelectItem>
                                     <SelectItem value="bozza">Bozza</SelectItem>
                                     <SelectItem value="emessa">Emessa</SelectItem>
                                     <SelectItem value="inviata_sdi">Inviata SDI</SelectItem>

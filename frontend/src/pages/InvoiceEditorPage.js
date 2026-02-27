@@ -422,13 +422,14 @@ export default function InvoiceEditorPage() {
                             <div>
                                 <Label>Cliente *</Label>
                                 <Select
-                                    value={formData.client_id}
-                                    onValueChange={(v) => updateField('client_id', v)}
+                                    value={formData.client_id || "none"}
+                                    onValueChange={(v) => updateField('client_id', v === "none" ? "" : v)}
                                 >
                                     <SelectTrigger data-testid="select-client">
                                         <SelectValue placeholder="Seleziona cliente..." />
                                     </SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="none" disabled>Seleziona cliente...</SelectItem>
                                         {clients.map(c => (
                                             <SelectItem key={c.client_id} value={c.client_id}>
                                                 {c.business_name} {c.partita_iva ? `(${c.partita_iva})` : ''}
