@@ -682,6 +682,117 @@ export default function DistintaEditorPage() {
                 </DialogContent>
             </Dialog>
 
+            {/* Ottimizzatore di Taglio Avanzato Dialog */}
+            <Dialog open={optimizerOpen} onOpenChange={setOptimizerOpen}>
+                <DialogContent className="sm:max-w-[950px] max-h-[90vh] flex flex-col" data-testid="optimizer-dialog">
+                    <DialogHeader>
+                        <DialogTitle className="font-sans text-xl text-[#1E293B] flex items-center gap-2">
+                            <Scissors className="h-5 w-5 text-emerald-500" /> Ottimizzatore di Taglio Avanzato
+                        </DialogTitle>
+                        <DialogDescription>
+                            Piano di taglio ottimizzato con algoritmo FFD. Minimizza lo sfrido posizionando i pezzi sulle barre.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {/* Parameters bar */}
+                    <div className="flex items-center gap-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        <Settings2 className="h-4 w-4 text-slate-500 shrink-0" />
+                        <div className="flex items-center gap-2">
+                            <Label className="text-sm whitespace-nowrap">Barra (mm):</Label>
+                            <Input
+                                data-testid="opt-bar-length"
+                                type="number" value={optimizerParams.bar_length_mm}
+                                onChange={e => setOptimizerParams(p => ({ ...p, bar_length_mm: parseInt(e.target.value) || 6000 }))}
+                                className="w-24 h-8 text-sm font-mono"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Label className="text-sm whitespace-nowrap">Lama (mm):</Label>
+                            <Input
+                                data-testid="opt-kerf"
+                                type="number" value={optimizerParams.kerf_mm} step="0.5"
+                                onChange={e => setOptimizerParams(p => ({ ...p, kerf_mm: parseFloat(e.target.value) || 3 }))}
+                                className="w-20 h-8 text-sm font-mono"
+                            />
+                        </div>
+                        <Button data-testid="opt-recalc" size="sm" onClick={handleOttimizzaTaglio} disabled={optimizerLoading} className="bg-emerald-500 hover:bg-emerald-600 text-white h-8">
+                            {optimizerLoading ? 'Calcolo...' : 'Ricalcola'}
+                        </Button>
+                    </div>
+
+                    {optimizerResult && (
+                        <ScrollArea className="flex-1 overflow-y-auto pr-2" style={{ maxHeight: '60vh' }}>
+                            <div className="space-y-5">
+                                {/* Summary Cards */}
+                                <div className="grid grid-cols-4 gap-3" data-testid="optimizer-summary">
+                                    <SummaryCard label="Barre Totali" value={optimizerResult.summary.total_bars} color="text-[#0055FF]" />
+                                    <SummaryCard label="Tagli" value={optimizerResult.summary.total_cuts} color="text-slate-700" />
+                                    <SummaryCard label="Utilizzato" value={`${(optimizerResult.summary.total_used_mm / 1000).toFixed(2)} m`} color="text-emerald-600" />
+                                    <SummaryCard
+                                        label="Sfrido"
+                                        value={`${optimizerResult.summary.waste_percent}%`}
+                                        color={optimizerResult.summary.waste_percent < 10 ? 'text-emerald-600' : optimizerResult.summary.waste_percent < 20 ? 'text-amber-500' : 'text-red-500'}
+                                        subtitle={`${(optimizerResult.summary.total_waste_mm / 1000).toFixed(2)} m`}
+                                    />
+                                </div>
+
+                                {/* Per-profile sections */}
+                                {optimizerResult.profiles.map(profile => (
+                                    <div key={profile.profile_id} className="border rounded-lg overflow-hidden" data-testid={`opt-profile-${profile.profile_id}`}>
+                                        {/* Profile header — clickable */}
+                                        <button
+                                            onClick={() => toggleProfileExpanded(profile.profile_id)}
+                                            className="w-full flex items-center justify-between px-4 py-3 bg-[#1E293B] text-white hover:bg-[#273548] transition-colors"
+                                            data-testid={`opt-profile-toggle-${profile.profile_id}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <span className="font-semibold">{profile.profile_label}</span>
+                                                <Badge variant="secondary" className="bg-white/20 text-white text-xs">
+                                                    {profile.bars_needed} barre
+                                                </Badge>
+                                                <Badge variant="secondary" className="bg-white/20 text-white text-xs">
+                                                    {profile.total_cuts} tagli
+                                                </Badge>
+                                                <Badge
+                                                    variant="secondary"
+                                                    className={`text-xs ${profile.waste_percent < 10 ? 'bg-emerald-500/30 text-emerald-200' : profile.waste_percent < 20 ? 'bg-amber-500/30 text-amber-200' : 'bg-red-500/30 text-red-200'}`}
+                                                >
+                                                    sfrido {profile.waste_percent}%
+                                                </Badge>
+                                            </div>
+                                            {expandedProfiles[profile.profile_id]
+                                                ? <ChevronUp className="h-4 w-4" />
+                                                : <ChevronDown className="h-4 w-4" />
+                                            }
+                                        </button>
+
+                                        {/* Expanded: bar visualization */}
+                                        {expandedProfiles[profile.profile_id] && (
+                                            <div className="p-4 space-y-3 bg-white">
+                                                {profile.bars.map(bar => (
+                                                    <BarVisualization
+                                                        key={bar.bar_index}
+                                                        bar={bar}
+                                                        barLengthMm={profile.bar_length_mm}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    )}
+
+                    <DialogFooter className="flex justify-between items-center border-t pt-3">
+                        <Button data-testid="opt-download-pdf" variant="outline" onClick={handleDownloadOptimizerPdf} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50">
+                            <FileDown className="h-4 w-4 mr-2" /> Scarica PDF Taglio
+                        </Button>
+                        <Button variant="outline" onClick={() => setOptimizerOpen(false)}>Chiudi</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {/* Import from Rilievo — Split Screen Dialog */}
             <Dialog open={importDialogOpen} onOpenChange={(open) => { setImportDialogOpen(open); if (!open) { setRilievoImportData(null); setSelectedRilievoForImport(''); setTargetRowIdx(null); } }}>
                 <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-hidden" data-testid="import-rilievo-dialog">
