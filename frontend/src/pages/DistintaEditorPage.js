@@ -78,6 +78,11 @@ export default function DistintaEditorPage() {
     const [targetRowIdx, setTargetRowIdx] = useState(null);
     const [barResults, setBarResults] = useState(null);
     const [barDialogOpen, setBarDialogOpen] = useState(false);
+    const [optimizerResult, setOptimizerResult] = useState(null);
+    const [optimizerOpen, setOptimizerOpen] = useState(false);
+    const [optimizerLoading, setOptimizerLoading] = useState(false);
+    const [optimizerParams, setOptimizerParams] = useState({ bar_length_mm: 6000, kerf_mm: 3 });
+    const [expandedProfiles, setExpandedProfiles] = useState({});
 
     const [formData, setFormData] = useState({
         name: '',
