@@ -219,6 +219,80 @@ def calc_voci_costo(data: dict) -> list:
     return voci
 
 
+# ── Archivio Sinistri (Stats Dashboard) ──
+
+@router.get("/archivio/stats")
+async def archivio_stats(user: dict = Depends(get_current_user)):
+    """Return aggregated stats for the Archivio Sinistri dashboard."""
+    q = {"user_id": user["user_id"]}
+    total_count = await db[COLLECTION].count_documents(q)
+
+    if total_count == 0:
+        return {
+            "total_count": 0,
+            "total_amount": 0,
+            "avg_amount": 0,
+            "by_tipo": {},
+            "by_status": {},
+            "by_month": [],
+            "codici_frequency": [],
+        }
+
+    # All perizie (light projection)
+    perizie = await db[COLLECTION].find(
+        q, {"_id": 0, "total_perizia": 1, "tipo_danno": 1, "status": 1, "created_at": 1, "codici_danno": 1}
+    ).to_list(1000)
+
+    total_amount = sum(p.get("total_perizia", 0) for p in perizie)
+    avg_amount = total_amount / total_count if total_count else 0
+
+    # By tipo_danno
+    by_tipo = {}
+    for p in perizie:
+        t = p.get("tipo_danno", "altro")
+        if t not in by_tipo:
+            by_tipo[t] = {"count": 0, "amount": 0}
+        by_tipo[t]["count"] += 1
+        by_tipo[t]["amount"] += p.get("total_perizia", 0)
+
+    # By status
+    by_status = {}
+    for p in perizie:
+        s = p.get("status", "bozza")
+        if s not in by_status:
+            by_status[s] = 0
+        by_status[s] += 1
+
+    # By month (last 12 months)
+    from collections import defaultdict
+    monthly = defaultdict(lambda: {"count": 0, "amount": 0})
+    for p in perizie:
+        ca = p.get("created_at")
+        if ca and hasattr(ca, "strftime"):
+            key = ca.strftime("%Y-%m")
+            monthly[key]["count"] += 1
+            monthly[key]["amount"] += p.get("total_perizia", 0)
+
+    by_month = [{"month": k, **v} for k, v in sorted(monthly.items())[-12:]
+
+    # Codici danno frequency
+    codici_freq = defaultdict(int)
+    for p in perizie:
+        for c in p.get("codici_danno", []):
+            codici_freq[c] += 1
+    codici_frequency = [{"codice": k, "count": v} for k, v in sorted(codici_freq.items(), key=lambda x: -x[1])]
+
+    return {
+        "total_count": total_count,
+        "total_amount": round(total_amount, 2),
+        "avg_amount": round(avg_amount, 2),
+        "by_tipo": by_tipo,
+        "by_status": by_status,
+        "by_month": by_month,
+        "codici_frequency": codici_frequency,
+    }
+
+
 # ── List ──
 
 @router.get("/")
