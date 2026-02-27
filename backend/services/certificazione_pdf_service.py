@@ -218,6 +218,93 @@ def generate_dop_ce_pdf(cert: dict, company: dict = None) -> BytesIO:
     elements.append(Spacer(1, 6 * mm))
     elements.append(Paragraph("Ritagliare lungo il bordo e apporre sul prodotto.", small_style))
 
+    # ════════════════════════════════════════════════════
+    # PAGE 3: MANUALE D'USO E MANUTENZIONE
+    # ════════════════════════════════════════════════════
+    elements.append(PageBreak())
+    elements.append(Paragraph("MANUALE D'USO E MANUTENZIONE", title_style))
+    elements.append(Paragraph(f"Prodotto: {cert.get('product_type', '-') or '-'}", center_style))
+    elements.append(Spacer(1, 8 * mm))
+
+    man_h2 = ParagraphStyle("ManH2", parent=subtitle_style, fontSize=12, textColor=BLUE, spaceBefore=6 * mm, spaceAfter=3 * mm)
+
+    elements.append(Paragraph("1. INFORMAZIONI GENERALI", man_h2))
+    elements.append(Paragraph(
+        f"Il presente manuale e' parte integrante del prodotto <b>{cert.get('product_type', '-')}</b> "
+        f"fabbricato da <b>{company_name}</b> in conformita' alla norma <b>{standard}</b>. "
+        "Conservare questo documento per tutta la vita utile del prodotto.",
+        normal,
+    ))
+
+    elements.append(Paragraph("2. USO PREVISTO", man_h2))
+    if standard == "EN 13241":
+        elements.append(Paragraph(
+            "Il prodotto e' destinato ad essere utilizzato come chiusura industriale, commerciale o residenziale. "
+            "L'uso e' limitato alle condizioni di installazione previste dal fabbricante. "
+            "Non modificare la struttura o i componenti senza autorizzazione del fabbricante.",
+            normal,
+        ))
+    else:
+        elements.append(Paragraph(
+            "Il prodotto e' un componente strutturale in acciaio destinato ad essere incorporato in opere di costruzione. "
+            "L'installazione deve essere eseguita da personale qualificato secondo le indicazioni del progettista strutturale.",
+            normal,
+        ))
+
+    elements.append(Paragraph("3. MANUTENZIONE ORDINARIA", man_h2))
+    maint_data = [
+        ["Operazione", "Frequenza", "Note"],
+        ["Ispezione visiva generale", "Ogni 6 mesi", "Verificare integrita' strutturale"],
+        ["Controllo bulloneria/saldature", "Annuale", "Serraggio e verifica visiva"],
+        ["Lubrificazione parti mobili", "Ogni 6 mesi", "Grasso o olio specifico"],
+        ["Controllo trattamento anticorrosione", "Annuale", "Ritoccare se danneggiato"],
+        ["Pulizia superficiale", "Secondo necessita'", "Acqua e detergente neutro"],
+    ]
+    if standard == "EN 13241":
+        maint_data.extend([
+            ["Verifica dispositivi di sicurezza", "Ogni 6 mesi", "Fotocellule, costa sensibile"],
+            ["Controllo bilanciamento molle", "Annuale", "Solo personale autorizzato"],
+            ["Verifica impianto elettrico", "Annuale", "Tecnico abilitato"],
+        ])
+
+    mt = Table(maint_data, colWidths=[60 * mm, 40 * mm, 60 * mm], repeatRows=1)
+    mt.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), DARK),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.Color(0.85, 0.85, 0.85)),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, LIGHT_BLUE]),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    elements.append(mt)
+
+    elements.append(Paragraph("4. AVVERTENZE DI SICUREZZA", man_h2))
+    warn_style = ParagraphStyle("Warn", parent=normal, textColor=colors.HexColor("#DC2626"), fontName="Helvetica-Bold")
+    elements.append(Paragraph("ATTENZIONE:", warn_style))
+    warnings = [
+        "Non apportare modifiche al prodotto senza autorizzazione del fabbricante.",
+        "Non rimuovere o coprire l'etichetta CE e la targa identificativa.",
+        "Gli interventi di manutenzione straordinaria devono essere eseguiti da personale qualificato.",
+        "Segnalare immediatamente qualsiasi anomalia strutturale (deformazioni, corrosione avanzata, rotture).",
+    ]
+    if standard == "EN 13241":
+        warnings.extend([
+            "Non passare sotto il cancello/porta durante il movimento.",
+            "Tenere i bambini lontani dal raggio d'azione del prodotto.",
+            "In caso di malfunzionamento dei dispositivi di sicurezza, sospendere immediatamente l'uso.",
+        ])
+    for w in warnings:
+        elements.append(Paragraph(f"- {w}", normal))
+
+    elements.append(Paragraph("5. CONTATTI FABBRICANTE", man_h2))
+    elements.append(Paragraph(f"<b>{company_name}</b>", normal))
+    elements.append(Paragraph(company_addr, normal))
+    if company_vat:
+        elements.append(Paragraph(f"P.IVA: {company_vat}", normal))
+
     doc.build(elements)
     buffer.seek(0)
     return buffer
