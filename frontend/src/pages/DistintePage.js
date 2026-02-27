@@ -41,6 +41,7 @@ import {
     Layers,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
+import EmptyState from '../components/EmptyState';
 
 const STATUS_BADGES = {
     bozza: { label: 'Bozza', color: 'bg-slate-100 text-slate-800' },
@@ -185,16 +186,14 @@ export default function DistintePage() {
                                     </TableRow>
                                 ) : distinte.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={9} className="text-center py-12 text-slate-500">
-                                            <Package className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                                            <p>Nessuna distinta trovata</p>
-                                            <Button
-                                                className="mt-4 bg-[#0055FF] text-white hover:bg-[#0044CC]"
-                                                onClick={() => navigate('/distinte/new')}
-                                            >
-                                                <Plus className="h-4 w-4 mr-2" />
-                                                Crea la prima distinta
-                                            </Button>
+                                        <TableCell colSpan={9} className="p-0">
+                                            <EmptyState
+                                                type="distinte"
+                                                title="Nessuna distinta trovata"
+                                                description="Crea la tua prima distinta materiali per calcolare peso, superficie e barre necessarie per il progetto."
+                                                actionLabel="Crea la prima Distinta"
+                                                onAction={() => navigate('/distinte/new')}
+                                            />
                                         </TableCell>
                                     </TableRow>
                                 ) : (

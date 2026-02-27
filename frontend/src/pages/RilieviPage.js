@@ -41,6 +41,7 @@ import {
     MapPin,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
+import EmptyState from '../components/EmptyState';
 
 const STATUS_BADGES = {
     bozza: { label: 'Bozza', color: 'bg-slate-100 text-slate-800' },
@@ -196,16 +197,14 @@ export default function RilieviPage() {
                                     </TableRow>
                                 ) : rilievi.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="text-center py-12 text-slate-500">
-                                            <Ruler className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                                            <p>Nessun rilievo trovato</p>
-                                            <Button
-                                                className="mt-4 bg-[#0055FF] text-white hover:bg-[#0044CC]"
-                                                onClick={() => navigate('/rilievi/new')}
-                                            >
-                                                <Plus className="h-4 w-4 mr-2" />
-                                                Crea il primo rilievo
-                                            </Button>
+                                        <TableCell colSpan={8} className="p-0">
+                                            <EmptyState
+                                                type="rilievi"
+                                                title="Nessun rilievo trovato"
+                                                description="Vai in cantiere e registra il tuo primo sopralluogo con schizzi e misure direttamente dal tablet."
+                                                actionLabel="Crea il primo Rilievo"
+                                                onAction={() => navigate('/rilievi/new')}
+                                            />
                                         </TableCell>
                                     </TableRow>
                                 ) : (
