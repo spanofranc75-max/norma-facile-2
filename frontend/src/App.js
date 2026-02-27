@@ -32,6 +32,7 @@ import PeriziaEditorPage from './pages/PeriziaEditorPage';
 import ArchivioSinistriPage from './pages/ArchivioSinistriPage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import './App.css';
 
 /**
@@ -187,12 +188,14 @@ function AppRouter() {
 
 function App() {
     return (
-        <BrowserRouter>
-            <AuthProvider>
-                <AppRouter />
-                <Toaster position="top-right" />
-            </AuthProvider>
-        </BrowserRouter>
+        <ErrorBoundary>
+            <BrowserRouter>
+                <AuthProvider>
+                    <AppRouter />
+                    <Toaster position="top-right" />
+                </AuthProvider>
+            </BrowserRouter>
+        </ErrorBoundary>
     );
 }
 
