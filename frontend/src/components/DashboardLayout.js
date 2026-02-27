@@ -28,18 +28,20 @@ import {
     HardHat,
     Warehouse,
     ClipboardList,
+    CreditCard,
 } from 'lucide-react';
 
 const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: Sparkles },
     { path: '/preventivi', label: 'Preventivi', icon: ClipboardList },
     { path: '/invoices', label: 'Fatturazione', icon: Receipt },
-    { path: '/clients', label: 'Clienti', icon: Users },
+    { path: '/clients', label: 'Clienti / Fornitori', icon: Users },
     { path: '/rilievi', label: 'Rilievi', icon: Ruler },
     { path: '/distinte', label: 'Distinte', icon: Package },
     { path: '/catalogo', label: 'Catalogo Profili', icon: Warehouse },
     { path: '/certificazioni', label: 'Certificazioni CE', icon: Shield },
     { path: '/sicurezza', label: 'Sicurezza (POS)', icon: HardHat },
+    { path: '/impostazioni/pagamenti', label: 'Tipi Pagamento', icon: CreditCard },
     { path: '/settings', label: 'Impostazioni', icon: Settings },
 ];
 
