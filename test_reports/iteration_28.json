@@ -1,0 +1,80 @@
+{
+  "summary": "Comprehensive testing of 'Perizia Sinistro' damage assessment module - Backend API (22/22 tests passed) and Frontend UI (all features verified). The module correctly creates perizie with auto-generated cost items based on damage type, calculates costs with markup formulas, supports recalculation, and generates PDF documents.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "PeriziaEditorPage cost table",
+        "issues": ["React hydration warning: <span> inside <tbody> - minor DOM nesting issue from dynamic rendering, does not affect functionality"]
+      }
+    ]
+  },
+  "features_verified": {
+    "backend_api": {
+      "POST /api/perizie/ create": "PASS - Creates new perizia with auto-generated number PER-{year}/{seq}",
+      "POST strutturale auto-cost": "PASS - Generates 6 items (A.01 smontaggio, B.01 fornitura +20%, C.01 trasporto, D.01 installazione, E.01 oneri normativi, F.01 smaltimento)",
+      "POST estetico auto-cost": "PASS - Generates 3 items (A.01, B.01 carteggiatura, F.01)",
+      "POST automatismi auto-cost": "PASS - Generates 4 items (A.01, B.01 componenti, B.02 collaudo EN12453, F.01)",
+      "GET /api/perizie/ list": "PASS - Returns items and total with search filter support",
+      "GET /api/perizie/{id}": "PASS - Returns complete perizia with all fields",
+      "PUT /api/perizie/{id}": "PASS - Updates fields and recalculates total_perizia",
+      "DELETE /api/perizie/{id}": "PASS - Removes perizia and returns 404 on subsequent GET",
+      "POST /api/perizie/{id}/recalc": "PASS - Regenerates cost items from current data",
+      "GET /api/perizie/{id}/pdf": "PASS - Returns PDF with correct Content-Type and Content-Disposition",
+      "Cost calc: fornitura markup": "PASS - prezzo_ml * (1 + coeff/100) * total_ml",
+      "Cost calc: trasporto ≤2.5ml": "PASS - Returns 180 EUR",
+      "Cost calc: trasporto >2.5ml": "PASS - Returns 350 EUR",
+      "Auth required": "PASS - Returns 401/403 without session token",
+      "404 for non-existent": "PASS - All endpoints return 404 for invalid IDs",
+      "Number format PER-{year}/{seq}": "PASS - e.g., PER-2026/0001"
+    },
+    "frontend_ui": {
+      "PeriziaListPage loads": "PASS - Shows title, search, table, empty state",
+      "Sidebar nav item": "PASS - 'Perizie Sinistro' with ShieldAlert icon visible and clickable",
+      "Nuova Perizia button": "PASS - Navigates to /perizie/new",
+      "Tipo Danno selector": "PASS - 3 clickable cards (Strutturale EN 1090, Estetico, Automatismi EN 12453)",
+      "Map component": "PASS - OpenStreetMap tiles render correctly (Rome default)",
+      "Address input": "PASS - Via/Piazza input with search button",
+      "Photo upload": "PASS - Shows 0/5 with add button",
+      "Prezzo di Riferimento": "PASS - Prezzo Originale + Maggiorazione % with calculated preview",
+      "Moduli Danneggiati": "PASS - Add/edit modules with lunghezza/altezza inputs",
+      "Cost table editable": "PASS - Cod, Descrizione, U.M., Q.ta, Prezzo inputs with delete buttons",
+      "Ricalcola button": "PASS - Triggers cost recalculation from server",
+      "Total perizia display": "PASS - Shows total in EUR at bottom of cost table",
+      "Save creates perizia": "PASS - Creates new perizia and navigates to /perizie/{id}",
+      "PDF button": "PASS - Visible after save, correct URL format",
+      "Success toast": "PASS - Shows 'Perizia PER-{number} creata' after save"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_perizia_sinistro.py",
+    "/app/test_reports/pytest/perizia_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "calc_voci_costo() correctly implements all 3 damage type cost structures",
+    "fornitura calculation uses prezzo_ml * (1 + coeff/100) * total_ml formula correctly",
+    "trasporto logic: 180 EUR if ml≤2.5, 350 EUR if ml>2.5 - implemented correctly",
+    "Cost items are editable in frontend with real-time total recalculation",
+    "PDF service uses reportlab with professional formatting and proper Italian text",
+    "All interactive elements have data-testid attributes for testing",
+    "Minor React hydration warning (span in tbody) from dynamic rendering - cosmetic only, no functionality impact"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_perizia_sinistro.py"
+  ],
+  "success_rate": {
+    "backend": "100% (22/22 tests passed)",
+    "frontend": "100% (all UI elements and flows verified)"
+  },
+  "test_credentials": "test_session_ui_498b7e31a84a (created in MongoDB)",
+  "seed_data_creation": "Test perizie created and cleaned up during backend testing. One UI test perizia created: PER-2026/0001",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Perizia Sinistro module fully tested. Key details: 1) POST /api/perizie/ auto-generates cost items based on tipo_danno (strutturale=6, estetico=3, automatismi=4). 2) Cost items use calc_voci_costo() with fornitura markup formula and trasporto threshold at 2.5ml. 3) Frontend has map (react-leaflet/OpenStreetMap), photo upload (max 5), editable cost table with Ricalcola button. 4) PDF generation works via reportlab. 5) AI photo analysis endpoint exists but requires real photos + EMERGENT_LLM_KEY - optional test. 6) Previous tests: DDT (iter_25), Fornitori (iter_26), DDT Convert (iter_27)."
+}
