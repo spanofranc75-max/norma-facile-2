@@ -101,9 +101,10 @@ export default function PeriziaEditorPage() {
     const [provincia, setProvincia] = useState('');
     const [mapCenter, setMapCenter] = useState([41.9028, 12.4964]); // Rome default
 
-    // Fetch clients
+    // Fetch clients + codici danno
     useEffect(() => {
         apiRequest('/clients/?limit=200').then(d => setClients(d.clients || [])).catch(() => {});
+        apiRequest('/perizie/codici-danno').then(d => setCodiciDannoDb(d.codici_danno || [])).catch(() => {});
     }, []);
 
     // Load existing perizia
