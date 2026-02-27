@@ -334,3 +334,141 @@ async def get_lista_taglio_pdf(distinta_id: str, user: dict = Depends(get_curren
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+
+# ── Import from Rilievo ──────────────────────────────────────────
+
+@router.get("/rilievo-data/{rilievo_id}")
+async def get_rilievo_import_data(rilievo_id: str, user: dict = Depends(get_current_user)):
+    """Fetch a rilievo and extract all parseable dimensions for BOM import."""
+    import re
+
+    rilievo = await db.rilievi.find_one(
+        {"rilievo_id": rilievo_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not rilievo:
+        raise HTTPException(404, "Rilievo non trovato")
+
+    dimensions = []
+    dim_id = 0
+
+    # 1. Parse from notes — look for patterns like "H=2200", "L 1500", "2200x1200"
+    notes = rilievo.get("notes", "") or ""
+    # Pattern: keyword + number (e.g., "H=2200", "altezza 1500", "L: 3000")
+    for match in re.finditer(r'(?i)(H|L|W|altezza|larghezza|lunghezza|profondita)\s*[=:]\s*(\d+(?:\.\d+)?)', notes):
+        label = match.group(1).upper()
+        val = float(match.group(2))
+        dim_id += 1
+        dimensions.append({
+            "dim_id": f"d_{dim_id}",
+            "label": f"{label} = {val:.0f}",
+            "value_mm": val,
+            "source": "notes",
+        })
+
+    # Pattern: "NNNNxNNNN" (e.g., "2200x1200")
+    for match in re.finditer(r'(\d{3,5})\s*[xX]\s*(\d{3,5})', notes):
+        h = float(match.group(1))
+        w = float(match.group(2))
+        dim_id += 1
+        dimensions.append({
+            "dim_id": f"d_{dim_id}",
+            "label": f"H = {h:.0f}",
+            "value_mm": h,
+            "source": "notes",
+        })
+        dim_id += 1
+        dimensions.append({
+            "dim_id": f"d_{dim_id}",
+            "label": f"L = {w:.0f}",
+            "value_mm": w,
+            "source": "notes",
+        })
+
+    # Pattern: standalone numbers > 100 that could be mm measurements
+    for match in re.finditer(r'(?<!\d)(\d{3,5})(?:\s*mm)?(?!\d)', notes):
+        val = float(match.group(1))
+        # Avoid duplicates from patterns above
+        if not any(d["value_mm"] == val for d in dimensions):
+            dim_id += 1
+            dimensions.append({
+                "dim_id": f"d_{dim_id}",
+                "label": f"{val:.0f} mm",
+                "value_mm": val,
+                "source": "notes",
+            })
+
+    # 2. Parse from sketch dimensions dict
+    for sketch in rilievo.get("sketches", []):
+        sk_dims = sketch.get("dimensions") or {}
+        for key, val in sk_dims.items():
+            try:
+                num = float(val)
+                if num > 0:
+                    dim_id += 1
+                    dimensions.append({
+                        "dim_id": f"d_{dim_id}",
+                        "label": f"{key} = {num:.0f}",
+                        "value_mm": num,
+                        "source": f"sketch:{sketch.get('name', 'sketch')}",
+                    })
+            except (ValueError, TypeError):
+                pass
+
+    # Build summary
+    sketches_summary = []
+    for s in rilievo.get("sketches", []):
+        sketches_summary.append({
+            "sketch_id": s.get("sketch_id"),
+            "name": s.get("name", "Sketch"),
+            "has_drawing": bool(s.get("drawing_data")),
+            "dimensions": s.get("dimensions") or {},
+        })
+
+    return {
+        "rilievo_id": rilievo_id,
+        "project_name": rilievo.get("project_name", ""),
+        "client_id": rilievo.get("client_id", ""),
+        "location": rilievo.get("location", ""),
+        "notes": notes,
+        "sketches": sketches_summary,
+        "dimensions": dimensions,
+        "dimension_count": len(dimensions),
+    }
+
+
+@router.post("/{distinta_id}/import-rilievo/{rilievo_id}")
+async def import_from_rilievo(distinta_id: str, rilievo_id: str, user: dict = Depends(get_current_user)):
+    """Import data from a rilievo into the distinta. Links rilievo and sets client."""
+    distinta = await db.distinte.find_one(
+        {"distinta_id": distinta_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not distinta:
+        raise HTTPException(404, "Distinta non trovata")
+
+    rilievo = await db.rilievi.find_one(
+        {"rilievo_id": rilievo_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not rilievo:
+        raise HTTPException(404, "Rilievo non trovato")
+
+    # Link rilievo and auto-set client
+    upd = {
+        "rilievo_id": rilievo_id,
+        "updated_at": datetime.now(timezone.utc),
+    }
+    if rilievo.get("client_id") and not distinta.get("client_id"):
+        upd["client_id"] = rilievo["client_id"]
+
+    # Append notes reference
+    existing_notes = distinta.get("notes", "") or ""
+    ref_note = f"Importato da rilievo: {rilievo.get('project_name', rilievo_id)}"
+    if ref_note not in existing_notes:
+        upd["notes"] = f"{existing_notes}\n{ref_note}".strip() if existing_notes else ref_note
+
+    await db.distinte.update_one({"distinta_id": distinta_id}, {"$set": upd})
+
+    updated = await db.distinte.find_one({"distinta_id": distinta_id}, {"_id": 0})
+    logger.info(f"Rilievo {rilievo_id} imported into distinta {distinta_id}")
+    return updated
