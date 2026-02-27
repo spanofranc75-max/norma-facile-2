@@ -187,10 +187,11 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 
 ### P1
 - [ ] Integrazione SDI diretta con provider (API keys da configurare)
-- [ ] Generazione Fascicolo Automatica (DOP, CE Label, Manuale d'Uso da NormaConfig)
 - [ ] Registro DDT (numerazione automatica e reportistica mensile spedizioni)
 - [ ] Quick Fill: fatture auto-popola da cliente (stesso pattern preventivi)
 - [ ] Recurring invoices / email reminders
+- [ ] Invio fascicolo via PEC automatico
+- [ ] Validazione AI foto posa cantiere
 
 ### P2
 - [ ] Team collaboration, advanced reporting, client portal, mobile app
