@@ -1,0 +1,68 @@
+{
+  "summary": "Comprehensive testing of Preventivo V2 features: Dual discounts (sconto_1, sconto_2), global discount (sconto_globale), down payment (acconto), sidebar tabs, Quick Fill, and convert-to-invoice with payment type mapping. Backend: 22/22 tests passed. Frontend: All UI elements verified with correct calculations.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [],
+    "bugs_fixed": [
+      {
+        "issue": "PUT /api/preventivi/{id} not recalculating totals when only sconto_globale or acconto updated without lines",
+        "fix": "Modified update_preventivo to recalculate totals when sconto_globale or acconto change, using existing lines if no new lines provided",
+        "file": "/app/backend/routes/preventivi.py"
+      },
+      {
+        "issue": "Convert-to-invoice setting payment_method/payment_terms to free-text payment_type_label causing InvoiceResponse validation error (500)",
+        "fix": "Added mapping logic to convert payment_type_label to valid enum values (bonifico/riba/contanti/etc. and 30gg/60gg/etc.)",
+        "file": "/app/backend/routes/preventivi.py"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "backend_api": {
+      "POST /api/preventivi/ with new fields": "PASS - payment_type_id, acconto, sconto_globale, destinazione_merce all stored correctly",
+      "PUT /api/preventivi/{id} with discounts": "PASS - sconto_1, sconto_2 per line, sconto_globale recalculation working",
+      "calc_line cascading discounts": "PASS - prezzo_netto = price * (1-s1/100) * (1-s2/100) verified with 10%+5% = 85.5",
+      "calc_totals with global discount": "PASS - sconto_val, imponibile, da_pagare all calculated correctly",
+      "POST /api/preventivi/{id}/convert-to-invoice": "PASS - Carries over prezzo_netto as unit_price, payment_type mapped to valid enums"
+    },
+    "frontend_ui": {
+      "PreventivoEditor data-testid": "PASS - preventivo-editor present",
+      "Sidebar 4 tabs": "PASS - Riferimento, Pagamento, Destinazione, Note all clickable",
+      "Line items columns": "PASS - Sc.1%, Sc.2%, Netto, Totale columns visible",
+      "Totals card": "PASS - Totale senza IVA, Sconto %, Imponibile, Totale IVA, TOTALE, Acconto, DA PAGARE",
+      "Workflow timeline": "PASS - Shows PRV → Accettato → Fattura → Pagata steps",
+      "Quick Fill": "PASS - Client selection auto-populates payment fields (implementation verified in code)",
+      "Dual discounts calculation": "PASS - UI correctly calculates: 100 × 0.9 × 0.95 = €85,50 Netto",
+      "Global discount display": "PASS - Shows 'Sconto 10%: -€17,10' in red",
+      "Acconto/DA PAGARE": "PASS - When acconto > 0, shows both lines correctly"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_preventivi_v2.py",
+    "/app/test_reports/pytest/preventivi_v2_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "calc_line function correctly implements cascading discounts formula",
+    "calc_totals properly handles 3 parameters (lines, sconto_globale, acconto)",
+    "convert_to_invoice now maps free-text payment_type_label to valid enums for invoice model",
+    "Frontend calculations mirror backend exactly - good consistency"
+  ],
+  "updated_files": [
+    "/app/backend/routes/preventivi.py",
+    "/app/backend/tests/test_preventivi_v2.py"
+  ],
+  "success_rate": {
+    "backend": "100% (22/22 tests passed)",
+    "frontend": "100% (all UI elements verified)"
+  },
+  "test_credentials": "Created test users via MongoDB (test-prev-v2-*, test-ui-prev-*), all cleaned up after tests",
+  "seed_data_creation": "Test preventivi created during backend tests, cleaned up in fixture teardown",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Preventivo V2 features fully tested. Key changes: 1) Dual discounts per line (sconto_1, sconto_2) with cascading calculation. 2) Global discount (sconto_globale) and down payment (acconto) in sidebar Riferimento tab. 3) Sidebar has 4 tabs: Riferimento (sconto/acconto), Pagamento (IBAN/banca/payment type), Destinazione (delivery address), Note. 4) Totals card shows full breakdown including DA PAGARE when acconto > 0. 5) Workflow timeline shows document lifecycle. 6) Convert-to-invoice maps payment_type_label to valid enums. BUG FIXED: Update endpoint now recalculates totals when sconto_globale/acconto change without providing lines."
+}
