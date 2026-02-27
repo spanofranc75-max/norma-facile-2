@@ -187,6 +187,17 @@ export default function PreventivoEditorPage() {
         } catch (e) { toast.error(e.message); }
     };
 
+    const handleConvertToInvoice = async () => {
+        if (isNew) return;
+        if (!window.confirm('Convertire questo preventivo in Fattura? Il preventivo sara marcato come "Accettato".')) return;
+        setConverting(true);
+        try {
+            const res = await apiRequest(`/preventivi/${prevId}/convert-to-invoice`, { method: 'POST' });
+            toast.success(res.message);
+            navigate(`/invoices/${res.invoice_id}`);
+        } catch (e) { toast.error(e.message || 'Errore nella conversione'); } finally { setConverting(false); }
+    };
+
     const activeLine = activeLineIdx !== null ? form.lines[activeLineIdx] : null;
     const activeThermal = activeLine?.thermal_data;
 
