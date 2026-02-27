@@ -13,3 +13,7 @@ from .rilievo import (
     Rilievo, RilievoCreate, RilievoUpdate, RilievoResponse, RilievoListResponse,
     RilievoStatus, SketchData, PhotoData
 )
+from .distinta import (
+    Distinta, DistintaCreate, DistintaUpdate, DistintaResponse, DistintaListResponse,
+    DistintaStatus, DistintaTotals, MaterialItem, MaterialCategory
+)
