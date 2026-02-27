@@ -146,7 +146,7 @@ export default function LandingPage() {
                         </span>
                     </div>
                     <p className="text-lg text-slate-700">
-                        Utilizzato da <span className="font-semibold text-slate-900">oltre 500 studi legali</span> in Italia
+                        Utilizzato da <span className="font-semibold text-slate-900">fabbri e carpenterie metalliche</span> in tutta Italia
                     </p>
                 </div>
             </section>
