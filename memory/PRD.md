@@ -101,7 +101,9 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 - Testing: incluso in iteration_30
 - Testing: 22/22 backend, 100% frontend
 
-- `/api/perizie/` (CRUD + analyze-photos + recalc + PDF)
+- `/api/perizie/` (CRUD + analyze-photos + recalc + genera-lettera + PDF)
+- `/api/perizie/codici-danno` (GET reference damage codes - no auth)
+- `/api/perizie/archivio/stats` (GET aggregated stats dashboard)
 
 ## API Endpoints
 - `/api/auth/`, `/api/clients/` (with client_type filter), `/api/invoices/`, `/api/company/settings`
