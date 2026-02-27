@@ -11,6 +11,10 @@ from models.certificazione import (
     CertificazioneListResponse, CertStatus,
 )
 from services.certificazione_pdf_service import generate_dop_ce_pdf
+from services.thermal_calc import (
+    ThermalInput, calculate_uw,
+    GLASS_TYPES, FRAME_TYPES, SPACER_TYPES, ZONE_LIMITS,
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -145,6 +149,27 @@ async def get_fascicolo_pdf(cert_id: str, user: dict = Depends(get_current_user)
     filename = f"fascicolo_CE_{doc.get('project_name', cert_id).replace(' ', '_')}.pdf"
     return StreamingResponse(
         pdf_buffer,
+
+
+# ── Thermal Calculator ───────────────────────────────────────────
+
+@router.get("/thermal/reference-data")
+async def get_thermal_reference_data():
+    """Get glass, frame, spacer types and zone limits for thermal calculator."""
+    return {
+        "glass_types": GLASS_TYPES,
+        "frame_types": FRAME_TYPES,
+        "spacer_types": SPACER_TYPES,
+        "zone_limits": ZONE_LIMITS,
+    }
+
+
+@router.post("/thermal/calculate")
+async def calculate_thermal(inp: ThermalInput):
+    """Calculate Uw thermal transmittance."""
+    result = calculate_uw(inp)
+    return result.model_dump()
+
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
