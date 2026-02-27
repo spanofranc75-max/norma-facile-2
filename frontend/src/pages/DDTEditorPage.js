@@ -65,6 +65,7 @@ export default function DDTEditorPage() {
     const [clients, setClients] = useState([]);
     const [paymentTypes, setPaymentTypes] = useState([]);
     const [saving, setSaving] = useState(false);
+    const [converting, setConverting] = useState(false);
     const [sidebarTab, setSidebarTab] = useState('trasporto');
     const [ddtInfo, setDdtInfo] = useState({ number: null, status: 'non_fatturato' });
 
