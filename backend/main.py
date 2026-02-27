@@ -31,6 +31,7 @@ from routes.ddt import router as ddt_router
 from routes.perizia import router as perizia_router
 from routes.articoli import router as articoli_router
 from routes.fatture_ricevute import router as fatture_ricevute_router
+from routes.engine import router as engine_router
 
 # Configure logging
 logging.basicConfig(
@@ -87,6 +88,7 @@ app.include_router(ddt_router, prefix="/api")
 app.include_router(perizia_router, prefix="/api")
 app.include_router(articoli_router, prefix="/api")
 app.include_router(fatture_ricevute_router, prefix="/api")
+app.include_router(engine_router, prefix="/api")
 
 
 @app.get("/api/")
