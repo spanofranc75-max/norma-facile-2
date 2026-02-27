@@ -261,7 +261,7 @@ async def update_perizia(perizia_id: str, data: PeriziaUpdate, user: dict = Depe
     simple_fields = [
         "client_id", "tipo_danno", "descrizione_utente", "prezzo_ml_originale",
         "coefficiente_maggiorazione", "ai_analysis", "stato_di_fatto",
-        "nota_tecnica", "notes", "status",
+        "nota_tecnica", "lettera_accompagnamento", "notes", "status",
     ]
     for field in simple_fields:
         val = getattr(data, field, None)
