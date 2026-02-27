@@ -131,6 +131,11 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 - [x] DDT Module — DONE (Phase 19)
 - [x] Fornitori Module — DONE (Phase 20)
 - [x] Perizia Sinistro Module — DONE (Phase 21)
+- [x] Sinistro Smart Algorithm — DONE (Phase 24) — 2026-02-27
+  - calc_voci_costo: MAT.01 (materiale +markup%), TRA.01 (€60/€120), MAN.01 (€40/ml), MAN.02 (€50/ml)
+  - AUT.01/02 (M1-FORCE), SIC.01 (G1-GAP €180), NOR.01 (€150), SMA.01 (€90)
+  - Recalc endpoint verified, PDF generation, Archivio stats
+  - Testing: 16/16 backend (iteration_32), 100% frontend, pytest suite at /app/backend/tests/test_sinistro_smart_algorithm.py
 
 ### P1
 - [ ] Registro DDT (numerazione automatica e reportistica mensile spedizioni)
