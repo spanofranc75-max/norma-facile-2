@@ -233,6 +233,7 @@ async def create_perizia(data: PeriziaCreate, user: dict = Depends(get_current_u
         "ai_analysis": data.ai_analysis,
         "stato_di_fatto": data.stato_di_fatto,
         "nota_tecnica": data.nota_tecnica,
+        "lettera_accompagnamento": data.lettera_accompagnamento,
         "voci_costo": voci,
         "total_perizia": round(total_perizia, 2),
         "notes": data.notes,
