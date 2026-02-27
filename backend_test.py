@@ -1,23 +1,24 @@
 #!/usr/bin/env python3
 """
-Comprehensive Backend API Test Suite for Norma Facile 2.0 Invoicing Module
-Tests all CRUD operations, PDF generation, and business logic.
+Comprehensive Backend API Test Suite for Norma Facile 2.0 Rilievo Misure Module
+Tests all CRUD operations, PDF generation, and business logic for Rilievi.
 """
 import requests
 import json
 import sys
 import time
+import base64
 from datetime import datetime, date, timedelta
 
-class NormaFacileAPITester:
+class RilievoAPITester:
     def __init__(self, base_url="https://legal-easy-1.preview.emergentagent.com"):
         self.base_url = base_url
-        self.session_token = "test_session_1772175508119"  # From auth setup
-        self.user_id = "test-user-1772175508119"
+        self.session_token = "test_session_1772176345185"  # From auth setup
+        self.user_id = "test-user-1772176345185"
         self.tests_run = 0
         self.tests_passed = 0
         self.client_id = None
-        self.invoice_id = None
+        self.rilievo_id = None
         self.session = requests.Session()
         
         # Set session cookie for authentication
