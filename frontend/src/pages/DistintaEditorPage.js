@@ -599,12 +599,12 @@ export default function DistintaEditorPage() {
                                 </p>
                                 <p className="text-sm text-slate-500">Peso (kg)</p>
                             </div>
-                            <div className="text-center p-4 bg-amber-50 rounded-lg border border-amber-200">
-                                <Euro className="h-6 w-6 mx-auto mb-2 text-amber-700" />
-                                <p className="text-2xl font-bold text-amber-700">
+                            <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                <Euro className="h-6 w-6 mx-auto mb-2 text-[#0055FF]" />
+                                <p className="text-2xl font-bold text-[#0055FF]">
                                     {formatCurrency(totals.total_cost)}
                                 </p>
-                                <p className="text-sm text-amber-600">Costo Totale</p>
+                                <p className="text-sm text-blue-600">Costo Totale</p>
                             </div>
                         </div>
 

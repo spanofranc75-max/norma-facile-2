@@ -175,7 +175,7 @@ function SketchEditor({ sketch, onSave, onCancel }) {
                                 type="button"
                                 onClick={() => setBrushColor(color)}
                                 className={`w-8 h-8 rounded-full border-2 transition-transform ${
-                                    brushColor === color ? 'border-slate-900 scale-110' : 'border-transparent'
+                                    brushColor === color ? 'border-[#0055FF] scale-110' : 'border-transparent'
                                 }`}
                                 style={{ backgroundColor: color }}
                             />
@@ -191,7 +191,7 @@ function SketchEditor({ sketch, onSave, onCancel }) {
                                 type="button"
                                 onClick={() => setBrushRadius(size)}
                                 className={`w-8 h-8 rounded-lg border flex items-center justify-center transition-colors ${
-                                    brushRadius === size ? 'bg-slate-900 text-white' : 'bg-white'
+                                    brushRadius === size ? 'bg-[#0055FF] text-white' : 'bg-white'
                                 }`}
                             >
                                 <div
