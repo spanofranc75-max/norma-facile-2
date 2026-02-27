@@ -128,7 +128,7 @@ export default function DistintePage() {
                 </div>
 
                 {/* Filters */}
-                <Card className="border-slate-200">
+                <Card className="border-gray-200">
                     <CardContent className="pt-6">
                         <div className="flex gap-4">
                             <Select
@@ -160,7 +160,7 @@ export default function DistintePage() {
                 </Card>
 
                 {/* Table */}
-                <Card className="border-slate-200">
+                <Card className="border-gray-200">
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader>

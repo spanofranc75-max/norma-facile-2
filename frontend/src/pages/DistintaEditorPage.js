@@ -354,7 +354,7 @@ export default function DistintaEditorPage() {
                 </div>
 
                 {/* Info Section */}
-                <Card className="border-slate-200">
+                <Card className="border-gray-200">
                     <CardHeader className="pb-4">
                         <CardTitle className="text-lg font-semibold">Informazioni</CardTitle>
                     </CardHeader>
@@ -404,7 +404,7 @@ export default function DistintaEditorPage() {
                 </Card>
 
                 {/* Materials Table */}
-                <Card className="border-slate-200">
+                <Card className="border-gray-200">
                     <CardHeader className="flex flex-row items-center justify-between pb-4">
                         <CardTitle className="text-lg font-semibold">Materiali</CardTitle>
                         <Button
@@ -571,7 +571,7 @@ export default function DistintaEditorPage() {
                 </Card>
 
                 {/* Totals */}
-                <Card className="border-slate-200">
+                <Card className="border-gray-200">
                     <CardHeader className="pb-4">
                         <CardTitle className="text-lg font-semibold flex items-center gap-2">
                             <Calculator className="h-5 w-5" />
@@ -615,7 +615,7 @@ export default function DistintaEditorPage() {
                                 <h4 className="font-semibold text-slate-900 mb-3">Per Categoria</h4>
                                 <div className="grid grid-cols-3 gap-4">
                                     {Object.entries(totals.by_category || {}).map(([category, data]) => (
-                                        <div key={category} className="p-3 border border-slate-200 rounded-lg">
+                                        <div key={category} className="p-3 border border-gray-200 rounded-lg">
                                             <p className="font-medium text-slate-900 capitalize">{category}</p>
                                             <div className="flex justify-between text-sm text-slate-500 mt-1">
                                                 <span>{data.count} art.</span>

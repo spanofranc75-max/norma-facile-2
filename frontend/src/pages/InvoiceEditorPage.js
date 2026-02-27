@@ -355,7 +355,7 @@ export default function InvoiceEditorPage() {
                 </div>
 
                 {/* Document Header */}
-                <Card className="border-slate-200">
+                <Card className="border-gray-200">
                     <CardHeader className="pb-4">
                         <CardTitle className="text-lg font-semibold">Intestazione</CardTitle>
                     </CardHeader>
@@ -469,7 +469,7 @@ export default function InvoiceEditorPage() {
                 </Card>
 
                 {/* Line Items */}
-                <Card className="border-slate-200">
+                <Card className="border-gray-200">
                     <CardHeader className="pb-4">
                         <div className="flex items-center justify-between">
                             <CardTitle className="text-lg font-semibold">Righe Documento</CardTitle>
@@ -599,7 +599,7 @@ export default function InvoiceEditorPage() {
                 {/* Tax Settings & Totals */}
                 <div className="grid grid-cols-2 gap-6">
                     {/* Tax Settings */}
-                    <Card className="border-slate-200">
+                    <Card className="border-gray-200">
                         <CardHeader className="pb-4">
                             <CardTitle className="text-lg font-semibold">Impostazioni Fiscali</CardTitle>
                         </CardHeader>
@@ -685,7 +685,7 @@ export default function InvoiceEditorPage() {
                     </Card>
 
                     {/* Totals */}
-                    <Card className="border-slate-200">
+                    <Card className="border-gray-200">
                         <CardHeader className="pb-4">
                             <CardTitle className="text-lg font-semibold flex items-center gap-2">
                                 <Calculator className="h-5 w-5" />

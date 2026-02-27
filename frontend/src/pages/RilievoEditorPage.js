@@ -537,7 +537,7 @@ export default function RilievoEditorPage() {
 
                     {/* Info Tab */}
                     <TabsContent value="info">
-                        <Card className="border-slate-200">
+                        <Card className="border-gray-200">
                             <CardContent className="pt-6 space-y-6">
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="col-span-2">
@@ -624,7 +624,7 @@ export default function RilievoEditorPage() {
 
                     {/* Sketches Tab */}
                     <TabsContent value="sketches">
-                        <Card className="border-slate-200">
+                        <Card className="border-gray-200">
                             <CardHeader className="flex flex-row items-center justify-between">
                                 <CardTitle className="font-sans text-xl">Schizzi e Misure</CardTitle>
                                 <Button
@@ -641,7 +641,7 @@ export default function RilievoEditorPage() {
                             </CardHeader>
                             <CardContent>
                                 {formData.sketches.length === 0 ? (
-                                    <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-lg">
+                                    <div className="text-center py-16 border-2 border-dashed border-gray-200 rounded-lg">
                                         <Ruler className="h-16 w-16 mx-auto mb-4 text-slate-300" />
                                         <p className="text-lg text-slate-500 mb-4">
                                             Nessuno schizzo ancora
@@ -662,7 +662,7 @@ export default function RilievoEditorPage() {
                                         {formData.sketches.map((sketch, index) => (
                                             <div
                                                 key={sketch.sketch_id}
-                                                className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                                                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
                                             >
                                                 <div className="flex items-start justify-between mb-3">
                                                     <div>
@@ -715,7 +715,7 @@ export default function RilievoEditorPage() {
 
                     {/* Photos Tab */}
                     <TabsContent value="photos">
-                        <Card className="border-slate-200">
+                        <Card className="border-gray-200">
                             <CardHeader className="flex flex-row items-center justify-between">
                                 <CardTitle className="font-sans text-xl">Foto Sopralluogo</CardTitle>
                                 <Button
@@ -738,7 +738,7 @@ export default function RilievoEditorPage() {
                             </CardHeader>
                             <CardContent>
                                 {formData.photos.length === 0 ? (
-                                    <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-lg">
+                                    <div className="text-center py-16 border-2 border-dashed border-gray-200 rounded-lg">
                                         <Camera className="h-16 w-16 mx-auto mb-4 text-slate-300" />
                                         <p className="text-lg text-slate-500 mb-4">
                                             Nessuna foto ancora
@@ -756,7 +756,7 @@ export default function RilievoEditorPage() {
                                         {formData.photos.map((photo, index) => (
                                             <div
                                                 key={photo.photo_id}
-                                                className="relative group rounded-lg overflow-hidden border border-slate-200"
+                                                className="relative group rounded-lg overflow-hidden border border-gray-200"
                                             >
                                                 <img
                                                     src={photo.image_data}

@@ -127,7 +127,7 @@ export default function SettingsPage() {
                     </TabsList>
 
                     <TabsContent value="company">
-                        <Card className="border-slate-200">
+                        <Card className="border-gray-200">
                             <CardHeader>
                                 <CardTitle>Dati Aziendali</CardTitle>
                                 <CardDescription>
@@ -262,7 +262,7 @@ export default function SettingsPage() {
                     </TabsContent>
 
                     <TabsContent value="bank">
-                        <Card className="border-slate-200">
+                        <Card className="border-gray-200">
                             <CardHeader>
                                 <CardTitle>Coordinate Bancarie</CardTitle>
                                 <CardDescription>

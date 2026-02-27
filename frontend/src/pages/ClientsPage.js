@@ -187,7 +187,7 @@ export default function ClientsPage() {
                 </div>
 
                 {/* Search */}
-                <Card className="border-slate-200">
+                <Card className="border-gray-200">
                     <CardContent className="pt-6">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -203,7 +203,7 @@ export default function ClientsPage() {
                 </Card>
 
                 {/* Table */}
-                <Card className="border-slate-200">
+                <Card className="border-gray-200">
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader>
