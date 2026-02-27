@@ -508,12 +508,23 @@ export default function InvoiceEditorPage() {
                                     return (
                                         <TableRow key={index} className="hover:bg-slate-50">
                                             <TableCell className="p-1">
-                                                <Input
-                                                    data-testid={`line-code-${index}`}
+                                                <ArticleSearch
                                                     value={line.code}
-                                                    onChange={(e) => updateLine(index, 'code', e.target.value)}
-                                                    className="h-8 text-sm"
+                                                    onChange={(v) => updateLine(index, 'code', v)}
+                                                    onSelect={(article) => {
+                                                        const updates = { ...formData };
+                                                        updates.lines = [...updates.lines];
+                                                        updates.lines[index] = {
+                                                            ...updates.lines[index],
+                                                            code: article.codice,
+                                                            description: article.descrizione,
+                                                            unit_price: article.prezzo_unitario || 0,
+                                                            vat_rate: article.aliquota_iva || '22',
+                                                        };
+                                                        setFormData(updates);
+                                                    }}
                                                     placeholder="COD"
+                                                    testId={`line-code-${index}`}
                                                 />
                                             </TableCell>
                                             <TableCell className="p-1">
