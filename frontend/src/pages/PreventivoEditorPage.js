@@ -219,6 +219,11 @@ export default function PreventivoEditorPage() {
                                 <FileDown className="h-4 w-4 mr-2" /> PDF
                             </Button>
                         )}
+                        {!isNew && (
+                            <Button data-testid="btn-convert-invoice" variant="outline" onClick={handleConvertToInvoice} disabled={converting} className="border-amber-500 text-amber-600 hover:bg-amber-50">
+                                <ArrowRightLeft className="h-4 w-4 mr-2" /> {converting ? 'Conversione...' : 'Converti in Fattura'}
+                            </Button>
+                        )}
                         <Button data-testid="btn-save-preventivo" onClick={handleSave} disabled={saving} className="bg-[#0055FF] text-white hover:bg-[#0044CC]">
                             <Save className="h-4 w-4 mr-2" /> {saving ? 'Salvataggio...' : 'Salva'}
                         </Button>
