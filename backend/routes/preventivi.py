@@ -380,33 +380,39 @@ async def convert_to_invoice(prev_id: str, user: dict = Depends(get_current_user
     # Map preventivo lines to invoice lines
     invoice_lines = []
     for idx, line in enumerate(doc.get("lines", [])):
+        lt = float(line.get("line_total", 0))
         invoice_lines.append({
             "line_id": f"ln_{uuid.uuid4().hex[:8]}",
-            "code": line.get("line_id", ""),
+            "code": line.get("codice_articolo") or line.get("line_id", ""),
             "description": line.get("description", ""),
             "quantity": float(line.get("quantity", 1)),
-            "unit_price": float(line.get("unit_price", 0)),
+            "unit_price": float(line.get("prezzo_netto") or line.get("unit_price", 0)),
             "discount_percent": 0,
             "vat_rate": line.get("vat_rate", "22"),
-            "line_total": float(line.get("line_total", 0)),
-            "vat_amount": round(float(line.get("line_total", 0)) * float(line.get("vat_rate", 22)) / 100, 2),
+            "line_total": lt,
+            "vat_amount": round(lt * float(line.get("vat_rate", 22)) / 100, 2),
         })
 
-    # Build totals
+    # Build totals (apply global discount if any)
+    sg = float(doc.get("sconto_globale", 0))
     subtotal = sum(row.get("line_total", 0) for row in invoice_lines)
+    sconto_val = round(subtotal * sg / 100, 2) if sg else 0
+    taxable = subtotal - sconto_val
     total_vat = sum(row.get("vat_amount", 0) for row in invoice_lines)
+    if sg:
+        total_vat = round(total_vat * (1 - sg / 100), 2)
 
     invoice_doc = {
         "invoice_id": invoice_id,
         "user_id": user["user_id"],
-        "document_type": "FT",  # Must use enum value, not string literal
+        "document_type": "FT",
         "document_number": doc_number,
         "client_id": client_id,
         "issue_date": now.strftime("%Y-%m-%d"),
         "due_date": None,
         "status": "bozza",
-        "payment_method": "bonifico",
-        "payment_terms": doc.get("payment_terms", "30gg"),
+        "payment_method": doc.get("payment_type_label") or "bonifico",
+        "payment_terms": doc.get("payment_type_label") or "30gg",
         "tax_settings": {
             "apply_rivalsa_inps": False, "rivalsa_inps_rate": 4.0,
             "apply_cassa": False, "cassa_type": None, "cassa_rate": 4.0,
