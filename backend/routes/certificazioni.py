@@ -13,6 +13,7 @@ from models.certificazione import (
 from services.certificazione_pdf_service import generate_dop_ce_pdf
 from core.engine.thermal import ThermalValidator, ThermalInput
 from core.engine.ce import CEValidator
+from core.engine.router import NormaRouter
 import logging
 
 logger = logging.getLogger(__name__)
