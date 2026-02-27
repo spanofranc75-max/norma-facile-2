@@ -282,6 +282,7 @@ export default function PeriziaEditorPage() {
                     prezzo_ml_originale: parseFloat(prezzoMl) || 0,
                     coefficiente_maggiorazione: parseFloat(coeffMagg) || 20,
                     moduli,
+                    codici_danno: codiciDanno,
                 },
             });
             const res = await apiRequest(`/perizie/${periziaId}/recalc`, { method: 'POST' });
