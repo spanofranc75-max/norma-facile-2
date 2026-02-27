@@ -462,9 +462,9 @@ class TestInvoiceProperties:
         invoice_id = convert.json()['invoice_id']
         
         invoice = auth_session.get(f'{BASE_URL}/api/invoices/{invoice_id}').json()
-        assert invoice['document_type'] == 'fattura', f"Expected document_type 'fattura', got {invoice['document_type']}"
+        assert invoice['document_type'] == 'FT', f"Expected document_type 'FT', got {invoice['document_type']}"
         
-        print("✓ Invoice document_type is 'fattura'")
+        print("✓ Invoice document_type is 'FT' (fattura)")
     
     def test_invoice_status_is_bozza(self, auth_session, test_client):
         """Verify converted invoice has status='bozza'."""
