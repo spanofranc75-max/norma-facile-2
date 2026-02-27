@@ -931,3 +931,71 @@ export default function DistintaEditorPage() {
         </DashboardLayout>
     );
 }
+
+
+// ── Helper Components ───────────────────────────────────────────
+
+const CUT_COLORS = [
+    'bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-red-500',
+    'bg-violet-500', 'bg-pink-500', 'bg-cyan-500', 'bg-lime-500',
+];
+
+function SummaryCard({ label, value, color, subtitle }) {
+    return (
+        <div className="text-center p-3 bg-slate-50 rounded-lg border border-slate-200">
+            <p className={`text-2xl font-mono font-bold ${color}`}>{value}</p>
+            <p className="text-xs text-slate-500 mt-1">{label}</p>
+            {subtitle && <p className="text-xs text-slate-400 font-mono">{subtitle}</p>}
+        </div>
+    );
+}
+
+function BarVisualization({ bar, barLengthMm }) {
+    const scale = 100 / barLengthMm;
+    const wasteColor = bar.waste_percent < 10 ? 'text-emerald-600' : bar.waste_percent < 20 ? 'text-amber-500' : 'text-red-500';
+
+    return (
+        <div className="flex items-center gap-3" data-testid={`bar-vis-${bar.bar_index}`}>
+            {/* Bar number */}
+            <span className="text-xs font-mono text-slate-400 w-8 shrink-0 text-right">B{bar.bar_index}</span>
+
+            {/* Visual bar */}
+            <div className="flex-1 relative h-8 bg-slate-100 rounded border border-slate-300 overflow-hidden">
+                {bar.cuts.map((cut, ci) => {
+                    const left = cut.offset_mm * scale;
+                    const width = cut.length_mm * scale;
+                    return (
+                        <div
+                            key={ci}
+                            className={`absolute top-0.5 bottom-0.5 ${CUT_COLORS[ci % CUT_COLORS.length]} rounded-sm flex items-center justify-center overflow-hidden`}
+                            style={{ left: `${left}%`, width: `${Math.max(width, 0.5)}%` }}
+                            title={`${cut.length_mm} mm`}
+                        >
+                            {width > 6 && (
+                                <span className="text-[10px] text-white font-mono font-bold truncate px-0.5">
+                                    {cut.length_mm}
+                                </span>
+                            )}
+                        </div>
+                    );
+                })}
+                {/* Waste area indicator */}
+                {bar.waste_percent > 2 && (
+                    <div
+                        className="absolute top-0 bottom-0 bg-red-100/60 border-l border-dashed border-red-300"
+                        style={{ left: `${bar.fill_percent}%`, width: `${100 - bar.fill_percent}%` }}
+                    />
+                )}
+            </div>
+
+            {/* Stats */}
+            <div className="flex items-center gap-2 shrink-0 w-48">
+                <span className="text-xs font-mono text-slate-600">{bar.used_mm} mm</span>
+                <span className="text-[10px] text-slate-400">|</span>
+                <span className={`text-xs font-mono font-semibold ${wasteColor}`}>
+                    -{bar.waste_mm} mm ({bar.waste_percent}%)
+                </span>
+            </div>
+        </div>
+    );
+}
