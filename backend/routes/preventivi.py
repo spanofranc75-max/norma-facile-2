@@ -71,12 +71,12 @@ def calc_line(line: dict) -> dict:
 
 
 def calc_totals(lines: list) -> dict:
-    subtotal = sum(l.get("line_total", 0) for l in lines)
+    subtotal = sum(item.get("line_total", 0) for item in lines)
     vat_groups = {}
-    for l in lines:
-        rate = l.get("vat_rate", "22")
+    for item in lines:
+        rate = item.get("vat_rate", "22")
         vat_groups.setdefault(rate, 0)
-        vat_groups[rate] += l.get("line_total", 0)
+        vat_groups[rate] += item.get("line_total", 0)
     total_vat = 0
     for rate, base in vat_groups.items():
         try:
@@ -96,8 +96,8 @@ def run_compliance(lines: list) -> dict:
     """Run thermal compliance on all lines with thermal_data."""
     results = []
     all_compliant = True
-    for l in lines:
-        td = l.get("thermal_data")
+    for item in lines:
+        td = item.get("thermal_data")
         if not td or not td.get("glass_id"):
             continue
         inp = ThermalInput(
@@ -115,8 +115,8 @@ def run_compliance(lines: list) -> dict:
         if not compliant:
             all_compliant = False
         results.append({
-            "line_id": l.get("line_id"),
-            "description": l.get("description"),
+            "line_id": item.get("line_id"),
+            "description": item.get("description"),
             "uw": calc.uw,
             "zone": zone,
             "limit": zone_limit,
@@ -315,7 +315,7 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
     title_style = ParagraphStyle("Title", parent=styles["Heading1"], fontSize=18, textColor=BLUE, spaceAfter=2 * mm)
     subtitle_style = ParagraphStyle("Sub", parent=styles["Heading2"], fontSize=12, textColor=DARK, spaceAfter=2 * mm)
     normal = styles["Normal"]
-    bold_style = ParagraphStyle("Bold", parent=normal, fontName="Helvetica-Bold")
+
 
     # Header
     co = company or {}
@@ -358,15 +358,15 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
         elements.append(Paragraph("DETTAGLIO OFFERTA", subtitle_style))
         header = ["#", "Descrizione", "Dim.", "Q.ta", "Prezzo Unit.", "IVA", "Totale"]
         data = [header]
-        for i, l in enumerate(lines):
+        for i, row in enumerate(lines):
             data.append([
                 str(i + 1),
-                l.get("description", "-"),
-                l.get("dimensions", "-") or "-",
-                str(l.get("quantity", 1)),
-                f"{l.get('unit_price', 0):.2f}",
-                f"{l.get('vat_rate', '22')}%",
-                f"{l.get('line_total', 0):.2f}",
+                row.get("description", "-"),
+                row.get("dimensions", "-") or "-",
+                str(row.get("quantity", 1)),
+                f"{row.get('unit_price', 0):.2f}",
+                f"{row.get('vat_rate', '22')}%",
+                f"{row.get('line_total', 0):.2f}",
             ])
 
         lt = Table(data, colWidths=[8 * mm, 55 * mm, 25 * mm, 15 * mm, 25 * mm, 15 * mm, 25 * mm])
