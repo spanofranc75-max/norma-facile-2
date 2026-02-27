@@ -1,0 +1,78 @@
+{
+  "summary": "Smart BOM Module (Norma Facile 2.0) - Tested profiles API, CRUD operations, weight/surface calculations, bar calculation, and PDF export. All backend tests passed (13/13). Frontend issues found and fixed: API path duplication bug in DistintaEditorPage.js and missing JSON.stringify in apiRequest utility.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "bugs_found_and_fixed": [
+    {
+      "issue": "Profile dropdown showed only 'Manuale' option instead of 43 profiles",
+      "root_cause": "DistintaEditorPage.js was calling apiRequest('/api/distinte/profiles') but apiRequest already adds '/api' prefix, resulting in '/api/api/distinte/profiles' (404)",
+      "fix": "Removed '/api' prefix from all apiRequest calls in DistintaEditorPage.js",
+      "file": "/app/frontend/src/pages/DistintaEditorPage.js"
+    },
+    {
+      "issue": "Save button returned 422 error",
+      "root_cause": "apiRequest utility was not JSON.stringify-ing the body object before fetch",
+      "fix": "Added JSON.stringify for object body in apiRequest function",
+      "file": "/app/frontend/src/lib/utils.js"
+    }
+  ],
+  "features_verified": {
+    "backend": {
+      "GET /api/distinte/profiles": "PASS - Returns 43 profiles with weight_per_meter and surface_per_meter",
+      "GET /api/distinte/profiles?profile_type=tubolare": "PASS - Returns 16 tubolare profiles",
+      "GET /api/distinte/profiles?profile_type=piatto": "PASS - Returns 12 piatto profiles",
+      "GET /api/distinte/profiles?profile_type=angolare": "PASS - Returns 10 angolare profiles",
+      "GET /api/distinte/profiles?profile_type=tondo": "PASS - Returns 5 tondo profiles",
+      "POST /api/distinte/": "PASS - Creates distinta with correct weight/surface calculations",
+      "PUT /api/distinte/{id}": "PASS - Updates distinta with recalculation",
+      "POST /api/distinte/{id}/calcola-barre": "PASS - Returns correct bars_needed and waste",
+      "GET /api/distinte/{id}/lista-taglio-pdf": "PASS - Returns application/pdf"
+    },
+    "frontend": {
+      "Profile dropdown grouped by type": "PASS - Shows Tubolari, Piatti, Angolari, Tondi groups",
+      "Profile auto-fills weight and surface": "PASS - Selecting profile fills weight_per_meter and surface_per_meter",
+      "Auto-calculation of Peso and Superficie": "PASS - Entering length 1500mm qty 2 with TQ-40x40x3 shows 10.17kg and 0.480mq",
+      "Footer summary boxes": "PASS - Shows 5 boxes: Articoli, Lunghezza, Peso Totale, Superficie, Costo",
+      "Calcola Barre dialog": "PASS - Shows bar calculation with waste percentage",
+      "Stampa Lista Taglio button": "PASS - Button visible after save"
+    }
+  },
+  "calculation_verification": {
+    "test_case": "Tubolare 40x40x3 (3.39 kg/m, 0.160 mq/m), length 1500mm, qty 2",
+    "expected_weight": "1.5 * 2 * 3.39 = 10.17 kg",
+    "actual_weight": "10.17 kg",
+    "expected_surface": "1.5 * 2 * 0.160 = 0.480 mq",
+    "actual_surface": "0.480 mq",
+    "expected_bars": "3000mm total -> 1 bar of 6000mm",
+    "actual_bars": "1",
+    "expected_waste": "3000mm (50%)",
+    "actual_waste": "3000mm (50%)"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_smart_bom.py",
+    "/app/test_reports/pytest/smart_bom_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/frontend/src/pages/DistintaEditorPage.js",
+    "/app/frontend/src/lib/utils.js",
+    "/app/backend/tests/test_smart_bom.py"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 tests passed)",
+    "frontend": "100% (all features verified)"
+  },
+  "seed_data_creation": "Created temporary test user and session for authenticated testing, cleaned up after",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Smart BOM Module fully tested and working. Fixed 2 frontend bugs: 1) API path duplication in DistintaEditorPage.js - removed '/api' prefix from apiRequest calls, 2) Missing JSON.stringify in apiRequest utility. All profiles now load correctly in dropdown (43 profiles in 4 groups). Weight/surface calculations verified correct. Bar calculation and PDF export working.",
+  "mocked_api_note": "POST /api/distinte/{id}/import-rilievo/{rilievo_id} still uses mock data (generates sample Tubolare 40x40x3 items based on rilievo sketches)"
+}
