@@ -15,6 +15,9 @@ from core.database import close_database
 from routes.auth import router as auth_router
 from routes.documents import router as documents_router
 from routes.chat import router as chat_router
+from routes.clients import router as clients_router
+from routes.invoices import router as invoices_router
+from routes.company import router as company_router
 
 # Configure logging
 logging.basicConfig(
@@ -55,6 +58,9 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api")
 app.include_router(documents_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
+app.include_router(clients_router, prefix="/api")
+app.include_router(invoices_router, prefix="/api")
+app.include_router(company_router, prefix="/api")
 
 
 @app.get("/api/")
