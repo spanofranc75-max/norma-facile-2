@@ -56,6 +56,7 @@ export default function PeriziaEditorPage() {
     const [saving, setSaving] = useState(false);
     const [analyzing, setAnalyzing] = useState(false);
     const [recalcing, setRecalcing] = useState(false);
+    const [generatingLetter, setGeneratingLetter] = useState(false);
     const [periziaInfo, setPInfo] = useState({ number: null, status: 'bozza', perizia_id: null });
 
     // Form state
