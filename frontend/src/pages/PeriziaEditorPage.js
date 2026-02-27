@@ -223,6 +223,7 @@ export default function PeriziaEditorPage() {
             localizzazione: { indirizzo, lat: mapPos?.lat || 0, lng: mapPos?.lng || 0, comune, provincia },
             tipo_danno: tipoDanno,
             descrizione_utente: descrizione,
+            codici_danno: codiciDanno,
             prezzo_ml_originale: parseFloat(prezzoMl) || 0,
             coefficiente_maggiorazione: parseFloat(coeffMagg) || 20,
             moduli,
