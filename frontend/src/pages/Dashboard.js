@@ -275,7 +275,7 @@ export default function Dashboard() {
                                             <Receipt className="h-5 w-5 text-slate-600" strokeWidth={1.5} />
                                         </div>
                                         <div>
-                                            <p className="font-medium text-slate-900">
+                                            <p className="font-mono font-medium text-[#1E293B]">
                                                 {inv.document_number}
                                             </p>
                                             <p className="text-sm text-slate-500">
@@ -285,7 +285,7 @@ export default function Dashboard() {
                                     </div>
                                     <div className="flex items-center gap-4">
                                         <div className="text-right">
-                                            <p className="font-medium text-slate-900">
+                                            <p className="font-mono font-semibold text-[#0055FF]">
                                                 {formatCurrency(inv.totals?.total_document)}
                                             </p>
                                             <div className="flex items-center gap-2 text-sm text-slate-500">
