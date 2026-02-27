@@ -207,12 +207,12 @@ export default function ClientsPage() {
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader>
-                                <TableRow className="bg-slate-50">
-                                    <TableHead className="font-semibold">Ragione Sociale</TableHead>
-                                    <TableHead className="font-semibold">Tipo</TableHead>
-                                    <TableHead className="font-semibold">P.IVA / C.F.</TableHead>
-                                    <TableHead className="font-semibold">Località</TableHead>
-                                    <TableHead className="font-semibold">Cod. SDI</TableHead>
+                                <TableRow className="bg-[#1E293B]">
+                                    <TableHead className="text-white font-semibold">Ragione Sociale</TableHead>
+                                    <TableHead className="text-white font-semibold">Tipo</TableHead>
+                                    <TableHead className="text-white font-semibold">P.IVA / C.F.</TableHead>
+                                    <TableHead className="text-white font-semibold">Località</TableHead>
+                                    <TableHead className="text-white font-semibold">Cod. SDI</TableHead>
                                     <TableHead className="w-[100px]"></TableHead>
                                 </TableRow>
                             </TableHeader>

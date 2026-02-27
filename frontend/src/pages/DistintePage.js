@@ -164,14 +164,14 @@ export default function DistintePage() {
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader>
-                                <TableRow className="bg-slate-50">
-                                    <TableHead className="font-semibold">Nome</TableHead>
-                                    <TableHead className="font-semibold">Rilievo</TableHead>
-                                    <TableHead className="font-semibold">Cliente</TableHead>
-                                    <TableHead className="font-semibold text-center">Articoli</TableHead>
-                                    <TableHead className="font-semibold text-right">Peso (kg)</TableHead>
-                                    <TableHead className="font-semibold text-right">Costo</TableHead>
-                                    <TableHead className="font-semibold">Stato</TableHead>
+                                <TableRow className="bg-[#1E293B]">
+                                    <TableHead className="text-white font-semibold">Nome</TableHead>
+                                    <TableHead className="text-white font-semibold">Rilievo</TableHead>
+                                    <TableHead className="text-white font-semibold">Cliente</TableHead>
+                                    <TableHead className="text-white font-semibold text-center">Articoli</TableHead>
+                                    <TableHead className="text-white font-semibold text-right">Peso (kg)</TableHead>
+                                    <TableHead className="text-white font-semibold text-right">Costo</TableHead>
+                                    <TableHead className="text-white font-semibold">Stato</TableHead>
                                     <TableHead className="w-[60px]"></TableHead>
                                 </TableRow>
                             </TableHeader>

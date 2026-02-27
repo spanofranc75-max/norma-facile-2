@@ -262,14 +262,14 @@ export default function InvoicesPage() {
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader>
-                                <TableRow className="bg-slate-50">
-                                    <TableHead className="font-semibold">Numero</TableHead>
-                                    <TableHead className="font-semibold">Tipo</TableHead>
-                                    <TableHead className="font-semibold">Cliente</TableHead>
-                                    <TableHead className="font-semibold">Data</TableHead>
-                                    <TableHead className="font-semibold">Scadenza</TableHead>
-                                    <TableHead className="font-semibold text-right">Totale</TableHead>
-                                    <TableHead className="font-semibold">Stato</TableHead>
+                                <TableRow className="bg-[#1E293B]">
+                                    <TableHead className="text-white font-semibold">Numero</TableHead>
+                                    <TableHead className="text-white font-semibold">Tipo</TableHead>
+                                    <TableHead className="text-white font-semibold">Cliente</TableHead>
+                                    <TableHead className="text-white font-semibold">Data</TableHead>
+                                    <TableHead className="text-white font-semibold">Scadenza</TableHead>
+                                    <TableHead className="text-white font-semibold text-right">Totale</TableHead>
+                                    <TableHead className="text-white font-semibold">Stato</TableHead>
                                     <TableHead className="w-[60px]"></TableHead>
                                 </TableRow>
                             </TableHeader>

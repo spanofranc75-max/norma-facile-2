@@ -176,14 +176,14 @@ export default function RilieviPage() {
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader>
-                                <TableRow className="bg-slate-50">
-                                    <TableHead className="font-semibold">Progetto</TableHead>
-                                    <TableHead className="font-semibold">Cliente</TableHead>
-                                    <TableHead className="font-semibold">Data</TableHead>
-                                    <TableHead className="font-semibold">Località</TableHead>
-                                    <TableHead className="font-semibold text-center">Schizzi</TableHead>
-                                    <TableHead className="font-semibold text-center">Foto</TableHead>
-                                    <TableHead className="font-semibold">Stato</TableHead>
+                                <TableRow className="bg-[#1E293B]">
+                                    <TableHead className="text-white font-semibold">Progetto</TableHead>
+                                    <TableHead className="text-white font-semibold">Cliente</TableHead>
+                                    <TableHead className="text-white font-semibold">Data</TableHead>
+                                    <TableHead className="text-white font-semibold">Località</TableHead>
+                                    <TableHead className="text-white font-semibold text-center">Schizzi</TableHead>
+                                    <TableHead className="text-white font-semibold text-center">Foto</TableHead>
+                                    <TableHead className="text-white font-semibold">Stato</TableHead>
                                     <TableHead className="w-[60px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
