@@ -38,36 +38,55 @@ async def next_perizia_number(user_id: str) -> str:
 
 
 def calc_voci_costo(data: dict) -> list:
-    """Auto-generate cost items based on damage type and modules."""
+    """Auto-generate cost items based on damage type, modules, AND selected damage codes."""
     tipo = data.get("tipo_danno", "strutturale")
     prezzo_ml = float(data.get("prezzo_ml_originale", 0))
     coeff = float(data.get("coefficiente_maggiorazione", 20))
     moduli = data.get("moduli", [])
+    codici = data.get("codici_danno", [])
     total_ml = sum(float(m.get("lunghezza_ml", 0)) for m in moduli)
-
+    costo_orario = 45.0
     voci = []
 
-    # 1. Smontaggio e Messa in Sicurezza
+    # Resolve selected damage codes
+    selected_codes = [CODICI_DANNO_MAP[c] for c in codici if c in CODICI_DANNO_MAP]
+    has_struttura = any(c["categoria"] == "Struttura" for c in selected_codes)
+    has_ancoraggio = any(c["categoria"] == "Ancoraggio" for c in selected_codes)
+    has_protezione = any(c["categoria"] == "Protezione" for c in selected_codes)
+    has_sicurezza = any(c["categoria"] == "Sicurezza" for c in selected_codes)
+    has_automazione = any(c["categoria"] == "Automazione" for c in selected_codes)
+
+    # If no codes selected, fall back to tipo_danno logic
+    if not selected_codes:
+        has_struttura = tipo == "strutturale"
+        has_protezione = tipo in ("strutturale", "estetico")
+        has_automazione = tipo == "automatismi"
+
+    # 1. Smontaggio e Messa in Sicurezza (always)
     ore_smontaggio = max(2, total_ml * 0.5)
-    costo_orario = 45.0
+    norme_cite = ", ".join(sorted(set(c["norma"] for c in selected_codes))) if selected_codes else "EN 1090-2"
     voci.append({
         "codice": "A.01",
-        "descrizione": "Smontaggio elementi danneggiati e messa in sicurezza dell'area. "
-                       "Comprensivo di movimentazione, protezione zone adiacenti e segnaletica provvisoria.",
+        "descrizione": f"Smontaggio elementi danneggiati e messa in sicurezza dell'area. "
+                       f"Codici danno rilevati: {', '.join(codici) if codici else 'generico'}. "
+                       f"Comprensivo di movimentazione, protezione zone adiacenti e segnaletica provvisoria.",
         "unita": "ore",
         "quantita": round(ore_smontaggio, 1),
         "prezzo_unitario": costo_orario,
         "totale": round(ore_smontaggio * costo_orario, 2),
     })
 
-    if tipo == "strutturale":
-        # 2. Fornitura Materiale (con maggiorazione fuori serie)
+    # 2. Struttura: S1-DEF, S2-WELD → Sostituzione modulo
+    if has_struttura:
         prezzo_maggiorato = prezzo_ml * (1 + coeff / 100)
+        struct_codes = [c for c in selected_codes if c["categoria"] == "Struttura"]
+        norme_struct = ", ".join(set(c["norma"] for c in struct_codes)) if struct_codes else "EN 1090-2"
+        azioni = " ".join(c["azione"] for c in struct_codes) if struct_codes else "Sostituzione integrale del modulo."
         voci.append({
             "codice": "B.01",
-            "descrizione": f"Fornitura recinzione/cancello in acciaio zincato a caldo conforme EN 1090. "
-                           f"Produzione fuori serie di pezzo singolo con maggiorazione {coeff:.0f}% "
-                           f"sul prezzo originale di {prezzo_ml:.2f} EUR/ml. "
+            "descrizione": f"Fornitura recinzione/cancello in acciaio zincato a caldo conforme {norme_struct}. "
+                           f"{azioni} "
+                           f"Produzione fuori serie con maggiorazione {coeff:.0f}% sul prezzo originale di {prezzo_ml:.2f} EUR/ml. "
                            f"Comprensivo di lavorazione, zincatura e verniciatura.",
             "unita": "ml",
             "quantita": round(total_ml, 2),
@@ -75,7 +94,77 @@ def calc_voci_costo(data: dict) -> list:
             "totale": round(total_ml * prezzo_maggiorato, 2),
         })
 
-        # 3. Trasporto e Logistica
+    # 3. Ancoraggio: A1-ANCH, A2-CONC → Rifacimento ancoranti
+    if has_ancoraggio:
+        anch_codes = [c for c in selected_codes if c["categoria"] == "Ancoraggio"]
+        has_conc = any(c["codice"] == "A2-CONC" for c in anch_codes)
+        desc_anch = "Rifacimento fori e ancorante chimico certificato ETA (ETAG 001). "
+        if has_conc:
+            desc_anch += "Ripristino cordolo in cemento con malta tixotropica strutturale. "
+        desc_anch += "Verifica tenuta meccanica post-installazione."
+        ore_anch = max(2, total_ml * 0.4)
+        mat_anch = 15.0 * total_ml if total_ml else 80.0
+        voci.append({
+            "codice": "B.02",
+            "descrizione": desc_anch,
+            "unita": "corpo",
+            "quantita": 1,
+            "prezzo_unitario": round(ore_anch * costo_orario + mat_anch, 2),
+            "totale": round(ore_anch * costo_orario + mat_anch, 2),
+        })
+
+    # 4. Protezione: P1-ZINC → Trattamento anticorrosivo
+    if has_protezione and not has_struttura:
+        # Only if not already replacing the whole module
+        voci.append({
+            "codice": "B.03",
+            "descrizione": "Ripristino ciclo anticorrosivo conforme ISO 1461 / ISO 12944. "
+                           "Carteggiatura manuale, applicazione primer antiruggine bicomponente e "
+                           "mano di finitura con smalto poliuretanico colore a campione. "
+                           "Compreso mascheratura aree adiacenti.",
+            "unita": "mq",
+            "quantita": round(total_ml * 1.2, 2),
+            "prezzo_unitario": 35.0,
+            "totale": round(total_ml * 1.2 * 35.0, 2),
+        })
+
+    # 5. Sicurezza: G1-GAP → Riallineamento
+    if has_sicurezza:
+        voci.append({
+            "codice": "B.04",
+            "descrizione": "Riallineamento millimetrico elementi e verifica distanze di sicurezza "
+                           "anti-cesoiamento conforme EN 13241. Test spazi con calibro certificato. "
+                           "Aggiornamento Dichiarazione di Prestazione (DoP).",
+            "unita": "corpo",
+            "quantita": 1,
+            "prezzo_unitario": 220.0,
+            "totale": 220.0,
+        })
+
+    # 6. Automazione: M1-FORCE → Test forze e sostituzione
+    if has_automazione:
+        voci.append({
+            "codice": "B.05",
+            "descrizione": "Fornitura e sostituzione componenti di automazione danneggiati "
+                           "(motore, centralina, fotocellule, finecorsa).",
+            "unita": "corpo",
+            "quantita": 1,
+            "prezzo_unitario": round(prezzo_ml * total_ml * 0.5, 2) if prezzo_ml else 450.0,
+            "totale": round(prezzo_ml * total_ml * 0.5, 2) if prezzo_ml else 450.0,
+        })
+        voci.append({
+            "codice": "B.06",
+            "descrizione": "Verifica e collaudo impianto automazione conforme EN 12453. "
+                           "Test forze di impatto con strumento certificato, verifica dispositivi "
+                           "di sicurezza e fotocellule. Rilascio certificato di conformita.",
+            "unita": "corpo",
+            "quantita": 1,
+            "prezzo_unitario": 320.0,
+            "totale": 320.0,
+        })
+
+    # 7. Trasporto (if structural replacement or significant work)
+    if has_struttura or total_ml > 2:
         costo_trasporto = 180.0 if total_ml <= 2.5 else 350.0
         voci.append({
             "codice": "C.01",
@@ -87,69 +176,34 @@ def calc_voci_costo(data: dict) -> list:
             "totale": costo_trasporto,
         })
 
-        # 4. Installazione e Fissaggio
+    # 8. Installazione (if structural replacement)
+    if has_struttura:
         ore_install = max(3, total_ml * 0.8)
         voci.append({
             "codice": "D.01",
             "descrizione": "Installazione e fissaggio con ancoranti chimici certificati ETA. "
-                           "Comprensivo di ripristino sigillante elastomerico, allineamento e regolazione. "
-                           "Verifica di stabilita e planarità a completamento.",
+                           "Comprensivo di ripristino sigillante elastomerico, allineamento e regolazione.",
             "unita": "ore",
             "quantita": round(ore_install, 1),
             "prezzo_unitario": costo_orario,
             "totale": round(ore_install * costo_orario, 2),
         })
 
-        # 5. Oneri Normativi
+    # 9. Oneri Normativi (if any norm-relevant code selected)
+    if has_struttura or has_sicurezza:
+        norme_list = sorted(set(c["norma"] for c in selected_codes)) if selected_codes else ["EN 1090-2"]
         voci.append({
             "codice": "E.01",
-            "descrizione": "Revisione Fascicolo Tecnico della struttura e aggiornamento della "
-                           "Dichiarazione di Prestazione (DoP) come richiesto dal Reg. UE 305/2011 "
-                           "e dalla norma EN 1090-1. Comprensivo di certificazione del saldatore e "
-                           "documentazione per conformita CE.",
+            "descrizione": f"Revisione Fascicolo Tecnico e aggiornamento Dichiarazione di Prestazione (DoP) "
+                           f"come richiesto dal Reg. UE 305/2011 e dalle norme {', '.join(norme_list)}. "
+                           f"Comprensivo di certificazione e documentazione per conformita CE.",
             "unita": "corpo",
             "quantita": 1,
             "prezzo_unitario": 280.0,
             "totale": 280.0,
         })
 
-    elif tipo == "estetico":
-        # Carteggiatura e verniciatura
-        voci.append({
-            "codice": "B.01",
-            "descrizione": "Carteggiatura manuale delle superfici danneggiate, applicazione primer "
-                           "antiruggine bicomponente e mano di finitura con smalto poliuretanico "
-                           "colore a campione. Compreso mascheratura aree adiacenti.",
-            "unita": "mq",
-            "quantita": round(total_ml * 1.2, 2),
-            "prezzo_unitario": 35.0,
-            "totale": round(total_ml * 1.2 * 35.0, 2),
-        })
-
-    elif tipo == "automatismi":
-        # Verifica automazione EN 12453
-        voci.append({
-            "codice": "B.01",
-            "descrizione": "Fornitura e sostituzione componenti di automazione danneggiati "
-                           "(motore, centralina, fotocellule, finecorsa). Marca e modello da definire in base "
-                           "all'impianto esistente.",
-            "unita": "corpo",
-            "quantita": 1,
-            "prezzo_unitario": round(prezzo_ml * total_ml * 0.5, 2) if prezzo_ml else 450.0,
-            "totale": round(prezzo_ml * total_ml * 0.5, 2) if prezzo_ml else 450.0,
-        })
-        voci.append({
-            "codice": "B.02",
-            "descrizione": "Verifica e collaudo dell'impianto di automazione conforme EN 12453 "
-                           "(forze di impatto, dispositivi di sicurezza, fotocellule). "
-                           "Rilascio certificato di conformita.",
-            "unita": "corpo",
-            "quantita": 1,
-            "prezzo_unitario": 320.0,
-            "totale": 320.0,
-        })
-
-    # 6. Smaltimento (always)
+    # 10. Smaltimento (always)
     costo_smaltimento = max(120.0, total_ml * 25.0)
     voci.append({
         "codice": "F.01",
