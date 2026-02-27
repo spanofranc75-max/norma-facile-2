@@ -28,6 +28,7 @@ from routes.vendor_api import router as vendor_router
 from routes.preventivi import router as preventivi_router
 from routes.payment_types import router as payment_types_router
 from routes.ddt import router as ddt_router
+from routes.perizia import router as perizia_router
 
 # Configure logging
 logging.basicConfig(
@@ -81,6 +82,7 @@ app.include_router(vendor_router, prefix="/api")
 app.include_router(preventivi_router, prefix="/api")
 app.include_router(payment_types_router, prefix="/api")
 app.include_router(ddt_router, prefix="/api")
+app.include_router(perizia_router, prefix="/api")
 
 
 @app.get("/api/")
