@@ -134,135 +134,149 @@ class RilievoAPITester:
         
         return True
 
-    def test_invoices_crud(self):
-        """Test complete invoice CRUD operations"""
-        print("\n📄 TESTING INVOICE MANAGEMENT")
+    def test_rilievi_crud(self):
+        """Test complete rilievo CRUD operations"""
+        print("\n📏 TESTING RILIEVO MANAGEMENT")
         
         if not self.client_id:
-            self.log_test("Invoice tests", False, "No client_id available")
+            self.log_test("Rilievo tests", False, "No client_id available")
             return False
         
-        # Test GET invoices (empty list)
-        success, data = self.api_request('GET', '/invoices/')
-        self.log_test("GET /api/invoices/ (initial)", success, f"Total: {data.get('total', 0)}")
+        # Test GET rilievi (empty list)
+        success, data = self.api_request('GET', '/rilievi/')
+        self.log_test("GET /api/rilievi/ (initial)", success, f"Total: {data.get('total', 0)}")
         
-        # Test CREATE invoice with line items
+        # Create a simple base64 test image for sketches and photos
+        test_image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
+        
+        # Test CREATE rilievo with sketches and photos
         today = date.today()
-        due_date = today + timedelta(days=30)
         
-        invoice_data = {
-            "document_type": "FT",
+        rilievo_data = {
             "client_id": self.client_id,
-            "issue_date": today.isoformat(),
-            "due_date": due_date.isoformat(),
-            "payment_method": "bonifico",
-            "payment_terms": "30gg",
-            "notes": "Test invoice created by automated testing",
-            "internal_notes": "Internal test note",
-            "tax_settings": {
-                "apply_rivalsa_inps": False,
-                "rivalsa_inps_rate": 4,
-                "apply_cassa": False,
-                "cassa_type": "",
-                "cassa_rate": 4,
-                "apply_ritenuta": False,
-                "ritenuta_rate": 20,
-                "ritenuta_base": "imponibile"
-            },
-            "lines": [
+            "project_name": "Test Rilievo Appartamento",
+            "survey_date": today.isoformat(),
+            "location": "Via Roma 123, Milano",
+            "notes": "Test rilievo created by automated testing",
+            "sketches": [
                 {
-                    "code": "TEST001",
-                    "description": "Test Product 1",
-                    "quantity": 2,
-                    "unit_price": 100.00,
-                    "discount_percent": 0,
-                    "vat_rate": "22"
-                },
+                    "name": "Pianta principale",
+                    "background_image": test_image,
+                    "drawing_data": '{"lines":[],"width":800,"height":500}',
+                    "dimensions": {
+                        "width": "500",
+                        "height": "300", 
+                        "depth": "250"
+                    }
+                }
+            ],
+            "photos": [
                 {
-                    "code": "TEST002", 
-                    "description": "Test Service 1",
-                    "quantity": 1,
-                    "unit_price": 500.00,
-                    "discount_percent": 10,
-                    "vat_rate": "22"
+                    "name": "Foto ingresso",
+                    "image_data": test_image,
+                    "caption": "Vista dell'ingresso principale"
                 }
             ]
         }
         
-        success, data = self.api_request('POST', '/invoices/', invoice_data, 201)
-        if success and data.get('invoice_id'):
-            self.invoice_id = data['invoice_id']
-            totals = data.get('totals', {})
-            self.log_test("POST /api/invoices/", True, 
-                f"Invoice {data.get('document_number', '')} created: {self.invoice_id}, Total: €{totals.get('total_document', 0)}")
+        success, data = self.api_request('POST', '/rilievi/', rilievo_data, 201)
+        if success and data.get('rilievo_id'):
+            self.rilievo_id = data['rilievo_id']
+            self.log_test("POST /api/rilievi/", True, 
+                f"Rilievo created: {self.rilievo_id}, Project: {data.get('project_name', '')}")
         else:
-            self.log_test("POST /api/invoices/", False, str(data))
+            self.log_test("POST /api/rilievi/", False, str(data))
             return False
         
-        # Test GET specific invoice
-        success, data = self.api_request('GET', f'/invoices/{self.invoice_id}')
+        # Test GET specific rilievo
+        success, data = self.api_request('GET', f'/rilievi/{self.rilievo_id}')
         if success:
-            self.log_test("GET /api/invoices/{id}", True, 
-                f"Doc: {data.get('document_number', '')}, Status: {data.get('status', '')}")
+            self.log_test("GET /api/rilievi/{id}", True, 
+                f"Project: {data.get('project_name', '')}, Status: {data.get('status', '')}, Sketches: {len(data.get('sketches', []))}, Photos: {len(data.get('photos', []))}")
         else:
-            self.log_test("GET /api/invoices/{id}", False, str(data))
+            self.log_test("GET /api/rilievi/{id}", False, str(data))
         
-        # Test UPDATE invoice (add line item)
+        # Test UPDATE rilievo (add sketch and photo)
         update_data = {
-            "notes": "Updated invoice notes via API test",
-            "lines": invoice_data["lines"] + [
+            "notes": "Updated rilievo notes via API test",
+            "sketches": rilievo_data["sketches"] + [
                 {
-                    "code": "TEST003",
-                    "description": "Additional Test Item",
-                    "quantity": 1,
-                    "unit_price": 150.00,
-                    "discount_percent": 5,
-                    "vat_rate": "10"
+                    "name": "Schizzo bagno",
+                    "background_image": test_image,
+                    "drawing_data": '{"lines":[{"tool":"pencil","points":[10,10,50,50]}],"width":800,"height":500}',
+                    "dimensions": {
+                        "width": "200",
+                        "height": "180"
+                    }
+                }
+            ],
+            "photos": rilievo_data["photos"] + [
+                {
+                    "name": "Foto cucina",
+                    "image_data": test_image,
+                    "caption": "Vista della cucina"
                 }
             ]
         }
-        success, data = self.api_request('PUT', f'/invoices/{self.invoice_id}', update_data)
+        success, data = self.api_request('PUT', f'/rilievi/{self.rilievo_id}', update_data)
         if success:
-            totals = data.get('totals', {})
-            self.log_test("PUT /api/invoices/{id}", True, 
-                f"Updated total: €{totals.get('total_document', 0)} (3 lines)")
+            self.log_test("PUT /api/rilievi/{id}", True, 
+                f"Updated - Sketches: {len(data.get('sketches', []))}, Photos: {len(data.get('photos', []))}")
         else:
-            self.log_test("PUT /api/invoices/{id}", False, str(data))
+            self.log_test("PUT /api/rilievi/{id}", False, str(data))
         
-        # Test invoice status update
-        status_data = {"status": "emessa"}
-        success, data = self.api_request('PATCH', f'/invoices/{self.invoice_id}/status', status_data)
-        self.log_test("PATCH /api/invoices/{id}/status", success, 
-            f"Status: {data.get('status', 'unknown')}")
+        # Test add single sketch endpoint
+        new_sketch = {
+            "name": "Schizzo camera",
+            "background_image": test_image,
+            "drawing_data": '{"lines":[],"width":800,"height":500}',
+            "dimensions": {
+                "width": "400",
+                "height": "350"
+            }
+        }
+        success, data = self.api_request('POST', f'/rilievi/{self.rilievo_id}/sketch', new_sketch)
+        self.log_test("POST /api/rilievi/{id}/sketch", success, 
+            f"Total sketches: {len(data.get('sketches', []))}" if success else str(data))
         
-        # Test invoice filters
-        success, data = self.api_request('GET', '/invoices/?document_type=FT')
-        self.log_test("GET /api/invoices/?document_type=FT", success, f"Found: {data.get('total', 0)} fatture")
+        # Test add single photo endpoint
+        new_photo = {
+            "name": "Foto terrazzo",
+            "image_data": test_image,
+            "caption": "Vista del terrazzo"
+        }
+        success, data = self.api_request('POST', f'/rilievi/{self.rilievo_id}/photo', new_photo)
+        self.log_test("POST /api/rilievi/{id}/photo", success, 
+            f"Total photos: {len(data.get('photos', []))}" if success else str(data))
         
-        success, data = self.api_request('GET', f'/invoices/?client_id={self.client_id}')
-        self.log_test("GET /api/invoices/?client_id={client_id}", success, f"Found: {data.get('total', 0)} for client")
+        # Test rilievo filters
+        success, data = self.api_request('GET', f'/rilievi/?client_id={self.client_id}')
+        self.log_test("GET /api/rilievi/?client_id={client_id}", success, f"Found: {data.get('total', 0)} for client")
+        
+        success, data = self.api_request('GET', '/rilievi/?status=bozza')
+        self.log_test("GET /api/rilievi/?status=bozza", success, f"Found: {data.get('total', 0)} bozze")
         
         return True
 
-    def test_pdf_generation(self):
-        """Test PDF generation for invoices"""
-        print("\n📑 TESTING PDF GENERATION")
+    def test_rilievo_pdf_generation(self):
+        """Test PDF generation for rilievi"""
+        print("\n📑 TESTING RILIEVO PDF GENERATION")
         
-        if not self.invoice_id:
-            self.log_test("PDF generation", False, "No invoice_id available")
+        if not self.rilievo_id:
+            self.log_test("Rilievo PDF generation", False, "No rilievo_id available")
             return False
         
         # Test PDF generation endpoint
-        pdf_url = f"{self.base_url}/api/invoices/{self.invoice_id}/pdf"
+        pdf_url = f"{self.base_url}/api/rilievi/{self.rilievo_id}/pdf"
         try:
             response = self.session.get(pdf_url)
             if response.status_code == 200:
                 # Check if response is actually a PDF
                 if response.headers.get('content-type') == 'application/pdf':
                     pdf_size = len(response.content)
-                    self.log_test("GET /api/invoices/{id}/pdf", True, f"PDF size: {pdf_size} bytes")
+                    self.log_test("GET /api/rilievi/{id}/pdf", True, f"PDF size: {pdf_size} bytes")
                 else:
-                    self.log_test("GET /api/invoices/{id}/pdf", False, "Response not PDF format")
+                    self.log_test("GET /api/rilievi/{id}/pdf", False, "Response not PDF format")
             else:
                 error_msg = f"Status {response.status_code}"
                 try:
@@ -270,85 +284,11 @@ class RilievoAPITester:
                     error_msg += f" - {error_data.get('detail', response.text)}"
                 except:
                     error_msg += f" - {response.text}"
-                self.log_test("GET /api/invoices/{id}/pdf", False, error_msg)
+                self.log_test("GET /api/rilievi/{id}/pdf", False, error_msg)
         except Exception as e:
-            self.log_test("GET /api/invoices/{id}/pdf", False, f"Request failed: {str(e)}")
+            self.log_test("GET /api/rilievi/{id}/pdf", False, f"Request failed: {str(e)}")
             return False
             
-        return True
-
-    def test_company_settings(self):
-        """Test company settings endpoint"""
-        print("\n🏢 TESTING COMPANY SETTINGS")
-        
-        # Test GET company settings (might not exist initially)
-        success, data = self.api_request('GET', '/company/settings')
-        if success:
-            self.log_test("GET /api/company/settings", True, f"Company: {data.get('business_name', 'Not set')}")
-        else:
-            # If no settings exist, that's also OK for initial state
-            self.log_test("GET /api/company/settings", True, "No company settings found (initial state)")
-        
-        return True
-
-    def test_document_conversion(self):
-        """Test document conversion functionality"""
-        print("\n🔄 TESTING DOCUMENT CONVERSION")
-        
-        if not self.client_id:
-            self.log_test("Document conversion", False, "No client_id available")
-            return False
-        
-        # Create a preventivo (quote) to convert
-        preventivo_data = {
-            "document_type": "PRV",
-            "client_id": self.client_id,
-            "issue_date": date.today().isoformat(),
-            "payment_method": "bonifico",
-            "payment_terms": "30gg",
-            "notes": "Test preventivo for conversion",
-            "tax_settings": {
-                "apply_rivalsa_inps": False,
-                "rivalsa_inps_rate": 4,
-                "apply_cassa": False,
-                "cassa_type": "",
-                "cassa_rate": 4,
-                "apply_ritenuta": False,
-                "ritenuta_rate": 20,
-                "ritenuta_base": "imponibile"
-            },
-            "lines": [
-                {
-                    "code": "PREV001",
-                    "description": "Test Quote Item",
-                    "quantity": 1,
-                    "unit_price": 1000.00,
-                    "discount_percent": 0,
-                    "vat_rate": "22"
-                }
-            ]
-        }
-        
-        success, data = self.api_request('POST', '/invoices/', preventivo_data, 201)
-        if success and data.get('invoice_id'):
-            preventivo_id = data['invoice_id']
-            self.log_test("Create preventivo for conversion", True, f"Doc: {data.get('document_number', '')}")
-            
-            # Test conversion from preventivo to fattura
-            convert_data = {
-                "target_type": "FT",
-                "source_ids": [preventivo_id]
-            }
-            success, data = self.api_request('POST', '/invoices/convert', convert_data, 201)
-            if success:
-                self.log_test("POST /api/invoices/convert (PRV->FT)", True, 
-                    f"Converted to: {data.get('document_number', '')}")
-            else:
-                self.log_test("POST /api/invoices/convert (PRV->FT)", False, str(data))
-        else:
-            self.log_test("Create preventivo for conversion", False, str(data))
-            return False
-        
         return True
 
     def cleanup_test_data(self):
