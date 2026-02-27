@@ -1,4 +1,4 @@
-"""Distinta Materiali (Bill of Materials) models."""
+"""Distinta Materiali (Bill of Materials) models - Smart BOM for Fabbri."""
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
@@ -6,7 +6,6 @@ from enum import Enum
 
 
 class DistintaStatus(str, Enum):
-    """Stato della distinta."""
     BOZZA = "bozza"
     CONFERMATA = "confermata"
     ORDINATA = "ordinata"
@@ -14,7 +13,6 @@ class DistintaStatus(str, Enum):
 
 
 class MaterialCategory(str, Enum):
-    """Categoria materiale."""
     PROFILO = "profilo"
     ACCESSORIO = "accessorio"
     FERRAMENTA = "ferramenta"
@@ -24,50 +22,54 @@ class MaterialCategory(str, Enum):
 
 
 class MaterialItem(BaseModel):
-    """Single material item in the BOM."""
     item_id: Optional[str] = None
     category: MaterialCategory = MaterialCategory.PROFILO
-    code: str = ""  # Product code
-    name: str  # Profile/material name
+    code: str = ""
+    name: str
     description: Optional[str] = None
-    
+
+    # Profile reference
+    profile_id: Optional[str] = None
+    profile_label: Optional[str] = None
+
     # Dimensions
-    length_mm: float = 0  # Length in mm
-    width_mm: Optional[float] = None  # Width in mm (for sheets)
-    height_mm: Optional[float] = None  # Height in mm
-    
+    length_mm: float = 0
+    width_mm: Optional[float] = None
+    height_mm: Optional[float] = None
+
     # Quantities
     quantity: float = 1
-    unit: str = "pz"  # pz, m, m², kg
-    
-    # Weight & Cost
-    weight_per_unit: float = 0  # kg per unit/meter
-    cost_per_unit: float = 0  # € per unit/meter
-    
-    # Calculated (filled on save)
-    total_length: Optional[float] = None  # length_mm * quantity
+    unit: str = "pz"
+
+    # Weight & Cost & Surface per meter
+    weight_per_meter: float = 0
+    surface_per_meter: float = 0
+    cost_per_unit: float = 0
+
+    # Legacy field (kept for backward compat)
+    weight_per_unit: float = 0
+
+    # Calculated
+    total_length: Optional[float] = None
     total_weight: Optional[float] = None
+    total_surface: Optional[float] = None
     total_cost: Optional[float] = None
-    
-    # Notes
+
     notes: Optional[str] = None
 
 
 class DistintaBase(BaseModel):
-    """Base distinta model."""
     name: str
-    rilievo_id: Optional[str] = None  # Link to source Rilievo
-    client_id: Optional[str] = None  # Link to client
+    rilievo_id: Optional[str] = None
+    client_id: Optional[str] = None
     notes: Optional[str] = None
 
 
 class DistintaCreate(DistintaBase):
-    """Model for creating a distinta."""
     items: List[MaterialItem] = []
 
 
 class DistintaUpdate(BaseModel):
-    """Model for updating a distinta."""
     name: Optional[str] = None
     rilievo_id: Optional[str] = None
     client_id: Optional[str] = None
@@ -77,20 +79,16 @@ class DistintaUpdate(BaseModel):
 
 
 class DistintaTotals(BaseModel):
-    """Calculated totals for the BOM."""
     total_items: int = 0
-    total_length_m: float = 0  # Total length in meters
+    total_length_m: float = 0
     total_weight_kg: float = 0
+    total_surface_mq: float = 0
     total_cost: float = 0
-    
-    # Breakdown by category
-    by_category: dict = {}  # {"profilo": {"count": 5, "weight": 10, "cost": 100}, ...}
+    by_category: dict = {}
 
 
 class Distinta(DistintaBase):
-    """Full distinta model."""
     model_config = ConfigDict(extra="ignore")
-    
     distinta_id: str
     user_id: str
     status: DistintaStatus = DistintaStatus.BOZZA
@@ -101,15 +99,13 @@ class Distinta(DistintaBase):
 
 
 class DistintaResponse(BaseModel):
-    """Distinta response for API."""
     model_config = ConfigDict(extra="ignore")
-    
     distinta_id: str
     name: str
     rilievo_id: Optional[str] = None
-    rilievo_name: Optional[str] = None  # Populated from rilievo
+    rilievo_name: Optional[str] = None
     client_id: Optional[str] = None
-    client_name: Optional[str] = None  # Populated from client
+    client_name: Optional[str] = None
     status: DistintaStatus
     items: List[MaterialItem] = []
     totals: DistintaTotals
@@ -119,6 +115,22 @@ class DistintaResponse(BaseModel):
 
 
 class DistintaListResponse(BaseModel):
-    """List of distinte response."""
     distinte: List[DistintaResponse]
     total: int
+
+
+class BarCalculationResult(BaseModel):
+    profile_id: str
+    profile_label: str
+    cuts: List[float] = []
+    total_length_mm: float = 0
+    total_length_m: float = 0
+    bar_length_mm: int = 6000
+    bars_needed: int = 0
+    waste_mm: float = 0
+    waste_percent: float = 0
+
+
+class BarCalculationResponse(BaseModel):
+    results: List[BarCalculationResult] = []
+    total_bars: int = 0
