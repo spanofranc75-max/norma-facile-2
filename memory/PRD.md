@@ -55,13 +55,14 @@ Build Norma Facile 2.0 - a LegalTech SaaS for Italian legal professionals with:
 - Import from Rilievo (mock)
 
 ### Phase 5 - Industrial Blue Theme (Feb 27, 2026)
-- Primary buttons: #0055FF (Electric Blue)
+- Primary buttons: #0055FF (Electric Blue), flat, no shadows
 - Sidebar/Table headers: #1E293B (Slate 800)
 - Active nav items: #0055FF blue highlight
-- Flat blue buttons, white cards with thin borders
-- Dark industrial table headers with white text
-- Font: Inter/Roboto
-- Applied consistently across ALL pages
+- Cards: white bg, border-gray-200, bg-blue-50 header sections
+- Data numbers: font-mono, blue #0055FF (prices, quantities, stats)
+- Typography: Inter/Roboto (font-sans), NO serif fonts
+- Headers: Bold, Slate 800 (#1E293B)
+- Applied consistently across ALL 10+ pages and editors
 
 ## API Endpoints
 - `/api/auth/` - Google OAuth
