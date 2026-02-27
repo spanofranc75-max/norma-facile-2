@@ -176,8 +176,9 @@ async def get_fascicolo_cantiere(client_id: str, user: dict = Depends(get_curren
         {"_id": 0, "cert_id": 1, "project_name": 1, "standard": 1, "status": 1, "created_at": 1}
     ).sort("created_at", -1).to_list(50)
 
-    # POS
-    pos_docs = await db.pos_documents.find(
+    # POS — fetched for context but currently not client-filtered
+    # (POS are project-based, not always linked to a client_id)
+    _ = await db.pos_documents.find(
         {"user_id": uid},
         {"_id": 0, "pos_id": 1, "project_name": 1, "status": 1, "cantiere": 1, "created_at": 1}
     ).sort("created_at", -1).to_list(50)
