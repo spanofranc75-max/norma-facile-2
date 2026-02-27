@@ -59,7 +59,7 @@ export default function LandingPage() {
                         <Button
                             data-testid="header-login-btn"
                             onClick={login}
-                            className="bg-slate-900 text-white hover:bg-slate-800"
+                            className="bg-[#0055FF] text-white hover:bg-[#0044CC]"
                         >
                             Accedi
                         </Button>
@@ -68,11 +68,11 @@ export default function LandingPage() {
 
                 <section className="container mx-auto px-6 py-24 text-center">
                     <div className="max-w-3xl mx-auto animate-fade-in">
-                        <span className="inline-block px-4 py-1.5 mb-6 text-xs font-semibold uppercase tracking-wider text-amber-700 bg-amber-50 rounded-full">
+                        <span className="inline-block px-4 py-1.5 mb-6 text-xs font-semibold uppercase tracking-wider text-[#0055FF] bg-blue-50 rounded-full">
                             LegalTech per Professionisti
                         </span>
                         <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 mb-6">
-                            Il Diritto, <span className="text-amber-700">Semplificato</span>
+                            Il Diritto, <span className="text-[#0055FF]">Semplificato</span>
                         </h1>
                         <p className="text-lg text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
                             Genera documenti legali professionali, ottieni risposte immediate 
@@ -83,7 +83,7 @@ export default function LandingPage() {
                                 data-testid="hero-login-btn"
                                 onClick={login}
                                 size="lg"
-                                className="bg-slate-900 text-white hover:bg-slate-800 px-8 py-3 text-base"
+                                className="bg-[#0055FF] text-white hover:bg-[#0044CC] px-8 py-3 text-base"
                             >
                                 Inizia Gratuitamente
                                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -121,7 +121,7 @@ export default function LandingPage() {
                                 className="group p-8 bg-white border border-slate-200 rounded-lg hover:shadow-md hover:border-slate-300 transition-all duration-300 animate-slide-up"
                                 style={{ animationDelay: `${index * 100}ms` }}
                             >
-                                <div className="w-12 h-12 mb-6 flex items-center justify-center bg-slate-900 text-white rounded-lg group-hover:bg-amber-700 transition-colors duration-300">
+                                <div className="w-12 h-12 mb-6 flex items-center justify-center bg-[#0055FF] text-white rounded-lg group-hover:bg-[#0044CC] transition-colors duration-300">
                                     <feature.icon className="h-6 w-6" strokeWidth={1.5} />
                                 </div>
                                 <h3 className="font-serif text-xl font-bold text-slate-900 mb-3">
