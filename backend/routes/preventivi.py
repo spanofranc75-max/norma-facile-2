@@ -165,6 +165,17 @@ async def get_preventivo(prev_id: str, user: dict = Depends(get_current_user)):
     if doc.get("client_id"):
         c = await db.clients.find_one({"client_id": doc["client_id"]}, {"_id": 0, "business_name": 1})
         doc["client_name"] = c.get("business_name") if c else None
+    # Enrich with linked invoice data for workflow timeline
+    if doc.get("converted_to"):
+        inv = await db.invoices.find_one(
+            {"invoice_id": doc["converted_to"]}, {"_id": 0, "invoice_id": 1, "document_number": 1, "status": 1, "updated_at": 1}
+        )
+        if inv:
+            doc["linked_invoice"] = {
+                "invoice_id": inv["invoice_id"],
+                "document_number": inv["document_number"],
+                "status": inv["status"],
+            }
     return doc
 
 
