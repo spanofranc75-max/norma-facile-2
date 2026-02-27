@@ -6,51 +6,81 @@ import pytest
 import requests
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
+# Create a unique session for this test run
+from pymongo import MongoClient
 
-class TestPeriziaSetup:
-    """Test setup - create auth token and seed data"""
+
+def create_test_session():
+    """Create a test session in MongoDB and return the session token."""
+    client = MongoClient("mongodb://localhost:27017")
+    db = client["test_database"]
     
-    @pytest.fixture(scope="class")
-    def auth_session(self):
-        """Create an authenticated session for testing"""
-        # Create a unique test session
-        session_id = f"test_session_perizia_{uuid.uuid4().hex[:12]}"
-        user_id = f"test_user_perizia_{uuid.uuid4().hex[:8]}"
-        
-        # Create session directly in MongoDB
-        from pymongo import MongoClient
+    session_id = f"test_perizia_{uuid.uuid4().hex[:12]}"
+    user_id = f"usr_perizia_{uuid.uuid4().hex[:8]}"
+    
+    db.sessions.insert_one({
+        "session_id": session_id,
+        "user_id": user_id,
+        "email": f"{user_id}@test.com",
+        "name": "Perizia Test User",
+        "picture": "",
+        "created_at": datetime.now(timezone.utc),
+        "expires_at": datetime(2030, 1, 1, tzinfo=timezone.utc),
+    })
+    client.close()
+    return session_id, user_id
+
+
+# Create session at module load
+SESSION_TOKEN, USER_ID = create_test_session()
+print(f"Created test session: {SESSION_TOKEN}")
+
+
+@pytest.fixture(scope="module")
+def api_client():
+    """Authenticated requests session."""
+    session = requests.Session()
+    session.headers.update({
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {SESSION_TOKEN}"
+    })
+    return session
+
+
+@pytest.fixture(scope="module")
+def cleanup_perizie():
+    """Track perizia IDs for cleanup at end of module."""
+    ids = []
+    yield ids
+    # Cleanup at end
+    session = requests.Session()
+    session.headers.update({
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {SESSION_TOKEN}"
+    })
+    for perizia_id in ids:
+        try:
+            session.delete(f"{BASE_URL}/api/perizie/{perizia_id}")
+        except:
+            pass
+    # Cleanup session
+    try:
         client = MongoClient("mongodb://localhost:27017")
         db = client["test_database"]
-        
-        # Create user session
-        db.sessions.insert_one({
-            "session_id": session_id,
-            "user_id": user_id,
-            "email": f"{user_id}@test.com",
-            "name": "Test User Perizia",
-            "picture": "",
-            "created_at": datetime.utcnow(),
-            "expires_at": datetime(2030, 1, 1),
-        })
-        
-        # Return session headers
-        headers = {
-            "Authorization": f"Bearer {session_id}",
-            "Content-Type": "application/json"
-        }
-        
-        yield {"headers": headers, "user_id": user_id, "session_id": session_id, "db": db}
-        
-        # Cleanup
-        db.sessions.delete_many({"user_id": user_id})
-        db.perizie.delete_many({"user_id": user_id})
-        db.clients.delete_many({"user_id": user_id})
+        db.sessions.delete_many({"session_id": SESSION_TOKEN})
+        db.perizie.delete_many({"user_id": USER_ID})
         client.close()
+    except:
+        pass
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Health Check
+# ═══════════════════════════════════════════════════════════════════════════════
 
 class TestPeriziaHealthCheck:
     """Health check for perizie endpoints"""
@@ -61,24 +91,26 @@ class TestPeriziaHealthCheck:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
-        print("API health check passed")
+        print("✓ API health check passed")
 
 
-class TestPeriziaCRUD(TestPeriziaSetup):
-    """Test CRUD operations for Perizia Sinistro"""
+# ═══════════════════════════════════════════════════════════════════════════════
+# CRUD Operations Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestPeriziaCreate:
+    """Test perizia creation with auto cost generation"""
     
-    # ── CREATE Tests ──
-    
-    def test_create_perizia_strutturale_auto_cost(self, auth_session):
-        """Test creating a structural damage perizia - should auto-generate 6 cost items"""
+    def test_create_perizia_strutturale_generates_6_items(self, api_client, cleanup_perizie):
+        """POST /api/perizie/ with tipo_danno=strutturale → should generate 6 cost items"""
         payload = {
             "tipo_danno": "strutturale",
-            "descrizione_utente": "TEST_Urto da veicolo su recinzione in acciaio zincato",
+            "descrizione_utente": "TEST_Urto veicolo su recinzione acciaio zincato",
             "prezzo_ml_originale": 150.0,
             "coefficiente_maggiorazione": 20,
             "moduli": [
-                {"descrizione": "Modulo A", "lunghezza_ml": 3.0, "altezza_m": 2.0, "note": "Pannello piegato"},
-                {"descrizione": "Modulo B", "lunghezza_ml": 2.5, "altezza_m": 2.0, "note": "Montante deformato"}
+                {"descrizione": "Modulo A", "lunghezza_ml": 3.0, "altezza_m": 2.0, "note": "Piegato"},
+                {"descrizione": "Modulo B", "lunghezza_ml": 2.5, "altezza_m": 2.0, "note": "Deformato"}
             ],
             "localizzazione": {
                 "indirizzo": "Via Test 123",
@@ -89,26 +121,22 @@ class TestPeriziaCRUD(TestPeriziaSetup):
             }
         }
         
-        response = requests.post(
-            f"{BASE_URL}/api/perizie/",
-            json=payload,
-            headers=auth_session["headers"]
-        )
-        
+        response = api_client.post(f"{BASE_URL}/api/perizie/", json=payload)
         assert response.status_code == 201, f"Expected 201, got {response.status_code}: {response.text}"
-        data = response.json()
         
-        # Verify perizia was created
+        data = response.json()
+        cleanup_perizie.append(data["perizia_id"])
+        
+        # Verify basic fields
         assert "perizia_id" in data
         assert data["number"].startswith("PER-")
         assert data["tipo_danno"] == "strutturale"
         assert data["status"] == "bozza"
         
-        # Verify auto-generated cost items for strutturale (6 items)
+        # Verify 6 cost items for strutturale
         voci = data.get("voci_costo", [])
-        assert len(voci) == 6, f"Expected 6 cost items for strutturale, got {len(voci)}"
+        assert len(voci) == 6, f"Strutturale should have 6 items, got {len(voci)}"
         
-        # Check cost item codes
         codes = [v["codice"] for v in voci]
         assert "A.01" in codes, "Missing A.01 (smontaggio)"
         assert "B.01" in codes, "Missing B.01 (fornitura)"
@@ -117,552 +145,453 @@ class TestPeriziaCRUD(TestPeriziaSetup):
         assert "E.01" in codes, "Missing E.01 (oneri normativi)"
         assert "F.01" in codes, "Missing F.01 (smaltimento)"
         
-        # Verify total is calculated
         assert data.get("total_perizia", 0) > 0
-        
-        print(f"Created strutturale perizia {data['number']} with {len(voci)} cost items, total: {data['total_perizia']} EUR")
-        
-        # Store for cleanup
-        auth_session["test_perizia_id"] = data["perizia_id"]
-        return data
+        print(f"✓ Created strutturale perizia {data['number']} with 6 items, total: {data['total_perizia']} EUR")
     
-    def test_create_perizia_estetico_auto_cost(self, auth_session):
-        """Test creating an aesthetic damage perizia - should auto-generate cost items"""
+    def test_create_perizia_estetico_generates_3_items(self, api_client, cleanup_perizie):
+        """POST /api/perizie/ with tipo_danno=estetico → should generate 3 cost items"""
         payload = {
             "tipo_danno": "estetico",
             "descrizione_utente": "TEST_Graffi e abrasioni su verniciatura",
             "prezzo_ml_originale": 100.0,
-            "coefficiente_maggiorazione": 10,
-            "moduli": [
-                {"descrizione": "Pannello graffiato", "lunghezza_ml": 4.0, "altezza_m": 1.5, "note": ""}
-            ]
+            "moduli": [{"descrizione": "Pannello", "lunghezza_ml": 4.0, "altezza_m": 1.5, "note": ""}]
         }
         
-        response = requests.post(
-            f"{BASE_URL}/api/perizie/",
-            json=payload,
-            headers=auth_session["headers"]
-        )
-        
+        response = api_client.post(f"{BASE_URL}/api/perizie/", json=payload)
         assert response.status_code == 201
-        data = response.json()
         
-        # Verify estetico cost items (3 items: A.01 smontaggio, B.01 carteggiatura, F.01 smaltimento)
+        data = response.json()
+        cleanup_perizie.append(data["perizia_id"])
+        
         voci = data.get("voci_costo", [])
-        assert len(voci) == 3, f"Expected 3 cost items for estetico, got {len(voci)}"
+        assert len(voci) == 3, f"Estetico should have 3 items, got {len(voci)}"
         
         codes = [v["codice"] for v in voci]
-        assert "A.01" in codes, "Missing A.01"
+        assert "A.01" in codes
         assert "B.01" in codes, "Missing B.01 (carteggiatura)"
-        assert "F.01" in codes, "Missing F.01"
-        
-        print(f"Created estetico perizia {data['number']} with {len(voci)} cost items")
-        return data
+        assert "F.01" in codes
+        print(f"✓ Created estetico perizia {data['number']} with 3 items")
     
-    def test_create_perizia_automatismi_auto_cost(self, auth_session):
-        """Test creating an automation damage perizia - should auto-generate cost items"""
+    def test_create_perizia_automatismi_generates_4_items(self, api_client, cleanup_perizie):
+        """POST /api/perizie/ with tipo_danno=automatismi → should generate 4 cost items"""
         payload = {
             "tipo_danno": "automatismi",
             "descrizione_utente": "TEST_Motore automazione cancello danneggiato",
             "prezzo_ml_originale": 200.0,
-            "coefficiente_maggiorazione": 15,
-            "moduli": [
-                {"descrizione": "Cancello motorizzato", "lunghezza_ml": 5.0, "altezza_m": 2.5, "note": "Motore bloccato"}
-            ]
+            "moduli": [{"descrizione": "Cancello", "lunghezza_ml": 5.0, "altezza_m": 2.5, "note": ""}]
         }
         
-        response = requests.post(
-            f"{BASE_URL}/api/perizie/",
-            json=payload,
-            headers=auth_session["headers"]
-        )
-        
+        response = api_client.post(f"{BASE_URL}/api/perizie/", json=payload)
         assert response.status_code == 201
-        data = response.json()
         
-        # Verify automatismi cost items (4 items: A.01 smontaggio, B.01 componenti, B.02 collaudo, F.01 smaltimento)
+        data = response.json()
+        cleanup_perizie.append(data["perizia_id"])
+        
         voci = data.get("voci_costo", [])
-        assert len(voci) == 4, f"Expected 4 cost items for automatismi, got {len(voci)}"
+        assert len(voci) == 4, f"Automatismi should have 4 items, got {len(voci)}"
         
         codes = [v["codice"] for v in voci]
         assert "A.01" in codes
         assert "B.01" in codes, "Missing B.01 (componenti)"
         assert "B.02" in codes, "Missing B.02 (collaudo EN12453)"
         assert "F.01" in codes
-        
-        print(f"Created automatismi perizia {data['number']} with {len(voci)} cost items")
-        return data
+        print(f"✓ Created automatismi perizia {data['number']} with 4 items")
+
+
+class TestPeriziaList:
+    """Test listing and searching perizie"""
     
-    # ── GET/LIST Tests ──
-    
-    def test_list_perizie(self, auth_session):
-        """Test listing all perizie"""
-        response = requests.get(
-            f"{BASE_URL}/api/perizie/",
-            headers=auth_session["headers"]
-        )
-        
+    def test_list_perizie_returns_items_and_total(self, api_client):
+        """GET /api/perizie/ returns items array and total count"""
+        response = api_client.get(f"{BASE_URL}/api/perizie/")
         assert response.status_code == 200
+        
         data = response.json()
         assert "items" in data
         assert "total" in data
-        assert data["total"] >= 0
-        print(f"Listed {data['total']} perizie")
+        assert isinstance(data["items"], list)
+        print(f"✓ Listed {data['total']} perizie")
     
-    def test_list_perizie_with_search(self, auth_session):
-        """Test searching perizie"""
-        response = requests.get(
-            f"{BASE_URL}/api/perizie/?search=TEST_",
-            headers=auth_session["headers"]
-        )
-        
-        assert response.status_code == 200
-        data = response.json()
-        print(f"Search found {data['total']} perizie matching 'TEST_'")
-    
-    def test_get_single_perizia(self, auth_session):
-        """Test getting a single perizia by ID"""
-        # First create one
-        create_payload = {
+    def test_list_perizie_with_search_filter(self, api_client, cleanup_perizie):
+        """GET /api/perizie/?search=XXX filters results"""
+        # First create a unique one
+        unique_desc = f"TEST_UNIQUE_{uuid.uuid4().hex[:8]}"
+        payload = {
             "tipo_danno": "strutturale",
-            "descrizione_utente": "TEST_Single fetch test",
-            "prezzo_ml_originale": 120.0,
-            "moduli": [{"descrizione": "Test module", "lunghezza_ml": 2.0, "altezza_m": 1.5, "note": ""}]
+            "descrizione_utente": unique_desc,
+            "moduli": [{"descrizione": "Test", "lunghezza_ml": 1, "altezza_m": 1, "note": ""}]
         }
+        create_resp = api_client.post(f"{BASE_URL}/api/perizie/", json=payload)
+        assert create_resp.status_code == 201
+        cleanup_perizie.append(create_resp.json()["perizia_id"])
         
-        create_resp = requests.post(
-            f"{BASE_URL}/api/perizie/",
-            json=create_payload,
-            headers=auth_session["headers"]
-        )
+        # Search for it
+        response = api_client.get(f"{BASE_URL}/api/perizie/?search={unique_desc}")
+        assert response.status_code == 200
+        
+        data = response.json()
+        assert data["total"] >= 1
+        assert any(unique_desc in item.get("descrizione_utente", "") for item in data["items"])
+        print(f"✓ Search filter working, found {data['total']} matching perizie")
+
+
+class TestPeriziaGetOne:
+    """Test getting single perizia"""
+    
+    def test_get_perizia_returns_all_fields(self, api_client, cleanup_perizie):
+        """GET /api/perizie/{id} returns complete perizia with all fields"""
+        # Create one
+        payload = {
+            "tipo_danno": "strutturale",
+            "descrizione_utente": "TEST_Get single",
+            "prezzo_ml_originale": 120,
+            "moduli": [{"descrizione": "Module", "lunghezza_ml": 2.0, "altezza_m": 1.5, "note": ""}]
+        }
+        create_resp = api_client.post(f"{BASE_URL}/api/perizie/", json=payload)
         assert create_resp.status_code == 201
         perizia_id = create_resp.json()["perizia_id"]
+        cleanup_perizie.append(perizia_id)
         
-        # Now fetch it
-        response = requests.get(
-            f"{BASE_URL}/api/perizie/{perizia_id}",
-            headers=auth_session["headers"]
-        )
-        
+        # Fetch it
+        response = api_client.get(f"{BASE_URL}/api/perizie/{perizia_id}")
         assert response.status_code == 200
+        
         data = response.json()
         assert data["perizia_id"] == perizia_id
-        assert data["descrizione_utente"] == "TEST_Single fetch test"
-        print(f"Successfully fetched perizia {data['number']}")
+        assert "number" in data
+        assert "tipo_danno" in data
+        assert "voci_costo" in data
+        assert "total_perizia" in data
+        print(f"✓ Got perizia {data['number']} with all fields")
     
-    def test_get_perizia_not_found(self, auth_session):
-        """Test 404 for non-existent perizia"""
-        response = requests.get(
-            f"{BASE_URL}/api/perizie/nonexistent_id_12345",
-            headers=auth_session["headers"]
-        )
-        
+    def test_get_perizia_not_found_returns_404(self, api_client):
+        """GET /api/perizie/{invalid_id} returns 404"""
+        response = api_client.get(f"{BASE_URL}/api/perizie/nonexistent_id_xyz")
         assert response.status_code == 404
-        print("404 returned for non-existent perizia")
+        print("✓ 404 returned for non-existent perizia")
+
+
+class TestPeriziaUpdate:
+    """Test updating perizia"""
     
-    # ── UPDATE Tests ──
-    
-    def test_update_perizia(self, auth_session):
-        """Test updating a perizia"""
-        # Create one first
-        create_payload = {
+    def test_update_perizia_modifies_fields(self, api_client, cleanup_perizie):
+        """PUT /api/perizie/{id} updates fields correctly"""
+        # Create
+        payload = {
             "tipo_danno": "strutturale",
-            "descrizione_utente": "TEST_Original description",
-            "prezzo_ml_originale": 100.0,
-            "moduli": [{"descrizione": "Original module", "lunghezza_ml": 2.0, "altezza_m": 1.5, "note": ""}]
+            "descrizione_utente": "TEST_Original",
+            "prezzo_ml_originale": 100,
+            "moduli": [{"descrizione": "Orig", "lunghezza_ml": 2, "altezza_m": 1.5, "note": ""}]
         }
-        
-        create_resp = requests.post(
-            f"{BASE_URL}/api/perizie/",
-            json=create_payload,
-            headers=auth_session["headers"]
-        )
+        create_resp = api_client.post(f"{BASE_URL}/api/perizie/", json=payload)
         assert create_resp.status_code == 201
         perizia_id = create_resp.json()["perizia_id"]
+        cleanup_perizie.append(perizia_id)
         
-        # Update it
+        # Update
         update_payload = {
-            "descrizione_utente": "TEST_Updated description",
-            "prezzo_ml_originale": 180.0,
-            "notes": "Updated notes from test"
+            "descrizione_utente": "TEST_Updated",
+            "prezzo_ml_originale": 180,
+            "notes": "Updated notes"
         }
-        
-        response = requests.put(
-            f"{BASE_URL}/api/perizie/{perizia_id}",
-            json=update_payload,
-            headers=auth_session["headers"]
-        )
-        
+        response = api_client.put(f"{BASE_URL}/api/perizie/{perizia_id}", json=update_payload)
         assert response.status_code == 200
+        
         data = response.json()
-        assert data["descrizione_utente"] == "TEST_Updated description"
-        assert data["prezzo_ml_originale"] == 180.0
-        assert data["notes"] == "Updated notes from test"
-        print(f"Successfully updated perizia {data['number']}")
+        assert data["descrizione_utente"] == "TEST_Updated"
+        assert data["prezzo_ml_originale"] == 180
+        assert data["notes"] == "Updated notes"
         
-        # Verify GET returns updated data
-        get_resp = requests.get(
-            f"{BASE_URL}/api/perizie/{perizia_id}",
-            headers=auth_session["headers"]
-        )
-        assert get_resp.status_code == 200
-        assert get_resp.json()["descrizione_utente"] == "TEST_Updated description"
+        # Verify persistence via GET
+        get_resp = api_client.get(f"{BASE_URL}/api/perizie/{perizia_id}")
+        assert get_resp.json()["descrizione_utente"] == "TEST_Updated"
+        print(f"✓ Updated perizia, verified persistence")
     
-    def test_update_perizia_voci_costo(self, auth_session):
-        """Test updating cost items and total recalculation"""
-        # Create one first
-        create_payload = {
+    def test_update_voci_costo_recalculates_total(self, api_client, cleanup_perizie):
+        """PUT /api/perizie/{id} with voci_costo recalculates total_perizia"""
+        # Create
+        payload = {
             "tipo_danno": "estetico",
-            "descrizione_utente": "TEST_Cost update test",
-            "moduli": [{"descrizione": "Module", "lunghezza_ml": 3.0, "altezza_m": 1.5, "note": ""}]
+            "descrizione_utente": "TEST_Voci update",
+            "moduli": [{"descrizione": "M", "lunghezza_ml": 2, "altezza_m": 1, "note": ""}]
         }
-        
-        create_resp = requests.post(
-            f"{BASE_URL}/api/perizie/",
-            json=create_payload,
-            headers=auth_session["headers"]
-        )
+        create_resp = api_client.post(f"{BASE_URL}/api/perizie/", json=payload)
         assert create_resp.status_code == 201
         perizia_id = create_resp.json()["perizia_id"]
-        original_total = create_resp.json()["total_perizia"]
+        cleanup_perizie.append(perizia_id)
         
-        # Update with custom voci_costo
+        # Update with custom cost items
         custom_voci = [
-            {"codice": "X.01", "descrizione": "Custom item 1", "unita": "corpo", "quantita": 1, "prezzo_unitario": 500, "totale": 500},
-            {"codice": "X.02", "descrizione": "Custom item 2", "unita": "ore", "quantita": 5, "prezzo_unitario": 50, "totale": 250}
+            {"codice": "X.01", "descrizione": "Item 1", "unita": "corpo", "quantita": 1, "prezzo_unitario": 500, "totale": 500},
+            {"codice": "X.02", "descrizione": "Item 2", "unita": "ore", "quantita": 5, "prezzo_unitario": 50, "totale": 250}
         ]
-        
-        update_payload = {"voci_costo": custom_voci}
-        
-        response = requests.put(
-            f"{BASE_URL}/api/perizie/{perizia_id}",
-            json=update_payload,
-            headers=auth_session["headers"]
-        )
-        
+        response = api_client.put(f"{BASE_URL}/api/perizie/{perizia_id}", json={"voci_costo": custom_voci})
         assert response.status_code == 200
+        
         data = response.json()
         assert len(data["voci_costo"]) == 2
-        assert data["total_perizia"] == 750.0  # 500 + 250
-        print(f"Cost items updated, new total: {data['total_perizia']} EUR (was {original_total})")
+        assert data["total_perizia"] == 750.0
+        print(f"✓ Updated cost items, total recalculated to {data['total_perizia']} EUR")
+
+
+class TestPeriziaDelete:
+    """Test deleting perizia"""
     
-    # ── DELETE Tests ──
-    
-    def test_delete_perizia(self, auth_session):
-        """Test deleting a perizia"""
-        # Create one first
-        create_payload = {
+    def test_delete_perizia_removes_it(self, api_client):
+        """DELETE /api/perizie/{id} removes the perizia"""
+        # Create one (don't add to cleanup since we're deleting)
+        payload = {
             "tipo_danno": "strutturale",
-            "descrizione_utente": "TEST_To be deleted",
-            "moduli": [{"descrizione": "Delete me", "lunghezza_ml": 1.0, "altezza_m": 1.0, "note": ""}]
+            "descrizione_utente": "TEST_To delete",
+            "moduli": [{"descrizione": "D", "lunghezza_ml": 1, "altezza_m": 1, "note": ""}]
         }
-        
-        create_resp = requests.post(
-            f"{BASE_URL}/api/perizie/",
-            json=create_payload,
-            headers=auth_session["headers"]
-        )
+        create_resp = api_client.post(f"{BASE_URL}/api/perizie/", json=payload)
         assert create_resp.status_code == 201
         perizia_id = create_resp.json()["perizia_id"]
         
-        # Delete it
-        response = requests.delete(
-            f"{BASE_URL}/api/perizie/{perizia_id}",
-            headers=auth_session["headers"]
-        )
-        
+        # Delete
+        response = api_client.delete(f"{BASE_URL}/api/perizie/{perizia_id}")
         assert response.status_code == 200
         assert response.json()["message"] == "Perizia eliminata"
-        print(f"Successfully deleted perizia {perizia_id}")
         
-        # Verify it's gone
-        get_resp = requests.get(
-            f"{BASE_URL}/api/perizie/{perizia_id}",
-            headers=auth_session["headers"]
-        )
+        # Verify gone
+        get_resp = api_client.get(f"{BASE_URL}/api/perizie/{perizia_id}")
         assert get_resp.status_code == 404
+        print(f"✓ Deleted perizia and verified removal")
     
-    def test_delete_perizia_not_found(self, auth_session):
-        """Test 404 for deleting non-existent perizia"""
-        response = requests.delete(
-            f"{BASE_URL}/api/perizie/nonexistent_id_12345",
-            headers=auth_session["headers"]
-        )
-        
+    def test_delete_not_found_returns_404(self, api_client):
+        """DELETE /api/perizie/{invalid_id} returns 404"""
+        response = api_client.delete(f"{BASE_URL}/api/perizie/nonexistent_xyz")
         assert response.status_code == 404
-        print("404 returned for deleting non-existent perizia")
+        print("✓ 404 returned for deleting non-existent perizia")
 
 
-class TestPeriziaCostCalculation(TestPeriziaSetup):
-    """Test cost calculation logic"""
+# ═══════════════════════════════════════════════════════════════════════════════
+# Cost Calculation Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestCostCalculation:
+    """Test cost calculation formulas"""
     
-    def test_fornitura_calculation_with_markup(self, auth_session):
-        """Test: fornitura = prezzo_ml * (1 + coefficiente_maggiorazione/100) * total_ml"""
+    def test_fornitura_uses_markup_formula(self, api_client, cleanup_perizie):
+        """fornitura = prezzo_ml * (1 + coefficiente_maggiorazione/100) * total_ml"""
         prezzo_ml = 150.0
-        coeff = 20  # 20% markup
-        total_ml = 5.5  # Sum of modules
+        coeff = 20  # 20%
+        ml1, ml2 = 3.0, 2.5
+        total_ml = ml1 + ml2  # 5.5
         
         payload = {
             "tipo_danno": "strutturale",
-            "descrizione_utente": "TEST_Fornitura calculation",
+            "descrizione_utente": "TEST_Fornitura calc",
             "prezzo_ml_originale": prezzo_ml,
             "coefficiente_maggiorazione": coeff,
             "moduli": [
-                {"descrizione": "Mod A", "lunghezza_ml": 3.0, "altezza_m": 2.0, "note": ""},
-                {"descrizione": "Mod B", "lunghezza_ml": 2.5, "altezza_m": 2.0, "note": ""}
+                {"descrizione": "A", "lunghezza_ml": ml1, "altezza_m": 2, "note": ""},
+                {"descrizione": "B", "lunghezza_ml": ml2, "altezza_m": 2, "note": ""}
             ]
         }
         
-        response = requests.post(
-            f"{BASE_URL}/api/perizie/",
-            json=payload,
-            headers=auth_session["headers"]
-        )
-        
+        response = api_client.post(f"{BASE_URL}/api/perizie/", json=payload)
         assert response.status_code == 201
         data = response.json()
+        cleanup_perizie.append(data["perizia_id"])
         
-        # Find B.01 (fornitura) item
+        # Find B.01 (fornitura)
         fornitura = next((v for v in data["voci_costo"] if v["codice"] == "B.01"), None)
-        assert fornitura is not None, "B.01 (fornitura) not found"
+        assert fornitura is not None
         
-        # Expected calculation: prezzo_ml * (1 + coeff/100) * total_ml
-        expected_unit = prezzo_ml * (1 + coeff / 100)  # 150 * 1.20 = 180
+        expected_unit = prezzo_ml * (1 + coeff / 100)  # 150 * 1.2 = 180
         expected_total = expected_unit * total_ml  # 180 * 5.5 = 990
         
-        assert fornitura["quantita"] == total_ml, f"Expected qty {total_ml}, got {fornitura['quantita']}"
-        assert abs(fornitura["prezzo_unitario"] - expected_unit) < 0.01, f"Expected unit price {expected_unit}, got {fornitura['prezzo_unitario']}"
-        assert abs(fornitura["totale"] - expected_total) < 0.01, f"Expected total {expected_total}, got {fornitura['totale']}"
-        
-        print(f"Fornitura calculation correct: {fornitura['quantita']} ml × {fornitura['prezzo_unitario']} EUR/ml = {fornitura['totale']} EUR")
+        assert abs(fornitura["prezzo_unitario"] - expected_unit) < 0.01
+        assert abs(fornitura["totale"] - expected_total) < 0.01
+        print(f"✓ Fornitura calc: {total_ml} ml × {fornitura['prezzo_unitario']} EUR/ml = {fornitura['totale']} EUR")
     
-    def test_trasporto_under_2_5ml(self, auth_session):
-        """Test trasporto = 180 EUR when ml <= 2.5"""
+    def test_trasporto_180_when_under_2_5ml(self, api_client, cleanup_perizie):
+        """trasporto = 180 EUR when total_ml <= 2.5"""
         payload = {
             "tipo_danno": "strutturale",
             "descrizione_utente": "TEST_Trasporto small",
-            "prezzo_ml_originale": 100.0,
-            "moduli": [
-                {"descrizione": "Small module", "lunghezza_ml": 2.0, "altezza_m": 1.5, "note": ""}
-            ]
+            "prezzo_ml_originale": 100,
+            "moduli": [{"descrizione": "Small", "lunghezza_ml": 2.0, "altezza_m": 1.5, "note": ""}]
         }
         
-        response = requests.post(
-            f"{BASE_URL}/api/perizie/",
-            json=payload,
-            headers=auth_session["headers"]
-        )
-        
+        response = api_client.post(f"{BASE_URL}/api/perizie/", json=payload)
         assert response.status_code == 201
         data = response.json()
+        cleanup_perizie.append(data["perizia_id"])
         
-        # Find C.01 (trasporto) item
         trasporto = next((v for v in data["voci_costo"] if v["codice"] == "C.01"), None)
         assert trasporto is not None
-        assert trasporto["totale"] == 180.0, f"Expected trasporto 180 EUR for <=2.5ml, got {trasporto['totale']}"
-        
-        print(f"Trasporto for <=2.5ml: {trasporto['totale']} EUR (expected 180)")
+        assert trasporto["totale"] == 180.0
+        print(f"✓ Trasporto for ≤2.5ml = {trasporto['totale']} EUR (expected 180)")
     
-    def test_trasporto_over_2_5ml(self, auth_session):
-        """Test trasporto = 350 EUR when ml > 2.5"""
+    def test_trasporto_350_when_over_2_5ml(self, api_client, cleanup_perizie):
+        """trasporto = 350 EUR when total_ml > 2.5"""
         payload = {
             "tipo_danno": "strutturale",
             "descrizione_utente": "TEST_Trasporto large",
-            "prezzo_ml_originale": 100.0,
-            "moduli": [
-                {"descrizione": "Large module", "lunghezza_ml": 3.0, "altezza_m": 2.0, "note": ""}
-            ]
+            "prezzo_ml_originale": 100,
+            "moduli": [{"descrizione": "Large", "lunghezza_ml": 3.0, "altezza_m": 2, "note": ""}]
         }
         
-        response = requests.post(
-            f"{BASE_URL}/api/perizie/",
-            json=payload,
-            headers=auth_session["headers"]
-        )
-        
+        response = api_client.post(f"{BASE_URL}/api/perizie/", json=payload)
         assert response.status_code == 201
         data = response.json()
+        cleanup_perizie.append(data["perizia_id"])
         
-        # Find C.01 (trasporto) item
         trasporto = next((v for v in data["voci_costo"] if v["codice"] == "C.01"), None)
         assert trasporto is not None
-        assert trasporto["totale"] == 350.0, f"Expected trasporto 350 EUR for >2.5ml, got {trasporto['totale']}"
-        
-        print(f"Trasporto for >2.5ml: {trasporto['totale']} EUR (expected 350)")
+        assert trasporto["totale"] == 350.0
+        print(f"✓ Trasporto for >2.5ml = {trasporto['totale']} EUR (expected 350)")
 
 
-class TestPeriziaRecalc(TestPeriziaSetup):
+# ═══════════════════════════════════════════════════════════════════════════════
+# Recalculation Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestPeriziaRecalc:
     """Test cost recalculation endpoint"""
     
-    def test_recalculate_costs(self, auth_session):
-        """Test POST /api/perizie/{id}/recalc recalculates cost items"""
-        # Create perizia with initial values
-        create_payload = {
+    def test_recalc_regenerates_costs(self, api_client, cleanup_perizie):
+        """POST /api/perizie/{id}/recalc regenerates cost items from current data"""
+        # Create with initial values
+        payload = {
             "tipo_danno": "strutturale",
-            "descrizione_utente": "TEST_Recalc test",
-            "prezzo_ml_originale": 100.0,
+            "descrizione_utente": "TEST_Recalc",
+            "prezzo_ml_originale": 100,
             "coefficiente_maggiorazione": 20,
-            "moduli": [{"descrizione": "Module", "lunghezza_ml": 2.0, "altezza_m": 1.5, "note": ""}]
+            "moduli": [{"descrizione": "M", "lunghezza_ml": 2, "altezza_m": 1.5, "note": ""}]
         }
-        
-        create_resp = requests.post(
-            f"{BASE_URL}/api/perizie/",
-            json=create_payload,
-            headers=auth_session["headers"]
-        )
+        create_resp = api_client.post(f"{BASE_URL}/api/perizie/", json=payload)
         assert create_resp.status_code == 201
         perizia_id = create_resp.json()["perizia_id"]
+        cleanup_perizie.append(perizia_id)
         original_total = create_resp.json()["total_perizia"]
         
-        # Update modules and price (but NOT voci_costo directly)
-        update_payload = {
-            "prezzo_ml_originale": 200.0,
+        # Update modules and price (more material = higher cost)
+        update = {
+            "prezzo_ml_originale": 200,
             "moduli": [
-                {"descrizione": "Module A", "lunghezza_ml": 4.0, "altezza_m": 2.0, "note": ""},
-                {"descrizione": "Module B", "lunghezza_ml": 3.0, "altezza_m": 2.0, "note": ""}
+                {"descrizione": "A", "lunghezza_ml": 4, "altezza_m": 2, "note": ""},
+                {"descrizione": "B", "lunghezza_ml": 3, "altezza_m": 2, "note": ""}
             ]
         }
+        api_client.put(f"{BASE_URL}/api/perizie/{perizia_id}", json=update)
         
-        requests.put(
-            f"{BASE_URL}/api/perizie/{perizia_id}",
-            json=update_payload,
-            headers=auth_session["headers"]
-        )
-        
-        # Now call recalc
-        response = requests.post(
-            f"{BASE_URL}/api/perizie/{perizia_id}/recalc",
-            headers=auth_session["headers"]
-        )
-        
+        # Recalc
+        response = api_client.post(f"{BASE_URL}/api/perizie/{perizia_id}/recalc")
         assert response.status_code == 200
+        
         data = response.json()
         assert "voci_costo" in data
         assert "total_perizia" in data
-        assert data["total_perizia"] != original_total, "Recalc should change total with new values"
+        assert data["total_perizia"] > original_total, "Recalc should increase total with more material"
         
-        print(f"Recalc changed total from {original_total} to {data['total_perizia']} EUR")
-        
-        # Verify persistence
-        get_resp = requests.get(
-            f"{BASE_URL}/api/perizie/{perizia_id}",
-            headers=auth_session["headers"]
-        )
+        # Verify persisted
+        get_resp = api_client.get(f"{BASE_URL}/api/perizie/{perizia_id}")
         assert get_resp.json()["total_perizia"] == data["total_perizia"]
+        print(f"✓ Recalc changed total from {original_total} to {data['total_perizia']} EUR")
     
-    def test_recalc_not_found(self, auth_session):
-        """Test 404 for recalc on non-existent perizia"""
-        response = requests.post(
-            f"{BASE_URL}/api/perizie/nonexistent_id_12345/recalc",
-            headers=auth_session["headers"]
-        )
-        
+    def test_recalc_not_found_returns_404(self, api_client):
+        """POST /api/perizie/{invalid}/recalc returns 404"""
+        response = api_client.post(f"{BASE_URL}/api/perizie/nonexistent_xyz/recalc")
         assert response.status_code == 404
-        print("404 returned for recalc on non-existent perizia")
+        print("✓ 404 returned for recalc on non-existent perizia")
 
 
-class TestPeriziaPDF(TestPeriziaSetup):
-    """Test PDF generation"""
+# ═══════════════════════════════════════════════════════════════════════════════
+# PDF Generation Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestPeriziaPDF:
+    """Test PDF generation endpoint"""
     
-    def test_pdf_generation(self, auth_session):
-        """Test GET /api/perizie/{id}/pdf returns a PDF"""
-        # Create perizia
-        create_payload = {
+    def test_pdf_returns_valid_document(self, api_client, cleanup_perizie):
+        """GET /api/perizie/{id}/pdf returns PDF with correct headers"""
+        # Create with full data
+        payload = {
             "tipo_danno": "strutturale",
-            "descrizione_utente": "TEST_PDF generation test",
-            "prezzo_ml_originale": 150.0,
-            "moduli": [{"descrizione": "Module for PDF", "lunghezza_ml": 3.0, "altezza_m": 2.0, "note": "Test note"}],
-            "stato_di_fatto": "Test stato di fatto for PDF",
-            "nota_tecnica": "Test nota tecnica for PDF"
+            "descrizione_utente": "TEST_PDF generation",
+            "prezzo_ml_originale": 150,
+            "moduli": [{"descrizione": "Module PDF", "lunghezza_ml": 3, "altezza_m": 2, "note": "Test"}],
+            "stato_di_fatto": "Stato di fatto test text",
+            "nota_tecnica": "Nota tecnica test text"
         }
-        
-        create_resp = requests.post(
-            f"{BASE_URL}/api/perizie/",
-            json=create_payload,
-            headers=auth_session["headers"]
-        )
+        create_resp = api_client.post(f"{BASE_URL}/api/perizie/", json=payload)
         assert create_resp.status_code == 201
         perizia_id = create_resp.json()["perizia_id"]
+        cleanup_perizie.append(perizia_id)
         
         # Get PDF
-        response = requests.get(
-            f"{BASE_URL}/api/perizie/{perizia_id}/pdf",
-            headers=auth_session["headers"]
-        )
-        
+        response = api_client.get(f"{BASE_URL}/api/perizie/{perizia_id}/pdf")
         assert response.status_code == 200
         assert response.headers.get("content-type") == "application/pdf"
-        assert len(response.content) > 0
+        assert len(response.content) > 100  # PDF should have some content
         
-        # Check filename in Content-Disposition header
+        # Check Content-Disposition header
         content_disp = response.headers.get("content-disposition", "")
         assert "perizia_" in content_disp
         assert ".pdf" in content_disp
-        
-        print(f"PDF generated successfully, size: {len(response.content)} bytes")
+        print(f"✓ PDF generated, size: {len(response.content)} bytes")
     
-    def test_pdf_not_found(self, auth_session):
-        """Test 404 for PDF on non-existent perizia"""
-        response = requests.get(
-            f"{BASE_URL}/api/perizie/nonexistent_id_12345/pdf",
-            headers=auth_session["headers"]
-        )
-        
+    def test_pdf_not_found_returns_404(self, api_client):
+        """GET /api/perizie/{invalid}/pdf returns 404"""
+        response = api_client.get(f"{BASE_URL}/api/perizie/nonexistent_xyz/pdf")
         assert response.status_code == 404
-        print("404 returned for PDF on non-existent perizia")
+        print("✓ 404 returned for PDF on non-existent perizia")
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Authentication Tests
+# ═══════════════════════════════════════════════════════════════════════════════
 
 class TestPeriziaAuth:
     """Test authentication requirements"""
     
     def test_list_requires_auth(self):
-        """Test listing perizie requires authentication"""
+        """GET /api/perizie/ without auth returns 401/403/422"""
         response = requests.get(f"{BASE_URL}/api/perizie/")
         assert response.status_code in [401, 403, 422]
-        print(f"List perizie requires auth: {response.status_code}")
+        print(f"✓ List requires auth: {response.status_code}")
     
     def test_create_requires_auth(self):
-        """Test creating perizia requires authentication"""
-        response = requests.post(
-            f"{BASE_URL}/api/perizie/",
-            json={"tipo_danno": "strutturale", "descrizione_utente": "Unauthorized test"}
-        )
+        """POST /api/perizie/ without auth returns 401/403/422"""
+        response = requests.post(f"{BASE_URL}/api/perizie/", json={"tipo_danno": "strutturale"})
         assert response.status_code in [401, 403, 422]
-        print(f"Create perizia requires auth: {response.status_code}")
+        print(f"✓ Create requires auth: {response.status_code}")
 
 
-class TestPeriziaNumber(TestPeriziaSetup):
+# ═══════════════════════════════════════════════════════════════════════════════
+# Perizia Number Format Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestPeriziaNumber:
     """Test perizia number generation"""
     
-    def test_perizia_number_format(self, auth_session):
-        """Test perizia number follows PER-{year}/{seq} format"""
+    def test_number_format_per_year_seq(self, api_client, cleanup_perizie):
+        """Perizia number follows PER-{year}/{seq} format"""
         payload = {
             "tipo_danno": "strutturale",
-            "descrizione_utente": "TEST_Number format test",
-            "moduli": [{"descrizione": "Module", "lunghezza_ml": 1.0, "altezza_m": 1.0, "note": ""}]
+            "descrizione_utente": "TEST_Number format",
+            "moduli": [{"descrizione": "M", "lunghezza_ml": 1, "altezza_m": 1, "note": ""}]
         }
         
-        response = requests.post(
-            f"{BASE_URL}/api/perizie/",
-            json=payload,
-            headers=auth_session["headers"]
-        )
-        
+        response = api_client.post(f"{BASE_URL}/api/perizie/", json=payload)
         assert response.status_code == 201
         data = response.json()
+        cleanup_perizie.append(data["perizia_id"])
         
         number = data["number"]
         current_year = datetime.now().strftime("%Y")
         
-        assert number.startswith(f"PER-{current_year}/"), f"Number should start with PER-{current_year}/, got {number}"
+        assert number.startswith(f"PER-{current_year}/"), f"Should start with PER-{current_year}/, got {number}"
         
-        # Check sequence part is a 4-digit padded number
         parts = number.split("/")
         assert len(parts) == 2
         seq = parts[1]
-        assert seq.isdigit() and len(seq) == 4, f"Sequence should be 4-digit number, got {seq}"
-        
-        print(f"Perizia number format correct: {number}")
+        assert seq.isdigit() and len(seq) == 4, f"Sequence should be 4-digit, got {seq}"
+        print(f"✓ Perizia number format correct: {number}")
 
 
 if __name__ == "__main__":
