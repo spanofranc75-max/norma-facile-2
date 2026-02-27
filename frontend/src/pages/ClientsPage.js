@@ -260,6 +260,15 @@ export default function ClientsPage() {
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
+                                                            data-testid={`rilievo-client-${client.client_id}`}
+                                                            onClick={() => navigate(`/rilievi/new?client_id=${client.client_id}`)}
+                                                            title="Nuovo Rilievo"
+                                                        >
+                                                            <Ruler className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
                                                             data-testid={`edit-client-${client.client_id}`}
                                                             onClick={() => handleOpenDialog(client)}
                                                         >
