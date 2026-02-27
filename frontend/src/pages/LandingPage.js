@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
-import { FileText, MessageSquare, Database, Shield, ArrowRight, Scale } from 'lucide-react';
+import { FileText, Package, Shield, ArrowRight, Scale, Ruler } from 'lucide-react';
 
 export default function LandingPage() {
     const { isAuthenticated, login, loading } = useAuth();
@@ -28,19 +28,19 @@ export default function LandingPage() {
 
     const features = [
         {
-            icon: FileText,
-            title: 'Generazione Documenti',
-            description: 'Crea contratti, lettere e atti legali con l\'intelligenza artificiale.',
+            icon: Package,
+            title: 'Distinta Materiali',
+            description: 'Calcola peso, superficie e tagli con il catalogo profili integrato.',
         },
         {
-            icon: MessageSquare,
-            title: 'Assistente Legale',
-            description: 'Chatbot specializzato per rispondere alle tue domande legali.',
+            icon: Ruler,
+            title: 'Rilievi in Cantiere',
+            description: 'Schizzi, misure e foto dal sopralluogo direttamente su tablet.',
         },
         {
-            icon: Database,
-            title: 'Archivio Sicuro',
-            description: 'Salva e organizza tutti i tuoi documenti in un unico posto.',
+            icon: Shield,
+            title: 'Certificazioni CE',
+            description: 'DOP e etichette CE per EN 1090 e EN 13241 in pochi click.',
         },
     ];
 
