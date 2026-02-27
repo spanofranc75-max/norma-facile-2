@@ -443,6 +443,146 @@ Scrivi in italiano formale, tono professionale e tecnico. Non usare markdown."""
         raise HTTPException(500, f"Errore nell'analisi AI: {str(e)}")
 
 
+# ── Genera Lettera di Accompagnamento Tecnica ──
+
+@router.post("/{perizia_id}/genera-lettera")
+async def genera_lettera(perizia_id: str, user: dict = Depends(get_current_user)):
+    """Generate the formal technical cover letter for the insurance assessor using AI."""
+    doc = await db[COLLECTION].find_one(
+        {"perizia_id": perizia_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "Perizia non trovata")
+
+    # Gather context
+    loc = doc.get("localizzazione", {})
+    indirizzo = loc.get("indirizzo", "[Indirizzo]")
+    comune = loc.get("comune", "")
+    provincia = loc.get("provincia", "")
+    localita = f"{indirizzo}, {comune} ({provincia})".strip(", ()")
+
+    client_name = doc.get("client_name", "[Nome Cliente]")
+    tipo_danno = doc.get("tipo_danno", "strutturale")
+    moduli = doc.get("moduli", [])
+    total_ml = sum(float(m.get("lunghezza_ml", 0)) for m in moduli)
+    total_perizia = doc.get("total_perizia", 0)
+    stato_di_fatto = doc.get("stato_di_fatto", "")
+    data_sinistro = doc.get("created_at")
+    if hasattr(data_sinistro, "strftime"):
+        data_sinistro_str = data_sinistro.strftime("%d/%m/%Y")
+    else:
+        data_sinistro_str = str(data_sinistro)[:10] if data_sinistro else "[Data]"
+
+    # Modules description
+    moduli_desc = ", ".join(
+        f"1 modulo da {m.get('lunghezza_ml', 0):.1f}ml" for m in moduli
+    ) if moduli else "moduli danneggiati"
+
+    # Get company info
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    co_name = (company or {}).get("company_name", "[Nome Ditta]")
+    co_address = (company or {}).get("address", "")
+    co_vat = (company or {}).get("vat_number", "")
+
+    if not LLM_KEY:
+        # Fallback: generate template without AI
+        lettera = _generate_lettera_template(
+            localita, data_sinistro_str, moduli_desc, total_ml,
+            tipo_danno, total_perizia, co_name, client_name
+        )
+    else:
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+
+            prompt = f"""Sei un responsabile tecnico di una ditta di carpenteria metallica. Devi scrivere una lettera di accompagnamento tecnica formale per un preventivo di ripristino sinistro, da inviare all'ufficio sinistri dell'assicurazione.
+
+DATI PERIZIA:
+- Localita sinistro: {localita}
+- Data sinistro: {data_sinistro_str}
+- Cliente/Proprietario: {client_name}
+- Tipo danno: {TIPO_DANNO_LABELS.get(tipo_danno, tipo_danno)}
+- Moduli coinvolti: {moduli_desc} (totale {total_ml:.1f} ml)
+- Importo perizia: {total_perizia:.2f} EUR
+- Stato di fatto: {stato_di_fatto[:500] if stato_di_fatto else 'Danni da urto veicolare'}
+- Ditta: {co_name}
+
+STRUTTURA DELLA LETTERA:
+1. Oggetto: "Relazione tecnica di ripristino e dichiarazione di conformita (Rif. Sinistro del {data_sinistro_str})"
+2. Introduzione: trasmissione computo metrico per ripristino recinzione/cancello in [localita]
+3. Qualifica: la ditta e' installatrice/produttrice del manufatto originale
+4. Corpo (3 punti tecnici vincolanti):
+   a. DECADENZA DELLA MARCATURA CE: L'urto ha alterato le caratteristiche meccaniche. Qualsiasi raddrizzatura o saldatura in opera non certificata comporta decadenza della Marcatura CE e della DoP (EN 1090-2, EN 13241). Come produttori, non possiamo assumerci responsabilita civile e penale sulla stabilita se non tramite sostituzione integrale.
+   b. INTEGRITA DEL CICLO ANTICORROSIVO: Frattura protezione superficiale (zincatura/verniciatura a polvere). Per durabilita ISO 12944, necessario ripristino industriale.
+   c. SICUREZZA DEI FISSAGGI: Stress meccanico sui tasselli richiede bonifica supporto e nuovo ancoraggio certificato per evitare ribaltamento (carico vento).
+5. Chiusura: congruita degli importi necessari a sollevare proprietario e ditta da responsabilita per vizi di conformita post-sinistro.
+
+REGOLE:
+- Tono formale, autorevole, tecnico.
+- Lingua italiana corretta.
+- Cita specificamente le norme: UNI EN 1090-2, UNI EN 13241, ISO 12944.
+- NON usare markdown. Scrivi testo semplice con paragrafi.
+- Includi spazio per timbro e firma alla fine.
+- La lettera deve far capire al perito che tagliare il preventivo significherebbe assumersi responsabilita legali."""
+
+            chat = LlmChat(
+                api_key=LLM_KEY,
+                session_id=f"perizia-lettera-{perizia_id}",
+                system_message="Sei un responsabile tecnico esperto in carpenteria metallica e normative CE. Scrivi lettere formali professionali per periti assicurativi. Rispondi sempre in italiano formale."
+            ).with_model("openai", "gpt-4o")
+
+            response = await chat.send_message(UserMessage(text=prompt))
+            lettera = response if isinstance(response, str) else str(response)
+
+        except Exception as e:
+            logger.error(f"AI letter generation failed: {e}")
+            lettera = _generate_lettera_template(
+                localita, data_sinistro_str, moduli_desc, total_ml,
+                tipo_danno, total_perizia, co_name, client_name
+            )
+
+    await db[COLLECTION].update_one(
+        {"perizia_id": perizia_id},
+        {"$set": {"lettera_accompagnamento": lettera, "updated_at": datetime.now(timezone.utc)}}
+    )
+
+    logger.info(f"Lettera accompagnamento generated for perizia {perizia_id}")
+    return {"perizia_id": perizia_id, "lettera_accompagnamento": lettera}
+
+
+def _generate_lettera_template(localita, data_sinistro, moduli_desc, total_ml, tipo_danno, total_perizia, co_name, client_name):
+    """Fallback template when AI is not available."""
+    return f"""Oggetto: Relazione tecnica di ripristino e dichiarazione di conformita (Rif. Sinistro del {data_sinistro})
+
+Alla cortese attenzione dell'Ufficio Sinistri / Perito incaricato,
+
+In allegato alla presente si trasmette il computo metrico estimativo per il ripristino della recinzione sita in {localita}, danneggiata in data {data_sinistro}.
+
+In qualita di ditta installatrice e produttrice del manufatto originale, si precisa che l'intervento di riparazione e' stato calcolato non secondo criteri puramente estetici, ma nel rigoroso rispetto delle normative cogenti UNI EN 1090-2 (Esecuzione di strutture di acciaio) e UNI EN 13241 (Norma di prodotto per cancelli e recinzioni).
+
+Si evidenziano i seguenti punti tecnici vincolanti:
+
+1. DECADENZA DELLA MARCATURA CE
+L'urto ha alterato le caratteristiche meccaniche dei moduli coinvolti ({moduli_desc}, per un totale di {total_ml:.1f} ml). Qualsiasi intervento di raddrizzatura o saldatura in opera non certificato comporterebbe l'immediata decadenza della Marcatura CE originale e della Dichiarazione di Prestazione (DoP). Come produttori, non possiamo assumerci la responsabilita civile e penale sulla stabilita strutturale del manufatto se non tramite la sostituzione integrale degli elementi deformati.
+
+2. INTEGRITA DEL CICLO ANTICORROSIVO
+La frattura della protezione superficiale (zincatura a caldo e verniciatura a polvere) espone l'acciaio a fenomeni ossidativi non riparabili con verniciature liquide monocomponenti in loco. Per garantire la durabilita prevista dalla norma ISO 12944, e' necessario il ripristino industriale del componente.
+
+3. SICUREZZA DEI FISSAGGI
+Lo stress meccanico subito dai tasselli a seguito dell'impatto richiede la bonifica del supporto e il nuovo ancoraggio certificato, onde evitare il ribaltamento improvviso del modulo in caso di sollecitazioni atmosferiche (carico vento).
+
+L'importo complessivo della perizia ammonta a EUR {total_perizia:.2f}, necessario a sollevare sia la proprieta ({client_name}) che lo scrivente ({co_name}) da responsabilita derivanti da vizi di conformita post-sinistro.
+
+Restiamo a disposizione per ogni chiarimento tecnico.
+
+Distinti saluti,
+
+
+____________________________
+{co_name}
+Responsabile Tecnico delle Commesse
+[Timbro e Firma]"""
+
+
 # ── Recalculate Cost Items ──
 
 @router.post("/{perizia_id}/recalc")
