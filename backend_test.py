@@ -1,346 +1,378 @@
 #!/usr/bin/env python3
 """
-Comprehensive Backend API Test Suite for Norma Facile 2.0 Rilievo Misure Module
-Tests all CRUD operations, PDF generation, and business logic for Rilievi.
+Backend API Testing for Norma Facile 2.0 - Distinta Materiali Module
+Tests CRUD operations, totals calculations, and import functionality.
 """
 import requests
 import json
 import sys
-import time
-import base64
-from datetime import datetime, date, timedelta
+from datetime import datetime
 
-class RilievoAPITester:
+class DistinteAPITester:
     def __init__(self, base_url="https://legal-easy-1.preview.emergentagent.com"):
         self.base_url = base_url
-        self.session_token = "test_session_1772176450581"  # From auth setup
-        self.user_id = "test-user-1772176450581"
+        self.session_token = "test_session_1772177028714"  # From auth setup
+        self.user_id = "test-user-1772177028714"
         self.tests_run = 0
         self.tests_passed = 0
-        self.client_id = None
-        self.rilievo_id = None
-        self.session = requests.Session()
-        
-        # Set session cookie for authentication
-        self.session.cookies.set("session_token", self.session_token)
+        self.created_distinta_id = None
+        self.created_rilievo_id = None
 
-    def log_test(self, name, success=None, details=""):
-        """Log test results"""
-        self.tests_run += 1
-        if success is not None:
-            if success:
-                self.tests_passed += 1
-                print(f"✅ {name} - PASSED {details}")
-            else:
-                print(f"❌ {name} - FAILED {details}")
-        else:
-            print(f"🔍 {name} {details}")
-
-    def api_request(self, method, endpoint, data=None, expect_status=200):
-        """Make API request with proper headers and error handling"""
-        url = f"{self.base_url}/api{endpoint}"
+    def run_test(self, name, method, endpoint, expected_status, data=None, description=""):
+        """Run a single API test"""
+        url = f"{self.base_url}/api/{endpoint}"
         headers = {
             'Content-Type': 'application/json',
-            'User-Agent': 'NormaFacile-Tester/1.0'
+            'Authorization': f'Bearer {self.session_token}'
         }
+
+        self.tests_run += 1
+        print(f"\n🔍 Testing {name}...")
+        if description:
+            print(f"   📝 {description}")
         
         try:
             if method == 'GET':
-                response = self.session.get(url, headers=headers)
+                response = requests.get(url, headers=headers)
             elif method == 'POST':
-                response = self.session.post(url, headers=headers, json=data)
+                response = requests.post(url, json=data, headers=headers)
             elif method == 'PUT':
-                response = self.session.put(url, headers=headers, json=data)
+                response = requests.put(url, json=data, headers=headers)
             elif method == 'DELETE':
-                response = self.session.delete(url, headers=headers)
-            elif method == 'PATCH':
-                response = self.session.patch(url, headers=headers, json=data)
-            
-            success = response.status_code == expect_status
-            
+                response = requests.delete(url, headers=headers)
+
+            print(f"   📍 URL: {url}")
+            print(f"   📤 Status: {response.status_code}")
+
+            success = response.status_code == expected_status
             if success:
+                self.tests_passed += 1
+                print(f"✅ PASSED - Status: {response.status_code}")
                 try:
-                    return True, response.json() if response.content else {}
-                except json.JSONDecodeError:
-                    return True, {"raw_response": response.text}
+                    response_data = response.json() if response.text else {}
+                    if response_data:
+                        print(f"   📦 Response keys: {list(response_data.keys())}")
+                    return True, response_data
+                except:
+                    return True, {}
             else:
-                error_msg = f"Status {response.status_code}, expected {expect_status}"
+                print(f"❌ FAILED - Expected {expected_status}, got {response.status_code}")
                 try:
                     error_data = response.json()
-                    error_msg += f" - {error_data.get('detail', response.text)}"
+                    print(f"   🚨 Error: {error_data}")
                 except:
-                    error_msg += f" - {response.text}"
-                return False, {"error": error_msg}
-                
-        except Exception as e:
-            return False, {"error": f"Request failed: {str(e)}"}
+                    print(f"   🚨 Response: {response.text[:200]}...")
+                return False, {}
 
-    def test_auth(self):
-        """Test authentication endpoint"""
-        print("\n🔐 TESTING AUTHENTICATION")
-        
-        success, data = self.api_request('GET', '/auth/me')
-        self.log_test("GET /api/auth/me", success, f"User: {data.get('name', 'Unknown')}")
+        except Exception as e:
+            print(f"❌ FAILED - Network Error: {str(e)}")
+            return False, {}
+
+    def test_auth_status(self):
+        """Test authentication status"""
+        success, response = self.run_test(
+            "Auth Status", "GET", "auth/me", 200,
+            description="Verify test session is working"
+        )
+        if success:
+            print(f"   👤 User: {response.get('name', 'Unknown')}")
         return success
 
-    def test_clients_crud(self):
-        """Test complete client CRUD operations"""
-        print("\n👥 TESTING CLIENT MANAGEMENT")
-        
-        # Test GET clients (empty list)
-        success, data = self.api_request('GET', '/clients/')
-        self.log_test("GET /api/clients/ (initial)", success, f"Total: {data.get('total', 0)}")
-        
-        # Test CREATE client
-        unique_id = str(int(time.time()))[-8:]  # Use timestamp for uniqueness
-        client_data = {
-            "business_name": "Test Client SRL",
-            "client_type": "azienda",
-            "partita_iva": f"IT{unique_id}901",
-            "codice_fiscale": f"TSTCLN{unique_id}",
-            "codice_sdi": "ABC1234",
-            "address": "Via Roma 123",
-            "cap": "00100",
-            "city": "Roma",
-            "province": "RM",
-            "country": "IT",
-            "phone": "+39 06 1234567",
-            "email": f"test{unique_id}@client.it",
-            "notes": "Test client for automated testing"
-        }
-        
-        success, data = self.api_request('POST', '/clients/', client_data, 201)
-        if success and data.get('client_id'):
-            self.client_id = data['client_id']
-            self.log_test("POST /api/clients/", True, f"Client created: {self.client_id}")
-        else:
-            self.log_test("POST /api/clients/", False, str(data))
-            return False
-        
-        # Test GET specific client
-        success, data = self.api_request('GET', f'/clients/{self.client_id}')
-        self.log_test("GET /api/clients/{id}", success, f"Name: {data.get('business_name', 'Unknown')}")
-        
-        # Test UPDATE client
-        update_data = {
-            "business_name": "Test Client SRL - Updated",
-            "notes": "Updated via API test"
-        }
-        success, data = self.api_request('PUT', f'/clients/{self.client_id}', update_data)
-        self.log_test("PUT /api/clients/{id}", success, f"Updated name: {data.get('business_name', 'Unknown')}")
-        
-        # Test search clients
-        success, data = self.api_request('GET', '/clients/?search=Test Client')
-        self.log_test("GET /api/clients/?search=Test", success, f"Found: {data.get('total', 0)} clients")
-        
-        return True
+    def test_get_empty_distinte_list(self):
+        """Test getting empty distinte list"""
+        success, response = self.run_test(
+            "Get Empty Distinte List", "GET", "distinte/", 200,
+            description="Should return empty list initially"
+        )
+        if success:
+            print(f"   📋 Found {len(response.get('distinte', []))} distinte")
+        return success
 
-    def test_rilievi_crud(self):
-        """Test complete rilievo CRUD operations"""
-        print("\n📏 TESTING RILIEVO MANAGEMENT")
-        
-        if not self.client_id:
-            self.log_test("Rilievo tests", False, "No client_id available")
-            return False
-        
-        # Test GET rilievi (empty list)
-        success, data = self.api_request('GET', '/rilievi/')
-        self.log_test("GET /api/rilievi/ (initial)", success, f"Total: {data.get('total', 0)}")
-        
-        # Create a simple base64 test image for sketches and photos
-        test_image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
-        
-        # Test CREATE rilievo with sketches and photos
-        today = date.today()
-        
-        rilievo_data = {
-            "client_id": self.client_id,
-            "project_name": "Test Rilievo Appartamento",
-            "survey_date": today.isoformat(),
-            "location": "Via Roma 123, Milano",
-            "notes": "Test rilievo created by automated testing",
-            "sketches": [
+    def test_create_distinta(self):
+        """Test creating a new distinta with items"""
+        test_data = {
+            "name": "Test BOM - Serramenti Ufficio",
+            "notes": "Distinta di test per verificare i calcoli",
+            "items": [
                 {
-                    "name": "Pianta principale",
-                    "background_image": test_image,
-                    "drawing_data": '{"lines":[],"width":800,"height":500}',
-                    "dimensions": {
-                        "width": "500",
-                        "height": "300", 
-                        "depth": "250"
-                    }
-                }
-            ],
-            "photos": [
+                    "category": "profilo",
+                    "code": "PRF001",
+                    "name": "Profilo alluminio 60x20",
+                    "description": "Profilo strutturale",
+                    "length_mm": 2000,
+                    "quantity": 4,
+                    "unit": "pz",
+                    "weight_per_unit": 0.8,
+                    "cost_per_unit": 12.50,
+                    "notes": "Per telaio"
+                },
                 {
-                    "name": "Foto ingresso",
-                    "image_data": test_image,
-                    "caption": "Vista dell'ingresso principale"
+                    "category": "vetro", 
+                    "code": "VTR001",
+                    "name": "Vetro temperato 6mm",
+                    "description": "Vetro di sicurezza",
+                    "length_mm": 1000,
+                    "width_mm": 800,
+                    "quantity": 2,
+                    "unit": "m²",
+                    "weight_per_unit": 15.0,
+                    "cost_per_unit": 45.00,
+                    "notes": "Pannelli laterali"
                 }
             ]
         }
-        
-        success, data = self.api_request('POST', '/rilievi/', rilievo_data, 201)
-        if success and data.get('rilievo_id'):
-            self.rilievo_id = data['rilievo_id']
-            self.log_test("POST /api/rilievi/", True, 
-                f"Rilievo created: {self.rilievo_id}, Project: {data.get('project_name', '')}")
-        else:
-            self.log_test("POST /api/rilievi/", False, str(data))
-            return False
-        
-        # Test GET specific rilievo
-        success, data = self.api_request('GET', f'/rilievi/{self.rilievo_id}')
-        if success:
-            self.log_test("GET /api/rilievi/{id}", True, 
-                f"Project: {data.get('project_name', '')}, Status: {data.get('status', '')}, Sketches: {len(data.get('sketches', []))}, Photos: {len(data.get('photos', []))}")
-        else:
-            self.log_test("GET /api/rilievi/{id}", False, str(data))
-        
-        # Test UPDATE rilievo (add sketch and photo)
-        update_data = {
-            "notes": "Updated rilievo notes via API test",
-            "sketches": rilievo_data["sketches"] + [
-                {
-                    "name": "Schizzo bagno",
-                    "background_image": test_image,
-                    "drawing_data": '{"lines":[{"tool":"pencil","points":[10,10,50,50]}],"width":800,"height":500}',
-                    "dimensions": {
-                        "width": "200",
-                        "height": "180"
-                    }
-                }
-            ],
-            "photos": rilievo_data["photos"] + [
-                {
-                    "name": "Foto cucina",
-                    "image_data": test_image,
-                    "caption": "Vista della cucina"
-                }
-            ]
-        }
-        success, data = self.api_request('PUT', f'/rilievi/{self.rilievo_id}', update_data)
-        if success:
-            self.log_test("PUT /api/rilievi/{id}", True, 
-                f"Updated - Sketches: {len(data.get('sketches', []))}, Photos: {len(data.get('photos', []))}")
-        else:
-            self.log_test("PUT /api/rilievi/{id}", False, str(data))
-        
-        # Test add single sketch endpoint
-        new_sketch = {
-            "name": "Schizzo camera",
-            "background_image": test_image,
-            "drawing_data": '{"lines":[],"width":800,"height":500}',
-            "dimensions": {
-                "width": "400",
-                "height": "350"
-            }
-        }
-        success, data = self.api_request('POST', f'/rilievi/{self.rilievo_id}/sketch', new_sketch)
-        self.log_test("POST /api/rilievi/{id}/sketch", success, 
-            f"Total sketches: {len(data.get('sketches', []))}" if success else str(data))
-        
-        # Test add single photo endpoint
-        new_photo = {
-            "name": "Foto terrazzo",
-            "image_data": test_image,
-            "caption": "Vista del terrazzo"
-        }
-        success, data = self.api_request('POST', f'/rilievi/{self.rilievo_id}/photo', new_photo)
-        self.log_test("POST /api/rilievi/{id}/photo", success, 
-            f"Total photos: {len(data.get('photos', []))}" if success else str(data))
-        
-        # Test rilievo filters
-        success, data = self.api_request('GET', f'/rilievi/?client_id={self.client_id}')
-        self.log_test("GET /api/rilievi/?client_id={client_id}", success, f"Found: {data.get('total', 0)} for client")
-        
-        success, data = self.api_request('GET', '/rilievi/?status=bozza')
-        self.log_test("GET /api/rilievi/?status=bozza", success, f"Found: {data.get('total', 0)} bozze")
-        
-        return True
 
-    def test_rilievo_pdf_generation(self):
-        """Test PDF generation for rilievi"""
-        print("\n📑 TESTING RILIEVO PDF GENERATION")
+        success, response = self.run_test(
+            "Create Distinta", "POST", "distinte/", 201, test_data,
+            description="Create BOM with 2 items and verify totals calculation"
+        )
         
-        if not self.rilievo_id:
-            self.log_test("Rilievo PDF generation", False, "No rilievo_id available")
-            return False
-        
-        # Test PDF generation endpoint
-        pdf_url = f"{self.base_url}/api/rilievi/{self.rilievo_id}/pdf"
-        try:
-            response = self.session.get(pdf_url)
-            if response.status_code == 200:
-                # Check if response is actually a PDF
-                if response.headers.get('content-type') == 'application/pdf':
-                    pdf_size = len(response.content)
-                    self.log_test("GET /api/rilievi/{id}/pdf", True, f"PDF size: {pdf_size} bytes")
-                else:
-                    self.log_test("GET /api/rilievi/{id}/pdf", False, "Response not PDF format")
+        if success:
+            self.created_distinta_id = response.get('distinta_id')
+            print(f"   🆔 Created ID: {self.created_distinta_id}")
+            
+            # Verify totals calculation
+            totals = response.get('totals', {})
+            print(f"   🧮 Totals: {totals.get('total_items', 0)} items, "
+                  f"{totals.get('total_weight_kg', 0):.2f}kg, "
+                  f"€{totals.get('total_cost', 0):.2f}")
+            
+            # Check expected calculations
+            expected_items = 2
+            # Item 1: 4 pieces × 0.8kg = 3.2kg, 4 × 12.50 = €50.00
+            # Item 2: 2 pieces × (1000×800/1000000) m² × 15kg/m² = 2 × 0.8 × 15 = 24kg, 2 × 0.8 × 45 = €72.00
+            expected_weight = 3.2 + 24.0  # 27.2kg
+            expected_cost = 50.00 + 72.00  # €122.00
+            
+            if (totals.get('total_items') == expected_items and 
+                abs(totals.get('total_weight_kg', 0) - expected_weight) < 0.1 and
+                abs(totals.get('total_cost', 0) - expected_cost) < 0.1):
+                print("   ✅ Totals calculation correct")
             else:
-                error_msg = f"Status {response.status_code}"
-                try:
-                    error_data = response.json()
-                    error_msg += f" - {error_data.get('detail', response.text)}"
-                except:
-                    error_msg += f" - {response.text}"
-                self.log_test("GET /api/rilievi/{id}/pdf", False, error_msg)
-        except Exception as e:
-            self.log_test("GET /api/rilievi/{id}/pdf", False, f"Request failed: {str(e)}")
+                print(f"   ⚠️  Totals mismatch - Expected: {expected_items} items, {expected_weight}kg, €{expected_cost}")
+                
+        return success
+
+    def test_get_distinta_by_id(self):
+        """Test getting distinta by ID"""
+        if not self.created_distinta_id:
+            print("❌ No distinta ID available - skipping")
             return False
             
-        return True
+        success, response = self.run_test(
+            "Get Distinta by ID", "GET", f"distinte/{self.created_distinta_id}", 200,
+            description="Retrieve created distinta by ID"
+        )
+        
+        if success:
+            print(f"   📋 Name: {response.get('name')}")
+            print(f"   🏷️  Status: {response.get('status')}")
+            print(f"   📦 Items: {len(response.get('items', []))}")
+        
+        return success
+
+    def test_update_distinta(self):
+        """Test updating distinta and recalculating totals"""
+        if not self.created_distinta_id:
+            print("❌ No distinta ID available - skipping")
+            return False
+
+        # Add another item and modify existing ones
+        update_data = {
+            "name": "Test BOM - Serramenti Ufficio (Updated)",
+            "status": "confermata",
+            "items": [
+                {
+                    "category": "profilo",
+                    "code": "PRF001",
+                    "name": "Profilo alluminio 60x20",
+                    "length_mm": 2000,
+                    "quantity": 6,  # Increased from 4 to 6
+                    "unit": "pz",
+                    "weight_per_unit": 0.8,
+                    "cost_per_unit": 12.50
+                },
+                {
+                    "category": "accessorio",
+                    "code": "ACC001", 
+                    "name": "Cerniera a scomparsa",
+                    "quantity": 8,
+                    "unit": "pz",
+                    "weight_per_unit": 0.15,
+                    "cost_per_unit": 3.75
+                }
+            ]
+        }
+
+        success, response = self.run_test(
+            "Update Distinta", "PUT", f"distinte/{self.created_distinta_id}", 200, update_data,
+            description="Update distinta with new items and verify recalculation"
+        )
+        
+        if success:
+            totals = response.get('totals', {})
+            print(f"   🧮 New Totals: {totals.get('total_items', 0)} items, "
+                  f"{totals.get('total_weight_kg', 0):.2f}kg, "
+                  f"€{totals.get('total_cost', 0):.2f}")
+            print(f"   🏷️  Status: {response.get('status')}")
+            
+        return success
+
+    def test_get_updated_distinte_list(self):
+        """Test getting distinte list after creation"""
+        success, response = self.run_test(
+            "Get Distinte List", "GET", "distinte/", 200,
+            description="Should now include created distinta"
+        )
+        
+        if success:
+            distinte = response.get('distinte', [])
+            print(f"   📋 Found {len(distinte)} distinte")
+            if distinte:
+                for d in distinte:
+                    print(f"   - {d.get('name')} (Status: {d.get('status')})")
+        
+        return success
+
+    def setup_test_rilievo(self):
+        """Create a test rilievo for import testing"""
+        rilievo_data = {
+            "project_name": "Test Project for Import",
+            "client_id": "test_client_123",
+            "sketches": [
+                {
+                    "name": "Finestra principale",
+                    "dimensions": {
+                        "width": 120,  # cm
+                        "height": 150  # cm
+                    },
+                    "notes": "Finestra lato sud"
+                },
+                {
+                    "name": "Porta ingresso", 
+                    "dimensions": {
+                        "width": 90,   # cm
+                        "height": 210  # cm
+                    },
+                    "notes": "Porta principale"
+                }
+            ]
+        }
+
+        success, response = self.run_test(
+            "Create Test Rilievo", "POST", "rilievi/", 201, rilievo_data,
+            description="Create rilievo for import testing"
+        )
+        
+        if success:
+            self.created_rilievo_id = response.get('rilievo_id')
+            print(f"   🆔 Created Rilievo ID: {self.created_rilievo_id}")
+        
+        return success
+
+    def test_import_from_rilievo(self):
+        """Test the mocked import-from-rilievo functionality"""
+        if not self.created_distinta_id:
+            print("❌ No distinta ID available - skipping")
+            return False
+        
+        if not self.created_rilievo_id:
+            print("❌ No rilievo ID available - skipping")
+            return False
+
+        success, response = self.run_test(
+            "Import from Rilievo (MOCKED)", "POST", 
+            f"distinte/{self.created_distinta_id}/import-rilievo/{self.created_rilievo_id}", 200,
+            description="Test mocked import functionality"
+        )
+        
+        if success:
+            items = response.get('items', [])
+            print(f"   📦 Total items after import: {len(items)}")
+            
+            # Count imported items (should have "Importato da rilievo" in description)
+            imported_count = sum(1 for item in items if 'Importato da rilievo' in item.get('description', ''))
+            print(f"   📥 Imported items: {imported_count}")
+            
+            totals = response.get('totals', {})
+            print(f"   🧮 Updated Totals: {totals.get('total_items', 0)} items, "
+                  f"€{totals.get('total_cost', 0):.2f}")
+        
+        return success
+
+    def test_filter_by_status(self):
+        """Test filtering distinte by status"""
+        success, response = self.run_test(
+            "Filter by Status", "GET", "distinte/?status=confermata", 200,
+            description="Filter distinte by confirmed status"
+        )
+        
+        if success:
+            distinte = response.get('distinte', [])
+            print(f"   📋 Found {len(distinte)} confirmed distinte")
+            
+        return success
+
+    def test_delete_distinta(self):
+        """Test deleting a distinta"""
+        if not self.created_distinta_id:
+            print("❌ No distinta ID available - skipping")
+            return False
+
+        success, response = self.run_test(
+            "Delete Distinta", "DELETE", f"distinte/{self.created_distinta_id}", 200,
+            description="Delete the test distinta"
+        )
+        
+        return success
 
     def cleanup_test_data(self):
-        """Clean up test data created during testing"""
-        print("\n🧹 CLEANING UP TEST DATA")
+        """Clean up test data"""
+        print("\n🧹 Cleaning up test data...")
         
-        # Note: In a real scenario, we might delete test data
-        # For now, just report what was created
-        if self.client_id:
-            self.log_test("Test client created", None, f"ID: {self.client_id}")
-        if self.rilievo_id:
-            self.log_test("Test rilievo created", None, f"ID: {self.rilievo_id}")
-
-    def run_all_tests(self):
-        """Run the complete test suite"""
-        print("🚀 Starting Norma Facile 2.0 Rilievo Misure Backend API Test Suite")
-        print("=" * 70)
-        
-        start_time = time.time()
-        
-        # Run all test suites
-        test_results = []
-        test_results.append(self.test_auth())
-        test_results.append(self.test_clients_crud())
-        test_results.append(self.test_rilievi_crud())
-        test_results.append(self.test_rilievo_pdf_generation())
-        
-        # Cleanup
-        self.cleanup_test_data()
-        
-        # Final results
-        elapsed = time.time() - start_time
-        print("\n" + "=" * 70)
-        print(f"📊 TEST RESULTS SUMMARY")
-        print(f"Tests Run: {self.tests_run}")
-        print(f"Tests Passed: {self.tests_passed}")
-        print(f"Tests Failed: {self.tests_run - self.tests_passed}")
-        print(f"Success Rate: {(self.tests_passed/self.tests_run)*100:.1f}%")
-        print(f"Execution Time: {elapsed:.2f} seconds")
-        
-        if self.tests_passed == self.tests_run:
-            print("🎉 ALL TESTS PASSED!")
-            return 0
-        else:
-            print("⚠️  SOME TESTS FAILED - See details above")
-            return 1
+        # Delete test rilievo if created
+        if self.created_rilievo_id:
+            self.run_test("Cleanup Rilievo", "DELETE", f"rilievi/{self.created_rilievo_id}", 200)
 
 def main():
-    """Main test runner"""
-    tester = RilievoAPITester()
-    return tester.run_all_tests()
+    print("🚀 Starting Distinta Materiali API Testing")
+    print("=" * 60)
+    
+    tester = DistinteAPITester()
+    
+    # Test sequence
+    tests = [
+        ("Auth Check", tester.test_auth_status),
+        ("Empty List", tester.test_get_empty_distinte_list),
+        ("Create Distinta", tester.test_create_distinta),
+        ("Get by ID", tester.test_get_distinta_by_id),
+        ("Update Distinta", tester.test_update_distinta),
+        ("Get Updated List", tester.test_get_updated_distinte_list),
+        ("Setup Rilievo", tester.setup_test_rilievo),
+        ("Import from Rilievo", tester.test_import_from_rilievo),
+        ("Filter by Status", tester.test_filter_by_status),
+        ("Delete Distinta", tester.test_delete_distinta),
+    ]
+    
+    for test_name, test_func in tests:
+        try:
+            test_func()
+        except Exception as e:
+            print(f"❌ {test_name} failed with exception: {e}")
+    
+    # Cleanup
+    tester.cleanup_test_data()
+    
+    # Results
+    print("\n" + "=" * 60)
+    print(f"📊 Test Results: {tester.tests_passed}/{tester.tests_run} passed")
+    
+    if tester.tests_passed == tester.tests_run:
+        print("🎉 All tests passed!")
+        return 0
+    else:
+        print("⚠️  Some tests failed - check logs above")
+        return 1
 
 if __name__ == "__main__":
     sys.exit(main())
