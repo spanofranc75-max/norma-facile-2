@@ -170,6 +170,7 @@ export default function DistintePage() {
                                     <TableHead className="text-white font-semibold">Cliente</TableHead>
                                     <TableHead className="text-white font-semibold text-center">Articoli</TableHead>
                                     <TableHead className="text-white font-semibold text-right">Peso (kg)</TableHead>
+                                    <TableHead className="text-white font-semibold text-right">Sup. (mq)</TableHead>
                                     <TableHead className="text-white font-semibold text-right">Costo</TableHead>
                                     <TableHead className="text-white font-semibold">Stato</TableHead>
                                     <TableHead className="w-[60px]"></TableHead>
@@ -178,13 +179,13 @@ export default function DistintePage() {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="text-center py-8">
+                                        <TableCell colSpan={9} className="text-center py-8">
                                             <div className="w-6 h-6 loading-spinner mx-auto" />
                                         </TableCell>
                                     </TableRow>
                                 ) : distinte.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="text-center py-12 text-slate-500">
+                                        <TableCell colSpan={9} className="text-center py-12 text-slate-500">
                                             <Package className="h-12 w-12 mx-auto mb-4 text-slate-300" />
                                             <p>Nessuna distinta trovata</p>
                                             <Button
@@ -224,6 +225,9 @@ export default function DistintePage() {
                                                     <Weight className="h-3 w-3" />
                                                     {distinta.totals?.total_weight_kg?.toFixed(2) || '0.00'}
                                                 </div>
+                                            </TableCell>
+                                            <TableCell className="text-right font-mono text-slate-600">
+                                                {distinta.totals?.total_surface_mq?.toFixed(3) || '0.000'}
                                             </TableCell>
                                             <TableCell className="text-right font-mono font-semibold text-[#0055FF]">
                                                 {formatCurrency(distinta.totals?.total_cost)}
