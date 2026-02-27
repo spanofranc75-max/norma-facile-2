@@ -197,6 +197,16 @@ export default function DDTEditorPage() {
         window.open(`${process.env.REACT_APP_BACKEND_URL}/api/ddt/${ddtId}/pdf`, '_blank');
     };
 
+    const handleConvertToInvoice = async () => {
+        if (!window.confirm('Convertire questo DDT in Fattura? Le righe, il cliente e i totali verranno importati automaticamente.')) return;
+        setConverting(true);
+        try {
+            const res = await apiRequest(`/ddt/${ddtId}/convert-to-invoice`, { method: 'POST' });
+            toast.success(res.message || 'DDT convertito in Fattura');
+            navigate(`/invoices/${res.invoice_id}`);
+        } catch (e) { toast.error(e.message); } finally { setConverting(false); }
+    };
+
     const handlePaymentTypeChange = (ptId) => {
         const pt = paymentTypes.find(p => p.payment_type_id === ptId);
         setForm(f => ({
