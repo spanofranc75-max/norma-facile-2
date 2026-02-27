@@ -288,6 +288,7 @@ async def create_perizia(data: PeriziaCreate, user: dict = Depends(get_current_u
         "localizzazione": data.localizzazione.model_dump() if data.localizzazione else {},
         "tipo_danno": data.tipo_danno,
         "tipo_danno_label": TIPO_DANNO_LABELS.get(data.tipo_danno, ""),
+        "codici_danno": data.codici_danno,
         "descrizione_utente": data.descrizione_utente,
         "prezzo_ml_originale": data.prezzo_ml_originale,
         "coefficiente_maggiorazione": data.coefficiente_maggiorazione,
