@@ -536,7 +536,7 @@ export default function CertificazioneWizardPage() {
                                         <SelectContent>
                                             {thermalRef.frame_types.map(f => (
                                                 <SelectItem key={f.id} value={f.id}>
-                                                    {f.label} (Uf={f.uf})
+                                                    {f.source === 'vendor' && '[Vendor] '}{f.source === 'custom' && '[Custom] '}{f.label} (Uf={f.uf})
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
