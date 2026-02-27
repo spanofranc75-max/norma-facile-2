@@ -43,6 +43,7 @@ import {
     Building2,
     User,
     Landmark,
+    Ruler,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
