@@ -155,6 +155,50 @@ export default function CoreEnginePage() {
         finally { setCalculating(false); }
     };
 
+    // Generate Fascicolo
+    const [generatingFascicolo, setGeneratingFascicolo] = useState(false);
+    const [fascicoloDesc, setFascicoloDesc] = useState('');
+    const [fascicoloDialog, setFascicoloDialog] = useState(false);
+
+    const generateFascicolo = async (format = 'pdf') => {
+        if (!configResult?.norme?.length || !calcResult) return;
+        setGeneratingFascicolo(true);
+        try {
+            const normaId = configResult.norme[0].norma_id;
+            const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/engine/generate-fascicolo`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    norma_id: normaId,
+                    product_type: selectedProduct,
+                    description: fascicoloDesc || selectedProduct,
+                    height_mm: calcForm.height_mm,
+                    width_mm: calcForm.width_mm,
+                    frame_width_mm: calcForm.frame_width_mm,
+                    vetro_id: calcForm.vetro_id,
+                    telaio_id: calcForm.telaio_id,
+                    distanziatore_id: calcForm.distanziatore_id,
+                    zona_climatica: calcForm.zona_climatica,
+                    specs: calcForm.specs || {},
+                    calc_results: calcResult,
+                    output: format,
+                }),
+            });
+            if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Errore'); }
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `fascicolo_CE_${selectedProduct}.${format}`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            toast.success(`Fascicolo ${format.toUpperCase()} generato e scaricato!`);
+            setFascicoloDialog(false);
+        } catch (e) { toast.error(e.message); }
+        finally { setGeneratingFascicolo(false); }
+    };
+
     // Component CRUD
     const openNewComp = (tipo) => {
         setEditingComp(null);
