@@ -258,6 +258,54 @@ export default function PreventivoEditorPage() {
                     </Card>
                 )}
 
+                {/* Workflow Timeline */}
+                {!isNew && workflow.number && (
+                    <Card className="border-gray-200" data-testid="workflow-timeline">
+                        <CardContent className="py-4 px-5">
+                            <div className="flex items-center gap-0">
+                                {/* Step 1: Preventivo */}
+                                <div className="flex flex-col items-center text-center min-w-[100px]">
+                                    <div className="w-9 h-9 rounded-full bg-[#0055FF] flex items-center justify-center">
+                                        <FileDown className="h-4 w-4 text-white" />
+                                    </div>
+                                    <span className="text-xs font-semibold text-[#1E293B] mt-1.5">Preventivo</span>
+                                    <span className="text-[10px] text-[#0055FF] font-mono">{workflow.number}</span>
+                                </div>
+                                {/* Connector */}
+                                <div className={`flex-1 h-0.5 ${workflow.status === 'accettato' ? 'bg-emerald-400' : 'bg-slate-200'}`} />
+                                {/* Step 2: Accettato */}
+                                <div className="flex flex-col items-center text-center min-w-[100px]">
+                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center ${workflow.status === 'accettato' ? 'bg-emerald-500' : 'bg-slate-200'}`}>
+                                        <CheckCircle2 className={`h-4 w-4 ${workflow.status === 'accettato' ? 'text-white' : 'text-slate-400'}`} />
+                                    </div>
+                                    <span className={`text-xs font-semibold mt-1.5 ${workflow.status === 'accettato' ? 'text-emerald-700' : 'text-slate-400'}`}>Accettato</span>
+                                </div>
+                                {/* Connector */}
+                                <div className={`flex-1 h-0.5 ${workflow.linked_invoice ? 'bg-[#0055FF]' : 'bg-slate-200'}`} />
+                                {/* Step 3: Fattura */}
+                                <div className="flex flex-col items-center text-center min-w-[100px]">
+                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center ${workflow.linked_invoice ? 'bg-[#0055FF] cursor-pointer' : 'bg-slate-200'}`} onClick={() => workflow.linked_invoice && navigate(`/invoices/${workflow.linked_invoice.invoice_id}`)}>
+                                        <ArrowRightLeft className={`h-4 w-4 ${workflow.linked_invoice ? 'text-white' : 'text-slate-400'}`} />
+                                    </div>
+                                    <span className={`text-xs font-semibold mt-1.5 ${workflow.linked_invoice ? 'text-[#0055FF]' : 'text-slate-400'}`}>Fattura</span>
+                                    {workflow.linked_invoice && (
+                                        <button onClick={() => navigate(`/invoices/${workflow.linked_invoice.invoice_id}`)} className="text-[10px] text-[#0055FF] font-mono hover:underline">{workflow.linked_invoice.document_number}</button>
+                                    )}
+                                </div>
+                                {/* Connector */}
+                                <div className={`flex-1 h-0.5 ${workflow.linked_invoice?.status === 'pagata' ? 'bg-emerald-400' : 'bg-slate-200'}`} />
+                                {/* Step 4: Pagata */}
+                                <div className="flex flex-col items-center text-center min-w-[100px]">
+                                    <div className={`w-9 h-9 rounded-full flex items-center justify-center ${workflow.linked_invoice?.status === 'pagata' ? 'bg-emerald-500' : 'bg-slate-200'}`}>
+                                        <Euro className={`h-4 w-4 ${workflow.linked_invoice?.status === 'pagata' ? 'text-white' : 'text-slate-400'}`} />
+                                    </div>
+                                    <span className={`text-xs font-semibold mt-1.5 ${workflow.linked_invoice?.status === 'pagata' ? 'text-emerald-700' : 'text-slate-400'}`}>Pagata</span>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
                 {/* Form Header */}
                 <Card className="border-gray-200">
                     <CardHeader className="bg-blue-50 border-b border-gray-200 py-3 px-5">
