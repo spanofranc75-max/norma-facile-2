@@ -537,3 +537,217 @@ async def delete_invoice(
     
     logger.info(f"Invoice deleted: {invoice_id}")
     return {"message": "Documento eliminato con successo"}
+
+
+# ── Scadenze / Payment Tracking ─────────────────────────────────
+
+from pydantic import BaseModel as PydanticBaseModel
+
+
+class ScadenzaPayment(PydanticBaseModel):
+    """Record a payment against an invoice."""
+    importo: float = Field(..., gt=0)
+    data_pagamento: str  # ISO date
+    metodo: Optional[str] = None
+    note: Optional[str] = None
+
+
+@router.get("/{invoice_id}/scadenze")
+async def get_scadenze(
+    invoice_id: str,
+    user: dict = Depends(get_current_user)
+):
+    """Get payment schedule and history for an invoice."""
+    invoice = await db.invoices.find_one(
+        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"_id": 0}
+    )
+    if not invoice:
+        raise HTTPException(404, "Documento non trovato")
+
+    totals = invoice.get("totals", {})
+    total_doc = totals.get("total_document", 0) or totals.get("total_to_pay", 0)
+    pagamenti = invoice.get("pagamenti", [])
+    pagato = sum(p.get("importo", 0) for p in pagamenti)
+    residuo = round(total_doc - pagato, 2)
+
+    # Payment status
+    if pagato <= 0:
+        payment_status = "non_pagata"
+    elif residuo <= 0.01:
+        payment_status = "pagata"
+    else:
+        payment_status = "parzialmente_pagata"
+
+    return {
+        "invoice_id": invoice_id,
+        "document_number": invoice.get("document_number"),
+        "total_document": total_doc,
+        "pagamenti": pagamenti,
+        "totale_pagato": round(pagato, 2),
+        "residuo": max(residuo, 0),
+        "payment_status": payment_status,
+        "due_date": invoice.get("due_date"),
+    }
+
+
+@router.post("/{invoice_id}/scadenze/pagamento")
+async def record_payment(
+    invoice_id: str,
+    payment: ScadenzaPayment,
+    user: dict = Depends(get_current_user)
+):
+    """Record a payment for an invoice."""
+    invoice = await db.invoices.find_one(
+        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"_id": 0}
+    )
+    if not invoice:
+        raise HTTPException(404, "Documento non trovato")
+
+    totals = invoice.get("totals", {})
+    total_doc = totals.get("total_document", 0) or totals.get("total_to_pay", 0)
+    existing_payments = invoice.get("pagamenti", [])
+    already_paid = sum(p.get("importo", 0) for p in existing_payments)
+
+    if payment.importo > (total_doc - already_paid + 0.01):
+        raise HTTPException(400, "Importo supera il residuo da pagare")
+
+    new_payment = {
+        "payment_id": f"pay_{uuid.uuid4().hex[:8]}",
+        "importo": payment.importo,
+        "data_pagamento": payment.data_pagamento,
+        "metodo": payment.metodo,
+        "note": payment.note,
+        "recorded_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    new_paid = already_paid + payment.importo
+    residuo = round(total_doc - new_paid, 2)
+
+    # Determine new status
+    if residuo <= 0.01:
+        new_status = "pagata"
+    else:
+        new_status = invoice.get("status")
+        # Don't revert to bozza, keep current status
+
+    update = {
+        "$push": {"pagamenti": new_payment},
+        "$set": {
+            "totale_pagato": round(new_paid, 2),
+            "residuo": max(residuo, 0),
+            "payment_status": "pagata" if residuo <= 0.01 else "parzialmente_pagata",
+            "updated_at": datetime.now(timezone.utc),
+        }
+    }
+    if residuo <= 0.01:
+        update["$set"]["status"] = "pagata"
+
+    await db.invoices.update_one({"invoice_id": invoice_id}, update)
+
+    logger.info(f"Payment recorded for {invoice_id}: {payment.importo} EUR")
+    return {
+        "message": "Pagamento registrato",
+        "totale_pagato": round(new_paid, 2),
+        "residuo": max(residuo, 0),
+        "payment_status": "pagata" if residuo <= 0.01 else "parzialmente_pagata",
+    }
+
+
+@router.delete("/{invoice_id}/scadenze/pagamento/{payment_id}")
+async def delete_payment(
+    invoice_id: str,
+    payment_id: str,
+    user: dict = Depends(get_current_user)
+):
+    """Delete a recorded payment."""
+    invoice = await db.invoices.find_one(
+        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"_id": 0}
+    )
+    if not invoice:
+        raise HTTPException(404, "Documento non trovato")
+
+    pagamenti = invoice.get("pagamenti", [])
+    new_pagamenti = [p for p in pagamenti if p.get("payment_id") != payment_id]
+
+    if len(new_pagamenti) == len(pagamenti):
+        raise HTTPException(404, "Pagamento non trovato")
+
+    new_paid = sum(p.get("importo", 0) for p in new_pagamenti)
+    totals = invoice.get("totals", {})
+    total_doc = totals.get("total_document", 0) or totals.get("total_to_pay", 0)
+    residuo = round(total_doc - new_paid, 2)
+
+    if new_paid <= 0:
+        ps = "non_pagata"
+    elif residuo <= 0.01:
+        ps = "pagata"
+    else:
+        ps = "parzialmente_pagata"
+
+    # Update status back if needed
+    update_set = {
+        "pagamenti": new_pagamenti,
+        "totale_pagato": round(new_paid, 2),
+        "residuo": max(residuo, 0),
+        "payment_status": ps,
+        "updated_at": datetime.now(timezone.utc),
+    }
+    # If was pagata but now partially or unpaid, revert to emessa
+    if invoice.get("status") == "pagata" and ps != "pagata":
+        update_set["status"] = "emessa"
+
+    await db.invoices.update_one({"invoice_id": invoice_id}, {"$set": update_set})
+    return {"message": "Pagamento eliminato", "payment_status": ps}
+
+
+@router.post("/{invoice_id}/duplicate", response_model=InvoiceResponse)
+async def duplicate_invoice(
+    invoice_id: str,
+    user: dict = Depends(get_current_user)
+):
+    """Duplicate an existing invoice as a new draft."""
+    original = await db.invoices.find_one(
+        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"_id": 0}
+    )
+    if not original:
+        raise HTTPException(404, "Documento non trovato")
+
+    new_id = f"inv_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    year = datetime.now().year
+
+    doc_type = original.get("document_type", "FT")
+    document_number = await invoice_service.get_next_number(user["user_id"], doc_type, year)
+
+    new_doc = {
+        **original,
+        "invoice_id": new_id,
+        "document_number": document_number,
+        "status": "bozza",
+        "issue_date": date.today().isoformat(),
+        "created_at": now,
+        "updated_at": now,
+        "converted_from": None,
+        "converted_to": None,
+        "pagamenti": [],
+        "totale_pagato": 0,
+        "residuo": 0,
+        "payment_status": "non_pagata",
+    }
+    # Remove _id if present
+    new_doc.pop("_id", None)
+
+    await db.invoices.insert_one(new_doc)
+
+    created = await db.invoices.find_one({"invoice_id": new_id}, {"_id": 0})
+    client = await db.clients.find_one(
+        {"client_id": created.get("client_id")}, {"_id": 0, "business_name": 1}
+    )
+    created["client_name"] = client.get("business_name") if client else "N/A"
+
+    logger.info(f"Invoice duplicated: {invoice_id} -> {new_id}")
+    return InvoiceResponse(**created)
