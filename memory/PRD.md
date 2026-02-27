@@ -5,7 +5,6 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 
 ## Core Architecture
 - **Norma Core Engine** (`backend/core/engine/`) — Single Source of Truth
-  - `climate_zones.py`, `thermal.py`, `safety.py`, `ce.py`, `router.py`
 - **Optimizer Service** (`backend/services/optimizer.py`) — FFD bin-packing
 
 ## Implemented Modules
@@ -33,29 +32,32 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 ### Import Rilievo -> Distinta (Phase 14)
 - The Bridge: Split-screen dialog, dimension parser, interactive UI
 
-### Ottimizzatore di Taglio Avanzato (Phase 15) — NEW (2026-02-27)
-- **FFD Algorithm:** First Fit Decreasing 1D bin-packing in `services/optimizer.py`
-- **API Endpoints:** POST `/{id}/ottimizza-taglio`, GET `/{id}/ottimizza-taglio-pdf`
-- **Frontend Modal:** Graphical bar visualization with colored cuts, waste indicators
-- **Parameters:** Configurable bar length (default 6000mm) and blade kerf (default 3mm)
-- **Per-profile sections:** Collapsible with badges (bars needed, cuts, waste %)
-- **PDF Export:** "Scheda Taglio Ottimizzata" with visual bar drawings via ReportLab
-- **Testing:** 100% pass (13/13 backend, all frontend verified)
+### Ottimizzatore di Taglio Avanzato (Phase 15) — 2026-02-27
+- FFD Algorithm (First Fit Decreasing 1D bin-packing)
+- API: POST /{id}/ottimizza-taglio, GET /{id}/ottimizza-taglio-pdf
+- Frontend modal with graphical bar visualization + PDF export
+
+### UI/UX Polish Phase — "Arredamento" (Phase 16) — 2026-02-27
+- **Dashboard Upgrade:** Gradient KPI cards (blue/amber/emerald/violet), Recharts BarChart "Fatturato Mensile" (6 months), custom tooltip
+- **Quick Action FAB:** Floating action button bottom-right, expands to [Rilievo, Preventivo, Cliente] with slide-in animation
+- **Fascicolo Cantiere:** New page `/fascicolo/:clientId` with vertical timeline (type-colored dots: rilievo/distinta/preventivo/fattura/certificazione), document grid (5 gradient count cards)
+- **Empty States:** Reusable `EmptyState` component with per-module SVG illustrations (clients/invoices/rilievi/distinte/preventivi/fascicolo), friendly CTA buttons "Crea il primo [X]"
+- **Backend:** `/api/dashboard/stats` now returns `fatturato_mensile` (6 months aggregation), `/api/dashboard/fascicolo/:clientId` aggregates all client documents
 
 ## API Endpoints
 - `/api/auth/`, `/api/clients/`, `/api/invoices/`, `/api/company/settings`
-- `/api/rilievi/`, `/api/distinte/` + `/rilievo-data/{id}` + `/{id}/import-rilievo/{id}`
-- `/api/distinte/{id}/ottimizza-taglio` (POST — run FFD optimizer)
-- `/api/distinte/{id}/ottimizza-taglio-pdf` (GET — optimized cutting plan PDF)
+- `/api/rilievi/`, `/api/distinte/` + optimizer endpoints
 - `/api/certificazioni/` + `/thermal/` + `/router/`
 - `/api/sicurezza/`
-- `/api/dashboard/stats`
+- `/api/dashboard/stats` (GET — KPIs + fatturato_mensile chart data)
+- `/api/dashboard/fascicolo/{client_id}` (GET — project dossier timeline + documents)
 - `/api/catalogo/`, `/api/vendor/`, `/api/preventivi/`
 
 ## Prioritized Backlog
 
 ### P1
-- [x] Advanced bar optimizer (FFD bin-packing algorithm) — DONE 2026-02-27
+- [x] Advanced bar optimizer (FFD bin-packing) — DONE
+- [x] UI/UX Polish Phase (Dashboard, Empty States, Fascicolo) — DONE
 - [ ] SDI direct integration
 - [ ] Recurring invoices / email reminders
 
