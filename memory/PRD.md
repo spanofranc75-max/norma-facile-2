@@ -66,6 +66,22 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 - Contact persons with document preferences (DDT, Preventivi, Fatture, etc.)
 - Testing: 16/16 backend, 100% frontend
 
+### Perizia Sinistro (Damage Assessment) Module (Phase 21) — 2026-02-27
+- Professional damage assessment tool for insurance claims on fences/gates
+- 3 damage types: Strutturale (EN 1090), Estetico, Automatismi (EN 12453)
+- Map picker (react-leaflet + OpenStreetMap) with reverse geocoding
+- Multi-photo upload (max 5) with GPT-4o Vision AI analysis
+- Auto-generated cost items based on damage type:
+  - Strutturale: 6 voci (smontaggio, fornitura +20% fuori serie, trasporto, installazione, oneri normativi DoP, smaltimento)
+  - Estetico: 3 voci (smontaggio, carteggiatura/verniciatura, smaltimento)
+  - Automatismi: 4 voci (smontaggio, componenti, collaudo EN 12453, smaltimento)
+- Editable cost table with real-time total recalculation + "Ricalcola" server-side
+- Professional PDF: Stato di Fatto, Computo Metrico Estimativo, Nota Tecnica per il Perito
+- Endpoints: CRUD + /analyze-photos + /recalc + /pdf
+- Testing: 22/22 backend, 100% frontend
+
+- `/api/perizie/` (CRUD + analyze-photos + recalc + PDF)
+
 ## API Endpoints
 - `/api/auth/`, `/api/clients/` (with client_type filter), `/api/invoices/`, `/api/company/settings`
 - `/api/rilievi/`, `/api/distinte/` + optimizer endpoints
@@ -80,8 +96,10 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 ### P0 — Completed
 - [x] DDT Module — DONE (Phase 19)
 - [x] Fornitori Module — DONE (Phase 20)
+- [x] Perizia Sinistro Module — DONE (Phase 21)
 
 ### P1
+- [ ] Registro DDT (numerazione automatica e reportistica mensile spedizioni)
 - [ ] Quick Fill: fatture auto-popola da cliente (stesso pattern preventivi)
 - [ ] SDI direct integration
 - [ ] Recurring invoices / email reminders
