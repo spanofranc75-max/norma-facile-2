@@ -1,4 +1,4 @@
-"""DDT (Documento di Trasporto) routes — Full CRUD + PDF."""
+"""DDT (Documento di Trasporto) routes — Full CRUD + PDF + Convert."""
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from typing import Optional
