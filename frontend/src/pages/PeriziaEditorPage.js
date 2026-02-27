@@ -106,6 +106,7 @@ export default function PeriziaEditorPage() {
             setNotaTecnica(data.nota_tecnica || '');
             setVociCosto(data.voci_costo || []);
             setNotes(data.notes || '');
+            setLetteraAccompagnamento(data.lettera_accompagnamento || '');
 
             const loc = data.localizzazione || {};
             if (loc.lat && loc.lng) {
