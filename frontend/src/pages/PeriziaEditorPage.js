@@ -115,6 +115,7 @@ export default function PeriziaEditorPage() {
             setPInfo({ number: data.number, status: data.status, perizia_id: data.perizia_id });
             setClientId(data.client_id || '');
             setTipoDanno(data.tipo_danno || 'strutturale');
+            setCodiciDanno(data.codici_danno || []);
             setDescrizione(data.descrizione_utente || '');
             setPrezzoMl(data.prezzo_ml_originale || 0);
             setCoeffMagg(data.coefficiente_maggiorazione ?? 20);
