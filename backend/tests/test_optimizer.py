@@ -5,7 +5,11 @@ Tests the FFD bin-packing algorithm and API endpoints.
 import pytest
 import requests
 import os
+import sys
 import time
+
+# Add backend directory to path for module imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 
