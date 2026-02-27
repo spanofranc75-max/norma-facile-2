@@ -26,6 +26,7 @@ from routes.dashboard import router as dashboard_router
 from routes.catalogo import router as catalogo_router
 from routes.vendor_api import router as vendor_router
 from routes.preventivi import router as preventivi_router
+from routes.payment_types import router as payment_types_router
 
 # Configure logging
 logging.basicConfig(
@@ -77,6 +78,7 @@ app.include_router(dashboard_router, prefix="/api")
 app.include_router(catalogo_router, prefix="/api")
 app.include_router(vendor_router, prefix="/api")
 app.include_router(preventivi_router, prefix="/api")
+app.include_router(payment_types_router, prefix="/api")
 
 
 @app.get("/api/")
