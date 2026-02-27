@@ -330,7 +330,7 @@ async def convert_to_invoice(prev_id: str, user: dict = Depends(get_current_user
     invoice_doc = {
         "invoice_id": invoice_id,
         "user_id": user["user_id"],
-        "document_type": "fattura",
+        "document_type": "FT",  # Must use enum value, not string literal
         "document_number": doc_number,
         "client_id": client_id,
         "issue_date": now.strftime("%Y-%m-%d"),
