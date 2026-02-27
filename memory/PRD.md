@@ -128,6 +128,11 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 - `/api/invoices/{id}/scadenze` (GET payment schedule)
 - `/api/invoices/{id}/scadenze/pagamento` (POST record payment, DELETE remove)
 - `/api/invoices/{id}/duplicate` (POST duplicate as draft)
+- `/api/fatture-ricevute/` (CRUD + KPIs for received invoices)
+- `/api/fatture-ricevute/import-xml` (POST multipart XML FatturaPA import)
+- `/api/fatture-ricevute/preview-xml` (POST parse XML without saving)
+- `/api/fatture-ricevute/{id}/extract-articoli` (POST extract to catalog)
+- `/api/fatture-ricevute/{id}/pagamenti` (GET/POST payment tracking)
 
 ## Prioritized Backlog
 
@@ -156,11 +161,16 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 - [x] Ricerca Articoli in Fattura — DONE (Phase 25) — 2026-02-27
   - Autocomplete nel campo codice delle righe fattura
   - Auto-popolamento: codice, descrizione, prezzo, IVA dal catalogo
+- [x] Fatture Ricevute (Fornitori + SDI) — DONE (Phase 26) — 2026-02-27
+  - Pagina dedicata /fatture-ricevute con CRUD + KPI cards
+  - Import XML FatturaPA v1.2 con parser namespace-agnostic
+  - Tracciamento pagamenti (stesso pattern fatture emesse)
+  - Estrazione voci in Catalogo Articoli con storico prezzi
+  - Matching automatico fornitore per P.IVA
+  - Testing: 21/21 backend (iteration_34), 100% frontend
 
 ### P1
-- [ ] Fatture Ricevute (Fornitori + SDI) — modulo fatture passive
-- [ ] Estrazione voci da fatture ricevute per catalogo articoli
-- [ ] Integrazione SDI diretta (import XML fatture elettroniche)
+- [ ] Integrazione SDI diretta con provider (API keys da configurare)
 - [ ] Registro DDT (numerazione automatica e reportistica mensile spedizioni)
 - [ ] Quick Fill: fatture auto-popola da cliente (stesso pattern preventivi)
 - [ ] Recurring invoices / email reminders
