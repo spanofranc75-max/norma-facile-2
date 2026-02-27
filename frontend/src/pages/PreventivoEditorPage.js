@@ -52,6 +52,7 @@ export default function PreventivoEditorPage() {
     const [converting, setConverting] = useState(false);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [activeLineIdx, setActiveLineIdx] = useState(null);
+    const [workflow, setWorkflow] = useState({ status: 'bozza', number: null, created_at: null, converted_to: null, linked_invoice: null });
 
     // Fetch clients + thermal ref
     useEffect(() => {
