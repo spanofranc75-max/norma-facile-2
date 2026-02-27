@@ -632,30 +632,138 @@ export default function DistintaEditorPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Import from Rilievo Dialog */}
-            <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
-                <DialogContent>
+            {/* Import from Rilievo — Split Screen Dialog */}
+            <Dialog open={importDialogOpen} onOpenChange={(open) => { setImportDialogOpen(open); if (!open) { setRilievoImportData(null); setSelectedRilievoForImport(''); setTargetRowIdx(null); } }}>
+                <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-hidden" data-testid="import-rilievo-dialog">
                     <DialogHeader>
-                        <DialogTitle className="font-sans text-xl text-[#1E293B]">Importa da Rilievo</DialogTitle>
+                        <DialogTitle className="font-sans text-xl text-[#1E293B] flex items-center gap-2">
+                            <Import className="h-5 w-5 text-[#0055FF]" /> Importa da Rilievo
+                        </DialogTitle>
                         <DialogDescription>
-                            Seleziona un rilievo per importare le misure nella distinta.
+                            Seleziona un rilievo, poi clicca una misura per applicarla a una riga della distinta.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <Select value={selectedRilievoForImport} onValueChange={setSelectedRilievoForImport}>
-                            <SelectTrigger data-testid="import-rilievo-select"><SelectValue placeholder="Seleziona rilievo..." /></SelectTrigger>
-                            <SelectContent>
-                                {rilievi.map(r => (
-                                    <SelectItem key={r.rilievo_id} value={r.rilievo_id}>{r.project_name} - {r.client_name || 'Senza cliente'}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setImportDialogOpen(false)}>Annulla</Button>
-                        <Button data-testid="btn-confirm-import" onClick={handleImportFromRilievo} disabled={!selectedRilievoForImport} className="bg-[#0055FF] text-white hover:bg-[#0044CC]">
-                            <Import className="h-4 w-4 mr-2" /> Importa
+
+                    {/* Rilievo Selector */}
+                    <div className="flex gap-3 items-end">
+                        <div className="flex-1">
+                            <Select value={selectedRilievoForImport} onValueChange={handleSelectRilievoForImport}>
+                                <SelectTrigger data-testid="import-rilievo-select"><SelectValue placeholder="Seleziona rilievo..." /></SelectTrigger>
+                                <SelectContent>
+                                    {rilievi.map(r => (
+                                        <SelectItem key={r.rilievo_id} value={r.rilievo_id}>{r.project_name} - {r.client_name || 'N/A'}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <Button data-testid="btn-confirm-import" onClick={handleImportFromRilievo} disabled={!selectedRilievoForImport || !isEditing} className="bg-[#0055FF] text-white hover:bg-[#0044CC]">
+                            <Import className="h-4 w-4 mr-2" /> Collega
                         </Button>
+                    </div>
+
+                    {/* Split Screen Content */}
+                    {loadingImportData ? (
+                        <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#0055FF]" /></div>
+                    ) : rilievoImportData ? (
+                        <div className="grid grid-cols-2 gap-4 overflow-y-auto max-h-[50vh] mt-2">
+                            {/* LEFT: Rilievo Data */}
+                            <div className="space-y-3 border-r pr-4" data-testid="rilievo-panel">
+                                <div className="bg-blue-50 rounded-lg p-3">
+                                    <h3 className="text-sm font-semibold text-[#1E293B]">{rilievoImportData.project_name}</h3>
+                                    {rilievoImportData.location && <p className="text-xs text-slate-500 mt-1">{rilievoImportData.location}</p>}
+                                </div>
+
+                                {/* Notes */}
+                                {rilievoImportData.notes && (
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Note Tecniche</p>
+                                        <div className="bg-slate-50 rounded p-2 text-xs text-[#1E293B] whitespace-pre-wrap max-h-[120px] overflow-y-auto">{rilievoImportData.notes}</div>
+                                    </div>
+                                )}
+
+                                {/* Sketches */}
+                                {rilievoImportData.sketches?.length > 0 && (
+                                    <div>
+                                        <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Schizzi ({rilievoImportData.sketches.length})</p>
+                                        {rilievoImportData.sketches.map((s, i) => (
+                                            <div key={i} className="bg-slate-50 rounded p-2 mb-2">
+                                                <span className="text-xs font-medium text-[#1E293B]">{s.name}</span>
+                                                {Object.keys(s.dimensions || {}).length > 0 && (
+                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                        {Object.entries(s.dimensions).map(([k, v]) => (
+                                                            <span key={k} className="text-[10px] bg-blue-100 text-[#0055FF] px-1.5 py-0.5 rounded font-mono">{k}: {v}</span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Parsed Dimensions — Clickable chips */}
+                                <div>
+                                    <p className="text-xs font-semibold text-slate-500 uppercase mb-2">
+                                        Misure Trovate ({rilievoImportData.dimensions?.length || 0})
+                                    </p>
+                                    {rilievoImportData.dimensions?.length > 0 ? (
+                                        <div className="flex flex-wrap gap-2" data-testid="dimensions-chips">
+                                            {rilievoImportData.dimensions.map(d => (
+                                                <button
+                                                    key={d.dim_id}
+                                                    data-testid={`dim-chip-${d.dim_id}`}
+                                                    onClick={() => handleApplyDimension(d.value_mm)}
+                                                    className="flex items-center gap-1.5 bg-white border-2 border-[#0055FF] text-[#0055FF] hover:bg-[#0055FF] hover:text-white rounded-lg px-3 py-1.5 text-sm font-mono font-semibold transition-colors cursor-pointer"
+                                                >
+                                                    <Ruler className="h-3.5 w-3.5" />
+                                                    {d.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs text-slate-400 italic">Nessuna misura strutturata trovata. Usa le note per inserire dimensioni (es. "H=2200", "1500x900").</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* RIGHT: Target BOM rows */}
+                            <div className="space-y-3" data-testid="bom-target-panel">
+                                <p className="text-xs font-semibold text-slate-500 uppercase">
+                                    Riga Destinazione {targetRowIdx !== null ? `(Riga ${targetRowIdx + 1} selezionata)` : '(clicca una riga o aggiungi nuova)'}
+                                </p>
+                                <div className="space-y-1 max-h-[300px] overflow-y-auto">
+                                    {formData.items.length === 0 ? (
+                                        <p className="text-xs text-slate-400 italic py-4 text-center">Nessuna riga. Clicca una misura per aggiungerne una.</p>
+                                    ) : (
+                                        formData.items.map((item, i) => (
+                                            <button
+                                                key={i}
+                                                data-testid={`target-row-${i}`}
+                                                onClick={() => setTargetRowIdx(targetRowIdx === i ? null : i)}
+                                                className={`w-full text-left flex items-center justify-between px-3 py-2 rounded border text-sm transition-colors ${targetRowIdx === i ? 'border-[#0055FF] bg-blue-50 ring-1 ring-[#0055FF]' : 'border-gray-200 hover:border-blue-300'}`}
+                                            >
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <span className="text-xs text-slate-400 font-mono w-5">{i + 1}</span>
+                                                    <span className="text-[#1E293B] truncate">{item.name || item.profile_label || 'Voce vuota'}</span>
+                                                </div>
+                                                <span className="font-mono text-xs text-[#0055FF] shrink-0 ml-2">{item.length_mm || 0} mm</span>
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                                <p className="text-[10px] text-slate-400">
+                                    Seleziona una riga, poi clicca una misura a sinistra per applicarla. Senza selezione, viene creata una nuova riga.
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-center py-8 text-slate-400">
+                            <Ruler className="h-8 w-8 mx-auto mb-2 text-slate-300" />
+                            <p className="text-sm">Seleziona un rilievo per vedere le misure disponibili</p>
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setImportDialogOpen(false)}>Chiudi</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
