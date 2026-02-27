@@ -1,0 +1,118 @@
+{
+  "summary": "Complete testing of Fatture Ricevute module. Backend: 21/21 tests PASS (fixed extract-articoli bug). Frontend: All UI components verified working - page, KPIs, table, filters, dropdown menu, detail dialog, payment dialog, XML import button.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "bugs_fixed": [
+    {
+      "file": "/app/backend/routes/fatture_ricevute.py",
+      "line": 550,
+      "issue": "extract_articoli endpoint returned 500 when codice_articolo was None - AttributeError: 'NoneType' object has no attribute 'strip'",
+      "fix": "Changed `linea.get('codice_articolo', '').strip()` to `(linea.get('codice_articolo') or '').strip()` to handle None values"
+    }
+  ],
+  "features_verified": {
+    "backend_auth": {
+      "unauthenticated_requests": "PASS - All endpoints return 401 without session cookie"
+    },
+    "backend_crud": {
+      "GET /api/fatture-ricevute/": "PASS - Returns list with KPIs (totale_fatture, totale_pagato, da_pagare, count)",
+      "POST /api/fatture-ricevute/": "PASS - Creates received invoice with linee, payment tracking fields",
+      "GET /api/fatture-ricevute/{fr_id}": "PASS - Returns single invoice with linee",
+      "PUT /api/fatture-ricevute/{fr_id}": "PASS - Updates invoice status",
+      "DELETE /api/fatture-ricevute/{fr_id}": "PASS - Deletes invoice, returns 404 on re-fetch"
+    },
+    "backend_xml_import": {
+      "POST /api/fatture-ricevute/import-xml": "PASS - Imports FatturaPA XML, extracts fornitore, linee, totali, pagamento",
+      "POST /api/fatture-ricevute/preview-xml": "PASS - Parses XML without saving",
+      "invalid_xml": "PASS - Returns 400 for invalid XML",
+      "non_xml_file": "PASS - Returns 400 for non-XML file"
+    },
+    "backend_payments": {
+      "GET /api/fatture-ricevute/{fr_id}/pagamenti": "PASS - Returns payment schedule (total_document, pagamenti, totale_pagato, residuo, payment_status)",
+      "POST /api/fatture-ricevute/{fr_id}/pagamenti": "PASS - Records payment, updates totale_pagato, residuo, payment_status",
+      "partial_payment": "PASS - Status becomes 'parzialmente_pagata'",
+      "full_payment": "PASS - Status becomes 'pagata', invoice status also updated",
+      "overpayment": "PASS - Returns 400 when payment exceeds residuo"
+    },
+    "backend_extract_articoli": {
+      "POST /api/fatture-ricevute/{fr_id}/extract-articoli": "PASS - Extracts line items to catalogo articoli (creates/updates with storico_prezzi)"
+    },
+    "backend_filters": {
+      "year_filter": "PASS - GET ?year=2025 filters by year",
+      "status_filter": "PASS - GET ?status=da_registrare filters by status",
+      "search": "PASS - GET ?q=xxx searches by fornitore_nome or numero_documento"
+    },
+    "frontend_page": {
+      "route": "PASS - /fatture-ricevute loads FattureRicevutePage",
+      "header": "PASS - 'Fatture Ricevute' title",
+      "kpi_cards": "PASS - Totale Fatture, Pagato, Da Pagare with data-testid"
+    },
+    "frontend_filters": {
+      "search": "PASS - data-testid='search-fr' visible",
+      "status_filter": "PASS - data-testid='filter-fr-status' visible",
+      "year_filter": "PASS - data-testid='filter-fr-year' visible"
+    },
+    "frontend_table": {
+      "columns": "PASS - Fornitore, Tipo, Numero, Data, Totale, Pagato, Da Pagare, Stato, XML",
+      "row_data": "PASS - Shows correct invoice data",
+      "row_click": "PASS - Opens detail dialog"
+    },
+    "frontend_dropdown": {
+      "menu_items": "PASS - Dettagli, Gestisci Pagamenti, Estrai Articoli, Segna come Registrata, Elimina"
+    },
+    "frontend_detail_dialog": {
+      "title": "PASS - 'Fattura {numero} — {fornitore}'",
+      "fornitore_info": "PASS - Shows fornitore_nome, P.IVA",
+      "linee_table": "PASS - Cod, Descrizione, Q.tà, Prezzo, Importo columns",
+      "totals": "PASS - Imponibile, IVA, Totale",
+      "action_buttons": "PASS - 'Estrai in Catalogo', 'Gestisci Pagamenti'"
+    },
+    "frontend_payment_dialog": {
+      "summary_cards": "PASS - Totale, Pagato, Residuo",
+      "payment_history": "PASS - 'Pagamenti effettuati' list",
+      "payment_form": "PASS - Importo, Data, Metodo, Note fields",
+      "buttons": "PASS - 'Saldo Completo', 'Registra Pagamento'",
+      "record_payment": "PASS - Payment recorded, dialog updated, KPIs refreshed"
+    },
+    "frontend_sidebar": {
+      "nav_item": "PASS - 'Fatture Ricevute' nav item present",
+      "position": "PASS - Between 'Fatturazione' (pos 3) and 'Clienti' (pos 5)",
+      "data_testid": "PASS - data-testid='nav-fatture-ricevute'"
+    },
+    "frontend_xml_import": {
+      "button": "PASS - 'Importa XML SDI' button visible",
+      "file_input": "PASS - Hidden file input accepts .xml files"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_fatture_ricevute.py",
+    "/app/test_reports/pytest/fatture_ricevute_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Fatture Ricevute module fully implemented and working",
+    "Fixed extract_articoli bug - None value handling for codice_articolo field",
+    "XML parser correctly handles FatturaPA v1.2 with namespace handling",
+    "Payment tracking follows same pattern as outgoing invoices (Scadenze)"
+  ],
+  "updated_files": [
+    "/app/backend/routes/fatture_ricevute.py",
+    "/app/backend/tests/test_fatture_ricevute.py"
+  ],
+  "success_rate": {
+    "backend": "100% (21/21 tests passed after bug fix)",
+    "frontend": "100% (all pages and components verified)"
+  },
+  "test_credentials": "test_session_fr_1772215827168",
+  "seed_data_creation": "Created test invoice UI_TEST-001 during UI tests (cleaned up after)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Fatture Ricevute module fully tested: 1) Backend CRUD + XML import + payments + extract articoli, 2) Frontend FattureRicevutePage with KPIs, table, filters, dropdown menu, detail dialog, payment dialog. Fixed bug in extract_articoli where None codice_articolo caused AttributeError. All data-testids in place for testing."
+}
