@@ -65,14 +65,19 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with:
 - Typography: Inter/Roboto (font-sans), NO serif fonts
 
 ### Phase 6 - Certificazioni CE (Feb 27, 2026)
-- Full CRUD for certifications (DOP / CE Label)
+- Full CRUD for certifications (DOP / CE Label / Manuale d'Uso e Manutenzione)
 - Support for EN 1090-1 (Structural) and EN 13241 (Gates/Doors)
 - 3-step wizard: Project → Standard → Technical Specs
-- Adaptive form: EN 1090 shows Execution Class/Fire Reaction; EN 13241 shows gate-specific fields
-- PDF generation: Professional DOP + CE Label ready to print and stick on product
-- Auto-generated declaration numbers (DOP-YEAR-CODE / DOP-G-YEAR-CODE)
-- Link to Distinta and Client
-- Landing page rebranded to "CRM per Fabbri" with metalworking features
+- PDF generation: DOP + CE Label + Manuale d'Uso e Manutenzione (3 pages)
+- Auto-generated declaration numbers
+
+### Phase 7 - Sicurezza Cantieri / POS Generator (Feb 27, 2026)
+- Predefined risk database: 13 risks, 14 machines, 13 DPI for metalworkers
+- 3-step wizard: Cantiere → Lavorazioni → Macchine & DPI
+- AI-powered risk assessment via GPT-4o (Emergent LLM Key)
+- POS PDF generation (8 sections: cover, company, site, risks, machines, DPI, AI assessment, emergencies)
+- Auto-fill committente from client selection
+- Landing page rebranded to "CRM per Fabbri" — "Il Ferro, Organizzato"
 
 ## API Endpoints
 - `/api/auth/` - Google OAuth
@@ -89,7 +94,11 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with:
 - `/api/distinte/profiles` - Standard metal profiles catalog
 - `/api/distinte/{id}/calcola-barre` - Bar optimization
 - `/api/certificazioni/` - Certificazioni CE CRUD
-- `/api/certificazioni/{id}/fascicolo-pdf` - DOP + CE Label PDF
+- `/api/certificazioni/{id}/fascicolo-pdf` - DOP + CE Label + Manuale d'Uso PDF
+- `/api/sicurezza/` - POS CRUD
+- `/api/sicurezza/rischi` - Risk/Machine/DPI reference data
+- `/api/sicurezza/{id}/genera-rischi` - AI risk assessment (GPT-4o)
+- `/api/sicurezza/{id}/pdf` - POS PDF download
 
 ## Prioritized Backlog
 
