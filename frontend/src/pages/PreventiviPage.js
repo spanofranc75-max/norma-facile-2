@@ -13,6 +13,7 @@ import {
 import { toast } from 'sonner';
 import { Plus, FileText, Trash2, CheckCircle2, XCircle, Minus } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
+import EmptyState from '../components/EmptyState';
 
 const STATUS_MAP = {
     bozza: { label: 'Bozza', color: 'bg-yellow-100 text-yellow-800' },
@@ -76,13 +77,13 @@ export default function PreventiviPage() {
                         {loading ? (
                             <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#0055FF]" /></div>
                         ) : preventivi.length === 0 ? (
-                            <div className="text-center py-12 text-slate-400">
-                                <FileText className="h-10 w-10 mx-auto mb-3 text-slate-300" />
-                                <p className="text-sm mb-3">Nessun preventivo ancora</p>
-                                <Button onClick={() => navigate('/preventivi/new')} className="bg-[#0055FF] text-white hover:bg-[#0044CC] text-xs h-8">
-                                    <Plus className="h-3 w-3 mr-1" /> Crea il primo
-                                </Button>
-                            </div>
+                            <EmptyState
+                                type="preventivi"
+                                title="Nessun preventivo ancora"
+                                description="Crea il tuo primo preventivo con controllo conformità integrato e converti direttamente in fattura."
+                                actionLabel="Crea il primo Preventivo"
+                                onAction={() => navigate('/preventivi/new')}
+                            />
                         ) : (
                             <Table>
                                 <TableHeader>
