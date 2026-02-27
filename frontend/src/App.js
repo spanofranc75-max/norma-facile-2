@@ -30,6 +30,7 @@ import FornitoriPage from './pages/FornitoriPage';
 import PeriziaListPage from './pages/PeriziaListPage';
 import PeriziaEditorPage from './pages/PeriziaEditorPage';
 import ArchivioSinistriPage from './pages/ArchivioSinistriPage';
+import ArticoliPage from './pages/ArticoliPage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -182,6 +183,8 @@ function AppRouter() {
             <Route path="/perizie/:periziaId" element={<ProtectedRoute><PeriziaEditorPage /></ProtectedRoute>} />
             {/* Archivio Sinistri */}
             <Route path="/archivio-sinistri" element={<ProtectedRoute><ArchivioSinistriPage /></ProtectedRoute>} />
+            {/* Catalogo Articoli */}
+            <Route path="/articoli" element={<ProtectedRoute><ArticoliPage /></ProtectedRoute>} />
         </Routes>
     );
 }
