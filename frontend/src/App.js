@@ -23,6 +23,7 @@ import CatalogoPage from './pages/CatalogoPage';
 import PreventiviPage from './pages/PreventiviPage';
 import PreventivoEditorPage from './pages/PreventivoEditorPage';
 import FascicoloCantierePage from './pages/FascicoloCantierePage';
+import PaymentTypesPage from './pages/PaymentTypesPage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
@@ -156,6 +157,8 @@ function AppRouter() {
             <Route path="/catalogo" element={<ProtectedRoute><CatalogoPage /></ProtectedRoute>} />
             {/* Fascicolo Cantiere */}
             <Route path="/fascicolo/:clientId" element={<ProtectedRoute><FascicoloCantierePage /></ProtectedRoute>} />
+            {/* Tipi Pagamento */}
+            <Route path="/impostazioni/pagamenti" element={<ProtectedRoute><PaymentTypesPage /></ProtectedRoute>} />
             {/* Preventivi */}
             <Route path="/preventivi" element={<ProtectedRoute><PreventiviPage /></ProtectedRoute>} />
             <Route path="/preventivi/new" element={<ProtectedRoute><PreventivoEditorPage /></ProtectedRoute>} />
