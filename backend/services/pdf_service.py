@@ -133,6 +133,22 @@ class PDFService:
         styles = PDFService.create_styles()
         elements = []
         
+        # ========== LOGO ==========
+        logo_url = company.get('logo_url', '')
+        if logo_url and logo_url.startswith('data:image'):
+            try:
+                import base64
+                # Parse base64 data URI
+                header_part, b64_data = logo_url.split(',', 1)
+                img_bytes = base64.b64decode(b64_data)
+                logo_buf = BytesIO(img_bytes)
+                logo_img = Image(logo_buf, width=40*mm, height=15*mm)
+                logo_img.hAlign = 'LEFT'
+                elements.append(logo_img)
+                elements.append(Spacer(1, 3*mm))
+            except Exception as e:
+                logger.warning(f"Could not render logo: {e}")
+        
         # ========== HEADER ==========
         # Document type and number
         doc_type_names = {
