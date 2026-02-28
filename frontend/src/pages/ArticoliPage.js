@@ -16,6 +16,7 @@ import {
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '../components/ui/dialog';
+import { Combobox } from '../components/ui/combobox';
 import { Badge } from '../components/ui/badge';
 import { Textarea } from '../components/ui/textarea';
 import { toast } from 'sonner';
