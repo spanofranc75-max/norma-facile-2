@@ -6,7 +6,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
-import { ArrowLeft, Shield, AlertTriangle, CheckCircle, User, FileText, Package, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Shield, AlertTriangle, CheckCircle, User, FileText, Package, ChevronDown, Printer, Loader2 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 function getHeaders() {
