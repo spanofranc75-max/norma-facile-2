@@ -72,6 +72,17 @@ export default function PreventivoEditorPage() {
     const [creatingCommessa, setCreatingCommessa] = useState(false);
     const [workflow, setWorkflow] = useState({ status: 'bozza', number: null, created_at: null, converted_to: null, linked_invoice: null, invoicing_progress: 0, linked_invoices: [] });
 
+    const isAccepted = workflow.status === 'accettato' || workflow.invoicing_progress > 0;
+
+    const handleAcceptPreventivo = async () => {
+        if (isNew) return;
+        try {
+            await apiRequest(`/preventivi/${prevId}`, { method: 'PUT', body: { status: 'accettato' } });
+            setWorkflow(w => ({ ...w, status: 'accettato' }));
+            toast.success('Preventivo accettato!');
+        } catch (e) { toast.error(e.message); }
+    };
+
     useEffect(() => {
         Promise.all([
             apiRequest('/clients/').catch(() => ({ clients: [] })),
