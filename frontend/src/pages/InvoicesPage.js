@@ -28,6 +28,7 @@ import {
     Copy, CreditCard, CircleDollarSign, CheckCircle2, Clock, AlertCircle,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
+import { PDFPreviewModal } from '../components/PDFPreviewModal';
 import EmptyState from '../components/EmptyState';
 
 const DOC_TYPES = {
