@@ -399,11 +399,27 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         try {
             const res = await apiRequest(`/commesse/${commessaId}/documenti/${docId}/parse-certificato`, { method: 'POST' });
             const m = res.metadata;
-            const camInfo = res.cam_auto_created ? ' — Lotto CAM creato automaticamente!' : '';
-            toast.success(`Colata: ${m?.numero_colata || '?'} — ${m?.qualita_acciaio || '?'} — ${m?.fornitore || '?'}${camInfo}`, { duration: 5000 });
-            if (m?.percentuale_riciclato != null) {
-                toast.info(`CAM: ${m.percentuale_riciclato}% riciclato — ${(m.metodo_produttivo || '').replace(/_/g, ' ')}`, { duration: 4000 });
+            const matches = res.risultati_match || [];
+            const nProfili = res.profili_trovati || 0;
+            
+            // Show results per profile
+            const corrente = matches.filter(r => r.tipo === 'commessa_corrente');
+            const altre = matches.filter(r => r.tipo === 'altra_commessa');
+            const archivio = matches.filter(r => r.tipo === 'archivio');
+            
+            if (corrente.length > 0) {
+                toast.success(`${corrente.map(p => p.dimensioni).join(', ')} → assegnato a questa commessa (+ CAM auto)`, { duration: 6000 });
             }
+            if (altre.length > 0) {
+                toast.info(`${altre.map(p => `${p.dimensioni} → ${p.commessa_numero || p.commessa_id}`).join(' | ')} — certificato copiato automaticamente`, { duration: 8000 });
+            }
+            if (archivio.length > 0) {
+                toast.warning(`${archivio.map(p => p.dimensioni).join(', ')} → archiviato (nessuna commessa trovata)`, { duration: 6000 });
+            }
+            if (nProfili === 0) {
+                toast.info(`Fornitore: ${m?.fornitore || '?'} — nessun profilo specifico trovato`, { duration: 4000 });
+            }
+            
             fetchData(); fetchCamData(); onRefresh?.();
         } catch (e) { toast.error(e.message); } finally { setParsing(null); }
     };
