@@ -160,8 +160,8 @@ export default function InvoiceGenerationModal({ open, onOpenChange, prevId, onC
                                         {status.linked_invoices.map((inv, i) => (
                                             <div key={i} className="flex items-center justify-between text-xs bg-white rounded px-2 py-1 border border-slate-100">
                                                 <span className="font-mono text-[#0055FF]">{inv.document_number}</span>
-                                                <Badge className="text-[9px] bg-slate-100 text-slate-600">{inv.type === 'acconto' ? 'Acconto' : inv.type === 'sal' ? 'SAL' : 'Saldo'}</Badge>
-                                                <span className="font-mono font-medium">{fmtEur(inv.amount)}</span>
+                                                <Badge className="text-[9px] bg-slate-100 text-slate-600">{(inv.progressive_type || inv.type) === 'acconto' ? 'Acconto' : (inv.progressive_type || inv.type) === 'sal' ? 'SAL' : 'Saldo'}</Badge>
+                                                <span className="font-mono font-medium">{fmtEur(inv.progressive_amount || inv.amount)}</span>
                                             </div>
                                         ))}
                                     </div>
