@@ -193,6 +193,15 @@ def generate_ddt_pdf(doc: dict, company: dict = None) -> BytesIO:
         elements.append(Paragraph("Note:", section))
         elements.append(Paragraph(doc["notes"], small))
 
+    # ── Condizioni di Vendita ──
+    condizioni = company.get('condizioni_vendita', '')
+    if condizioni:
+        elements.append(Spacer(1, 6 * mm))
+        elements.append(Paragraph("CONDIZIONI DI VENDITA", section))
+        for line in condizioni.split('\n'):
+            if line.strip():
+                elements.append(Paragraph(line.strip(), small))
+
     # ── Footer ──
     elements.append(Spacer(1, 6 * mm))
     elements.append(Paragraph(
