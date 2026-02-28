@@ -479,6 +479,15 @@ export default function InvoicesPage() {
                                                                 </DropdownMenuItem>
                                                             )}
                                                             <DropdownMenuSeparator />
+                                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleSendEmail(inv); }} data-testid="btn-send-email">
+                                                                <Mail className="mr-2 h-4 w-4" />Invia via Email
+                                                            </DropdownMenuItem>
+                                                            {(inv.document_type === 'FT' || inv.document_type === 'NC') && inv.status !== 'bozza' && (
+                                                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleSendSDI(inv); }} data-testid="btn-send-sdi">
+                                                                    <Send className="mr-2 h-4 w-4" />Invia a SDI
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            <DropdownMenuSeparator />
                                                             {inv.document_type === 'FT' && inv.status !== 'bozza' && (
                                                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openPaymentDialog(inv); }}>
                                                                     <CreditCard className="mr-2 h-4 w-4" />Gestisci Pagamenti
