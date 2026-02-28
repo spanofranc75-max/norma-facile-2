@@ -823,6 +823,15 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
         elements.append(Paragraph("NOTE", subtitle_style))
         elements.append(Paragraph(prev["notes"], normal))
 
+    # Condizioni di Vendita
+    condizioni = co.get('condizioni_vendita', '')
+    if condizioni:
+        elements.append(Spacer(1, 8 * mm))
+        elements.append(Paragraph("CONDIZIONI DI VENDITA", subtitle_style))
+        for line in condizioni.split('\n'):
+            if line.strip():
+                elements.append(Paragraph(line.strip(), small))
+
     doc_pdf.build(elements)
     buffer.seek(0)
     return buffer
