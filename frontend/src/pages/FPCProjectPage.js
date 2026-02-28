@@ -122,6 +122,23 @@ export default function FPCProjectPage() {
           </div>
         </div>
 
+        {/* BIG DOSSIER BUTTON */}
+        <div className="mb-6">
+          <Button
+            data-testid="download-dossier-btn"
+            onClick={downloadDossier}
+            disabled={generatingDossier}
+            className="w-full h-14 text-base bg-[#0055FF] hover:bg-[#0044CC] shadow-lg"
+          >
+            {generatingDossier ? (
+              <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Generazione Fascicolo in corso...</>
+            ) : (
+              <><Printer className="h-5 w-5 mr-2" /> Stampa Fascicolo Tecnico Completo</>
+            )}
+          </Button>
+          <p className="text-xs text-slate-400 text-center mt-1">DoP + CE Label + Certificati 3.1 + Qualifica Saldatore + Controlli FPC</p>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* LEFT: Welder & WPS */}
           <div className="space-y-4">
