@@ -95,6 +95,12 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     const [pdfPreviewTitle, setPdfPreviewTitle] = useState('');
     const [sendingEmail, setSendingEmail] = useState(null); // Track which item is sending email
 
+    // Certificate linking states
+    const [certLinkOpen, setCertLinkOpen] = useState(false);
+    const [selectedArrivo, setSelectedArrivo] = useState(null);
+    const [linkingCert, setLinkingCert] = useState(null); // { arrivo_id, mat_idx }
+    const certFileRef = useRef();
+
     // Load fornitori from anagrafica
     useEffect(() => {
         apiRequest('/clients/?client_type=fornitore&limit=100').then(data => {
