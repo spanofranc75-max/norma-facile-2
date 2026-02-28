@@ -1,19 +1,13 @@
-"""PDF service for DDT (Documento di Trasporto)."""
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import mm
-from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+"""PDF service for DDT (Documento di Trasporto) — WeasyPrint unified template."""
 from io import BytesIO
 from datetime import datetime
 import logging
+from services.pdf_template import (
+    fmt_it, safe, build_header_html, compute_iva_groups,
+    build_totals_html, render_pdf, format_date, COMMON_CSS,
+)
 
 logger = logging.getLogger(__name__)
-
-BLUE = colors.HexColor("#0055FF")
-DARK = colors.HexColor("#1E293B")
-LIGHT = colors.HexColor("#F8FAFC")
 
 DDT_TYPE_TITLES = {
     "vendita": "DOCUMENTO DI TRASPORTO",
@@ -23,192 +17,166 @@ DDT_TYPE_TITLES = {
 
 
 def generate_ddt_pdf(doc: dict, company: dict = None) -> BytesIO:
-    company = company or {}
-    buffer = BytesIO()
-    page_doc = SimpleDocTemplate(
-        buffer, pagesize=A4,
-        leftMargin=12 * mm, rightMargin=12 * mm,
-        topMargin=12 * mm, bottomMargin=12 * mm,
-    )
-    usable_w = A4[0] - 24 * mm
-    styles = getSampleStyleSheet()
+    """Generate DDT PDF with unified template."""
+    co = company or {}
 
-    title_style = ParagraphStyle("T", parent=styles["Heading1"], fontSize=14, textColor=DARK, spaceAfter=2 * mm)
-    sub_style = ParagraphStyle("S", parent=styles["Normal"], fontSize=9, textColor=colors.grey)
-    section = ParagraphStyle("Sec", parent=styles["Heading2"], fontSize=10, textColor=BLUE, spaceBefore=4 * mm, spaceAfter=2 * mm)
-    small = ParagraphStyle("Sm", parent=styles["Normal"], fontSize=8)
+    # ── Client from embedded fields ──
+    cl = {
+        "business_name": doc.get("client_name", ""),
+        "address": doc.get("client_address", ""),
+    }
 
-    elements = []
+    header = build_header_html(co, cl)
 
-    # ── Logo ──
-    logo_url = company.get('logo_url', '')
-    if logo_url and logo_url.startswith('data:image'):
-        try:
-            import base64
-            header_part, b64_data = logo_url.split(',', 1)
-            img_bytes = base64.b64decode(b64_data)
-            logo_buf = BytesIO(img_bytes)
-            logo_img = Image(logo_buf, width=40 * mm, height=15 * mm)
-            logo_img.hAlign = 'LEFT'
-            elements.append(logo_img)
-            elements.append(Spacer(1, 3 * mm))
-        except Exception as e:
-            logger.warning(f"Could not render logo in DDT: {e}")
-
-    # ── Header ──
+    # ── Title ──
     ddt_type = doc.get("ddt_type", "vendita")
-    title_text = DDT_TYPE_TITLES.get(ddt_type, "DOCUMENTO DI TRASPORTO")
-    elements.append(Paragraph(title_text, title_style))
-    elements.append(Paragraph(
-        f"N. {doc.get('number', '-')} &nbsp;|&nbsp; Data: {doc.get('data_ora_trasporto', '-')} &nbsp;|&nbsp; "
-        f"Cliente: {doc.get('client_name', '-')}",
-        sub_style,
-    ))
-    elements.append(Spacer(1, 3 * mm))
+    title = DDT_TYPE_TITLES.get(ddt_type, "DOCUMENTO DI TRASPORTO")
+    doc_number = safe(doc.get("number", ""))
+    display_num = doc_number.replace("DDT-", "")
+    doc_date = format_date(doc.get("data_ora_trasporto") or doc.get("created_at", ""))
 
-    # ── Destinazione ──
-    dest = doc.get("destinazione", {})
-    if dest and dest.get("ragione_sociale"):
-        dest_data = [
-            ["Destinazione Merce:", ""],
-            ["Rag. Sociale:", dest.get("ragione_sociale", "")],
-            ["Indirizzo:", dest.get("indirizzo", "")],
-            ["Località:", f"{dest.get('cap', '')} {dest.get('localita', '')} ({dest.get('provincia', '')})"],
-        ]
-        dt = Table(dest_data, colWidths=[28 * mm, usable_w - 28 * mm])
-        dt.setStyle(TableStyle([
-            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, -1), 8),
-            ("TEXTCOLOR", (0, 0), (0, -1), BLUE),
-            ("TOPPADDING", (0, 0), (-1, -1), 1),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
-        ]))
-        elements.append(dt)
-        elements.append(Spacer(1, 2 * mm))
+    # ── Transport info (DDT-specific) ──
+    dest = doc.get("destinazione", {}) or {}
+    dest_html = ""
+    if dest.get("ragione_sociale"):
+        dest_html = f"""
+        <div class="info-box">
+            <div class="info-box-title">DESTINAZIONE MERCE</div>
+            <p><strong>Rag. Sociale:</strong> {safe(dest.get("ragione_sociale"))}</p>
+            <p><strong>Indirizzo:</strong> {safe(dest.get("indirizzo"))}
+            {safe(dest.get("cap"))} {safe(dest.get("localita"))} ({safe(dest.get("provincia"))})</p>
+        </div>"""
 
-    # ── Transport Info ──
-    transport_data = [
-        ["Causale:", doc.get("causale_trasporto", "-"), "Porto:", doc.get("porto", "-")],
-        ["Vettore:", doc.get("vettore", "-"), "Mezzo:", doc.get("mezzo_trasporto", "-")],
-        ["Colli:", str(doc.get("num_colli", 0)), "Peso Lordo:", f"{doc.get('peso_lordo_kg', 0)} kg"],
-        ["Aspetto:", doc.get("aspetto_beni", "-"), "Peso Netto:", f"{doc.get('peso_netto_kg', 0)} kg"],
-    ]
-    tt = Table(transport_data, colWidths=[20 * mm, (usable_w - 40 * mm) / 2, 22 * mm, (usable_w - 40 * mm) / 2])
-    tt.setStyle(TableStyle([
-        ("FONTSIZE", (0, 0), (-1, -1), 8),
-        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-        ("FONTNAME", (2, 0), (2, -1), "Helvetica-Bold"),
-        ("TEXTCOLOR", (0, 0), (0, -1), DARK),
-        ("TEXTCOLOR", (2, 0), (2, -1), DARK),
-        ("TOPPADDING", (0, 0), (-1, -1), 1),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
-        ("GRID", (0, 0), (-1, -1), 0.3, colors.Color(0.9, 0.9, 0.9)),
-    ]))
-    elements.append(tt)
-    elements.append(Spacer(1, 3 * mm))
+    transport_html = f"""
+    <table class="transport-table">
+        <tr>
+            <td class="t-label">Causale trasporto:</td>
+            <td>{safe(doc.get("causale_trasporto", "-"))}</td>
+            <td class="t-label">Porto:</td>
+            <td>{safe(doc.get("porto", "-"))}</td>
+        </tr>
+        <tr>
+            <td class="t-label">Vettore:</td>
+            <td>{safe(doc.get("vettore", "-"))}</td>
+            <td class="t-label">Mezzo:</td>
+            <td>{safe(doc.get("mezzo_trasporto", "-"))}</td>
+        </tr>
+        <tr>
+            <td class="t-label">N. Colli:</td>
+            <td>{doc.get("num_colli", 0)}</td>
+            <td class="t-label">Peso Lordo:</td>
+            <td>{doc.get("peso_lordo_kg", 0)} kg</td>
+        </tr>
+        <tr>
+            <td class="t-label">Aspetto beni:</td>
+            <td>{safe(doc.get("aspetto_beni", "-"))}</td>
+            <td class="t-label">Peso Netto:</td>
+            <td>{doc.get("peso_netto_kg", 0)} kg</td>
+        </tr>
+    </table>"""
 
-    # ── Lines Table ──
+    # ── Line items ──
     lines = doc.get("lines", [])
     show_prices = doc.get("stampa_prezzi", True)
 
     if show_prices:
-        header = ["#", "Cod.", "Descrizione", "UdM", "Q.tà", "Prezzo", "Sc.%", "Totale", "IVA"]
-        cw = [8 * mm, 18 * mm, usable_w - 120 * mm, 12 * mm, 14 * mm, 20 * mm, 14 * mm, 22 * mm, 12 * mm]
+        colgroup = """<colgroup>
+            <col style="width:8%"><col style="width:35%"><col style="width:7%">
+            <col style="width:8%"><col style="width:12%"><col style="width:8%">
+            <col style="width:12%"><col style="width:8%">
+        </colgroup>"""
+        thead = """<tr>
+            <th>Codice</th><th>Descrizione</th><th>u.m.</th>
+            <th>Q.t&agrave;</th><th>Prezzo</th><th>Sconti</th>
+            <th>Importo</th><th>IVA</th>
+        </tr>"""
     else:
-        header = ["#", "Cod.", "Descrizione", "UdM", "Q.tà"]
-        cw = [10 * mm, 25 * mm, usable_w - 65 * mm, 15 * mm, 15 * mm]
+        colgroup = """<colgroup>
+            <col style="width:10%"><col style="width:55%"><col style="width:15%">
+            <col style="width:20%">
+        </colgroup>"""
+        thead = "<tr><th>Codice</th><th>Descrizione</th><th>u.m.</th><th>Q.t&agrave;</th></tr>"
 
-    line_data = [header]
-    for i, line in enumerate(lines):
-        s1 = float(line.get("sconto_1", 0))
-        s2 = float(line.get("sconto_2", 0))
-        sc_str = ""
-        if s1:
-            sc_str = f"{s1}"
-        if s2:
-            sc_str += f"+{s2}" if sc_str else f"{s2}"
+    lines_html = ""
+    for ln in lines:
+        code = safe(ln.get("codice_articolo") or "")
+        desc = safe(ln.get("description") or "").replace("\n", "<br>")
+        um = safe(ln.get("unit", "pz"))
+        qty = fmt_it(ln.get("quantity", 0))
 
-        row = [
-            str(i + 1),
-            line.get("codice_articolo", ""),
-            Paragraph(line.get("description", ""), small),
-            line.get("unit", "pz"),
-            f"{float(line.get('quantity', 0)):.1f}",
-        ]
         if show_prices:
-            row.extend([
-                f"{float(line.get('unit_price', 0)):.2f}",
-                sc_str or "-",
-                f"{float(line.get('line_total', 0)):.2f}",
-                f"{line.get('vat_rate', '22')}%",
-            ])
-        line_data.append(row)
+            price = fmt_it(ln.get("unit_price", 0))
+            s1 = float(ln.get("sconto_1") or 0)
+            s2 = float(ln.get("sconto_2") or 0)
+            sc = ""
+            if s1 > 0 and s2 > 0:
+                sc = f"{fmt_it(s1)}%+{fmt_it(s2)}%"
+            elif s1 > 0:
+                sc = f"{fmt_it(s1)}%"
+            elif s2 > 0:
+                sc = f"{fmt_it(s2)}%"
+            total = fmt_it(ln.get("line_total", 0))
+            vat = safe(str(ln.get("vat_rate", "22")))
+            lines_html += f"""<tr>
+                <td class="tc">{code}</td><td class="desc-cell">{desc}</td>
+                <td class="tc">{um}</td><td class="tr">{qty}</td>
+                <td class="tr">{price}</td><td class="tc">{sc}</td>
+                <td class="tr">{total}</td><td class="tc">{vat}%</td>
+            </tr>"""
+        else:
+            lines_html += f"""<tr>
+                <td class="tc">{code}</td><td class="desc-cell">{desc}</td>
+                <td class="tc">{um}</td><td class="tr">{qty}</td>
+            </tr>"""
 
-    lt = Table(line_data, colWidths=cw, repeatRows=1)
-    lt.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), DARK),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 8),
-        ("ALIGN", (0, 0), (0, -1), "CENTER"),
-        ("ALIGN", (3, 1), (-1, -1), "RIGHT"),
-        ("GRID", (0, 0), (-1, -1), 0.4, colors.Color(0.85, 0.85, 0.85)),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, LIGHT]),
-        ("TOPPADDING", (0, 0), (-1, -1), 2),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-    ]))
-    elements.append(lt)
-
-    # ── Totals ──
-    if show_prices:
-        elements.append(Spacer(1, 3 * mm))
-        totals = doc.get("totals", {})
-        tot_data = [
-            ["Imponibile:", f"{totals.get('imponibile', 0):.2f} EUR"],
-            ["Totale IVA:", f"{totals.get('total_vat', 0):.2f} EUR"],
-            ["TOTALE:", f"{totals.get('total', 0):.2f} EUR"],
-        ]
-        if totals.get("acconto", 0) > 0:
-            tot_data.append(["Acconto:", f"-{totals.get('acconto', 0):.2f} EUR"])
-            tot_data.append(["Da Pagare:", f"{totals.get('da_pagare', 0):.2f} EUR"])
-
-        tot_t = Table(tot_data, colWidths=[usable_w - 45 * mm, 45 * mm])
-        tot_t.setStyle(TableStyle([
-            ("FONTSIZE", (0, 0), (-1, -1), 9),
-            ("ALIGN", (0, 0), (0, -1), "RIGHT"),
-            ("ALIGN", (1, 0), (1, -1), "RIGHT"),
-            ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
-            ("FONTNAME", (0, 2), (-1, 2), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 2), (-1, 2), 11),
-            ("TEXTCOLOR", (1, 2), (1, 2), BLUE),
-            ("TOPPADDING", (0, 0), (-1, -1), 2),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
-        ]))
-        elements.append(tot_t)
+    # ── Totals (only if prices shown) ──
+    totals_html = ""
+    if show_prices and lines:
+        sconto_glob = float(doc.get("sconto_globale") or 0)
+        iva_data = compute_iva_groups(lines, sconto_glob)
+        totals_html = build_totals_html(iva_data, sconto_glob)
 
     # ── Notes ──
+    notes_html = ""
     if doc.get("notes"):
-        elements.append(Spacer(1, 3 * mm))
-        elements.append(Paragraph("Note:", section))
-        elements.append(Paragraph(doc["notes"], small))
+        notes_html = f'<div class="info-box"><strong>Note:</strong> {safe(doc["notes"]).replace(chr(10), "<br>")}</div>'
 
-    # ── Condizioni di Vendita ──
-    condizioni = company.get('condizioni_vendita', '')
-    if condizioni:
-        elements.append(Spacer(1, 6 * mm))
-        elements.append(Paragraph("CONDIZIONI DI VENDITA", section))
-        for line in condizioni.split('\n'):
-            if line.strip():
-                elements.append(Paragraph(line.strip(), small))
+    # ── DDT-specific signature section ──
+    signatures_html = """
+    <table class="signatures-row">
+        <tr>
+            <td><div class="sig-line-center">Firma mittente</div></td>
+            <td><div class="sig-line-center">Firma vettore</div></td>
+            <td><div class="sig-line-center">Firma destinatario</div></td>
+        </tr>
+    </table>"""
 
-    # ── Footer ──
-    elements.append(Spacer(1, 6 * mm))
-    elements.append(Paragraph(
-        "Generato da Norma Facile 2.0",
-        ParagraphStyle("Foot", parent=styles["Normal"], fontSize=7, textColor=colors.grey, alignment=TA_CENTER),
-    ))
+    # ── Meta rows ──
+    meta_rows = f"""
+    <tr><td class="meta-label">DATA:</td><td>{doc_date}</td></tr>
+    <tr><td class="meta-label">Tipo DDT:</td><td>{safe(ddt_type.replace("_", " ").title())}</td></tr>"""
 
-    page_doc.build(elements)
-    buffer.seek(0)
-    return buffer
+    # ── Assemble ──
+    body = f"""
+    {header}
+    <div class="doc-title">
+        <h1>{title}</h1>
+        <div class="doc-num">{display_num}</div>
+    </div>
+    <table class="meta-table">{meta_rows}</table>
+
+    {dest_html}
+    {transport_html}
+
+    <table class="items-table">
+        {colgroup}
+        <thead>{thead}</thead>
+        <tbody>{lines_html}</tbody>
+    </table>
+
+    {notes_html}
+    {totals_html}
+    {signatures_html}
+    """
+
+    return render_pdf(body)
