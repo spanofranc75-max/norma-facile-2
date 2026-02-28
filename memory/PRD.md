@@ -123,16 +123,18 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 - `/api/sicurezza/`, `/api/dashboard/stats`, `/api/dashboard/fascicolo/{client_id}`
 - `/api/catalogo/`, `/api/vendor/`, `/api/preventivi/`
 - `/api/payment-types/` (CRUD + `seed-defaults`)
-- `/api/ddt/` (CRUD + PDF + causali + convert-to-invoice)
+- `/api/ddt/` (CRUD + PDF + causali + convert-to-invoice + stats/registro)
 - `/api/articoli/` (CRUD + search + bulk-import)
 - `/api/invoices/{id}/scadenze` (GET payment schedule)
 - `/api/invoices/{id}/scadenze/pagamento` (POST record payment, DELETE remove)
 - `/api/invoices/{id}/duplicate` (POST duplicate as draft)
+- `/api/invoices/quick-fill/sources` (GET list preventivi/DDT for quick fill)
 - `/api/fatture-ricevute/` (CRUD + KPIs for received invoices)
 - `/api/fatture-ricevute/import-xml` (POST multipart XML FatturaPA import)
 - `/api/fatture-ricevute/preview-xml` (POST parse XML without saving)
 - `/api/fatture-ricevute/{id}/extract-articoli` (POST extract to catalog)
 - `/api/fatture-ricevute/{id}/pagamenti` (GET/POST payment tracking)
+- `/api/engine/validate-installation-photos` (POST AI photo validation via GPT-4o Vision)
 
 ## Prioritized Backlog
 
