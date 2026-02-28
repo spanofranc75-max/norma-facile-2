@@ -893,6 +893,124 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                 </div>
             </Section>
 
+            {/* ── CAM - CRITERI AMBIENTALI MINIMI ── */}
+            <Section title="CAM - Criteri Ambientali Minimi" icon={Leaf} count={camLotti.length}>
+                <div className="space-y-3">
+                    {/* Summary Card */}
+                    {camCalcolo && camCalcolo.righe?.length > 0 && (
+                        <div className={`p-3 rounded-lg border-2 ${camCalcolo.conforme_cam ? 'bg-emerald-50 border-emerald-400' : 'bg-red-50 border-red-400'}`} data-testid="cam-summary">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2">
+                                    {camCalcolo.conforme_cam ? (
+                                        <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                                    ) : (
+                                        <AlertTriangle className="h-5 w-5 text-red-600" />
+                                    )}
+                                    <span className={`text-sm font-bold ${camCalcolo.conforme_cam ? 'text-emerald-800' : 'text-red-800'}`}>
+                                        {camCalcolo.conforme_cam ? 'CONFORME CAM' : 'NON CONFORME CAM'}
+                                    </span>
+                                </div>
+                                <Badge className={camCalcolo.conforme_cam ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}>
+                                    DM 256/2022
+                                </Badge>
+                            </div>
+                            <div className="grid grid-cols-4 gap-2 text-center">
+                                <div className="bg-white/60 rounded p-1.5">
+                                    <p className="text-[10px] text-slate-500">Peso Totale</p>
+                                    <p className="text-xs font-bold text-slate-800">{(camCalcolo.peso_totale_kg || 0).toLocaleString('it-IT')} kg</p>
+                                </div>
+                                <div className="bg-white/60 rounded p-1.5">
+                                    <p className="text-[10px] text-slate-500">Peso Riciclato</p>
+                                    <p className="text-xs font-bold text-slate-800">{(camCalcolo.peso_riciclato_kg || 0).toLocaleString('it-IT')} kg</p>
+                                </div>
+                                <div className="bg-white/60 rounded p-1.5">
+                                    <p className="text-[10px] text-slate-500">% Riciclato</p>
+                                    <p className={`text-sm font-bold ${camCalcolo.conforme_cam ? 'text-emerald-700' : 'text-red-700'}`}>
+                                        {(camCalcolo.percentuale_riciclato_totale || 0).toFixed(1)}%
+                                    </p>
+                                </div>
+                                <div className="bg-white/60 rounded p-1.5">
+                                    <p className="text-[10px] text-slate-500">Soglia Min.</p>
+                                    <p className="text-xs font-bold text-slate-600">{camCalcolo.soglia_minima_richiesta || 0}%</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="flex gap-2 flex-wrap">
+                        <Button size="sm" variant="outline" onClick={() => { setEditingCamLotto(null); setCamLottoForm({ descrizione: '', fornitore: '', numero_colata: '', peso_kg: 0, qualita_acciaio: '', percentuale_riciclato: 75, metodo_produttivo: 'forno_elettrico_non_legato', tipo_certificazione: 'dichiarazione_produttore', numero_certificazione: '', ente_certificatore: '', uso_strutturale: true, commessa_id: commessaId }); setCamLottoOpen(true); }} className="text-xs" data-testid="btn-new-cam-lotto">
+                            <Plus className="h-3 w-3 mr-1" /> Aggiungi Materiale
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={handleCalcolaCAM} disabled={camLoading} className="text-xs" data-testid="btn-calcola-cam">
+                            <RefreshCw className={`h-3 w-3 mr-1 ${camLoading ? 'animate-spin' : ''}`} /> Ricalcola
+                        </Button>
+                        {camLotti.length > 0 && (
+                            <Button size="sm" onClick={handleDownloadCamPdf} className="text-xs bg-emerald-600 text-white hover:bg-emerald-700" data-testid="btn-cam-pdf">
+                                <Download className="h-3 w-3 mr-1" /> Dichiarazione CAM PDF
+                            </Button>
+                        )}
+                    </div>
+
+                    {/* Import from AI-analyzed certificates */}
+                    {docs.filter(d => d.metadata_estratti?.numero_colata && !camLotti.find(l => l.numero_colata === d.metadata_estratti.numero_colata)).length > 0 && (
+                        <div className="p-2 bg-amber-50 border border-amber-200 rounded text-xs" data-testid="cam-import-certs">
+                            <p className="font-semibold text-amber-800 mb-1.5 flex items-center gap-1">
+                                <Sparkles className="h-3.5 w-3.5" /> Certificati analizzati importabili
+                            </p>
+                            <div className="space-y-1">
+                                {docs.filter(d => d.metadata_estratti?.numero_colata && !camLotti.find(l => l.numero_colata === d.metadata_estratti.numero_colata)).map(d => (
+                                    <div key={d.doc_id} className="flex items-center justify-between bg-white rounded p-1.5 border border-amber-100">
+                                        <span className="text-slate-700 truncate flex-1">
+                                            {d.nome_file} — <span className="font-mono">{d.metadata_estratti.numero_colata}</span>
+                                            {d.metadata_estratti.percentuale_riciclato != null && (
+                                                <Badge className="ml-1 bg-emerald-50 text-emerald-700 text-[9px]">{d.metadata_estratti.percentuale_riciclato}% ric.</Badge>
+                                            )}
+                                        </span>
+                                        <Button size="sm" variant="ghost" className="h-6 text-[10px] text-amber-700" onClick={() => handleImportCamFromCert(d.doc_id)} disabled={camLoading} data-testid={`btn-import-cam-${d.doc_id}`}>
+                                            <Plus className="h-3 w-3 mr-0.5" /> Importa
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Material list */}
+                    {camLotti.map(lotto => (
+                        <div key={lotto.lotto_id} className={`p-2 rounded border text-xs cursor-pointer hover:shadow-sm transition-shadow ${lotto.conforme_cam ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}
+                             onClick={() => openEditCamLotto(lotto)} data-testid={`cam-lotto-${lotto.lotto_id}`}>
+                            <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center gap-2">
+                                    {lotto.conforme_cam ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <AlertTriangle className="h-3.5 w-3.5 text-red-500" />}
+                                    <span className="font-semibold text-slate-800">{lotto.descrizione}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <Badge className={`text-[9px] ${lotto.conforme_cam ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                        {lotto.percentuale_riciclato}% ric. (soglia {lotto.soglia_minima_cam}%)
+                                    </Badge>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-[10px]">
+                                <div><span className="text-slate-500 block">Fornitore</span><span className="font-mono">{lotto.fornitore || '-'}</span></div>
+                                <div><span className="text-slate-500 block">Colata</span><span className="font-mono">{lotto.numero_colata || '-'}</span></div>
+                                <div><span className="text-slate-500 block">Peso</span><span className="font-mono">{lotto.peso_kg} kg</span></div>
+                                <div><span className="text-slate-500 block">Metodo</span><span className="font-mono">{(lotto.metodo_produttivo || '').replace(/_/g, ' ')}</span></div>
+                                <div><span className="text-slate-500 block">Cert.</span><span className="font-mono">{(lotto.tipo_certificazione || '').replace(/_/g, ' ')}</span></div>
+                            </div>
+                        </div>
+                    ))}
+
+                    {camLotti.length === 0 && (
+                        <div className="text-center py-4 text-slate-400 text-xs" data-testid="cam-empty">
+                            <Leaf className="h-6 w-6 mx-auto mb-1 opacity-50" />
+                            <p>Nessun materiale CAM registrato</p>
+                            <p className="text-[10px] mt-1">Aggiungi materiali o importa dai certificati analizzati con AI</p>
+                        </div>
+                    )}
+                </div>
+            </Section>
+
             {/* ── REPOSITORY DOCUMENTI ── */}
             <Section title="Repository Documenti" icon={FileUp} count={docs.length} defaultOpen>
                 <div className="space-y-2">
