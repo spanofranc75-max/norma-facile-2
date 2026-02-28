@@ -179,3 +179,56 @@ async def delete_client(
     
     logger.info(f"Client deleted: {client_id}")
     return {"message": "Cliente eliminato con successo"}
+
+
+
+# ── Email Log per Cliente ──
+
+@router.get("/{client_id}/email-log")
+async def get_client_email_log(client_id: str, user: dict = Depends(get_current_user)):
+    """Get all emails sent to documents linked to this client."""
+    uid = user["user_id"]
+
+    emails = []
+
+    # Invoices with email_sent=true for this client
+    async for inv in db.invoices.find(
+        {"user_id": uid, "client_id": client_id, "email_sent": True},
+        {"_id": 0, "document_number": 1, "document_type": 1, "email_sent_to": 1, "email_sent_at": 1}
+    ):
+        type_labels = {"FT": "Fattura", "NC": "Nota di Credito"}
+        emails.append({
+            "type": type_labels.get(inv.get("document_type"), "Documento"),
+            "number": inv.get("document_number", ""),
+            "to": inv.get("email_sent_to", ""),
+            "sent_at": inv.get("email_sent_at", ""),
+        })
+
+    # DDTs with email_sent=true
+    async for ddt in db.ddt.find(
+        {"user_id": uid, "client_id": client_id, "email_sent": True},
+        {"_id": 0, "number": 1, "ddt_type": 1, "email_sent_to": 1, "email_sent_at": 1}
+    ):
+        emails.append({
+            "type": f"DDT ({ddt.get('ddt_type', 'vendita')})",
+            "number": ddt.get("number", ""),
+            "to": ddt.get("email_sent_to", ""),
+            "sent_at": ddt.get("email_sent_at", ""),
+        })
+
+    # Preventivi with email_sent=true
+    async for prev in db.preventivi.find(
+        {"user_id": uid, "client_id": client_id, "email_sent": True},
+        {"_id": 0, "number": 1, "email_sent_to": 1, "email_sent_at": 1}
+    ):
+        emails.append({
+            "type": "Preventivo",
+            "number": prev.get("number", ""),
+            "to": prev.get("email_sent_to", ""),
+            "sent_at": prev.get("email_sent_at", ""),
+        })
+
+    # Sort by date (newest first)
+    emails.sort(key=lambda e: e.get("sent_at", ""), reverse=True)
+
+    return {"emails": emails, "total": len(emails)}
