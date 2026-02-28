@@ -279,6 +279,7 @@ export default function RilievoEditorPage() {
 
     const [loading, setLoading] = useState(isEditing);
     const [saving, setSaving] = useState(false);
+    const [creatingPos, setCreatingPos] = useState(false);
     const [clients, setClients] = useState([]);
     const photoInputRef = useRef(null);
     
