@@ -445,3 +445,32 @@ async def generate_ce_label(project_id: str, user: dict = Depends(get_current_us
         "project_id": project_id,
         "execution_class": fpc.get("execution_class"),
     }
+
+
+# ═══════════════════════════════════════════════════════════════
+# TECHNICAL DOSSIER
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/projects/{project_id}/dossier")
+async def download_dossier(project_id: str, user: dict = Depends(get_current_user)):
+    """Generate and download the complete Technical Dossier (Fascicolo Tecnico)."""
+    from services.dossier_generator import generate_dossier
+
+    try:
+        pdf_buf = await generate_dossier(project_id, user["user_id"])
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+
+    # Build filename
+    project = await db.fpc_projects.find_one(
+        {"project_id": project_id, "user_id": user["user_id"]},
+        {"_id": 0, "preventivo_number": 1}
+    )
+    name_part = (project or {}).get("preventivo_number", project_id).replace("/", "-")
+    filename = f"Fascicolo_Tecnico_{name_part}.pdf"
+
+    return StreamingResponse(
+        pdf_buf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
