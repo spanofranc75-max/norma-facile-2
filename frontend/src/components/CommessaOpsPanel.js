@@ -142,6 +142,21 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
+    // CAM data fetch
+    const fetchCamData = useCallback(async () => {
+        if (!commessaId) return;
+        try {
+            const [lottiRes, calcoloRes] = await Promise.all([
+                apiRequest(`/cam/lotti?commessa_id=${commessaId}`).catch(() => ({ lotti: [] })),
+                apiRequest(`/cam/calcolo/${commessaId}`).catch(() => null),
+            ]);
+            setCamLotti(lottiRes.lotti || []);
+            setCamCalcolo(calcoloRes);
+        } catch (e) { console.error('CAM fetch error', e); }
+    }, [commessaId]);
+
+    useEffect(() => { fetchCamData(); }, [fetchCamData]);
+
     if (loading) return <div className="text-center py-6 text-sm text-slate-400">Caricamento dati operativi...</div>;
 
     const approv = ops?.approvvigionamento || { richieste: [], ordini: [], arrivi: [] };
