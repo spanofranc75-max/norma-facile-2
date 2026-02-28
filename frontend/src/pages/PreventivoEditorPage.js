@@ -70,6 +70,7 @@ export default function PreventivoEditorPage() {
     const [sidebarTab, setSidebarTab] = useState('riferimento');
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
     const [linkedCommessa, setLinkedCommessa] = useState(null);
+    const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
     const [creatingCommessa, setCreatingCommessa] = useState(false);
     const [workflow, setWorkflow] = useState({ status: 'bozza', number: null, created_at: null, converted_to: null, linked_invoice: null, invoicing_progress: 0, linked_invoices: [] });
 
