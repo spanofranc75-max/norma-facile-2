@@ -186,12 +186,33 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
   - Testing: 12/12 backend (iteration_36), 100% frontend
 
 ### P1
+- [x] Registro DDT — DONE (Phase 29) — 2026-02-28
+  - KPI cards: DDT mese, volume mese, breakdown per tipo, non fatturati
+  - Navigazione mese precedente/successivo per report mensile
+  - Filtri per stato (non_fatturato/fatturato) + filtri per data
+  - Endpoint: /api/ddt/stats/registro con year/month params
+  - Testing: 12/12 backend (iteration_37), 100% frontend
+- [x] Quick Fill Fatture — DONE (Phase 29) — 2026-02-28
+  - Pulsante "Importa da Preventivo/DDT" nell'editor fattura
+  - Modale QuickFillModal con ricerca, filtro per tipo, selezione
+  - Auto-popolamento righe, cliente, note dalla sorgente selezionata
+  - Endpoint: /api/invoices/quick-fill/sources con filtri doc_type e q
+  - Testing: 12/12 backend (iteration_37), 100% frontend
+- [x] Validazione AI Foto Posa — DONE (Phase 29) — 2026-02-28
+  - Pagina dedicata /validazione-foto con configurazione prodotto e norma
+  - Upload fino a 5 foto dell'installazione
+  - Checklist personalizzabile + checklist standard per tipo prodotto
+  - Analisi GPT-4o Vision con esito CONFORME/NON CONFORME/NON VERIFICABILE
+  - Report strutturato con summary e note aggiuntive
+  - Endpoint: /api/engine/validate-installation-photos
+  - Testing: 12/12 backend (iteration_37), 100% frontend
 - [ ] Integrazione SDI diretta con provider (API keys da configurare)
-- [ ] Registro DDT (numerazione automatica e reportistica mensile spedizioni)
-- [ ] Quick Fill: fatture auto-popola da cliente (stesso pattern preventivi)
 - [ ] Recurring invoices / email reminders
 - [ ] Invio fascicolo via PEC automatico
-- [ ] Validazione AI foto posa cantiere
 
 ### P2
 - [ ] Team collaboration, advanced reporting, client portal, mobile app
+- [ ] Digitalizzazione documenti cartacei (AI scan)
+- [ ] Integrazione calendario (Google/Outlook)
+- [ ] Firma Elettronica Avanzata (FEA)
+- [ ] App Mobile Nativa
