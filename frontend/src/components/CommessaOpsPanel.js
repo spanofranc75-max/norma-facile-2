@@ -512,7 +512,22 @@ export default function CommessaOpsPanel({ commessaId, onRefresh }) {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div><Label className="text-xs">Fornitore</Label><Input value={clForm.fornitore_nome} onChange={e => setClForm(f => ({ ...f, fornitore_nome: e.target.value }))} className="mt-1" data-testid="cl-fornitore" /></div>
+                        <div>
+                            <Label className="text-xs">Fornitore</Label>
+                            <Combobox
+                                options={fornitori.map(f => ({ value: f.id, label: f.nome }))}
+                                value={clForm.fornitore_id}
+                                onValueChange={(val) => {
+                                    const f = fornitori.find(x => x.id === val);
+                                    setClForm(prev => ({ ...prev, fornitore_id: val, fornitore_nome: f?.nome || '' }));
+                                }}
+                                placeholder="Seleziona fornitore..."
+                                searchPlaceholder="Cerca fornitore..."
+                                emptyText="Nessun fornitore trovato"
+                                className="mt-1"
+                                data-testid="cl-fornitore"
+                            />
+                        </div>
                     </div>
                     <DialogFooter><Button size="sm" disabled={!clForm.fornitore_nome} onClick={handleCreateCL} className="bg-[#0055FF] text-white" data-testid="btn-confirm-cl">Crea</Button></DialogFooter>
                 </DialogContent>
