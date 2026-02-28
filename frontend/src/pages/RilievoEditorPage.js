@@ -47,6 +47,7 @@ import {
     Undo,
     RotateCcw,
     Check,
+    HardHat,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import CanvasDraw from 'react-canvas-draw';
