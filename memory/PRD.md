@@ -12,7 +12,7 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Backend**: FastAPI + Motor (MongoDB async)
 - **Database**: MongoDB
 - **Email**: Resend API (`fatture@steelprojectdesign.it`)
-- **PDF**: WeasyPrint + ReportLab
+- **PDF**: WeasyPrint (template unificato)
 - **AI**: GPT-4o Vision (Emergent LLM Key)
 - **Auth**: Google OAuth (Emergent-managed)
 - **SDI**: Aruba + FattureInCloud (moduli pronti)
