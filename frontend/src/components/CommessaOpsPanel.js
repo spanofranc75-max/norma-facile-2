@@ -61,6 +61,7 @@ function Section({ title, icon: Icon, count, defaultOpen, children }) {
 export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh }) {
     const [ops, setOps] = useState(null);
     const [docs, setDocs] = useState([]);
+    const [materialBatches, setMaterialBatches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [fornitori, setFornitori] = useState([]);
     const fileRef = useRef();
