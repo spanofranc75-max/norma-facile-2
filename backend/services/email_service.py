@@ -208,3 +208,143 @@ async def send_ddt_email(
     except Exception as e:
         logger.error(f"[EMAIL ERROR] DDT email to {to_email}: {e}")
         return False
+
+
+async def send_rdp_email(
+    to_email: str,
+    fornitore_name: str,
+    rdp_id: str,
+    commessa_numero: str,
+    company_name: str,
+    num_righe: int,
+    pdf_bytes: Optional[bytes] = None,
+    filename: Optional[str] = None,
+) -> bool:
+    """Send Request for Quote (RdP) email to supplier with PDF attachment."""
+    if not _init_resend():
+        logger.info(f"[EMAIL SKIP] RdP email to {to_email} (Resend not configured)")
+        return False
+
+    try:
+        html = f"""
+        <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 40px 20px;">
+            <div style="background: white; border-radius: 12px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h1 style="color: #0055FF; font-size: 24px; margin: 0;">Richiesta di Preventivo</h1>
+                </div>
+                <h2 style="color: #1e293b; font-size: 18px;">Spett.le {fornitore_name},</h2>
+                <p style="color: #475569; font-size: 15px; line-height: 1.6;">
+                    In allegato la nostra richiesta di preventivo (rif. <strong>{rdp_id}</strong>)
+                    relativa alla commessa <strong>{commessa_numero}</strong>.
+                </p>
+                <div style="background: #f0f4ff; border-radius: 8px; padding: 16px; margin: 20px 0;">
+                    <p style="color: #0055FF; font-weight: 600; margin: 0;">
+                        Materiali richiesti: {num_righe} voci
+                    </p>
+                </div>
+                <p style="color: #475569; font-size: 14px; line-height: 1.6;">
+                    Si prega di rispondere indicando prezzi, tempi di consegna e 
+                    disponibilità certificati 3.1 ove richiesti.
+                </p>
+                <p style="color: #475569; font-size: 14px;">
+                    In attesa di cortese riscontro, porgiamo distinti saluti.<br/>
+                    <strong>{company_name}</strong>
+                </p>
+            </div>
+            <p style="text-align: center; color: #94a3b8; font-size: 12px; margin-top: 20px;">
+                Email inviata tramite {settings.sender_name}
+            </p>
+        </div>
+        """
+
+        params = {
+            "from": f"{settings.sender_name} <{settings.sender_email}>",
+            "to": [to_email],
+            "subject": f"Richiesta Preventivo {rdp_id} - Commessa {commessa_numero} - {company_name}",
+            "html": html,
+        }
+
+        if pdf_bytes and filename:
+            import base64
+            params["attachments"] = [{
+                "filename": filename,
+                "content": base64.b64encode(pdf_bytes).decode("utf-8"),
+                "content_type": "application/pdf",
+            }]
+
+        resend.Emails.send(params)
+        logger.info(f"[EMAIL] RdP {rdp_id} sent to {to_email}")
+        return True
+    except Exception as e:
+        logger.error(f"[EMAIL ERROR] RdP email to {to_email}: {e}")
+        return False
+
+
+async def send_oda_email(
+    to_email: str,
+    fornitore_name: str,
+    ordine_id: str,
+    commessa_numero: str,
+    company_name: str,
+    importo_totale: float,
+    pdf_bytes: Optional[bytes] = None,
+    filename: Optional[str] = None,
+) -> bool:
+    """Send Purchase Order (OdA) email to supplier with PDF attachment."""
+    if not _init_resend():
+        logger.info(f"[EMAIL SKIP] OdA email to {to_email} (Resend not configured)")
+        return False
+
+    total_fmt = f"{importo_totale:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    try:
+        html = f"""
+        <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 40px 20px;">
+            <div style="background: white; border-radius: 12px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h1 style="color: #059669; font-size: 24px; margin: 0;">Ordine di Acquisto</h1>
+                </div>
+                <h2 style="color: #1e293b; font-size: 18px;">Spett.le {fornitore_name},</h2>
+                <p style="color: #475569; font-size: 15px; line-height: 1.6;">
+                    In allegato il nostro ordine di acquisto n. <strong>{ordine_id}</strong>
+                    relativo alla commessa <strong>{commessa_numero}</strong>.
+                </p>
+                <div style="background: #f0fdf4; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center;">
+                    <p style="color: #64748b; font-size: 13px; margin: 0;">Importo ordine</p>
+                    <p style="color: #059669; font-size: 28px; font-weight: 700; margin: 4px 0 0 0;">&euro; {total_fmt}</p>
+                </div>
+                <p style="color: #475569; font-size: 14px; line-height: 1.6;">
+                    Si prega di confermare l'ordine e comunicare la data di consegna prevista.
+                </p>
+                <p style="color: #475569; font-size: 14px;">
+                    Distinti saluti,<br/>
+                    <strong>{company_name}</strong>
+                </p>
+            </div>
+            <p style="text-align: center; color: #94a3b8; font-size: 12px; margin-top: 20px;">
+                Email inviata tramite {settings.sender_name}
+            </p>
+        </div>
+        """
+
+        params = {
+            "from": f"{settings.sender_name} <{settings.sender_email}>",
+            "to": [to_email],
+            "subject": f"Ordine n. {ordine_id} - Commessa {commessa_numero} - {company_name}",
+            "html": html,
+        }
+
+        if pdf_bytes and filename:
+            import base64
+            params["attachments"] = [{
+                "filename": filename,
+                "content": base64.b64encode(pdf_bytes).decode("utf-8"),
+                "content_type": "application/pdf",
+            }]
+
+        resend.Emails.send(params)
+        logger.info(f"[EMAIL] OdA {ordine_id} sent to {to_email}")
+        return True
+    except Exception as e:
+        logger.error(f"[EMAIL ERROR] OdA email to {to_email}: {e}")
+        return False
