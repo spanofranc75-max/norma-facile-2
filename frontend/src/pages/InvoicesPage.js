@@ -177,13 +177,7 @@ export default function InvoicesPage() {
     };
 
     const handleSendEmail = async (invoice) => {
-        try {
-            const result = await apiRequest(`/invoices/${invoice.invoice_id}/send-email`, { method: 'POST' });
-            toast.success(result.message);
-            fetchInvoices();
-        } catch (error) {
-            toast.error(error.message);
-        }
+        setEmailPreview({ open: true, invoiceId: invoice.invoice_id });
     };
 
     const handleSendSDI = async (invoice) => {
