@@ -131,7 +131,7 @@ def generate_rdp_pdf(
     try:
         dt = datetime.fromisoformat(data_richiesta.replace("Z", "+00:00"))
         data_fmt = dt.strftime("%d/%m/%Y")
-    except:
+    except (ValueError, AttributeError):
         data_fmt = data_richiesta[:10] if data_richiesta else datetime.now().strftime("%d/%m/%Y")
 
     # Build table rows
