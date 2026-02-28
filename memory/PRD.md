@@ -246,6 +246,16 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **UX Migliorata**: Bottone "Emetti Ordine" richiede descrizione compilata (non solo placeholder)
 - Testing: 12/12 backend, 100% frontend (iteration_56)
 
+### Crea OdA da RdP + UI Certificati con AI OCR (Phase 51)
+- **Crea OdA da RdP Accettata**: Bottone "Crea OdA" su RdP con stato 'accettata' che pre-compila l'ordine con le stesse righe della richiesta
+- **Pre-compilazione Intelligente**: Fornitore, descrizione, quantità, u.m., richiede_cert_31 copiati automaticamente — solo i prezzi da inserire
+- **Riferimento RdP**: Note dell'OdA contengono automaticamente "Rif. RdP: xxx" per tracciabilità
+- **UI Collegamento Certificati**: Dialog "Collega Certificati ai Materiali" accessibile dagli arrivi con materiali che richiedono Cert. 3.1
+- **Tabella Materiali con Stato**: Mostra materiali con badge 3.1, stato collegamento (verde "Collegato" o rosso "Non collegato")
+- **Upload con AI OCR**: Caricamento PDF certificato → analisi GPT-4o Vision → estrazione automatica numero colata, qualità, fornitore → collegamento a materiale + tracciabilità EN 1090
+- **Toast Informativi**: "OdA pre-compilato dalla RdP - aggiungi i prezzi e invia!"
+- Testing: 100% backend, 100% frontend (iteration_57)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
