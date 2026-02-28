@@ -113,6 +113,7 @@ export default function PreventivoEditorPage() {
                 riferimento: data.riferimento || '',
                 acconto: data.acconto || 0,
                 sconto_globale: data.sconto_globale || 0,
+                normativa: data.normativa || '',
             });
             if (data.compliance_detail) setCompliance(data.compliance_detail);
             setWorkflow({
