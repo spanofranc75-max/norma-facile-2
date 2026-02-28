@@ -34,7 +34,7 @@ import { ScrollArea } from '../components/ui/scroll-area';
 import {
     Save, ArrowLeft, Plus, Trash2, Import, Package,
     Weight, Calculator, FileDown, BarChart3, Ruler,
-    Scissors, ChevronDown, ChevronUp, Settings2,
+    Scissors, ChevronDown, ChevronUp, Settings2, Receipt,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
