@@ -473,8 +473,8 @@ class TestCAMRequiresAuth:
         assert response.status_code in [401, 403], f"Expected 401/403, got {response.status_code}"
 
 
-@pytest.fixture(autouse=True, scope="module")
-def cleanup_test_data(auth_client):
+@pytest.fixture(autouse=True, scope="session")
+def cleanup_test_data():
     """Cleanup TEST_ prefixed data after all tests."""
     yield
     
