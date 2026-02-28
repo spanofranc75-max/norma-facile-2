@@ -33,6 +33,22 @@ async def get_commessa_or_404(commessa_id, uid):
     return doc
 
 
+async def ensure_ops_fields(commessa_id):
+    """Ensure operational fields exist in commessa document for backward compat."""
+    await db[COLL].update_one(
+        {"commessa_id": commessa_id, "approvvigionamento": {"$exists": False}},
+        {"$set": {"approvvigionamento": {"richieste": [], "ordini": [], "arrivi": []}}}
+    )
+    await db[COLL].update_one(
+        {"commessa_id": commessa_id, "fasi_produzione": {"$exists": False}},
+        {"$set": {"fasi_produzione": []}}
+    )
+    await db[COLL].update_one(
+        {"commessa_id": commessa_id, "conto_lavoro": {"$exists": False}},
+        {"$set": {"conto_lavoro": []}}
+    )
+
+
 def ts():
     return datetime.now(timezone.utc)
 
