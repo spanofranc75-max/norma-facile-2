@@ -32,6 +32,7 @@ from routes.perizia import router as perizia_router
 from routes.articoli import router as articoli_router
 from routes.fatture_ricevute import router as fatture_ricevute_router
 from routes.engine import router as engine_router
+from routes.commesse import router as commesse_router
 
 # Configure logging
 logging.basicConfig(
