@@ -382,3 +382,143 @@ async def get_fascicolo_cantiere(client_id: str, user: dict = Depends(get_curren
         "invoices": invoices,
         "certificazioni": certs,
     }
+
+
+
+# ── EBITDA / Financial Analysis ─────────────────────────────────
+
+@router.get("/ebitda")
+async def get_ebitda(
+    year: int = None,
+    user: dict = Depends(get_current_user)
+):
+    """Get EBITDA financial analysis: Revenue vs Costs by month."""
+    uid = user["user_id"]
+    now = datetime.now(timezone.utc)
+    year = year or now.year
+
+    mesi_it = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu",
+               "Lug", "Ago", "Set", "Ott", "Nov", "Dic"]
+
+    monthly = []
+    ytd_revenue = 0
+    ytd_costs = 0
+
+    for month in range(1, 13):
+        m_start = datetime(year, month, 1, tzinfo=timezone.utc)
+        if month == 12:
+            m_end = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+        else:
+            m_end = datetime(year, month + 1, 1, tzinfo=timezone.utc)
+
+        # Revenue: emitted invoices (fatture emesse)
+        rev_pipeline = [
+            {"$match": {
+                "user_id": uid,
+                "status": {"$in": ["emessa", "pagata", "inviata_sdi", "accettata"]},
+                "created_at": {"$gte": m_start, "$lt": m_end},
+            }},
+            {"$group": {
+                "_id": None,
+                "total": {"$sum": "$totals.total_document"},
+                "count": {"$sum": 1}
+            }},
+        ]
+        rev_result = await db.invoices.aggregate(rev_pipeline).to_list(1)
+        revenue = round(rev_result[0]["total"], 2) if rev_result else 0
+        rev_count = rev_result[0]["count"] if rev_result else 0
+
+        # Costs: received invoices (fatture ricevute)
+        cost_pipeline = [
+            {"$match": {
+                "user_id": uid,
+                "created_at": {"$gte": m_start, "$lt": m_end},
+            }},
+            {"$group": {
+                "_id": None,
+                "total": {"$sum": "$totale_documento"},
+                "count": {"$sum": 1}
+            }},
+        ]
+        cost_result = await db.fatture_ricevute.aggregate(cost_pipeline).to_list(1)
+        costs = round(cost_result[0]["total"], 2) if cost_result else 0
+        cost_count = cost_result[0]["count"] if cost_result else 0
+
+        margin = round(revenue - costs, 2)
+        margin_pct = round((margin / revenue * 100), 1) if revenue > 0 else 0
+
+        # Only accumulate for months up to current
+        if year == now.year and month <= now.month:
+            ytd_revenue += revenue
+            ytd_costs += costs
+        elif year < now.year:
+            ytd_revenue += revenue
+            ytd_costs += costs
+
+        monthly.append({
+            "month": month,
+            "month_label": mesi_it[month - 1],
+            "revenue": revenue,
+            "costs": costs,
+            "margin": margin,
+            "margin_pct": margin_pct,
+            "rev_count": rev_count,
+            "cost_count": cost_count,
+        })
+
+    ytd_margin = round(ytd_revenue - ytd_costs, 2)
+    ytd_margin_pct = round((ytd_margin / ytd_revenue * 100), 1) if ytd_revenue > 0 else 0
+
+    # Top expense categories from fatture ricevute
+    cat_pipeline = [
+        {"$match": {"user_id": uid, "created_at": {
+            "$gte": datetime(year, 1, 1, tzinfo=timezone.utc),
+            "$lt": datetime(year + 1, 1, 1, tzinfo=timezone.utc),
+        }}},
+        {"$group": {
+            "_id": "$fornitore_nome",
+            "total": {"$sum": "$totale_documento"},
+            "count": {"$sum": 1},
+        }},
+        {"$sort": {"total": -1}},
+        {"$limit": 10},
+    ]
+    top_suppliers = await db.fatture_ricevute.aggregate(cat_pipeline).to_list(10)
+    top_suppliers = [
+        {"supplier": s["_id"] or "Non specificato", "total": round(s["total"], 2), "count": s["count"]}
+        for s in top_suppliers
+    ]
+
+    # Payment status breakdown
+    paid_pipeline = [
+        {"$match": {
+            "user_id": uid,
+            "status": {"$in": ["emessa", "pagata", "inviata_sdi", "accettata"]},
+            "created_at": {
+                "$gte": datetime(year, 1, 1, tzinfo=timezone.utc),
+                "$lt": datetime(year + 1, 1, 1, tzinfo=timezone.utc),
+            },
+        }},
+        {"$group": {
+            "_id": "$payment_status",
+            "total": {"$sum": "$totals.total_document"},
+            "count": {"$sum": 1},
+        }},
+    ]
+    payment_breakdown = await db.invoices.aggregate(paid_pipeline).to_list(10)
+    incassato = sum(p["total"] for p in payment_breakdown if p["_id"] == "pagata")
+    da_incassare = sum(p["total"] for p in payment_breakdown if p["_id"] in [None, "non_pagata", "parzialmente_pagata"])
+
+    return {
+        "year": year,
+        "monthly": monthly,
+        "ytd": {
+            "revenue": round(ytd_revenue, 2),
+            "costs": round(ytd_costs, 2),
+            "margin": ytd_margin,
+            "margin_pct": ytd_margin_pct,
+        },
+        "incassato": round(incassato, 2),
+        "da_incassare": round(da_incassare, 2),
+        "top_suppliers": top_suppliers,
+    }
