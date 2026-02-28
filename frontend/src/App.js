@@ -39,6 +39,7 @@ import CommessaHubPage from './pages/CommessaHubPage';
 import EBITDAPage from './pages/EBITDAPage';
 import TracciabilitaPage from './pages/TracciabilitaPage';
 import FPCProjectPage from './pages/FPCProjectPage';
+import ReportCAMPage from './pages/ReportCAMPage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -206,6 +207,8 @@ function AppRouter() {
             {/* Tracciabilità EN 1090 */}
             <Route path="/tracciabilita" element={<ProtectedRoute><TracciabilitaPage /></ProtectedRoute>} />
             <Route path="/tracciabilita/progetto/:projectId" element={<ProtectedRoute><FPCProjectPage /></ProtectedRoute>} />
+            {/* Report CAM */}
+            <Route path="/report-cam" element={<ProtectedRoute><ReportCAMPage /></ProtectedRoute>} />
         </Routes>
     );
 }
