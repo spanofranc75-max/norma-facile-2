@@ -245,7 +245,7 @@ function SingleLink({ item, active, navigate }) {
             className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-all duration-150 ${
                 active
                     ? 'bg-[#0055FF] text-white font-medium'
-                    : 'text-slate-300 hover:text-white hover:bg-white/8'
+                    : 'text-slate-300 hover:text-white hover:bg-white/10'
             }`}
         >
             <Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={1.5} />
@@ -265,7 +265,7 @@ function NavGroup({ group, isOpen, hasActive, pathname, onToggle, navigate }) {
                 className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-sm transition-all duration-150 ${
                     hasActive
                         ? 'text-white font-semibold bg-white/5'
-                        : 'text-slate-300 hover:text-white hover:bg-white/8'
+                        : 'text-slate-300 hover:text-white hover:bg-white/10'
                 }`}
             >
                 <Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={1.5} />
