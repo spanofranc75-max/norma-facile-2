@@ -53,7 +53,7 @@ export default function PreventivoEditorPage() {
         client_id: '', subject: '', validity_days: 30, notes: '', lines: [emptyLine()],
         payment_type_id: '', payment_type_label: '', destinazione_merce: '',
         iban: '', banca: '', note_pagamento: '', riferimento: '',
-        acconto: 0, sconto_globale: 0,
+        acconto: 0, sconto_globale: 0, normativa: '',
     });
     const [clients, setClients] = useState([]);
     const [paymentTypes, setPaymentTypes] = useState([]);
