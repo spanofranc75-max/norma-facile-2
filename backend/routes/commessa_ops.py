@@ -649,9 +649,14 @@ async def send_oda_email_endpoint(cid: str, ordine_id: str, user: dict = Depends
     company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
     company_name = company.get("business_name", "")
     
-    # Generate PDF
-    from services.pdf_procurement import generate_oda_pdf
-    pdf_bytes = generate_oda_pdf(oda, doc, company)
+    # Get fornitore details for PDF
+    fornitore_doc = None
+    if fornitore_id:
+        fornitore_doc = await db.clients.find_one({"client_id": fornitore_id}, {"_id": 0})
+    
+    # Generate PDF using V2 template
+    from services.pdf_template_v2 import generate_oda_pdf_v2
+    pdf_bytes = generate_oda_pdf_v2(oda, doc, company, fornitore_doc)
     filename = f"OdA_{ordine_id}.pdf"
     
     # Send email
