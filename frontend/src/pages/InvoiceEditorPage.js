@@ -374,8 +374,10 @@ export default function InvoiceEditorPage() {
                             </h1>
                         </div>
                     </div>
-                    <Button
-                        data-testid="btn-save-invoice"
+                    <div className="flex gap-2">
+                        {isEditing && <PDFPreviewButton pdfUrl={`/invoices/${invoiceId}/pdf`} title="Anteprima Fattura" className="border-emerald-500 text-emerald-600 hover:bg-emerald-50" />}
+                        <Button
+                            data-testid="btn-save-invoice"
                         onClick={handleSave}
                         disabled={saving}
                         className="bg-[#0055FF] text-white hover:bg-[#0044CC]"
