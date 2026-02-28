@@ -208,6 +208,20 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
   - Report strutturato con summary e note aggiuntive
   - Endpoint: /api/engine/validate-installation-photos
   - Testing: 12/12 backend (iteration_37), 100% frontend
+- [x] Module Interconnection (Data Linking) — DONE (Phase 30) — 2026-02-28
+  - Bridge 1: Distinta → Preventivo con markup configurabile (default 30%)
+    - Endpoint: POST /api/preventivi/from-distinta/{distinta_id}?markup_percent=30
+    - Smart pricing: costo materiale + markup % = prezzo vendita
+    - Frontend: Pulsante "Crea Preventivo" in DistintaEditorPage
+  - Bridge 2: Preventivo → Fattura (copia righe, cliente, note)
+    - Endpoint: POST /api/invoices/from-preventivo/{preventivo_id}
+    - Stato fattura = "bozza", preventivo marcato "accettato"
+    - Frontend: Pulsante esistente "Converti in Fattura" in PreventivoEditorPage
+  - Bridge 3: Rilievo → POS (auto-fill cantiere)
+    - Endpoint: POST /api/sicurezza/from-rilievo/{rilievo_id}
+    - Auto-fill: indirizzo, città, committente, data inizio, descrizione
+    - Frontend: Pulsante "Genera POS" in RilievoEditorPage
+  - Testing: 10/10 backend (iteration_38), 100% frontend
 - [ ] Integrazione SDI diretta con provider (API keys da configurare)
 - [ ] Recurring invoices / email reminders
 - [ ] Invio fascicolo via PEC automatico
