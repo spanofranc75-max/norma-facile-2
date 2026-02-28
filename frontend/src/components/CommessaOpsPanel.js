@@ -115,12 +115,47 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     const cl = ops?.conto_lavoro || [];
 
     // ── Handlers ──
+    
+    // RdP line helpers
+    const addRdpLine = () => setRdpForm(f => ({ ...f, righe: [...f.righe, emptyRdpLine()] }));
+    const removeRdpLine = (idx) => setRdpForm(f => ({ ...f, righe: f.righe.filter((_, i) => i !== idx) }));
+    const updateRdpLine = (idx, field, value) => setRdpForm(f => {
+        const righe = [...f.righe];
+        righe[idx] = { ...righe[idx], [field]: value };
+        return { ...f, righe };
+    });
+
+    // OdA line helpers
+    const addOdaLine = () => setOdaForm(f => ({ ...f, righe: [...f.righe, emptyOdaLine()] }));
+    const removeOdaLine = (idx) => setOdaForm(f => ({ ...f, righe: f.righe.filter((_, i) => i !== idx) }));
+    const updateOdaLine = (idx, field, value) => setOdaForm(f => {
+        const righe = [...f.righe];
+        righe[idx] = { ...righe[idx], [field]: value };
+        return { ...f, righe };
+    });
+
+    // Calculate OdA total
+    const odaTotale = odaForm.righe.reduce((sum, r) => sum + (parseFloat(r.quantita) || 0) * (parseFloat(r.prezzo_unitario) || 0), 0);
+
     const handleCreateRdP = async () => {
+        if (rdpForm.righe.filter(r => r.descrizione.trim()).length === 0) {
+            toast.error('Inserisci almeno una riga');
+            return;
+        }
         try {
-            await apiRequest(`/commesse/${commessaId}/approvvigionamento/richieste`, { method: 'POST', body: rdpForm });
+            const payload = {
+                ...rdpForm,
+                righe: rdpForm.righe.filter(r => r.descrizione.trim()).map(r => ({
+                    descrizione: r.descrizione,
+                    quantita: parseFloat(r.quantita) || 1,
+                    unita_misura: r.unita_misura,
+                    richiede_cert_31: r.richiede_cert_31,
+                })),
+            };
+            await apiRequest(`/commesse/${commessaId}/approvvigionamento/richieste`, { method: 'POST', body: payload });
             toast.success('RdP inviata');
             setRdpOpen(false);
-            setRdpForm({ fornitore_nome: '', materiali_richiesti: '' });
+            setRdpForm({ fornitore_nome: '', fornitore_id: '', righe: [emptyRdpLine()], note: '' });
             fetchData(); onRefresh?.();
         } catch (e) { toast.error(e.message); }
     };
