@@ -443,6 +443,9 @@ export default function DistintaEditorPage() {
                     <div className="flex items-center gap-3">
                         {isEditing && (
                             <>
+                                <Button data-testid="btn-crea-preventivo" variant="outline" onClick={handleCreaPreventivo} disabled={creatingPreventivo} className="h-10 border-amber-500 text-amber-600 hover:bg-amber-50 font-semibold">
+                                    <Receipt className="h-4 w-4 mr-2" /> {creatingPreventivo ? 'Creazione...' : 'Crea Preventivo'}
+                                </Button>
                                 <Button data-testid="btn-ottimizza-taglio" variant="outline" onClick={handleOttimizzaTaglio} disabled={optimizerLoading} className="h-10 border-emerald-500 text-emerald-600 hover:bg-emerald-50 font-semibold">
                                     <Scissors className="h-4 w-4 mr-2" /> {optimizerLoading ? 'Calcolo...' : 'Ottimizza Taglio'}
                                 </Button>
