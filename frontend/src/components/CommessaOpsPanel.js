@@ -961,14 +961,182 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                 </DialogContent>
             </Dialog>
 
-            {/* Arrivo Dialog */}
+            {/* Arrivo Dialog - Enhanced with material tracking */}
             <Dialog open={arrivoOpen} onOpenChange={setArrivoOpen}>
-                <DialogContent className="max-w-sm"><DialogHeader><DialogTitle>Registra Arrivo Materiale</DialogTitle></DialogHeader>
-                    <div className="space-y-3">
-                        <div><Label className="text-xs">DDT Fornitore</Label><Input value={arrivoForm.ddt_fornitore} onChange={e => setArrivoForm(f => ({ ...f, ddt_fornitore: e.target.value }))} className="mt-1" placeholder="es. DDT-2026/0123" data-testid="arrivo-ddt" /></div>
-                        <div><Label className="text-xs">Note</Label><Textarea value={arrivoForm.note} onChange={e => setArrivoForm(f => ({ ...f, note: e.target.value }))} className="mt-1 h-12" /></div>
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Package className="h-5 w-5 text-amber-600" />
+                            Registra Arrivo Materiale
+                        </DialogTitle>
+                        {commessaNumero && (
+                            <DialogDescription>
+                                Commessa <span className="font-semibold">{commessaNumero}</span>
+                            </DialogDescription>
+                        )}
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        {/* DDT Info */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label className="text-sm font-medium">N. DDT Fornitore *</Label>
+                                <Input 
+                                    value={arrivoForm.ddt_fornitore} 
+                                    onChange={e => setArrivoForm(f => ({ ...f, ddt_fornitore: e.target.value }))} 
+                                    className="mt-1" 
+                                    placeholder="es. DDT-2026/0123" 
+                                    data-testid="arrivo-ddt" 
+                                />
+                            </div>
+                            <div>
+                                <Label className="text-sm font-medium">Data DDT</Label>
+                                <Input 
+                                    type="date"
+                                    value={arrivoForm.data_ddt} 
+                                    onChange={e => setArrivoForm(f => ({ ...f, data_ddt: e.target.value }))} 
+                                    className="mt-1" 
+                                />
+                            </div>
+                        </div>
+
+                        {/* Fornitore */}
+                        <div>
+                            <Label className="text-sm font-medium">Fornitore</Label>
+                            <Combobox
+                                options={fornitori.map(f => ({ value: f.id, label: f.nome }))}
+                                value={arrivoForm.fornitore_id}
+                                onValueChange={(val) => {
+                                    const f = fornitori.find(x => x.id === val);
+                                    setArrivoForm(prev => ({ ...prev, fornitore_id: val, fornitore_nome: f?.nome || '' }));
+                                }}
+                                placeholder="Seleziona fornitore..."
+                                searchPlaceholder="Cerca fornitore..."
+                                emptyText="Nessun fornitore trovato"
+                                className="mt-1"
+                            />
+                        </div>
+
+                        {/* Materiali table */}
+                        <div>
+                            <div className="flex justify-between items-center mb-2">
+                                <Label className="text-sm font-medium">Materiali Ricevuti *</Label>
+                                <Button type="button" variant="outline" size="sm" onClick={addArrivoMat}>
+                                    <Plus className="h-3 w-3 mr-1" /> Aggiungi
+                                </Button>
+                            </div>
+                            <div className="border rounded-md overflow-hidden">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-amber-50">
+                                            <TableHead className="w-[40%] text-xs">Descrizione</TableHead>
+                                            <TableHead className="w-[15%] text-xs text-center">Q.tà</TableHead>
+                                            <TableHead className="w-[12%] text-xs text-center">U.M.</TableHead>
+                                            <TableHead className="w-[20%] text-xs">Rif. Ordine</TableHead>
+                                            <TableHead className="w-[8%] text-xs text-center">3.1</TableHead>
+                                            <TableHead className="w-[5%]"></TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {arrivoForm.materiali.map((mat, idx) => (
+                                            <TableRow key={mat.id || idx}>
+                                                <TableCell className="p-1">
+                                                    <Input
+                                                        value={mat.descrizione}
+                                                        onChange={e => updateArrivoMat(idx, 'descrizione', e.target.value)}
+                                                        placeholder="es. Trave IPE 200"
+                                                        className="h-8 text-sm"
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="p-1">
+                                                    <Input
+                                                        type="number"
+                                                        value={mat.quantita}
+                                                        onChange={e => updateArrivoMat(idx, 'quantita', e.target.value)}
+                                                        className="h-8 text-sm text-center"
+                                                        min="0"
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="p-1">
+                                                    <Select value={mat.unita_misura} onValueChange={v => updateArrivoMat(idx, 'unita_misura', v)}>
+                                                        <SelectTrigger className="h-8 text-xs">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="kg">kg</SelectItem>
+                                                            <SelectItem value="pz">pz</SelectItem>
+                                                            <SelectItem value="ml">ml</SelectItem>
+                                                            <SelectItem value="mq">mq</SelectItem>
+                                                            <SelectItem value="t">t</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </TableCell>
+                                                <TableCell className="p-1">
+                                                    <Select value={mat.ordine_id || ''} onValueChange={v => updateArrivoMat(idx, 'ordine_id', v)}>
+                                                        <SelectTrigger className="h-8 text-xs">
+                                                            <SelectValue placeholder="N/D" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="">Nessuno</SelectItem>
+                                                            {(approv?.ordini || []).map(o => (
+                                                                <SelectItem key={o.ordine_id} value={o.ordine_id}>
+                                                                    {o.ordine_id.slice(-6)} - {o.fornitore_nome}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </TableCell>
+                                                <TableCell className="p-1 text-center">
+                                                    <Checkbox
+                                                        checked={mat.richiede_cert_31}
+                                                        onCheckedChange={v => updateArrivoMat(idx, 'richiede_cert_31', v)}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="p-1 text-center">
+                                                    {arrivoForm.materiali.length > 1 && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-7 w-7 p-0 text-red-400 hover:text-red-600"
+                                                            onClick={() => removeArrivoMat(idx)}
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                ☑️ 3.1 = richiede certificato materiale. Collegherai i certificati dopo la registrazione.
+                            </p>
+                        </div>
+
+                        {/* Note */}
+                        <div>
+                            <Label className="text-sm font-medium">Note</Label>
+                            <Textarea 
+                                value={arrivoForm.note} 
+                                onChange={e => setArrivoForm(f => ({ ...f, note: e.target.value }))} 
+                                className="mt-1 h-16" 
+                                placeholder="Note aggiuntive..."
+                            />
+                        </div>
                     </div>
-                    <DialogFooter><Button size="sm" onClick={handleCreateArrivo} className="bg-[#0055FF] text-white" data-testid="btn-confirm-arrivo">Registra</Button></DialogFooter>
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setArrivoOpen(false)}>Annulla</Button>
+                        <Button 
+                            size="sm" 
+                            disabled={!arrivoForm.ddt_fornitore.trim() || arrivoForm.materiali.filter(m => m.descrizione.trim()).length === 0}
+                            onClick={handleCreateArrivo} 
+                            className="bg-amber-600 text-white hover:bg-amber-700" 
+                            data-testid="btn-confirm-arrivo"
+                        >
+                            <Package className="h-4 w-4 mr-1" /> Registra Arrivo
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 
