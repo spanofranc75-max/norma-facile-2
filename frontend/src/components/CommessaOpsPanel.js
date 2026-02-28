@@ -10,14 +10,16 @@ import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
+import { Checkbox } from '../components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Combobox } from '../components/ui/combobox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { toast } from 'sonner';
 import {
     ShoppingCart, Package, Truck, Factory, Paintbrush, FileUp,
     Play, CheckCircle2, Clock, AlertTriangle, Plus, Trash2,
-    Download, Eye, Loader2, Sparkles, ChevronDown, ChevronUp,
+    Download, Eye, Loader2, Sparkles, ChevronDown, ChevronUp, FileText,
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
