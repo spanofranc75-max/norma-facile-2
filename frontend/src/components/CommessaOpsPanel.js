@@ -2007,6 +2007,15 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Email Preview Dialog */}
+            <EmailPreviewDialog
+                open={emailPreview.open}
+                onOpenChange={(open) => setEmailPreview(prev => ({ ...prev, open }))}
+                previewUrl={emailPreview.previewUrl}
+                sendUrl={emailPreview.sendUrl}
+                onSent={() => { fetchData(); onRefresh?.(); }}
+            />
         </div>
     );
 }
