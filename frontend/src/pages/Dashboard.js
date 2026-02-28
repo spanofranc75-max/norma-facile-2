@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import QuickActionFAB from '../components/QuickActionFAB';
+import QualityScoreWidget from '../components/QualityScoreWidget';
 
 const formatCurrency = (v) =>
     new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
