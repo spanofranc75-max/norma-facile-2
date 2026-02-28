@@ -321,6 +321,217 @@ async def verifica_arrivo(cid: str, arrivo_id: str, user: dict = Depends(get_cur
 
 
 # ══════════════════════════════════════════════════════════════════
+#  PDF GENERATION & EMAIL SENDING (RdP, OdA)
+# ══════════════════════════════════════════════════════════════════
+
+@router.get("/{cid}/approvvigionamento/richieste/{rdp_id}/pdf")
+async def get_rdp_pdf(cid: str, rdp_id: str, user: dict = Depends(get_current_user)):
+    """Generate PDF preview for a Request for Quote (RdP)."""
+    doc = await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
+    
+    # Find the RdP
+    approv = doc.get("approvvigionamento", {})
+    rdp = next((r for r in approv.get("richieste", []) if r.get("rdp_id") == rdp_id), None)
+    if not rdp:
+        raise HTTPException(404, "RdP non trovata")
+    
+    # Get company info
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    
+    # Generate PDF
+    from services.pdf_procurement import generate_rdp_pdf
+    pdf_bytes = generate_rdp_pdf(rdp, doc, company)
+    
+    filename = f"RdP_{rdp_id}.pdf"
+    return StreamingResponse(
+        BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename={filename}"}
+    )
+
+
+@router.post("/{cid}/approvvigionamento/richieste/{rdp_id}/send-email")
+async def send_rdp_email_endpoint(cid: str, rdp_id: str, user: dict = Depends(get_current_user)):
+    """Generate PDF and send RdP via email to supplier."""
+    doc = await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
+    
+    # Find the RdP
+    approv = doc.get("approvvigionamento", {})
+    rdp = next((r for r in approv.get("richieste", []) if r.get("rdp_id") == rdp_id), None)
+    if not rdp:
+        raise HTTPException(404, "RdP non trovata")
+    
+    # Get supplier email
+    fornitore_id = rdp.get("fornitore_id")
+    fornitore_nome = rdp.get("fornitore_nome", "Fornitore")
+    to_email = None
+    
+    if fornitore_id:
+        fornitore = await db.clients.find_one({"client_id": fornitore_id}, {"_id": 0})
+        if fornitore:
+            to_email = fornitore.get("pec") or fornitore.get("email")
+            # Check contacts for procurement preferences
+            if not to_email:
+                for contact in fornitore.get("contacts", []):
+                    if contact.get("email"):
+                        to_email = contact["email"]
+                        break
+    
+    if not to_email:
+        raise HTTPException(400, f"Nessun indirizzo email trovato per {fornitore_nome}. Aggiungi un'email nella scheda fornitore.")
+    
+    # Get company info
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company_name = company.get("business_name", "")
+    
+    # Generate PDF
+    from services.pdf_procurement import generate_rdp_pdf
+    pdf_bytes = generate_rdp_pdf(rdp, doc, company)
+    filename = f"RdP_{rdp_id}.pdf"
+    
+    # Send email
+    from services.email_service import send_rdp_email
+    num_righe = len(rdp.get("righe", []))
+    commessa_numero = doc.get("numero", "N/D")
+    
+    success = await send_rdp_email(
+        to_email=to_email,
+        fornitore_name=fornitore_nome,
+        rdp_id=rdp_id,
+        commessa_numero=commessa_numero,
+        company_name=company_name,
+        num_righe=num_righe,
+        pdf_bytes=pdf_bytes,
+        filename=filename,
+    )
+    
+    if not success:
+        raise HTTPException(500, "Invio email fallito. Verifica la configurazione Resend in Impostazioni.")
+    
+    # Track email sent on the RdP
+    await db[COLL].update_one(
+        {"commessa_id": cid},
+        {"$set": {
+            "approvvigionamento.richieste.$[elem].email_sent": True,
+            "approvvigionamento.richieste.$[elem].email_sent_to": to_email,
+            "approvvigionamento.richieste.$[elem].email_sent_at": ts().isoformat(),
+        }},
+        array_filters=[{"elem.rdp_id": rdp_id}],
+    )
+    
+    # Add event
+    await db[COLL].update_one({"commessa_id": cid}, push_event(cid, "RDP_EMAIL_INVIATA", user, f"RdP {rdp_id} inviata via email a {to_email}"))
+    
+    logger.info(f"RdP {rdp_id} sent via email to {to_email}")
+    return {"message": f"Email inviata con successo a {to_email}", "to": to_email}
+
+
+@router.get("/{cid}/approvvigionamento/ordini/{ordine_id}/pdf")
+async def get_oda_pdf(cid: str, ordine_id: str, user: dict = Depends(get_current_user)):
+    """Generate PDF preview for a Purchase Order (OdA)."""
+    doc = await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
+    
+    # Find the OdA
+    approv = doc.get("approvvigionamento", {})
+    oda = next((o for o in approv.get("ordini", []) if o.get("ordine_id") == ordine_id), None)
+    if not oda:
+        raise HTTPException(404, "Ordine non trovato")
+    
+    # Get company info
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    
+    # Generate PDF
+    from services.pdf_procurement import generate_oda_pdf
+    pdf_bytes = generate_oda_pdf(oda, doc, company)
+    
+    filename = f"OdA_{ordine_id}.pdf"
+    return StreamingResponse(
+        BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename={filename}"}
+    )
+
+
+@router.post("/{cid}/approvvigionamento/ordini/{ordine_id}/send-email")
+async def send_oda_email_endpoint(cid: str, ordine_id: str, user: dict = Depends(get_current_user)):
+    """Generate PDF and send OdA via email to supplier."""
+    doc = await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
+    
+    # Find the OdA
+    approv = doc.get("approvvigionamento", {})
+    oda = next((o for o in approv.get("ordini", []) if o.get("ordine_id") == ordine_id), None)
+    if not oda:
+        raise HTTPException(404, "Ordine non trovato")
+    
+    # Get supplier email
+    fornitore_id = oda.get("fornitore_id")
+    fornitore_nome = oda.get("fornitore_nome", "Fornitore")
+    to_email = None
+    
+    if fornitore_id:
+        fornitore = await db.clients.find_one({"client_id": fornitore_id}, {"_id": 0})
+        if fornitore:
+            to_email = fornitore.get("pec") or fornitore.get("email")
+            if not to_email:
+                for contact in fornitore.get("contacts", []):
+                    if contact.get("email"):
+                        to_email = contact["email"]
+                        break
+    
+    if not to_email:
+        raise HTTPException(400, f"Nessun indirizzo email trovato per {fornitore_nome}. Aggiungi un'email nella scheda fornitore.")
+    
+    # Get company info
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company_name = company.get("business_name", "")
+    
+    # Generate PDF
+    from services.pdf_procurement import generate_oda_pdf
+    pdf_bytes = generate_oda_pdf(oda, doc, company)
+    filename = f"OdA_{ordine_id}.pdf"
+    
+    # Send email
+    from services.email_service import send_oda_email
+    importo_totale = oda.get("importo_totale", 0)
+    commessa_numero = doc.get("numero", "N/D")
+    
+    success = await send_oda_email(
+        to_email=to_email,
+        fornitore_name=fornitore_nome,
+        ordine_id=ordine_id,
+        commessa_numero=commessa_numero,
+        company_name=company_name,
+        importo_totale=importo_totale,
+        pdf_bytes=pdf_bytes,
+        filename=filename,
+    )
+    
+    if not success:
+        raise HTTPException(500, "Invio email fallito. Verifica la configurazione Resend in Impostazioni.")
+    
+    # Track email sent on the OdA
+    await db[COLL].update_one(
+        {"commessa_id": cid},
+        {"$set": {
+            "approvvigionamento.ordini.$[elem].email_sent": True,
+            "approvvigionamento.ordini.$[elem].email_sent_to": to_email,
+            "approvvigionamento.ordini.$[elem].email_sent_at": ts().isoformat(),
+        }},
+        array_filters=[{"elem.ordine_id": ordine_id}],
+    )
+    
+    # Add event
+    await db[COLL].update_one({"commessa_id": cid}, push_event(cid, "ODA_EMAIL_INVIATA", user, f"Ordine {ordine_id} inviato via email a {to_email}"))
+    
+    logger.info(f"OdA {ordine_id} sent via email to {to_email}")
+    return {"message": f"Email inviata con successo a {to_email}", "to": to_email}
+
+
+# ══════════════════════════════════════════════════════════════════
 #  PRODUZIONE (Production Phases)
 # ══════════════════════════════════════════════════════════════════
 
