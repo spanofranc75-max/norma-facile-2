@@ -88,6 +88,14 @@ export default function ArticoliPage() {
     const [selectedArticolo, setSelectedArticolo] = useState(null);
     const [form, setForm] = useState({ ...emptyForm });
     const [saving, setSaving] = useState(false);
+    const [fornitori, setFornitori] = useState([]);
+
+    // Load fornitori from anagrafica
+    useEffect(() => {
+        apiRequest('/clients/?client_type=fornitore&limit=100')
+            .then(data => setFornitori((data.clients || []).map(c => ({ id: c.client_id, nome: c.business_name }))))
+            .catch(() => {});
+    }, []);
 
     const fetchArticoli = useCallback(async () => {
         try {
