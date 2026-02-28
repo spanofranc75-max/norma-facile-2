@@ -107,6 +107,8 @@ export default function PreventivoEditorPage() {
                 created_at: data.created_at,
                 converted_to: data.converted_to,
                 linked_invoice: data.linked_invoice || null,
+                invoicing_progress: data.invoicing_progress || 0,
+                linked_invoices: data.linked_invoices || [],
             });
         }).catch(() => toast.error('Preventivo non trovato'));
     }, [prevId, isNew]);
