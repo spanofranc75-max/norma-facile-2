@@ -528,6 +528,74 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         }
     };
 
+    // ── CAM Handlers ──
+    const handleCreateCamLotto = async () => {
+        if (!camLottoForm.descrizione.trim()) { toast.error('Inserisci una descrizione'); return; }
+        try {
+            const payload = { ...camLottoForm, peso_kg: parseFloat(camLottoForm.peso_kg) || 0, percentuale_riciclato: parseFloat(camLottoForm.percentuale_riciclato) || 0, commessa_id: commessaId };
+            if (editingCamLotto) {
+                await apiRequest(`/cam/lotti/${editingCamLotto}`, { method: 'PUT', body: payload });
+                toast.success('Lotto CAM aggiornato');
+            } else {
+                await apiRequest('/cam/lotti', { method: 'POST', body: payload });
+                toast.success('Lotto CAM creato');
+            }
+            setCamLottoOpen(false);
+            setEditingCamLotto(null);
+            setCamLottoForm({ descrizione: '', fornitore: '', numero_colata: '', peso_kg: 0, qualita_acciaio: '', percentuale_riciclato: 75, metodo_produttivo: 'forno_elettrico_non_legato', tipo_certificazione: 'dichiarazione_produttore', numero_certificazione: '', ente_certificatore: '', uso_strutturale: true, commessa_id: commessaId });
+            fetchCamData();
+        } catch (e) { toast.error(e.message); }
+    };
+
+    const handleCalcolaCAM = async () => {
+        setCamLoading(true);
+        try {
+            const result = await apiRequest(`/cam/calcola/${commessaId}`, { method: 'POST' });
+            setCamCalcolo(result);
+            toast.success('Calcolo CAM aggiornato');
+        } catch (e) { toast.error(e.message); }
+        finally { setCamLoading(false); }
+    };
+
+    const handleDownloadCamPdf = async () => {
+        try {
+            const res = await fetch(`${API}/api/cam/dichiarazione-pdf/${commessaId}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+            });
+            if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Errore generazione PDF'); }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Dichiarazione_CAM_${commessaNumero || commessaId}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+            toast.success('Dichiarazione CAM generata');
+        } catch (e) { toast.error(e.message); }
+    };
+
+    const handleImportCamFromCert = async (docId) => {
+        setCamLoading(true);
+        try {
+            await apiRequest(`/cam/import-da-certificato/${docId}?commessa_id=${commessaId}&peso_kg=0`, { method: 'POST' });
+            toast.success('Dati CAM importati dal certificato');
+            fetchCamData();
+        } catch (e) { toast.error(e.message); }
+        finally { setCamLoading(false); }
+    };
+
+    const openEditCamLotto = (lotto) => {
+        setCamLottoForm({
+            descrizione: lotto.descrizione || '', fornitore: lotto.fornitore || '', numero_colata: lotto.numero_colata || '',
+            peso_kg: lotto.peso_kg || 0, qualita_acciaio: lotto.qualita_acciaio || '',
+            percentuale_riciclato: lotto.percentuale_riciclato || 0, metodo_produttivo: lotto.metodo_produttivo || 'forno_elettrico_non_legato',
+            tipo_certificazione: lotto.tipo_certificazione || 'dichiarazione_produttore', numero_certificazione: lotto.numero_certificazione || '',
+            ente_certificatore: lotto.ente_certificatore || '', uso_strutturale: lotto.uso_strutturale !== false, commessa_id: commessaId,
+        });
+        setEditingCamLotto(lotto.lotto_id);
+        setCamLottoOpen(true);
+    };
+
     return (
         <div className="space-y-3" data-testid="commessa-ops">
             {/* ── APPROVVIGIONAMENTO ── */}
