@@ -131,6 +131,139 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
     }
 
 
+# ── Officina Quality Score (SRA) ────────────────────────────────
+
+@router.get("/quality-score")
+async def get_quality_score(user: dict = Depends(get_current_user)):
+    """Calculate Officina Quality Score (0-100) based on safety, CE, photos, activity."""
+    uid = user["user_id"]
+    now = datetime.now(timezone.utc)
+    insights = []
+
+    # ── Safety Score (max 30 pts): % of rilievi/commesse with a POS
+    total_rilievi = await db.rilievi.count_documents({"user_id": uid})
+    total_pos = await db.pos_documents.count_documents({"user_id": uid})
+    if total_rilievi > 0:
+        safety_pct = min(total_pos / total_rilievi, 1.0)
+        safety_score = round(safety_pct * 30)
+        missing_pos = max(total_rilievi - total_pos, 0)
+        if missing_pos > 0:
+            insights.append({
+                "type": "warning",
+                "text": f"{missing_pos} cantier{'e' if missing_pos == 1 else 'i'} senza POS. Generali per migliorare la sicurezza!",
+                "action": "/sicurezza",
+                "points": min(missing_pos * 5, 15),
+            })
+    else:
+        safety_score = 0
+        if total_pos == 0:
+            insights.append({
+                "type": "info",
+                "text": "Crea il tuo primo Rilievo e genera un POS per iniziare a guadagnare punti sicurezza.",
+                "action": "/rilievi",
+                "points": 10,
+            })
+
+    # ── CE Score (max 25 pts): % of certificazioni vs invoices
+    total_invoices = await db.invoices.count_documents({"user_id": uid})
+    total_certs = await db.certificazioni.count_documents({"user_id": uid})
+    total_norme = await db.norme_config.count_documents({})
+    if total_invoices > 0:
+        ce_pct = min(total_certs / max(total_invoices, 1), 1.0)
+        ce_score = round(ce_pct * 25)
+        if total_certs == 0:
+            insights.append({
+                "type": "warning",
+                "text": "Nessuna certificazione CE emessa. Genera il fascicolo tecnico per i tuoi prodotti!",
+                "action": "/certificazioni",
+                "points": 15,
+            })
+    else:
+        ce_score = 5 if total_certs > 0 else 0
+
+    # ── Documentation Score (max 20 pts): preventivi + distinte + completeness
+    total_prev = await db.preventivi.count_documents({"user_id": uid})
+    total_distinte = await db.distinte.count_documents({"user_id": uid})
+    total_commesse = await db.commesse.count_documents({"user_id": uid})
+    doc_items = sum(1 for x in [total_prev, total_distinte, total_commesse, total_rilievi] if x > 0)
+    doc_score = round((doc_items / 4) * 20)
+    if total_prev == 0:
+        insights.append({
+            "type": "info",
+            "text": "Crea il tuo primo preventivo per tracciare le commesse dall'offerta al cantiere.",
+            "action": "/preventivi",
+            "points": 5,
+        })
+
+    # ── Photo Score (max 10 pts): rilievi with photos
+    rilievi_with_photos = await db.rilievi.count_documents({"user_id": uid, "photos.0": {"$exists": True}})
+    if total_rilievi > 0:
+        photo_pct = min(rilievi_with_photos / total_rilievi, 1.0)
+        photo_score = round(photo_pct * 10)
+        missing_photos = total_rilievi - rilievi_with_photos
+        if missing_photos > 0:
+            insights.append({
+                "type": "tip",
+                "text": f"{missing_photos} riliev{'o' if missing_photos == 1 else 'i'} senza foto. Aggiungi foto per documentare il lavoro!",
+                "action": "/rilievi",
+                "points": min(missing_photos * 2, 5),
+            })
+    else:
+        photo_score = 0
+
+    # ── Activity Score (max 15 pts): recent activity
+    week_ago = now - timedelta(days=7)
+    recent_sessions = await db.user_sessions.count_documents({"user_id": uid, "created_at": {"$gte": week_ago}})
+    recent_docs = 0
+    for coll_name in ["invoices", "preventivi", "rilievi", "distinte", "ddt_documents"]:
+        recent_docs += await db[coll_name].count_documents({"user_id": uid, "created_at": {"$gte": week_ago}})
+    activity_raw = min(recent_sessions, 7) + min(recent_docs, 8)
+    activity_score = round(min(activity_raw / 15, 1.0) * 15)
+
+    # ── Total
+    total_score = min(safety_score + ce_score + doc_score + photo_score + activity_score, 100)
+
+    # Sort insights by points (highest first), keep top 3
+    insights.sort(key=lambda x: x.get("points", 0), reverse=True)
+    insights = insights[:3]
+
+    # Level
+    if total_score >= 80:
+        level = "Maestro Artigiano"
+        level_color = "emerald"
+    elif total_score >= 60:
+        level = "Artigiano Esperto"
+        level_color = "blue"
+    elif total_score >= 40:
+        level = "Artigiano in Crescita"
+        level_color = "amber"
+    else:
+        level = "Apprendista"
+        level_color = "slate"
+
+    return {
+        "total_score": total_score,
+        "level": level,
+        "level_color": level_color,
+        "breakdown": {
+            "safety": {"score": safety_score, "max": 30, "label": "Sicurezza Cantieri"},
+            "ce": {"score": ce_score, "max": 25, "label": "Certificazioni CE"},
+            "documentation": {"score": doc_score, "max": 20, "label": "Documentazione"},
+            "photos": {"score": photo_score, "max": 10, "label": "Foto & Rilievi"},
+            "activity": {"score": activity_score, "max": 15, "label": "Attività Recente"},
+        },
+        "insights": insights,
+        "stats": {
+            "total_rilievi": total_rilievi,
+            "total_pos": total_pos,
+            "total_certs": total_certs,
+            "total_invoices": total_invoices,
+            "total_prev": total_prev,
+            "total_distinte": total_distinte,
+        },
+    }
+
+
 @router.get("/fascicolo/{client_id}")
 async def get_fascicolo_cantiere(client_id: str, user: dict = Depends(get_current_user)):
     """Aggregate all documents for a client into a 'Fascicolo Cantiere' (Project Dossier)."""
