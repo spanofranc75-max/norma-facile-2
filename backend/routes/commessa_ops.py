@@ -101,6 +101,7 @@ class ArrivoMateriale(BaseModel):
 async def create_richiesta_preventivo(cid: str, data: RichiestaPreventivo, user: dict = Depends(get_current_user)):
     """Create a Request for Quote (RdP) to a supplier."""
     await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
     rdp = {
         "rdp_id": new_id("rdp_"),
         "fornitore_nome": data.fornitore_nome,
@@ -126,6 +127,7 @@ async def create_richiesta_preventivo(cid: str, data: RichiestaPreventivo, user:
 async def update_richiesta(cid: str, rdp_id: str, stato: str = Form(...), importo: Optional[float] = Form(None), user: dict = Depends(get_current_user)):
     """Update RdP status: ricevuta, accettata, rifiutata."""
     await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
     upd = {"approvvigionamento.richieste.$[elem].stato": stato, "approvvigionamento.richieste.$[elem].data_risposta": ts().isoformat()}
     if importo is not None:
         upd["approvvigionamento.richieste.$[elem].importo_proposto"] = importo
@@ -142,6 +144,7 @@ async def update_richiesta(cid: str, rdp_id: str, stato: str = Form(...), import
 async def create_ordine_fornitore(cid: str, data: OrdineFornitore, user: dict = Depends(get_current_user)):
     """Create a Purchase Order (OdA) to a supplier."""
     await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
     oda = {
         "ordine_id": new_id("oda_"),
         "fornitore_nome": data.fornitore_nome,
