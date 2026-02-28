@@ -102,6 +102,19 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     const [linkingCert, setLinkingCert] = useState(null); // { arrivo_id, mat_idx }
     const certFileRef = useRef();
 
+    // CAM states
+    const [camLotti, setCamLotti] = useState([]);
+    const [camCalcolo, setCamCalcolo] = useState(null);
+    const [camLoading, setCamLoading] = useState(false);
+    const [camLottoOpen, setCamLottoOpen] = useState(false);
+    const [camLottoForm, setCamLottoForm] = useState({
+        descrizione: '', fornitore: '', numero_colata: '', peso_kg: 0, qualita_acciaio: '',
+        percentuale_riciclato: 75, metodo_produttivo: 'forno_elettrico_non_legato',
+        tipo_certificazione: 'dichiarazione_produttore', numero_certificazione: '',
+        ente_certificatore: '', uso_strutturale: true, commessa_id: commessaId,
+    });
+    const [editingCamLotto, setEditingCamLotto] = useState(null);
+
     // Load fornitori from anagrafica
     useEffect(() => {
         apiRequest('/clients/?client_type=fornitore&limit=100').then(data => {
