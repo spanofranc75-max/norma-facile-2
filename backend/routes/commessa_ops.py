@@ -172,6 +172,7 @@ async def create_ordine_fornitore(cid: str, data: OrdineFornitore, user: dict = 
 async def update_ordine(cid: str, ordine_id: str, stato: str = Form(...), user: dict = Depends(get_current_user)):
     """Update order status: confermato, in_consegna, consegnato."""
     await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
     upd = {"approvvigionamento.ordini.$[elem].stato": stato}
     if stato == "confermato":
         upd["approvvigionamento.ordini.$[elem].data_conferma"] = ts().isoformat()
@@ -188,6 +189,7 @@ async def update_ordine(cid: str, ordine_id: str, stato: str = Form(...), user: 
 async def register_arrivo_materiale(cid: str, data: ArrivoMateriale, user: dict = Depends(get_current_user)):
     """Register material arrival."""
     await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
     arrivo = {
         "arrivo_id": new_id("arr_"),
         "ordine_id": data.ordine_id or "",
@@ -219,6 +221,7 @@ async def register_arrivo_materiale(cid: str, data: ArrivoMateriale, user: dict 
 async def verifica_arrivo(cid: str, arrivo_id: str, user: dict = Depends(get_current_user)):
     """Mark arrival as verified."""
     await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
     await db[COLL].update_one(
         {"commessa_id": cid},
         {"$set": {
