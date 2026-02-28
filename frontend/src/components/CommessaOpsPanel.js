@@ -228,14 +228,49 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     };
 
     const handleCreateArrivo = async () => {
+        if (!arrivoForm.ddt_fornitore.trim()) {
+            toast.error('Inserisci il numero DDT fornitore');
+            return;
+        }
+        if (arrivoForm.materiali.filter(m => m.descrizione.trim()).length === 0) {
+            toast.error('Inserisci almeno un materiale');
+            return;
+        }
         try {
-            await apiRequest(`/commesse/${commessaId}/approvvigionamento/arrivi`, { method: 'POST', body: arrivoForm });
+            const payload = {
+                ...arrivoForm,
+                materiali: arrivoForm.materiali.filter(m => m.descrizione.trim()).map(m => ({
+                    descrizione: m.descrizione,
+                    quantita: parseFloat(m.quantita) || 1,
+                    unita_misura: m.unita_misura,
+                    ordine_id: m.ordine_id || '',
+                    richiede_cert_31: m.richiede_cert_31,
+                })),
+            };
+            await apiRequest(`/commesse/${commessaId}/approvvigionamento/arrivi`, { method: 'POST', body: payload });
             toast.success('Arrivo registrato');
             setArrivoOpen(false);
-            setArrivoForm({ ddt_fornitore: '', ordine_id: '', note: '' });
+            setArrivoForm({ 
+                ddt_fornitore: '', 
+                data_ddt: '', 
+                fornitore_nome: '', 
+                fornitore_id: '',
+                materiali: [{ descrizione: '', quantita: 1, unita_misura: 'kg', ordine_id: '', richiede_cert_31: false }],
+                note: '' 
+            });
             fetchData(); onRefresh?.();
         } catch (e) { toast.error(e.message); }
     };
+
+    // Arrivo materiali helpers
+    const emptyArrivoMat = () => ({ id: `m${Date.now()}`, descrizione: '', quantita: 1, unita_misura: 'kg', ordine_id: '', richiede_cert_31: false });
+    const addArrivoMat = () => setArrivoForm(f => ({ ...f, materiali: [...f.materiali, emptyArrivoMat()] }));
+    const removeArrivoMat = (idx) => setArrivoForm(f => ({ ...f, materiali: f.materiali.filter((_, i) => i !== idx) }));
+    const updateArrivoMat = (idx, field, value) => setArrivoForm(f => {
+        const materiali = [...f.materiali];
+        materiali[idx] = { ...materiali[idx], [field]: value };
+        return { ...f, materiali };
+    });
 
     const handleVerificaArrivo = async (arrivoId) => {
         try {
