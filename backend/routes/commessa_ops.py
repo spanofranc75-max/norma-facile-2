@@ -386,10 +386,10 @@ async def create_conto_lavoro(cid: str, data: ContoLavoroCreate, user: dict = De
     }
     await db[COLL].update_one(
         {"commessa_id": cid},
-        {
-            "$push": {"conto_lavoro": cl},
-            **push_event(cid, "CL_CREATO", user, f"C/L {data.tipo} → {data.fornitore_nome}")
-        },
+        build_update_with_event(
+            push_items={"conto_lavoro": cl},
+            tipo="CL_CREATO", user=user, note=f"C/L {data.tipo} → {data.fornitore_nome}"
+        ),
     )
     return {"message": f"Conto lavoro creato: {data.tipo}", "conto_lavoro": cl}
 
