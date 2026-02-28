@@ -352,7 +352,9 @@ async def get_ddt_pdf(ddt_id: str, user: dict = Depends(get_current_user)):
         raise HTTPException(404, "DDT non trovato")
 
     from services.ddt_pdf_service import generate_ddt_pdf
-    pdf_buffer = generate_ddt_pdf(doc)
+    # Fetch company settings for logo/condizioni
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    pdf_buffer = generate_ddt_pdf(doc, company)
     filename = f"ddt_{doc.get('number', ddt_id).replace('/', '_')}.pdf"
     return StreamingResponse(
         pdf_buffer,
