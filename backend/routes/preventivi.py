@@ -244,7 +244,7 @@ async def create_preventivo_from_distinta(
         })
 
     # Totals
-    subtotal = sum(float(l.get("line_total", 0)) for l in lines)
+    subtotal = sum(float(ln.get("line_total", 0)) for ln in lines)
     vat_total = round(subtotal * 0.22, 2)
 
     prev_doc = {
@@ -275,7 +275,6 @@ async def create_preventivo_from_distinta(
     }
 
     await db.preventivi.insert_one(prev_doc)
-    created = await db.preventivi.find_one({"preventivo_id": prev_id}, {"_id": 0})
     logger.info(f"Preventivo {prev_id} ({number}) created from distinta {distinta_id} with {markup_percent}% markup")
     return {
         "message": f"Preventivo {number} creato da distinta con markup {markup_percent:.0f}%",
