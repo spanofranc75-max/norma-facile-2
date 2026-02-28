@@ -1036,7 +1036,9 @@ Se un campo non è leggibile o non presente, usa null. Rispondi SOLO con il JSON
 
         # Parse JSON response
         import json
-        response_text = response.text.strip()
+        # emergentintegrations returns string directly
+        response_text = response if isinstance(response, str) else getattr(response, 'text', str(response))
+        response_text = response_text.strip()
         # Clean markdown wrapping if present
         if response_text.startswith("```"):
             response_text = response_text.split("\n", 1)[1] if "\n" in response_text else response_text[3:]
