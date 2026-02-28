@@ -300,10 +300,10 @@ async def init_produzione(cid: str, user: dict = Depends(get_current_user)):
         })
     await db[COLL].update_one(
         {"commessa_id": cid},
-        {
-            "$set": {"fasi_produzione": fasi},
-            **push_event(cid, "PRODUZIONE_INIZIALIZZATA", user, "Fasi produzione create")
-        },
+        build_update_with_event(
+            set_items={"fasi_produzione": fasi},
+            tipo="PRODUZIONE_INIZIALIZZATA", user=user, note="Fasi produzione create"
+        ),
     )
     return {"message": "Fasi produzione inizializzate", "fasi": fasi}
 
