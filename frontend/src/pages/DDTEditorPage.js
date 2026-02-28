@@ -70,6 +70,7 @@ export default function DDTEditorPage() {
     const [saving, setSaving] = useState(false);
     const [converting, setConverting] = useState(false);
     const [sidebarTab, setSidebarTab] = useState('trasporto');
+    const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
     const [ddtInfo, setDdtInfo] = useState({ number: null, status: 'non_fatturato', converted_to: null });
 
     useEffect(() => {
