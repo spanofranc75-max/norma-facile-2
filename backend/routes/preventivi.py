@@ -736,10 +736,10 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
     if company_cap or company_city:
         parts = [p for p in [company_cap, company_city, f"({company_prov})" if company_prov else ""] if p]
         company_full_addr += f"<br>{' '.join(parts)}" if company_addr else ' '.join(parts)
-    company_piva = esc(co.get("partita_iva", ""))
-    company_cf = esc(co.get("codice_fiscale", ""))
-    company_phone = esc(co.get("phone", co.get("tel", "")))
-    company_email = esc(co.get("email", co.get("contact_email", "")))
+    company_piva = esc(co.get("partita_iva", "") or "")
+    company_cf = esc(co.get("codice_fiscale", "") or "")
+    company_phone = esc(co.get("phone", "") or co.get("tel", "") or "")
+    company_email = esc(co.get("email", "") or co.get("contact_email", "") or "")
 
     # Logo
     logo_html = ""
