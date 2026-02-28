@@ -319,7 +319,7 @@ export default function InvoiceGenerationModal({ open, onOpenChange, prevId, onC
                                                         {status.linked_invoices.map((inv, i) => (
                                                             <div key={i} className="flex justify-between pl-3">
                                                                 <span>- Ft. {inv.document_number}</span>
-                                                                <span className="font-mono text-red-500">-{fmtEur(inv.amount)}</span>
+                                                                <span className="font-mono text-red-500">-{fmtEur(inv.progressive_amount || inv.amount)}</span>
                                                             </div>
                                                         ))}
                                                     </div>
