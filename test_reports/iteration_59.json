@@ -1,0 +1,60 @@
+{
+  "summary": "Iteration 59: Testing Tracciabilità Materiali features. Found and FIXED a critical bug - frontend was calling non-existent endpoint /material-batches instead of /fpc/batches. All backend APIs working correctly. UI verified with correct sections and empty state messages.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "backend_api_tests": {
+      "GET /api/fpc/batches": "PASS - Returns 200 with batches array",
+      "GET /api/fpc/batches?commessa_id=xxx": "PASS - Filter parameter accepted and working",
+      "GET /api/material-batches": "PASS - Correctly returns 404 (endpoint does not exist)",
+      "GET /api/commesse/{id}/ops": "PASS - Returns operational data",
+      "GET /api/commesse/{id}/documenti": "PASS - Returns documents array"
+    },
+    "frontend_ui_tests": {
+      "commessa_ops_panel": "PASS - CommessaOpsPanel renders correctly",
+      "tracciabilita_section": "PASS - Section visible with correct header",
+      "empty_state_message": "PASS - Shows 'Nessun materiale tracciato' when empty",
+      "repository_documenti": "PASS - Section visible and expandable",
+      "document_type_dropdown": "PASS - All 8 document types available (certificato_31, altro, ddt_fornitore, etc.)",
+      "carica_file_button": "PASS - Upload button visible and clickable"
+    },
+    "fixed_bugs": {
+      "wrong_endpoint_bug": {
+        "location": "/app/frontend/src/components/CommessaOpsPanel.js line 118",
+        "issue": "Frontend was calling /material-batches which doesn't exist",
+        "fix": "Changed to /fpc/batches to use correct endpoint"
+      }
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_tracciabilita_features.py",
+    "/app/test_reports/pytest/tracciabilita_features_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "BUG FIXED: Line 118 in CommessaOpsPanel.js was calling apiRequest('/material-batches?commessa_id=') which returned 404. Changed to '/fpc/batches?commessa_id=' which is the correct endpoint.",
+    "The /api/fpc/batches endpoint with commessa_id filter is working correctly but material_batches don't have commessa_id by default - only batches explicitly linked to a commessa will appear in Tracciabilità section",
+    "Documents with metadata_estratti.numero_colata will show in Tracciabilità Materiali section after AI OCR analysis",
+    "Analizza AI button correctly shows for certificato_31, altro, and ddt_fornitore document types when document is PDF and has no extracted metadata"
+  ],
+  "updated_files": [
+    "/app/frontend/src/components/CommessaOpsPanel.js",
+    "/app/backend/tests/test_tracciabilita_features.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100%"
+  },
+  "test_credentials": "Dynamic test session created and cleaned up after testing",
+  "seed_data_creation": "Test commessa com_39cefc9bbb91 (NF-2026-000001) and test batch bat_a6c08326edec created and cleaned up",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Tracciabilità Materiali feature working correctly after bug fix. The frontend now calls /fpc/batches?commessa_id= correctly. To test AI extraction, upload a PDF certificate (tipo: certificato_31, altro, or ddt_fornitore) and click 'Analizza AI' button. Extracted data (numero_colata, qualita_acciaio, fornitore, normativa) will appear in green box on document card and in Tracciabilità Materiali section."
+}
