@@ -167,7 +167,6 @@ async def get_quality_score(user: dict = Depends(get_current_user)):
     # ── CE Score (max 25 pts): % of certificazioni vs invoices
     total_invoices = await db.invoices.count_documents({"user_id": uid})
     total_certs = await db.certificazioni.count_documents({"user_id": uid})
-    total_norme = await db.norme_config.count_documents({})
     if total_invoices > 0:
         ce_pct = min(total_certs / max(total_invoices, 1), 1.0)
         ce_score = round(ce_pct * 25)
