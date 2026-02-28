@@ -1,0 +1,75 @@
+{
+  "summary": "Iteration 46: Backend PDF generation testing for Preventivo. Fixed 2 bugs in generate_preventivo_pdf function that caused crashes when fields had explicit None values. All 17 tests pass. PDF endpoint verified end-to-end.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "italian_number_formatting": {
+      "test_format_positive_number": "PASS - 1234.56 → 1.234,56",
+      "test_format_large_number": "PASS - 1234567.89 → 1.234.567,89",
+      "test_format_zero": "PASS - 0 → 0,00",
+      "test_format_none": "PASS - None → 0,00",
+      "test_format_small_decimal": "PASS - 0.99 → 0,99",
+      "test_format_string_number": "PASS - '123.45' → 123,45",
+      "test_format_invalid_string": "PASS - 'invalid' → 0,00"
+    },
+    "pdf_generation_basic": {
+      "complete_data": "PASS - PDF generated with company/client/lines data",
+      "missing_company": "PASS - No crash when company is None",
+      "missing_client": "PASS - No crash when client is None",
+      "missing_both": "PASS - No crash when both are None",
+      "empty_lines": "PASS - No crash with empty lines array"
+    },
+    "pdf_generation_none_values": {
+      "client_with_none_fields": "PASS - Handles None address/piva/cf/etc",
+      "line_with_none_optional_fields": "PASS - Handles None sconto_1/sconto_2/codice_articolo"
+    },
+    "pdf_content_validation": {
+      "contains_totals": "PASS - IVA breakdown and totals present",
+      "contains_conditions_page": "PASS - Conditions page generated when condizioni_vendita set"
+    },
+    "api_endpoint_test": {
+      "health_check": "PASS - Backend healthy",
+      "pdf_endpoint": "PASS - GET /api/preventivi/{id}/pdf returns valid PDF (14705 bytes, %PDF-1.7 header)"
+    }
+  },
+  "bugs_fixed": [
+    {
+      "file": "/app/backend/routes/preventivi.py",
+      "line": "781-785",
+      "issue": "payment_type_label, subject, riferimento could be explicitly None causing html.escape() to crash",
+      "fix": "Added 'or \"\"' to handle None values: prev.get('payment_type_label', '') or ''"
+    },
+    {
+      "file": "/app/backend/routes/preventivi.py",
+      "line": "796-797, 820-821, 828",
+      "issue": "sconto_1, sconto_2, sconto_globale, line_total could be None causing float() to crash",
+      "fix": "Changed float(ln.get('sconto_1', 0)) to float(ln.get('sconto_1') or 0)"
+    }
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_preventivo_pdf_generation.py",
+    "/app/test_reports/pytest/preventivo_pdf_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/routes/preventivi.py",
+    "/app/backend/tests/test_preventivo_pdf_generation.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "N/A (backend-only testing)"
+  },
+  "test_credentials": "Cookie session_token=test_pdf_session_11912698190a (for user bridge-test-user)",
+  "seed_data_creation": "Created session for bridge-test-user in user_sessions collection",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "PDF generation for preventivi fully tested. WeasyPrint HTML/CSS implementation verified. Italian number formatting (_fmt_it helper) working correctly. All edge cases (None company, None client, empty lines, None field values) handled. Test session: test_pdf_session_11912698190a for bridge-test-user."
+}
