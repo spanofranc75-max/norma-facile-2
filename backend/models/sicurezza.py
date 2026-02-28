@@ -103,6 +103,7 @@ class PosResponse(BaseModel):
     client_id: Optional[str] = None
     client_name: Optional[str] = None
     distinta_id: Optional[str] = None
+    linked_rilievo_id: Optional[str] = None  # Link to source rilievo (for POS from Rilievo bridge)
     cantiere: CantiereInfo = Field(default_factory=CantiereInfo)
     selected_risks: List[str] = []
     selected_machines: List[str] = []
