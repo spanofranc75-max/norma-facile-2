@@ -817,8 +817,8 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
         </tr>"""
 
     # ── Compute IVA breakdown ──
-    sconto_globale = float(prev.get("sconto_globale", 0))
-    subtotal = sum(float(ln.get("line_total", 0)) for ln in lines)
+    sconto_globale = float(prev.get("sconto_globale") or 0)
+    subtotal = sum(float(ln.get("line_total") or 0) for ln in lines)
     sconto_val = round(subtotal * sconto_globale / 100, 2) if sconto_globale else 0
     imponibile = round(subtotal - sconto_val, 2)
 
