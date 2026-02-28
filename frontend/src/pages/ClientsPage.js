@@ -106,21 +106,33 @@ export default function ClientsPage() {
         setDialogOpen(true);
     };
 
-    const handleSave = async () => {
+    const handleSave = async (e) => {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
         if (!formData.business_name) { toast.error('Ragione Sociale obbligatoria'); return; }
         setSaving(true);
         try {
+            // Clean empty strings to null for Optional fields
+            const payload = { ...formData };
+            ['codice_fiscale', 'partita_iva', 'pec', 'phone', 'cellulare', 'fax', 'email', 'sito_web', 'payment_type_id', 'payment_type_label', 'iban', 'banca', 'notes'].forEach(k => {
+                if (payload[k] === '') payload[k] = null;
+            });
+
             if (editingClient) {
-                await apiRequest(`/clients/${editingClient.client_id}`, { method: 'PUT', body: formData });
+                await apiRequest(`/clients/${editingClient.client_id}`, { method: 'PUT', body: payload });
                 toast.success('Cliente aggiornato');
             } else {
-                await apiRequest('/clients/', { method: 'POST', body: formData });
-                toast.success('Cliente creato');
+                const result = await apiRequest('/clients/', { method: 'POST', body: payload });
+                console.log('[ClientsPage] Client created:', result?.client_id);
+                toast.success('Cliente creato con successo');
             }
             setDialogOpen(false);
             fetchClients();
-        } catch (e) { toast.error(e.message); }
-        finally { setSaving(false); }
+        } catch (err) {
+            console.error('[ClientsPage] Save failed:', err);
+            toast.error(err.message || 'Errore durante il salvataggio');
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleDelete = async () => {
