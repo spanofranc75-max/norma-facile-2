@@ -8,8 +8,9 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Textarea } from '../components/ui/textarea';
 import { toast } from 'sonner';
-import { Save, Building2, CreditCard, User } from 'lucide-react';
+import { Save, Building2, CreditCard, FileText, ImageIcon, Upload, X } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
 export default function SettingsPage() {
@@ -35,6 +36,8 @@ export default function SettingsPage() {
             iban: '',
             bic_swift: '',
         },
+        logo_url: '',
+        condizioni_vendita: '',
     });
 
     useEffect(() => {
@@ -45,6 +48,8 @@ export default function SettingsPage() {
                     ...prev,
                     ...data,
                     bank_details: data.bank_details || prev.bank_details,
+                    logo_url: data.logo_url || '',
+                    condizioni_vendita: data.condizioni_vendita || '',
                 }));
             } catch (error) {
                 console.error('Error loading settings:', error);
