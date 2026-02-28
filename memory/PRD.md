@@ -1,13 +1,32 @@
-# Norma Facile 2.0 - Product Requirements Document
+# NormaFacile 2.0 - Product Requirements Document
 
-## Original Problem Statement
-Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + FastAPI + MongoDB.
+## Problema Originale
+Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, preventivi, fatture, DDT, commesse e documentazione normativa per aziende del settore metalmeccanico (Fabbri).
 
-## Core Architecture
-- **Norma Core Engine** (`backend/core/engine/`) — Business logic
-- **Optimizer Service** (`backend/services/optimizer.py`) — FFD bin-packing
+## Dominio di Produzione
+- Frontend: `https://www.1090normafacile.it`
+- API: `https://api.1090normafacile.it`
 
-## Implemented Modules
+## Architettura
+- **Frontend**: React (CRA) + Shadcn UI + TailwindCSS
+- **Backend**: FastAPI + Motor (MongoDB async)
+- **Database**: MongoDB
+- **Email**: Resend API (`fatture@steelprojectdesign.it`)
+- **PDF**: WeasyPrint + ReportLab
+- **AI**: GPT-4o Vision (Emergent LLM Key)
+- **Auth**: Google OAuth (Emergent-managed)
+- **SDI**: Aruba + FattureInCloud (moduli pronti)
+
+## Configurazione Produzione (COMPLETATA - Phase 36)
+- `backend/core/config.py`: Pydantic Settings centralizzato con tutte le variabili
+- `backend/services/email_service.py`: Resend (welcome, invoice, DDT)
+- `backend/services/aruba_sdi.py`: FatturaPA XML generator + Aruba API client
+- `backend/services/fattureincloud_api.py`: FIC API v2 client completo
+- `.env`: JWT_SECRET, RESEND_API_KEY, GOOGLE_CLIENT_ID/SECRET, CORS produzione
+- Dipendenze aggiuntive: resend, APScheduler, qrcode, ezdxf, openpyxl
+- Frontend: fabric, react-signature-canvas, react-dropzone, html2pdf.js, pdfjs-dist, date-fns, zod
+
+## Moduli Implementati
 
 ### Foundation (Phase 1-5)
 - Google OAuth, Invoicing, Rilievi, Distinta Smart BOM, Industrial Blue Theme
@@ -19,264 +38,85 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
 - 3-step wizard, AI risk assessment (GPT-4o), POS PDF
 
 ### Workshop Dashboard (Phase 9) + UI Polish (Phase 16)
-- Gradient KPI cards, Recharts BarChart "Fatturato Mensile", FAB "Nuovo"
-- Fascicolo Cantiere, Empty States SVG
+- Gradient KPI cards, Recharts BarChart, FAB "Nuovo", Fascicolo Cantiere
 
 ### Norma Core Engine + Catalogo + Vendor API (Phase 10-12)
-- ThermalValidator, SafetyValidator, CEValidator, NormaRouter
-- Custom profiles, merged catalog, vendor system
+- ThermalValidator, SafetyValidator, CEValidator, NormaRouter, Custom profiles
 
 ### Scheda Cliente/Fornitore + Tipi Pagamento (Phase 17)
-- Tab-based client form (Anagrafica, Indirizzo, Contatti, Pagamento, Note)
-- Persone di Riferimento with document email preferences
-- Payment Types CRUD with installment checkbox grid
-- Client_type: Cliente / Fornitore / Cliente-Fornitore
+- Tab-based form, Persone di Riferimento, Payment Types CRUD
 
-### Preventivo Avanzato v2 — Invoicex Style (Phase 18) — 2026-02-27
-- Sidebar Tabs: Riferimento, Pagamento, Destinazione merce, Note
-- Line Items Enhanced with cascading discounts
-- Quick Fill from client data
-- Totals block: subtotal, sconto globale, imponibile, IVA, totale, acconto, da pagare
-- Converti in Fattura v2
+### Preventivo Avanzato v2 — Invoicex Style (Phase 18)
+- Sidebar Tabs, Line Items, Quick Fill, Totals block, Converti in Fattura
 
-## Ottimizzatore di Taglio (Phase 15)
-- FFD Algorithm, API + PDF export, frontend modal
+### DDT Module (Phase 19)
+- 3 types, Invoicex-style editor, PDF, Converti DDT in Fattura
 
-## Import Rilievo -> Distinta (Phase 14)
-- Split-screen bridge UI
+### Fornitori Module (Phase 20)
+- Dedicated /fornitori page, shared backend with client_type filter
 
-### DDT (Documento di Trasporto) Module (Phase 19) — 2026-02-27
-- 3 types: Vendita (DDT-), Conto Lavoro (CL-), Rientro (RCL-)
-- Invoicex-style editor with 4 sidebar tabs (Trasporto, Destinazione, Pagamento, Note)
-- Line items with cascading discounts (sconto_1, sconto_2)
-- Auto-causale based on DDT type
-- PDF generation with stampa_prezzi toggle
-- **Converti DDT in Fattura**: one-click conversion mapping lines, client, totals → creates invoice in bozza
-  - DDT status → fatturato, bidirectional link (converted_to / converted_from)
-  - "Vai alla Fattura" button after conversion
-  - Duplicate conversion protection (409)
-- Testing: 20/20 + 18/18 backend, 100% frontend
+### Perizia Sinistro (Phase 21-21c)
+- Damage assessment, AI photo analysis, Codici Danno Tags, Lettera Perito
 
-### Fornitori (Suppliers) Module (Phase 20) — 2026-02-27
-- Dedicated /fornitori page with same tab-based UI as Clienti
-- Uses existing /api/clients/ endpoint with client_type=fornitore filter
-- Backend filter: $in query includes both 'fornitore' and 'cliente_fornitore'
-- Sidebar: separate "Clienti" and "Fornitori" nav items
-- Dialog: 5 tabs (Anagrafica, Indirizzo, Contatti, Pagamento, Note)
-- Contact persons with document preferences (DDT, Preventivi, Fatture, etc.)
-- Testing: 16/16 backend, 100% frontend
+### Sopralluogo Rapido Wizard (Phase 23)
+- 5-step mobile-first wizard, GPS, Camera Smart, Diagnosi, Misure, Riepilogo
 
-### Perizia Sinistro (Damage Assessment) Module (Phase 21) — 2026-02-27
-- Professional damage assessment tool for insurance claims on fences/gates
-- 3 damage types: Strutturale (EN 1090), Estetico, Automatismi (EN 12453)
-- Map picker (react-leaflet + OpenStreetMap) with reverse geocoding
-- Multi-photo upload (max 5) with GPT-4o Vision AI analysis
-- Auto-generated cost items based on damage type:
-  - Strutturale: 6 voci (smontaggio, fornitura +20% fuori serie, trasporto, installazione, oneri normativi DoP, smaltimento)
-  - Estetico: 3 voci (smontaggio, carteggiatura/verniciatura, smaltimento)
-  - Automatismi: 4 voci (smontaggio, componenti, collaudo EN 12453, smaltimento)
-- Editable cost table with real-time total recalculation + "Ricalcola" server-side
-- Professional PDF: Stato di Fatto, Computo Metrico Estimativo, Nota Tecnica per il Perito
-- Endpoints: CRUD + /analyze-photos + /recalc + /genera-lettera + /pdf
-- **Lettera di Accompagnamento Tecnica** (Phase 21b): Generazione AI di lettera formale per ufficio sinistri
-  - Cita EN 1090-2, EN 13241, ISO 12944 per spostare focus da prezzo a responsabilita
-  - 3 punti vincolanti: Decadenza Marcatura CE, Integrita Ciclo Anticorrosivo, Sicurezza Fissaggi
-  - Fallback template professionale se AI non disponibile
-  - Editabile + inclusa nel PDF perizia
-  - Testing: 10/10 backend, 100% frontend (iteration_29)
-- **Codici Danno Tag System** (Phase 21c): Database di 7 codici danno con tag selezionabili
-  - S1-DEF (Deformazione EN 1090-2), S2-WELD (Cricca saldatura EN 1090-2)
-  - A1-ANCH (Tassello ETAG 001), A2-CONC (Crepa cemento NTC 2018)
-  - P1-ZINC (Zincatura ISO 1461/12944), G1-GAP (Distanze EN 13241), M1-FORCE (Motore EN 12453)
-  - Generazione costi smart basata sui codici selezionati (non solo tipo_danno)
-  - Frontend: tag pill-shaped colorati per categoria, "Norme attivate" dinamiche
-  - Testing: 16/16 backend, 100% frontend (iteration_30)
+### Archivio Sinistri Dashboard (Phase 22)
+- KPI cards, grafici, breakdown per tipo danno
 
-### Sopralluogo Rapido Wizard (Phase 23) — 2026-02-27
-- Complete UX redesign: PeriziaEditorPage rewritten as mobile-first 5-step wizard
-- Step 1 (Cantiere): Auto-GPS geolocation + reverse geocoding (Nominatim) + address + map + client
-- Step 2 (Foto): Camera Smart con "Foto Panoramica" (blu) e "Dettaglio Danno" (rosso) + AI analysis GPT-4o + tag suggestions auto-parsed
-- Step 3 (Diagnosi): Large bubble tag selector grouped by severity (rosso/arancio/blu/giallo/viola) with ring selection + norme attivate
-- Step 4 (Misure): Slider bars per lunghezza (0.5-12ml) e altezza (0.5-3m) + prezzi + toggle smaltimento/accesso difficile
-- Step 5 (Riepilogo): Total prominente + computo metrico + quick actions (Genera Preventivo, Lettera Perito EN 1090/13241, PDF, Invia WhatsApp/Email)
-- Step validation: avanti disabled fino a soddisfazione requisiti per step
-- navigator.share() API per condivisione nativa
-- Testing: 100% backend + frontend (iteration_31)
+### Sinistro Smart Algorithm (Phase 24)
+- calc_voci_costo con formule EN 1090/13241
 
-### Archivio Sinistri Dashboard (Phase 22) — 2026-02-27
-- Dashboard riepilogo perizie: KPI cards (totali, volume, importo medio, codici usati)
-- Grafico andamento mensile (Recharts BarChart)
-- Grafico stato perizie (PieChart donut)
-- Breakdown per tipo danno con progress bar
-- Frequenza codici danno con badges
-- Testing: incluso in iteration_30
-- Testing: 22/22 backend, 100% frontend
+### Catalogo Articoli (Phase 25)
+- CRUD, ricerca, storico prezzi, bulk import
 
-- `/api/perizie/` (CRUD + analyze-photos + recalc + genera-lettera + PDF)
-- `/api/perizie/codici-danno` (GET reference damage codes - no auth)
-- `/api/perizie/archivio/stats` (GET aggregated stats dashboard)
+### Tracciamento Pagamenti (Phase 25)
+- Scadenze, pagamenti parziali/totali, KPI cards
 
-## API Endpoints
-- `/api/auth/`, `/api/clients/` (with client_type filter), `/api/invoices/`, `/api/company/settings`
-- `/api/rilievi/`, `/api/distinte/` + optimizer endpoints
-- `/api/certificazioni/` + `/thermal/` + `/router/`
-- `/api/sicurezza/`, `/api/dashboard/stats`, `/api/dashboard/fascicolo/{client_id}`
-- `/api/catalogo/`, `/api/vendor/`, `/api/preventivi/`
-- `/api/payment-types/` (CRUD + `seed-defaults`)
-- `/api/ddt/` (CRUD + PDF + causali + convert-to-invoice + stats/registro)
-- `/api/articoli/` (CRUD + search + bulk-import)
-- `/api/invoices/{id}/scadenze` (GET payment schedule)
-- `/api/invoices/{id}/scadenze/pagamento` (POST record payment, DELETE remove)
-- `/api/invoices/{id}/duplicate` (POST duplicate as draft)
-- `/api/invoices/quick-fill/sources` (GET list preventivi/DDT for quick fill)
-- `/api/fatture-ricevute/` (CRUD + KPIs for received invoices)
-- `/api/fatture-ricevute/import-xml` (POST multipart XML FatturaPA import)
-- `/api/fatture-ricevute/preview-xml` (POST parse XML without saving)
-- `/api/fatture-ricevute/{id}/extract-articoli` (POST extract to catalog)
-- `/api/fatture-ricevute/{id}/pagamenti` (GET/POST payment tracking)
-- `/api/engine/validate-installation-photos` (POST AI photo validation via GPT-4o Vision)
+### Fatture Ricevute + FatturaPA XML Import (Phase 26)
+- Import XML, parser namespace-agnostic, matching fornitore per P.IVA
 
-## Prioritized Backlog
+### Core Engine Normativo (Phase 27)
+- NormaConfig data-driven, Calcolo Uw ISO 10077-1, Validazione regole dinamiche
 
-### P0 — Completed
-- [x] DDT Module — DONE (Phase 19)
-- [x] Fornitori Module — DONE (Phase 20)
-- [x] Perizia Sinistro Module — DONE (Phase 21)
-- [x] Sinistro Smart Algorithm — DONE (Phase 24) — 2026-02-27
-  - calc_voci_costo: MAT.01 (materiale +markup%), TRA.01 (€60/€120), MAN.01 (€40/ml), MAN.02 (€50/ml)
-  - AUT.01/02 (M1-FORCE), SIC.01 (G1-GAP €180), NOR.01 (€150), SMA.01 (€90)
-  - Recalc endpoint verified, PDF generation, Archivio stats
-  - Testing: 16/16 backend (iteration_32), 100% frontend, pytest suite at /app/backend/tests/test_sinistro_smart_algorithm.py
-- [x] Catalogo Articoli — DONE (Phase 25) — 2026-02-27
-  - Pagina dedicata /articoli con CRUD completo
-  - Ricerca per codice/descrizione/fornitore, filtro categoria
-  - Storico prezzi con tracciamento fonte (manuale/fattura fornitore)
-  - Bulk import per fatture ricevute
-  - Testing: 23/23 backend (iteration_33), 100% frontend
-- [x] Tracciamento Pagamenti (Scadenze) — DONE (Phase 25) — 2026-02-27
-  - Colonne Pagato/Da Pagare nella lista fatture
-  - KPI cards: Totale Fatturato, Incassato, Da Incassare
-  - Modale Scadenze con registrazione pagamenti parziali/totali
-  - Stato automatico: non_pagata → parzialmente_pagata → pagata
-  - Duplica fattura
-  - Testing: 23/23 backend (iteration_33), 100% frontend
-- [x] Ricerca Articoli in Fattura — DONE (Phase 25) — 2026-02-27
-  - Autocomplete nel campo codice delle righe fattura
-  - Auto-popolamento: codice, descrizione, prezzo, IVA dal catalogo
-- [x] Fatture Ricevute (Fornitori + SDI) — DONE (Phase 26) — 2026-02-27
-  - Pagina dedicata /fatture-ricevute con CRUD + KPI cards
-  - Import XML FatturaPA v1.2 con parser namespace-agnostic
-  - Tracciamento pagamenti (stesso pattern fatture emesse)
-  - Estrazione voci in Catalogo Articoli con storico prezzi
-  - Matching automatico fornitore per P.IVA
-  - Testing: 21/21 backend (iteration_34), 100% frontend
-- [x] Core Engine Normativo — DONE (Phase 27) — 2026-02-27
-  - NormaConfig data-driven: ogni norma è un JSON, zero code changes per nuove norme
-  - Seed: EN 1090-1 (strutture acciaio), EN 13241 (cancelli), UNI EN 14351-1 (finestre)
-  - Componenti CRUD: 8 vetri, 8 telai, 5 distanziatori con Ug/Uf/Ψ
-  - Calcolo Uw ISO 10077-1: formula (Ag*Ug + Af*Uf + lg*Ψ) / (Ag+Af)
-  - Validazione regole dinamiche con BLOCK_CE_MARKING/WARN
-  - Semaforo zone climatiche A-F, suggerimenti upgrade componenti
-  - Frontend: /core-engine con 3 tab (Configuratore, Norme, Componenti)
-  - Testing: 30/30 backend (iteration_35), 100% frontend
-- [x] Generazione Fascicolo Automatica — DONE (Phase 28) — 2026-02-27
-  - DOP con prestazioni dichiarate da NormaConfig JSON (dinamiche, non hardcoded)
-  - Dettaglio calcolo Uw + tabella compliance zone climatiche con CONFORME/NON CONFORME
-  - Etichetta CE ritagliabile con prestazioni obbligatorie
-  - Manuale d'Uso e Manutenzione specifico per norma (manutenzione diversa cancello/finestra)
-  - Output: PDF singolo o ZIP (PDF + JSON machine-readable)
-  - Testing: 12/12 backend (iteration_36), 100% frontend
+### Generazione Fascicolo Automatica (Phase 28)
+- DOP, Etichetta CE, Manuale d'Uso, PDF + ZIP
 
-### P1
-- [x] Registro DDT — DONE (Phase 29) — 2026-02-28
-  - KPI cards: DDT mese, volume mese, breakdown per tipo, non fatturati
-  - Navigazione mese precedente/successivo per report mensile
-  - Filtri per stato (non_fatturato/fatturato) + filtri per data
-  - Endpoint: /api/ddt/stats/registro con year/month params
-  - Testing: 12/12 backend (iteration_37), 100% frontend
-- [x] Quick Fill Fatture — DONE (Phase 29) — 2026-02-28
-  - Pulsante "Importa da Preventivo/DDT" nell'editor fattura
-  - Modale QuickFillModal con ricerca, filtro per tipo, selezione
-  - Auto-popolamento righe, cliente, note dalla sorgente selezionata
-  - Endpoint: /api/invoices/quick-fill/sources con filtri doc_type e q
-  - Testing: 12/12 backend (iteration_37), 100% frontend
-- [x] Validazione AI Foto Posa — DONE (Phase 29) — 2026-02-28
-  - Pagina dedicata /validazione-foto con configurazione prodotto e norma
-  - Upload fino a 5 foto dell'installazione
-  - Checklist personalizzabile + checklist standard per tipo prodotto
-  - Analisi GPT-4o Vision con esito CONFORME/NON CONFORME/NON VERIFICABILE
-  - Report strutturato con summary e note aggiuntive
-  - Endpoint: /api/engine/validate-installation-photos
-  - Testing: 12/12 backend (iteration_37), 100% frontend
-- [x] Module Interconnection (Data Linking) — DONE (Phase 30) — 2026-02-28
-  - Bridge 1: Distinta → Preventivo con markup configurabile (default 30%)
-    - Endpoint: POST /api/preventivi/from-distinta/{distinta_id}?markup_percent=30
-    - Smart pricing: costo materiale + markup % = prezzo vendita
-    - Frontend: Pulsante "Crea Preventivo" in DistintaEditorPage
-  - Bridge 2: Preventivo → Fattura (copia righe, cliente, note)
-    - Endpoint: POST /api/invoices/from-preventivo/{preventivo_id}
-    - Stato fattura = "bozza", preventivo marcato "accettato"
-    - Frontend: Pulsante esistente "Converti in Fattura" in PreventivoEditorPage
-  - Bridge 3: Rilievo → POS (auto-fill cantiere)
-    - Endpoint: POST /api/sicurezza/from-rilievo/{rilievo_id}
-    - Auto-fill: indirizzo, città, committente, data inizio, descrizione
-    - Frontend: Pulsante "Genera POS" in RilievoEditorPage
-  - Testing: 10/10 backend (iteration_38), 100% frontend
-- [x] UI Refactor: Sidebar Accordion — DONE (Phase 31) — 2026-02-28
-  - Sidebar ristrutturata da 19 voci piatte a 6 gruppi collassabili
-  - Gruppi: Dashboard, Commerciale (4), Produzione (4), Certificazioni (3), Acquisti (4), Perizie (2)
-  - Impostazioni fisso in fondo, chevron animato, auto-open gruppo attivo
-  - Testing: 100% frontend (iteration_39)
-- [x] Kanban Board "Planning Cantieri" — DONE (Phase 32) — 2026-02-28
-  - 7 colonne: Nuove Commesse, Approvvigionamento, Lavorazione, Conto Lavoro, Pronto Consegna, Montaggio, Completato
-  - Drag-and-drop (@hello-pangea/dnd) aggiorna stato in tempo reale
-  - Card: titolo, cliente, valore (EUR), scadenza (rosso se scaduta), priorità
-  - CRUD completo + board/view + status history + from-preventivo
-  - Sidebar: "Planning Cantieri" sotto gruppo Produzione
-  - Testing: 18/18 backend, 100% frontend (iteration_40)
-- [x] Officina Quality Score (SRA MVP) — DONE (Phase 33) — 2026-02-28
-  - Score 0-100 con breakdown: Sicurezza (30), CE (25), Documentazione (20), Foto (10), Attività (15)
-  - 4 livelli: Maestro Artigiano (>80), Esperto (>60), Crescita (>40), Apprendista (<40)
-  - Radial progress bar SVG (verde >80, giallo >50, rosso <50)
-  - Insights con "Next Best Action" cliccabili (+punti potenziali)
-  - Widget integrato in Dashboard
-  - Testing: 17/17 backend, 100% frontend (iteration_41)
-- [x] Bug Fix: Creazione Cliente + Logo + Condizioni Vendita — DONE (Phase 34) — 2026-02-28
-  - Bug 1 (P0): Creazione nuovo cliente — verificato funzionante, POST /api/clients/ ritorna 201
-  - Bug 2 (P1): Condizioni di vendita — campo condizioni_vendita aggiunto a CompanySettings
-    - Nuovo tab "Condizioni" in /settings con textarea
-    - Condizioni incluse in footer PDF fatture, preventivi e DDT
-  - Bug 3 (P1): Logo aziendale — upload immagine (base64, max 500KB)
-    - Nuovo tab "Logo" in /settings con upload drag & drop
-    - Logo mostrato in sidebar (data-testid='sidebar-company-logo')
-    - Logo incluso in header PDF fatture, preventivi e DDT
-  - Testing: 14/14 backend, 100% frontend (iteration_42)
-- [x] Bug Fix Critico: Creazione Cliente + EBITDA + Anteprima PDF — DONE (Phase 35) — 2026-02-28
-  - BUG FIX (P0): Creazione cliente non salvava e redirect a home
-    - Root cause: form non wrappata con preventDefault, button senza type=button
-    - Fix: <form onSubmit={preventDefault}>, type=submit per Salva, console.error logging
-    - Empty string → null conversion per campi Optional
-    - Verificato: dialog chiude, toast "Cliente creato con successo", no redirect, cliente in tabella
-  - EBITDA Dashboard (/ebitda): Pannello Analisi Finanziaria
-    - KPI cards: Ricavi YTD, Costi YTD, Margine YTD, Incassato
-    - Grafico a barre: Ricavi vs Costi per mese
-    - Area chart: Andamento margine
-    - Top Fornitori per spesa
-    - Tabella dettaglio mensile con 12 righe
-    - Selettore anno con navigazione ← →
-  - Anteprima PDF in-app
-    - PDFPreviewModal con iframe per visualizzazione inline
-    - PDFPreviewButton componente riutilizzabile
-    - Integrato in: InvoiceEditorPage, PreventivoEditorPage, DDTEditorPage, InvoicesPage (dropdown)
-  - Sidebar: Aggiunto link "Analisi Finanziaria" (TrendingUp icon)
-  - Testing: 12/12 backend, 100% frontend (iteration_43)
-- [ ] Integrazione SDI diretta con provider (API keys da configurare)
-- [ ] Recurring invoices / email reminders
-- [ ] Invio fascicolo via PEC automatico
+### Registro DDT + Quick Fill + AI Foto Posa (Phase 29)
+- KPI, filtri, quick fill fatture, validazione foto installazione
 
-### P2
-- [ ] Team collaboration, advanced reporting, client portal, mobile app
-- [ ] Digitalizzazione documenti cartacei (AI scan)
-- [ ] Integrazione calendario (Google/Outlook)
+### Module Interconnection (Phase 30)
+- Distinta→Preventivo, Preventivo→Fattura, Rilievo→POS
+
+### Kanban Planning Cantieri (Phase 32)
+- 7 colonne drag-and-drop, CRUD commesse
+
+### Quality Score (Phase 33)
+- Score 0-100, 4 livelli, radial progress bar, insights
+
+### Bug Fix: Logo + Condizioni Vendita + Client Creation (Phase 34-35)
+- Logo upload base64, condizioni vendita in PDF, fix form client
+
+### EBITDA Dashboard + PDF Preview (Phase 35)
+- Analisi finanziaria, KPI, grafici, tabella mensile, anteprima PDF inline
+
+### Migrazione Configurazione Produzione (Phase 36)
+- Config centralizzata, Email Resend, Aruba SDI, FattureInCloud API
+
+## Issue Pendenti
+- **P0**: Firma digitale DDT - pulsante "Salva" bloccato
+- **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
+- **P2**: Sovrapposizione footer PDF
+- **P2**: Account test non funziona da UI
+
+## Task Futuri
+- [ ] Esportazione CSV distinta di taglio per CNC
+- [ ] Estensione Distinta Facile (grata 2 ante, cancello scorrevole)
+- [ ] Categoria "CANCELLI" al listino prezzi
+- [ ] Migrazione dati EN 13241
+- [ ] Versioning fatture
+- [ ] Integrazione Stripe (pagamenti online)
+- [ ] Automazione invio credenziali
+- [ ] Modalità offline (PWA)
 - [ ] Firma Elettronica Avanzata (FEA)
 - [ ] App Mobile Nativa
