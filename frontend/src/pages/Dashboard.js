@@ -188,6 +188,12 @@ export default function Dashboard() {
                         </CardContent>
                     </Card>
 
+                    {/* Quality Score */}
+                    <QualityScoreWidget />
+                </div>
+
+                {/* Widgets Row */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Prossime Scadenze */}
                     <Card className="border-gray-200" data-testid="widget-scadenze">
                         <CardHeader className="bg-slate-50 border-b border-gray-200 py-3 px-5">
