@@ -61,6 +61,81 @@ async def get_invoices(
     )
 
 
+@router.get("/quick-fill/sources")
+async def get_quick_fill_sources(
+    q: Optional[str] = Query(None),
+    doc_type: Optional[str] = Query(None),
+    user: dict = Depends(get_current_user),
+):
+    """List preventivi and DDT available for quick fill into an invoice."""
+    uid = user["user_id"]
+    sources = []
+
+    # Fetch Preventivi (exclude already converted or cancelled)
+    if not doc_type or doc_type == "preventivo":
+        prev_q = {"user_id": uid, "status": {"$nin": ["annullato"]}}
+        if q:
+            prev_q["$or"] = [
+                {"number": {"$regex": q, "$options": "i"}},
+                {"subject": {"$regex": q, "$options": "i"}},
+                {"client_name": {"$regex": q, "$options": "i"}},
+            ]
+        prev_cursor = db.preventivi.find(prev_q, {"_id": 0}).sort("created_at", -1).limit(50)
+        prevs = await prev_cursor.to_list(50)
+        for p in prevs:
+            if p.get("client_id"):
+                c = await db.clients.find_one({"client_id": p["client_id"]}, {"_id": 0, "business_name": 1})
+                p["client_name"] = c.get("business_name") if c else ""
+            sources.append({
+                "source_type": "preventivo",
+                "source_id": p.get("preventivo_id"),
+                "number": p.get("number", ""),
+                "client_name": p.get("client_name", ""),
+                "client_id": p.get("client_id", ""),
+                "subject": p.get("subject", ""),
+                "total": p.get("totals", {}).get("total", 0),
+                "date": str(p.get("created_at", ""))[:10],
+                "status": p.get("status", ""),
+                "converted_to": p.get("converted_to"),
+                "lines": p.get("lines", []),
+                "sconto_globale": p.get("sconto_globale", 0),
+                "acconto": p.get("acconto", 0),
+                "payment_type_id": p.get("payment_type_id"),
+                "payment_type_label": p.get("payment_type_label"),
+            })
+
+    # Fetch DDT (non fatturato)
+    if not doc_type or doc_type == "ddt":
+        ddt_q = {"user_id": uid}
+        if q:
+            ddt_q["$or"] = [
+                {"number": {"$regex": q, "$options": "i"}},
+                {"subject": {"$regex": q, "$options": "i"}},
+                {"client_name": {"$regex": q, "$options": "i"}},
+            ]
+        ddt_cursor = db.ddt_documents.find(ddt_q, {"_id": 0}).sort("created_at", -1).limit(50)
+        ddts = await ddt_cursor.to_list(50)
+        for d in ddts:
+            sources.append({
+                "source_type": "ddt",
+                "source_id": d.get("ddt_id"),
+                "number": d.get("number", ""),
+                "client_name": d.get("client_name", ""),
+                "client_id": d.get("client_id", ""),
+                "subject": d.get("subject", ""),
+                "total": d.get("totals", {}).get("total", 0),
+                "date": str(d.get("created_at", ""))[:10],
+                "status": d.get("status", ""),
+                "converted_to": d.get("converted_to"),
+                "lines": d.get("lines", []),
+                "sconto_globale": d.get("sconto_globale", 0),
+                "acconto": d.get("acconto", 0),
+                "ddt_type": d.get("ddt_type", ""),
+            })
+
+    return {"sources": sources, "total": len(sources)}
+
+
 @router.get("/{invoice_id}", response_model=InvoiceResponse)
 async def get_invoice(
     invoice_id: str,
