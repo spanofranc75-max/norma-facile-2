@@ -726,6 +726,77 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                 </div>
             </Section>
 
+            {/* ── TRACCIABILITÀ MATERIALI (EN 1090) ── */}
+            <Section title="Tracciabilità Materiali" icon={FileText} count={materialBatches.length + docs.filter(d => d.metadata_estratti?.numero_colata).length}>
+                <div className="space-y-2">
+                    {/* From material_batches collection */}
+                    {materialBatches.map(b => (
+                        <div key={b.batch_id} className="p-2 bg-emerald-50 rounded border border-emerald-200 text-xs" data-testid={`batch-${b.batch_id}`}>
+                            <div className="flex items-center gap-2 mb-1">
+                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                                <span className="font-semibold text-emerald-800">{b.tipo_materiale || 'Materiale'}</span>
+                                <Badge className="bg-emerald-100 text-emerald-700 text-[9px]">EN 1090</Badge>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px]">
+                                <div>
+                                    <span className="text-slate-500 block">N. Colata</span>
+                                    <span className="font-mono font-bold text-emerald-700">{b.numero_colata}</span>
+                                </div>
+                                <div>
+                                    <span className="text-slate-500 block">Qualità</span>
+                                    <span className="font-mono">{b.qualita || '-'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-slate-500 block">Fornitore</span>
+                                    <span className="font-mono">{b.fornitore || '-'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-slate-500 block">DDT Rif.</span>
+                                    <span className="font-mono">{b.ddt_riferimento || '-'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    
+                    {/* From documents with extracted metadata */}
+                    {docs.filter(d => d.metadata_estratti?.numero_colata).map(d => (
+                        <div key={d.doc_id} className="p-2 bg-blue-50 rounded border border-blue-200 text-xs" data-testid={`traced-${d.doc_id}`}>
+                            <div className="flex items-center gap-2 mb-1">
+                                <Sparkles className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                                <span className="font-semibold text-blue-800">{d.nome_file}</span>
+                                <Badge className="bg-blue-100 text-blue-700 text-[9px]">AI OCR</Badge>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px]">
+                                <div>
+                                    <span className="text-slate-500 block">N. Colata</span>
+                                    <span className="font-mono font-bold text-blue-700">{d.metadata_estratti.numero_colata}</span>
+                                </div>
+                                <div>
+                                    <span className="text-slate-500 block">Qualità</span>
+                                    <span className="font-mono">{d.metadata_estratti.qualita_acciaio || '-'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-slate-500 block">Fornitore</span>
+                                    <span className="font-mono">{d.metadata_estratti.fornitore || '-'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-slate-500 block">Normativa</span>
+                                    <span className="font-mono">{d.metadata_estratti.normativa || '-'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    
+                    {materialBatches.length === 0 && docs.filter(d => d.metadata_estratti?.numero_colata).length === 0 && (
+                        <div className="text-center py-4 text-slate-400 text-xs">
+                            <FileText className="h-6 w-6 mx-auto mb-1 opacity-50" />
+                            <p>Nessun materiale tracciato</p>
+                            <p className="text-[10px] mt-1">Carica un certificato 3.1 e clicca "Analizza AI" per estrarre i dati</p>
+                        </div>
+                    )}
+                </div>
+            </Section>
+
             {/* ── REPOSITORY DOCUMENTI ── */}
             <Section title="Repository Documenti" icon={FileUp} count={docs.length} defaultOpen>
                 <div className="space-y-2">
