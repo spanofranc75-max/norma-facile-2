@@ -326,13 +326,26 @@ export default function PreventivoEditorPage() {
                         <CardContent className="py-3 px-5">
                             <div className="flex items-center gap-0">
                                 <TimelineStep active label="Preventivo" sub={workflow.number} icon={FileText} color="bg-[#0055FF]" />
-                                <div className={`flex-1 h-0.5 ${workflow.status === 'accettato' ? 'bg-emerald-400' : 'bg-slate-200'}`} />
-                                <TimelineStep active={workflow.status === 'accettato'} label="Accettato" icon={CheckCircle2} color="bg-emerald-500" />
-                                <div className={`flex-1 h-0.5 ${workflow.linked_invoice ? 'bg-[#0055FF]' : 'bg-slate-200'}`} />
-                                <TimelineStep active={!!workflow.linked_invoice} label="Fattura" sub={workflow.linked_invoice?.document_number} icon={ArrowRightLeft} color="bg-[#0055FF]" onClick={() => workflow.linked_invoice && navigate(`/invoices/${workflow.linked_invoice.invoice_id}`)} />
-                                <div className={`flex-1 h-0.5 ${workflow.linked_invoice?.status === 'pagata' ? 'bg-emerald-400' : 'bg-slate-200'}`} />
-                                <TimelineStep active={workflow.linked_invoice?.status === 'pagata'} label="Pagata" icon={Euro} color="bg-emerald-500" />
+                                <div className={`flex-1 h-0.5 ${workflow.invoicing_progress > 0 ? 'bg-amber-400' : 'bg-slate-200'}`} />
+                                <TimelineStep active={workflow.invoicing_progress > 0} label="Fatturazione" sub={workflow.invoicing_progress > 0 ? `${workflow.invoicing_progress}%` : ''} icon={Receipt} color="bg-amber-500" />
+                                <div className={`flex-1 h-0.5 ${workflow.invoicing_progress >= 100 ? 'bg-emerald-400' : 'bg-slate-200'}`} />
+                                <TimelineStep active={workflow.invoicing_progress >= 100} label="Completato" icon={CheckCircle2} color="bg-emerald-500" />
                             </div>
+                            {/* Progress bar */}
+                            {workflow.invoicing_progress > 0 && (
+                                <div className="mt-2">
+                                    <div className="flex justify-between text-[10px] text-slate-500 mb-1">
+                                        <span>Fatturato: {workflow.invoicing_progress}%</span>
+                                        <span>{workflow.linked_invoices?.length || 0} fatture</span>
+                                    </div>
+                                    <div className="w-full bg-slate-200 rounded-full h-1.5">
+                                        <div
+                                            className={`h-1.5 rounded-full transition-all ${workflow.invoicing_progress >= 100 ? 'bg-emerald-500' : 'bg-[#0055FF]'}`}
+                                            style={{ width: `${Math.min(workflow.invoicing_progress, 100)}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 )}
