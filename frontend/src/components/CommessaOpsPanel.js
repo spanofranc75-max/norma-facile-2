@@ -1350,6 +1350,123 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Certificate Linking Dialog */}
+            <Dialog open={certLinkOpen} onOpenChange={setCertLinkOpen}>
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Sparkles className="h-5 w-5 text-purple-600" />
+                            Collega Certificati ai Materiali
+                        </DialogTitle>
+                        <DialogDescription>
+                            {selectedArrivo && `DDT: ${selectedArrivo.ddt_fornitore} — Carica i certificati 3.1 e il sistema li analizzerà automaticamente`}
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    {selectedArrivo && (
+                        <div className="space-y-3">
+                            <input
+                                ref={certFileRef}
+                                type="file"
+                                accept=".pdf,image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                    if (certFileRef.current?.dataset?.matIdx && e.target.files?.[0]) {
+                                        handleCertificateUpload(
+                                            selectedArrivo.arrivo_id,
+                                            parseInt(certFileRef.current.dataset.matIdx),
+                                            e.target.files[0]
+                                        );
+                                        e.target.value = '';
+                                    }
+                                }}
+                            />
+                            
+                            <div className="border rounded-md overflow-hidden">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-purple-50">
+                                            <TableHead className="w-[40%] text-xs">Materiale</TableHead>
+                                            <TableHead className="w-[15%] text-xs text-center">Q.tà</TableHead>
+                                            <TableHead className="w-[20%] text-xs">Colata</TableHead>
+                                            <TableHead className="w-[25%] text-xs">Azioni</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {(selectedArrivo.materiali || []).map((mat, idx) => (
+                                            <TableRow key={idx} className={mat.richiede_cert_31 ? '' : 'opacity-50'}>
+                                                <TableCell className="text-sm">
+                                                    <div>
+                                                        {mat.descrizione}
+                                                        {mat.richiede_cert_31 && (
+                                                            <Badge variant="outline" className="ml-1 text-[9px] bg-amber-50 border-amber-300">3.1</Badge>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-center text-sm">
+                                                    {mat.quantita} {mat.unita_misura}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {mat.numero_colata ? (
+                                                        <div className="text-sm">
+                                                            <span className="font-mono font-medium text-emerald-700">{mat.numero_colata}</span>
+                                                            {mat.qualita_materiale && (
+                                                                <span className="text-xs text-slate-500 ml-1">({mat.qualita_materiale})</span>
+                                                            )}
+                                                        </div>
+                                                    ) : mat.richiede_cert_31 ? (
+                                                        <span className="text-xs text-red-500">Non collegato</span>
+                                                    ) : (
+                                                        <span className="text-xs text-slate-400">-</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {mat.richiede_cert_31 && (
+                                                        mat.certificato_doc_id ? (
+                                                            <Badge className="bg-emerald-100 text-emerald-700 text-[10px]">
+                                                                <CheckCircle2 className="h-3 w-3 mr-0.5" /> Collegato
+                                                            </Badge>
+                                                        ) : (
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="h-7 text-xs text-purple-600 border-purple-300"
+                                                                disabled={linkingCert?.mat_idx === idx}
+                                                                onClick={() => {
+                                                                    if (certFileRef.current) {
+                                                                        certFileRef.current.dataset.matIdx = idx;
+                                                                        certFileRef.current.click();
+                                                                    }
+                                                                }}
+                                                            >
+                                                                {linkingCert?.mat_idx === idx ? (
+                                                                    <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Analisi...</>
+                                                                ) : (
+                                                                    <><FileUp className="h-3 w-3 mr-1" /> Carica Cert.</>
+                                                                )}
+                                                            </Button>
+                                                        )
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            
+                            <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded">
+                                <strong>AI OCR:</strong> Caricando un certificato 3.1, il sistema estrarrà automaticamente
+                                numero colata, qualità del materiale e fornitore. I dati saranno collegati alla tracciabilità EN 1090.
+                            </div>
+                        </div>
+                    )}
+                    
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setCertLinkOpen(false)}>Chiudi</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
