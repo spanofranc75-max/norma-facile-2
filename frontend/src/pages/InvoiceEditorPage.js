@@ -43,6 +43,7 @@ import ArticleSearch from '../components/ArticleSearch';
 import { QuickFillModal } from '../components/QuickFillModal';
 import { PDFPreviewButton } from '../components/PDFPreviewModal';
 import { AutoExpandTextarea } from '../components/AutoExpandTextarea';
+import EmailPreviewDialog from '../components/EmailPreviewDialog';
 
 const DOC_TYPES = [
     { value: 'FT', label: 'Fattura' },
