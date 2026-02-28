@@ -782,11 +782,21 @@ async def update_fase(cid: str, fase_tipo: str, data: FaseUpdate, user: dict = D
 #  CONTO LAVORO (Subcontracting: verniciatura, zincatura, etc.)
 # ══════════════════════════════════════════════════════════════════
 
+class RigaCL(BaseModel):
+    descrizione: str
+    quantita: float = 0
+    unita: str = "pz"
+    peso_kg: float = 0
+    note: str = ""
+
 class ContoLavoroCreate(BaseModel):
     tipo: str  # verniciatura, zincatura, sabbiatura, altro
     fornitore_nome: str
     fornitore_id: Optional[str] = None
     note: Optional[str] = ""
+    ral: Optional[str] = ""  # RAL color for verniciatura
+    righe: List[dict] = []
+    causale_trasporto: str = "Conto Lavorazione"
 
 class ContoLavoroUpdate(BaseModel):
     stato: str  # da_inviare, inviato, in_lavorazione, rientrato, verificato
