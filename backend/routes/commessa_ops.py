@@ -147,10 +147,10 @@ async def create_richiesta_preventivo(cid: str, data: RichiestaPreventivo, user:
     }
     await db[COLL].update_one(
         {"commessa_id": cid},
-        {
-            "$push": {"approvvigionamento.richieste": rdp},
-            **push_event(cid, "RDP_INVIATA", user, f"RdP inviata a {data.fornitore_nome}")
-        },
+        build_update_with_event(
+            push_items={"approvvigionamento.richieste": rdp},
+            tipo="RDP_INVIATA", user=user, note=f"RdP inviata a {data.fornitore_nome}"
+        ),
     )
     return {"message": f"RdP inviata a {data.fornitore_nome}", "rdp": rdp}
 
