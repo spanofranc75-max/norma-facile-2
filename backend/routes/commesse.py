@@ -1,9 +1,19 @@
-"""Commesse (Projects / Workshop Orders) — Kanban Planning routes."""
+"""Commesse (Projects / Workshop Orders) — Enhanced Hub Architecture.
+
+Macchina a stati event-driven + Kanban board + Module hub.
+Backward compatible with existing Kanban status field.
+
+Lifecycle states (stato):
+  richiesta → bozza → rilievo_completato → firmato →
+  in_produzione → fatturato → chiuso  (+ sospesa)
+
+The Kanban `status` field is kept for the board drag-and-drop and
+auto-synced when `stato` changes via events.
+"""
 import uuid
 import logging
 from datetime import datetime, timezone
 from typing import Optional, List
-from enum import Enum
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from pydantic import BaseModel, Field
@@ -16,19 +26,64 @@ logger = logging.getLogger(__name__)
 COLLECTION = "commesse"
 
 
-# ── Enums & Models ───────────────────────────────────────────────
+# ── Lifecycle States & Events ────────────────────────────────────
 
-class CommessaStatus(str, Enum):
-    PREVENTIVO = "preventivo"
-    APPROVVIGIONAMENTO = "approvvigionamento"
-    LAVORAZIONE = "lavorazione"
-    CONTO_LAVORO = "conto_lavoro"
-    PRONTO_CONSEGNA = "pronto_consegna"
-    MONTAGGIO = "montaggio"
-    COMPLETATO = "completato"
+STATI_LIFECYCLE = [
+    "richiesta", "bozza", "rilievo_completato", "firmato",
+    "in_produzione", "fatturato", "chiuso", "sospesa",
+]
+
+# Maps lifecycle stato → Kanban column (best-effort sync)
+STATO_TO_KANBAN = {
+    "richiesta":           "preventivo",
+    "bozza":               "preventivo",
+    "rilievo_completato":  "approvvigionamento",
+    "firmato":             "lavorazione",
+    "in_produzione":       "lavorazione",
+    "fatturato":           "pronto_consegna",
+    "chiuso":              "completato",
+    "sospesa":             None,  # keep current kanban status
+}
+
+STATO_META = {
+    "richiesta":           {"label": "Richiesta",           "color": "violet",  "order": 0},
+    "bozza":               {"label": "Bozza",               "color": "slate",   "order": 1},
+    "rilievo_completato":  {"label": "Rilievo Completato",  "color": "amber",   "order": 2},
+    "firmato":             {"label": "Firmato",              "color": "blue",    "order": 3},
+    "in_produzione":       {"label": "In Produzione",        "color": "orange",  "order": 4},
+    "fatturato":           {"label": "Fatturato",            "color": "emerald", "order": 5},
+    "chiuso":              {"label": "Chiuso",               "color": "slate",   "order": 6},
+    "sospesa":             {"label": "Sospesa",              "color": "red",     "order": 7},
+}
+
+# Evento → { from: [allowed current states], to: new state }
+# None in "from" means creation event (no prior state)
+EVENTO_TRANSITIONS = {
+    "COMMESSA_CREATA":        {"from": [None],                                                       "to": "bozza"},
+    "RICHIESTA_PREVENTIVO":   {"from": [None],                                                       "to": "richiesta"},
+    "RILIEVO_COMPLETATO":     {"from": ["bozza", "richiesta"],                                       "to": "rilievo_completato"},
+    "FIRMA_CLIENTE":          {"from": ["rilievo_completato"],                                        "to": "firmato"},
+    "PREVENTIVO_ACCETTATO":   {"from": ["richiesta", "bozza", "rilievo_completato"],                  "to": "firmato"},
+    "AVVIO_PRODUZIONE":       {"from": ["firmato"],                                                   "to": "in_produzione"},
+    "FATTURA_EMESSA":         {"from": ["in_produzione", "firmato"],                                  "to": "fatturato"},
+    "CHIUSURA_COMMESSA":      {"from": ["fatturato", "in_produzione", "firmato"],                     "to": "chiuso"},
+    "SOSPENSIONE":            {"from": ["bozza", "richiesta", "rilievo_completato", "firmato", "in_produzione"], "to": "sospesa"},
+    "RIATTIVAZIONE":          {"from": ["sospesa"],                                                   "to": "__previous__"},
+}
+
+# Informational events — recorded but don't change stato
+EVENTI_INFORMATIVI = [
+    "PREVENTIVO_CREATO", "PREVENTIVO_GENERATO", "PDF_PREVENTIVO_GENERATO",
+    "PRODUZIONE_GENERATA", "PRODUZIONE_INIZIATA", "PRODUZIONE_COMPLETATA",
+    "FATTURA_GENERATA", "FATTURA_PAGATA", "DDT_CREATO",
+    "MODULO_COLLEGATO", "MODULO_SCOLLEGATO", "NOTA_AGGIUNTA",
+    "FPC_PROGETTO_CREATO", "CE_GENERATA", "DOSSIER_GENERATO",
+]
 
 
-STATUS_META = {
+# ── Kanban (kept for backward compatibility) ─────────────────────
+
+KANBAN_META = {
     "preventivo":         {"label": "Nuove Commesse",     "order": 0},
     "approvvigionamento": {"label": "Approvvigionamento", "order": 1},
     "lavorazione":        {"label": "In Lavorazione",     "order": 2},
@@ -39,29 +94,103 @@ STATUS_META = {
 }
 
 
+# ── Pydantic Models ──────────────────────────────────────────────
+
+class CantiereData(BaseModel):
+    indirizzo: Optional[str] = ""
+    citta: Optional[str] = ""
+    cap: Optional[str] = ""
+    contesto: Optional[str] = ""   # privato | condominio | industriale
+    ambiente: Optional[str] = ""   # interno | esterno
+
 class CommessaCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     client_id: Optional[str] = None
     client_name: Optional[str] = ""
     description: Optional[str] = ""
+    riferimento: Optional[str] = ""
+    cantiere: Optional[CantiereData] = None
     value: Optional[float] = 0
     deadline: Optional[str] = None
-    status: CommessaStatus = CommessaStatus.PREVENTIVO
     priority: Optional[str] = "media"
+    notes: Optional[str] = ""
+    # Shortcut — pre-link a module at creation
     linked_preventivo_id: Optional[str] = None
     linked_distinta_id: Optional[str] = None
     linked_rilievo_id: Optional[str] = None
-    notes: Optional[str] = ""
-
+    # If True, start as "richiesta" (no survey)
+    is_richiesta: Optional[bool] = False
 
 class CommessaUpdate(BaseModel):
     title: Optional[str] = None
+    client_id: Optional[str] = None
     client_name: Optional[str] = None
     description: Optional[str] = None
+    riferimento: Optional[str] = None
+    cantiere: Optional[CantiereData] = None
     value: Optional[float] = None
     deadline: Optional[str] = None
     priority: Optional[str] = None
     notes: Optional[str] = None
+
+class EventoRequest(BaseModel):
+    tipo: str
+    note: Optional[str] = ""
+    payload: Optional[dict] = None
+
+class LinkModuleRequest(BaseModel):
+    tipo: str     # rilievo | distinta | preventivo | fattura | ddt | fpc_project | certificazione
+    module_id: str
+
+
+# ── Helpers ──────────────────────────────────────────────────────
+
+def make_empty_moduli():
+    return {
+        "rilievo_id": None,
+        "distinta_id": None,
+        "preventivo_id": None,
+        "fatture_ids": [],
+        "ddt_ids": [],
+        "fpc_project_id": None,
+        "certificazione_id": None,
+    }
+
+
+def ensure_moduli(doc):
+    """Backward compat: migrate old linked_* fields to moduli dict."""
+    if "moduli" not in doc:
+        doc["moduli"] = make_empty_moduli()
+        doc["moduli"]["preventivo_id"] = doc.get("linked_preventivo_id")
+        doc["moduli"]["distinta_id"] = doc.get("linked_distinta_id")
+        doc["moduli"]["rilievo_id"] = doc.get("linked_rilievo_id")
+    if "stato" not in doc:
+        doc["stato"] = "bozza"
+    if "eventi" not in doc:
+        doc["eventi"] = []
+    if "cantiere" not in doc:
+        doc["cantiere"] = {}
+    if "riferimento" not in doc:
+        doc["riferimento"] = ""
+    return doc
+
+
+def build_event(tipo, user, note="", payload=None):
+    return {
+        "tipo": tipo,
+        "data": datetime.now(timezone.utc).isoformat(),
+        "operatore_id": user.get("user_id", ""),
+        "operatore_nome": user.get("name", user.get("email", "")),
+        "note": note or "",
+        "payload": payload or {},
+    }
+
+
+async def generate_commessa_number(uid):
+    """Generate sequential commessa number: NF-YYYY-NNNNNN."""
+    year = datetime.now(timezone.utc).year
+    count = await db[COLLECTION].count_documents({"user_id": uid})
+    return f"NF-{year}-{count + 1:06d}"
 
 
 # ── CRUD ─────────────────────────────────────────────────────────
@@ -69,18 +198,24 @@ class CommessaUpdate(BaseModel):
 @router.get("/")
 async def list_commesse(
     status: Optional[str] = Query(None),
+    stato: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     user: dict = Depends(get_current_user),
 ):
     q = {"user_id": user["user_id"]}
     if status:
         q["status"] = status
+    if stato:
+        q["stato"] = stato
     if search:
         q["$or"] = [
             {"title": {"$regex": search, "$options": "i"}},
             {"client_name": {"$regex": search, "$options": "i"}},
+            {"numero": {"$regex": search, "$options": "i"}},
         ]
-    items = await db[COLLECTION].find(q, {"_id": 0}).sort("created_at", -1).to_list(500)
+    items = await db[COLLECTION].find(q, {"_id": 0, "eventi": 0}).sort("created_at", -1).to_list(500)
+    for item in items:
+        ensure_moduli(item)
     return {"items": items, "total": len(items)}
 
 
@@ -89,35 +224,78 @@ async def create_commessa(data: CommessaCreate, user: dict = Depends(get_current
     uid = user["user_id"]
     now = datetime.now(timezone.utc)
     cid = f"com_{uuid.uuid4().hex[:12]}"
+    numero = await generate_commessa_number(uid)
 
-    # Auto-fill client name if client_id provided
     client_name = data.client_name or ""
     if data.client_id and not client_name:
         client = await db.clients.find_one({"client_id": data.client_id}, {"_id": 0, "business_name": 1})
         client_name = client.get("business_name", "") if client else ""
 
+    initial_stato = "richiesta" if data.is_richiesta else "bozza"
+    initial_event_type = "RICHIESTA_PREVENTIVO" if data.is_richiesta else "COMMESSA_CREATA"
+    initial_kanban = STATO_TO_KANBAN.get(initial_stato, "preventivo")
+
+    moduli = make_empty_moduli()
+    moduli["preventivo_id"] = data.linked_preventivo_id
+    moduli["distinta_id"] = data.linked_distinta_id
+    moduli["rilievo_id"] = data.linked_rilievo_id
+
     doc = {
         "commessa_id": cid,
+        "numero": numero,
         "user_id": uid,
         "title": data.title,
         "client_id": data.client_id or "",
         "client_name": client_name,
         "description": data.description or "",
+        "riferimento": data.riferimento or "",
+        "cantiere": (data.cantiere.model_dump() if data.cantiere else {}),
         "value": float(data.value or 0),
         "deadline": data.deadline,
-        "status": data.status.value,
+        "status": initial_kanban,
+        "stato": initial_stato,
+        "stato_precedente": None,
         "priority": data.priority or "media",
+        "moduli": moduli,
+        "eventi": [build_event(initial_event_type, user, f"Commessa {numero} creata")],
+        "notes": data.notes or "",
+        "status_history": [{"status": initial_kanban, "date": now.isoformat(), "note": "Creazione"}],
+        # Keep old fields for backward compat
         "linked_preventivo_id": data.linked_preventivo_id,
         "linked_distinta_id": data.linked_distinta_id,
         "linked_rilievo_id": data.linked_rilievo_id,
-        "notes": data.notes or "",
-        "status_history": [{"status": data.status.value, "date": now.isoformat(), "note": "Creazione"}],
         "created_at": now,
         "updated_at": now,
     }
     await db[COLLECTION].insert_one(doc)
     created = await db[COLLECTION].find_one({"commessa_id": cid}, {"_id": 0})
     return created
+
+
+@router.get("/stati", response_model=None)
+async def get_stati_meta():
+    """Return lifecycle states metadata."""
+    return {"stati": STATO_META, "transitions": {k: v for k, v in EVENTO_TRANSITIONS.items()}}
+
+
+@router.get("/board/view")
+async def get_board_view(user: dict = Depends(get_current_user)):
+    """Return all commesse grouped by Kanban status for the board."""
+    uid = user["user_id"]
+    items = await db[COLLECTION].find({"user_id": uid}, {"_id": 0, "eventi": 0}).sort("updated_at", -1).to_list(500)
+
+    columns = {}
+    for key, meta in KANBAN_META.items():
+        columns[key] = {"id": key, "label": meta["label"], "order": meta["order"], "items": []}
+
+    for item in items:
+        ensure_moduli(item)
+        st = item.get("status", "preventivo")
+        if st in columns:
+            columns[st]["items"].append(item)
+
+    sorted_cols = sorted(columns.values(), key=lambda c: c["order"])
+    return {"columns": sorted_cols, "total": len(items)}
 
 
 @router.get("/{commessa_id}")
@@ -127,6 +305,7 @@ async def get_commessa(commessa_id: str, user: dict = Depends(get_current_user))
     )
     if not doc:
         raise HTTPException(404, "Commessa non trovata")
+    ensure_moduli(doc)
     return doc
 
 
@@ -137,10 +316,18 @@ async def update_commessa(commessa_id: str, data: CommessaUpdate, user: dict = D
     if not existing:
         raise HTTPException(404, "Commessa non trovata")
 
-    updates = {k: v for k, v in data.model_dump().items() if v is not None}
+    updates = {}
+    for k, v in data.model_dump().items():
+        if v is not None:
+            if k == "cantiere":
+                updates["cantiere"] = v
+            else:
+                updates[k] = v
     updates["updated_at"] = datetime.now(timezone.utc)
+
     await db[COLLECTION].update_one({"commessa_id": commessa_id}, {"$set": updates})
     updated = await db[COLLECTION].find_one({"commessa_id": commessa_id}, {"_id": 0})
+    ensure_moduli(updated)
     return updated
 
 
@@ -160,17 +347,17 @@ async def update_commessa_status(
     new_status: str = Body(..., embed=True),
     user: dict = Depends(get_current_user),
 ):
-    """Update commessa status — called on Kanban drag & drop."""
+    """Update Kanban status — called on drag & drop. Does NOT change lifecycle stato."""
     uid = user["user_id"]
-    if new_status not in STATUS_META:
-        raise HTTPException(422, f"Stato non valido: {new_status}")
+    if new_status not in KANBAN_META:
+        raise HTTPException(422, f"Stato Kanban non valido: {new_status}")
 
     existing = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid})
     if not existing:
         raise HTTPException(404, "Commessa non trovata")
 
     now = datetime.now(timezone.utc)
-    history_entry = {"status": new_status, "date": now.isoformat(), "note": f"Spostata a: {STATUS_META[new_status]['label']}"}
+    history_entry = {"status": new_status, "date": now.isoformat(), "note": f"Spostata a: {KANBAN_META[new_status]['label']}"}
 
     await db[COLLECTION].update_one(
         {"commessa_id": commessa_id},
@@ -180,41 +367,257 @@ async def update_commessa_status(
         },
     )
     updated = await db[COLLECTION].find_one({"commessa_id": commessa_id}, {"_id": 0})
+    ensure_moduli(updated)
     return updated
 
 
-# ── Board View (grouped by status) ──────────────────────────────
+# ── Event Sourcing: Emit Event ───────────────────────────────────
 
-@router.get("/board/view")
-async def get_board_view(user: dict = Depends(get_current_user)):
-    """Return all commesse grouped by status for the Kanban board."""
+@router.post("/{commessa_id}/eventi")
+async def emit_event(commessa_id: str, req: EventoRequest, user: dict = Depends(get_current_user)):
+    """Emit a lifecycle event. Validates state transition rules."""
     uid = user["user_id"]
-    items = await db[COLLECTION].find({"user_id": uid}, {"_id": 0}).sort("updated_at", -1).to_list(500)
+    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid})
+    if not doc:
+        raise HTTPException(404, "Commessa non trovata")
 
-    columns = {}
-    for key, meta in STATUS_META.items():
-        columns[key] = {
-            "id": key,
-            "label": meta["label"],
-            "order": meta["order"],
-            "items": [],
+    ensure_moduli(doc)
+    current_stato = doc.get("stato", "bozza")
+    tipo = req.tipo.upper()
+
+    # Check if it's a state-changing event
+    if tipo in EVENTO_TRANSITIONS:
+        trans = EVENTO_TRANSITIONS[tipo]
+        allowed_from = trans["from"]
+
+        # Validate current state is allowed
+        if allowed_from != [None] and current_stato not in allowed_from:
+            raise HTTPException(
+                400,
+                f"Transizione non valida: {tipo} non permesso da stato '{current_stato}'. "
+                f"Stati consentiti: {allowed_from}"
+            )
+
+        new_stato = trans["to"]
+
+        # Handle RIATTIVAZIONE — restore previous state
+        if new_stato == "__previous__":
+            new_stato = doc.get("stato_precedente", "bozza")
+
+        # Build updates
+        now = datetime.now(timezone.utc)
+        updates = {
+            "stato": new_stato,
+            "updated_at": now,
         }
 
-    for item in items:
-        st = item.get("status", "preventivo")
-        if st in columns:
-            columns[st]["items"].append(item)
+        # Store previous state for potential SOSPESA recovery
+        if tipo == "SOSPENSIONE":
+            updates["stato_precedente"] = current_stato
 
-    # Sort by order
-    sorted_cols = sorted(columns.values(), key=lambda c: c["order"])
-    return {"columns": sorted_cols, "total": len(items)}
+        # Auto-sync Kanban status
+        kanban = STATO_TO_KANBAN.get(new_stato)
+        if kanban:
+            updates["status"] = kanban
+
+        event = build_event(tipo, user, req.note, req.payload)
+        await db[COLLECTION].update_one(
+            {"commessa_id": commessa_id},
+            {"$set": updates, "$push": {"eventi": event}},
+        )
+
+        logger.info(f"Commessa {commessa_id}: {tipo} → {new_stato}")
+        return {
+            "message": f"Evento {tipo} emesso. Stato: {STATO_META.get(new_stato, {}).get('label', new_stato)}",
+            "stato": new_stato,
+            "stato_label": STATO_META.get(new_stato, {}).get("label", new_stato),
+        }
+
+    elif tipo in EVENTI_INFORMATIVI or tipo.startswith("CUSTOM_"):
+        # Informational event — just record it, no state change
+        event = build_event(tipo, user, req.note, req.payload)
+        await db[COLLECTION].update_one(
+            {"commessa_id": commessa_id},
+            {"$push": {"eventi": event}, "$set": {"updated_at": datetime.now(timezone.utc)}},
+        )
+        return {"message": f"Evento {tipo} registrato", "stato": current_stato}
+
+    else:
+        raise HTTPException(400, f"Tipo evento sconosciuto: {tipo}")
+
+
+# ── Module Linking ───────────────────────────────────────────────
+
+MODULE_FIELDS = {
+    "rilievo":        "rilievo_id",
+    "distinta":       "distinta_id",
+    "preventivo":     "preventivo_id",
+    "fattura":        "fatture_ids",
+    "ddt":            "ddt_ids",
+    "fpc_project":    "fpc_project_id",
+    "certificazione": "certificazione_id",
+}
+
+@router.post("/{commessa_id}/link-module")
+async def link_module(commessa_id: str, req: LinkModuleRequest, user: dict = Depends(get_current_user)):
+    """Link a module (preventivo, fattura, etc.) to this commessa."""
+    uid = user["user_id"]
+    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid})
+    if not doc:
+        raise HTTPException(404, "Commessa non trovata")
+
+    field = MODULE_FIELDS.get(req.tipo)
+    if not field:
+        raise HTTPException(400, f"Tipo modulo non valido: {req.tipo}. Validi: {list(MODULE_FIELDS.keys())}")
+
+    ensure_moduli(doc)
+    now = datetime.now(timezone.utc)
+
+    if field.endswith("_ids"):
+        # Array field — append if not already there
+        current = doc.get("moduli", {}).get(field, [])
+        if req.module_id in current:
+            return {"message": f"Modulo {req.tipo} gia' collegato", "moduli": doc["moduli"]}
+        await db[COLLECTION].update_one(
+            {"commessa_id": commessa_id},
+            {
+                "$push": {f"moduli.{field}": req.module_id},
+                "$set": {"updated_at": now},
+            },
+        )
+    else:
+        # Single value field
+        await db[COLLECTION].update_one(
+            {"commessa_id": commessa_id},
+            {"$set": {f"moduli.{field}": req.module_id, "updated_at": now}},
+        )
+
+    # Also keep backward-compat fields
+    compat_map = {"preventivo_id": "linked_preventivo_id", "distinta_id": "linked_distinta_id", "rilievo_id": "linked_rilievo_id"}
+    if field in compat_map:
+        await db[COLLECTION].update_one(
+            {"commessa_id": commessa_id},
+            {"$set": {compat_map[field]: req.module_id}},
+        )
+
+    # Record informational event
+    event = build_event("MODULO_COLLEGATO", user, f"{req.tipo} collegato", {"tipo": req.tipo, "module_id": req.module_id})
+    await db[COLLECTION].update_one({"commessa_id": commessa_id}, {"$push": {"eventi": event}})
+
+    updated = await db[COLLECTION].find_one({"commessa_id": commessa_id}, {"_id": 0})
+    ensure_moduli(updated)
+    return {"message": f"Modulo {req.tipo} collegato", "moduli": updated["moduli"]}
+
+
+@router.post("/{commessa_id}/unlink-module")
+async def unlink_module(commessa_id: str, req: LinkModuleRequest, user: dict = Depends(get_current_user)):
+    """Unlink a module from this commessa."""
+    uid = user["user_id"]
+    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid})
+    if not doc:
+        raise HTTPException(404, "Commessa non trovata")
+
+    field = MODULE_FIELDS.get(req.tipo)
+    if not field:
+        raise HTTPException(400, f"Tipo modulo non valido: {req.tipo}")
+
+    now = datetime.now(timezone.utc)
+    if field.endswith("_ids"):
+        await db[COLLECTION].update_one(
+            {"commessa_id": commessa_id},
+            {"$pull": {f"moduli.{field}": req.module_id}, "$set": {"updated_at": now}},
+        )
+    else:
+        await db[COLLECTION].update_one(
+            {"commessa_id": commessa_id},
+            {"$set": {f"moduli.{field}": None, "updated_at": now}},
+        )
+
+    event = build_event("MODULO_SCOLLEGATO", user, f"{req.tipo} scollegato", {"tipo": req.tipo, "module_id": req.module_id})
+    await db[COLLECTION].update_one({"commessa_id": commessa_id}, {"$push": {"eventi": event}})
+
+    return {"message": f"Modulo {req.tipo} scollegato"}
+
+
+# ── Hub View (aggregated) ────────────────────────────────────────
+
+@router.get("/{commessa_id}/hub")
+async def get_commessa_hub(commessa_id: str, user: dict = Depends(get_current_user)):
+    """Full hub view: commessa + all linked modules fetched from their collections."""
+    uid = user["user_id"]
+    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Commessa non trovata")
+
+    ensure_moduli(doc)
+    moduli = doc.get("moduli", {})
+
+    hub = {
+        "commessa": doc,
+        "moduli_dettaglio": {},
+    }
+
+    proj = {"_id": 0}
+    proj_light = {"_id": 0, "certificate_base64": 0}  # exclude heavy fields
+
+    # Fetch linked modules in parallel-style
+    if moduli.get("rilievo_id"):
+        r = await db.rilievi.find_one({"rilievo_id": moduli["rilievo_id"], "user_id": uid}, proj)
+        if r:
+            hub["moduli_dettaglio"]["rilievo"] = r
+
+    if moduli.get("distinta_id"):
+        d = await db.distinte.find_one({"distinta_id": moduli["distinta_id"], "user_id": uid}, proj)
+        if d:
+            hub["moduli_dettaglio"]["distinta"] = d
+
+    if moduli.get("preventivo_id"):
+        p = await db.preventivi.find_one({"preventivo_id": moduli["preventivo_id"], "user_id": uid}, proj)
+        if p:
+            hub["moduli_dettaglio"]["preventivo"] = p
+
+    if moduli.get("fatture_ids"):
+        fatture = await db.invoices.find(
+            {"invoice_id": {"$in": moduli["fatture_ids"]}, "user_id": uid}, proj
+        ).to_list(50)
+        hub["moduli_dettaglio"]["fatture"] = fatture
+
+    if moduli.get("ddt_ids"):
+        ddts = await db.ddt_documents.find(
+            {"ddt_id": {"$in": moduli["ddt_ids"]}, "user_id": uid}, proj
+        ).to_list(50)
+        hub["moduli_dettaglio"]["ddt"] = ddts
+
+    if moduli.get("fpc_project_id"):
+        fpc = await db.fpc_projects.find_one({"project_id": moduli["fpc_project_id"], "user_id": uid}, proj_light)
+        if fpc:
+            hub["moduli_dettaglio"]["fpc_project"] = fpc
+
+    if moduli.get("certificazione_id"):
+        cert = await db.certificazioni.find_one({"cert_id": moduli["certificazione_id"], "user_id": uid}, proj)
+        if cert:
+            hub["moduli_dettaglio"]["certificazione"] = cert
+
+    # Compute invoicing summary if preventivo exists
+    prev = hub["moduli_dettaglio"].get("preventivo")
+    if prev:
+        total_prev = float(prev.get("totals", {}).get("total", 0))
+        total_invoiced = float(prev.get("total_invoiced", 0))
+        hub["fatturazione_summary"] = {
+            "total_preventivo": total_prev,
+            "total_invoiced": total_invoiced,
+            "remaining": round(total_prev - total_invoiced, 2),
+            "percentage": round(total_invoiced / total_prev * 100, 1) if total_prev > 0 else 0,
+        }
+
+    return hub
 
 
 # ── Quick Create from Preventivo ─────────────────────────────────
 
 @router.post("/from-preventivo/{preventivo_id}")
 async def create_commessa_from_preventivo(preventivo_id: str, user: dict = Depends(get_current_user)):
-    """Create a commessa from an accepted Preventivo."""
+    """Create a commessa from a Preventivo — auto-links the preventivo module."""
     uid = user["user_id"]
     prev = await db.preventivi.find_one({"preventivo_id": preventivo_id, "user_id": uid}, {"_id": 0})
     if not prev:
@@ -227,21 +630,36 @@ async def create_commessa_from_preventivo(preventivo_id: str, user: dict = Depen
 
     now = datetime.now(timezone.utc)
     cid = f"com_{uuid.uuid4().hex[:12]}"
+    numero = await generate_commessa_number(uid)
+
+    moduli = make_empty_moduli()
+    moduli["preventivo_id"] = preventivo_id
+
     doc = {
         "commessa_id": cid,
+        "numero": numero,
         "user_id": uid,
         "title": prev.get("subject") or f"Commessa da {prev.get('number', preventivo_id)}",
         "client_id": prev.get("client_id", ""),
         "client_name": client_name,
         "description": prev.get("notes", ""),
+        "riferimento": prev.get("riferimento", ""),
+        "cantiere": {},
         "value": float(prev.get("totals", {}).get("total", 0)),
         "deadline": None,
         "status": "preventivo",
+        "stato": "richiesta",
+        "stato_precedente": None,
         "priority": "media",
+        "moduli": moduli,
+        "eventi": [
+            build_event("RICHIESTA_PREVENTIVO", user, f"Creata da preventivo {prev.get('number', '')}"),
+            build_event("MODULO_COLLEGATO", user, "Preventivo collegato", {"tipo": "preventivo", "module_id": preventivo_id}),
+        ],
+        "notes": f"Generata da Preventivo {prev.get('number', '')}",
         "linked_preventivo_id": preventivo_id,
         "linked_distinta_id": None,
         "linked_rilievo_id": None,
-        "notes": f"Generata da Preventivo {prev.get('number', '')}",
         "status_history": [{"status": "preventivo", "date": now.isoformat(), "note": f"Creata da preventivo {prev.get('number', '')}"}],
         "created_at": now,
         "updated_at": now,
@@ -249,3 +667,40 @@ async def create_commessa_from_preventivo(preventivo_id: str, user: dict = Depen
     await db[COLLECTION].insert_one(doc)
     created = await db[COLLECTION].find_one({"commessa_id": cid}, {"_id": 0})
     return created
+
+
+# ── Dossier Unico di Commessa ────────────────────────────────────
+
+@router.get("/{commessa_id}/dossier")
+async def generate_commessa_dossier(commessa_id: str, user: dict = Depends(get_current_user)):
+    """Generate a complete PDF dossier aggregating all commessa modules."""
+    from services.commessa_dossier import generate_commessa_dossier_pdf
+
+    uid = user["user_id"]
+    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Commessa non trovata")
+
+    ensure_moduli(doc)
+
+    # Fetch hub data for dossier generation
+    hub_data = await get_commessa_hub(commessa_id, user)
+
+    # Company settings for branding
+    company = await db.company_settings.find_one({"user_id": uid}, {"_id": 0}) or {}
+
+    pdf_bytes = await generate_commessa_dossier_pdf(hub_data, company)
+
+    from fastapi.responses import StreamingResponse
+    numero = doc.get("numero", commessa_id)
+    filename = f"Dossier_{numero}.pdf"
+
+    # Record event
+    event = build_event("DOSSIER_GENERATO", user, f"Dossier generato per {numero}")
+    await db[COLLECTION].update_one({"commessa_id": commessa_id}, {"$push": {"eventi": event}})
+
+    return StreamingResponse(
+        pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
