@@ -33,6 +33,7 @@ from routes.articoli import router as articoli_router
 from routes.fatture_ricevute import router as fatture_ricevute_router
 from routes.engine import router as engine_router
 from routes.commesse import router as commesse_router
+from routes.fpc import router as fpc_router
 
 # Configure logging
 logging.basicConfig(
