@@ -83,6 +83,11 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     const [arrivoForm, setArrivoForm] = useState({ ddt_fornitore: '', ordine_id: '', note: '' });
     const [clForm, setClForm] = useState({ tipo: 'verniciatura', fornitore_nome: '', fornitore_id: '' });
 
+    // PDF Preview and Email states (must be before any conditional return)
+    const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
+    const [pdfPreviewTitle, setPdfPreviewTitle] = useState('');
+    const [sendingEmail, setSendingEmail] = useState(null); // Track which item is sending email
+
     // Load fornitori from anagrafica
     useEffect(() => {
         apiRequest('/clients/?client_type=fornitore&limit=100').then(data => {
