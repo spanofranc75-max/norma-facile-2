@@ -123,6 +123,7 @@ export default function PreventiviPage() {
                                                 <TableCell className="text-sm">{p.client_name || '-'}</TableCell>
                                                 <TableCell className="text-sm text-slate-600 max-w-[200px] truncate">{p.subject || '-'}</TableCell>
                                                 <TableCell className="text-right font-mono font-semibold text-sm">{fmtEur(p.totals?.total)}</TableCell>
+                                                <TableCell><InvoicingProgressBar progress={p.invoicing_progress} /></TableCell>
                                                 <TableCell><ComplianceBadge status={p.compliance_status} /></TableCell>
                                                 <TableCell><Badge className={st.color + ' text-xs'}>{st.label}</Badge></TableCell>
                                                 <TableCell>
