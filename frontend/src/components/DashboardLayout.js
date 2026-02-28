@@ -63,6 +63,7 @@ const NAV_GROUPS = [
             { path: '/planning', label: 'Planning Cantieri', icon: LayoutGrid },
             { path: '/rilievi', label: 'Rilievi', icon: Ruler },
             { path: '/distinte', label: 'Distinte', icon: Package },
+            { path: '/tracciabilita', label: 'Tracciabilit\u00e0 EN 1090', icon: Shield },
             { path: '/sicurezza', label: 'Sicurezza POS', icon: HardHat },
         ],
     },
