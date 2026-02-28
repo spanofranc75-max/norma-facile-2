@@ -35,6 +35,13 @@ const NAV_GROUPS = [
         path: '/dashboard',
     },
     {
+        id: 'ebitda',
+        label: 'Analisi Finanziaria',
+        icon: TrendingUp,
+        type: 'link',
+        path: '/ebitda',
+    },
+    {
         id: 'commerciale',
         label: 'Commerciale',
         icon: Briefcase,
