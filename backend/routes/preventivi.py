@@ -317,6 +317,10 @@ async def list_preventivi(
         if d.get("client_id"):
             c = await db.clients.find_one({"client_id": d["client_id"]}, {"_id": 0, "business_name": 1})
             d["client_name"] = c.get("business_name") if c else None
+        # Compute invoicing progress
+        tot = float(d.get("totals", {}).get("total", 0))
+        invoiced = float(d.get("total_invoiced", 0))
+        d["invoicing_progress"] = round((invoiced / tot * 100), 1) if tot > 0 else 0
     return {"preventivi": docs, "total": total}
 
 
