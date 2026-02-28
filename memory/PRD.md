@@ -114,6 +114,12 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - Validazione SDI: blocca bozze, verifica configurazione chiavi
 - Testing: 16/16 backend, 100% frontend (iteration_44)
 
+### Fix Indirizzo Tab + Storico Email Cliente (Phase 38)
+- BUG FIX: Tab "Indirizzo" nel dialog cliente non mostrava i campi (form wrapper senza flex classes)
+- Nuovo tab "Email Inviate" nella scheda cliente — storico completo email inviate
+- Endpoint GET /api/clients/{id}/email-log — aggrega email da fatture, DDT, preventivi
+- Testing: 100% backend e frontend (iteration_45)
+
 ## Issue Pendenti
 - **P0**: Firma digitale DDT - pulsante "Salva" bloccato
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
