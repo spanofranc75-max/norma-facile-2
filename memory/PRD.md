@@ -236,6 +236,16 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **PDF Professionale**: Layout a due colonne, tabella righe con badge Cert. 3.1, riferimento cantiere
 - Testing: 12/12 backend, 100% frontend (iteration_55)
 
+### Arrivo Materiali Intelligente + Normativa Preventivo (Phase 50)
+- **Logo nei PDF**: RdP e OdA includono il logo aziendale se presente in company_settings
+- **Normativa in Preventivo**: Campo "EN_1090", "EN_13241" o nessuna per determinare i requisiti di tracciabilità fin dall'inizio
+- **Registrazione Arrivo Avanzata**: Form con DDT fornitore, data, fornitore (combobox), e tabella materiali dettagliata
+- **Materiali con Dettaglio**: Ogni materiale ha descrizione, quantità, U.M., riferimento ordine (per smistamento multi-commessa), checkbox Cert. 3.1
+- **Collegamento Certificati**: Endpoint `PUT .../materiale/{idx}/certificato` per collegare certificato (numero colata, qualità) a singolo materiale
+- **Auto-Tracciabilità EN 1090**: Se commessa è EN 1090 e viene collegato un certificato, auto-registrazione in material_batches
+- **UX Migliorata**: Bottone "Emetti Ordine" richiede descrizione compilata (non solo placeholder)
+- Testing: 12/12 backend, 100% frontend (iteration_56)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
