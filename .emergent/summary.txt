@@ -2,57 +2,73 @@
 The user wants to build a SaaS application named Norma Facile 2.0. The project initially started as a LegalTech SaaS but has pivoted to be a comprehensive CRM and compliance tool for Metalworkers (Fabbri) in Italy.
 
 **PRODUCT REQUIREMENTS:**
-The application should include the following modules:
-1.  **Architecture & Auth:** Modular monolith backend, Google OAuth & JWT auth. (COMPLETED)
-2.  **Invoicing Module:** A complete module to create and manage clients and invoices. (COMPLETED)
-3.  **Rilievo Misure (On-Site Survey Tool):** A tablet-first tool for creating surveys with a drawing canvas for sketches. (COMPLETED)
-4.  **Distinta Materiali (Smart Bill of Materials - BOM):** An advanced BOM generator with a built-in database of standard metal profiles, automatic calculation of weight and surface area, bar optimization, and PDF export for the workshop. (COMPLETED)
-5.  **Certificazioni CE (CE Certifications):** A wizard to generate compliance documents (DOP, CE Label, User Manual). (COMPLETED)
-6.  **Sicurezza Cantieri (Site Safety):** A generator for the Piano Operativo di Sicurezza (POS) that uses GPT-4o. (COMPLETED)
-7.  **Preventivi Commerciali (Smart Quote):** A quoting module with integrated compliance checks and a feature to convert quotes to invoices. (COMPLETED)
-8.  **DDT (Delivery Documents):** A module to create, manage, and convert delivery documents to invoices. (COMPLETED)
-9.  **Fornitori (Suppliers):** A module for managing suppliers, reusing the client management UI. (COMPLETED)
-10. **Perizia Sinistro (Insurance Claim Assessment):** An advanced, AI-powered module to generate detailed, standards-compliant quotes for insurance claims. This includes a mobile-first wizard, photo analysis, a damage-code tagging system, an advanced calculation algorithm (Sinistro Smart), AI-generated legal letters, and a statistical archive. (COMPLETED)
-11. **UI Theme:** A consistent Industrial Blue theme to give a Precision Engineering look. (COMPLETED)
+The application has evolved significantly. The current high-level goals are:
+1.  **Full-Featured CRM:** Manage clients, suppliers, invoices, quotes, and delivery documents (DDT).
+2.  **Advanced Invoicing & Payments:** Include a product catalog, payment tracking with installments, and quick-fill options from other documents.
+3.  **On-Site & Workshop Tools:** Rilievo Misure (On-Site Survey) with a drawing canvas and Distinta Materiali (Bill of Materials) for workshop optimization.
+4.  **AI-Powered Compliance & Quoting:**
+    *   Sicurezza Cantieri (Site Safety): An AI generator for safety plans (POS).
+    *   Perizia Sinistro (Insurance Claim Assessment): An AI-driven wizard for creating detailed insurance claim quotes, including photo analysis and legal letter generation.
+    *   **Core Engine for CE Marking:** A dynamic, data-driven engine to configure products against technical standards (e.g., UNI EN 14351-1), calculate performance values (like thermal transmittance), validate compliance, and automatically generate the complete legal technical dossier (CE Mark, DoP, etc.).
+5.  **Supplier & Procurement Management:** Manage suppliers and import/parse electronic invoices (FatturaPA XML) to automatically build a product/price catalog.
 
-**User's preferred language**: Italian. The user has consistently communicated in Italian (procedi, si, etc.). The next agent MUST respond in Italian.
+**User's preferred language**: Italian. The user communicates exclusively in Italian. The next agent **MUST** respond in Italian.
 
 **what currently exists?**
-A feature-rich, full-stack application (React, FastAPI, MongoDB) for Italian metalworkers. The application has numerous completed modules, including clients, invoicing, quotes, on-site surveys, BOM optimization, CE certifications, and an AI-powered safety plan generator.
+A sophisticated, full-stack SaaS application for Italian metalworkers. The app features a modular architecture with a React frontend, FastAPI backend, and MongoDB database.
 
-In this session, the agent completed the DDT (Delivery Documents) and Fornitori (Suppliers) modules. Most significantly, the agent built the Perizia Sinistro (Insurance Claim Assessment) module from the ground up. This new module features a mobile-first, step-by-step wizard UI for rapid on-site data collection (GPS, photos, damage tagging). It integrates GPT-4o Vision to suggest damage tags from photos and generate legally-formatted technical letters for insurance adjusters. A sophisticated backend algorithm (Sinistro Smart) automatically calculates quotes based on a new Damage Code database, applying specific business logic for markups, logistics, and mandatory fees. The module is rounded out by a statistical dashboard (Archivio Sinistri).
+In this session, the agent accomplished several major tasks:
+1.  **Bug Fix:** Resolved a critical React crash ( error) that occurred on the new invoice page by implementing a global  and fixing an anti-pattern in  components across the app.
+2.  **Invoicing & Catalog:** Implemented a full product catalog (), integrated payment tracking () into the invoice list, and added an autocomplete search for catalog items when creating invoices.
+3.  **Received Invoices Module:** Built a new module () to upload and parse Italian electronic invoices (FatturaPA XML). This feature automatically extracts line items and adds them to the product catalog, creating a self-populating price list.
+4.  **Core Engine for CE Marking:** Developed a powerful, data-driven Core Engine for managing technical compliance. This includes:
+    *   A backend to define technical standards () as JSON rules.
+    *   CRUD interfaces for managing product components (glass, frames, etc.).
+    *   A universal calculation and validation engine.
+    *   A new frontend Product Configurator page for users to build products and see real-time compliance checks and performance calculations.
+    *   An automated document generator () that creates the complete, compliant technical dossier (DoP, CE Label, Manual) as a PDF based on the engine's output.
+
+All new features were tested successfully using the testing agent.
 
 **Last working item**:
-- **Last item agent was working:** Implementing the final piece of the Perizia Sinistro module: the Sinistro Smart calculation algorithm and the corresponding UI update. The agent implemented the backend logic in  (the  function) and redesigned the final step of the frontend wizard () to show a detailed cost breakdown (Analisi Congruità), explanatory tooltips, and a field for a courtesy discount.
-- **Status:** IN PROGRESS
-- **Agent Testing Done:** N
-- **Which testing method agent to use?** both. The backend calculation logic needs to be verified with  or a Python script to ensure the formulas are applied correctly. The entire frontend wizard flow, especially the new final step with its UI elements and interactions, must be tested end-to-end using .
+- **Last item agent was working:** The agent was analyzing the existing codebase to plan the implementation of a new set of P1 features requested by the user. The user prioritized three specific enhancements: (1) a DDT Register, (2) a Quick Fill feature for invoices, and (3) AI validation for installation photos.
+- **Status:** NOT STARTED
+- **Agent Testing Done:** N/A
+- **Which testing method agent to use?** both. This will involve new backend endpoints and significant frontend changes.
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-There are no known bugs or issues. The agent has successfully used the testing agent after each major feature development.
+There are no known pending issues. A significant React crash was successfully identified and fixed in this session.
 
 **In progress Task List**:
-- **Task 1: (P0) Test and Finalize the Sinistro Smart Algorithm and UX**
-    - **Where to resume:** The code has been written for both the backend algorithm and the frontend summary view. The agent needs to start the testing phase.
-    - **What will be achieved with this?** This will complete the entire Perizia Sinistro module, verifying that the complex business logic for pricing is correctly implemented and the final UI is user-friendly and accurate.
-    - **Status:** IN PROGRESS
-    - **Should Test frontend/backend/both after fix?** both
-    - **Blocked on something:** No.
+None. All previously assigned tasks have been completed and verified. The agent is about to start a new set of tasks.
 
 **Upcoming and Future Tasks**
-- There are no new feature requests from the user. After successfully testing and completing the Sinistro Smart feature, the agent should summarize the work done and ask the user for the next set of priorities or suggest potential enhancements.
+**Upcoming Tasks (P1 - Prioritized by User):**
+- **1. Registro DDT (DDT Register):** Create a new dedicated page to list, search, filter, and manage all Delivery Documents (DDTs), similar to the existing .
+- **2. Quick Fill Fatture (Invoice Quick Fill):** In the , add functionality (e.g., a button or search modal) to allow users to select an existing Quote or DDT and automatically populate the invoice line items from it.
+- **3. Validazione AI Foto Posa (AI Validation of Installation Photos):** In the Core Engine module, add a feature for users to upload photos of the finished installation. The system should use an AI Vision model (GPT-4o) to analyze the photos and validate them against the manufacturer's installation requirements (e.g., confirm 4 screws are visible at the hinge).
+
+**Future Tasks (P2/P3 - Mentioned by user as future ideas):**
+- **Digitalizzazione Documenti Cartacei:** An AI-powered feature to scan and digitize paper documents.
+- **Integrazione Calendario:** Syncing deadlines and payment schedules with Google Calendar or Outlook.
+- **Firma Elettronica Avanzata (FEA):** Integration of a certified advanced electronic signature service.
+- **App Mobile Nativa:** A dedicated native mobile application for iOS and Android.
 
 **Completed work in this session**
-- **DDT (Delivery Document) Module:** Fully implemented, including CRUD, PDF generation, and a Convert to Invoice feature.
-- **Fornitori (Suppliers) Module:** Created a new page and backend logic for managing suppliers, reusing the advanced UI pattern from the Clients module.
-- **Perizia Sinistro (Insurance Claim Assessment) Module:**
-    - A new, complex module built from the ground up.
-    - **UX/UI:** Redesigned the editor into a mobile-first, multi-step wizard () for streamlined on-site data entry.
-    - **AI Integration:** Integrated GPT-4o Vision to analyze photos, suggest damage tags, and generate AI-powered technical letters (Diffida Tecnica) for insurance adjusters.
-    - **Core Logic:** Implemented a Codici Danno (Damage Codes) system for tagging claims and a sophisticated Sinistro Smart calculation algorithm to automate quoting based on specific business rules.
-    - **Dashboarding:** Added an Archivio Sinistri page with charts for statistical analysis of past claims.
-- **Continuous Testing:** Consistently used  after each major feature completion, achieving 100% pass rates.
+- **React Crash Fix:** Implemented a global  and refactored  components to resolve a recurring  DOM error.
+- **Invoicing Module Enhancements:**
+    - **Catalogo Articoli:** Full CRUD for a product catalog.
+    - **Tracciamento Pagamenti:** Added payment status, installment tracking, and a management modal to the invoice list.
+    - **Ricerca Articoli:** Added an autocomplete search for catalog items in the invoice editor.
+- **Fatture Ricevute Module (SDI Import):**
+    - Built a new module to upload and parse FatturaPA XML files.
+    - Automatically extracts line items to populate the .
+- **Core Engine for CE Marking (Data-Driven):**
+    - **Backend Engine:** Built a dynamic engine to manage compliance standards as JSON, handle component data, and run universal calculations/validations.
+    - **Frontend Configurator:** Created a new page for users to configure products against standards and get real-time feedback.
+    - **Automated Document Generation:** Implemented a universal PDF generator to create the full technical dossier (CE Mark, DoP, Manual) from the engine's output.
+- **Continuous Testing:** All major features were successfully validated with , which found and fixed minor bugs along the way.
 
 **Earlier issues found/mentioned but not fixed**
 None.
@@ -64,85 +80,83 @@ None.
 
 
 **Key Technical Concepts**
-- **Backend:** FastAPI, Pydantic
-- **Frontend:** React, React Router, Tailwind CSS, Shadcn/UI, Recharts, **Leaflet**
-- **Database:** MongoDB
-- **AI Integration:** OpenAI GPT-4o (including Vision capabilities) for text generation and analysis.
-- **UX Patterns:** Multi-step wizard for complex forms on mobile.
-- **Business Logic:** Implementation of complex, rule-based pricing algorithms in the backend.
+- **Backend:** FastAPI, Pydantic, WeasyPrint (for PDF generation),  (for XML parsing).
+- **Frontend:** React, React Router, Tailwind CSS, Shadcn/UI.
+- **Database:** MongoDB.
+- **Architecture:** Data-Driven Rule Engine for compliance, modular API structure.
+- **AI Integration:** OpenAI GPT-4o (Vision) for analysis and text generation.
 
 **key DB schema**
-- **ddts:**  (Updated)
-- **perizie:**  (New)
-- **codici_danno:**  (New)
-- **clients:**  field used to differentiate between 'cliente' and 'fornitore'.
+- **articles:** 
+- **invoices:**  (extended)
+- **received_invoices:** 
+- **norma_configs:** 
+- **components:** 
 
 **changes in tech stack**
-- Added , ,  for map functionality in the Perizia module.
+- : Added for advanced PDF generation from HTML templates.
+- : Used from Python's standard library for parsing FatturaPA XML files.
 
 **All files of reference**
-- **DDT Module:** , 
-- **Fornitori Module:** ,  (modified)
-- **Perizia Sinistro Module (New):**
-    - , 
-    - 
-    - 
-    - 
-    - 
-    -  (all wizard step components)
+- **Bug Fix:** , 
+- **Invoicing & Catalog:** , , , , 
+- **Received Invoices:** , 
+- **Core Engine:** , , 
 
 **Areas that need refactoring**:
-None. The agent has just completed a major, well-structured implementation of the Perizia module.
+None. The agent has successfully implemented a significant architectural improvement with the Core Engine.
 
 **key api endpoints**
--  (POST)
--  (CRUD for Perizie)
--  (GET list of damage codes)
--  (GET statistics for the claims archive)
--  (POST to generate AI letter)
--  (POST to trigger the Sinistro Smart calculation)
+-  (CRUD for product catalog)
+-  (POST to add a payment)
+-  (POST to upload and parse FatturaPA XML)
+-  (CRUD for compliance standards)
+-  (CRUD for product components)
+-  (POST to run compliance calculation)
+-  (POST to generate the technical dossier PDF)
 
 **Critical Info for New Agent**
 - **You MUST respond to the user in Italian.**
-- Your immediate priority is to **test the Sinistro Smart algorithm and the wizard UI**. The code has been written but is unverified. This is the final step to complete the Perizia Sinistro module.
-- After completing the current task, proactively ask the user for the next steps, as all currently requested features will have been implemented.
+- Your immediate goal is to implement the three **P1** features requested by the user: **DDT Register**, **Invoice Quick Fill**, and **AI Photo Validation**.
+- The agent has already analyzed the code and is ready to begin implementation. The logical starting point is the backend work for the DDT Register.
 
 **documents and test reports created in this job**
--  (Continuously updated)
-- Multiple test reports in , confirming the stability of all new features except the very last one.
+-  (Continuously updated with all new features)
+- Multiple test reports in  confirming 100% pass rates for all completed features.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Asks to implement a damage code tagging system for the Perizia module. (COMPLETED)
-2.  **Agent:** Implements the damage code system and a new Claims Archive dashboard. (COMPLETED)
-3.  **User:** Requests a complete UX redesign of the Perizia editor into a mobile-first, step-by-step wizard for on-site use. (COMPLETED)
-4.  **Agent:** Implements the full wizard UI. (COMPLETED)
-5.  **User:** Provides the detailed business logic for an advanced calculation algorithm (Sinistro Smart) to automate quoting. (IN PROGRESS)
-6.  **Agent:** Confirms understanding and plans the implementation. (COMPLETED)
-7.  **Agent:** Implements the Sinistro Smart algorithm in the backend. (IN PROGRESS)
-8.  **Agent:** Implements the new frontend summary view in the wizard to display the calculated costs. (IN PROGRESS)
-9.  **Agent:** Finalizes the UI code for the summary step with tooltips and a discount field. (IN PROGRESS)
-10. **(PENDING) Agent Action:** The agent is ready to test the final implementation of the Sinistro Smart feature.
+1.  **User:** Provides a detailed vision for a data-driven Core Engine to handle complex compliance standards. (COMPLETED)
+2.  **Agent:** Proposes a phased implementation plan for the Core Engine. (COMPLETED)
+3.  **User:** Approves the plan, prioritizing the backend engine and component CRUD first. (COMPLETED)
+4.  **Agent:** Implements and successfully tests the entire backend Core Engine and frontend configurator. (COMPLETED)
+5.  **User:** Approves moving to Fase 4: automatic document generation. (COMPLETED)
+6.  **Agent:** Implements and successfully tests the automated PDF dossier generation feature. (COMPLETED)
+7.  **User:** Asks for the agent's next suggestions.
+8.  **Agent:** Proposes a list of potential new features (DDT Register, Quick Fill, AI photo validation, etc.).
+9.  **User:** Selects three features as the next priority (P1): Registro DDT (1), Quick Fill Fatture (2), and Validazione AI Foto Posa (6).
+10. **Agent:** Confirms understanding and begins analyzing the codebase to start implementation. (IN PROGRESS)
 
 **Project Health Check:**
-- **Working:** The application is stable and all modules are functional.
+- **Working:** The application is stable, feature-rich, and all recently added modules are functional and tested.
 - **Broken:** None.
 - **Mocked:** None.
 
 **3rd Party Integrations**
 - **Google Auth:** Emergent-managed.
-- **OpenAI GPT-4o (with Vision):** Uses Emergent LLM Key for AI text generation and image analysis.
-- **Leaflet:** For map display in the Perizia module.
-- **react-canvas-draw:** v1.2.1, for the Rilievo sketchpad.
-- **recharts:** v2.12.7, for dashboard charts.
+- **OpenAI GPT-4o (with Vision):** Uses Emergent LLM Key.
+- **WeasyPrint:** For backend PDF generation.
+- **Leaflet:** For map display.
+- **react-canvas-draw:** For sketchpads.
+- **recharts:** For dashboards.
 
 **Testing status**
-- **Testing agent used after significant changes:** YES. The agent has consistently used  after every major feature increment.
+- **Testing agent used after significant changes:** YES. The agent has rigorously used  after every major feature, achieving 100% pass rates.
 - **Troubleshoot agent used after agent stuck in loop:** NO.
-- **Test files created:** None. All testing was done via .
+- **Test files created:** Pytest files were created by the testing agent in .
 - **Known regressions:** None.
 
 **Credentials to test flow:**
 Use the Google OAuth flow. No static credentials are needed.
 
 **What agent forgot to execute**
-The agent has not yet tested the final implementation of the Sinistro Smart calculation algorithm and its corresponding frontend UI in the wizard's summary step. This is the immediate pending action required to finalize the feature.</analysis>
+Nothing. The agent was in the process of starting the next batch of user-requested tasks when the session ended.</analysis>
