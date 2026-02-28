@@ -169,6 +169,124 @@ def run_compliance(lines: list) -> dict:
     }
 
 
+# ── BRIDGE: Distinta → Preventivo ────────────────────────────────
+
+@router.post("/from-distinta/{distinta_id}")
+async def create_preventivo_from_distinta(
+    distinta_id: str,
+    markup_percent: float = Query(30.0, ge=0, le=200),
+    user: dict = Depends(get_current_user),
+):
+    """Create a Preventivo from a Distinta (BOM). Applies markup to material cost."""
+    uid = user["user_id"]
+    distinta = await db.distinte.find_one({"distinta_id": distinta_id, "user_id": uid}, {"_id": 0})
+    if not distinta:
+        raise HTTPException(404, "Distinta non trovata")
+
+    now = datetime.now(timezone.utc)
+    prev_id = f"prev_{uuid.uuid4().hex[:12]}"
+    year = now.year
+
+    # Counter
+    counter = await db.document_counters.find_one_and_update(
+        {"counter_id": f"PRV-{uid}-{year}"},
+        {"$inc": {"counter": 1}},
+        upsert=True,
+        return_document=True,
+    )
+    seq = counter.get("counter", 1) if counter else 1
+    number = f"PRV-{year}/{seq:04d}"
+
+    # Build lines from distinta items
+    items = distinta.get("items", [])
+    totals_d = distinta.get("totals", {})
+    material_cost = float(totals_d.get("total_cost", 0))
+    total_weight = float(totals_d.get("total_weight_kg", 0))
+
+    lines = []
+    # Group items into a single summary line or individual lines
+    if len(items) <= 8:
+        for item in items:
+            q = float(item.get("quantity", 1))
+            cost_unit = float(item.get("cost_per_unit", 0))
+            selling_price = round(cost_unit * (1 + markup_percent / 100), 2)
+            line_total = round(selling_price * q, 2)
+            lines.append({
+                "line_id": f"ln_{uuid.uuid4().hex[:8]}",
+                "description": f"{item.get('name', item.get('code', ''))} — {item.get('dimensions', '')} × {float(item.get('length_mm',0))}mm",
+                "codice_articolo": item.get("code", ""),
+                "quantity": q,
+                "unit": item.get("unit", "pz"),
+                "unit_price": selling_price,
+                "prezzo_netto": selling_price,
+                "sconto_1": 0,
+                "sconto_2": 0,
+                "vat_rate": "22",
+                "line_total": line_total,
+                "notes": "",
+            })
+    else:
+        # Summarize as single line
+        selling_price = round(material_cost * (1 + markup_percent / 100), 2)
+        lines.append({
+            "line_id": f"ln_{uuid.uuid4().hex[:8]}",
+            "description": f"Realizzazione opera (da Distinta #{distinta.get('name', distinta_id)}) — {len(items)} voci, {round(total_weight, 1)} kg",
+            "codice_articolo": "",
+            "quantity": 1,
+            "unit": "corpo",
+            "unit_price": selling_price,
+            "prezzo_netto": selling_price,
+            "sconto_1": 0,
+            "sconto_2": 0,
+            "vat_rate": "22",
+            "line_total": selling_price,
+            "notes": f"Costo materiale: €{material_cost:.2f} + markup {markup_percent:.0f}%",
+        })
+
+    # Totals
+    subtotal = sum(float(l.get("line_total", 0)) for l in lines)
+    vat_total = round(subtotal * 0.22, 2)
+
+    prev_doc = {
+        "preventivo_id": prev_id,
+        "user_id": uid,
+        "number": number,
+        "client_id": distinta.get("client_id", ""),
+        "subject": f"Preventivo da Distinta: {distinta.get('name', '')}",
+        "validity_days": 30,
+        "lines": lines,
+        "sconto_globale": 0,
+        "acconto": 0,
+        "totals": {
+            "subtotal": round(subtotal, 2),
+            "sconto_globale_value": 0,
+            "imponibile": round(subtotal, 2),
+            "iva": vat_total,
+            "total": round(subtotal + vat_total, 2),
+        },
+        "notes": f"Generato da Distinta #{distinta.get('name', distinta_id)}. Markup applicato: {markup_percent:.0f}%.",
+        "status": "bozza",
+        "linked_distinta_id": distinta_id,
+        "converted_to": None,
+        "payment_type_id": "",
+        "payment_type_label": "",
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    await db.preventivi.insert_one(prev_doc)
+    created = await db.preventivi.find_one({"preventivo_id": prev_id}, {"_id": 0})
+    logger.info(f"Preventivo {prev_id} ({number}) created from distinta {distinta_id} with {markup_percent}% markup")
+    return {
+        "message": f"Preventivo {number} creato da distinta con markup {markup_percent:.0f}%",
+        "preventivo_id": prev_id,
+        "number": number,
+        "material_cost": material_cost,
+        "markup_percent": markup_percent,
+        "selling_total": round(subtotal, 2),
+    }
+
+
 # ── CRUD ─────────────────────────────────────────────────────────
 
 @router.get("/")
