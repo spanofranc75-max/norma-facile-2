@@ -227,6 +227,13 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
   - Gruppi: Dashboard, Commerciale (4), Produzione (4), Certificazioni (3), Acquisti (4), Perizie (2)
   - Impostazioni fisso in fondo, chevron animato, auto-open gruppo attivo
   - Testing: 100% frontend (iteration_39)
+- [x] Kanban Board "Planning Cantieri" — DONE (Phase 32) — 2026-02-28
+  - 7 colonne: Nuove Commesse, Approvvigionamento, Lavorazione, Conto Lavoro, Pronto Consegna, Montaggio, Completato
+  - Drag-and-drop (@hello-pangea/dnd) aggiorna stato in tempo reale
+  - Card: titolo, cliente, valore (EUR), scadenza (rosso se scaduta), priorità
+  - CRUD completo + board/view + status history + from-preventivo
+  - Sidebar: "Planning Cantieri" sotto gruppo Produzione
+  - Testing: 18/18 backend, 100% frontend (iteration_40)
 - [ ] Integrazione SDI diretta con provider (API keys da configurare)
 - [ ] Recurring invoices / email reminders
 - [ ] Invio fascicolo via PEC automatico
