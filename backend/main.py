@@ -92,6 +92,7 @@ app.include_router(articoli_router, prefix="/api")
 app.include_router(fatture_ricevute_router, prefix="/api")
 app.include_router(engine_router, prefix="/api")
 app.include_router(commesse_router, prefix="/api")
+app.include_router(fpc_router)
 
 
 @app.get("/api/")
