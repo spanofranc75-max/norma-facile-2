@@ -111,12 +111,14 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     const fetchData = useCallback(async () => {
         if (!commessaId) return;
         try {
-            const [o, d] = await Promise.all([
+            const [o, d, batches] = await Promise.all([
                 apiRequest(`/commesse/${commessaId}/ops`),
                 apiRequest(`/commesse/${commessaId}/documenti`),
+                apiRequest(`/material-batches?commessa_id=${commessaId}`).catch(() => ({ batches: [] })),
             ]);
             setOps(o);
             setDocs(d.documents || []);
+            setMaterialBatches(batches.batches || []);
         } catch (e) {
             console.error(e);
         } finally {
