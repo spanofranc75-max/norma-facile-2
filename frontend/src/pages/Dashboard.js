@@ -192,7 +192,7 @@ export default function Dashboard() {
                     <QualityScoreWidget />
                 </div>
 
-                {/* Widgets Row */}
+                {/* Widgets Row — 3 columns */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Prossime Scadenze */}
                     <Card className="border-gray-200" data-testid="widget-scadenze">
