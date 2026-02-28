@@ -31,6 +31,7 @@ import {
 import DashboardLayout from '../components/DashboardLayout';
 import { PDFPreviewModal } from '../components/PDFPreviewModal';
 import EmptyState from '../components/EmptyState';
+import EmailPreviewDialog from '../components/EmailPreviewDialog';
 
 const DOC_TYPES = {
     FT: { label: 'Fattura', color: 'bg-blue-100 text-blue-800' },
