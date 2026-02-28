@@ -68,6 +68,8 @@ export default function PreventivoEditorPage() {
     const [activeLineIdx, setActiveLineIdx] = useState(null);
     const [sidebarTab, setSidebarTab] = useState('riferimento');
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+    const [linkedCommessa, setLinkedCommessa] = useState(null);
+    const [creatingCommessa, setCreatingCommessa] = useState(false);
     const [workflow, setWorkflow] = useState({ status: 'bozza', number: null, created_at: null, converted_to: null, linked_invoice: null, invoicing_progress: 0, linked_invoices: [] });
 
     useEffect(() => {
