@@ -318,17 +318,12 @@ export default function PreventivoEditorPage() {
                             {workflow.number && <span className="text-xs font-mono text-slate-400">{workflow.number}</span>}
                         </div>
                     </div>
-                    <div className="flex gap-2">
-                        <Button data-testid="btn-check-compliance" variant="outline" onClick={handleCheckCompliance} disabled={checking || isNew} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9 text-xs">
-                            <ShieldCheck className="h-3.5 w-3.5 mr-1.5" /> {checking ? 'Verifica...' : 'Compliance'}
-                        </Button>
+                    <div className="flex gap-2 flex-wrap">
+                        {/* Always visible: technical tools */}
                         {!isNew && <Button data-testid="btn-download-pdf" variant="outline" onClick={handleDownloadPdf} className="border-[#0055FF] text-[#0055FF] hover:bg-blue-50 h-9 text-xs"><FileDown className="h-3.5 w-3.5 mr-1.5" /> PDF</Button>}
                         {!isNew && <PDFPreviewButton pdfUrl={`/preventivi/${prevId}/pdf`} title={`Anteprima Preventivo ${workflow.number || ''}`} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9" />}
                         {!isNew && (
-                            <Button
-                                type="button"
-                                variant="outline"
-                                data-testid="btn-send-email-prev"
+                            <Button type="button" variant="outline" data-testid="btn-send-email-prev"
                                 onClick={async () => {
                                     try {
                                         const r = await apiRequest(`/preventivi/${prevId}/send-email`, { method: 'POST' });
@@ -340,15 +335,41 @@ export default function PreventivoEditorPage() {
                                 <Mail className="h-3.5 w-3.5 mr-1" /> Email
                             </Button>
                         )}
-                        {!isNew && <Button data-testid="btn-convert-invoice" variant="outline" onClick={() => setShowInvoiceModal(true)} disabled={converting} className="border-amber-500 text-amber-600 hover:bg-amber-50 h-9 text-xs"><Receipt className="h-3.5 w-3.5 mr-1.5" /> Fattura</Button>}
+
+                        {/* Workflow step: Accetta (only if bozza/inviato and not yet accepted) */}
+                        {!isNew && !isAccepted && (
+                            <Button data-testid="btn-accept-preventivo" onClick={handleAcceptPreventivo}
+                                className="bg-emerald-600 text-white hover:bg-emerald-500 h-9 text-xs">
+                                <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Accetta Preventivo
+                            </Button>
+                        )}
+
+                        {/* Workflow step: Fattura (only after acceptance) */}
+                        {!isNew && isAccepted && (
+                            <Button data-testid="btn-convert-invoice" onClick={() => setShowInvoiceModal(true)} disabled={converting}
+                                className="bg-amber-500 text-white hover:bg-amber-400 h-9 text-xs">
+                                <Receipt className="h-3.5 w-3.5 mr-1.5" /> Emetti Fattura
+                            </Button>
+                        )}
+
+                        {/* Create/Go to Commessa */}
                         {!isNew && (
                             <Button data-testid="btn-go-commessa" variant="outline" onClick={handleGoToCommessa} disabled={creatingCommessa}
                                 className={`h-9 text-xs ${linkedCommessa ? 'border-[#0055FF] text-[#0055FF] hover:bg-blue-50' : 'border-slate-400 text-slate-600 hover:bg-slate-50'}`}>
                                 {creatingCommessa ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Briefcase className="h-3.5 w-3.5 mr-1.5" />}
-                                {linkedCommessa ? `Commessa ${linkedCommessa.numero || ''}` : 'Crea Commessa'}
+                                {linkedCommessa ? `Commessa ${linkedCommessa.numero || ''}` : 'Commessa'}
                             </Button>
                         )}
-                        {!isNew && <Button data-testid="btn-convert-project" variant="outline" onClick={() => setShowFpcDialog(true)} disabled={converting} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9 text-xs"><Shield className="h-3.5 w-3.5 mr-1.5" /> Progetto FPC</Button>}
+
+                        {/* FPC Project */}
+                        {!isNew && <Button data-testid="btn-convert-project" variant="outline" onClick={() => setShowFpcDialog(true)} disabled={converting} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9 text-xs"><Shield className="h-3.5 w-3.5 mr-1.5" /> FPC</Button>}
+
+                        {/* Compliance */}
+                        <Button data-testid="btn-check-compliance" variant="outline" onClick={handleCheckCompliance} disabled={checking || isNew} className="border-slate-300 text-slate-600 hover:bg-slate-50 h-9 text-xs">
+                            <ShieldCheck className="h-3.5 w-3.5 mr-1.5" /> {checking ? '...' : 'Compliance'}
+                        </Button>
+
+                        {/* Save */}
                         <Button data-testid="btn-save-preventivo" onClick={handleSave} disabled={saving} className="bg-[#0055FF] text-white hover:bg-[#0044CC] h-9 text-xs"><Save className="h-3.5 w-3.5 mr-1.5" /> {saving ? 'Salvataggio...' : 'Salva'}</Button>
                     </div>
                 </div>
