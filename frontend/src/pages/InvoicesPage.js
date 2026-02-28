@@ -85,6 +85,7 @@ export default function InvoicesPage() {
     
     // PDF Preview state
     const [pdfPreview, setPdfPreview] = useState({ open: false, url: '', title: '' });
+    const [emailPreview, setEmailPreview] = useState({ open: false, invoiceId: null });
 
     const fetchInvoices = useCallback(async () => {
         try {
