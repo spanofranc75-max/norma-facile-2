@@ -1047,26 +1047,32 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                 <span className="text-[10px] text-slate-400">{d.tipo?.replace(/_/g, ' ')} — {(d.size_bytes / 1024).toFixed(0)}KB</span>
                                 {d.metadata_estratti?.numero_colata && (
                                     <div className="mt-1 p-1.5 bg-emerald-50 rounded border border-emerald-200">
-                                        <span className="block text-[10px] text-emerald-700 font-semibold">✓ Dati Estratti con AI</span>
+                                        <span className="block text-[10px] text-emerald-700 font-semibold">Dati Estratti con AI</span>
                                         <div className="grid grid-cols-3 gap-x-2 text-[10px] mt-1">
                                             <div><span className="text-slate-500">Colata:</span> <span className="font-mono font-semibold">{d.metadata_estratti.numero_colata}</span></div>
                                             <div><span className="text-slate-500">Qualità:</span> <span className="font-mono">{d.metadata_estratti.qualita_acciaio || '-'}</span></div>
                                             <div><span className="text-slate-500">Fornitore:</span> <span className="font-mono">{d.metadata_estratti.fornitore || '-'}</span></div>
                                         </div>
-                                        {d.metadata_estratti.normativa && (
-                                            <div className="text-[10px] mt-0.5"><span className="text-slate-500">Normativa:</span> <span className="font-mono">{d.metadata_estratti.normativa}</span></div>
+                                        {d.metadata_estratti.percentuale_riciclato != null && (
+                                            <div className="mt-1 p-1 bg-emerald-100 rounded flex items-center gap-2 text-[10px]">
+                                                <Leaf className="h-3 w-3 text-emerald-600" />
+                                                <span className="font-semibold text-emerald-800">CAM: {d.metadata_estratti.percentuale_riciclato}% riciclato</span>
+                                                {d.metadata_estratti.metodo_produttivo && <span className="text-emerald-600">({(d.metadata_estratti.metodo_produttivo || '').replace(/_/g, ' ')})</span>}
+                                                {d.metadata_estratti.certificazione_ambientale && <span className="text-emerald-500">[{d.metadata_estratti.certificazione_ambientale}]</span>}
+                                            </div>
+                                        )}
+                                        {d.metadata_estratti.normativa_riferimento && (
+                                            <div className="text-[10px] mt-0.5"><span className="text-slate-500">Normativa:</span> <span className="font-mono">{d.metadata_estratti.normativa_riferimento}</span></div>
                                         )}
                                     </div>
                                 )}
                             </div>
-                            {/* AI OCR button - show for certificates or any PDF without extracted data */}
-                            {(d.tipo === 'certificato_31' || d.tipo === 'altro' || d.tipo === 'ddt_fornitore') && 
-                             !d.metadata_estratti && 
-                             (d.nome_file?.toLowerCase().endsWith('.pdf') || d.content_type?.includes('pdf')) && (
-                                <Button size="sm" variant="ghost" className="h-7 text-[10px] text-purple-600 border border-purple-200" disabled={parsing === d.doc_id}
+                            {/* AI OCR button - show for PDFs that haven't been analyzed yet OR allow re-analysis */}
+                            {(d.nome_file?.toLowerCase().endsWith('.pdf') || d.content_type?.includes('pdf') || d.content_type?.includes('image')) && (
+                                <Button size="sm" variant="ghost" className={`h-7 text-[10px] border ${d.metadata_estratti?.numero_colata ? 'text-emerald-600 border-emerald-200' : 'text-purple-600 border-purple-200'}`} disabled={parsing === d.doc_id}
                                     onClick={() => handleParseAI(d.doc_id)} data-testid={`btn-parse-${d.doc_id}`}>
                                     {parsing === d.doc_id ? <Loader2 className="h-3 w-3 animate-spin mr-0.5" /> : <Sparkles className="h-3 w-3 mr-0.5" />}
-                                    Analizza AI
+                                    {d.metadata_estratti?.numero_colata ? 'Ri-analizza' : 'Analizza AI'}
                                 </Button>
                             )}
                             <Button size="sm" variant="ghost" className="h-7 px-1.5" onClick={() => handleDownloadDoc(d.doc_id, d.nome_file)}>
