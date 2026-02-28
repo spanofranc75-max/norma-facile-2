@@ -271,6 +271,10 @@ async def create_commessa(data: CommessaCreate, user: dict = Depends(get_current
         "linked_preventivo_id": data.linked_preventivo_id,
         "linked_distinta_id": data.linked_distinta_id,
         "linked_rilievo_id": data.linked_rilievo_id,
+        # Operational fields for commessa_ops routes
+        "approvvigionamento": {"richieste": [], "ordini": [], "arrivi": []},
+        "fasi_produzione": [],
+        "conto_lavoro": [],
         "created_at": now,
         "updated_at": now,
     }
