@@ -80,6 +80,15 @@ class PreventivoUpdate(BaseModel):
     status: Optional[str] = None
 
 
+class ProgressiveInvoiceRequest(BaseModel):
+    """Request body for progressive invoicing (acconto / SAL / saldo)."""
+    invoice_type: str  # "acconto", "sal", "saldo"
+    percentage: Optional[float] = None         # For acconto: e.g. 30
+    selected_lines: Optional[List[int]] = None # For SAL: line indices
+    custom_amount: Optional[float] = None      # For SAL: fixed amount
+    description: Optional[str] = None          # Custom description override
+
+
 # ── Helpers ──────────────────────────────────────────────────────
 
 def calc_line(line: dict) -> dict:
