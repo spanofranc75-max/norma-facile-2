@@ -276,6 +276,33 @@ export default function InvoiceEditorPage() {
         }));
     };
 
+    const handleQuickFill = (source) => {
+        // Map lines from preventivo/DDT into invoice format
+        const mappedLines = (source.lines || []).map(line => ({
+            code: line.codice_articolo || line.code || '',
+            description: line.description || '',
+            quantity: parseFloat(line.quantity) || 1,
+            unit_price: parseFloat(line.prezzo_netto || line.unit_price) || 0,
+            discount_percent: 0,
+            vat_rate: line.vat_rate || '22',
+        }));
+
+        if (mappedLines.length === 0) {
+            toast.error('Nessuna riga trovata nel documento');
+            return;
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            client_id: source.client_id || prev.client_id,
+            lines: mappedLines,
+            notes: prev.notes
+                ? `${prev.notes}\nRif. ${source.source_type === 'preventivo' ? 'Preventivo' : 'DDT'} ${source.number}`
+                : `Rif. ${source.source_type === 'preventivo' ? 'Preventivo' : 'DDT'} ${source.number}`,
+        }));
+        toast.success(`${mappedLines.length} righe importate da ${source.number}`);
+    };
+
     const handleSave = async () => {
         if (!formData.client_id) {
             toast.error('Seleziona un cliente');
