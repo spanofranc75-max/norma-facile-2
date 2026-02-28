@@ -35,6 +35,7 @@ from routes.engine import router as engine_router
 from routes.commesse import router as commesse_router
 from routes.commessa_ops import router as commessa_ops_router
 from routes.fpc import router as fpc_router
+from routes.cam import router as cam_router
 
 # Configure logging
 logging.basicConfig(
