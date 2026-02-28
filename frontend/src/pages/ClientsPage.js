@@ -271,7 +271,7 @@ export default function ClientsPage() {
             {/* ── Create/Edit Dialog ── Tab-based Form ── */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogContent className="sm:max-w-[750px] max-h-[90vh] flex flex-col" data-testid="client-dialog">
-                    <form onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); handleSave(e); }}>
+                    <form onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); handleSave(e); }} className="flex flex-col flex-1 overflow-hidden">
                     <DialogHeader>
                         <DialogTitle className="font-sans text-xl text-[#1E293B]">
                             {editingClient ? 'Modifica Scheda' : 'Nuova Scheda Cliente/Fornitore'}
