@@ -174,6 +174,28 @@ export default function InvoicesPage() {
         }
     };
 
+    const handleSendEmail = async (invoice) => {
+        try {
+            const result = await apiRequest(`/invoices/${invoice.invoice_id}/send-email`, { method: 'POST' });
+            toast.success(result.message);
+            fetchInvoices();
+        } catch (error) {
+            toast.error(error.message);
+        }
+    };
+
+    const handleSendSDI = async (invoice) => {
+        if (!window.confirm('Confermi l\'invio al Sistema di Interscambio (SDI)?')) return;
+        try {
+            const result = await apiRequest(`/invoices/${invoice.invoice_id}/send-sdi`, { method: 'POST' });
+            toast.success(result.message);
+            fetchInvoices();
+        } catch (error) {
+            toast.error(error.message);
+        }
+    };
+
+
     const handleDelete = async (invoice) => {
         if (!window.confirm('Sei sicuro di voler eliminare questo documento?')) return;
         try {
