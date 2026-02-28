@@ -20,6 +20,7 @@ import {
     ShoppingCart, Package, Truck, Factory, Paintbrush, FileUp,
     Play, CheckCircle2, Clock, AlertTriangle, Plus, Trash2,
     Download, Eye, Loader2, Sparkles, ChevronDown, ChevronUp, FileText,
+    Mail, MailCheck, FileSearch,
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
