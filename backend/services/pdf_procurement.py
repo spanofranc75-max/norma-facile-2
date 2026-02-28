@@ -198,6 +198,7 @@ def generate_rdp_pdf(
         <table class="header-table">
             <tr>
                 <td class="company-cell">
+                    {logo_html}
                     <div class="company-name">{safe(company_name)}</div>
                     <div class="company-details">
                         {safe(company_address)}<br/>
