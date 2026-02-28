@@ -222,6 +222,11 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
     - Auto-fill: indirizzo, città, committente, data inizio, descrizione
     - Frontend: Pulsante "Genera POS" in RilievoEditorPage
   - Testing: 10/10 backend (iteration_38), 100% frontend
+- [x] UI Refactor: Sidebar Accordion — DONE (Phase 31) — 2026-02-28
+  - Sidebar ristrutturata da 19 voci piatte a 6 gruppi collassabili
+  - Gruppi: Dashboard, Commerciale (4), Produzione (4), Certificazioni (3), Acquisti (4), Perizie (2)
+  - Impostazioni fisso in fondo, chevron animato, auto-open gruppo attivo
+  - Testing: 100% frontend (iteration_39)
 - [ ] Integrazione SDI diretta con provider (API keys da configurare)
 - [ ] Recurring invoices / email reminders
 - [ ] Invio fascicolo via PEC automatico
