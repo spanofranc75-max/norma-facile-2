@@ -1,0 +1,77 @@
+{
+  "summary": "Iteration 48: Complete testing of Technical Dossier (Fascicolo Tecnico) feature. All 22 backend tests passed. Frontend UI confirmed - 'Stampa Fascicolo Tecnico Completo' button present and functional.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "TracciabilitaPage",
+        "issues": ["React hydration warnings (non-critical): <span> cannot be child of <tbody>/<tr>. These are dev-mode warnings carried over from iteration 47."]
+      }
+    ]
+  },
+  "test_results": {
+    "dossier_endpoint": {
+      "returns_pdf": "PASS - GET /api/fpc/projects/{id}/dossier returns valid PDF",
+      "content_disposition": "PASS - Header has 'attachment; filename=Fascicolo_Tecnico_*.pdf'",
+      "pdf_pages": "PASS - PDF has 5+ pages (Cover, DoP, CE Label, Materials, Controls)",
+      "auth_required": "PASS - Returns 401 without authentication",
+      "404_nonexistent": "PASS - Returns 404 for non-existent project_id"
+    },
+    "dossier_with_welder": {
+      "welder_assignment": "PASS - Welder can be assigned to project",
+      "welder_page_added": "PASS - Dossier includes welder qualification page when assigned",
+      "graceful_omit": "PASS - Welder section omitted when no welder assigned"
+    },
+    "dossier_with_certificates": {
+      "cert_creation": "PASS - Batch with certificate_base64 created successfully",
+      "cert_assignment": "PASS - Batch assigned to project line",
+      "cert_pages_merged": "PASS - Certificate PDF pages merged into dossier"
+    },
+    "dossier_content": {
+      "cover_page": "PASS - Contains 'FASCICOLO TECNICO' title",
+      "dop_page": "PASS - Contains EN 1090-1 reference",
+      "ce_label": "PASS - CE marking section present",
+      "controls_checklist": "PASS - FPC controls section present",
+      "materials_traceability": "PASS - Materials/colata section present",
+      "execution_class": "PASS - EXC class mentioned in document"
+    },
+    "edge_cases": {
+      "empty_lines": "PASS - Handles project without lines",
+      "sparse_company": "PASS - Handles missing company settings",
+      "no_certificate_batch": "PASS - Handles batches without certificate"
+    },
+    "frontend_ui": {
+      "tracciabilita_page": "PASS - Page loads with 3 tabs (Lotti Materiale, Saldatori, Progetti FPC)",
+      "dossier_button": "PASS - 'Stampa Fascicolo Tecnico Completo' button visible on FPCProjectPage",
+      "button_testid": "PASS - data-testid='download-dossier-btn' present",
+      "button_subtitle": "PASS - Shows 'DoP + CE Label + Certificati 3.1 + Qualifica Saldatore + Controlli FPC'",
+      "fpc_controls": "PASS - 7 control checkboxes visible (all checked)",
+      "ce_status": "PASS - 'Etichetta CE Generata' status shown when CE generated"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_dossier_generator.py",
+    "/app/test_reports/pytest/dossier_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "React hydration warnings in TracciabilitaPage (span inside tbody) - low priority, doesn't affect functionality"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_dossier_generator.py"
+  ],
+  "success_rate": {
+    "backend": "100% (22/22 tests passed)",
+    "frontend": "100% (dossier button and all UI elements verified)"
+  },
+  "test_credentials": "Session token: test_fpc_session_1772273339015 for user bridge-test-user",
+  "seed_data_creation": "Created test welders and batches during testing (cleaned up after each test class)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Technical Dossier feature fully tested and working. Endpoint GET /api/fpc/projects/{project_id}/dossier generates merged PDF containing: Cover Page, DoP, CE Label, Materials Summary, Certificates (if any), Welder Qualification (if assigned), FPC Controls. Uses pypdf for merging, WeasyPrint for HTML->PDF. Frontend button 'Stampa Fascicolo Tecnico Completo' triggers download. FPCProjectPage at /tracciabilita/progetto/{id}. Test session active for bridge-test-user."
+}
