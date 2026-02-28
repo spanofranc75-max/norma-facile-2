@@ -135,9 +135,7 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - Testing: 17/17 test passati (iteration_46)
 
 ## Issue Pendenti
-- **P0**: Firma digitale DDT - pulsante "Salva" bloccato
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
-- **P2**: Sovrapposizione footer PDF
 - **P2**: Account test non funziona da UI
 
 ## Task Futuri
