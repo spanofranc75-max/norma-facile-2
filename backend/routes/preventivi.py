@@ -793,8 +793,8 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
         um = esc(str(ln.get("unit", "pz")))
         qty = _fmt_it(ln.get("quantity", 1))
         price = _fmt_it(ln.get("unit_price", 0))
-        s1 = float(ln.get("sconto_1", 0))
-        s2 = float(ln.get("sconto_2", 0))
+        s1 = float(ln.get("sconto_1") or 0)
+        s2 = float(ln.get("sconto_2") or 0)
         sconto_display = ""
         if s1 > 0 and s2 > 0:
             sconto_display = f"{_fmt_it(s1)}%+{_fmt_it(s2)}%"
