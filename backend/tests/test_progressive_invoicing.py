@@ -171,7 +171,7 @@ class TestAccontoInvoice:
             status = api_client.get(f"{BASE_URL}/api/preventivi/{prev_id}/invoicing-status").json()
             assert status["total_invoiced"] == data["progressive_amount"]
             assert len(status["linked_invoices"]) == 1
-            assert status["linked_invoices"][0]["type"] == "acconto"
+            assert status["linked_invoices"][0]["progressive_type"] == "acconto"
             
         finally:
             api_client.delete(f"{BASE_URL}/api/preventivi/{prev_id}")
