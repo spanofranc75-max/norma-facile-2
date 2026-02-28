@@ -128,11 +128,19 @@ export default function DashboardLayout({ children }) {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const [companyLogo, setCompanyLogo] = useState(null);
 
     const activeGroupId = findActiveGroup(location.pathname);
     const [openGroups, setOpenGroups] = useState(() => {
         return activeGroupId ? new Set([activeGroupId]) : new Set();
     });
+
+    // Fetch company logo once
+    useEffect(() => {
+        apiRequest('/company/settings')
+            .then(data => { if (data?.logo_url) setCompanyLogo(data.logo_url); })
+            .catch(() => {});
+    }, []);
 
     // Keep active group open on navigation
     useEffect(() => {
