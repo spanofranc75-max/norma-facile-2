@@ -326,6 +326,7 @@ function CreateCommessaModal({ open, onOpenChange, clients, onCreated }) {
             <DialogContent className="max-w-md">
                 <DialogHeader>
                     <DialogTitle className="text-lg font-bold text-[#1E293B]">Nuova Commessa</DialogTitle>
+                    <p className="text-sm text-slate-500">Crea una nuova commessa per il planning cantieri</p>
                 </DialogHeader>
                 <div className="space-y-3 mt-2">
                     <div>
