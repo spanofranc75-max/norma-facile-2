@@ -384,6 +384,29 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         } catch (e) { toast.error(e.message); }
     };
 
+    const handlePreviewClPdf = async (clId) => {
+        try {
+            const res = await fetch(`${API}/api/commesse/${commessaId}/conto-lavoro/${clId}/preview-pdf`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+            });
+            if (!res.ok) throw new Error('Errore generazione PDF');
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            setPdfPreviewUrl(url);
+            setPdfPreviewTitle('DDT Conto Lavoro');
+        } catch (e) { toast.error(e.message); }
+    };
+
+    const handleSendClEmail = async (clId) => {
+        setSendingEmail(clId);
+        try {
+            await apiRequest(`/commesse/${commessaId}/conto-lavoro/${clId}/send-email`, { method: 'POST' });
+            toast.success('DDT inviato via email');
+            fetchData();
+        } catch (e) { toast.error(e.message); }
+        finally { setSendingEmail(null); }
+    };
+
     const handleUploadDoc = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
