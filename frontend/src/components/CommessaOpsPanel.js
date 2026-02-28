@@ -97,6 +97,9 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     const [pdfPreviewTitle, setPdfPreviewTitle] = useState('');
     const [sendingEmail, setSendingEmail] = useState(null); // Track which item is sending email
 
+    // Email Preview Dialog state
+    const [emailPreview, setEmailPreview] = useState({ open: false, previewUrl: '', sendUrl: '' });
+
     // Certificate linking states
     const [certLinkOpen, setCertLinkOpen] = useState(false);
     const [selectedArrivo, setSelectedArrivo] = useState(null);
