@@ -139,11 +139,34 @@ class OrdineFornitore(BaseModel):
     note: Optional[str] = ""
     riferimento_rdp_id: Optional[str] = None
 
+class MaterialeRicevuto(BaseModel):
+    """Singolo materiale ricevuto con possibile certificato."""
+    descrizione: str
+    quantita: float = 1
+    unita_misura: str = "kg"
+    ordine_id: Optional[str] = None  # Riferimento a OdA
+    commessa_id: Optional[str] = None  # Per smistamento multi-commessa
+    richiede_cert_31: bool = False
+    # Dati certificato (se presente)
+    certificato_doc_id: Optional[str] = None  # Riferimento a documento caricato
+    numero_colata: Optional[str] = None
+    qualita_materiale: Optional[str] = None
+    fornitore_materiale: Optional[str] = None
+    # Collegamento a tracciabilità EN 1090
+    material_batch_id: Optional[str] = None
+
 class ArrivoMateriale(BaseModel):
+    """Registrazione arrivo materiale dal fornitore.
+    Supporta un DDT che contiene materiali per più ordini/commesse.
+    """
+    ddt_fornitore: str  # Numero DDT fornitore (obbligatorio)
+    data_ddt: Optional[str] = None  # Data del DDT fornitore
+    fornitore_nome: Optional[str] = None
+    fornitore_id: Optional[str] = None
+    materiali: Optional[List[MaterialeRicevuto]] = []
+    # Per retrocompatibilità - link a singolo ordine
     ordine_id: Optional[str] = None
-    ddt_fornitore: Optional[str] = ""
     note: Optional[str] = ""
-    materiali: Optional[List[dict]] = []
 
 
 @router.post("/{cid}/approvvigionamento/richieste")
