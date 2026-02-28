@@ -58,18 +58,50 @@ def new_id(prefix=""):
 
 
 def push_event(commessa_id, tipo, user, note="", payload=None):
-    """Returns the update operation dict for pushing an event."""
+    """Returns the update operation dict for pushing an event.
+    NOTE: If you need to combine this with other $push operations,
+    extract the 'eventi' value and merge manually.
+    """
     return {
-        "$push": {"eventi": {
+        "eventi": {
             "tipo": tipo,
             "data": ts().isoformat(),
             "operatore_id": user.get("user_id", ""),
             "operatore_nome": user.get("name", user.get("email", "")),
             "note": note,
             "payload": payload or {},
-        }},
-        "$set": {"updated_at": ts()},
+        }
     }
+
+
+def build_update_with_event(push_items=None, set_items=None, commessa_id="", tipo="", user=None, note="", payload=None):
+    """Build a MongoDB update with both data operations and event push."""
+    update = {}
+    
+    push_dict = {}
+    if push_items:
+        push_dict.update(push_items)
+    
+    # Add event push
+    if user:
+        push_dict["eventi"] = {
+            "tipo": tipo,
+            "data": ts().isoformat(),
+            "operatore_id": user.get("user_id", ""),
+            "operatore_nome": user.get("name", user.get("email", "")),
+            "note": note,
+            "payload": payload or {},
+        }
+    
+    if push_dict:
+        update["$push"] = push_dict
+    
+    set_dict = {"updated_at": ts()}
+    if set_items:
+        set_dict.update(set_items)
+    update["$set"] = set_dict
+    
+    return update
 
 
 # ══════════════════════════════════════════════════════════════════
