@@ -83,6 +83,7 @@ export default function DistintaEditorPage() {
     const [optimizerLoading, setOptimizerLoading] = useState(false);
     const [optimizerParams, setOptimizerParams] = useState({ bar_length_mm: 6000, kerf_mm: 3 });
     const [expandedProfiles, setExpandedProfiles] = useState({});
+    const [creatingPreventivo, setCreatingPreventivo] = useState(false);
 
     const [formData, setFormData] = useState({
         name: '',
