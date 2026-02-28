@@ -423,3 +423,160 @@ async def genera_dichiarazione_cam_pdf(commessa_id: str, user: dict = Depends(ge
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{filename}"'}
     )
+
+
+
+# ══════════════════════════════════════════════════════════════════
+#  REPORT AZIENDALE CAM MULTI-COMMESSA
+# ══════════════════════════════════════════════════════════════════
+
+@router.get("/report-aziendale")
+async def report_aziendale_cam(
+    anno: Optional[int] = None,
+    user: dict = Depends(get_current_user)
+):
+    """
+    Report riepilogativo CAM multi-commessa con calcolo CO2.
+    Aggrega tutti i lotti CAM dell'utente per anno.
+    """
+    query = {"user_id": user["user_id"]}
+    if anno:
+        query["created_at"] = {
+            "$gte": f"{anno}-01-01",
+            "$lte": f"{anno}-12-31T23:59:59",
+        }
+    
+    # Get all CAM lots
+    cursor = db.lotti_cam.find(query, {"_id": 0}).sort("created_at", -1)
+    all_lotti = await cursor.to_list(2000)
+    
+    if not all_lotti:
+        return {
+            "anno": anno or datetime.now().year,
+            "totale_lotti": 0,
+            "peso_totale_kg": 0,
+            "peso_riciclato_kg": 0,
+            "percentuale_riciclato_media": 0,
+            "co2": calcola_co2_risparmiata(0, 0),
+            "commesse": [],
+            "fornitori": [],
+            "metodi_produttivi": {},
+            "commesse_conformi": 0,
+            "commesse_totali": 0,
+        }
+    
+    # Aggregate by commessa
+    commesse_map = {}
+    fornitori_map = {}
+    metodi_map = {}
+    
+    peso_totale = 0
+    peso_riciclato = 0
+    
+    for lotto in all_lotti:
+        peso = lotto.get("peso_kg", 0)
+        perc_ric = lotto.get("percentuale_riciclato", 0)
+        peso_ric = peso * perc_ric / 100
+        peso_totale += peso
+        peso_riciclato += peso_ric
+        
+        # By commessa
+        cid = lotto.get("commessa_id", "senza_commessa")
+        if cid not in commesse_map:
+            commesse_map[cid] = {"commessa_id": cid, "peso_kg": 0, "peso_riciclato_kg": 0, "lotti": 0, "conforme": True}
+        commesse_map[cid]["peso_kg"] += peso
+        commesse_map[cid]["peso_riciclato_kg"] += peso_ric
+        commesse_map[cid]["lotti"] += 1
+        if not lotto.get("conforme_cam", False):
+            commesse_map[cid]["conforme"] = False
+        
+        # By fornitore
+        forn = lotto.get("fornitore", "Sconosciuto") or "Sconosciuto"
+        if forn not in fornitori_map:
+            fornitori_map[forn] = {"fornitore": forn, "peso_kg": 0, "peso_riciclato_kg": 0, "lotti": 0}
+        fornitori_map[forn]["peso_kg"] += peso
+        fornitori_map[forn]["peso_riciclato_kg"] += peso_ric
+        fornitori_map[forn]["lotti"] += 1
+        
+        # By metodo
+        metodo = lotto.get("metodo_produttivo", "sconosciuto")
+        if metodo not in metodi_map:
+            metodi_map[metodo] = {"peso_kg": 0, "lotti": 0}
+        metodi_map[metodo]["peso_kg"] += peso
+        metodi_map[metodo]["lotti"] += 1
+    
+    # Enrich commesse with names
+    commesse_ids = [c for c in commesse_map.keys() if c != "senza_commessa"]
+    if commesse_ids:
+        comm_cursor = db.commesse.find(
+            {"commessa_id": {"$in": commesse_ids}, "user_id": user["user_id"]},
+            {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "client_name": 1}
+        )
+        comm_docs = await comm_cursor.to_list(500)
+        comm_names = {c["commessa_id"]: c for c in comm_docs}
+        
+        for cid, data in commesse_map.items():
+            info = comm_names.get(cid, {})
+            data["numero"] = info.get("numero", "")
+            data["titolo"] = info.get("title", "")
+            data["cliente"] = info.get("client_name", "")
+            data["percentuale_riciclato"] = round(data["peso_riciclato_kg"] / data["peso_kg"] * 100, 1) if data["peso_kg"] > 0 else 0
+    
+    # Enrich fornitori
+    for fdata in fornitori_map.values():
+        fdata["percentuale_riciclato"] = round(fdata["peso_riciclato_kg"] / fdata["peso_kg"] * 100, 1) if fdata["peso_kg"] > 0 else 0
+    
+    perc_media = round(peso_riciclato / peso_totale * 100, 1) if peso_totale > 0 else 0
+    co2 = calcola_co2_risparmiata(peso_totale, peso_riciclato)
+    
+    commesse_list = sorted(commesse_map.values(), key=lambda x: x["peso_kg"], reverse=True)
+    fornitori_list = sorted(fornitori_map.values(), key=lambda x: x["peso_kg"], reverse=True)
+    
+    return {
+        "anno": anno or datetime.now().year,
+        "totale_lotti": len(all_lotti),
+        "peso_totale_kg": round(peso_totale, 2),
+        "peso_riciclato_kg": round(peso_riciclato, 2),
+        "percentuale_riciclato_media": perc_media,
+        "co2": co2,
+        "commesse": commesse_list,
+        "fornitori": fornitori_list,
+        "metodi_produttivi": metodi_map,
+        "commesse_conformi": sum(1 for c in commesse_list if c.get("conforme")),
+        "commesse_totali": len(commesse_list),
+        "data_report": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@router.get("/report-aziendale/pdf")
+async def report_aziendale_cam_pdf(
+    anno: Optional[int] = None,
+    user: dict = Depends(get_current_user)
+):
+    """Genera il PDF del Bilancio di Sostenibilità Ambientale."""
+    # Get report data
+    report = await report_aziendale_cam(anno, user)
+    
+    if report["totale_lotti"] == 0:
+        raise HTTPException(400, "Nessun dato CAM disponibile per il periodo selezionato.")
+    
+    # Get company settings
+    company = await db.company_settings.find_one(
+        {"user_id": user["user_id"]}, {"_id": 0}
+    ) or {}
+    
+    from services.pdf_cam_report import generate_cam_report_pdf
+    try:
+        pdf_bytes = generate_cam_report_pdf(report, company)
+    except Exception as e:
+        logger.error(f"CAM Report PDF error: {e}")
+        raise HTTPException(500, f"Errore generazione PDF: {str(e)}")
+    
+    anno_label = anno or datetime.now().year
+    filename = f"Bilancio_Sostenibilita_CAM_{anno_label}.pdf"
+    
+    return StreamingResponse(
+        BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'}
+    )
