@@ -59,6 +59,8 @@ export default function PreventivoEditorPage() {
     const [saving, setSaving] = useState(false);
     const [checking, setChecking] = useState(false);
     const [converting, setConverting] = useState(false);
+    const [showFpcDialog, setShowFpcDialog] = useState(false);
+    const [excClass, setExcClass] = useState('EXC2');
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [activeLineIdx, setActiveLineIdx] = useState(null);
     const [sidebarTab, setSidebarTab] = useState('riferimento');
