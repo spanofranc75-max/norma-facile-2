@@ -379,16 +379,53 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                     {(approv.richieste || []).map(r => (
                         <div key={r.rdp_id} className="flex items-center gap-2 p-2 bg-slate-50 rounded text-xs" data-testid={`rdp-${r.rdp_id}`}>
                             <ShoppingCart className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                            <span className="font-medium flex-1 truncate">RdP → {r.fornitore_nome}</span>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-medium truncate">RdP → {r.fornitore_nome}</span>
+                                    {/* Email status badge */}
+                                    {r.email_sent ? (
+                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[9px] font-medium" title={`Inviata a ${r.email_sent_to}`}>
+                                            <MailCheck className="h-2.5 w-2.5" /> Inviata
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-red-100 text-red-600 rounded text-[9px] font-medium">
+                                            <Mail className="h-2.5 w-2.5" /> Bozza
+                                        </span>
+                                    )}
+                                </div>
+                                {r.righe?.length > 0 && (
+                                    <div className="text-[10px] text-slate-500 mt-0.5">
+                                        {r.righe.length} righe — {r.righe.filter(x => x.richiede_cert_31).length > 0 && `${r.righe.filter(x => x.richiede_cert_31).length} cert. 3.1`}
+                                    </div>
+                                )}
+                            </div>
                             <StatoBadge stato={r.stato} />
                             {r.importo_proposto && <span className="font-mono text-[10px]">{fmtEur(r.importo_proposto)}</span>}
-                            {r.stato === 'inviata' && <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => handleUpdateRdP(r.rdp_id, 'ricevuta')}>Ricevuta</Button>}
-                            {r.stato === 'ricevuta' && (
-                                <>
-                                    <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => handleUpdateRdP(r.rdp_id, 'accettata')}>Accetta</Button>
-                                    <Button size="sm" variant="ghost" className="h-6 text-[10px] text-red-600" onClick={() => handleUpdateRdP(r.rdp_id, 'rifiutata')}>Rifiuta</Button>
-                                </>
-                            )}
+                            {/* Action buttons */}
+                            <div className="flex items-center gap-1">
+                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => handlePreviewRdpPdf(r.rdp_id)} title="Anteprima PDF">
+                                    <FileSearch className="h-3.5 w-3.5 text-blue-600" />
+                                </Button>
+                                {!r.email_sent && (
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-6 w-6 p-0"
+                                        onClick={() => handleSendRdpEmail(r.rdp_id)}
+                                        disabled={sendingEmail === r.rdp_id}
+                                        title="Invia Email"
+                                    >
+                                        {sendingEmail === r.rdp_id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5 text-amber-600" />}
+                                    </Button>
+                                )}
+                                {r.stato === 'inviata' && <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => handleUpdateRdP(r.rdp_id, 'ricevuta')}>Ricevuta</Button>}
+                                {r.stato === 'ricevuta' && (
+                                    <>
+                                        <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => handleUpdateRdP(r.rdp_id, 'accettata')}>Accetta</Button>
+                                        <Button size="sm" variant="ghost" className="h-6 text-[10px] text-red-600" onClick={() => handleUpdateRdP(r.rdp_id, 'rifiutata')}>Rifiuta</Button>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     ))}
 
