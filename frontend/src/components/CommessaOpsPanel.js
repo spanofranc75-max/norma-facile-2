@@ -629,15 +629,40 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
 
                     {/* Arrivi */}
                     {(approv.arrivi || []).map(a => (
-                        <div key={a.arrivo_id} className="flex items-center gap-2 p-2 bg-amber-50 rounded text-xs" data-testid={`arrivo-${a.arrivo_id}`}>
-                            <Package className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                            <span className="font-medium flex-1 truncate">Arrivo DDT: {a.ddt_fornitore || '-'}</span>
-                            <StatoBadge stato={a.stato} />
-                            {a.stato === 'da_verificare' && (
-                                <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => handleVerificaArrivo(a.arrivo_id)}>
-                                    <CheckCircle2 className="h-3 w-3 mr-0.5" /> Verifica
-                                </Button>
-                            )}
+                        <div key={a.arrivo_id} className="p-2 bg-amber-50 rounded text-xs space-y-1.5" data-testid={`arrivo-${a.arrivo_id}`}>
+                            <div className="flex items-center gap-2">
+                                <Package className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-medium">DDT: {a.ddt_fornitore || '-'}</span>
+                                        {a.fornitore_nome && <span className="text-slate-500">({a.fornitore_nome})</span>}
+                                    </div>
+                                    {a.materiali?.length > 0 && (
+                                        <div className="text-[10px] text-slate-500">
+                                            {a.materiali.length} materiali — {a.materiali.filter(m => m.certificato_doc_id || m.numero_colata).length} con certificato
+                                        </div>
+                                    )}
+                                </div>
+                                <StatoBadge stato={a.stato} />
+                                <div className="flex items-center gap-1">
+                                    {a.materiali?.some(m => m.richiede_cert_31 && !m.certificato_doc_id) && (
+                                        <Button 
+                                            size="sm" 
+                                            variant="ghost" 
+                                            className="h-6 text-[10px] text-purple-600"
+                                            onClick={() => handleOpenCertLink(a)}
+                                            title="Collega certificati ai materiali"
+                                        >
+                                            <Sparkles className="h-3 w-3 mr-0.5" /> Certificati
+                                        </Button>
+                                    )}
+                                    {a.stato === 'da_verificare' && (
+                                        <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => handleVerificaArrivo(a.arrivo_id)}>
+                                            <CheckCircle2 className="h-3 w-3 mr-0.5" /> Verifica
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     ))}
                 </div>
