@@ -908,25 +908,9 @@ async def send_cl_email(cid: str, cl_id: str, user: dict = Depends(get_current_u
     company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
 
     # Generate PDF
-    from services.pdf_procurement import generate_procurement_pdf
+    from services.pdf_procurement import generate_cl_pdf
 
-    tipo_labels = {"verniciatura": "VERNICIATURA", "zincatura": "ZINCATURA A CALDO", "sabbiatura": "SABBIATURA", "altro": "LAVORAZIONE ESTERNA"}
-    tipo_label = tipo_labels.get(cl["tipo"], cl["tipo"].upper())
-    title = f"DDT CONTO LAVORO — {tipo_label}"
-
-    righe_pdf = [{"n": i, "descrizione": r.get("descrizione", ""), "quantita": r.get("quantita", ""), "unita": r.get("unita", "pz"), "peso_kg": r.get("peso_kg", "")} for i, r in enumerate(cl.get("righe", []), 1)]
-
-    extra_info = f"Commessa: {comm.get('numero', cid)}"
-    if cl.get("ral"):
-        extra_info += f" — RAL {cl['ral']}"
-    extra_info += f"\nCausale Trasporto: {cl.get('causale_trasporto', 'Conto Lavorazione')}"
-
-    pdf_bytes = generate_procurement_pdf(
-        doc_type="ddt_cl", doc_title=title, numero=cl["cl_id"],
-        data_doc=cl.get("created_at", ""), fornitore_nome=cl.get("fornitore_nome", ""),
-        commessa_numero=comm.get("numero", cid), righe=righe_pdf,
-        company=company, extra_info=extra_info, note=cl.get("note", ""),
-    )
+    pdf_bytes = generate_cl_pdf(cl, comm, company)
 
     # Send email
     from services.email_service import send_email_with_attachment
