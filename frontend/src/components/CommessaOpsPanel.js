@@ -964,6 +964,49 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                     <DialogFooter><Button size="sm" disabled={!clForm.fornitore_nome} onClick={handleCreateCL} className="bg-[#0055FF] text-white" data-testid="btn-confirm-cl">Crea</Button></DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* PDF Preview Dialog */}
+            <Dialog open={!!pdfPreviewUrl} onOpenChange={(open) => !open && setPdfPreviewUrl(null)}>
+                <DialogContent className="max-w-4xl h-[85vh]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <FileSearch className="h-5 w-5 text-blue-600" />
+                            {pdfPreviewTitle}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Verifica il documento prima di inviarlo via email
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex-1 h-full min-h-0">
+                        {pdfPreviewUrl && (
+                            <iframe
+                                src={`${pdfPreviewUrl}?token=${localStorage.getItem('auth_token')}`}
+                                className="w-full h-[calc(85vh-120px)] border rounded"
+                                title="PDF Preview"
+                            />
+                        )}
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" onClick={() => setPdfPreviewUrl(null)}>Chiudi</Button>
+                        <Button
+                            className="bg-[#0055FF] text-white"
+                            onClick={() => {
+                                // Extract type and ID from URL
+                                if (pdfPreviewUrl?.includes('/richieste/')) {
+                                    const rdpId = pdfPreviewUrl.split('/richieste/')[1]?.split('/')[0];
+                                    if (rdpId) handleSendRdpEmail(rdpId);
+                                } else if (pdfPreviewUrl?.includes('/ordini/')) {
+                                    const ordineId = pdfPreviewUrl.split('/ordini/')[1]?.split('/')[0];
+                                    if (ordineId) handleSendOdaEmail(ordineId);
+                                }
+                                setPdfPreviewUrl(null);
+                            }}
+                        >
+                            <Mail className="h-4 w-4 mr-1" /> Invia Email
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
