@@ -88,8 +88,8 @@ class TestCommessaOpsEndpoints(TestSetup):
     
     def test_commessa_ops_endpoint(self, auth_headers):
         """Verify /api/commesse/{id}/ops endpoint exists"""
-        # First get a commessa to test with
-        response = requests.get(f"{BASE_URL}/api/commesse?limit=1", headers=auth_headers)
+        # First get a commessa to test with (note trailing slash for FastAPI)
+        response = requests.get(f"{BASE_URL}/api/commesse/?limit=1", headers=auth_headers)
         assert response.status_code == 200, f"Failed to get commesse: {response.text}"
         
         data = response.json()
@@ -107,7 +107,7 @@ class TestCommessaOpsEndpoints(TestSetup):
     
     def test_commessa_documenti_endpoint(self, auth_headers):
         """Verify /api/commesse/{id}/documenti endpoint exists"""
-        response = requests.get(f"{BASE_URL}/api/commesse?limit=1", headers=auth_headers)
+        response = requests.get(f"{BASE_URL}/api/commesse/?limit=1", headers=auth_headers)
         assert response.status_code == 200
         
         data = response.json()
@@ -131,8 +131,8 @@ class TestParseAIEndpoint(TestSetup):
     
     def test_parse_certificato_endpoint_structure(self, auth_headers):
         """Verify parse-certificato endpoint exists and returns proper structure"""
-        # Get a commessa with documents
-        response = requests.get(f"{BASE_URL}/api/commesse?limit=5", headers=auth_headers)
+        # Get a commessa with documents (note trailing slash for FastAPI)
+        response = requests.get(f"{BASE_URL}/api/commesse/?limit=5", headers=auth_headers)
         assert response.status_code == 200
         
         data = response.json()
