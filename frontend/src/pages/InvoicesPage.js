@@ -447,6 +447,9 @@ export default function InvoicesPage() {
                                                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDownloadPDF(inv); }}>
                                                                 <Download className="mr-2 h-4 w-4" />Scarica PDF
                                                             </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setPdfPreview({ open: true, url: `/invoices/${inv.invoice_id}/pdf`, title: `Anteprima ${inv.document_number}` }); }}>
+                                                                <Eye className="mr-2 h-4 w-4" />Anteprima PDF
+                                                            </DropdownMenuItem>
                                                             {(inv.document_type === 'FT' || inv.document_type === 'NC') && (
                                                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDownloadXML(inv); }}>
                                                                     <FileCode className="mr-2 h-4 w-4" />Esporta XML
