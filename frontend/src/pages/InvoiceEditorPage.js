@@ -798,6 +798,12 @@ export default function InvoiceEditorPage() {
                         </CardContent>
                     </Card>
                 </div>
+
+                <QuickFillModal
+                    open={quickFillOpen}
+                    onOpenChange={setQuickFillOpen}
+                    onSelect={handleQuickFill}
+                />
             </div>
         </DashboardLayout>
     );
