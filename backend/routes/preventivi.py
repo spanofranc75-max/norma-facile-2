@@ -778,10 +778,10 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
     else:
         doc_date = datetime.now().strftime("%d-%m-%Y")
 
-    payment_label = esc(prev.get("payment_type_label", ""))
-    validity = prev.get("validity_days", 30)
-    subject = esc(prev.get("subject", ""))
-    riferimento = esc(prev.get("riferimento", ""))
+    payment_label = esc(prev.get("payment_type_label", "") or "")
+    validity = prev.get("validity_days", 30) or 30
+    subject = esc(prev.get("subject", "") or "")
+    riferimento = esc(prev.get("riferimento", "") or "")
     notes_text = prev.get("notes", "") or ""
 
     # ── Build line items HTML ──
