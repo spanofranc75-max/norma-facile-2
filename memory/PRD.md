@@ -251,6 +251,25 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
     - Logo mostrato in sidebar (data-testid='sidebar-company-logo')
     - Logo incluso in header PDF fatture, preventivi e DDT
   - Testing: 14/14 backend, 100% frontend (iteration_42)
+- [x] Bug Fix Critico: Creazione Cliente + EBITDA + Anteprima PDF — DONE (Phase 35) — 2026-02-28
+  - BUG FIX (P0): Creazione cliente non salvava e redirect a home
+    - Root cause: form non wrappata con preventDefault, button senza type=button
+    - Fix: <form onSubmit={preventDefault}>, type=submit per Salva, console.error logging
+    - Empty string → null conversion per campi Optional
+    - Verificato: dialog chiude, toast "Cliente creato con successo", no redirect, cliente in tabella
+  - EBITDA Dashboard (/ebitda): Pannello Analisi Finanziaria
+    - KPI cards: Ricavi YTD, Costi YTD, Margine YTD, Incassato
+    - Grafico a barre: Ricavi vs Costi per mese
+    - Area chart: Andamento margine
+    - Top Fornitori per spesa
+    - Tabella dettaglio mensile con 12 righe
+    - Selettore anno con navigazione ← →
+  - Anteprima PDF in-app
+    - PDFPreviewModal con iframe per visualizzazione inline
+    - PDFPreviewButton componente riutilizzabile
+    - Integrato in: InvoiceEditorPage, PreventivoEditorPage, DDTEditorPage, InvoicesPage (dropdown)
+  - Sidebar: Aggiunto link "Analisi Finanziaria" (TrendingUp icon)
+  - Testing: 12/12 backend, 100% frontend (iteration_43)
 - [ ] Integrazione SDI diretta con provider (API keys da configurare)
 - [ ] Recurring invoices / email reminders
 - [ ] Invio fascicolo via PEC automatico
