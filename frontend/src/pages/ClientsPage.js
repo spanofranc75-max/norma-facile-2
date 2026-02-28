@@ -466,7 +466,6 @@ export default function ClientsPage() {
                     </DialogFooter>
                     </form>
                 </DialogContent>
-                </DialogContent>
             </Dialog>
 
             {/* ── Contact Person Dialog ── */}
