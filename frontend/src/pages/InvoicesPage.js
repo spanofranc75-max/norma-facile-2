@@ -650,6 +650,13 @@ export default function InvoicesPage() {
                     )}
                 </DialogContent>
             </Dialog>
+
+            <PDFPreviewModal
+                open={pdfPreview.open}
+                onClose={() => setPdfPreview({ open: false, url: '', title: '' })}
+                pdfUrl={pdfPreview.url}
+                title={pdfPreview.title}
+            />
         </DashboardLayout>
     );
 }
