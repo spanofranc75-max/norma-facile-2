@@ -825,7 +825,7 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
     vat_groups = {}
     for ln in lines:
         rate_str = str(ln.get("vat_rate", "22"))
-        base = float(ln.get("line_total", 0))
+        base = float(ln.get("line_total") or 0)
         if sconto_globale and subtotal > 0:
             base = base * (1 - sconto_globale / 100)
         vat_groups.setdefault(rate_str, {"base": 0.0, "tax": 0.0})
