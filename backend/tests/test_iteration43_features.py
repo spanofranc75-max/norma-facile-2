@@ -98,7 +98,7 @@ class TestClientCreationBugFix:
         
         assert response.status_code == 201, f"Expected 201, got {response.status_code}: {response.text}"
         data = response.json()
-        assert data["partita_iva"] == "IT12345678901"
+        assert data["partita_iva"] == payload["partita_iva"]
         assert data["city"] == "Roma"
         
         # Verify persistence
