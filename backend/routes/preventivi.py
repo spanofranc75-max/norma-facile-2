@@ -757,11 +757,11 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
     if cl_cap or cl_city:
         parts = [p for p in [cl_cap, cl_city, f"({cl_prov})" if cl_prov else ""] if p]
         cl_full_addr += f"<br>{' '.join(parts)}" if cl_addr else ' '.join(parts)
-    cl_cf = esc(cl.get("codice_fiscale", ""))
-    cl_piva = esc(cl.get("partita_iva", ""))
-    cl_sdi = esc(cl.get("codice_sdi", ""))
-    cl_pec = esc(cl.get("pec", ""))
-    cl_email = esc(cl.get("email", ""))
+    cl_cf = esc(cl.get("codice_fiscale", "") or "")
+    cl_piva = esc(cl.get("partita_iva", "") or "")
+    cl_sdi = esc(cl.get("codice_sdi", "") or "")
+    cl_pec = esc(cl.get("pec", "") or "")
+    cl_email = esc(cl.get("email", "") or "")
 
     # ── Document data ──
     doc_number = prev.get("number", "")
