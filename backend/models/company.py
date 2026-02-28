@@ -43,8 +43,11 @@ class CompanySettings(BaseModel):
     # Bank details
     bank_details: BankDetails = Field(default_factory=BankDetails)
     
-    # Logo
+    # Logo (base64 data URI)
     logo_url: Optional[str] = None
+    
+    # Condizioni di vendita
+    condizioni_vendita: Optional[str] = None
     
     # Timestamps
     updated_at: Optional[datetime] = None
@@ -68,3 +71,4 @@ class CompanySettingsUpdate(BaseModel):
     website: Optional[str] = None
     bank_details: Optional[BankDetails] = None
     logo_url: Optional[str] = None
+    condizioni_vendita: Optional[str] = None
