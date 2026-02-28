@@ -193,14 +193,6 @@ export default function DashboardLayout({ children }) {
                         })}
                     </div>
 
-                    {/* Bottom: Impostazioni */}
-                    <div className="mt-4 pt-3 border-t border-slate-700/50">
-                        <SingleLink
-                            item={{ id: 'settings', label: 'Impostazioni', icon: Settings, path: '/settings' }}
-                            active={location.pathname.startsWith('/settings') || location.pathname.startsWith('/impostazioni')}
-                            navigate={navigate}
-                        />
-                    </div>
                 </nav>
 
                 {/* User menu */}
