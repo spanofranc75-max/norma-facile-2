@@ -86,7 +86,7 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - KPI, filtri, quick fill fatture, validazione foto installazione
 
 ### Module Interconnection (Phase 30)
-- Distinta→Preventivo, Preventivo→Fattura, Rilievo→POS
+- Distinta->Preventivo, Preventivo->Fattura, Rilievo->POS
 
 ### Kanban Planning Cantieri (Phase 32)
 - 7 colonne drag-and-drop, CRUD commesse
@@ -124,10 +124,10 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - Riscrittura completa del generatore PDF preventivi da ReportLab a WeasyPrint (HTML/CSS)
 - Layout a due colonne: info azienda (sx) + cliente con bordo (dx)
 - Titolo PREVENTIVO centrato con numero documento
-- Metadati: DATA, Pagamento, Validità
-- Tabella articoli 8 colonne: Codice, Descrizione, u.m., Quantità, Prezzo, Sconti, Importo, Iva
+- Metadati: DATA, Pagamento, Validita
+- Tabella articoli 8 colonne: Codice, Descrizione, u.m., Quantita, Prezzo, Sconti, Importo, Iva
 - Sezione note tecniche
-- Dettaglio IVA con breakdown per aliquota + TOTALE IMPONIBILE + Totale IVA + Totale €
+- Dettaglio IVA con breakdown per aliquota + TOTALE IMPONIBILE + Totale IVA + Totale EUR
 - Dati bancari
 - Pagina condizioni di vendita con sezione accettazione e firma
 - Formattazione numeri italiana (virgola decimale, punto migliaia)
@@ -143,9 +143,9 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 
 ### EN 1090 FPC System (Phase 41)
 - **Registro Saldatori**: CRUD completo con qualifica ISO 9606-1, scadenza, allarme scadenza
-- **Tracciabilità Materiali**: CRUD lotti con fornitore, tipo materiale, numero colata, certificato 3.1 (base64)
-- **Progetti FPC**: Conversione preventivo→progetto con classe EXC obbligatoria (EXC1-EXC4)
-- **Assegnazione materiali**: Link lotto→riga distinta con heat_number e material_type
+- **Tracciabilita Materiali**: CRUD lotti con fornitore, tipo materiale, numero colata, certificato 3.1 (base64)
+- **Progetti FPC**: Conversione preventivo->progetto con classe EXC obbligatoria (EXC1-EXC4)
+- **Assegnazione materiali**: Link lotto->riga distinta con heat_number e material_type
 - **Controlli FPC**: 7 checklist (dimensionale, visivo, certificati, WPS, superfici, marcatura)
 - **CE Label**: Verifica requisiti (blockers) + generazione etichetta CE
 - **Workflow completo**: Blocco generazione CE se materiali non collegati, saldatore non assegnato, controlli non completati
@@ -155,19 +155,30 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 
 ### One-Click Technical Dossier (Phase 42)
 - Servizio `dossier_generator.py`: genera Fascicolo Tecnico completo in un unico PDF
-- 6+ sezioni: Copertina, DoP (Dichiarazione di Prestazione), Etichetta CE, Riepilogo Tracciabilità Materiali, Qualifica Saldatore, Checklist Controlli FPC
+- 6+ sezioni: Copertina, DoP (Dichiarazione di Prestazione), Etichetta CE, Riepilogo Tracciabilita Materiali, Qualifica Saldatore, Checklist Controlli FPC
 - Certificati 3.1 (base64) decodificati e allegati automaticamente al fascicolo
 - Merge PDF con pypdf (PdfWriter/PdfReader)
-- Endpoint: GET /api/fpc/projects/{id}/dossier → StreamingResponse PDF
+- Endpoint: GET /api/fpc/projects/{id}/dossier -> StreamingResponse PDF
 - Frontend: Pulsante grande "Stampa Fascicolo Tecnico Completo" con loading spinner
 - Gestione robusta: sezioni omesse se dati mancanti (saldatore, certificati)
 - Testing: 22/22 backend, 100% frontend (iteration_48)
+
+### Architecture Documentation (Phase 43)
+- Creato `/app/memory/ARCHITECTURE_FPC_WORKFLOW.md` con mappa completa dei flussi
+- Documenta tutte le connessioni tra moduli: Rilievo->Distinta->Preventivo->(Fattura/Commessa/FPC)->Fascicolo
+- Schema DB completo con foreign key tra collection
+- Caso d'uso end-to-end dal sopralluogo alla fatturazione
+- Suggerimenti miglioramento: collegamento Commessa<->FPC, avanzamento Kanban automatico
 
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
 
 ## Task Futuri
+- [ ] P0: Finalizzare Dashboard EBITDA (calcoli finanziari + grafici)
+- [ ] P1: Modal Anteprima PDF per tutti i documenti
+- [ ] P1: Attivazione SDI (chiavi API Aruba)
+- [ ] Collegamento diretto Commessa <-> Progetto FPC
 - [ ] Esportazione CSV distinta di taglio per CNC
 - [ ] Estensione Distinta Facile (grata 2 ante, cancello scorrevole)
 - [ ] Categoria "CANCELLI" al listino prezzi
@@ -175,6 +186,6 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - [ ] Versioning fatture
 - [ ] Integrazione Stripe (pagamenti online)
 - [ ] Automazione invio credenziali
-- [ ] Modalità offline (PWA)
+- [ ] Modalita offline (PWA)
 - [ ] Firma Elettronica Avanzata (FEA)
 - [ ] App Mobile Nativa
