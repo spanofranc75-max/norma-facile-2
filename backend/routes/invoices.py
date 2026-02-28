@@ -136,6 +136,101 @@ async def get_quick_fill_sources(
     return {"sources": sources, "total": len(sources)}
 
 
+@router.post("/from-preventivo/{preventivo_id}")
+async def create_invoice_from_preventivo(
+    preventivo_id: str,
+    user: dict = Depends(get_current_user),
+):
+    """Create an Invoice (bozza) from an existing Preventivo. Copies lines, client, notes."""
+    uid = user["user_id"]
+    prev = await db.preventivi.find_one({"preventivo_id": preventivo_id, "user_id": uid}, {"_id": 0})
+    if not prev:
+        raise HTTPException(404, "Preventivo non trovato")
+
+    if prev.get("converted_to"):
+        raise HTTPException(409, f"Preventivo già convertito in fattura {prev['converted_to']}")
+
+    client_id = prev.get("client_id")
+    if not client_id:
+        raise HTTPException(422, "Preventivo senza cliente. Assegnare un cliente prima della conversione.")
+
+    now = datetime.now(timezone.utc)
+    invoice_id = f"inv_{uuid.uuid4().hex[:12]}"
+    year = now.year
+
+    count = await db.invoices.count_documents({"user_id": uid, "document_type": {"$in": ["fattura", "FT"]}})
+    doc_number = f"FT-{year}/{count + 1:04d}"
+
+    # Map lines
+    invoice_lines = []
+    for line in prev.get("lines", []):
+        lt = float(line.get("line_total", 0))
+        vat_r = line.get("vat_rate", "22")
+        invoice_lines.append({
+            "line_id": f"ln_{uuid.uuid4().hex[:8]}",
+            "code": line.get("codice_articolo", ""),
+            "description": line.get("description", ""),
+            "quantity": float(line.get("quantity", 1)),
+            "unit_price": float(line.get("prezzo_netto") or line.get("unit_price", 0)),
+            "discount_percent": 0,
+            "vat_rate": vat_r,
+            "line_total": lt,
+            "vat_amount": round(lt * float(vat_r) / 100, 2),
+        })
+
+    sg = float(prev.get("sconto_globale", 0))
+    subtotal = sum(r["line_total"] for r in invoice_lines)
+    sconto_val = round(subtotal * sg / 100, 2) if sg else 0
+    taxable = subtotal - sconto_val
+    total_vat = sum(r["vat_amount"] for r in invoice_lines)
+    if sg:
+        total_vat = round(total_vat * (1 - sg / 100), 2)
+
+    invoice_doc = {
+        "invoice_id": invoice_id,
+        "user_id": uid,
+        "document_type": "FT",
+        "document_number": doc_number,
+        "client_id": client_id,
+        "issue_date": now.strftime("%Y-%m-%d"),
+        "due_date": None,
+        "status": "bozza",
+        "payment_method": "bonifico",
+        "payment_terms": "30gg",
+        "tax_settings": {
+            "apply_rivalsa_inps": False, "rivalsa_inps_rate": 4.0,
+            "apply_cassa": False, "cassa_type": None, "cassa_rate": 4.0,
+            "apply_ritenuta": False, "ritenuta_rate": 20.0, "ritenuta_base": "imponibile",
+        },
+        "lines": invoice_lines,
+        "totals": {
+            "subtotal": round(subtotal, 2),
+            "taxable_amount": round(taxable, 2),
+            "total_vat": round(total_vat, 2),
+            "total_document": round(taxable + total_vat, 2),
+            "total_due": round(subtotal + total_vat, 2),
+        },
+        "notes": f"Rif. Preventivo {prev.get('number', preventivo_id)}. {prev.get('notes', '') or ''}".strip(),
+        "internal_notes": None,
+        "created_at": now,
+        "updated_at": now,
+        "converted_from": preventivo_id,
+        "converted_to": None,
+    }
+
+    await db.invoices.insert_one(invoice_doc)
+    await db.preventivi.update_one(
+        {"preventivo_id": preventivo_id},
+        {"$set": {"status": "accettato", "converted_to": invoice_id, "updated_at": now}},
+    )
+
+    return {
+        "message": f"Fattura {doc_number} creata da Preventivo {prev.get('number', '')}",
+        "invoice_id": invoice_id,
+        "document_number": doc_number,
+    }
+
+
 @router.get("/{invoice_id}", response_model=InvoiceResponse)
 async def get_invoice(
     invoice_id: str,
