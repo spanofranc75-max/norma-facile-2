@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import ArticleSearch from '../components/ArticleSearch';
+import { QuickFillModal } from '../components/QuickFillModal';
 
 const DOC_TYPES = [
     { value: 'FT', label: 'Fattura' },
