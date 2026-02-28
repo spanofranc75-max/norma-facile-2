@@ -256,6 +256,19 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Toast Informativi**: "OdA pre-compilato dalla RdP - aggiungi i prezzi e invia!"
 - Testing: 100% backend, 100% frontend (iteration_57)
 
+### Template PDF Unificato V2 - Steel Project Design Style (Phase 52)
+- **Nuovo Template**: `/app/backend/services/pdf_template_v2.py` con formato professionale unificato
+- **Header a Due Colonne**: Logo + Azienda (sinistra) | "Spett.le" + Destinatario (destra)
+- **Linea Blu Separatrice**: Separatore visivo tra header e contenuto
+- **Titolo Centrato Blu**: "RICHIESTA DI PREVENTIVO N. RDA-xxx" o "ORDINE DI ACQUISTO N. ODA-xxx"
+- **Box Info**: DATA | RIF. COMMESSA con etichette e valori
+- **Tabella Professionale**: Header blu scuro (#1e3a5f), righe alternate, colonne allineate
+- **Alert Box Giallo**: "CERTIFICATO RICHIESTO: Si richiede certificato materiale tipo 3.1 (EN 10204)"
+- **Info Box Giallo Chiaro**: Per note aggiuntive
+- **Footer Professionale**: "In attesa di Vs. cortese riscontro, porgiamo distinti saluti." + Nome Azienda + Contatti
+- **Helper Functions**: `build_header()`, `build_info_boxes()`, `build_footer()` riutilizzabili per tutti i documenti
+- Testing: 100% backend (iteration_58)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
