@@ -748,11 +748,11 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
         logo_html = f'<img src="{logo_url}" class="logo" />'
 
     # ── Client info ──
-    cl_name = esc(cl.get("business_name", ""))
-    cl_addr = esc(cl.get("address", ""))
-    cl_cap = esc(cl.get("cap", ""))
-    cl_city = esc(cl.get("city", ""))
-    cl_prov = esc(cl.get("province", ""))
+    cl_name = esc(cl.get("business_name", "") or "")
+    cl_addr = esc(cl.get("address", "") or "")
+    cl_cap = esc(cl.get("cap", "") or "")
+    cl_city = esc(cl.get("city", "") or "")
+    cl_prov = esc(cl.get("province", "") or "")
     cl_full_addr = cl_addr
     if cl_cap or cl_city:
         parts = [p for p in [cl_cap, cl_city, f"({cl_prov})" if cl_prov else ""] if p]
