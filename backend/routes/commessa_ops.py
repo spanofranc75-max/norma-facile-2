@@ -205,15 +205,27 @@ async def update_richiesta(cid: str, rdp_id: str, stato: str = Form(...), import
 
 @router.post("/{cid}/approvvigionamento/ordini")
 async def create_ordine_fornitore(cid: str, data: OrdineFornitore, user: dict = Depends(get_current_user)):
-    """Create a Purchase Order (OdA) to a supplier."""
+    """Create a Purchase Order (OdA) to a supplier with detailed line items."""
     await get_commessa_or_404(cid, user["user_id"])
     await ensure_ops_fields(cid)
+    
+    # Convert righe to dict for MongoDB
+    righe_dict = [r.model_dump() if hasattr(r, 'model_dump') else (r.dict() if hasattr(r, 'dict') else r) for r in (data.righe or [])]
+    
+    # Calculate total from lines if not provided
+    importo_totale = data.importo_totale or 0
+    if righe_dict and importo_totale == 0:
+        importo_totale = sum(
+            (r.get("quantita", 1) * r.get("prezzo_unitario", 0)) 
+            for r in righe_dict
+        )
+    
     oda = {
         "ordine_id": new_id("oda_"),
         "fornitore_nome": data.fornitore_nome,
         "fornitore_id": data.fornitore_id or "",
-        "righe": data.righe or [],
-        "importo_totale": data.importo_totale or 0,
+        "righe": righe_dict,
+        "importo_totale": round(importo_totale, 2),
         "note": data.note or "",
         "riferimento_rdp_id": data.riferimento_rdp_id or "",
         "stato": "inviato",
@@ -221,11 +233,22 @@ async def create_ordine_fornitore(cid: str, data: OrdineFornitore, user: dict = 
         "data_conferma": None,
         "data_consegna_prevista": None,
     }
+    
+    # Build summary for event note
+    n_righe = len(righe_dict)
+    cert_count = sum(1 for r in righe_dict if r.get("richiede_cert_31"))
+    note_summary = f"OdA a {data.fornitore_nome} — EUR {importo_totale:.2f}"
+    if n_righe > 0:
+        note_summary += f" ({n_righe} righe"
+        if cert_count > 0:
+            note_summary += f", {cert_count} Cert. 3.1"
+        note_summary += ")"
+    
     await db[COLL].update_one(
         {"commessa_id": cid},
         build_update_with_event(
             push_items={"approvvigionamento.ordini": oda},
-            tipo="ORDINE_EMESSO", user=user, note=f"OdA a {data.fornitore_nome} — EUR {data.importo_totale:.2f}"
+            tipo="ORDINE_EMESSO", user=user, note=note_summary
         ),
     )
     return {"message": f"Ordine emesso a {data.fornitore_nome}", "ordine": oda}
