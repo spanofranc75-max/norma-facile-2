@@ -16,7 +16,8 @@ from core.security import get_current_user
 from core.database import db
 from models.cam import (
     DatiCAMMateriale, MetodoProduttivo, TipoCertificazioneCAM,
-    calcola_cam_commessa, calcola_conformita_cam, SOGLIE_CAM_ACCIAIO
+    calcola_cam_commessa, calcola_conformita_cam, SOGLIE_CAM_ACCIAIO,
+    calcola_co2_risparmiata,
 )
 
 logger = logging.getLogger(__name__)
