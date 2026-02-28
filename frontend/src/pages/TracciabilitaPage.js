@@ -90,15 +90,15 @@ function BatchesTab() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div className="relative w-72">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
-          <Input data-testid="batch-search" placeholder="Cerca per colata, fornitore, materiale..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 bg-zinc-800 border-zinc-700 text-white" />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Input data-testid="batch-search" placeholder="Cerca per colata, fornitore, materiale..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
-        <Button data-testid="new-batch-btn" onClick={openNew} className="bg-amber-600 hover:bg-amber-500"><Plus className="h-4 w-4 mr-1" /> Nuovo Lotto</Button>
+        <Button data-testid="new-batch-btn" onClick={openNew} className="bg-[#0055FF] hover:bg-[#0044CC]"><Plus className="h-4 w-4 mr-1" /> Nuovo Lotto</Button>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto bg-white rounded-lg border">
         <table className="w-full text-sm" data-testid="batches-table">
-          <thead><tr className="border-b border-zinc-700 text-zinc-400 text-xs uppercase">
+          <thead><tr className="border-b text-slate-500 text-xs uppercase bg-slate-50">
             <th className="text-left py-2 px-3">N. Colata</th>
             <th className="text-left py-2 px-3">Materiale</th>
             <th className="text-left py-2 px-3">Fornitore</th>
@@ -108,23 +108,23 @@ function BatchesTab() {
           </tr></thead>
           <tbody>
             {filtered.map(b => (
-              <tr key={b.batch_id} className="border-b border-zinc-800 hover:bg-zinc-800/50">
-                <td className="py-2 px-3 font-mono font-bold text-amber-400">{b.heat_number}</td>
+              <tr key={b.batch_id} className="border-b hover:bg-slate-50">
+                <td className="py-2 px-3 font-mono font-bold text-[#0055FF]">{b.heat_number}</td>
                 <td className="py-2 px-3">{b.material_type}</td>
                 <td className="py-2 px-3">{b.supplier_name}</td>
-                <td className="py-2 px-3 text-zinc-400">{b.received_date || '-'}</td>
+                <td className="py-2 px-3 text-slate-400">{b.received_date || '-'}</td>
                 <td className="py-2 px-3 text-center">
                   {b.has_certificate ? (
-                    <button data-testid={`download-cert-${b.batch_id}`} onClick={() => downloadCert(b.batch_id, b.certificate_filename)} className="text-green-400 hover:text-green-300"><Download className="h-4 w-4 inline" /></button>
-                  ) : <span className="text-zinc-500">-</span>}
+                    <button data-testid={`download-cert-${b.batch_id}`} onClick={() => downloadCert(b.batch_id, b.certificate_filename)} className="text-emerald-500 hover:text-emerald-600"><Download className="h-4 w-4 inline" /></button>
+                  ) : <span className="text-slate-300">-</span>}
                 </td>
                 <td className="py-2 px-3 text-right space-x-1">
-                  <button data-testid={`edit-batch-${b.batch_id}`} onClick={() => openEdit(b)} className="text-zinc-400 hover:text-white"><Edit className="h-4 w-4 inline" /></button>
-                  <button data-testid={`delete-batch-${b.batch_id}`} onClick={() => deleteBatch(b.batch_id)} className="text-red-400 hover:text-red-300"><Trash2 className="h-4 w-4 inline" /></button>
+                  <button data-testid={`edit-batch-${b.batch_id}`} onClick={() => openEdit(b)} className="text-slate-400 hover:text-slate-700"><Edit className="h-4 w-4 inline" /></button>
+                  <button data-testid={`delete-batch-${b.batch_id}`} onClick={() => deleteBatch(b.batch_id)} className="text-red-400 hover:text-red-500"><Trash2 className="h-4 w-4 inline" /></button>
                 </td>
               </tr>
             ))}
-            {filtered.length === 0 && <tr><td colSpan={6} className="text-center py-8 text-zinc-500">Nessun lotto registrato</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan={6} className="text-center py-8 text-slate-400">Nessun lotto registrato</td></tr>}
           </tbody>
         </table>
       </div>
