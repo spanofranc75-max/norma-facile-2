@@ -363,6 +363,67 @@ async def get_ddt_pdf(ddt_id: str, user: dict = Depends(get_current_user)):
     )
 
 
+# ── Send DDT via Email ──
+
+@router.post("/{ddt_id}/send-email")
+async def send_ddt_email(ddt_id: str, user: dict = Depends(get_current_user)):
+    """Generate PDF and send DDT via email to client."""
+    doc = await db[COLLECTION].find_one(
+        {"ddt_id": ddt_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "DDT non trovato")
+
+    # Find client email
+    client = None
+    to_email = None
+    if doc.get("client_id"):
+        client = await db.clients.find_one({"client_id": doc["client_id"]}, {"_id": 0})
+        if client:
+            to_email = client.get("pec") or client.get("email")
+            if not to_email:
+                for contact in client.get("contacts", []):
+                    if contact.get("email") and contact.get("doc_preferences", {}).get("ddt"):
+                        to_email = contact["email"]
+                        break
+
+    if not to_email:
+        raise HTTPException(400, "Nessun indirizzo email trovato per il destinatario.")
+
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+
+    from services.ddt_pdf_service import generate_ddt_pdf
+    pdf_buffer = generate_ddt_pdf(doc, company)
+    pdf_bytes = pdf_buffer.getvalue()
+    ddt_number = doc.get("number", ddt_id)
+    filename = f"ddt_{ddt_number.replace('/', '_')}.pdf"
+
+    from services.email_service import send_ddt_email as _send
+    success = await _send(
+        to_email=to_email,
+        client_name=client.get("business_name", "") if client else "",
+        ddt_number=ddt_number,
+        ddt_type=doc.get("ddt_type", "vendita"),
+        pdf_bytes=pdf_bytes,
+        filename=filename,
+    )
+
+    if not success:
+        raise HTTPException(500, "Invio email fallito. Verifica la configurazione Resend.")
+
+    await db[COLLECTION].update_one(
+        {"ddt_id": ddt_id},
+        {"$set": {
+            "email_sent": True,
+            "email_sent_to": to_email,
+            "email_sent_at": datetime.now(timezone.utc).isoformat(),
+        }}
+    )
+
+    return {"message": f"DDT inviato via email a {to_email}", "to": to_email}
+
+
+
 # ── Convert DDT to Invoice ──
 
 @router.post("/{ddt_id}/convert-to-invoice")
