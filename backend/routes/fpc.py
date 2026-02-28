@@ -77,15 +77,23 @@ async def delete_welder(welder_id: str, user: dict = Depends(get_current_user)):
 # ═══════════════════════════════════════════════════════════════
 
 @router.get("/batches")
-async def list_batches(user: dict = Depends(get_current_user)):
+async def list_batches(
+    commessa_id: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    """List material batches, optionally filtered by commessa."""
+    query = {"user_id": user["user_id"]}
+    if commessa_id:
+        query["commessa_id"] = commessa_id
+    
     cursor = db.material_batches.find(
-        {"user_id": user["user_id"]},
-        {"_id": 0, "certificate_base64": 0}   # Exclude heavy field
-    ).sort("created_at", -1)
+        query,
+        {"_id": 0, "certificate_base64": 0, "certificato_31_base64": 0}   # Exclude heavy fields
+    ).sort("data_registrazione", -1)
     docs = await cursor.to_list(500)
     for d in docs:
-        d["has_certificate"] = bool(d.pop("_has_cert", False) or d.get("has_certificate"))
-    return docs
+        d["has_certificate"] = bool(d.pop("_has_cert", False) or d.get("has_certificate") or d.get("certificato_doc_id"))
+    return {"batches": docs}
 
 
 @router.get("/batches/{batch_id}")
