@@ -1015,19 +1015,21 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
             <Section title="Repository Documenti" icon={FileUp} count={docs.length} defaultOpen>
                 <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                        <Select value={uploadType} onValueChange={setUploadType}>
-                            <SelectTrigger className="w-44 h-8 text-xs" data-testid="select-upload-type"><SelectValue /></SelectTrigger>
-                            <SelectContent position="popper" sideOffset={4} className="z-[9999]">
-                                <SelectItem value="certificato_31">Certificato 3.1</SelectItem>
-                                <SelectItem value="conferma_ordine">Conferma Ordine</SelectItem>
-                                <SelectItem value="disegno">Disegno</SelectItem>
-                                <SelectItem value="certificato_verniciatura">Cert. Verniciatura</SelectItem>
-                                <SelectItem value="certificato_zincatura">Cert. Zincatura</SelectItem>
-                                <SelectItem value="ddt_fornitore">DDT Fornitore</SelectItem>
-                                <SelectItem value="foto">Foto</SelectItem>
-                                <SelectItem value="altro">Altro</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <select
+                            value={uploadType}
+                            onChange={(e) => setUploadType(e.target.value)}
+                            className="w-44 h-8 text-xs rounded-md border border-input bg-transparent px-2 py-1 shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                            data-testid="select-upload-type"
+                        >
+                            <option value="certificato_31">Certificato 3.1</option>
+                            <option value="conferma_ordine">Conferma Ordine</option>
+                            <option value="disegno">Disegno</option>
+                            <option value="certificato_verniciatura">Cert. Verniciatura</option>
+                            <option value="certificato_zincatura">Cert. Zincatura</option>
+                            <option value="ddt_fornitore">DDT Fornitore</option>
+                            <option value="foto">Foto</option>
+                            <option value="altro">Altro</option>
+                        </select>
                         <input ref={fileRef} type="file" className="hidden" onChange={handleUploadDoc} data-testid="file-input" />
                         <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} className="text-xs" data-testid="btn-upload-doc">
                             <FileUp className="h-3 w-3 mr-1" /> Carica File
