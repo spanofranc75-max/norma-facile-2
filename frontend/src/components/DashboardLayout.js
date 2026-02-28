@@ -174,7 +174,11 @@ export default function DashboardLayout({ children }) {
                 {/* Logo */}
                 <div className="px-5 pt-5 pb-4">
                     <div className="flex items-center gap-2">
-                        <Scale className="h-7 w-7 text-[#0055FF]" strokeWidth={1.5} />
+                        {companyLogo ? (
+                            <img src={companyLogo} alt="Logo" className="h-8 max-w-[120px] object-contain" data-testid="sidebar-company-logo" />
+                        ) : (
+                            <Scale className="h-7 w-7 text-[#0055FF]" strokeWidth={1.5} />
+                        )}
                         <span className="font-sans text-lg font-bold text-white">Norma Facile</span>
                     </div>
                 </div>
