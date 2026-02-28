@@ -684,6 +684,128 @@ async def get_invoice_xml(
     )
 
 
+# ── Send Invoice via Email ──
+
+@router.post("/{invoice_id}/send-email")
+async def send_invoice_email(invoice_id: str, user: dict = Depends(get_current_user)):
+    """Generate PDF and send invoice via email to client."""
+    invoice = await db.invoices.find_one(
+        {"invoice_id": invoice_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not invoice:
+        raise HTTPException(404, "Documento non trovato")
+
+    client = await db.clients.find_one({"client_id": invoice.get("client_id")}, {"_id": 0})
+    if not client:
+        raise HTTPException(400, "Cliente non trovato")
+
+    # Find email recipient
+    to_email = client.get("pec") or client.get("email")
+    if not to_email:
+        # Check contacts for email preferences
+        for contact in client.get("contacts", []):
+            if contact.get("email") and contact.get("doc_preferences", {}).get("fatture"):
+                to_email = contact["email"]
+                break
+    if not to_email:
+        raise HTTPException(400, "Nessun indirizzo email trovato per il cliente. Aggiungi un'email o PEC nella scheda cliente.")
+
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+
+    # Generate PDF
+    pdf_bytes = pdf_service.generate_invoice_pdf(invoice, client, company)
+    doc_num = invoice.get("document_number", "documento")
+    filename = f"{doc_num}.pdf"
+
+    # Send email
+    from services.email_service import send_invoice_email as _send
+    doc_type = invoice.get("document_type", "FT")
+    total = invoice.get("totals", {}).get("total_document", 0)
+
+    success = await _send(
+        to_email=to_email,
+        client_name=client.get("business_name", ""),
+        document_number=doc_num,
+        document_type=doc_type,
+        total=total,
+        pdf_bytes=pdf_bytes,
+        filename=filename,
+    )
+
+    if not success:
+        raise HTTPException(500, "Invio email fallito. Verifica la configurazione Resend in Impostazioni.")
+
+    # Track email sent
+    await db.invoices.update_one(
+        {"invoice_id": invoice_id},
+        {"$set": {
+            "email_sent": True,
+            "email_sent_to": to_email,
+            "email_sent_at": datetime.now(timezone.utc).isoformat(),
+        }}
+    )
+
+    logger.info(f"Invoice {doc_num} sent via email to {to_email}")
+    return {"message": f"Email inviata con successo a {to_email}", "to": to_email}
+
+
+# ── Send Invoice to SDI ──
+
+@router.post("/{invoice_id}/send-sdi")
+async def send_invoice_to_sdi(invoice_id: str, user: dict = Depends(get_current_user)):
+    """Generate FatturaPA XML and send to SDI via Aruba."""
+    invoice = await db.invoices.find_one(
+        {"invoice_id": invoice_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not invoice:
+        raise HTTPException(404, "Documento non trovato")
+
+    if invoice.get("document_type") not in ["FT", "NC"]:
+        raise HTTPException(400, "Solo fatture e note di credito possono essere inviate al SDI")
+
+    if invoice.get("status") == "bozza":
+        raise HTTPException(400, "Non puoi inviare una bozza al SDI. Prima emetti il documento.")
+
+    client = await db.clients.find_one({"client_id": invoice.get("client_id")}, {"_id": 0})
+    if not client:
+        raise HTTPException(400, "Cliente non trovato")
+
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    if not company or not company.get("partita_iva"):
+        raise HTTPException(400, "Configura i dati aziendali (P.IVA obbligatoria) prima di inviare al SDI")
+
+    # Generate XML
+    xml_content = xml_service.generate_fattura_xml(invoice, client, company)
+    piva = company.get("partita_iva", "").replace(" ", "")
+    doc_num = invoice.get("document_number", "").replace("-", "_").replace("/", "_")
+    filename = f"IT{piva}_{doc_num}.xml"
+
+    # Send to SDI via Aruba
+    from services.aruba_sdi import aruba_sdi
+    if not aruba_sdi.is_configured:
+        raise HTTPException(400, "SDI non configurato. Inserisci SDI_API_KEY e SDI_API_SECRET nel file .env")
+
+    result = await aruba_sdi.send_invoice(xml_content, filename)
+
+    if not result.get("success"):
+        raise HTTPException(500, f"Invio SDI fallito: {result.get('error', 'Errore sconosciuto')}")
+
+    # Update invoice status
+    await db.invoices.update_one(
+        {"invoice_id": invoice_id},
+        {"$set": {
+            "status": "inviata_sdi",
+            "sdi_id": result.get("sdi_id"),
+            "sdi_sent_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }}
+    )
+
+    logger.info(f"Invoice {doc_num} sent to SDI: {result.get('sdi_id')}")
+    return {"message": "Fattura inviata al SDI con successo", "sdi_id": result.get("sdi_id")}
+
+
+
 @router.delete("/{invoice_id}")
 async def delete_invoice(
     invoice_id: str,
