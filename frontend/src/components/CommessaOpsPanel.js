@@ -897,7 +897,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                 </div>
                                 <div>
                                     <span className="text-slate-500 block">Normativa</span>
-                                    <span className="font-mono">{d.metadata_estratti.normativa || '-'}</span>
+                                    <span className="font-mono">{d.metadata_estratti.normativa_riferimento || d.metadata_estratti.normativa || '-'}</span>
                                 </div>
                             </div>
                         </div>
