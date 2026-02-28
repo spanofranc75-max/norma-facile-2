@@ -862,14 +862,32 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                         <Plus className="h-3 w-3 mr-1" /> Nuovo C/L
                     </Button>
                     {cl.map(c => (
-                        <div key={c.cl_id} className="flex items-center gap-2 p-2 bg-slate-50 rounded text-xs" data-testid={`cl-${c.cl_id}`}>
-                            <Paintbrush className="h-3.5 w-3.5 text-purple-500 shrink-0" />
-                            <span className="font-medium flex-1 truncate capitalize">{c.tipo} → {c.fornitore_nome}</span>
-                            <StatoBadge stato={c.stato} />
-                            {c.stato === 'da_inviare' && <Button size="sm" variant="ghost" className="h-6 text-[10px] text-blue-600" onClick={() => handleUpdateCL(c.cl_id, 'inviato')}>Invia</Button>}
-                            {c.stato === 'inviato' && <Button size="sm" variant="ghost" className="h-6 text-[10px] text-amber-600" onClick={() => handleUpdateCL(c.cl_id, 'in_lavorazione')}>In Lav.</Button>}
-                            {c.stato === 'in_lavorazione' && <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => handleUpdateCL(c.cl_id, 'rientrato')}>Rientrato</Button>}
-                            {c.stato === 'rientrato' && <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => handleUpdateCL(c.cl_id, 'verificato')}>Verifica</Button>}
+                        <div key={c.cl_id} className="p-2.5 bg-slate-50 rounded border text-xs space-y-1.5" data-testid={`cl-${c.cl_id}`}>
+                            <div className="flex items-center gap-2">
+                                <Paintbrush className="h-3.5 w-3.5 text-purple-500 shrink-0" />
+                                <span className="font-semibold flex-1 truncate capitalize">{c.tipo} → {c.fornitore_nome}</span>
+                                <StatoBadge stato={c.stato} />
+                                {c.stato_email === 'inviata' && <Badge className="bg-green-100 text-green-700 text-[8px]"><MailCheck className="h-2.5 w-2.5 mr-0.5" />Email</Badge>}
+                            </div>
+                            {c.ral && <div className="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded inline-block">RAL: {c.ral}</div>}
+                            {(c.righe || []).length > 0 && <div className="text-[10px] text-slate-500">{c.righe.length} materiali — {c.righe.reduce((sum, r) => sum + (parseFloat(r.peso_kg) || 0), 0).toFixed(1)} kg</div>}
+                            <div className="flex items-center gap-1 flex-wrap pt-1">
+                                {/* Status transition buttons */}
+                                {c.stato === 'da_inviare' && <Button size="sm" variant="ghost" className="h-6 text-[10px] text-blue-600" onClick={() => handleUpdateCL(c.cl_id, 'inviato')}>Invia</Button>}
+                                {c.stato === 'inviato' && <Button size="sm" variant="ghost" className="h-6 text-[10px] text-amber-600" onClick={() => handleUpdateCL(c.cl_id, 'in_lavorazione')}>In Lav.</Button>}
+                                {c.stato === 'in_lavorazione' && <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => handleUpdateCL(c.cl_id, 'rientrato')}>Rientrato</Button>}
+                                {c.stato === 'rientrato' && <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => handleUpdateCL(c.cl_id, 'verificato')}>Verifica</Button>}
+                                <div className="h-4 w-px bg-slate-200 mx-0.5" />
+                                {/* PDF Preview */}
+                                <Button size="sm" variant="ghost" className="h-6 text-[10px] text-blue-600" onClick={() => handlePreviewClPdf(c.cl_id)} data-testid={`cl-preview-${c.cl_id}`}>
+                                    <Eye className="h-3 w-3 mr-0.5" /> PDF
+                                </Button>
+                                {/* Send Email */}
+                                <Button size="sm" variant="ghost" className="h-6 text-[10px] text-purple-600" disabled={sendingEmail === c.cl_id} onClick={() => handleSendClEmail(c.cl_id)} data-testid={`cl-email-${c.cl_id}`}>
+                                    {sendingEmail === c.cl_id ? <Loader2 className="h-3 w-3 animate-spin mr-0.5" /> : <Mail className="h-3 w-3 mr-0.5" />}
+                                    Email
+                                </Button>
+                            </div>
                         </div>
                     ))}
                 </div>
