@@ -50,6 +50,7 @@ const NAV_GROUPS = [
         icon: Wrench,
         type: 'group',
         children: [
+            { path: '/planning', label: 'Planning Cantieri', icon: LayoutGrid },
             { path: '/rilievi', label: 'Rilievi', icon: Ruler },
             { path: '/distinte', label: 'Distinte', icon: Package },
             { path: '/sicurezza', label: 'Sicurezza POS', icon: HardHat },
