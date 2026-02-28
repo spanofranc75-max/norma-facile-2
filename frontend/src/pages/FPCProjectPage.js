@@ -76,6 +76,22 @@ export default function FPCProjectPage() {
     else { const d = await r.json().catch(() => ({})); toast.error(d.detail || 'Errore generazione CE'); }
   };
 
+  const downloadDossier = async () => {
+    setGeneratingDossier(true);
+    try {
+      const r = await fetch(`${API}/api/fpc/projects/${projectId}/dossier`, { headers: getHeaders() });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); toast.error(d.detail || 'Errore generazione'); return; }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Fascicolo_Tecnico_${project?.preventivo_number || projectId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Fascicolo Tecnico scaricato!');
+    } catch (e) { toast.error('Errore: ' + e.message); } finally { setGeneratingDossier(false); }
+  };
+
   if (!project) return <DashboardLayout><div className="flex items-center justify-center h-64"><p className="text-slate-400">Caricamento...</p></div></DashboardLayout>;
 
   const fpc = project.fpc_data || {};
