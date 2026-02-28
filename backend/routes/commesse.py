@@ -172,6 +172,13 @@ def ensure_moduli(doc):
         doc["cantiere"] = {}
     if "riferimento" not in doc:
         doc["riferimento"] = ""
+    # Initialize operational fields for backward compat
+    if "approvvigionamento" not in doc:
+        doc["approvvigionamento"] = {"richieste": [], "ordini": [], "arrivi": []}
+    if "fasi_produzione" not in doc:
+        doc["fasi_produzione"] = []
+    if "conto_lavoro" not in doc:
+        doc["conto_lavoro"] = []
     return doc
 
 
