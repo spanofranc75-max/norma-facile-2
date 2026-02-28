@@ -1766,6 +1766,100 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* CAM Lotto Dialog */}
+            <Dialog open={camLottoOpen} onOpenChange={(open) => { setCamLottoOpen(open); if (!open) setEditingCamLotto(null); }}>
+                <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto" data-testid="cam-lotto-dialog">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Leaf className="h-5 w-5 text-emerald-600" />
+                            {editingCamLotto ? 'Modifica Lotto CAM' : 'Nuovo Lotto Materiale CAM'}
+                        </DialogTitle>
+                        <DialogDescription>Inserisci i dati del materiale per il calcolo CAM</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label className="text-xs">Descrizione *</Label>
+                                <Input value={camLottoForm.descrizione} onChange={e => setCamLottoForm(f => ({ ...f, descrizione: e.target.value }))} placeholder="es. IPE 200, HEB 160" className="mt-1 h-8 text-sm" data-testid="cam-descrizione" />
+                            </div>
+                            <div>
+                                <Label className="text-xs">Qualità acciaio</Label>
+                                <Input value={camLottoForm.qualita_acciaio} onChange={e => setCamLottoForm(f => ({ ...f, qualita_acciaio: e.target.value }))} placeholder="es. S275JR" className="mt-1 h-8 text-sm" data-testid="cam-qualita" />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label className="text-xs">Fornitore</Label>
+                                <Input value={camLottoForm.fornitore} onChange={e => setCamLottoForm(f => ({ ...f, fornitore: e.target.value }))} placeholder="Acciaieria" className="mt-1 h-8 text-sm" data-testid="cam-fornitore" />
+                            </div>
+                            <div>
+                                <Label className="text-xs">N. Colata</Label>
+                                <Input value={camLottoForm.numero_colata} onChange={e => setCamLottoForm(f => ({ ...f, numero_colata: e.target.value }))} placeholder="Heat number" className="mt-1 h-8 text-sm" data-testid="cam-colata" />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label className="text-xs">Peso (kg) *</Label>
+                                <Input type="number" value={camLottoForm.peso_kg} onChange={e => setCamLottoForm(f => ({ ...f, peso_kg: e.target.value }))} className="mt-1 h-8 text-sm" data-testid="cam-peso" />
+                            </div>
+                            <div>
+                                <Label className="text-xs">% Riciclato *</Label>
+                                <Input type="number" min="0" max="100" value={camLottoForm.percentuale_riciclato} onChange={e => setCamLottoForm(f => ({ ...f, percentuale_riciclato: e.target.value }))} className="mt-1 h-8 text-sm" data-testid="cam-perc-riciclato" />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label className="text-xs">Metodo produttivo</Label>
+                                <Select value={camLottoForm.metodo_produttivo} onValueChange={v => setCamLottoForm(f => ({ ...f, metodo_produttivo: v }))}>
+                                    <SelectTrigger className="mt-1 h-8 text-xs" data-testid="cam-metodo"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="forno_elettrico_non_legato">Forno Elettrico (non legato) - soglia 75%</SelectItem>
+                                        <SelectItem value="forno_elettrico_legato">Forno Elettrico (legato) - soglia 60%</SelectItem>
+                                        <SelectItem value="ciclo_integrale">Ciclo Integrale (altoforno) - soglia 12%</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div>
+                                <Label className="text-xs">Certificazione</Label>
+                                <Select value={camLottoForm.tipo_certificazione} onValueChange={v => setCamLottoForm(f => ({ ...f, tipo_certificazione: v }))}>
+                                    <SelectTrigger className="mt-1 h-8 text-xs" data-testid="cam-certificazione"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="epd">EPD (ISO 14025, EN 15804)</SelectItem>
+                                        <SelectItem value="remade_in_italy">ReMade in Italy</SelectItem>
+                                        <SelectItem value="dichiarazione_produttore">Dichiarazione Produttore</SelectItem>
+                                        <SelectItem value="altra_accreditata">Altra certificazione</SelectItem>
+                                        <SelectItem value="nessuna">Nessuna</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label className="text-xs">N. Certificazione</Label>
+                                <Input value={camLottoForm.numero_certificazione} onChange={e => setCamLottoForm(f => ({ ...f, numero_certificazione: e.target.value }))} className="mt-1 h-8 text-sm" data-testid="cam-num-cert" />
+                            </div>
+                            <div>
+                                <Label className="text-xs">Ente certificatore</Label>
+                                <Input value={camLottoForm.ente_certificatore} onChange={e => setCamLottoForm(f => ({ ...f, ente_certificatore: e.target.value }))} placeholder="es. ICMQ, Bureau Veritas" className="mt-1 h-8 text-sm" data-testid="cam-ente" />
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Checkbox checked={camLottoForm.uso_strutturale} onCheckedChange={v => setCamLottoForm(f => ({ ...f, uso_strutturale: v }))} id="cam-strutturale" data-testid="cam-strutturale" />
+                            <Label htmlFor="cam-strutturale" className="text-xs">Uso strutturale (soglie più restrittive)</Label>
+                        </div>
+                        <div className="p-2 bg-slate-50 rounded text-[10px] text-slate-500">
+                            <strong>Soglie CAM (DM 256/2022):</strong> Forno el. non legato ≥ 75% | Forno el. legato ≥ 60% | Ciclo integrale ≥ 12%
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" size="sm" onClick={() => setCamLottoOpen(false)}>Annulla</Button>
+                        <Button size="sm" onClick={handleCreateCamLotto} className="bg-emerald-600 text-white hover:bg-emerald-700" data-testid="btn-save-cam-lotto">
+                            {editingCamLotto ? 'Aggiorna' : 'Crea Lotto'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
