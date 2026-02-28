@@ -659,6 +659,50 @@ async def get_oda_pdf(cid: str, ordine_id: str, user: dict = Depends(get_current
     )
 
 
+@router.get("/{cid}/approvvigionamento/ordini/{ordine_id}/preview-email")
+async def preview_oda_email(cid: str, ordine_id: str, user: dict = Depends(get_current_user)):
+    """Preview email that would be sent for OdA."""
+    doc = await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
+    approv = doc.get("approvvigionamento", {})
+    oda = next((o for o in approv.get("ordini", []) if o.get("ordine_id") == ordine_id), None)
+    if not oda:
+        raise HTTPException(404, "Ordine non trovato")
+
+    fornitore_id = oda.get("fornitore_id")
+    to_email = ""
+    if fornitore_id:
+        forn = await db.clients.find_one({"client_id": fornitore_id}, {"_id": 0})
+        if forn:
+            to_email = forn.get("pec") or forn.get("email") or ""
+            if not to_email:
+                for c in forn.get("contacts", []):
+                    if c.get("email"):
+                        to_email = c["email"]
+                        break
+
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company_name = company.get("business_name", "")
+
+    from services.email_preview import build_oda_email
+    preview = build_oda_email(
+        fornitore_name=oda.get("fornitore_nome", ""),
+        ordine_id=ordine_id,
+        commessa_numero=doc.get("numero", "N/D"),
+        company_name=company_name,
+        importo_totale=oda.get("importo_totale", 0),
+    )
+    return {
+        "to_email": to_email,
+        "to_name": oda.get("fornitore_nome", ""),
+        "subject": preview["subject"],
+        "html_body": preview["html_body"],
+        "has_attachment": True,
+        "attachment_name": f"OdA_{ordine_id}.pdf",
+    }
+
+
+
 @router.post("/{cid}/approvvigionamento/ordini/{ordine_id}/send-email")
 async def send_oda_email_endpoint(cid: str, ordine_id: str, user: dict = Depends(get_current_user)):
     """Generate PDF and send OdA via email to supplier."""
