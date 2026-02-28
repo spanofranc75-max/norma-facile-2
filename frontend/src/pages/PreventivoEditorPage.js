@@ -596,6 +596,14 @@ export default function PreventivoEditorPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Progressive Invoice Modal */}
+            <InvoiceGenerationModal
+                open={showInvoiceModal}
+                onOpenChange={setShowInvoiceModal}
+                prevId={prevId}
+                onCreated={(res) => navigate(`/invoices/${res.invoice_id}`)}
+            />
         </DashboardLayout>
     );
 }
