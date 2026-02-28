@@ -458,8 +458,8 @@ export default function ClientsPage() {
                     </div>
 
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setDialogOpen(false)}>Annulla</Button>
-                        <Button data-testid="btn-save-client" onClick={handleSave} disabled={saving} className="bg-[#0055FF] text-white hover:bg-[#0044CC]">
+                        <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annulla</Button>
+                        <Button type="button" data-testid="btn-save-client" onClick={handleSave} disabled={saving} className="bg-[#0055FF] text-white hover:bg-[#0044CC]">
                             {saving ? 'Salvataggio...' : 'Salva'}
                         </Button>
                     </DialogFooter>
