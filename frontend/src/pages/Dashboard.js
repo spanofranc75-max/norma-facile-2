@@ -148,7 +148,7 @@ export default function Dashboard() {
                     ))}
                 </div>
 
-                {/* Fatturato Mensile Chart + Scadenze */}
+                {/* Fatturato Mensile Chart + Quality Score */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Chart */}
                     <Card className="lg:col-span-2 border-gray-200" data-testid="chart-fatturato">
