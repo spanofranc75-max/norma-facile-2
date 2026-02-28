@@ -414,7 +414,7 @@ async def update_preventivo(prev_id: str, data: PreventivoUpdate, user: dict = D
     simple_fields = [
         "client_id", "subject", "validity_days", "notes", "status",
         "payment_type_id", "payment_type_label", "destinazione_merce",
-        "iban", "banca", "note_pagamento", "riferimento",
+        "iban", "banca", "note_pagamento", "riferimento", "normativa",
     ]
     for field in simple_fields:
         val = getattr(data, field, None)
