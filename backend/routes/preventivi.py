@@ -638,6 +638,68 @@ async def get_preventivo_pdf(prev_id: str, user: dict = Depends(get_current_user
     )
 
 
+# ── Send Preventivo via Email ──
+
+@router.post("/{prev_id}/send-email")
+async def send_preventivo_email(prev_id: str, user: dict = Depends(get_current_user)):
+    """Generate PDF and send preventivo via email to client."""
+    doc = await db.preventivi.find_one(
+        {"preventivo_id": prev_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "Preventivo non trovato")
+
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+
+    client = None
+    to_email = None
+    if doc.get("client_id"):
+        client = await db.clients.find_one({"client_id": doc["client_id"]}, {"_id": 0})
+        if client:
+            to_email = client.get("pec") or client.get("email")
+            if not to_email:
+                for contact in client.get("contacts", []):
+                    if contact.get("email") and contact.get("doc_preferences", {}).get("preventivi"):
+                        to_email = contact["email"]
+                        break
+
+    if not to_email:
+        raise HTTPException(400, "Nessun indirizzo email trovato per il cliente.")
+
+    pdf_buffer = generate_preventivo_pdf(doc, company, client)
+    pdf_bytes = pdf_buffer.getvalue()
+    prev_number = doc.get("number", prev_id)
+    filename = f"preventivo_{prev_number.replace(' ', '_').replace('/', '_')}.pdf"
+
+    from services.email_service import send_invoice_email as _send
+    total = doc.get("totals", {}).get("total_document", 0)
+
+    success = await _send(
+        to_email=to_email,
+        client_name=client.get("business_name", "") if client else "",
+        document_number=prev_number,
+        document_type="PRV",
+        total=total,
+        pdf_bytes=pdf_bytes,
+        filename=filename,
+    )
+
+    if not success:
+        raise HTTPException(500, "Invio email fallito. Verifica la configurazione Resend.")
+
+    await db.preventivi.update_one(
+        {"preventivo_id": prev_id},
+        {"$set": {
+            "email_sent": True,
+            "email_sent_to": to_email,
+            "email_sent_at": datetime.now(timezone.utc).isoformat(),
+        }}
+    )
+
+    return {"message": f"Preventivo inviato via email a {to_email}", "to": to_email}
+
+
+
 # ── PDF Builder ──────────────────────────────────────────────────
 
 def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
