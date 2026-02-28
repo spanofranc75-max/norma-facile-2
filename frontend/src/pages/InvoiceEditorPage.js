@@ -385,6 +385,7 @@ export default function InvoiceEditorPage() {
                         <Save className="h-4 w-4 mr-2" />
                         {saving ? 'Salvataggio...' : 'Salva'}
                     </Button>
+                    </div>
                 </div>
 
                 {/* Document Header */}
