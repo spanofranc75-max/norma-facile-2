@@ -1,5 +1,5 @@
 /**
- * DDT List Page — Lista DDT con filtro per tipo.
+ * DDT List Page — Registro DDT con KPI, filtri avanzati e reportistica mensile.
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -10,7 +10,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { toast } from 'sonner';
-import { Plus, Search, Truck, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, Truck, Pencil, Trash2, Package, FileCheck, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import EmptyState from '../components/EmptyState';
 
@@ -19,6 +19,12 @@ const DDT_TYPES = [
     { value: 'vendita', label: 'Vendita' },
     { value: 'conto_lavoro', label: 'Conto Lavoro' },
     { value: 'rientro_conto_lavoro', label: 'Rientro C/L' },
+];
+
+const STATUS_OPTIONS = [
+    { value: '', label: 'Tutti' },
+    { value: 'non_fatturato', label: 'Non Fatt.' },
+    { value: 'fatturato', label: 'Fatturato' },
 ];
 
 const TYPE_BADGES = {
@@ -35,18 +41,25 @@ const STATUS_BADGES = {
 
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
 
+const MONTHS = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+
 export default function DDTListPage() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [stats, setStats] = useState(null);
     const activeType = searchParams.get('type') || '';
+    const activeStatus = searchParams.get('status') || '';
+    const [statsYear, setStatsYear] = useState(new Date().getFullYear());
+    const [statsMonth, setStatsMonth] = useState(new Date().getMonth() + 1);
 
     const fetchItems = useCallback(async () => {
         try {
             let url = '/ddt/?';
             if (activeType) url += `ddt_type=${activeType}&`;
+            if (activeStatus) url += `status=${activeStatus}&`;
             if (search) url += `search=${search}&`;
             const data = await apiRequest(url);
             setItems(data.items || []);
@@ -55,9 +68,17 @@ export default function DDTListPage() {
         } finally {
             setLoading(false);
         }
-    }, [activeType, search]);
+    }, [activeType, activeStatus, search]);
+
+    const fetchStats = useCallback(async () => {
+        try {
+            const data = await apiRequest(`/ddt/stats/registro?year=${statsYear}&month=${statsMonth}`);
+            setStats(data);
+        } catch { /* stats are optional */ }
+    }, [statsYear, statsMonth]);
 
     useEffect(() => { fetchItems(); }, [fetchItems]);
+    useEffect(() => { fetchStats(); }, [fetchStats]);
 
     const handleDelete = async (id) => {
         if (!window.confirm('Eliminare questo DDT?')) return;
@@ -65,13 +86,23 @@ export default function DDTListPage() {
             await apiRequest(`/ddt/${id}`, { method: 'DELETE' });
             toast.success('DDT eliminato');
             fetchItems();
+            fetchStats();
         } catch (e) { toast.error(e.message); }
     };
 
-    const setType = (t) => {
-        if (t) searchParams.set('type', t);
-        else searchParams.delete('type');
+    const setFilter = (key, val) => {
+        if (val) searchParams.set(key, val);
+        else searchParams.delete(key);
         setSearchParams(searchParams);
+    };
+
+    const prevMonth = () => {
+        if (statsMonth === 1) { setStatsMonth(12); setStatsYear(y => y - 1); }
+        else setStatsMonth(m => m - 1);
+    };
+    const nextMonth = () => {
+        if (statsMonth === 12) { setStatsMonth(1); setStatsYear(y => y + 1); }
+        else setStatsMonth(m => m + 1);
     };
 
     return (
@@ -81,32 +112,54 @@ export default function DDTListPage() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="font-sans text-2xl font-bold text-[#1E293B] flex items-center gap-2">
-                            <Truck className="h-6 w-6 text-[#0055FF]" /> Documenti di Trasporto
+                            <Truck className="h-6 w-6 text-[#0055FF]" /> Registro DDT
                         </h1>
-                        <p className="text-sm text-slate-500 mt-1">DDT Vendita, Conto Lavoro e Rientro</p>
+                        <p className="text-sm text-slate-500 mt-1">Documenti di Trasporto — Vendita, Conto Lavoro e Rientro</p>
                     </div>
                     <Button data-testid="btn-new-ddt" onClick={() => navigate('/ddt/new')} className="h-10 bg-[#0055FF] hover:bg-[#0044CC] text-white">
                         <Plus className="h-4 w-4 mr-2" /> Nuovo DDT
                     </Button>
                 </div>
 
-                {/* Type Tabs + Search */}
+                {/* KPI Cards */}
+                {stats && (
+                    <div data-testid="ddt-stats">
+                        <div className="flex items-center gap-2 mb-2">
+                            <button onClick={prevMonth} className="p-1 hover:bg-slate-100 rounded"><ChevronLeft className="h-4 w-4" /></button>
+                            <span className="text-sm font-semibold text-[#1E293B]">{MONTHS[statsMonth - 1]} {statsYear}</span>
+                            <button onClick={nextMonth} className="p-1 hover:bg-slate-100 rounded"><ChevronRight className="h-4 w-4" /></button>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <KpiCard icon={Package} label="DDT Mese" value={stats.total_month} sub={`${stats.total_all} totali`} color="blue" testId="kpi-total-month" />
+                            <KpiCard icon={BarChart3} label="Volume Mese" value={fmtEur(stats.volume_month)} sub={`${stats.per_status?.fatturato || 0} fatturati`} color="emerald" testId="kpi-volume" />
+                            <KpiCard icon={Truck} label="Vendita" value={stats.per_type?.vendita || 0} sub={`C/L: ${stats.per_type?.conto_lavoro || 0} | Rientro: ${stats.per_type?.rientro_conto_lavoro || 0}`} color="amber" testId="kpi-types" />
+                            <KpiCard icon={FileCheck} label="Non Fatturati" value={stats.per_status?.non_fatturato || 0} sub={`da convertire in fattura`} color="red" testId="kpi-unfilled" />
+                        </div>
+                    </div>
+                )}
+
+                {/* Filters */}
                 <Card className="border-gray-200">
-                    <CardContent className="p-3 flex items-center gap-3">
+                    <CardContent className="p-3 flex flex-wrap items-center gap-3">
                         <div className="flex gap-1">
                             {DDT_TYPES.map(t => (
                                 <button
                                     key={t.value}
-                                    data-testid={`filter-${t.value || 'all'}`}
-                                    onClick={() => setType(t.value)}
-                                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                                        activeType === t.value
-                                            ? 'bg-[#0055FF] text-white'
-                                            : 'text-slate-600 hover:bg-slate-100'
-                                    }`}
-                                >
-                                    {t.label}
-                                </button>
+                                    data-testid={`filter-type-${t.value || 'all'}`}
+                                    onClick={() => setFilter('type', t.value)}
+                                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${activeType === t.value ? 'bg-[#0055FF] text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+                                >{t.label}</button>
+                            ))}
+                        </div>
+                        <div className="h-6 w-px bg-slate-200" />
+                        <div className="flex gap-1">
+                            {STATUS_OPTIONS.map(s => (
+                                <button
+                                    key={s.value}
+                                    data-testid={`filter-status-${s.value || 'all'}`}
+                                    onClick={() => setFilter('status', s.value)}
+                                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${activeStatus === s.value ? 'bg-[#1E293B] text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+                                >{s.label}</button>
                             ))}
                         </div>
                         <div className="flex-1 relative">
@@ -122,13 +175,7 @@ export default function DDTListPage() {
                         {loading ? (
                             <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0055FF]" /></div>
                         ) : items.length === 0 ? (
-                            <EmptyState
-                                type="distinte"
-                                title="Nessun DDT trovato"
-                                description="Crea il primo Documento di Trasporto per gestire le spedizioni e il conto lavoro."
-                                actionLabel="Crea il primo DDT"
-                                onAction={() => navigate('/ddt/new')}
-                            />
+                            <EmptyState type="distinte" title="Nessun DDT trovato" description="Crea il primo Documento di Trasporto per gestire le spedizioni e il conto lavoro." actionLabel="Crea il primo DDT" onAction={() => navigate('/ddt/new')} />
                         ) : (
                             <Table>
                                 <TableHeader>
@@ -172,5 +219,30 @@ export default function DDTListPage() {
                 </Card>
             </div>
         </DashboardLayout>
+    );
+}
+
+function KpiCard({ icon: Icon, label, value, sub, color, testId }) {
+    const colors = {
+        blue: 'from-blue-500 to-blue-600',
+        emerald: 'from-emerald-500 to-emerald-600',
+        amber: 'from-amber-500 to-amber-600',
+        red: 'from-red-500 to-red-600',
+    };
+    return (
+        <Card className="border-gray-200 overflow-hidden" data-testid={testId}>
+            <CardContent className="p-3">
+                <div className="flex items-start justify-between">
+                    <div>
+                        <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">{label}</p>
+                        <p className="text-xl font-bold text-[#1E293B] mt-0.5">{value}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{sub}</p>
+                    </div>
+                    <div className={`p-2 rounded-lg bg-gradient-to-br ${colors[color]} text-white`}>
+                        <Icon className="h-4 w-4" />
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
     );
 }
