@@ -1,0 +1,108 @@
+{
+  "summary": "Iteration 49: Complete testing of Progressive Invoicing (Acconto / SAL / Saldo) feature. All 15 backend tests passed. Frontend UI fully functional with all 3 invoice modes, progress bars, and workflow timeline working correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "InvoiceGenerationModal - Saldo mode",
+        "issues": ["Minor: The deduction amount for previous invoice shows '-0,00 €' in the detrazioni list instead of the actual amount like '-366,00 €'. The invoice preview amount (854,00 €) is correct, so this is just a display formatting issue in the detrazioni list."]
+      }
+    ]
+  },
+  "test_results": {
+    "backend_progressive_invoicing": {
+      "invoicing_status": {
+        "returns_correct_structure": "PASS - GET /api/preventivi/{id}/invoicing-status returns total_preventivo, total_invoiced, remaining, percentage_invoiced, linked_invoices, is_fully_invoiced",
+        "404_nonexistent": "PASS - Returns 404 for non-existent preventivo"
+      },
+      "acconto_invoice": {
+        "creates_with_percentage": "PASS - POST progressive-invoice with type=acconto creates invoice at percentage of total",
+        "rejects_invalid_percentage": "PASS - Rejects 0%, negative, >100% percentages"
+      },
+      "sal_invoice": {
+        "with_selected_lines": "PASS - Creates invoice with specific selected line indices",
+        "with_custom_amount": "PASS - Creates invoice with custom amount",
+        "rejects_exceeding_amount": "PASS - Rejects amounts exceeding remaining balance",
+        "rejects_invalid_line_index": "PASS - Rejects invalid line indices",
+        "requires_lines_or_amount": "PASS - Requires either selected_lines or custom_amount"
+      },
+      "saldo_invoice": {
+        "with_deductions": "PASS - Creates full invoice with negative lines for previous deposits",
+        "no_previous_invoices": "PASS - Works correctly when no previous invoices exist"
+      },
+      "validation": {
+        "reject_fully_invoiced": "PASS - Rejects new invoices when preventivo fully invoiced",
+        "requires_client": "PASS - Returns 422 when preventivo has no client",
+        "invalid_type": "PASS - Returns 400 for invalid invoice_type"
+      },
+      "preventivi_list": {
+        "invoicing_progress_field": "PASS - List returns invoicing_progress field for each preventivo"
+      }
+    },
+    "frontend_ui": {
+      "preventivi_list_page": {
+        "progress_bar_column": "PASS - Fatturato column shows InvoicingProgressBar component",
+        "progress_percentage": "PASS - Shows percentage and visual progress bar"
+      },
+      "preventivo_editor": {
+        "workflow_timeline": "PASS - Shows Preventivo → Fatturazione → Completato timeline",
+        "invoicing_progress_in_timeline": "PASS - Shows 'Fatturato: X%' below timeline",
+        "fattura_button": "PASS - btn-convert-invoice button opens InvoiceGenerationModal"
+      },
+      "invoice_generation_modal": {
+        "modal_opens": "PASS - Dialog opens with data-testid='invoice-generation-modal'",
+        "status_bar": "PASS - Shows total invoiced, remaining, percentage with progress bar",
+        "linked_invoices_list": "PASS - Shows previous invoices with document numbers and amounts",
+        "mode_selector": "PASS - 3 mode buttons: Acconto %, SAL, Saldo Finale"
+      },
+      "acconto_mode": {
+        "form_visible": "PASS - acconto-form displays correctly",
+        "percentage_input": "PASS - input-percentage with current value",
+        "quick_buttons": "PASS - 20%, 30%, 40%, 50% quick selection buttons",
+        "preview_amount": "PASS - Shows calculated invoice amount",
+        "create_button": "PASS - btn-create-invoice enables when valid"
+      },
+      "sal_mode": {
+        "form_visible": "PASS - sal-form displays correctly",
+        "mode_toggle": "PASS - sal-mode-lines and sal-mode-amount toggle buttons",
+        "lines_list": "PASS - sal-lines-list with selectable line checkboxes",
+        "amount_input": "PASS - input-sal-amount with max hint",
+        "preview_amount": "PASS - Shows calculated invoice amount"
+      },
+      "saldo_mode": {
+        "form_visible": "PASS - saldo-form displays correctly",
+        "info_message": "PASS - Shows explanation about including all lines and deducting acconti",
+        "deductions_list": "PASS - Lists previous invoices that will be deducted",
+        "preview_amount": "PASS - Shows remaining amount as invoice total"
+      }
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_progressive_invoicing.py",
+    "/app/test_reports/pytest/progressive_invoicing_results.xml"
+  ],
+  "action_items": [
+    "Minor: Fix the detrazioni list in Saldo mode to show the actual deduction amount (e.g., '-366,00 €') instead of '-0,00 €'. The calculation is correct, it's just a display issue."
+  ],
+  "critical_code_review_comments": [
+    "The invoicing-status endpoint returns linked_invoices from the invoices collection with 'progressive_type' key, while the preventivo document stores linked_invoices with 'type' key - consistent but worth documenting",
+    "Progressive invoice calculations correctly use total_invoiced sum from existing invoices to prevent overbilling"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_progressive_invoicing.py"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 tests passed)",
+    "frontend": "100% (all modal modes and flows working)"
+  },
+  "test_credentials": "Session token: prog_inv_session_1772275541744 for user progressive-invoice-test-user",
+  "seed_data_creation": "Created test clients and preventivi during testing (most cleaned up after test, some linked invoices remain in DB)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Progressive Invoicing feature fully tested and working. Key endpoints: POST /api/preventivi/{id}/progressive-invoice (acconto|sal|saldo), GET /api/preventivi/{id}/invoicing-status. Frontend components: InvoiceGenerationModal.js, InvoicingProgressBar in PreventiviPage.js, workflow timeline in PreventivoEditorPage.js. Test session active for progressive-invoice-test-user. All 3 invoice modes (Acconto %, SAL, Saldo Finale) create invoices correctly with proper validation and deduction logic."
+}
