@@ -108,16 +108,33 @@ def build_update_with_event(push_items=None, set_items=None, commessa_id="", tip
 #  APPROVVIGIONAMENTO (Procurement)
 # ══════════════════════════════════════════════════════════════════
 
+class RigaRdP(BaseModel):
+    descrizione: str
+    quantita: float = 1
+    unita_misura: str = "pz"
+    richiede_cert_31: bool = False
+    note: Optional[str] = ""
+
 class RichiestaPreventivo(BaseModel):
     fornitore_nome: str
     fornitore_id: Optional[str] = None
+    righe: Optional[List[RigaRdP]] = []
+    note: Optional[str] = ""
+    # Legacy field for backward compatibility
     materiali_richiesti: Optional[str] = ""
+
+class RigaOdA(BaseModel):
+    descrizione: str
+    quantita: float = 1
+    unita_misura: str = "pz"
+    prezzo_unitario: float = 0
+    richiede_cert_31: bool = False
     note: Optional[str] = ""
 
 class OrdineFornitore(BaseModel):
     fornitore_nome: str
     fornitore_id: Optional[str] = None
-    righe: Optional[List[dict]] = []
+    righe: Optional[List[RigaOdA]] = []
     importo_totale: Optional[float] = 0
     note: Optional[str] = ""
     riferimento_rdp_id: Optional[str] = None
