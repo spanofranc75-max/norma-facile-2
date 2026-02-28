@@ -22,7 +22,8 @@ DDT_TYPE_TITLES = {
 }
 
 
-def generate_ddt_pdf(doc: dict) -> BytesIO:
+def generate_ddt_pdf(doc: dict, company: dict = None) -> BytesIO:
+    company = company or {}
     buffer = BytesIO()
     page_doc = SimpleDocTemplate(
         buffer, pagesize=A4,
@@ -38,6 +39,21 @@ def generate_ddt_pdf(doc: dict) -> BytesIO:
     small = ParagraphStyle("Sm", parent=styles["Normal"], fontSize=8)
 
     elements = []
+
+    # ── Logo ──
+    logo_url = company.get('logo_url', '')
+    if logo_url and logo_url.startswith('data:image'):
+        try:
+            import base64
+            header_part, b64_data = logo_url.split(',', 1)
+            img_bytes = base64.b64decode(b64_data)
+            logo_buf = BytesIO(img_bytes)
+            logo_img = Image(logo_buf, width=40 * mm, height=15 * mm)
+            logo_img.hAlign = 'LEFT'
+            elements.append(logo_img)
+            elements.append(Spacer(1, 3 * mm))
+        except Exception as e:
+            logger.warning(f"Could not render logo in DDT: {e}")
 
     # ── Header ──
     ddt_type = doc.get("ddt_type", "vendita")
