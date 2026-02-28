@@ -213,7 +213,7 @@ function KanbanColumn({ column, colors, onCardClick, onDelete }) {
                                                 <div className="flex-1 min-w-0">
                                                     <p
                                                         className="text-sm font-semibold text-[#1E293B] truncate cursor-pointer hover:text-[#0055FF] transition-colors"
-                                                        onClick={() => item.client_id && onCardClick(item)}
+                                                        onClick={() => onCardClick(item)}
                                                     >
                                                         {item.title}
                                                     </p>
