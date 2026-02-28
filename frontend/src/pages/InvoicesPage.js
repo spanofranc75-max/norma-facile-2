@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import {
     Plus, MoreHorizontal, Download, RefreshCw, Trash2, Eye, FileCode,
     Copy, CreditCard, CircleDollarSign, CheckCircle2, Clock, AlertCircle,
+    Mail, Send,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import { PDFPreviewModal } from '../components/PDFPreviewModal';
