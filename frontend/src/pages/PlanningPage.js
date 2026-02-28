@@ -151,7 +151,7 @@ export default function PlanningPage() {
                                     key={col.id}
                                     column={col}
                                     colors={COL_COLORS[col.id] || COL_COLORS.preventivo}
-                                    onCardClick={(c) => navigate(`/fascicolo-cantiere/${c.client_id}`)}
+                                    onCardClick={(c) => navigate(`/commesse/${c.commessa_id}`)}
                                     onDelete={handleDelete}
                                 />
                             ))}
