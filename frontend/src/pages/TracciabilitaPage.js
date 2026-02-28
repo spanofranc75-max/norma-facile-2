@@ -130,20 +130,20 @@ function BatchesTab() {
       </div>
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="bg-zinc-900 border-zinc-700 text-white max-w-lg">
+        <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{editing ? 'Modifica Lotto' : 'Nuovo Lotto Materiale'}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><label className="text-xs text-zinc-400">Fornitore *</label><Input data-testid="batch-supplier" value={form.supplier_name} onChange={e => setForm({ ...form, supplier_name: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
+            <div><label className="text-xs text-slate-500">Fornitore *</label><Input data-testid="batch-supplier" value={form.supplier_name} onChange={e => setForm({ ...form, supplier_name: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div><label className="text-xs text-zinc-400">Tipo Materiale *</label><Input data-testid="batch-material" placeholder="es. S275JR" value={form.material_type} onChange={e => setForm({ ...form, material_type: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
-              <div><label className="text-xs text-zinc-400">N. Colata (Heat Number) *</label><Input data-testid="batch-heat" value={form.heat_number} onChange={e => setForm({ ...form, heat_number: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
+              <div><label className="text-xs text-slate-500">Tipo Materiale *</label><Input data-testid="batch-material" placeholder="es. S275JR" value={form.material_type} onChange={e => setForm({ ...form, material_type: e.target.value })} /></div>
+              <div><label className="text-xs text-slate-500">N. Colata (Heat Number) *</label><Input data-testid="batch-heat" value={form.heat_number} onChange={e => setForm({ ...form, heat_number: e.target.value })} /></div>
             </div>
-            <div><label className="text-xs text-zinc-400">Data Ricevimento</label><Input data-testid="batch-date" type="date" value={form.received_date} onChange={e => setForm({ ...form, received_date: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
-            <div><label className="text-xs text-zinc-400">Certificato 3.1 (PDF)</label><input data-testid="batch-cert-upload" type="file" accept=".pdf" onChange={handleFileChange} className="w-full text-sm text-zinc-400 file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:bg-zinc-700 file:text-white" /></div>
-            <div><label className="text-xs text-zinc-400">Note</label><Input data-testid="batch-notes" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
+            <div><label className="text-xs text-slate-500">Data Ricevimento</label><Input data-testid="batch-date" type="date" value={form.received_date} onChange={e => setForm({ ...form, received_date: e.target.value })} /></div>
+            <div><label className="text-xs text-slate-500">Certificato 3.1 (PDF)</label><input data-testid="batch-cert-upload" type="file" accept=".pdf" onChange={handleFileChange} className="w-full text-sm file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:bg-slate-100 file:text-slate-700" /></div>
+            <div><label className="text-xs text-slate-500">Note</label><Input data-testid="batch-notes" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
           </div>
           <DialogFooter>
-            <Button data-testid="save-batch-btn" onClick={save} className="bg-amber-600 hover:bg-amber-500" disabled={!form.supplier_name || !form.material_type || !form.heat_number}>Salva</Button>
+            <Button data-testid="save-batch-btn" onClick={save} className="bg-[#0055FF] hover:bg-[#0044CC]" disabled={!form.supplier_name || !form.material_type || !form.heat_number}>Salva</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
