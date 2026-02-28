@@ -1618,31 +1618,29 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                 <DialogContent className="max-w-sm"><DialogHeader><DialogTitle>Nuovo Conto Lavoro</DialogTitle></DialogHeader>
                     <div className="space-y-3">
                         <div><Label className="text-xs">Tipo</Label>
-                            <Select value={clForm.tipo} onValueChange={v => setClForm(f => ({ ...f, tipo: v }))}>
-                                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="verniciatura">Verniciatura</SelectItem>
-                                    <SelectItem value="zincatura">Zincatura a caldo</SelectItem>
-                                    <SelectItem value="sabbiatura">Sabbiatura</SelectItem>
-                                    <SelectItem value="altro">Altro</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <select value={clForm.tipo} onChange={e => setClForm(f => ({ ...f, tipo: e.target.value }))}
+                                className="mt-1 w-full h-9 text-sm rounded-md border border-input bg-transparent px-3 shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
+                                <option value="verniciatura">Verniciatura</option>
+                                <option value="zincatura">Zincatura a caldo</option>
+                                <option value="sabbiatura">Sabbiatura</option>
+                                <option value="altro">Altro</option>
+                            </select>
                         </div>
                         <div>
                             <Label className="text-xs">Fornitore</Label>
-                            <Combobox
-                                options={fornitori.map(f => ({ value: f.id, label: f.nome }))}
+                            <select
                                 value={clForm.fornitore_id}
-                                onValueChange={(val) => {
+                                onChange={(e) => {
+                                    const val = e.target.value;
                                     const f = fornitori.find(x => x.id === val);
                                     setClForm(prev => ({ ...prev, fornitore_id: val, fornitore_nome: f?.nome || '' }));
                                 }}
-                                placeholder="Seleziona fornitore..."
-                                searchPlaceholder="Cerca fornitore..."
-                                emptyText="Nessun fornitore trovato"
-                                className="mt-1"
+                                className="mt-1 w-full h-9 text-sm rounded-md border border-input bg-transparent px-3 shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
                                 data-testid="cl-fornitore"
-                            />
+                            >
+                                <option value="">Seleziona fornitore...</option>
+                                {fornitori.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                            </select>
                         </div>
                     </div>
                     <DialogFooter><Button size="sm" disabled={!clForm.fornitore_nome} onClick={handleCreateCL} className="bg-[#0055FF] text-white" data-testid="btn-confirm-cl">Crea</Button></DialogFooter>
