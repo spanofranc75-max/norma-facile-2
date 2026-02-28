@@ -301,6 +301,19 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - Nuovi file: `frontend/src/pages/ReportCAMPage.js`, `backend/services/pdf_cam_report.py`
 - Testing: 100% backend (17/17), 100% frontend (iteration_61)
 
+### AI OCR Intelligente Multi-Profilo (Phase 56)
+- **Prompt AI multi-profilo**: GPT-4o Vision ora estrae TUTTI i profili dal certificato 3.1 come array (non solo il primo)
+- **Matching intelligente**: Incrocio automatico con OdA, RdP, DDT arrivi di TUTTE le commesse dell'utente
+  - Profili che matchano la commessa corrente → CAM lotto + material_batch creati automaticamente
+  - Profili che matchano altre commesse → certificato copiato automaticamente, CAM lotto creato nella commessa giusta
+  - Profili non matchati → archiviati in `archivio_certificati` per recupero futuro
+- **Normalizzazione profili**: IPE 100 = ipe100 = IPE100 (case/space insensitive)
+- **Archivio Certificati**: `GET /api/cam/archivio-certificati` + `POST /api/cam/archivio-certificati/{colata}/assegna`
+- **Frontend**: Toast informativi per tipo match, card multi-profilo con box blu, ri-analisi disponibile
+- **Bug fix poppler**: Installato `poppler-utils` per conversione PDF→immagine
+- **Bug fix response.text**: Fixato parsing risposta emergentintegrations (stringa diretta, non oggetto)
+- Testing: 100% backend (8/8), 100% frontend (iteration_62)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
