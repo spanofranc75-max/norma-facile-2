@@ -18,6 +18,7 @@ def unique_id(prefix="test_"):
 def auth_token():
     """Create a test user and session for authenticated requests."""
     from pymongo import MongoClient
+    from datetime import timedelta
     client = MongoClient("mongodb://localhost:27017")
     db = client["test_database"]
     
@@ -32,11 +33,12 @@ def auth_token():
         "created_at": datetime.now(timezone.utc),
     })
     
-    # Create session
+    # Create session with expires_at (required field)
     db.user_sessions.insert_one({
         "session_token": session_token,
         "user_id": user_id,
         "created_at": datetime.now(timezone.utc),
+        "expires_at": datetime.now(timezone.utc) + timedelta(days=7),  # Session valid for 7 days
     })
     
     yield {"token": session_token, "user_id": user_id}
