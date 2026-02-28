@@ -88,6 +88,7 @@ const NAV_GROUPS = [
             { path: '/fornitori', label: 'Fornitori', icon: Factory },
             { path: '/catalogo', label: 'Catalogo Profili', icon: Warehouse },
             { path: '/articoli', label: 'Catalogo Articoli', icon: BoxIcon },
+            { path: '/archivio-certificati', label: 'Archivio Certificati', icon: FileInput },
         ],
     },
     {
