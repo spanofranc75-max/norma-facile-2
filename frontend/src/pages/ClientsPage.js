@@ -282,13 +282,21 @@ export default function ClientsPage() {
                     </DialogHeader>
 
                     {/* Tabs */}
-                    <div className="flex gap-1 border-b border-slate-200 -mx-6 px-6">
+                    <div className="flex gap-1 border-b border-slate-200 -mx-6 px-6 overflow-x-auto">
                         {TABS.map(t => (
                             <button
                                 key={t.key}
+                                type="button"
                                 data-testid={`tab-${t.key}`}
-                                onClick={() => setActiveTab(t.key)}
-                                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                                onClick={() => {
+                                    setActiveTab(t.key);
+                                    if (t.key === 'email_log' && editingClient) {
+                                        apiRequest(`/clients/${editingClient.client_id}/email-log`)
+                                            .then(data => setEmailLog(data.emails || []))
+                                            .catch(() => setEmailLog([]));
+                                    }
+                                }}
+                                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                                     activeTab === t.key
                                         ? 'border-[#0055FF] text-[#0055FF]'
                                         : 'border-transparent text-slate-500 hover:text-slate-700'
