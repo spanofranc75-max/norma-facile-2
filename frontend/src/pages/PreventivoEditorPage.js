@@ -27,6 +27,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import { PDFPreviewButton } from '../components/PDFPreviewModal';
 import { AutoExpandTextarea } from '../components/AutoExpandTextarea';
 import InvoiceGenerationModal from '../components/InvoiceGenerationModal';
+import EmailPreviewDialog from '../components/EmailPreviewDialog';
 
 const ZONES = ['A', 'B', 'C', 'D', 'E', 'F'];
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
