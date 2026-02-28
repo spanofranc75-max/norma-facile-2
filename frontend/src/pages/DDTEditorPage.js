@@ -239,6 +239,22 @@ export default function DDTEditorPage() {
                     <div className="flex gap-2">
                         {!isNew && <Button data-testid="btn-download-pdf" variant="outline" onClick={handleDownloadPdf} className="border-[#0055FF] text-[#0055FF] hover:bg-blue-50 h-9 text-xs"><FileDown className="h-3.5 w-3.5 mr-1.5" /> PDF</Button>}
                         {!isNew && <PDFPreviewButton pdfUrl={`/ddt/${ddtId}/pdf`} title={`Anteprima DDT ${ddtInfo.number || ''}`} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9" />}
+                        {!isNew && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                data-testid="btn-send-email-ddt"
+                                onClick={async () => {
+                                    try {
+                                        const r = await apiRequest(`/ddt/${ddtId}/send-email`, { method: 'POST' });
+                                        toast.success(r.message);
+                                    } catch (e) { toast.error(e.message); }
+                                }}
+                                className="border-violet-400 text-violet-600 hover:bg-violet-50 h-9 text-xs"
+                            >
+                                <Mail className="h-3.5 w-3.5 mr-1" /> Email
+                            </Button>
+                        )}
                         {!isNew && ddtInfo.status !== 'fatturato' && !ddtInfo.converted_to && (
                             <Button data-testid="btn-convert-invoice" variant="outline" onClick={handleConvertToInvoice} disabled={converting} className="border-amber-500 text-amber-600 hover:bg-amber-50 h-9 text-xs">
                                 <ArrowRightLeft className="h-3.5 w-3.5 mr-1.5" /> {converting ? 'Conversione...' : 'Converti in Fattura'}
