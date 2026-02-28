@@ -340,11 +340,12 @@ async def import_cam_da_certificato(
         numero_colata=metadata.get("numero_colata", ""),
         peso_kg=peso_kg,
         qualita_acciaio=metadata.get("qualita_acciaio", ""),
-        # CAM - Default per forno elettrico (più comune)
-        percentuale_riciclato=metadata.get("percentuale_riciclato", 75),  # Default ottimistico
-        metodo_produttivo="forno_elettrico_non_legato",
-        tipo_certificazione="dichiarazione_produttore",
+        # CAM - Use AI-extracted data if available
+        percentuale_riciclato=metadata.get("percentuale_riciclato") if metadata.get("percentuale_riciclato") is not None else 75,
+        metodo_produttivo=metadata.get("metodo_produttivo") or "forno_elettrico_non_legato",
+        tipo_certificazione=_map_cert_type(metadata.get("certificazione_ambientale")),
         numero_certificazione=metadata.get("n_certificato", ""),
+        ente_certificatore=metadata.get("ente_certificatore_ambientale"),
         data_certificazione=metadata.get("data_certificato", ""),
         ddt_riferimento=doc.get("nome_file", ""),
         commessa_id=commessa_id,
@@ -352,3 +353,72 @@ async def import_cam_da_certificato(
     )
     
     return await create_lotto_cam(lotto_data, user)
+
+
+def _map_cert_type(cert_str: str | None) -> str:
+    """Map AI-extracted certification type to enum value."""
+    if not cert_str:
+        return "dichiarazione_produttore"
+    lower = cert_str.lower()
+    if "epd" in lower:
+        return "epd"
+    if "remade" in lower:
+        return "remade_in_italy"
+    if "dichiarazione" in lower or "produttore" in lower:
+        return "dichiarazione_produttore"
+    return "altra_accreditata"
+
+
+# ══════════════════════════════════════════════════════════════════
+#  GENERAZIONE PDF DICHIARAZIONE CAM
+# ══════════════════════════════════════════════════════════════════
+
+@router.get("/dichiarazione-pdf/{commessa_id}")
+async def genera_dichiarazione_cam_pdf(commessa_id: str, user: dict = Depends(get_current_user)):
+    """
+    Genera la Dichiarazione di Conformità CAM come PDF.
+    Calcola al volo i dati e produce il documento ufficiale.
+    """
+    # 1. Get commessa
+    commessa = await db.commesse.find_one(
+        {"commessa_id": commessa_id, "user_id": user["user_id"]},
+        {"_id": 0}
+    )
+    if not commessa:
+        raise HTTPException(404, "Commessa non trovata")
+    
+    # 2. Calculate CAM
+    calcolo_result = await calcola_cam_per_commessa(commessa_id, user)
+    
+    if not calcolo_result.get("righe"):
+        raise HTTPException(400, "Nessun materiale CAM trovato per questa commessa. Aggiungi i lotti materiale prima di generare la dichiarazione.")
+    
+    # 3. Get company settings
+    company = await db.company_settings.find_one(
+        {"user_id": user["user_id"]}, {"_id": 0}
+    ) or {}
+    
+    # 4. Get client if linked
+    cliente = None
+    client_name = commessa.get("client_name", "")
+    if client_name:
+        cliente = await db.clients.find_one(
+            {"business_name": client_name, "user_id": user["user_id"]}, {"_id": 0}
+        )
+    
+    # 5. Generate PDF
+    from services.pdf_cam_declaration import generate_cam_declaration_pdf
+    try:
+        pdf_bytes = generate_cam_declaration_pdf(calcolo_result, commessa, company, cliente)
+    except Exception as e:
+        logger.error(f"CAM PDF generation error: {e}")
+        raise HTTPException(500, f"Errore generazione PDF: {str(e)}")
+    
+    numero = commessa.get("numero", commessa_id)
+    filename = f"Dichiarazione_CAM_{numero}.pdf"
+    
+    return StreamingResponse(
+        BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'}
+    )
