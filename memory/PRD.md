@@ -153,6 +153,16 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Sidebar**: Link aggiunto sotto "Produzione"
 - Testing: 27/27 backend, 100% frontend (iteration_47)
 
+### One-Click Technical Dossier (Phase 42)
+- Servizio `dossier_generator.py`: genera Fascicolo Tecnico completo in un unico PDF
+- 6+ sezioni: Copertina, DoP (Dichiarazione di Prestazione), Etichetta CE, Riepilogo Tracciabilità Materiali, Qualifica Saldatore, Checklist Controlli FPC
+- Certificati 3.1 (base64) decodificati e allegati automaticamente al fascicolo
+- Merge PDF con pypdf (PdfWriter/PdfReader)
+- Endpoint: GET /api/fpc/projects/{id}/dossier → StreamingResponse PDF
+- Frontend: Pulsante grande "Stampa Fascicolo Tecnico Completo" con loading spinner
+- Gestione robusta: sezioni omesse se dati mancanti (saldatore, certificati)
+- Testing: 22/22 backend, 100% frontend (iteration_48)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
