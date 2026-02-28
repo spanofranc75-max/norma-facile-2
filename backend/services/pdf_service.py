@@ -360,6 +360,15 @@ class PDFService:
             elements.append(Paragraph("<b>Note:</b>", styles['SmallText']))
             elements.append(Paragraph(invoice.get('notes', ''), styles['SmallText']))
         
+        # ========== CONDIZIONI DI VENDITA ==========
+        condizioni = company.get('condizioni_vendita', '')
+        if condizioni:
+            elements.append(Spacer(1, 8*mm))
+            elements.append(Paragraph("<b>CONDIZIONI DI VENDITA</b>", styles['SectionTitle']))
+            for line in condizioni.split('\n'):
+                if line.strip():
+                    elements.append(Paragraph(line.strip(), styles['SmallText']))
+        
         # Build PDF
         doc.build(elements)
         
