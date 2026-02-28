@@ -343,6 +343,10 @@ async def get_preventivo(prev_id: str, user: dict = Depends(get_current_user)):
                 "document_number": inv["document_number"],
                 "status": inv["status"],
             }
+    # Compute invoicing progress
+    tot = float(doc.get("totals", {}).get("total", 0))
+    invoiced = float(doc.get("total_invoiced", 0))
+    doc["invoicing_progress"] = round((invoiced / tot * 100), 1) if tot > 0 else 0
     return doc
 
 
