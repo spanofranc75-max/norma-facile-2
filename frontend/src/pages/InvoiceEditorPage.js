@@ -100,6 +100,7 @@ export default function InvoiceEditorPage() {
     const [loading, setLoading] = useState(isEditing);
     const [saving, setSaving] = useState(false);
     const [clients, setClients] = useState([]);
+    const [quickFillOpen, setQuickFillOpen] = useState(false);
     
     const [formData, setFormData] = useState({
         document_type: 'FT',
