@@ -1341,68 +1341,6 @@ async def _match_profili_to_commesse(
     return risultati
 
 
-# ══════════════════════════════════════════════════════════════════
-#  ARCHIVIO CERTIFICATI NON ASSEGNATI
-# ══════════════════════════════════════════════════════════════════
-
-@router.get("/archivio-certificati")
-async def get_archivio_certificati(user: dict = Depends(get_current_user)):
-    """Get all unassigned certificate profiles from the archive."""
-    cursor = db.archivio_certificati.find(
-        {"user_id": user["user_id"]}, {"_id": 0}
-    ).sort("updated_at", -1)
-    items = await cursor.to_list(200)
-    return {"archivio": items, "totale": len(items)}
-
-
-@router.post("/archivio-certificati/{numero_colata}/assegna")
-async def assegna_archivio_a_commessa(
-    numero_colata: str, commessa_id: str, user: dict = Depends(get_current_user)
-):
-    """Assign an archived certificate profile to a commessa."""
-    item = await db.archivio_certificati.find_one(
-        {"numero_colata": numero_colata, "user_id": user["user_id"]}, {"_id": 0}
-    )
-    if not item:
-        raise HTTPException(404, "Profilo non trovato in archivio")
-
-    await get_commessa_or_404(commessa_id, user["user_id"])
-
-    # Create CAM lotto in target commessa
-    metodo = item.get("metodo_produttivo") or "forno_elettrico_non_legato"
-    perc_ric = float(item.get("percentuale_riciclato") or 75)
-    soglie = {"forno_elettrico_non_legato": 75, "forno_elettrico_legato": 60, "ciclo_integrale": 12}
-    soglia = soglie.get(metodo, 75)
-
-    cam_id = f"cam_{uuid.uuid4().hex[:10]}"
-    await db.lotti_cam.insert_one({
-        "lotto_id": cam_id, "user_id": user["user_id"],
-        "commessa_id": commessa_id,
-        "descrizione": item.get("dimensioni") or item.get("qualita_acciaio", "Materiale"),
-        "fornitore": item.get("fornitore", ""),
-        "numero_colata": numero_colata,
-        "peso_kg": float(item.get("peso_kg") or 0),
-        "qualita_acciaio": item.get("qualita_acciaio", ""),
-        "percentuale_riciclato": perc_ric,
-        "metodo_produttivo": metodo,
-        "tipo_certificazione": "dichiarazione_produttore",
-        "numero_certificazione": item.get("n_certificato", ""),
-        "uso_strutturale": True,
-        "soglia_minima_cam": soglia,
-        "conforme_cam": perc_ric >= soglia,
-        "source_doc_id": item.get("source_doc_id", ""),
-        "note": "Assegnato da archivio",
-        "created_at": ts(),
-    })
-
-    # Remove from archive
-    await db.archivio_certificati.delete_one(
-        {"numero_colata": numero_colata, "user_id": user["user_id"]}
-    )
-
-    return {"message": f"Profilo {numero_colata} assegnato a commessa {commessa_id}", "cam_lotto_id": cam_id}
-
-
 
 # ══════════════════════════════════════════════════════════════════
 #  GET ALL OPS DATA (for hub enrichment)
