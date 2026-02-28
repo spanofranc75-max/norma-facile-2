@@ -320,7 +320,7 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Invio Email CL**: Endpoint per invio DDT via Resend con allegato PDF al fornitore (ricerca email da client_id, PEC, email, contacts)
 - **Lista CL Migliorata**: Ogni C/L mostra tipo, fornitore, RAL, n. materiali, peso totale, status badge, bottoni PDF/Email
 - **Transizioni Stato**: da_inviare → inviato → in_lavorazione → rientrato → verificato
-- **Bug Fix Backend**: Aggiunto `send_email_with_attachment` a email_service.py, fixato CSS PDF (aggiunto COMMON_CSS), fixato query fornitore (`client_id` vs `id`)
+- **Bug Fix Backend**: Aggiunto `send_email_with_attachment` a email_service.py, fixato CSS PDF (aggiunto COMMON_CSS), fixato query fornitore (`client_id` vs `id`), fixato metodo HTTP endpoint preview-pdf (POST→GET)
 - Testing: 100% backend (11/11), 100% frontend (iteration_63)
 
 ## Issue Pendenti
