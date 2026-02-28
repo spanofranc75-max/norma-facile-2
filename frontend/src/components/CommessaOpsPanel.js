@@ -752,16 +752,27 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                 <span className="font-medium truncate block">{d.nome_file}</span>
                                 <span className="text-[10px] text-slate-400">{d.tipo?.replace(/_/g, ' ')} — {(d.size_bytes / 1024).toFixed(0)}KB</span>
                                 {d.metadata_estratti?.numero_colata && (
-                                    <span className="block text-[10px] text-emerald-600 font-mono mt-0.5">
-                                        Colata: {d.metadata_estratti.numero_colata} | {d.metadata_estratti.qualita_acciaio} | {d.metadata_estratti.fornitore}
-                                    </span>
+                                    <div className="mt-1 p-1.5 bg-emerald-50 rounded border border-emerald-200">
+                                        <span className="block text-[10px] text-emerald-700 font-semibold">✓ Dati Estratti con AI</span>
+                                        <div className="grid grid-cols-3 gap-x-2 text-[10px] mt-1">
+                                            <div><span className="text-slate-500">Colata:</span> <span className="font-mono font-semibold">{d.metadata_estratti.numero_colata}</span></div>
+                                            <div><span className="text-slate-500">Qualità:</span> <span className="font-mono">{d.metadata_estratti.qualita_acciaio || '-'}</span></div>
+                                            <div><span className="text-slate-500">Fornitore:</span> <span className="font-mono">{d.metadata_estratti.fornitore || '-'}</span></div>
+                                        </div>
+                                        {d.metadata_estratti.normativa && (
+                                            <div className="text-[10px] mt-0.5"><span className="text-slate-500">Normativa:</span> <span className="font-mono">{d.metadata_estratti.normativa}</span></div>
+                                        )}
+                                    </div>
                                 )}
                             </div>
-                            {d.tipo === 'certificato_31' && !d.metadata_estratti && (
-                                <Button size="sm" variant="ghost" className="h-7 text-[10px] text-[#0055FF]" disabled={parsing === d.doc_id}
+                            {/* AI OCR button - show for certificates or any PDF without extracted data */}
+                            {(d.tipo === 'certificato_31' || d.tipo === 'altro' || d.tipo === 'ddt_fornitore') && 
+                             !d.metadata_estratti && 
+                             (d.nome_file?.toLowerCase().endsWith('.pdf') || d.content_type?.includes('pdf')) && (
+                                <Button size="sm" variant="ghost" className="h-7 text-[10px] text-purple-600 border border-purple-200" disabled={parsing === d.doc_id}
                                     onClick={() => handleParseAI(d.doc_id)} data-testid={`btn-parse-${d.doc_id}`}>
                                     {parsing === d.doc_id ? <Loader2 className="h-3 w-3 animate-spin mr-0.5" /> : <Sparkles className="h-3 w-3 mr-0.5" />}
-                                    AI OCR
+                                    Analizza AI
                                 </Button>
                             )}
                             <Button size="sm" variant="ghost" className="h-7 px-1.5" onClick={() => handleDownloadDoc(d.doc_id, d.nome_file)}>
