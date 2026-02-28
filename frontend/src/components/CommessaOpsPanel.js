@@ -487,12 +487,24 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
             </Section>
 
             {/* ── Dialogs ── */}
-            {/* RdP Dialog */}
+            {/* RdP Dialog - Full featured with line items */}
             <Dialog open={rdpOpen} onOpenChange={setRdpOpen}>
-                <DialogContent className="max-w-sm"><DialogHeader><DialogTitle>Nuova RdP Fornitore</DialogTitle></DialogHeader>
-                    <div className="space-y-3">
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-blue-600" />
+                            Nuova Richiesta di Preventivo (RdP)
+                        </DialogTitle>
+                        {commessaNumero && (
+                            <DialogDescription>
+                                Riferimento: Commessa <span className="font-semibold">{commessaNumero}</span>
+                            </DialogDescription>
+                        )}
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        {/* Fornitore selector */}
                         <div>
-                            <Label className="text-xs">Fornitore</Label>
+                            <Label className="text-sm font-medium">Fornitore *</Label>
                             <Combobox
                                 options={fornitori.map(f => ({ value: f.id, label: f.nome }))}
                                 value={rdpForm.fornitore_id}
@@ -507,18 +519,138 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                 data-testid="rdp-fornitore"
                             />
                         </div>
-                        <div><Label className="text-xs">Materiali richiesti</Label><Textarea value={rdpForm.materiali_richiesti} onChange={e => setRdpForm(f => ({ ...f, materiali_richiesti: e.target.value }))} className="mt-1 h-16" data-testid="rdp-materiali" /></div>
+
+                        {/* Line items table */}
+                        <div>
+                            <div className="flex justify-between items-center mb-2">
+                                <Label className="text-sm font-medium">Materiali Richiesti *</Label>
+                                <Button type="button" variant="outline" size="sm" onClick={addRdpLine} data-testid="rdp-add-line">
+                                    <Plus className="h-3 w-3 mr-1" /> Aggiungi riga
+                                </Button>
+                            </div>
+                            <div className="border rounded-md overflow-hidden">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-slate-50">
+                                            <TableHead className="w-[45%] text-xs">Descrizione</TableHead>
+                                            <TableHead className="w-[15%] text-xs text-center">Quantità</TableHead>
+                                            <TableHead className="w-[15%] text-xs text-center">U.M.</TableHead>
+                                            <TableHead className="w-[15%] text-xs text-center">Cert. 3.1</TableHead>
+                                            <TableHead className="w-[10%]"></TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {rdpForm.righe.map((riga, idx) => (
+                                            <TableRow key={riga.id || idx}>
+                                                <TableCell className="p-1">
+                                                    <Input
+                                                        value={riga.descrizione}
+                                                        onChange={e => updateRdpLine(idx, 'descrizione', e.target.value)}
+                                                        placeholder="es. Travi IPE 100"
+                                                        className="h-8 text-sm"
+                                                        data-testid={`rdp-desc-${idx}`}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="p-1">
+                                                    <Input
+                                                        type="number"
+                                                        value={riga.quantita}
+                                                        onChange={e => updateRdpLine(idx, 'quantita', e.target.value)}
+                                                        className="h-8 text-sm text-center"
+                                                        min="0"
+                                                        step="0.01"
+                                                        data-testid={`rdp-qty-${idx}`}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="p-1">
+                                                    <Select value={riga.unita_misura} onValueChange={v => updateRdpLine(idx, 'unita_misura', v)}>
+                                                        <SelectTrigger className="h-8 text-xs">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="kg">kg</SelectItem>
+                                                            <SelectItem value="pz">pz</SelectItem>
+                                                            <SelectItem value="ml">ml</SelectItem>
+                                                            <SelectItem value="mq">mq</SelectItem>
+                                                            <SelectItem value="t">t</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </TableCell>
+                                                <TableCell className="p-1 text-center">
+                                                    <Checkbox
+                                                        checked={riga.richiede_cert_31}
+                                                        onCheckedChange={v => updateRdpLine(idx, 'richiede_cert_31', v)}
+                                                        data-testid={`rdp-cert-${idx}`}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="p-1 text-center">
+                                                    {rdpForm.righe.length > 1 && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-7 w-7 p-0 text-red-400 hover:text-red-600"
+                                                            onClick={() => removeRdpLine(idx)}
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                ☑️ Cert. 3.1 = richiedi certificato materiale EN 10204 tipo 3.1
+                            </p>
+                        </div>
+
+                        {/* Notes */}
+                        <div>
+                            <Label className="text-sm font-medium">Note aggiuntive</Label>
+                            <Textarea
+                                value={rdpForm.note}
+                                onChange={e => setRdpForm(f => ({ ...f, note: e.target.value }))}
+                                className="mt-1 h-16"
+                                placeholder="Specifiche particolari, tempi di consegna richiesti, ecc."
+                                data-testid="rdp-note"
+                            />
+                        </div>
                     </div>
-                    <DialogFooter><Button size="sm" disabled={!rdpForm.fornitore_nome} onClick={handleCreateRdP} className="bg-[#0055FF] text-white" data-testid="btn-confirm-rdp">Invia RdP</Button></DialogFooter>
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setRdpOpen(false)}>Annulla</Button>
+                        <Button
+                            size="sm"
+                            disabled={!rdpForm.fornitore_nome || rdpForm.righe.filter(r => r.descrizione.trim()).length === 0}
+                            onClick={handleCreateRdP}
+                            className="bg-[#0055FF] text-white"
+                            data-testid="btn-confirm-rdp"
+                        >
+                            <ShoppingCart className="h-4 w-4 mr-1" /> Invia RdP
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            {/* OdA Dialog */}
+            {/* OdA Dialog - Full featured with line items and pricing */}
             <Dialog open={odaOpen} onOpenChange={setOdaOpen}>
-                <DialogContent className="max-w-sm"><DialogHeader><DialogTitle>Nuovo Ordine Fornitore</DialogTitle></DialogHeader>
-                    <div className="space-y-3">
+                <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Package className="h-5 w-5 text-emerald-600" />
+                            Nuovo Ordine di Acquisto (OdA)
+                        </DialogTitle>
+                        {commessaNumero && (
+                            <DialogDescription>
+                                Riferimento: Commessa <span className="font-semibold">{commessaNumero}</span>
+                            </DialogDescription>
+                        )}
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        {/* Fornitore selector */}
                         <div>
-                            <Label className="text-xs">Fornitore</Label>
+                            <Label className="text-sm font-medium">Fornitore *</Label>
                             <Combobox
                                 options={fornitori.map(f => ({ value: f.id, label: f.nome }))}
                                 value={odaForm.fornitore_id}
@@ -533,10 +665,142 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                 data-testid="oda-fornitore"
                             />
                         </div>
-                        <div><Label className="text-xs">Importo Totale (EUR)</Label><Input type="number" value={odaForm.importo_totale} onChange={e => setOdaForm(f => ({ ...f, importo_totale: e.target.value }))} className="mt-1" data-testid="oda-importo" /></div>
-                        <div><Label className="text-xs">Note</Label><Textarea value={odaForm.note} onChange={e => setOdaForm(f => ({ ...f, note: e.target.value }))} className="mt-1 h-12" /></div>
+
+                        {/* Line items table with pricing */}
+                        <div>
+                            <div className="flex justify-between items-center mb-2">
+                                <Label className="text-sm font-medium">Righe Ordine *</Label>
+                                <Button type="button" variant="outline" size="sm" onClick={addOdaLine} data-testid="oda-add-line">
+                                    <Plus className="h-3 w-3 mr-1" /> Aggiungi riga
+                                </Button>
+                            </div>
+                            <div className="border rounded-md overflow-hidden">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-slate-50">
+                                            <TableHead className="w-[35%] text-xs">Descrizione</TableHead>
+                                            <TableHead className="w-[12%] text-xs text-center">Quantità</TableHead>
+                                            <TableHead className="w-[10%] text-xs text-center">U.M.</TableHead>
+                                            <TableHead className="w-[15%] text-xs text-right">Prezzo Unit. €</TableHead>
+                                            <TableHead className="w-[13%] text-xs text-right">Importo €</TableHead>
+                                            <TableHead className="w-[8%] text-xs text-center">3.1</TableHead>
+                                            <TableHead className="w-[7%]"></TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {odaForm.righe.map((riga, idx) => {
+                                            const importoRiga = (parseFloat(riga.quantita) || 0) * (parseFloat(riga.prezzo_unitario) || 0);
+                                            return (
+                                                <TableRow key={riga.id || idx}>
+                                                    <TableCell className="p-1">
+                                                        <Input
+                                                            value={riga.descrizione}
+                                                            onChange={e => updateOdaLine(idx, 'descrizione', e.target.value)}
+                                                            placeholder="es. Travi IPE 100"
+                                                            className="h-8 text-sm"
+                                                            data-testid={`oda-desc-${idx}`}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="p-1">
+                                                        <Input
+                                                            type="number"
+                                                            value={riga.quantita}
+                                                            onChange={e => updateOdaLine(idx, 'quantita', e.target.value)}
+                                                            className="h-8 text-sm text-center"
+                                                            min="0"
+                                                            step="0.01"
+                                                            data-testid={`oda-qty-${idx}`}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="p-1">
+                                                        <Select value={riga.unita_misura} onValueChange={v => updateOdaLine(idx, 'unita_misura', v)}>
+                                                            <SelectTrigger className="h-8 text-xs">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="kg">kg</SelectItem>
+                                                                <SelectItem value="pz">pz</SelectItem>
+                                                                <SelectItem value="ml">ml</SelectItem>
+                                                                <SelectItem value="mq">mq</SelectItem>
+                                                                <SelectItem value="t">t</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </TableCell>
+                                                    <TableCell className="p-1">
+                                                        <Input
+                                                            type="number"
+                                                            value={riga.prezzo_unitario}
+                                                            onChange={e => updateOdaLine(idx, 'prezzo_unitario', e.target.value)}
+                                                            className="h-8 text-sm text-right"
+                                                            min="0"
+                                                            step="0.01"
+                                                            data-testid={`oda-price-${idx}`}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="p-1 text-right text-sm font-medium text-slate-600">
+                                                        {importoRiga.toFixed(2)}
+                                                    </TableCell>
+                                                    <TableCell className="p-1 text-center">
+                                                        <Checkbox
+                                                            checked={riga.richiede_cert_31}
+                                                            onCheckedChange={v => updateOdaLine(idx, 'richiede_cert_31', v)}
+                                                            data-testid={`oda-cert-${idx}`}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell className="p-1 text-center">
+                                                        {odaForm.righe.length > 1 && (
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-7 w-7 p-0 text-red-400 hover:text-red-600"
+                                                                onClick={() => removeOdaLine(idx)}
+                                                            >
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                            </Button>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            <div className="flex justify-between items-center mt-2 px-2">
+                                <p className="text-xs text-muted-foreground">
+                                    ☑️ 3.1 = richiedi certificato materiale
+                                </p>
+                                <div className="text-right">
+                                    <span className="text-sm text-slate-500 mr-2">Totale Ordine:</span>
+                                    <span className="text-lg font-bold text-emerald-700">{fmtEur(odaTotale)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Notes */}
+                        <div>
+                            <Label className="text-sm font-medium">Note</Label>
+                            <Textarea
+                                value={odaForm.note}
+                                onChange={e => setOdaForm(f => ({ ...f, note: e.target.value }))}
+                                className="mt-1 h-16"
+                                placeholder="Condizioni di pagamento, consegna, ecc."
+                                data-testid="oda-note"
+                            />
+                        </div>
                     </div>
-                    <DialogFooter><Button size="sm" disabled={!odaForm.fornitore_nome} onClick={handleCreateOdA} className="bg-[#0055FF] text-white" data-testid="btn-confirm-oda">Emetti Ordine</Button></DialogFooter>
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setOdaOpen(false)}>Annulla</Button>
+                        <Button
+                            size="sm"
+                            disabled={!odaForm.fornitore_nome || odaForm.righe.filter(r => r.descrizione.trim()).length === 0}
+                            onClick={handleCreateOdA}
+                            className="bg-emerald-600 text-white hover:bg-emerald-700"
+                            data-testid="btn-confirm-oda"
+                        >
+                            <Package className="h-4 w-4 mr-1" /> Emetti Ordine
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 
