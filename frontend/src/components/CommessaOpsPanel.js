@@ -433,10 +433,47 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                     {(approv.ordini || []).map(o => (
                         <div key={o.ordine_id} className="flex items-center gap-2 p-2 bg-blue-50 rounded text-xs" data-testid={`oda-${o.ordine_id}`}>
                             <Truck className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                            <span className="font-medium flex-1 truncate">OdA → {o.fornitore_nome}</span>
-                            <span className="font-mono text-[10px]">{fmtEur(o.importo_totale)}</span>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-medium truncate">OdA → {o.fornitore_nome}</span>
+                                    {/* Email status badge */}
+                                    {o.email_sent ? (
+                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[9px] font-medium" title={`Inviata a ${o.email_sent_to}`}>
+                                            <MailCheck className="h-2.5 w-2.5" /> Inviata
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-red-100 text-red-600 rounded text-[9px] font-medium">
+                                            <Mail className="h-2.5 w-2.5" /> Bozza
+                                        </span>
+                                    )}
+                                </div>
+                                {o.righe?.length > 0 && (
+                                    <div className="text-[10px] text-slate-500 mt-0.5">
+                                        {o.righe.length} righe — {o.righe.filter(x => x.richiede_cert_31).length > 0 && `${o.righe.filter(x => x.richiede_cert_31).length} cert. 3.1`}
+                                    </div>
+                                )}
+                            </div>
+                            <span className="font-mono text-[10px] font-semibold">{fmtEur(o.importo_totale)}</span>
                             <StatoBadge stato={o.stato} />
-                            {o.stato === 'inviato' && <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => handleUpdateOrdine(o.ordine_id, 'confermato')}>Confermato</Button>}
+                            {/* Action buttons */}
+                            <div className="flex items-center gap-1">
+                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => handlePreviewOdaPdf(o.ordine_id)} title="Anteprima PDF">
+                                    <FileSearch className="h-3.5 w-3.5 text-emerald-600" />
+                                </Button>
+                                {!o.email_sent && (
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-6 w-6 p-0"
+                                        onClick={() => handleSendOdaEmail(o.ordine_id)}
+                                        disabled={sendingEmail === o.ordine_id}
+                                        title="Invia Email"
+                                    >
+                                        {sendingEmail === o.ordine_id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5 text-amber-600" />}
+                                    </Button>
+                                )}
+                                {o.stato === 'inviato' && <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => handleUpdateOrdine(o.ordine_id, 'confermato')}>Confermato</Button>}
+                            </div>
                         </div>
                     ))}
 
