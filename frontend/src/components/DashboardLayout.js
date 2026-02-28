@@ -19,7 +19,7 @@ import {
     Sparkles, Receipt, Users, Settings, Ruler, Package, Shield,
     HardHat, Warehouse, ClipboardList, Truck, Factory, ShieldAlert,
     BarChart3, BoxIcon, FileInput, Camera, ChevronDown,
-    Briefcase, Wrench, Award, ShoppingCart, FileText,
+    Briefcase, Wrench, Award, ShoppingCart, FileText, LayoutGrid,
 } from 'lucide-react';
 
 // ── Navigation Structure ────────────────────────────────────────
