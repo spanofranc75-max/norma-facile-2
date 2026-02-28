@@ -323,6 +323,13 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Bug Fix Backend**: Aggiunto `send_email_with_attachment` a email_service.py, fixato CSS PDF (aggiunto COMMON_CSS), fixato query fornitore (`client_id` vs `id`), fixato metodo HTTP endpoint preview-pdf (POST→GET)
 - Testing: 100% backend (11/11), 100% frontend (iteration_63)
 
+### Anteprima Email per TUTTI gli Invii (Feb 2026)
+- **EmailPreviewDialog**: Componente riutilizzabile che mostra destinatario, oggetto, corpo HTML in iframe, badge allegato, bottoni "Invia" e "Annulla"
+- **6 Endpoint Backend `GET .../preview-email`**: RdP, OdA, Conto Lavoro (commessa_ops.py), Fattura (invoices.py), DDT (ddt.py), Preventivo (preventivi.py)
+- **Frontend Integrato**: Tutti i 6 bottoni "Email" (CommessaOpsPanel, InvoiceEditorPage, InvoicesPage, DDTEditorPage, PreventivoEditorPage) ora aprono l'anteprima prima dell'invio
+- **Email Preview Builder**: `/app/backend/services/email_preview.py` — template HTML coerenti per ogni tipo di documento
+- Testing: 100% backend (14/14 pytest), 100% frontend (iteration_64)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
