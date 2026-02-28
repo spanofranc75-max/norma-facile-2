@@ -913,6 +913,50 @@ async def get_preventivo_pdf(prev_id: str, user: dict = Depends(get_current_user
 
 # ── Send Preventivo via Email ──
 
+@router.get("/{prev_id}/preview-email")
+async def preview_preventivo_email(prev_id: str, user: dict = Depends(get_current_user)):
+    """Preview email that would be sent for a preventivo."""
+    doc = await db.preventivi.find_one(
+        {"preventivo_id": prev_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "Preventivo non trovato")
+
+    client = None
+    to_email = ""
+    client_name = ""
+    if doc.get("client_id"):
+        client = await db.clients.find_one({"client_id": doc["client_id"]}, {"_id": 0})
+        if client:
+            client_name = client.get("business_name", "")
+            to_email = client.get("pec") or client.get("email") or ""
+            if not to_email:
+                for contact in client.get("contacts", []):
+                    if contact.get("email"):
+                        to_email = contact["email"]
+                        break
+
+    from services.email_preview import build_invoice_email
+    prev_number = doc.get("number", prev_id)
+    total = doc.get("totals", {}).get("total_document", 0)
+
+    preview = build_invoice_email(
+        client_name=client_name,
+        document_number=prev_number,
+        document_type="PRV",
+        total=total,
+    )
+    return {
+        "to_email": to_email,
+        "to_name": client_name,
+        "subject": preview["subject"],
+        "html_body": preview["html_body"],
+        "has_attachment": True,
+        "attachment_name": f"Preventivo_{prev_number}.pdf",
+    }
+
+
+
 @router.post("/{prev_id}/send-email")
 async def send_preventivo_email(prev_id: str, user: dict = Depends(get_current_user)):
     """Generate PDF and send preventivo via email to client."""
