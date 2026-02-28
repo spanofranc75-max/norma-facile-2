@@ -945,8 +945,13 @@ async def delete_document(cid: str, doc_id: str, user: dict = Depends(get_curren
 
 @router.post("/{cid}/documenti/{doc_id}/parse-certificato")
 async def parse_certificato_31(cid: str, doc_id: str, user: dict = Depends(get_current_user)):
-    """Use GPT-4o Vision to extract data from a 3.1 material certificate."""
+    """Use GPT-4o Vision to extract data from a 3.1 material certificate.
+    Supports PDF (converts to image) and image files.
+    """
     import os
+    import base64
+    from io import BytesIO
+    
     LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
     if not LLM_KEY:
         raise HTTPException(500, "Chiave AI non configurata")
@@ -961,6 +966,33 @@ async def parse_certificato_31(cid: str, doc_id: str, user: dict = Depends(get_c
         from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 
         file_b64 = doc["file_base64"]
+        content_type = doc.get("content_type", "")
+        
+        # Check if it's a PDF and convert to image
+        if content_type == "application/pdf" or doc.get("nome_file", "").lower().endswith(".pdf"):
+            try:
+                from pdf2image import convert_from_bytes
+                
+                # Decode PDF bytes
+                pdf_bytes = base64.b64decode(file_b64)
+                
+                # Convert first page to image
+                images = convert_from_bytes(pdf_bytes, first_page=1, last_page=1, dpi=150)
+                if images:
+                    # Convert PIL image to base64 PNG
+                    img_buffer = BytesIO()
+                    images[0].save(img_buffer, format='PNG')
+                    img_buffer.seek(0)
+                    file_b64 = base64.b64encode(img_buffer.read()).decode('utf-8')
+                    logger.info(f"Converted PDF to PNG for AI analysis: {doc_id}")
+                else:
+                    raise HTTPException(400, "Impossibile convertire il PDF in immagine")
+            except ImportError:
+                raise HTTPException(500, "pdf2image non installato per la conversione PDF")
+            except Exception as pdf_err:
+                logger.error(f"PDF conversion error: {pdf_err}")
+                raise HTTPException(400, f"Errore conversione PDF: {str(pdf_err)}")
+        
         file_contents = [ImageContent(image_base64=file_b64)]
 
         prompt = """Analizza questo certificato di materiale 3.1 (EN 10204) per acciaio strutturale.
