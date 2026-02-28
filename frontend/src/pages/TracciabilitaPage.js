@@ -253,24 +253,24 @@ function ProjectsTab() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-zinc-400">Progetti creati da preventivi con tracciabilità FPC</p>
+        <p className="text-sm text-slate-500">Progetti creati da preventivi con tracciabilità FPC</p>
       </div>
 
       <div className="space-y-2" data-testid="projects-list">
         {projects.map(p => (
-          <div key={p.project_id} className="flex items-center justify-between p-3 rounded-lg border border-zinc-700 bg-zinc-800/50 cursor-pointer hover:border-amber-500/50" onClick={() => navigate(`/tracciabilita/progetto/${p.project_id}`)}>
+          <div key={p.project_id} className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-white cursor-pointer hover:border-[#0055FF]/50 hover:shadow-sm transition-all" onClick={() => navigate(`/tracciabilita/progetto/${p.project_id}`)}>
             <div>
               <div className="font-medium flex items-center gap-2">
                 {p.preventivo_number || p.project_id}
                 {getStatusBadge(p)}
               </div>
-              <div className="text-sm text-zinc-400">{p.client_name || 'N/A'} — {p.subject || 'Senza oggetto'}</div>
-              <div className="text-xs text-zinc-500">Classe: {p.fpc_data?.execution_class || '-'}</div>
+              <div className="text-sm text-slate-500">{p.client_name || 'N/A'} — {p.subject || 'Senza oggetto'}</div>
+              <div className="text-xs text-slate-400">Classe: {p.fpc_data?.execution_class || '-'}</div>
             </div>
-            <Shield className="h-5 w-5 text-zinc-500" />
+            <Shield className="h-5 w-5 text-slate-300" />
           </div>
         ))}
-        {projects.length === 0 && <p className="text-center py-8 text-zinc-500">Nessun progetto FPC. Converti un preventivo per iniziare.</p>}
+        {projects.length === 0 && <p className="text-center py-8 text-slate-400">Nessun progetto FPC. Converti un preventivo per iniziare.</p>}
       </div>
     </div>
   );
