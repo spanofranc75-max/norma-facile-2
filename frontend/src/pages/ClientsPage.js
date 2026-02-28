@@ -466,6 +466,37 @@ export default function ClientsPage() {
                                 <Textarea data-testid="input-notes" value={formData.notes} onChange={e => updateField('notes', e.target.value)} placeholder="Note aggiuntive..." rows={8} />
                             </div>
                         )}
+
+                        {activeTab === 'email_log' && (
+                            <div data-testid="email-log-tab">
+                                {!editingClient ? (
+                                    <p className="text-sm text-slate-400 text-center py-8">Salva il cliente prima per vedere lo storico email.</p>
+                                ) : emailLog.length === 0 ? (
+                                    <div className="text-center py-8">
+                                        <Mail className="h-8 w-8 mx-auto text-slate-300 mb-2" />
+                                        <p className="text-sm text-slate-400">Nessuna email inviata a questo cliente.</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {emailLog.map((e, i) => (
+                                            <div key={i} className="flex items-center gap-3 px-3 py-2.5 bg-slate-50 rounded-lg border border-slate-100" data-testid={`email-log-${i}`}>
+                                                <Mail className="h-4 w-4 text-violet-500 shrink-0" />
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-sm font-medium text-[#1E293B] truncate">{e.type} {e.number}</p>
+                                                    <p className="text-xs text-slate-400">Inviato a: {e.to}</p>
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <p className="text-xs text-slate-400 flex items-center gap-1">
+                                                        <Clock className="h-3 w-3" />
+                                                        {e.sent_at ? new Date(e.sent_at).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <DialogFooter>
