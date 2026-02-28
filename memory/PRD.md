@@ -234,6 +234,13 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
   - CRUD completo + board/view + status history + from-preventivo
   - Sidebar: "Planning Cantieri" sotto gruppo Produzione
   - Testing: 18/18 backend, 100% frontend (iteration_40)
+- [x] Officina Quality Score (SRA MVP) — DONE (Phase 33) — 2026-02-28
+  - Score 0-100 con breakdown: Sicurezza (30), CE (25), Documentazione (20), Foto (10), Attività (15)
+  - 4 livelli: Maestro Artigiano (>80), Esperto (>60), Crescita (>40), Apprendista (<40)
+  - Radial progress bar SVG (verde >80, giallo >50, rosso <50)
+  - Insights con "Next Best Action" cliccabili (+punti potenziali)
+  - Widget integrato in Dashboard
+  - Testing: 17/17 backend, 100% frontend (iteration_41)
 - [ ] Integrazione SDI diretta con provider (API keys da configurare)
 - [ ] Recurring invoices / email reminders
 - [ ] Invio fascicolo via PEC automatico
