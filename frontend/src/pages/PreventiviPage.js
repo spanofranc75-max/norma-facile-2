@@ -24,6 +24,22 @@ const STATUS_MAP = {
 
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
 
+function InvoicingProgressBar({ progress }) {
+    if (!progress || progress <= 0) return <span className="text-xs text-slate-400">-</span>;
+    const isComplete = progress >= 100;
+    return (
+        <div className="flex items-center gap-2 min-w-[100px]" data-testid="invoicing-progress">
+            <div className="flex-1 bg-slate-200 rounded-full h-1.5">
+                <div
+                    className={`h-1.5 rounded-full transition-all ${isComplete ? 'bg-emerald-500' : 'bg-[#0055FF]'}`}
+                    style={{ width: `${Math.min(progress, 100)}%` }}
+                />
+            </div>
+            <span className={`text-[10px] font-mono font-semibold ${isComplete ? 'text-emerald-600' : 'text-[#0055FF]'}`}>{Math.round(progress)}%</span>
+        </div>
+    );
+}
+
 export default function PreventiviPage() {
     const navigate = useNavigate();
     const [preventivi, setPreventivi] = useState([]);
