@@ -337,6 +337,7 @@ class ContoLavoroUpdate(BaseModel):
 @router.post("/{cid}/conto-lavoro")
 async def create_conto_lavoro(cid: str, data: ContoLavoroCreate, user: dict = Depends(get_current_user)):
     await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
     cl = {
         "cl_id": new_id("cl_"),
         "tipo": data.tipo,
@@ -364,6 +365,7 @@ async def create_conto_lavoro(cid: str, data: ContoLavoroCreate, user: dict = De
 @router.put("/{cid}/conto-lavoro/{cl_id}")
 async def update_conto_lavoro(cid: str, cl_id: str, data: ContoLavoroUpdate, user: dict = Depends(get_current_user)):
     await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
     upd = {"conto_lavoro.$[elem].stato": data.stato}
     if data.stato == "inviato":
         upd["conto_lavoro.$[elem].data_invio"] = ts().isoformat()
