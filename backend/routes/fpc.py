@@ -1,5 +1,6 @@
-"""Routes for EN 1090 FPC — Welders, Material Batches, Projects, CE Label."""
+"""Routes for EN 1090 FPC — Welders, Material Batches, Projects, CE Label, Dossier."""
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from datetime import datetime, timezone
 from typing import Optional
 import uuid
