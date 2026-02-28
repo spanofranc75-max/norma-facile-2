@@ -195,6 +195,8 @@ function AppRouter() {
             <Route path="/core-engine" element={<ProtectedRoute><CoreEnginePage /></ProtectedRoute>} />
 
             <Route path="/validazione-foto" element={<ProtectedRoute><ValidazioneFotoPage /></ProtectedRoute>} />
+
+            <Route path="/planning" element={<ProtectedRoute><PlanningPage /></ProtectedRoute>} />
         </Routes>
     );
 }
