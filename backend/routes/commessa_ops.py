@@ -192,10 +192,10 @@ async def create_ordine_fornitore(cid: str, data: OrdineFornitore, user: dict = 
     }
     await db[COLL].update_one(
         {"commessa_id": cid},
-        {
-            "$push": {"approvvigionamento.ordini": oda},
-            **push_event(cid, "ORDINE_EMESSO", user, f"OdA a {data.fornitore_nome} — EUR {data.importo_totale:.2f}")
-        },
+        build_update_with_event(
+            push_items={"approvvigionamento.ordini": oda},
+            tipo="ORDINE_EMESSO", user=user, note=f"OdA a {data.fornitore_nome} — EUR {data.importo_totale:.2f}"
+        ),
     )
     return {"message": f"Ordine emesso a {data.fornitore_nome}", "ordine": oda}
 
