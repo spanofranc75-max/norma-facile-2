@@ -57,7 +57,7 @@ function Section({ title, icon: Icon, count, defaultOpen, children }) {
     );
 }
 
-export default function CommessaOpsPanel({ commessaId, onRefresh }) {
+export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh }) {
     const [ops, setOps] = useState(null);
     const [docs, setDocs] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -72,9 +72,13 @@ export default function CommessaOpsPanel({ commessaId, onRefresh }) {
     const [uploadType, setUploadType] = useState('altro');
     const [parsing, setParsing] = useState(null); // doc_id being parsed
 
-    // Form states
-    const [rdpForm, setRdpForm] = useState({ fornitore_nome: '', fornitore_id: '', materiali_richiesti: '' });
-    const [odaForm, setOdaForm] = useState({ fornitore_nome: '', fornitore_id: '', importo_totale: '', note: '' });
+    // Empty line templates
+    const emptyRdpLine = () => ({ id: `l${Date.now()}`, descrizione: '', quantita: 1, unita_misura: 'kg', richiede_cert_31: false });
+    const emptyOdaLine = () => ({ id: `l${Date.now()}`, descrizione: '', quantita: 1, unita_misura: 'kg', prezzo_unitario: 0, richiede_cert_31: false });
+
+    // Form states with righe
+    const [rdpForm, setRdpForm] = useState({ fornitore_nome: '', fornitore_id: '', righe: [emptyRdpLine()], note: '' });
+    const [odaForm, setOdaForm] = useState({ fornitore_nome: '', fornitore_id: '', righe: [emptyOdaLine()], note: '' });
     const [arrivoForm, setArrivoForm] = useState({ ddt_fornitore: '', ordine_id: '', note: '' });
     const [clForm, setClForm] = useState({ tipo: 'verniciatura', fornitore_nome: '', fornitore_id: '' });
 
