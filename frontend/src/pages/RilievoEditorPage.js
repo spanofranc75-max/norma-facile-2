@@ -408,6 +408,23 @@ export default function RilievoEditorPage() {
         }));
     };
 
+    const handleGeneraPos = async () => {
+        if (!isEditing) {
+            toast.error('Salva il rilievo prima di generare il POS');
+            return;
+        }
+        setCreatingPos(true);
+        try {
+            const res = await apiRequest(`/sicurezza/from-rilievo/${rilievoId}`, { method: 'POST' });
+            toast.success('POS cantiere creato!');
+            navigate(`/sicurezza/${res.pos_id || ''}`);
+        } catch (e) {
+            toast.error(e.message || 'Errore nella creazione del POS');
+        } finally {
+            setCreatingPos(false);
+        }
+    };
+
     const handleSave = async () => {
         if (!formData.client_id) {
             toast.error('Seleziona un cliente');
