@@ -40,6 +40,7 @@ import EBITDAPage from './pages/EBITDAPage';
 import TracciabilitaPage from './pages/TracciabilitaPage';
 import FPCProjectPage from './pages/FPCProjectPage';
 import ReportCAMPage from './pages/ReportCAMPage';
+import ArchivioCertificatiPage from './pages/ArchivioCertificatiPage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -209,6 +210,7 @@ function AppRouter() {
             <Route path="/tracciabilita/progetto/:projectId" element={<ProtectedRoute><FPCProjectPage /></ProtectedRoute>} />
             {/* Report CAM */}
             <Route path="/report-cam" element={<ProtectedRoute><ReportCAMPage /></ProtectedRoute>} />
+            <Route path="/archivio-certificati" element={<ProtectedRoute><ArchivioCertificatiPage /></ProtectedRoute>} />
         </Routes>
     );
 }
