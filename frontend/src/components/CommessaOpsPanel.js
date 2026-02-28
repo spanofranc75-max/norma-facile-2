@@ -176,13 +176,26 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     };
 
     const handleCreateOdA = async () => {
+        if (odaForm.righe.filter(r => r.descrizione.trim()).length === 0) {
+            toast.error('Inserisci almeno una riga');
+            return;
+        }
         try {
-            await apiRequest(`/commesse/${commessaId}/approvvigionamento/ordini`, {
-                method: 'POST', body: { ...odaForm, importo_totale: parseFloat(odaForm.importo_totale) || 0 },
-            });
+            const payload = {
+                ...odaForm,
+                righe: odaForm.righe.filter(r => r.descrizione.trim()).map(r => ({
+                    descrizione: r.descrizione,
+                    quantita: parseFloat(r.quantita) || 1,
+                    unita_misura: r.unita_misura,
+                    prezzo_unitario: parseFloat(r.prezzo_unitario) || 0,
+                    richiede_cert_31: r.richiede_cert_31,
+                })),
+                importo_totale: odaTotale,
+            };
+            await apiRequest(`/commesse/${commessaId}/approvvigionamento/ordini`, { method: 'POST', body: payload });
             toast.success('Ordine emesso');
             setOdaOpen(false);
-            setOdaForm({ fornitore_nome: '', importo_totale: '', note: '' });
+            setOdaForm({ fornitore_nome: '', fornitore_id: '', righe: [emptyOdaLine()], note: '' });
             fetchData(); onRefresh?.();
         } catch (e) { toast.error(e.message); }
     };
