@@ -75,14 +75,16 @@ class TestClientCreationBugFix:
     
     def test_create_client_with_full_data(self, api_client):
         """POST /api/clients/ with all fields populated"""
+        import time
+        unique_suffix = str(int(time.time()))[-6:]
         payload = {
             "business_name": "TEST_FullData_SRL",
             "client_type": "cliente",
             "persona_fisica": False,
             "codice_sdi": "0000000",
             "country": "IT",
-            "partita_iva": "IT12345678901",
-            "codice_fiscale": "12345678901",
+            "partita_iva": f"IT99{unique_suffix}01",
+            "codice_fiscale": f"99{unique_suffix}01",
             "pec": "test@pec.it",
             "address": "Via Test 123",
             "cap": "00100",
