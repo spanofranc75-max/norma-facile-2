@@ -14,6 +14,75 @@ router = APIRouter(prefix="/ddt", tags=["ddt"])
 
 COLLECTION = "ddt_documents"
 
+# ── Stats / Registro ──
+
+@router.get("/stats/registro")
+async def ddt_stats(
+    year: Optional[int] = Query(None),
+    month: Optional[int] = Query(None),
+    user: dict = Depends(get_current_user),
+):
+    """KPI cards and monthly shipping report for DDT register."""
+    uid = user["user_id"]
+    now = datetime.now(timezone.utc)
+    target_year = year or now.year
+    target_month = month or now.month
+
+    # Date range for month filter
+    from calendar import monthrange
+    last_day = monthrange(target_year, target_month)[1]
+    start = datetime(target_year, target_month, 1, tzinfo=timezone.utc)
+    end = datetime(target_year, target_month, last_day, 23, 59, 59, tzinfo=timezone.utc)
+
+    base_q = {"user_id": uid}
+    month_q = {**base_q, "created_at": {"$gte": start, "$lte": end}}
+
+    # Total counts
+    total_all = await db[COLLECTION].count_documents(base_q)
+    total_month = await db[COLLECTION].count_documents(month_q)
+
+    # Per-type breakdown this month
+    per_type = {}
+    for t in ["vendita", "conto_lavoro", "rientro_conto_lavoro"]:
+        per_type[t] = await db[COLLECTION].count_documents({**month_q, "ddt_type": t})
+
+    # Per-status this month
+    per_status = {}
+    for s in ["non_fatturato", "parzialmente_fatturato", "fatturato"]:
+        per_status[s] = await db[COLLECTION].count_documents({**month_q, "status": s})
+
+    # Volume totale mese
+    pipeline = [
+        {"$match": month_q},
+        {"$group": {"_id": None, "volume": {"$sum": "$totals.total"}}},
+    ]
+    agg = await db[COLLECTION].aggregate(pipeline).to_list(1)
+    volume_month = round(agg[0]["volume"], 2) if agg else 0
+
+    # Top 5 clienti del mese
+    client_pipeline = [
+        {"$match": month_q},
+        {"$group": {"_id": "$client_name", "count": {"$sum": 1}, "volume": {"$sum": "$totals.total"}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 5},
+    ]
+    top_clients = await db[COLLECTION].aggregate(client_pipeline).to_list(5)
+
+    return {
+        "year": target_year,
+        "month": target_month,
+        "total_all": total_all,
+        "total_month": total_month,
+        "per_type": per_type,
+        "per_status": per_status,
+        "volume_month": volume_month,
+        "top_clients": [
+            {"name": c["_id"] or "Senza cliente", "count": c["count"], "volume": round(c["volume"], 2)}
+            for c in top_clients
+        ],
+    }
+
+
 DDT_TYPE_LABELS = {
     "vendita": "DDT di Vendita",
     "conto_lavoro": "DDT Conto Lavoro",
