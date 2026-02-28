@@ -686,6 +686,12 @@ export default function PreventivoEditorPage() {
                 prevId={prevId}
                 onCreated={(res) => navigate(`/invoices/${res.invoice_id}`)}
             />
+            <EmailPreviewDialog
+                open={emailPreviewOpen}
+                onOpenChange={setEmailPreviewOpen}
+                previewUrl={`/api/preventivi/${prevId}/preview-email`}
+                sendUrl={`/api/preventivi/${prevId}/send-email`}
+            />
         </DashboardLayout>
     );
 }
