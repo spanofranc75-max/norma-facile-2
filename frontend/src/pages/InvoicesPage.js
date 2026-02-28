@@ -685,6 +685,13 @@ export default function InvoicesPage() {
                 pdfUrl={pdfPreview.url}
                 title={pdfPreview.title}
             />
+            <EmailPreviewDialog
+                open={emailPreview.open}
+                onOpenChange={(open) => setEmailPreview(prev => ({ ...prev, open }))}
+                previewUrl={emailPreview.invoiceId ? `/api/invoices/${emailPreview.invoiceId}/preview-email` : ''}
+                sendUrl={emailPreview.invoiceId ? `/api/invoices/${emailPreview.invoiceId}/send-email` : ''}
+                onSent={fetchInvoices}
+            />
         </DashboardLayout>
     );
 }
