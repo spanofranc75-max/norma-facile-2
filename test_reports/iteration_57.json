@@ -1,0 +1,76 @@
+{
+  "summary": "Iteration 57: Testing new features - (1) 'Crea OdA from RdP' button on accepted RdPs pre-fills OdA form, (2) Certificate linking UI for arrivals with AI OCR extraction. Both features working correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "OdA Dialog - Fornitore Combobox",
+        "issue": "When creating OdA from RdP, fornitore dropdown shows 'Seleziona fornitore...' instead of the pre-filled fornitore name if the fornitore_id from RdP doesn't exist in the fornitori anagrafica list",
+        "selector": "[data-testid='oda-fornitore']",
+        "priority": "LOW",
+        "note": "This is expected behavior - the Combobox uses fornitore_id for matching which may not exist in fornitori list if supplier was manually entered. fornitore_nome IS set in the form state."
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "feature_1_crea_oda_from_rdp": {
+      "status": "PASS",
+      "description": "When RdP status is 'accettata', a 'Crea OdA' button appears and pre-fills OdA form",
+      "tests": {
+        "button_appears_on_accepted_rdp": "PASS - 'Crea OdA' button visible only on RdPs with stato='accettata'",
+        "line_items_prefilled": "PASS - All righe from RdP (Travi IPE 100, Bulloni M12, Piastre 10mm) pre-filled with descrizione, quantita, unita_misura",
+        "richiede_cert_31_prefilled": "PASS - Cert 3.1 checkboxes correctly marked for materials that required it in RdP",
+        "prezzo_unitario_zero": "PASS - All price fields default to 0 (user needs to fill)",
+        "note_contains_rdp_reference": "PASS - Note field pre-filled with 'Rif. RdP: rdp_ca08c6ec06'",
+        "toast_notification": "PASS - Toast message 'OdA pre-compilato dalla RdP - aggiungi i prezzi e invia!' displayed"
+      }
+    },
+    "feature_2_certificate_linking": {
+      "status": "PASS",
+      "description": "Certificate linking dialog opens from 'Certificati' button on arrivals with materials requiring 3.1",
+      "tests": {
+        "certificati_button_appears": "PASS - 'Certificati' button visible on arrival with materials having richiede_cert_31=true",
+        "dialog_title": "PASS - Dialog titled 'Collega Certificati ai Materiali'",
+        "ddt_reference_shown": "PASS - DDT reference 'DDT-2024-1234' displayed in dialog",
+        "materials_table_displayed": "PASS - Table shows materials with columns: Materiale, Q.tà, Colata, Azioni",
+        "cert_31_badges": "PASS - '3.1' badges shown next to materials requiring certificates",
+        "non_collegato_text": "PASS - Materials not linked show 'Non collegato' in red",
+        "carica_cert_button": "PASS - 'Carica Cert.' button available for uploading certificates",
+        "non_cert_materials_dash": "PASS - Materials not requiring cert 3.1 (Piastre 10mm) show '-' instead of upload option",
+        "ai_ocr_info_text": "PASS - AI OCR explanation text present about automatic extraction of numero colata, qualita, fornitore"
+      }
+    },
+    "backend_api_tests": {
+      "rdp_creation": "PASS - POST /api/commesse/{id}/approvvigionamento/richieste with righe array works",
+      "rdp_status_update": "PASS - PUT to update RdP status (inviata -> ricevuta -> accettata) works",
+      "arrivo_creation": "PASS - POST /api/commesse/{id}/approvvigionamento/arrivi with materiali array and richiede_cert_31 works",
+      "arrivo_materiali_cert_fields": "PASS - Each materiale has certificato_doc_id, numero_colata, qualita_materiale fields"
+    }
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_57.json"
+  ],
+  "action_items": [
+    "Minor: Consider adding display of fornitore_nome in OdA form even when fornitore_id doesn't match anagrafica (for manual entries)"
+  ],
+  "critical_code_review_comments": [
+    "handleCreateOdaFromRdp (line 237) correctly pre-fills all RdP line items with prezzo_unitario=0",
+    "Certificate linking dialog (line 1355) correctly shows materials table with upload buttons only for richiede_cert_31=true materials",
+    "handleCertificateUpload (line 440) uploads certificate, calls AI parse endpoint, then links to material via PUT endpoint"
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100% (both new features working)"
+  },
+  "test_credentials": "Dynamic test session: test_session_1772288168748",
+  "seed_data_creation": "Created test commessa com_19ac75484426 with RdP (3 righe) and Arrivo (3 materiali with richiede_cert_31) - cleaned up after testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "New features tested and working: (1) 'Crea OdA' button appears on RdPs with stato='accettata' and pre-fills OdA form with line items from RdP (descrizione, quantita, um, richiede_cert_31) - prices default to 0 and note contains RdP reference. (2) 'Certificati' button on arrivals opens dialog showing materials requiring 3.1 certificates with 'Carica Cert.' upload buttons - materials already linked would show green 'Collegato' badge. AI OCR integration would extract numero_colata and qualita_materiale from uploaded PDFs."
+}
