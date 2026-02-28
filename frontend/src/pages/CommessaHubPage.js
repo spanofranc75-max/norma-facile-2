@@ -342,6 +342,9 @@ export default function CommessaHubPage() {
                                 </CardContent>
                             </Card>
                         )}
+
+                        {/* Operational Panels: Approvvigionamento, Produzione, C/L, Repository */}
+                        <CommessaOpsPanel commessaId={commessaId} onRefresh={fetchHub} />
                     </div>
 
                     {/* Right: Timeline */}
