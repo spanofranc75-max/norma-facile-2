@@ -207,6 +207,14 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Event Sourcing**: Ogni operazione pushes evento nella timeline commessa (RDP_INVIATA, ORDINE_EMESSO, MATERIALE_ARRIVATO, FASE_IN_CORSO, CL_CREATO, DOCUMENTO_CARICATO, CERTIFICATO_ANALIZZATO, ecc.)
 - Testing: 24/24 backend, 100% frontend (iteration_52)
 
+### Auto-Suggerimento Fornitori (Phase 47)
+- **Combobox Riutilizzabile**: Nuovo componente `/app/frontend/src/components/ui/combobox.jsx` con ricerca in tempo reale (Command + Popover pattern)
+- **CommessaOpsPanel**: Dialogs RdP, OdA, Conto Lavoro aggiornati con Combobox per selezione fornitore da anagrafica
+- **ArticoliPage**: Dialog Nuovo Articolo aggiornato con Combobox per associazione fornitore
+- **Backend Filter**: GET `/api/clients/?client_type=fornitore` include sia 'fornitore' che 'cliente_fornitore'
+- **Data Association**: `fornitore_id` e `fornitore_nome` salvati correttamente in richieste, ordini, conto lavoro, articoli
+- Testing: 10/10 backend, 100% frontend (iteration_53)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
