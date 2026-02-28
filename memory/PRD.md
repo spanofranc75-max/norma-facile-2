@@ -215,6 +215,16 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Data Association**: `fornitore_id` e `fornitore_nome` salvati correttamente in richieste, ordini, conto lavoro, articoli
 - Testing: 10/10 backend, 100% frontend (iteration_53)
 
+### RdP e OdA con Righe Dettagliate (Phase 48)
+- **RdP Dialog Avanzato**: Tabella righe con Descrizione, Quantità, U.M., ☑️ Cert. 3.1 richiesto
+- **OdA Dialog Avanzato**: Tabella righe con Descrizione, Quantità, U.M., Prezzo Unitario, Importo calcolato, ☑️ Cert. 3.1
+- **Totale OdA Automatico**: Calcolo in tempo reale del totale ordine dalla somma delle righe
+- **Riferimento Commessa**: Numero commessa sempre visibile nell'intestazione dei dialog
+- **Backend Models**: `RigaRdP` e `RigaOdA` Pydantic con `richiede_cert_31: bool`
+- **Validazione**: Almeno una riga con descrizione richiesta per inviare
+- **Add/Remove Lines**: Bottoni per aggiungere/rimuovere righe dinamicamente
+- Testing: 12/12 backend, 100% frontend (iteration_54)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
