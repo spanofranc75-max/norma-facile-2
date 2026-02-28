@@ -460,10 +460,12 @@ export default function ClientsPage() {
 
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Annulla</Button>
-                        <Button type="button" data-testid="btn-save-client" onClick={handleSave} disabled={saving} className="bg-[#0055FF] text-white hover:bg-[#0044CC]">
+                        <Button type="submit" data-testid="btn-save-client" disabled={saving} className="bg-[#0055FF] text-white hover:bg-[#0044CC]">
                             {saving ? 'Salvataggio...' : 'Salva'}
                         </Button>
                     </DialogFooter>
+                    </form>
+                </DialogContent>
                 </DialogContent>
             </Dialog>
 
