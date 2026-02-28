@@ -236,6 +236,23 @@ export default function PreventivoEditorPage() {
         } catch (e) { toast.error(e.message); } finally { setConverting(false); }
     };
 
+    const handleConvertToProject = async () => {
+        setShowFpcDialog(false);
+        setConverting(true);
+        try {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            const r = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/fpc/projects`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ preventivo_id: prevId, execution_class: excClass }),
+            });
+            const data = await r.json();
+            if (!r.ok) throw new Error(data.detail || 'Errore conversione');
+            toast.success('Progetto FPC creato!');
+            navigate(`/tracciabilita/progetto/${data.project_id}`);
+        } catch (e) { toast.error(e.message); } finally { setConverting(false); }
+    };
+
     const activeLine = activeLineIdx !== null ? form.lines[activeLineIdx] : null;
     const activeThermal = activeLine?.thermal_data;
 
