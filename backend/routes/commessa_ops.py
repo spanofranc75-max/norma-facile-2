@@ -866,7 +866,7 @@ async def update_conto_lavoro(cid: str, cl_id: str, data: ContoLavoroUpdate, use
 
 
 # ── DDT CONTO LAVORO: Preview PDF ──
-@router.post("/{cid}/conto-lavoro/{cl_id}/preview-pdf")
+@router.get("/{cid}/conto-lavoro/{cl_id}/preview-pdf")
 async def preview_cl_pdf(cid: str, cl_id: str, user: dict = Depends(get_current_user)):
     """Generate DDT PDF for Conto Lavoro."""
     comm = await get_commessa_or_404(cid, user["user_id"])
