@@ -252,6 +252,7 @@ DEFAULT_FASI = [
 async def init_produzione(cid: str, user: dict = Depends(get_current_user)):
     """Initialize production phases for a commessa."""
     doc = await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
     if doc.get("fasi_produzione"):
         return {"message": "Fasi gia' inizializzate", "fasi": doc["fasi_produzione"]}
 
@@ -278,6 +279,7 @@ async def init_produzione(cid: str, user: dict = Depends(get_current_user)):
 @router.get("/{cid}/produzione")
 async def get_produzione(cid: str, user: dict = Depends(get_current_user)):
     doc = await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
     return {"fasi": doc.get("fasi_produzione", []), "conto_lavoro": doc.get("conto_lavoro", [])}
 
 
@@ -291,6 +293,7 @@ class FaseUpdate(BaseModel):
 async def update_fase(cid: str, fase_tipo: str, data: FaseUpdate, user: dict = Depends(get_current_user)):
     """Update a production phase."""
     await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
     now = ts().isoformat()
     upd = {"fasi_produzione.$[elem].stato": data.stato}
     if data.stato == "in_corso":
