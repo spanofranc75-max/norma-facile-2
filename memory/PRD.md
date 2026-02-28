@@ -120,6 +120,20 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - Endpoint GET /api/clients/{id}/email-log — aggrega email da fatture, DDT, preventivi
 - Testing: 100% backend e frontend (iteration_45)
 
+### PDF Redesign Preventivo (Phase 39)
+- Riscrittura completa del generatore PDF preventivi da ReportLab a WeasyPrint (HTML/CSS)
+- Layout a due colonne: info azienda (sx) + cliente con bordo (dx)
+- Titolo PREVENTIVO centrato con numero documento
+- Metadati: DATA, Pagamento, Validità
+- Tabella articoli 8 colonne: Codice, Descrizione, u.m., Quantità, Prezzo, Sconti, Importo, Iva
+- Sezione note tecniche
+- Dettaglio IVA con breakdown per aliquota + TOTALE IMPONIBILE + Totale IVA + Totale €
+- Dati bancari
+- Pagina condizioni di vendita con sezione accettazione e firma
+- Formattazione numeri italiana (virgola decimale, punto migliaia)
+- Gestione robusta valori None in tutti i campi
+- Testing: 17/17 test passati (iteration_46)
+
 ## Issue Pendenti
 - **P0**: Firma digitale DDT - pulsante "Salva" bloccato
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
