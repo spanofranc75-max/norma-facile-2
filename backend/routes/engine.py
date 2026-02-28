@@ -826,6 +826,223 @@ async def generate_fascicolo(
 
 
 # ══════════════════════════════════════════════════════════════════
+# 5. AI PHOTO VALIDATION — Installation Photo Analysis (GPT-4o Vision)
+# ══════════════════════════════════════════════════════════════════
+
+import os
+import base64
+
+LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
+
+
+class PhotoValidationRequest(BaseModel):
+    """Request to validate installation photos with AI."""
+    norma_id: Optional[str] = None
+    product_type: str = ""
+    description: str = ""
+    photos_base64: List[str] = []  # base64-encoded images
+    checklist: List[str] = []  # custom checklist items
+    zona_climatica: Optional[str] = None
+
+
+@router.post("/validate-installation-photos")
+async def validate_installation_photos(
+    req: PhotoValidationRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Analyze installation photos with GPT-4o Vision and validate against requirements."""
+    if not req.photos_base64:
+        raise HTTPException(422, "Nessuna foto caricata. Caricare almeno una foto dell'installazione.")
+
+    if not LLM_KEY:
+        raise HTTPException(500, "Chiave LLM non configurata. Contattare l'amministratore.")
+
+    # Get norm config if specified
+    norma = None
+    norma_title = ""
+    norma_ref = ""
+    if req.norma_id:
+        norma = await db.norme_config.find_one({"norma_id": req.norma_id}, {"_id": 0})
+        if norma:
+            norma_title = norma.get("title", "")
+            norma_ref = norma.get("standard_ref", "")
+
+    # Build the checklist from norm requirements + custom items
+    checklist_items = list(req.checklist) if req.checklist else []
+
+    # Auto-generate standard installation checklist based on product type
+    product_lower = req.product_type.lower()
+    default_checks = []
+    if any(k in product_lower for k in ["finestra", "portafinestra", "serramento"]):
+        default_checks = [
+            "Telaio correttamente a piombo e in bolla",
+            "Guarnizioni perimetrali integre e ben posizionate",
+            "Controtelato/falso telaio fissato correttamente al muro",
+            "Schiuma poliuretanica o isolante applicato nel giunto telaio-muro",
+            "Davanzale con pendenza e gocciolatoio",
+            "Ferramenta di chiusura funzionante (maniglia, cremonese)",
+            "Vetrocamera senza condensa interna",
+            "Sigillatura esterna completata (silicone o nastro)",
+        ]
+    elif any(k in product_lower for k in ["cancello", "portone", "recinzione"]):
+        default_checks = [
+            "Montanti verticali a piombo e ben ancorati",
+            "Cerniere correttamente saldate/imbullonate (minimo 3 per anta > 2m)",
+            "Serratura/chiavistello funzionante",
+            "Zincatura / verniciatura integra senza graffi o bolle",
+            "Distanza dal suolo conforme (EN 13241: max 50mm gap)",
+            "Automazione: fotocellule e dispositivi di sicurezza presenti (EN 12453)",
+            "Automazione: costa sensibile installata",
+            "Tasselli di fissaggio correttamente dimensionati (ETAG 001)",
+        ]
+    elif any(k in product_lower for k in ["ringhiera", "balaustra", "parapetto"]):
+        default_checks = [
+            "Altezza minima 100cm dal piano calpestio",
+            "Distanza tra le bacchette verticali ≤ 10cm (sicurezza bambini)",
+            "Fissaggio al solaio con piastre e tasselli chimici",
+            "Saldature continue e prive di cricche visibili",
+            "Zincatura / verniciatura integra",
+        ]
+    else:
+        default_checks = [
+            "Installazione a regola d'arte",
+            "Fissaggi visibili e correttamente dimensionati",
+            "Finitura superficiale integra",
+            "Allineamento e verticalita corretti",
+        ]
+
+    if not checklist_items:
+        checklist_items = default_checks
+    else:
+        # Merge custom items with defaults (custom first)
+        checklist_items = checklist_items + [d for d in default_checks if d not in checklist_items]
+
+    checklist_text = "\n".join(f"  {i+1}. {item}" for i, item in enumerate(checklist_items))
+
+    prompt = f"""Sei un Direttore dei Lavori specializzato in carpenteria metallica e serramenti.
+Analizza le foto dell'installazione completata e valida ogni punto della checklist di controllo.
+
+CONTESTO:
+- Tipo prodotto: {req.product_type or 'Non specificato'}
+- Descrizione: {req.description or 'Non fornita'}
+- Norma di riferimento: {norma_ref} - {norma_title}
+- Zona climatica: {req.zona_climatica or 'Non specificata'}
+
+CHECKLIST DI VALIDAZIONE:
+{checklist_text}
+
+ISTRUZIONI:
+Per OGNI punto della checklist, rispondi con:
+- CONFORME / NON CONFORME / NON VERIFICABILE
+- Breve motivazione (max 1 riga)
+
+Alla fine aggiungi:
+ESITO GLOBALE: CONFORME se tutti i punti essenziali sono conformi, altrimenti NON CONFORME.
+NOTE AGGIUNTIVE: eventuali osservazioni tecniche o raccomandazioni.
+
+Rispondi in italiano tecnico e formale. Non usare markdown."""
+
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+
+        file_contents = []
+        for photo_b64 in req.photos_base64[:5]:
+            if "," in photo_b64:
+                photo_b64 = photo_b64.split(",", 1)[1]
+            file_contents.append(ImageContent(image_base64=photo_b64))
+
+        chat = LlmChat(
+            api_key=LLM_KEY,
+            session_id=f"validate-install-{uuid.uuid4().hex[:8]}",
+            system_message="Sei un Direttore dei Lavori esperto in carpenteria metallica, serramenti e installazioni. Valida le installazioni rispetto alle norme tecniche. Rispondi sempre in italiano formale e tecnico."
+        ).with_model("openai", "gpt-4o")
+
+        response = await chat.send_message(UserMessage(
+            text=prompt,
+            file_contents=file_contents,
+        ))
+
+        ai_text = response if isinstance(response, str) else str(response)
+
+        # Parse response into structured checklist results
+        results = []
+        lines_text = ai_text.split("\n")
+        global_result = "NON VERIFICABILE"
+        notes = ""
+
+        for item in checklist_items:
+            found = False
+            for line in lines_text:
+                line_lower = line.lower().strip()
+                # Match checklist item number or text
+                item_words = item.lower()[:30]
+                if item_words[:15] in line_lower or any(
+                    w in line_lower for w in item_words.split()[:3] if len(w) > 3
+                ):
+                    if "conforme" in line_lower and "non conforme" not in line_lower:
+                        results.append({"item": item, "esito": "CONFORME", "note": line.strip()})
+                        found = True
+                        break
+                    elif "non conforme" in line_lower:
+                        results.append({"item": item, "esito": "NON CONFORME", "note": line.strip()})
+                        found = True
+                        break
+                    elif "non verificabile" in line_lower:
+                        results.append({"item": item, "esito": "NON VERIFICABILE", "note": line.strip()})
+                        found = True
+                        break
+            if not found:
+                results.append({"item": item, "esito": "NON VERIFICABILE", "note": ""})
+
+        # Extract global result
+        for line in lines_text:
+            ll = line.lower()
+            if "esito globale" in ll:
+                if "non conforme" in ll:
+                    global_result = "NON CONFORME"
+                elif "conforme" in ll:
+                    global_result = "CONFORME"
+                break
+
+        # Extract notes
+        note_started = False
+        note_lines = []
+        for line in lines_text:
+            if "note aggiuntive" in line.lower():
+                note_started = True
+                # Get text after the colon if present
+                if ":" in line:
+                    note_lines.append(line.split(":", 1)[1].strip())
+                continue
+            if note_started and line.strip():
+                note_lines.append(line.strip())
+        notes = " ".join(note_lines)
+
+        conformi = sum(1 for r in results if r["esito"] == "CONFORME")
+        non_conformi = sum(1 for r in results if r["esito"] == "NON CONFORME")
+        non_verificabili = sum(1 for r in results if r["esito"] == "NON VERIFICABILE")
+
+        return {
+            "esito_globale": global_result,
+            "checklist_results": results,
+            "summary": {
+                "total": len(results),
+                "conformi": conformi,
+                "non_conformi": non_conformi,
+                "non_verificabili": non_verificabili,
+            },
+            "notes": notes,
+            "ai_response_raw": ai_text,
+            "norma_ref": norma_ref,
+            "product_type": req.product_type,
+        }
+
+    except Exception as e:
+        logger.error(f"AI Photo Validation error: {str(e)}")
+        raise HTTPException(500, f"Errore nell'analisi AI: {str(e)}")
+
+
+# ══════════════════════════════════════════════════════════════════
 # SEED DATA
 # ══════════════════════════════════════════════════════════════════
 
