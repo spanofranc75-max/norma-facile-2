@@ -935,8 +935,18 @@ async def delete_document(cid: str, doc_id: str, user: dict = Depends(get_curren
     r = await db[DOC_COLL].delete_one({"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"]})
     if r.deleted_count == 0:
         raise HTTPException(404, "Documento non trovato")
-    await db[COLL].update_one({"commessa_id": cid}, push_event(cid, "DOCUMENTO_ELIMINATO", user, f"Doc {doc_id} eliminato"))
-    return {"message": "Documento eliminato"}
+    
+    # Cascade delete: remove linked CAM lotti, material_batches, and copies
+    cam_del = await db.lotti_cam.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"]})
+    batch_del = await db.material_batches.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"]})
+    copies_del = await db[DOC_COLL].delete_many({"source_doc_id": doc_id, "user_id": user["user_id"]})
+    archive_del = await db.archivio_certificati.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"]})
+    
+    cascade_info = f"CAM:{cam_del.deleted_count} Batch:{batch_del.deleted_count} Copie:{copies_del.deleted_count} Archivio:{archive_del.deleted_count}"
+    logger.info(f"Cascade delete for doc {doc_id}: {cascade_info}")
+    
+    await db[COLL].update_one({"commessa_id": cid}, push_event(cid, "DOCUMENTO_ELIMINATO", user, f"Doc {doc_id} eliminato ({cascade_info})"))
+    return {"message": "Documento e dati collegati eliminati", "cascade": cascade_info}
 
 
 # ══════════════════════════════════════════════════════════════════
