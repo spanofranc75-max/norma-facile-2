@@ -58,19 +58,19 @@ def new_id(prefix=""):
 
 
 def push_event(commessa_id, tipo, user, note="", payload=None):
-    """Returns the update operation dict for pushing an event.
-    NOTE: If you need to combine this with other $push operations,
-    extract the 'eventi' value and merge manually.
+    """Returns a complete MongoDB update dict with $push for eventi and $set for updated_at.
+    Use this for standalone event pushes (separate update_one call).
     """
     return {
-        "eventi": {
+        "$push": {"eventi": {
             "tipo": tipo,
             "data": ts().isoformat(),
             "operatore_id": user.get("user_id", ""),
             "operatore_nome": user.get("name", user.get("email", "")),
             "note": note,
             "payload": payload or {},
-        }
+        }},
+        "$set": {"updated_at": ts()},
     }
 
 
