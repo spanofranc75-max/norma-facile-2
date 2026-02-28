@@ -279,6 +279,18 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Bug Fix**: Corretto endpoint `/material-batches` → `/fpc/batches`
 - Testing: 100% backend, 100% frontend (iteration_59)
 
+### Modulo CAM - Criteri Ambientali Minimi (Phase 54)
+- **Conformità Ambientale DM 256/2022**: Modulo completo per gestione conformità CAM per carpenteria metallica
+- **Backend CRUD Lotti CAM**: Collection `lotti_cam` con dati materiale, % riciclato, metodo produttivo, certificazione
+- **Calcolo Conformità Automatico**: Soglie per forno elettrico non legato (75%), legato (60%), ciclo integrale (12%)
+- **AI OCR Potenziato**: Prompt GPT-4o Vision aggiornato per estrarre anche percentuale_riciclato, metodo_produttivo, certificazione_ambientale dai certificati 3.1
+- **Import da Certificato AI**: Endpoint `/api/cam/import-da-certificato/{doc_id}` crea lotto CAM dai dati estratti
+- **Dichiarazione CAM PDF**: Documento ufficiale con header azienda, tabella materiali, calcolo totale, esito conformità, riferimenti normativi, sezione firma
+- **Frontend Sezione CAM**: Pannello collassabile nel CommessaHub con: sommario conformità (verde/rosso), lista lotti, dialog aggiunta/modifica, import da certificati, download PDF
+- **Soglie Pubbliche**: Endpoint `/api/cam/soglie` restituisce regolamento completo
+- Nuovi file: `backend/routes/cam.py`, `backend/models/cam.py`, `backend/services/pdf_cam_declaration.py`
+- Testing: 100% backend, 100% frontend (iteration_60)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
