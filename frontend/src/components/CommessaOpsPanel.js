@@ -58,6 +58,7 @@ export default function CommessaOpsPanel({ commessaId, onRefresh }) {
     const [ops, setOps] = useState(null);
     const [docs, setDocs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [fornitori, setFornitori] = useState([]);
     const fileRef = useRef();
 
     // Dialog states
@@ -69,10 +70,17 @@ export default function CommessaOpsPanel({ commessaId, onRefresh }) {
     const [parsing, setParsing] = useState(null); // doc_id being parsed
 
     // Form states
-    const [rdpForm, setRdpForm] = useState({ fornitore_nome: '', materiali_richiesti: '' });
-    const [odaForm, setOdaForm] = useState({ fornitore_nome: '', importo_totale: '', note: '' });
+    const [rdpForm, setRdpForm] = useState({ fornitore_nome: '', fornitore_id: '', materiali_richiesti: '' });
+    const [odaForm, setOdaForm] = useState({ fornitore_nome: '', fornitore_id: '', importo_totale: '', note: '' });
     const [arrivoForm, setArrivoForm] = useState({ ddt_fornitore: '', ordine_id: '', note: '' });
-    const [clForm, setClForm] = useState({ tipo: 'verniciatura', fornitore_nome: '' });
+    const [clForm, setClForm] = useState({ tipo: 'verniciatura', fornitore_nome: '', fornitore_id: '' });
+
+    // Load fornitori from anagrafica
+    useEffect(() => {
+        apiRequest('/clients/?client_type=fornitore&limit=100').then(data => {
+            setFornitori((data.clients || []).map(c => ({ id: c.client_id, nome: c.business_name })));
+        }).catch(() => {});
+    }, []);
 
     const fetchData = useCallback(async () => {
         if (!commessaId) return;
