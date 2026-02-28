@@ -1,0 +1,73 @@
+{
+  "summary": "Iteration 63: Testing Conto Lavoro DDT feature for subcontracting (verniciatura, zincatura, sabbiatura). All 11 backend API tests passed (100%). Frontend UI verified: CL section shows existing entries with PDF/Email buttons, 'Nuovo C/L' dialog contains full form with Tipo, Fornitore dropdown, RAL field (conditional), Causale, Righe table with add/remove, Note, and submit button. PDF generation confirmed via direct API call.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "CL Dialog",
+        "issues": ["Minor React hydration warnings in console due to span elements inside select/tbody (cosmetic, does not affect functionality)"]
+      }
+    ]
+  },
+  "test_results": {
+    "backend_api_tests": {
+      "POST /api/commesse/{cid}/conto-lavoro": "PASS - Creates CL with tipo, fornitore_nome, fornitore_id, ral, righe, causale_trasporto, note",
+      "POST /api/commesse/{cid}/conto-lavoro (zincatura)": "PASS - Creates zincatura CL without RAL",
+      "POST /api/commesse/{cid}/conto-lavoro/{cl_id}/preview-pdf": "PASS - Returns valid PDF (14KB+, starts with %PDF)",
+      "POST /api/commesse/{cid}/conto-lavoro/{cl_id}/preview-pdf (404)": "PASS - Returns 404 for non-existent CL",
+      "PUT /api/commesse/{cid}/conto-lavoro/{cl_id} (da_inviare -> inviato)": "PASS - Updates status and sets data_invio",
+      "PUT /api/commesse/{cid}/conto-lavoro/{cl_id} (inviato -> in_lavorazione)": "PASS",
+      "PUT /api/commesse/{cid}/conto-lavoro/{cl_id} (in_lavorazione -> rientrato)": "PASS - Sets data_rientro",
+      "PUT /api/commesse/{cid}/conto-lavoro/{cl_id} (rientrato -> verificato)": "PASS",
+      "POST /api/commesse/{cid}/conto-lavoro/{cl_id}/send-email": "PASS - Sends DDT email to supplier (via Resend)",
+      "POST /api/commesse/{cid}/conto-lavoro/{cl_id}/send-email (no email)": "PASS - Returns 400 when supplier has no email",
+      "GET /api/commesse/{cid}/ops": "PASS - Returns conto_lavoro array with all fields (cl_id, tipo, fornitore_nome, righe, stato, ral, etc.)"
+    },
+    "frontend_ui_tests": {
+      "conto_lavoro_section": "PASS - Section header 'Conto Lavoro' with Paintbrush icon and count badge",
+      "btn_new_cl": "PASS - 'Nuovo C/L' button opens dialog (data-testid='btn-new-cl')",
+      "cl_existing_entry": "PASS - Existing CL shows: tipo, fornitore_nome, RAL badge, righe count, peso totale",
+      "cl_status_badges": "PASS - Status badges displayed (da_inviare, inviato, in_lavorazione, rientrato, verificato)",
+      "cl_pdf_button": "PASS - PDF preview button for each CL entry (data-testid='cl-preview-{cl_id}')",
+      "cl_email_button": "PASS - Email button for each CL entry (data-testid='cl-email-{cl_id}')",
+      "cl_dialog_tipo_select": "PASS - Tipo select with options: verniciatura, zincatura, sabbiatura, altro (data-testid='cl-tipo')",
+      "cl_dialog_fornitore_select": "PASS - Fornitore dropdown populated from anagrafica (data-testid='cl-fornitore')",
+      "cl_dialog_ral_input": "PASS - RAL input visible for verniciatura (data-testid='cl-ral')",
+      "cl_dialog_causale_input": "PASS - Causale trasporto input (data-testid='cl-causale')",
+      "cl_dialog_righe_table": "PASS - Table with columns: Descrizione, Qtà, U.M., Peso (kg)",
+      "cl_dialog_add_riga_button": "PASS - '+ Aggiungi riga' button (data-testid='cl-add-riga')",
+      "cl_dialog_note_textarea": "PASS - Note textarea (data-testid='cl-note')",
+      "cl_dialog_submit_button": "PASS - 'Crea DDT Conto Lavoro' submit button (data-testid='btn-confirm-cl')"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_conto_lavoro_ddt.py",
+    "/app/test_reports/pytest/conto_lavoro_ddt_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Conto Lavoro CRUD endpoints correctly implemented in /app/backend/routes/commessa_ops.py (lines 785-962)",
+    "PDF generation uses generate_cl_pdf function in /app/backend/services/pdf_procurement.py (lines 456-617)",
+    "Email sending uses send_email_with_attachment from email_service.py (lines 354-400)",
+    "Frontend CommessaOpsPanel.js CL dialog (lines 1669-1755) includes all required form fields",
+    "CL list view (lines 858-893) shows tipo, fornitore, RAL, righe count, peso, PDF and Email buttons",
+    "Status transitions work correctly: da_inviare -> inviato -> in_lavorazione -> rientrato -> verificato"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_conto_lavoro_ddt.py"
+  ],
+  "success_rate": {
+    "backend": "100% (11/11 pytest tests passed)",
+    "frontend": "100% (all UI elements verified)"
+  },
+  "test_credentials": "Created and cleaned up test sessions",
+  "seed_data_creation": "Created test commessa with CL entry, test fornitore with email, company_settings - all cleaned up",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Conto Lavoro DDT feature fully implemented and tested. Key endpoints: POST /api/commesse/{cid}/conto-lavoro (create CL with righe), POST /api/commesse/{cid}/conto-lavoro/{cl_id}/preview-pdf (generate DDT PDF), POST /api/commesse/{cid}/conto-lavoro/{cl_id}/send-email (send to supplier). Frontend dialog at CommessaOpsPanel.js lines 1669-1755. CL is embedded in commessa document under conto_lavoro array. Important data-testids: btn-new-cl, cl-tipo, cl-fornitore, cl-ral, cl-causale, cl-riga-desc-{idx}, cl-add-riga, cl-note, btn-confirm-cl, cl-preview-{cl_id}, cl-email-{cl_id}."
+}
