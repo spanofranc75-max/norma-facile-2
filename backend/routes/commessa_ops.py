@@ -975,6 +975,49 @@ async def preview_cl_pdf(cid: str, cl_id: str, user: dict = Depends(get_current_
     )
 
 
+# ── DDT CONTO LAVORO: Preview Email ──
+@router.get("/{cid}/conto-lavoro/{cl_id}/preview-email")
+async def preview_cl_email(cid: str, cl_id: str, user: dict = Depends(get_current_user)):
+    """Preview email for Conto Lavoro DDT."""
+    comm = await get_commessa_or_404(cid, user["user_id"])
+    cl_list = comm.get("conto_lavoro", [])
+    cl = next((c for c in cl_list if c["cl_id"] == cl_id), None)
+    if not cl:
+        raise HTTPException(404, "Conto lavoro non trovato")
+
+    fornitore_id = cl.get("fornitore_id")
+    to_email = ""
+    if fornitore_id:
+        forn = await db.clients.find_one({"client_id": fornitore_id, "user_id": user["user_id"]}, {"_id": 0})
+        if forn:
+            to_email = forn.get("pec") or forn.get("email") or ""
+            if not to_email:
+                for c in forn.get("contacts", []):
+                    if c.get("email"):
+                        to_email = c["email"]
+                        break
+
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+
+    from services.email_preview import build_cl_email
+    preview = build_cl_email(
+        fornitore_nome=cl.get("fornitore_nome", ""),
+        tipo=cl.get("tipo", ""),
+        ral=cl.get("ral", ""),
+        commessa_numero=comm.get("numero", "N/D"),
+        company_name=company.get("business_name", ""),
+    )
+    return {
+        "to_email": to_email,
+        "to_name": cl.get("fornitore_nome", ""),
+        "subject": preview["subject"],
+        "html_body": preview["html_body"],
+        "has_attachment": True,
+        "attachment_name": f"DDT_CL_{cl_id}.pdf",
+    }
+
+
+
 # ── DDT CONTO LAVORO: Send Email ──
 @router.post("/{cid}/conto-lavoro/{cl_id}/send-email")
 async def send_cl_email(cid: str, cl_id: str, user: dict = Depends(get_current_user)):
