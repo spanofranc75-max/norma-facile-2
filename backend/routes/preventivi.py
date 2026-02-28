@@ -624,6 +624,258 @@ async def convert_to_invoice(prev_id: str, user: dict = Depends(get_current_user
     }
 
 
+# ── Progressive Invoicing (Acconto / SAL / Saldo) ─────────────────
+
+@router.get("/{prev_id}/invoicing-status")
+async def get_invoicing_status(prev_id: str, user: dict = Depends(get_current_user)):
+    """Get the invoicing progress for a preventivo — how much has been billed."""
+    uid = user["user_id"]
+    doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": uid}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Preventivo non trovato")
+
+    total_prev = float(doc.get("totals", {}).get("total", doc.get("totals", {}).get("imponibile", 0)))
+
+    # Fetch all invoices linked to this preventivo
+    linked = await db.invoices.find(
+        {"progressive_from_preventivo": prev_id, "user_id": uid, "status": {"$ne": "annullata"}},
+        {"_id": 0, "invoice_id": 1, "document_number": 1, "progressive_type": 1,
+         "progressive_amount": 1, "issue_date": 1, "status": 1, "totals": 1}
+    ).sort("created_at", 1).to_list(100)
+
+    total_invoiced = sum(float(inv.get("progressive_amount", 0)) for inv in linked)
+    remaining = round(total_prev - total_invoiced, 2)
+    pct = round((total_invoiced / total_prev * 100), 1) if total_prev > 0 else 0
+
+    return {
+        "preventivo_id": prev_id,
+        "total_preventivo": round(total_prev, 2),
+        "total_invoiced": round(total_invoiced, 2),
+        "remaining": max(remaining, 0),
+        "percentage_invoiced": min(pct, 100),
+        "linked_invoices": linked,
+        "is_fully_invoiced": remaining <= 0.01,
+    }
+
+
+@router.post("/{prev_id}/progressive-invoice")
+async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceRequest, user: dict = Depends(get_current_user)):
+    """Create a progressive invoice (acconto, SAL, or saldo) from a preventivo."""
+    uid = user["user_id"]
+    doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": uid}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Preventivo non trovato")
+
+    client_id = doc.get("client_id")
+    if not client_id:
+        raise HTTPException(422, "Preventivo senza cliente. Assegnare un cliente prima della fatturazione.")
+
+    client = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(422, "Cliente non trovato")
+
+    total_prev = float(doc.get("totals", {}).get("total", doc.get("totals", {}).get("imponibile", 0)))
+    prev_number = doc.get("number", prev_id)
+    prev_lines = doc.get("lines", [])
+
+    # Fetch existing progressive invoices for this preventivo
+    existing_invoices = await db.invoices.find(
+        {"progressive_from_preventivo": prev_id, "user_id": uid, "status": {"$ne": "annullata"}},
+        {"_id": 0, "invoice_id": 1, "document_number": 1, "progressive_amount": 1,
+         "progressive_type": 1, "issue_date": 1}
+    ).sort("created_at", 1).to_list(100)
+
+    already_invoiced = sum(float(inv.get("progressive_amount", 0)) for inv in existing_invoices)
+    remaining = round(total_prev - already_invoiced, 2)
+
+    if remaining <= 0.01 and body.invoice_type != "saldo":
+        raise HTTPException(400, "Preventivo gia' completamente fatturato.")
+
+    # ── Determine invoice amount and lines ──
+    invoice_lines = []
+    progressive_amount = 0.0
+    vat_rate = prev_lines[0].get("vat_rate", "22") if prev_lines else "22"
+
+    if body.invoice_type == "acconto":
+        if not body.percentage or body.percentage <= 0 or body.percentage > 100:
+            raise HTTPException(400, "Percentuale acconto non valida (1-100)")
+        progressive_amount = round(total_prev * body.percentage / 100, 2)
+        if progressive_amount > remaining + 0.01:
+            raise HTTPException(400, f"Importo acconto ({progressive_amount:.2f}) supera il residuo ({remaining:.2f})")
+        desc = body.description or f"Acconto {body.percentage:.0f}% su preventivo {prev_number}"
+        invoice_lines.append({
+            "line_id": f"ln_{uuid.uuid4().hex[:8]}",
+            "code": "", "description": desc,
+            "quantity": 1, "unit_price": progressive_amount, "discount_percent": 0,
+            "vat_rate": vat_rate, "line_total": progressive_amount,
+            "vat_amount": round(progressive_amount * float(vat_rate) / 100, 2),
+        })
+
+    elif body.invoice_type == "sal":
+        if body.selected_lines is not None and len(body.selected_lines) > 0:
+            # SAL by selected lines
+            for idx in body.selected_lines:
+                if idx < 0 or idx >= len(prev_lines):
+                    raise HTTPException(400, f"Indice riga {idx} non valido")
+                ln = prev_lines[idx]
+                lt = float(ln.get("line_total", 0))
+                progressive_amount += lt
+                invoice_lines.append({
+                    "line_id": f"ln_{uuid.uuid4().hex[:8]}",
+                    "code": ln.get("codice_articolo", ""),
+                    "description": ln.get("description", ""),
+                    "quantity": float(ln.get("quantity", 1)),
+                    "unit_price": float(ln.get("prezzo_netto") or ln.get("unit_price", 0)),
+                    "discount_percent": 0,
+                    "vat_rate": ln.get("vat_rate", "22"),
+                    "line_total": lt,
+                    "vat_amount": round(lt * float(ln.get("vat_rate", 22)) / 100, 2),
+                })
+            progressive_amount = round(progressive_amount, 2)
+        elif body.custom_amount and body.custom_amount > 0:
+            progressive_amount = round(body.custom_amount, 2)
+            if progressive_amount > remaining + 0.01:
+                raise HTTPException(400, f"Importo SAL ({progressive_amount:.2f}) supera il residuo ({remaining:.2f})")
+            desc = body.description or f"SAL su preventivo {prev_number}"
+            invoice_lines.append({
+                "line_id": f"ln_{uuid.uuid4().hex[:8]}",
+                "code": "", "description": desc,
+                "quantity": 1, "unit_price": progressive_amount, "discount_percent": 0,
+                "vat_rate": vat_rate, "line_total": progressive_amount,
+                "vat_amount": round(progressive_amount * float(vat_rate) / 100, 2),
+            })
+        else:
+            raise HTTPException(400, "Per SAL specificare selected_lines o custom_amount")
+
+        if progressive_amount > remaining + 0.01:
+            raise HTTPException(400, f"Importo SAL ({progressive_amount:.2f}) supera il residuo ({remaining:.2f})")
+
+    elif body.invoice_type == "saldo":
+        # Full invoice with all lines, minus previous invoices as negative lines
+        for ln in prev_lines:
+            lt = float(ln.get("line_total", 0))
+            invoice_lines.append({
+                "line_id": f"ln_{uuid.uuid4().hex[:8]}",
+                "code": ln.get("codice_articolo", ""),
+                "description": ln.get("description", ""),
+                "quantity": float(ln.get("quantity", 1)),
+                "unit_price": float(ln.get("prezzo_netto") or ln.get("unit_price", 0)),
+                "discount_percent": 0,
+                "vat_rate": ln.get("vat_rate", "22"),
+                "line_total": lt,
+                "vat_amount": round(lt * float(ln.get("vat_rate", 22)) / 100, 2),
+            })
+
+        # Add negative lines for each previous invoice
+        for prev_inv in existing_invoices:
+            amt = float(prev_inv.get("progressive_amount", 0))
+            if amt > 0:
+                inv_num = prev_inv.get("document_number", "")
+                inv_date = str(prev_inv.get("issue_date", ""))[:10]
+                invoice_lines.append({
+                    "line_id": f"ln_{uuid.uuid4().hex[:8]}",
+                    "code": "", "description": f"A detrarre acconto Ft. {inv_num} del {inv_date}",
+                    "quantity": 1, "unit_price": -amt, "discount_percent": 0,
+                    "vat_rate": vat_rate, "line_total": -amt,
+                    "vat_amount": round(-amt * float(vat_rate) / 100, 2),
+                })
+
+        progressive_amount = remaining
+    else:
+        raise HTTPException(400, "Tipo fattura non valido. Usare: acconto, sal, saldo")
+
+    # ── Create the invoice document ──
+    now = datetime.now(timezone.utc)
+    invoice_id = f"inv_{uuid.uuid4().hex[:12]}"
+    year = now.year
+
+    count = await db.invoices.count_documents({"user_id": uid, "document_type": {"$in": ["fattura", "FT"]}})
+    doc_number = f"FT-{year}/{count + 1:04d}"
+
+    # Calculate totals
+    subtotal = sum(ln["line_total"] for ln in invoice_lines)
+    total_vat = sum(ln["vat_amount"] for ln in invoice_lines)
+
+    # Build label for progressive type
+    type_labels = {"acconto": "Acconto", "sal": "SAL", "saldo": "Saldo Finale"}
+
+    invoice_doc = {
+        "invoice_id": invoice_id,
+        "user_id": uid,
+        "document_type": "FT",
+        "document_number": doc_number,
+        "client_id": client_id,
+        "issue_date": now.strftime("%Y-%m-%d"),
+        "due_date": None,
+        "status": "bozza",
+        "payment_method": "bonifico",
+        "payment_terms": "30gg",
+        "tax_settings": {
+            "apply_rivalsa_inps": False, "rivalsa_inps_rate": 4.0,
+            "apply_cassa": False, "cassa_type": None, "cassa_rate": 4.0,
+            "apply_ritenuta": False, "ritenuta_rate": 20.0, "ritenuta_base": "imponibile",
+        },
+        "lines": invoice_lines,
+        "totals": {
+            "subtotal": round(subtotal, 2),
+            "taxable_amount": round(subtotal, 2),
+            "total_vat": round(total_vat, 2),
+            "total_document": round(subtotal + total_vat, 2),
+            "total_due": round(subtotal + total_vat, 2),
+        },
+        "notes": f"Rif. Preventivo {prev_number} — {type_labels.get(body.invoice_type, body.invoice_type)}",
+        "internal_notes": None,
+        "created_at": now,
+        "updated_at": now,
+        "converted_from": prev_id,
+        "converted_to": None,
+        # Progressive invoicing tracking fields
+        "progressive_from_preventivo": prev_id,
+        "progressive_type": body.invoice_type,
+        "progressive_amount": round(progressive_amount, 2),
+    }
+
+    await db.invoices.insert_one(invoice_doc)
+
+    # Update preventivo: track total invoiced and link
+    new_total_invoiced = round(already_invoiced + progressive_amount, 2)
+    prev_update = {
+        "total_invoiced": new_total_invoiced,
+        "updated_at": now,
+    }
+    # If saldo, mark as fully invoiced
+    if body.invoice_type == "saldo" or new_total_invoiced >= total_prev - 0.01:
+        prev_update["status"] = "accettato"
+        prev_update["converted_to"] = invoice_id  # Last invoice
+
+    await db.preventivi.update_one({"preventivo_id": prev_id}, {
+        "$set": prev_update,
+        "$push": {"linked_invoices": {
+            "invoice_id": invoice_id,
+            "document_number": doc_number,
+            "type": body.invoice_type,
+            "amount": round(progressive_amount, 2),
+            "date": now.strftime("%Y-%m-%d"),
+        }},
+    })
+
+    logger.info(f"Progressive invoice {doc_number} ({body.invoice_type}) created from preventivo {prev_id}: {progressive_amount:.2f} EUR")
+    return {
+        "message": f"Fattura {type_labels.get(body.invoice_type, body.invoice_type)} {doc_number} creata — {fmtEur_py(progressive_amount)}",
+        "invoice_id": invoice_id,
+        "document_number": doc_number,
+        "progressive_type": body.invoice_type,
+        "progressive_amount": round(progressive_amount, 2),
+        "total_invoiced": new_total_invoiced,
+        "remaining": round(total_prev - new_total_invoiced, 2),
+    }
+
+
+def fmtEur_py(v):
+    """Format EUR value in Italian style."""
+    return f"{v:,.2f} EUR".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
 # ── PDF Generation ───────────────────────────────────────────────
 
 @router.get("/{prev_id}/pdf")
