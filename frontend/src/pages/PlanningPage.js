@@ -246,21 +246,27 @@ function KanbanColumn({ column, colors, onCardClick, onDelete }) {
                                                 )}
                                             </div>
 
-                                            {/* Priority + Actions */}
+                                            {/* Priority + Stato + Actions */}
                                             <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
-                                                <Badge className={`text-[9px] ${PRIORITY_BADGE[item.priority] || PRIORITY_BADGE.media}`}>
-                                                    {item.priority || 'media'}
-                                                </Badge>
-                                                <div className="flex gap-1">
-                                                    {item.client_id && (
-                                                        <button
-                                                            onClick={() => onCardClick(item)}
-                                                            className="text-slate-400 hover:text-[#0055FF] transition-colors"
-                                                            title="Apri fascicolo"
-                                                        >
-                                                            <ChevronRight className="h-3.5 w-3.5" />
-                                                        </button>
+                                                <div className="flex items-center gap-1.5">
+                                                    <Badge className={`text-[9px] ${PRIORITY_BADGE[item.priority] || PRIORITY_BADGE.media}`}>
+                                                        {item.priority || 'media'}
+                                                    </Badge>
+                                                    {item.stato && item.stato !== 'bozza' && (
+                                                        <Badge className="text-[8px] bg-blue-50 text-blue-700 font-normal">{item.stato?.replace(/_/g, ' ')}</Badge>
                                                     )}
+                                                    {item.numero && (
+                                                        <span className="text-[9px] font-mono text-slate-400">{item.numero}</span>
+                                                    )}
+                                                </div>
+                                                <div className="flex gap-1">
+                                                    <button
+                                                        onClick={() => onCardClick(item)}
+                                                        className="text-slate-400 hover:text-[#0055FF] transition-colors"
+                                                        title="Apri Hub Commessa"
+                                                    >
+                                                        <ChevronRight className="h-3.5 w-3.5" />
+                                                    </button>
                                                     <button
                                                         onClick={() => onDelete(item.commessa_id)}
                                                         className="text-slate-300 hover:text-red-500 transition-colors"
