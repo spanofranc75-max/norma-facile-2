@@ -1079,20 +1079,12 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
         line-height: 1.4;
     }}
 
-    /* ── TOTALS (right-aligned via table) ── */
-    .totals-outer {{
-        width: 100%;
-        border: none;
-        border-collapse: collapse;
+    /* ── TOTALS (right-aligned block) ── */
+    .totals-block {{
+        width: 55%;
+        margin-left: auto;
         margin-top: 10px;
     }}
-    .totals-outer td {{
-        border: none;
-        padding: 0;
-        vertical-align: top;
-    }}
-    .totals-spacer {{ width: 45%; }}
-    .totals-content {{ width: 55%; }}
     .iva-table {{
         width: 100%;
         border-collapse: collapse;
