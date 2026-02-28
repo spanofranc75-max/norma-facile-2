@@ -468,6 +468,17 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                         <Button size="sm" variant="ghost" className="h-6 text-[10px] text-red-600" onClick={() => handleUpdateRdP(r.rdp_id, 'rifiutata')}>Rifiuta</Button>
                                     </>
                                 )}
+                                {r.stato === 'accettata' && (
+                                    <Button 
+                                        size="sm" 
+                                        variant="ghost" 
+                                        className="h-6 text-[10px] text-blue-600 font-medium"
+                                        onClick={() => handleCreateOdaFromRdp(r)}
+                                        title="Crea Ordine da questa RdP"
+                                    >
+                                        <Package className="h-3 w-3 mr-0.5" /> Crea OdA
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     ))}
