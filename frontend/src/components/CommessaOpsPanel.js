@@ -437,7 +437,22 @@ export default function CommessaOpsPanel({ commessaId, onRefresh }) {
             <Dialog open={rdpOpen} onOpenChange={setRdpOpen}>
                 <DialogContent className="max-w-sm"><DialogHeader><DialogTitle>Nuova RdP Fornitore</DialogTitle></DialogHeader>
                     <div className="space-y-3">
-                        <div><Label className="text-xs">Fornitore</Label><Input value={rdpForm.fornitore_nome} onChange={e => setRdpForm(f => ({ ...f, fornitore_nome: e.target.value }))} className="mt-1" data-testid="rdp-fornitore" /></div>
+                        <div>
+                            <Label className="text-xs">Fornitore</Label>
+                            <Combobox
+                                options={fornitori.map(f => ({ value: f.id, label: f.nome }))}
+                                value={rdpForm.fornitore_id}
+                                onValueChange={(val) => {
+                                    const f = fornitori.find(x => x.id === val);
+                                    setRdpForm(prev => ({ ...prev, fornitore_id: val, fornitore_nome: f?.nome || '' }));
+                                }}
+                                placeholder="Seleziona fornitore..."
+                                searchPlaceholder="Cerca fornitore..."
+                                emptyText="Nessun fornitore trovato"
+                                className="mt-1"
+                                data-testid="rdp-fornitore"
+                            />
+                        </div>
                         <div><Label className="text-xs">Materiali richiesti</Label><Textarea value={rdpForm.materiali_richiesti} onChange={e => setRdpForm(f => ({ ...f, materiali_richiesti: e.target.value }))} className="mt-1 h-16" data-testid="rdp-materiali" /></div>
                     </div>
                     <DialogFooter><Button size="sm" disabled={!rdpForm.fornitore_nome} onClick={handleCreateRdP} className="bg-[#0055FF] text-white" data-testid="btn-confirm-rdp">Invia RdP</Button></DialogFooter>
