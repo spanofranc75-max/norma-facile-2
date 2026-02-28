@@ -19,7 +19,7 @@ import { Separator } from '../components/ui/separator';
 import { toast } from 'sonner';
 import {
     Plus, Search, Pencil, Trash2, Building2, User, Users2, Ruler,
-    FolderOpen, Phone, Mail, Globe, CreditCard, UserPlus, X,
+    FolderOpen, Phone, Mail, Globe, CreditCard, UserPlus, X, Clock,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import EmptyState from '../components/EmptyState';
