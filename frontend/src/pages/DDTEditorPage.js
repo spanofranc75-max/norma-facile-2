@@ -23,6 +23,7 @@ import {
 import DashboardLayout from '../components/DashboardLayout';
 import { PDFPreviewButton } from '../components/PDFPreviewModal';
 import { AutoExpandTextarea } from '../components/AutoExpandTextarea';
+import EmailPreviewDialog from '../components/EmailPreviewDialog';
 
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
 
