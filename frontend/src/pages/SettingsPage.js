@@ -316,6 +316,104 @@ export default function SettingsPage() {
                             </CardContent>
                         </Card>
                     </TabsContent>
+
+                    <TabsContent value="logo">
+                        <Card className="border-gray-200">
+                            <CardHeader className="bg-blue-50 border-b border-gray-200">
+                                <CardTitle>Logo Aziendale</CardTitle>
+                                <CardDescription>
+                                    Il logo verrà mostrato nella sidebar e nell'intestazione dei documenti PDF
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {settings.logo_url && (
+                                    <div className="flex items-start gap-4">
+                                        <div className="border rounded-lg p-2 bg-white">
+                                            <img
+                                                src={settings.logo_url}
+                                                alt="Logo aziendale"
+                                                data-testid="logo-preview"
+                                                className="max-h-24 max-w-48 object-contain"
+                                            />
+                                        </div>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            data-testid="btn-remove-logo"
+                                            onClick={() => updateField('logo_url', '')}
+                                            className="text-red-600 hover:text-red-700"
+                                        >
+                                            <X className="h-4 w-4 mr-1" /> Rimuovi
+                                        </Button>
+                                    </div>
+                                )}
+                                <div>
+                                    <Label>Carica Logo (PNG, JPG, max 500KB)</Label>
+                                    <div className="mt-2">
+                                        <label
+                                            htmlFor="logo-upload"
+                                            data-testid="logo-upload-label"
+                                            className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-[#0055FF] hover:bg-blue-50 transition-colors"
+                                        >
+                                            <Upload className="h-5 w-5 text-slate-400" />
+                                            <span className="text-sm text-slate-600">
+                                                {settings.logo_url ? 'Cambia logo' : 'Seleziona un file immagine'}
+                                            </span>
+                                        </label>
+                                        <input
+                                            id="logo-upload"
+                                            type="file"
+                                            accept="image/png,image/jpeg,image/webp"
+                                            className="hidden"
+                                            data-testid="input-logo-upload"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (!file) return;
+                                                if (file.size > 500 * 1024) {
+                                                    toast.error('Il file è troppo grande (max 500KB)');
+                                                    return;
+                                                }
+                                                const reader = new FileReader();
+                                                reader.onload = (ev) => {
+                                                    updateField('logo_url', ev.target.result);
+                                                };
+                                                reader.readAsDataURL(file);
+                                                e.target.value = '';
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    <TabsContent value="condizioni">
+                        <Card className="border-gray-200">
+                            <CardHeader className="bg-blue-50 border-b border-gray-200">
+                                <CardTitle>Condizioni di Vendita</CardTitle>
+                                <CardDescription>
+                                    Queste condizioni verranno stampate in calce a preventivi, fatture e DDT
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div>
+                                    <Label htmlFor="condizioni_vendita">Testo condizioni</Label>
+                                    <Textarea
+                                        id="condizioni_vendita"
+                                        data-testid="input-condizioni-vendita"
+                                        value={settings.condizioni_vendita}
+                                        onChange={(e) => updateField('condizioni_vendita', e.target.value)}
+                                        placeholder="Es: Pagamento a 30 giorni data fattura. Merce viaggiante a rischio del committente. Foro competente: Tribunale di..."
+                                        rows={10}
+                                        className="font-mono text-sm"
+                                    />
+                                    <p className="text-xs text-slate-400 mt-1">
+                                        Questo testo verrà aggiunto automaticamente in fondo a tutti i documenti generati.
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
                 </Tabs>
             </div>
         </DashboardLayout>
