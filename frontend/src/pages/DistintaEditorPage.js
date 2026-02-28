@@ -230,6 +230,27 @@ export default function DistintaEditorPage() {
         return lm * (item.quantity || 1) * (item.surface_per_meter || 0);
     };
 
+    // Create Preventivo from this Distinta
+    const handleCreaPreventivo = async () => {
+        if (!isEditing) {
+            toast.error('Salva la distinta prima di creare il preventivo');
+            return;
+        }
+        const markup = window.prompt('Markup % sul costo materiale (default 30%):', '30');
+        if (markup === null) return;
+        const markupVal = parseFloat(markup) || 30;
+        setCreatingPreventivo(true);
+        try {
+            const res = await apiRequest(`/preventivi/from-distinta/${distintaId}?markup_percent=${markupVal}`, { method: 'POST' });
+            toast.success(res.message || 'Preventivo creato!');
+            navigate(`/preventivi/${res.preventivo_id}`);
+        } catch (e) {
+            toast.error(e.message || 'Errore nella creazione del preventivo');
+        } finally {
+            setCreatingPreventivo(false);
+        }
+    };
+
     // Save
     const handleSave = async () => {
         if (!formData.name.trim()) {
