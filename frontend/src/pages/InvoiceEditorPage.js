@@ -35,6 +35,8 @@ import {
     FileText,
     ArrowLeft,
     Calculator,
+    Mail,
+    Send,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import ArticleSearch from '../components/ArticleSearch';
