@@ -646,7 +646,7 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 
     BLUE = colors.HexColor("#0055FF")
     DARK = colors.HexColor("#1E293B")
@@ -659,7 +659,23 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
     title_style = ParagraphStyle("Title", parent=styles["Heading1"], fontSize=18, textColor=BLUE, spaceAfter=2 * mm)
     subtitle_style = ParagraphStyle("Sub", parent=styles["Heading2"], fontSize=12, textColor=DARK, spaceAfter=2 * mm)
     normal = styles["Normal"]
+    small = ParagraphStyle("Sm", parent=normal, fontSize=8)
 
+    # Logo
+    co = company or {}
+    logo_url = co.get('logo_url', '')
+    if logo_url and logo_url.startswith('data:image'):
+        try:
+            import base64 as b64mod
+            header_part, b64_data = logo_url.split(',', 1)
+            img_bytes = b64mod.b64decode(b64_data)
+            logo_buf = BytesIO(img_bytes)
+            logo_img = Image(logo_buf, width=40 * mm, height=15 * mm)
+            logo_img.hAlign = 'LEFT'
+            elements.append(logo_img)
+            elements.append(Spacer(1, 3 * mm))
+        except Exception:
+            pass
 
     # Header
     co = company or {}
