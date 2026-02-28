@@ -182,6 +182,21 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - Frontend: Timeline workflow aggiornata (Preventivo → Fatturazione → Completato)
 - Testing: 15/15 backend, 100% frontend (iteration_49)
 
+### Architettura Hub Commesse - Event-Driven (Phase 45)
+- **Macchina a Stati**: 8 stati lifecycle (richiesta, bozza, rilievo_completato, firmato, in_produzione, fatturato, chiuso, sospesa)
+- **Event Sourcing**: Ogni cambio stato tramite eventi con operatore, timestamp, note, payload
+- **10 Transizioni**: COMMESSA_CREATA, RICHIESTA_PREVENTIVO, RILIEVO_COMPLETATO, FIRMA_CLIENTE, PREVENTIVO_ACCETTATO, AVVIO_PRODUZIONE, FATTURA_EMESSA, CHIUSURA_COMMESSA, SOSPENSIONE, RIATTIVAZIONE
+- **Hub Moduli**: La commessa collega rilievo, distinta, preventivo, fatture[], ddt[], fpc_project, certificazione
+- **API Hub View**: `GET /api/commesse/{id}/hub` ritorna commessa + tutti i moduli collegati fetchati dalle rispettive collection
+- **Module Linking**: `POST /api/commesse/{id}/link-module` e unlink per collegare qualsiasi modulo
+- **Dossier Unico**: `GET /api/commesse/{id}/dossier` genera PDF completo (copertina, anagrafica, timeline, preventivo, fatture, DDT, FPC, certificazione)
+- **Backward Compatible**: Kanban drag-and-drop (campo `status`) resta funzionante, `stato` lifecycle opera in parallelo con sync automatico
+- **Numerazione**: Formato `NF-YYYY-NNNNNN` per commesse
+- **Cantiere**: Dati cantiere embedded (indirizzo, citta, contesto, ambiente)
+- **Frontend Hub**: Pagina `/commesse/:id` con barra lifecycle, azioni contestuali, moduli collegati, timeline eventi
+- **Frontend Kanban**: Click su card → pagina Hub, badge stato + numero su ogni card
+- Testing: 18/18 backend, 100% frontend (iteration_50)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
