@@ -21,8 +21,9 @@ import {
     HardHat, Warehouse, ClipboardList, Truck, Factory, ShieldAlert,
     BarChart3, BoxIcon, FileInput, Camera, ChevronDown,
     Briefcase, Wrench, Award, ShoppingCart, FileText, LayoutGrid,
-    CreditCard, TrendingUp, Leaf,
+    CreditCard, TrendingUp,
 } from 'lucide-react';
+import { Leaf } from 'lucide-react';
 
 // ── Navigation Structure ────────────────────────────────────────
 
