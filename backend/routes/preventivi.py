@@ -727,11 +727,11 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
     esc = html_mod.escape
 
     # ── Company info ──
-    company_name = esc(co.get("business_name", ""))
-    company_addr = esc(co.get("address", ""))
-    company_cap = esc(co.get("cap", ""))
-    company_city = esc(co.get("city", ""))
-    company_prov = esc(co.get("province", ""))
+    company_name = esc(co.get("business_name", "") or "")
+    company_addr = esc(co.get("address", "") or "")
+    company_cap = esc(co.get("cap", "") or "")
+    company_city = esc(co.get("city", "") or "")
+    company_prov = esc(co.get("province", "") or "")
     company_full_addr = company_addr
     if company_cap or company_city:
         parts = [p for p in [company_cap, company_city, f"({company_prov})" if company_prov else ""] if p]
