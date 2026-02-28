@@ -915,6 +915,8 @@ async def send_cl_email(cid: str, cl_id: str, user: dict = Depends(get_current_u
     # Send email
     from services.email_service import send_email_with_attachment
     company_name = company.get("business_name", "Officina")
+    tipo_labels = {"verniciatura": "VERNICIATURA", "zincatura": "ZINCATURA A CALDO", "sabbiatura": "SABBIATURA", "altro": "LAVORAZIONE ESTERNA"}
+    tipo_label = tipo_labels.get(cl["tipo"], cl["tipo"].upper())
     subject = f"DDT Conto Lavoro {tipo_label} — {company_name} — Rif. {comm.get('numero', cid)}"
     ral_note = f"\nColore RAL: {cl['ral']}" if cl.get("ral") else ""
     body = f"""Gentile {cl.get('fornitore_nome', '')},
