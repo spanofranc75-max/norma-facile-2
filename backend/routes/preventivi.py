@@ -389,6 +389,7 @@ async def create_preventivo(data: PreventivoCreate, user: dict = Depends(get_cur
         "riferimento": data.riferimento,
         "acconto": data.acconto,
         "sconto_globale": data.sconto_globale,
+        "normativa": data.normativa,  # EN_1090, EN_13241, NESSUNA
         "lines": lines,
         "totals": totals,
         "compliance_status": compliance["all_compliant"],
