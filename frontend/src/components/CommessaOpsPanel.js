@@ -319,6 +319,45 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         } catch (e) { toast.error(e.message); }
     };
 
+    // PDF Preview handlers
+    const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
+    const [pdfPreviewTitle, setPdfPreviewTitle] = useState('');
+    const [sendingEmail, setSendingEmail] = useState(null); // Track which item is sending email
+
+    const handlePreviewRdpPdf = async (rdpId) => {
+        try {
+            const url = `${API}/api/commesse/${commessaId}/approvvigionamento/richieste/${rdpId}/pdf`;
+            setPdfPreviewTitle(`Anteprima RdP ${rdpId}`);
+            setPdfPreviewUrl(url);
+        } catch (e) { toast.error(e.message); }
+    };
+
+    const handlePreviewOdaPdf = async (ordineId) => {
+        try {
+            const url = `${API}/api/commesse/${commessaId}/approvvigionamento/ordini/${ordineId}/pdf`;
+            setPdfPreviewTitle(`Anteprima OdA ${ordineId}`);
+            setPdfPreviewUrl(url);
+        } catch (e) { toast.error(e.message); }
+    };
+
+    const handleSendRdpEmail = async (rdpId) => {
+        setSendingEmail(rdpId);
+        try {
+            const res = await apiRequest(`/commesse/${commessaId}/approvvigionamento/richieste/${rdpId}/send-email`, { method: 'POST' });
+            toast.success(res.message || 'Email inviata');
+            fetchData(); onRefresh?.();
+        } catch (e) { toast.error(e.message); } finally { setSendingEmail(null); }
+    };
+
+    const handleSendOdaEmail = async (ordineId) => {
+        setSendingEmail(ordineId);
+        try {
+            const res = await apiRequest(`/commesse/${commessaId}/approvvigionamento/ordini/${ordineId}/send-email`, { method: 'POST' });
+            toast.success(res.message || 'Email inviata');
+            fetchData(); onRefresh?.();
+        } catch (e) { toast.error(e.message); } finally { setSendingEmail(null); }
+    };
+
     return (
         <div className="space-y-3" data-testid="commessa-ops">
             {/* ── APPROVVIGIONAMENTO ── */}
