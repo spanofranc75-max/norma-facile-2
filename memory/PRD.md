@@ -291,6 +291,16 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - Nuovi file: `backend/routes/cam.py`, `backend/models/cam.py`, `backend/services/pdf_cam_declaration.py`
 - Testing: 100% backend, 100% frontend (iteration_60)
 
+### Report CAM Multi-Commessa + CO2 (Phase 55)
+- **Report Aziendale Sostenibilità**: Aggregazione multi-commessa di tutti i lotti CAM per periodo/anno
+- **Calcolo CO2 Risparmiata**: Fattori World Steel Association (EAF=0.67 tCO2/t vs BOF=2.33 tCO2/t)
+- **Endpoint API**: `GET /api/cam/report-aziendale?anno={year}` + `GET /api/cam/report-aziendale/pdf?anno={year}`
+- **PDF Bilancio Sostenibilità**: Documento professionale con hero section, KPI grid, CO2 box, tabelle commesse/fornitori/metodi, footer normativo, sezione firma
+- **Frontend Pagina `/report-cam`**: KPI cards (acciaio totale/riciclato, commesse conformi, CO2), hero card CO2, tabelle breakdown per commessa e fornitore, filtro anno, download PDF
+- **Sidebar**: Link "Report CAM / CO2" aggiunto sotto gruppo "Certificazioni"
+- Nuovi file: `frontend/src/pages/ReportCAMPage.js`, `backend/services/pdf_cam_report.py`
+- Testing: 100% backend (17/17), 100% frontend (iteration_61)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
