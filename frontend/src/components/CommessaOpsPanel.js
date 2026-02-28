@@ -88,7 +88,8 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         materiali: [{ descrizione: '', quantita: 1, unita_misura: 'kg', ordine_id: '', richiede_cert_31: false }],
         note: '' 
     });
-    const [clForm, setClForm] = useState({ tipo: 'verniciatura', fornitore_nome: '', fornitore_id: '' });
+    const emptyClLine = () => ({ id: `l${Date.now()}`, descrizione: '', quantita: 1, unita: 'pz', peso_kg: 0 });
+    const [clForm, setClForm] = useState({ tipo: 'verniciatura', fornitore_nome: '', fornitore_id: '', ral: '', righe: [emptyClLine()], note: '', causale_trasporto: 'Conto Lavorazione' });
 
     // PDF Preview and Email states (must be before any conditional return)
     const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
