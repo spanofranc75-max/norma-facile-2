@@ -1,5 +1,14 @@
 # Norma Facile 2.0 - Changelog
 
+## 2026-02-28 - Phase 42: One-Click Technical Dossier (Fascicolo Tecnico)
+- Servizio `dossier_generator.py` genera fascicolo tecnico completo in un PDF
+- 6+ sezioni: Copertina, DoP, CE Label, Materiali, Certificati 3.1, Saldatore, Controlli FPC
+- Certificati PDF (base64) decodificati e allegati automaticamente
+- Merge con pypdf PdfWriter
+- Endpoint GET /api/fpc/projects/{id}/dossier
+- Pulsante grande "Stampa Fascicolo Tecnico Completo" su pagina progetto
+- Testing: 22/22 backend, 100% frontend (iteration_48)
+
 ## 2026-02-28 - Phase 41: EN 1090 FPC System
 - Sistema completo Factory Production Control per tracciabilità EN 1090
 - Registro Saldatori con qualifiche ISO 9606-1 e allarme scadenza
