@@ -241,6 +241,16 @@ Build Norma Facile 2.0 - a **CRM/ERP per Fabbri (Metalworkers)** with React + Fa
   - Insights con "Next Best Action" cliccabili (+punti potenziali)
   - Widget integrato in Dashboard
   - Testing: 17/17 backend, 100% frontend (iteration_41)
+- [x] Bug Fix: Creazione Cliente + Logo + Condizioni Vendita — DONE (Phase 34) — 2026-02-28
+  - Bug 1 (P0): Creazione nuovo cliente — verificato funzionante, POST /api/clients/ ritorna 201
+  - Bug 2 (P1): Condizioni di vendita — campo condizioni_vendita aggiunto a CompanySettings
+    - Nuovo tab "Condizioni" in /settings con textarea
+    - Condizioni incluse in footer PDF fatture, preventivi e DDT
+  - Bug 3 (P1): Logo aziendale — upload immagine (base64, max 500KB)
+    - Nuovo tab "Logo" in /settings con upload drag & drop
+    - Logo mostrato in sidebar (data-testid='sidebar-company-logo')
+    - Logo incluso in header PDF fatture, preventivi e DDT
+  - Testing: 14/14 backend, 100% frontend (iteration_42)
 - [ ] Integrazione SDI diretta con provider (API keys da configurare)
 - [ ] Recurring invoices / email reminders
 - [ ] Invio fascicolo via PEC automatico
