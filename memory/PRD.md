@@ -197,6 +197,16 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Frontend Kanban**: Click su card → pagina Hub, badge stato + numero su ogni card
 - Testing: 18/18 backend, 100% frontend (iteration_50)
 
+### Flusso Operativo Commessa Completo (Phase 46)
+- **Approvvigionamento**: Richiesta Preventivo Fornitore (RdP) → Ricezione → Accettazione → Ordine Fornitore (OdA) → Conferma → Arrivo Materiale → Verifica
+- **Produzione**: 6 fasi sequenziali tracciabili (Taglio → Foratura → Assemblaggio → Saldatura → Pulizia → Preparazione Superfici) con stato da_fare/in_corso/completato, operatore, date, progress bar
+- **Conto Lavoro**: Invio a terzista (verniciatura/zincatura/sabbiatura) → DDT c/L → Rientro → Verifica certificati — workflow 5 stati
+- **Repository Documenti**: Upload/download/delete file per commessa (certificati 3.1, conferme ordine, disegni, certificati verniciatura/zincatura, DDT, foto, altro) — collection separata commessa_documents
+- **AI OCR Certificati 3.1**: GPT-4o Vision analizza PDF certificato ed estrae: N. Colata, Fornitore, Qualita acciaio, Normativa, Dimensioni, Composizione chimica, Proprieta meccaniche — auto-registra nel registro material_batches
+- **Accetta Preventivo**: Bottone sulla toolbar del preventivo, abilita fatturazione progressiva solo dopo accettazione
+- **Event Sourcing**: Ogni operazione pushes evento nella timeline commessa (RDP_INVIATA, ORDINE_EMESSO, MATERIALE_ARRIVATO, FASE_IN_CORSO, CL_CREATO, DOCUMENTO_CARICATO, CERTIFICATO_ANALIZZATO, ecc.)
+- Testing: 24/24 backend, 100% frontend (iteration_52)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
