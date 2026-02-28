@@ -1082,17 +1082,82 @@ Se un campo non è leggibile o non presente, usa null. Rispondi SOLO con il JSON
             else:
                 batch_id = existing.get("batch_id")
 
+        # ── AUTO-CREATE CAM LOTTO from AI-extracted data ──
+        cam_lotto_id = None
+        if metadata.get("numero_colata") and not metadata.get("parse_error"):
+            existing_cam = await db.lotti_cam.find_one({
+                "numero_colata": metadata["numero_colata"],
+                "commessa_id": cid,
+                "user_id": user["user_id"],
+            })
+            if not existing_cam:
+                # Determine metodo_produttivo from AI extraction
+                metodo = metadata.get("metodo_produttivo") or "forno_elettrico_non_legato"
+                if metodo not in ("forno_elettrico_non_legato", "forno_elettrico_legato", "ciclo_integrale"):
+                    metodo = "forno_elettrico_non_legato"
+                
+                # Determine percentuale_riciclato
+                perc_ric = metadata.get("percentuale_riciclato")
+                if perc_ric is None:
+                    # Default based on production method (conservative estimate)
+                    perc_ric = {"forno_elettrico_non_legato": 80, "forno_elettrico_legato": 65, "ciclo_integrale": 10}.get(metodo, 75)
+                else:
+                    perc_ric = float(perc_ric)
+                
+                # Map certification type
+                cert_type = "dichiarazione_produttore"
+                cert_ai = (metadata.get("certificazione_ambientale") or "").lower()
+                if "epd" in cert_ai:
+                    cert_type = "epd"
+                elif "remade" in cert_ai:
+                    cert_type = "remade_in_italy"
+                
+                # Calculate conformity
+                soglie = {"forno_elettrico_non_legato": 75, "forno_elettrico_legato": 60, "ciclo_integrale": 12}
+                soglia = soglie.get(metodo, 75)
+                peso_kg = float(metadata.get("peso_kg") or 0)
+                descrizione = metadata.get("dimensioni") or metadata.get("qualita_acciaio") or "Materiale da certificato"
+                
+                cam_lotto_id = f"cam_{uuid.uuid4().hex[:10]}"
+                cam_doc = {
+                    "lotto_id": cam_lotto_id,
+                    "user_id": user["user_id"],
+                    "commessa_id": cid,
+                    "descrizione": descrizione,
+                    "fornitore": metadata.get("fornitore", ""),
+                    "numero_colata": metadata["numero_colata"],
+                    "peso_kg": peso_kg,
+                    "qualita_acciaio": metadata.get("qualita_acciaio", ""),
+                    "percentuale_riciclato": perc_ric,
+                    "metodo_produttivo": metodo,
+                    "tipo_certificazione": cert_type,
+                    "numero_certificazione": metadata.get("n_certificato", ""),
+                    "ente_certificatore": metadata.get("ente_certificatore_ambientale", ""),
+                    "uso_strutturale": True,
+                    "soglia_minima_cam": soglia,
+                    "conforme_cam": perc_ric >= soglia,
+                    "source_doc_id": doc_id,
+                    "note": f"Auto-creato da AI OCR certificato 3.1",
+                    "created_at": ts(),
+                }
+                await db.lotti_cam.insert_one(cam_doc)
+                logger.info(f"Auto-created CAM lotto {cam_lotto_id} from cert AI (colata: {metadata['numero_colata']}, ric: {perc_ric}%)")
+            else:
+                cam_lotto_id = existing_cam.get("lotto_id")
+
         await db[COLL].update_one({"commessa_id": cid}, push_event(
             cid, "CERTIFICATO_ANALIZZATO", user,
             f"Colata: {metadata.get('numero_colata', '?')} — {metadata.get('qualita_acciaio', '?')} — {metadata.get('fornitore', '?')}",
-            {"doc_id": doc_id, "batch_id": batch_id, "metadata": metadata}
+            {"doc_id": doc_id, "batch_id": batch_id, "cam_lotto_id": cam_lotto_id, "metadata": metadata}
         ))
 
         return {
             "message": "Certificato analizzato con successo",
             "metadata": metadata,
             "batch_id": batch_id,
+            "cam_lotto_id": cam_lotto_id,
             "auto_registered": batch_id is not None,
+            "cam_auto_created": cam_lotto_id is not None,
         }
 
     except Exception as e:
