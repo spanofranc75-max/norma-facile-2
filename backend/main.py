@@ -96,6 +96,7 @@ app.include_router(engine_router, prefix="/api")
 app.include_router(commesse_router, prefix="/api")
 app.include_router(commessa_ops_router, prefix="/api")
 app.include_router(fpc_router)
+app.include_router(cam_router, prefix="/api")
 
 
 @app.get("/api/")
