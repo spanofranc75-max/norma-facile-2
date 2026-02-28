@@ -3,7 +3,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
+import DashboardLayout from '../components/DashboardLayout';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
 import { ArrowLeft, Shield, AlertTriangle, CheckCircle, User, FileText, Package, ChevronDown } from 'lucide-react';
