@@ -1,5 +1,24 @@
 # Norma Facile 2.0 - Changelog
 
+## 2026-02-28 - Phase 41: EN 1090 FPC System
+- Sistema completo Factory Production Control per tracciabilità EN 1090
+- Registro Saldatori con qualifiche ISO 9606-1 e allarme scadenza
+- Tracciabilità Materiali: lotti con numero colata, tipo materiale, certificato 3.1 (base64)
+- Progetti FPC: conversione preventivo→progetto con classe EXC obbligatoria
+- Assegnazione materiali a righe distinta con heat_number
+- 7 controlli FPC (dimensionale, visivo, certificati, WPS, superfici, marcatura)
+- Generazione etichetta CE con verifica blockers
+- Frontend: /tracciabilita (3 tab) + /tracciabilita/progetto/:id
+- Sidebar: link "Tracciabilità EN 1090" sotto Produzione
+- Testing: 27/27 backend, 100% frontend (iteration_47)
+
+## 2026-02-28 - Phase 40: PDF Template Unification
+- Modulo condiviso `services/pdf_template.py` (CSS, header, totals, conditions)
+- Fatture PDF riscritte da ReportLab a WeasyPrint con layout unificato
+- DDT PDF riscritti da ReportLab a WeasyPrint con info trasporto + firme
+- Preventivo refactored per usare modulo condiviso
+- Font/colori/margini identici su tutti i documenti
+
 ## 2026-02-28 - Phase 39: PDF Preventivo Redesign
 - Riscrittura completa generatore PDF preventivi (ReportLab → WeasyPrint HTML/CSS)
 - Layout match esatto del PDF esempio utente (Steel Project Design Srls)
