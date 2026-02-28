@@ -35,6 +35,7 @@ import FattureRicevutePage from './pages/FattureRicevutePage';
 import CoreEnginePage from './pages/CoreEnginePage';
 import ValidazioneFotoPage from './pages/ValidazioneFotoPage';
 import PlanningPage from './pages/PlanningPage';
+import EBITDAPage from './pages/EBITDAPage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -197,6 +198,7 @@ function AppRouter() {
             <Route path="/validazione-foto" element={<ProtectedRoute><ValidazioneFotoPage /></ProtectedRoute>} />
 
             <Route path="/planning" element={<ProtectedRoute><PlanningPage /></ProtectedRoute>} />
+            <Route path="/ebitda" element={<ProtectedRoute><EBITDAPage /></ProtectedRoute>} />
         </Routes>
     );
 }
