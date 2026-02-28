@@ -1,0 +1,106 @@
+{
+  "summary": "Iteration 56: Testing new features - (1) OdA form validation with description required, (2) Company logo in RdP/OdA PDFs, (3) Enhanced Arrivo Materiale form with detailed tracking, (4) Normativa field in Preventivi. Backend: 12/12 tests passed (100%). Frontend: OdA validation confirmed working. Preventivo normativa selector available in sidebar.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "backend_api_tests": {
+      "preventivo_normativa": {
+        "create_with_en1090": "PASS - Normativa EN_1090 saved correctly",
+        "create_with_en13241": "PASS - Normativa EN_13241 saved correctly",
+        "create_without_normativa": "PASS - Normativa defaults to null/empty",
+        "update_normativa": "PASS - Normativa can be updated from null to EN_1090 to EN_13241",
+        "get_includes_normativa": "PASS - GET response includes normativa field"
+      },
+      "arrivo_materiale": {
+        "create_with_detailed_materiali": "PASS - POST /api/commesse/{id}/approvvigionamento/arrivi accepts DDT, date, fornitore, materiali array with descrizione, quantita, unita_misura, ordine_id, richiede_cert_31",
+        "link_certificato_to_materiale": "PASS - PUT /api/commesse/{id}/approvvigionamento/arrivi/{arrivo_id}/materiale/{idx}/certificato links certificate (numero_colata, qualita_materiale) to specific material"
+      },
+      "pdf_logo": {
+        "rdp_pdf_with_logo": "PASS - RdP PDF generated with company logo when logo_url is set in company_settings",
+        "oda_pdf_with_logo": "PASS - OdA PDF generated with company logo when logo_url is set in company_settings"
+      },
+      "oda_validation": {
+        "empty_description_handling": "PASS - API accepts request but returns filtered righe (empty descriptions excluded)",
+        "valid_description_accepted": "PASS - OdA with valid description saved correctly"
+      }
+    },
+    "frontend_ui_tests": {
+      "oda_button_validation": {
+        "button_disabled_empty_desc": "PASS - 'Emetti Ordine' button disabled when all descriptions are empty",
+        "button_disabled_no_fornitore": "PASS - 'Emetti Ordine' button disabled when fornitore not selected (even with description)"
+      },
+      "preventivo_normativa_selector": {
+        "riferimento_tab_present": "PASS - 'Riferimento' tab in sidebar of preventivo editor",
+        "normativa_label_visible": "PASS - 'Normativa' label with helper text 'Determina requisiti di tracciabilità materiali'",
+        "default_value": "PASS - Shows '-- Nessuna --' by default",
+        "en1090_option": "AVAILABLE - EN 1090 option in dropdown",
+        "en13241_option": "AVAILABLE - EN 13241 option in dropdown"
+      },
+      "oda_dialog": {
+        "dialog_layout": "PASS - OdA dialog with Fornitore dropdown, Righe Ordine table, Note, Emetti Ordine button",
+        "righe_table_columns": "PASS - Columns: Descrizione, Quantità, U.M., Prezzo Unit. €, Importo €, 3.1 checkbox",
+        "totale_display": "PASS - 'Totale Ordine: X,XX €' shown at bottom"
+      },
+      "arrivo_materiale_dialog": {
+        "code_verification": "PASS - CommessaOpsPanel.js lines 980-1116 implement: DDT number field (data-testid='arrivo-ddt'), Data DDT date field, Fornitore Combobox, Materiali Ricevuti table with columns: Descrizione, Q.tà, U.M., Rif. Ordine dropdown, 3.1 checkbox"
+      }
+    }
+  },
+  "code_review": {
+    "oda_validation_logic": {
+      "file": "/app/frontend/src/components/CommessaOpsPanel.js",
+      "line": 953,
+      "code": "disabled={!odaForm.fornitore_nome || odaForm.righe.filter(r => r.descrizione.trim()).length === 0}",
+      "assessment": "CORRECT - Button disabled if no fornitore OR all descriptions empty"
+    },
+    "rdp_validation_logic": {
+      "file": "/app/frontend/src/components/CommessaOpsPanel.js",
+      "line": 782,
+      "code": "disabled={!rdpForm.fornitore_nome || rdpForm.righe.filter(r => r.descrizione.trim()).length === 0}",
+      "assessment": "CORRECT - Same pattern for RdP"
+    },
+    "pdf_logo_integration": {
+      "file": "/app/backend/services/pdf_procurement.py",
+      "lines": "131-134 (RdP), 298-301 (OdA)",
+      "assessment": "CORRECT - Logo included in HTML template when logo_url starts with 'data:image'"
+    },
+    "normativa_api": {
+      "file": "/app/backend/routes/preventivi.py",
+      "assessment": "CORRECT - CreatePreventivo and UpdatePreventivo models include normativa: Optional[str] = None field"
+    },
+    "arrivo_materiale_model": {
+      "file": "/app/backend/routes/commessa_ops.py",
+      "assessment": "CORRECT - MaterialeRicevuto model with descrizione, quantita, unita_misura, ordine_id, richiede_cert_31, certificato_doc_id, numero_colata, qualita_materiale, fornitore_materiale fields"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration56_features.py",
+    "/app/test_reports/pytest/iteration56_features_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "OdA button validation correctly implemented - disabled if fornitore not selected OR all descriptions empty",
+    "PDF logo integration in RdP/OdA uses company_settings.logo_url - should be data:image base64",
+    "Arrivo Materiale form includes all requested fields: DDT number, data DDT, fornitore dropdown, materiali table with per-material Cert 3.1 checkbox and order reference",
+    "Normativa field available in Preventivo editor under 'Riferimento' tab with EN_1090, EN_13241, none options"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration56_features.py"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 tests passed)",
+    "frontend": "100% (OdA validation and preventivo normativa confirmed)"
+  },
+  "test_credentials": "Dynamic test sessions created per test run",
+  "seed_data_creation": "Test commesse with ordini for arrivo testing, company_settings with logo_url for PDF testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "New features tested: (1) OdA 'Emetti Ordine' button now validates description field - disabled if all descriptions empty, (2) Company logo appears in RdP/OdA PDFs when logo_url is set in company_settings (/impostazioni), (3) Arrivo Materiale form has detailed tracking with DDT number, date, supplier dropdown, and materials table with order reference and Cert 3.1 checkbox per material, (4) Preventivo has 'normativa' dropdown under 'Riferimento' tab (EN_1090, EN_13241, none) for early determination of traceability requirements."
+}
