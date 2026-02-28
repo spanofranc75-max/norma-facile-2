@@ -187,41 +187,41 @@ function WeldersTab() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-zinc-400">Registro saldatori con qualifiche ISO 9606-1</p>
-        <Button data-testid="new-welder-btn" onClick={openNew} className="bg-amber-600 hover:bg-amber-500"><Plus className="h-4 w-4 mr-1" /> Nuovo Saldatore</Button>
+        <p className="text-sm text-slate-500">Registro saldatori con qualifiche ISO 9606-1</p>
+        <Button data-testid="new-welder-btn" onClick={openNew} className="bg-[#0055FF] hover:bg-[#0044CC]"><Plus className="h-4 w-4 mr-1" /> Nuovo Saldatore</Button>
       </div>
 
       <div className="space-y-2" data-testid="welders-list">
         {welders.map(w => (
-          <div key={w.welder_id} className={`flex items-center justify-between p-3 rounded-lg border ${w.is_expired ? 'border-red-500/50 bg-red-900/10' : 'border-zinc-700 bg-zinc-800/50'}`}>
+          <div key={w.welder_id} className={`flex items-center justify-between p-3 rounded-lg border ${w.is_expired ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`}>
             <div>
               <div className="font-medium flex items-center gap-2">
                 {w.name}
-                {w.is_expired && <span className="flex items-center text-xs text-red-400"><AlertTriangle className="h-3 w-3 mr-1" /> Qualifica scaduta</span>}
+                {w.is_expired && <span className="flex items-center text-xs text-red-500"><AlertTriangle className="h-3 w-3 mr-1" /> Qualifica scaduta</span>}
               </div>
-              <div className="text-xs text-zinc-400">{w.qualification_level || 'Qualifica non specificata'}</div>
-              {w.license_expiry && <div className="text-xs text-zinc-500">Scadenza: {w.license_expiry}</div>}
+              <div className="text-xs text-slate-400">{w.qualification_level || 'Qualifica non specificata'}</div>
+              {w.license_expiry && <div className="text-xs text-slate-400">Scadenza: {w.license_expiry}</div>}
             </div>
             <div className="flex gap-2">
-              <button data-testid={`edit-welder-${w.welder_id}`} onClick={() => openEdit(w)} className="text-zinc-400 hover:text-white"><Edit className="h-4 w-4" /></button>
-              <button data-testid={`delete-welder-${w.welder_id}`} onClick={() => deleteWelder(w.welder_id)} className="text-red-400 hover:text-red-300"><Trash2 className="h-4 w-4" /></button>
+              <button data-testid={`edit-welder-${w.welder_id}`} onClick={() => openEdit(w)} className="text-slate-400 hover:text-slate-700"><Edit className="h-4 w-4" /></button>
+              <button data-testid={`delete-welder-${w.welder_id}`} onClick={() => deleteWelder(w.welder_id)} className="text-red-400 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
             </div>
           </div>
         ))}
-        {welders.length === 0 && <p className="text-center py-8 text-zinc-500">Nessun saldatore registrato</p>}
+        {welders.length === 0 && <p className="text-center py-8 text-slate-400">Nessun saldatore registrato</p>}
       </div>
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="bg-zinc-900 border-zinc-700 text-white max-w-md">
+        <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{editing ? 'Modifica Saldatore' : 'Nuovo Saldatore'}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div><label className="text-xs text-zinc-400">Nome *</label><Input data-testid="welder-name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
-            <div><label className="text-xs text-zinc-400">Livello Qualifica (ISO 9606-1)</label><Input data-testid="welder-qual" placeholder="es. ISO 9606-1 135 P BW" value={form.qualification_level} onChange={e => setForm({ ...form, qualification_level: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
-            <div><label className="text-xs text-zinc-400">Scadenza Qualifica</label><Input data-testid="welder-expiry" type="date" value={form.license_expiry} onChange={e => setForm({ ...form, license_expiry: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
-            <div><label className="text-xs text-zinc-400">Note</label><Input data-testid="welder-notes" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} className="bg-zinc-800 border-zinc-700" /></div>
+            <div><label className="text-xs text-slate-500">Nome *</label><Input data-testid="welder-name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+            <div><label className="text-xs text-slate-500">Livello Qualifica (ISO 9606-1)</label><Input data-testid="welder-qual" placeholder="es. ISO 9606-1 135 P BW" value={form.qualification_level} onChange={e => setForm({ ...form, qualification_level: e.target.value })} /></div>
+            <div><label className="text-xs text-slate-500">Scadenza Qualifica</label><Input data-testid="welder-expiry" type="date" value={form.license_expiry} onChange={e => setForm({ ...form, license_expiry: e.target.value })} /></div>
+            <div><label className="text-xs text-slate-500">Note</label><Input data-testid="welder-notes" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
           </div>
           <DialogFooter>
-            <Button data-testid="save-welder-btn" onClick={save} className="bg-amber-600 hover:bg-amber-500" disabled={!form.name}>Salva</Button>
+            <Button data-testid="save-welder-btn" onClick={save} className="bg-[#0055FF] hover:bg-[#0044CC]" disabled={!form.name}>Salva</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
