@@ -327,12 +327,7 @@ export default function PreventivoEditorPage() {
                         {!isNew && <PDFPreviewButton pdfUrl={`/preventivi/${prevId}/pdf`} title={`Anteprima Preventivo ${workflow.number || ''}`} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9" />}
                         {!isNew && (
                             <Button type="button" variant="outline" data-testid="btn-send-email-prev"
-                                onClick={async () => {
-                                    try {
-                                        const r = await apiRequest(`/preventivi/${prevId}/send-email`, { method: 'POST' });
-                                        toast.success(r.message);
-                                    } catch (e) { toast.error(e.message); }
-                                }}
+                                onClick={() => setEmailPreviewOpen(true)}
                                 className="border-violet-400 text-violet-600 hover:bg-violet-50 h-9 text-xs"
                             >
                                 <Mail className="h-3.5 w-3.5 mr-1" /> Email
