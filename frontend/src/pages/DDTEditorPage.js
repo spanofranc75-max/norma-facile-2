@@ -21,6 +21,7 @@ import {
     MapPin, CreditCard, StickyNote, Package, Weight, ArrowRightLeft,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
+import { PDFPreviewButton } from '../components/PDFPreviewModal';
 
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
 
