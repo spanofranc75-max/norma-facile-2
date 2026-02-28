@@ -394,7 +394,7 @@ export default function InvoiceEditorPage() {
                                 <Mail className="h-3.5 w-3.5 mr-1" /> Email
                             </Button>
                         )}
-                        {isEditing && (invoice.document_type === 'FT' || invoice.document_type === 'NC') && invoice.status !== 'bozza' && (
+                        {isEditing && (formData.document_type === 'FT' || formData.document_type === 'NC') && (
                             <Button
                                 type="button"
                                 variant="outline"
