@@ -47,6 +47,7 @@ const navItems = [
     { path: '/fornitori', label: 'Fornitori', icon: Factory },
     { path: '/articoli', label: 'Catalogo Articoli', icon: BoxIcon },
     { path: '/core-engine', label: 'Core Engine', icon: Shield },
+    { path: '/validazione-foto', label: 'Validazione Foto AI', icon: Camera },
     { path: '/rilievi', label: 'Rilievi', icon: Ruler },
     { path: '/distinte', label: 'Distinte', icon: Package },
     { path: '/catalogo', label: 'Catalogo Profili', icon: Warehouse },
