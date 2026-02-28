@@ -501,6 +501,50 @@ async def get_rdp_pdf(cid: str, rdp_id: str, user: dict = Depends(get_current_us
     )
 
 
+@router.get("/{cid}/approvvigionamento/richieste/{rdp_id}/preview-email")
+async def preview_rdp_email(cid: str, rdp_id: str, user: dict = Depends(get_current_user)):
+    """Preview email that would be sent for RdP."""
+    doc = await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
+    approv = doc.get("approvvigionamento", {})
+    rdp = next((r for r in approv.get("richieste", []) if r.get("rdp_id") == rdp_id), None)
+    if not rdp:
+        raise HTTPException(404, "RdP non trovata")
+
+    fornitore_id = rdp.get("fornitore_id")
+    to_email = ""
+    if fornitore_id:
+        forn = await db.clients.find_one({"client_id": fornitore_id}, {"_id": 0})
+        if forn:
+            to_email = forn.get("pec") or forn.get("email") or ""
+            if not to_email:
+                for c in forn.get("contacts", []):
+                    if c.get("email"):
+                        to_email = c["email"]
+                        break
+
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company_name = company.get("business_name", "")
+
+    from services.email_preview import build_rdp_email
+    preview = build_rdp_email(
+        fornitore_name=rdp.get("fornitore_nome", ""),
+        rdp_id=rdp_id,
+        commessa_numero=doc.get("numero", "N/D"),
+        company_name=company_name,
+        num_righe=len(rdp.get("righe", [])),
+    )
+    return {
+        "to_email": to_email,
+        "to_name": rdp.get("fornitore_nome", ""),
+        "subject": preview["subject"],
+        "html_body": preview["html_body"],
+        "has_attachment": True,
+        "attachment_name": f"RdP_{rdp_id}.pdf",
+    }
+
+
+
 @router.post("/{cid}/approvvigionamento/richieste/{rdp_id}/send-email")
 async def send_rdp_email_endpoint(cid: str, rdp_id: str, user: dict = Depends(get_current_user)):
     """Generate PDF and send RdP via email to supplier."""
