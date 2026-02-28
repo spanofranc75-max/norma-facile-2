@@ -348,3 +348,53 @@ async def send_oda_email(
     except Exception as e:
         logger.error(f"[EMAIL ERROR] OdA email to {to_email}: {e}")
         return False
+
+
+
+async def send_email_with_attachment(
+    to_email: str,
+    subject: str,
+    body: str,
+    pdf_bytes: Optional[bytes] = None,
+    filename: Optional[str] = None,
+) -> bool:
+    """Generic email sender with PDF attachment. Used for Conto Lavoro DDTs."""
+    if not _init_resend():
+        logger.info(f"[EMAIL SKIP] Generic email to {to_email} (Resend not configured)")
+        return False
+
+    try:
+        # Convert plain text body to simple HTML
+        body_html = body.replace("\n", "<br/>")
+        html = f"""
+        <div style="font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 40px 20px;">
+            <div style="background: white; border-radius: 12px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <p style="color: #1e293b; font-size: 15px; line-height: 1.7;">{body_html}</p>
+            </div>
+            <p style="text-align: center; color: #94a3b8; font-size: 12px; margin-top: 20px;">
+                Email inviata tramite {settings.sender_name}
+            </p>
+        </div>
+        """
+
+        params = {
+            "from": f"{settings.sender_name} <{settings.sender_email}>",
+            "to": [to_email],
+            "subject": subject,
+            "html": html,
+        }
+
+        if pdf_bytes and filename:
+            import base64 as b64
+            params["attachments"] = [{
+                "filename": filename,
+                "content": b64.b64encode(pdf_bytes).decode("utf-8"),
+                "content_type": "application/pdf",
+            }]
+
+        resend.Emails.send(params)
+        logger.info(f"[EMAIL] Generic email sent to {to_email}: {subject}")
+        return True
+    except Exception as e:
+        logger.error(f"[EMAIL ERROR] Generic email to {to_email}: {e}")
+        return False

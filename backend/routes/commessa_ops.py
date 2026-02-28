@@ -898,10 +898,20 @@ async def send_cl_email(cid: str, cl_id: str, user: dict = Depends(get_current_u
         raise HTTPException(404, "Conto lavoro non trovato")
 
     # Get supplier email
-    supplier = await db.clients.find_one(
-        {"id": cl.get("fornitore_id"), "user_id": user["user_id"]}, {"_id": 0}
-    )
-    supplier_email = (supplier or {}).get("email", "")
+    fornitore_id = cl.get("fornitore_id")
+    supplier = None
+    if fornitore_id:
+        supplier = await db.clients.find_one(
+            {"client_id": fornitore_id, "user_id": user["user_id"]}, {"_id": 0}
+        )
+    supplier_email = ""
+    if supplier:
+        supplier_email = supplier.get("pec") or supplier.get("email") or ""
+        if not supplier_email:
+            for contact in supplier.get("contacts", []):
+                if contact.get("email"):
+                    supplier_email = contact["email"]
+                    break
     if not supplier_email:
         raise HTTPException(400, "Email fornitore non disponibile. Aggiungila nell'anagrafica fornitori.")
 

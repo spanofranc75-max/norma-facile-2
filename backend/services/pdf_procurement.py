@@ -542,7 +542,14 @@ def generate_cl_pdf(
     html_content = f"""
     <!DOCTYPE html>
     <html><head><meta charset="utf-8">
-    <style>{PROCUREMENT_CSS}</style>
+    <style>{COMMON_CSS}
+    {PROCUREMENT_CSS}
+    .doc-title {{
+        font-size: 18pt; font-weight: bold; color: #0055FF;
+        text-align: center; margin: 15px 0; padding: 10px;
+        border-top: 2px solid #0055FF; border-bottom: 2px solid #0055FF;
+    }}
+    </style>
     </head>
     <body>
         <table class="header-table">
