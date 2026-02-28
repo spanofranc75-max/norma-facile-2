@@ -424,11 +424,17 @@ export default function ArticoliPage() {
                         </div>
                         <div>
                             <Label>Fornitore</Label>
-                            <Input
+                            <Combobox
+                                options={fornitori.map(f => ({ value: f.id, label: f.nome }))}
+                                value={form.fornitore_id || ''}
+                                onValueChange={(val) => {
+                                    const f = fornitori.find(x => x.id === val);
+                                    setForm(prev => ({ ...prev, fornitore_id: val, fornitore_nome: f?.nome || '' }));
+                                }}
+                                placeholder="Seleziona fornitore..."
+                                searchPlaceholder="Cerca fornitore..."
+                                emptyText="Nessun fornitore trovato"
                                 data-testid="input-fornitore"
-                                value={form.fornitore_nome}
-                                onChange={(e) => setForm(f => ({ ...f, fornitore_nome: e.target.value }))}
-                                placeholder="Nome fornitore (opzionale)"
                             />
                         </div>
                         <div>
