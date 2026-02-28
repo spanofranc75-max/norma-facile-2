@@ -996,37 +996,44 @@ async def parse_certificato_31(cid: str, doc_id: str, user: dict = Depends(get_c
         file_contents = [ImageContent(image_base64=file_b64)]
 
         prompt = """Analizza questo certificato di materiale 3.1 (EN 10204) per acciaio strutturale.
-Estrai i seguenti dati in formato JSON PURO (senza markdown, senza ```):
+ATTENZIONE: Un certificato 3.1 può riportare PIÙ profili/prodotti diversi. Estrai TUTTI i profili presenti.
+
+Rispondi in formato JSON PURO (senza markdown, senza ```):
 {
-  "numero_colata": "il numero di colata/heat number",
   "fornitore": "nome del produttore/acciaieria",
-  "qualita_acciaio": "grado dell'acciaio (es. S275JR, S355J2, ecc.)",
-  "normativa_riferimento": "norma di riferimento (es. EN 10025-2)",
-  "dimensioni": "profilo/dimensione del prodotto (es. IPE 200, HEB 160, L80x8)",
-  "peso_kg": "peso in kg se indicato, altrimenti null",
-  "data_certificato": "data del certificato se presente",
   "n_certificato": "numero del certificato",
-  "composizione_chimica": "breve riepilogo (C, Mn, Si, P, S, ecc.)",
-  "proprieta_meccaniche": "Rp0.2, Rm, A%, KV se presenti",
-  "conforme": true/false se il certificato indica conformità,
-  "note": "eventuali note aggiuntive",
+  "data_certificato": "data del certificato se presente",
+  "normativa_riferimento": "norma di riferimento (es. EN 10025-2)",
   "percentuale_riciclato": "percentuale di contenuto riciclato se indicata (numero, es. 85), altrimenti null",
   "metodo_produttivo": "forno_elettrico_non_legato oppure forno_elettrico_legato oppure ciclo_integrale se desumibile, altrimenti null",
   "certificazione_ambientale": "tipo di certificazione ambientale se presente (es. EPD, ReMade in Italy, dichiarazione produttore), altrimenti null",
-  "ente_certificatore_ambientale": "ente che ha rilasciato la certificazione ambientale se indicato, altrimenti null"
+  "ente_certificatore_ambientale": "ente certificatore se indicato, altrimenti null",
+  "profili": [
+    {
+      "dimensioni": "profilo/dimensione (es. IPE 100, HEB 200, L80x8, tubo 60x60x3)",
+      "numero_colata": "numero colata/heat number per questo profilo",
+      "qualita_acciaio": "grado acciaio (es. S275JR, S355J2)",
+      "peso_kg": "peso in kg se indicato, altrimenti null",
+      "composizione_chimica": "breve riepilogo composizione se presente",
+      "proprieta_meccaniche": "Rp0.2, Rm, A%, KV se presenti",
+      "conforme": true/false
+    }
+  ]
 }
 
-NOTA IMPORTANTE per i campi CAM (Criteri Ambientali Minimi):
-- "percentuale_riciclato": cerca diciture come "contenuto riciclato", "recycled content", "% riciclato", "materia prima secondaria", "rottame" nel documento.
-- "metodo_produttivo": se il certificato menziona "forno elettrico" o "EAF" → "forno_elettrico_non_legato" (o "forno_elettrico_legato" se acciaio legato/inox). Se menziona "altoforno" o "BOF" o "ciclo integrale" → "ciclo_integrale".
-- Se il produttore è noto come acciaieria a forno elettrico italiana (es. Acciaierie di Calvisano, Feralpi, Pittini, Alfa Acciai, Ori Martin, Arvedi) → presumere "forno_elettrico_non_legato".
-
-Se un campo non è leggibile o non presente, usa null. Rispondi SOLO con il JSON."""
+ISTRUZIONI IMPORTANTI:
+- "profili" DEVE essere un array, anche se c'è un solo profilo.
+- Ogni riga del certificato con un profilo diverso = un elemento nell'array.
+- Se più profili condividono la stessa colata, inseriscili comunque come elementi separati.
+- "percentuale_riciclato": cerca "contenuto riciclato", "recycled content", "% riciclato", "rottame".
+- "metodo_produttivo": "forno elettrico"/"EAF" → "forno_elettrico_non_legato" (o "legato" se inox). "altoforno"/"BOF" → "ciclo_integrale".
+- Produttori noti EAF italiani (Calvisano, Feralpi, Pittini, Alfa Acciai, Ori Martin, Arvedi) → "forno_elettrico_non_legato".
+Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
 
         chat = LlmChat(
             api_key=LLM_KEY,
             session_id=f"cert31-{doc_id}",
-            system_message="Sei un tecnico esperto di certificati materiale 3.1 per acciaio strutturale EN 10204. Estrai dati tecnici con precisione."
+            system_message="Sei un tecnico esperto di certificati materiale 3.1 per acciaio strutturale EN 10204. Estrai dati tecnici con precisione. I certificati spesso contengono più profili/prodotti."
         ).with_model("openai", "gpt-4o")
 
         response = await chat.send_message(UserMessage(
