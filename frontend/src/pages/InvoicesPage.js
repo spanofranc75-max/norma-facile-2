@@ -80,6 +80,9 @@ export default function InvoicesPage() {
         note: '',
     });
     const [savingPayment, setSavingPayment] = useState(false);
+    
+    // PDF Preview state
+    const [pdfPreview, setPdfPreview] = useState({ open: false, url: '', title: '' });
 
     const fetchInvoices = useCallback(async () => {
         try {
