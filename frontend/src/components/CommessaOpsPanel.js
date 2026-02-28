@@ -1281,19 +1281,19 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                         {/* Fornitore selector */}
                         <div>
                             <Label className="text-sm font-medium">Fornitore *</Label>
-                            <Combobox
-                                options={fornitori.map(f => ({ value: f.id, label: f.nome }))}
+                            <select
                                 value={odaForm.fornitore_id}
-                                onValueChange={(val) => {
+                                onChange={(e) => {
+                                    const val = e.target.value;
                                     const f = fornitori.find(x => x.id === val);
                                     setOdaForm(prev => ({ ...prev, fornitore_id: val, fornitore_nome: f?.nome || '' }));
                                 }}
-                                placeholder="Seleziona fornitore..."
-                                searchPlaceholder="Cerca fornitore..."
-                                emptyText="Nessun fornitore trovato"
-                                className="mt-1"
+                                className="mt-1 w-full h-9 text-sm rounded-md border border-input bg-transparent px-3 shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
                                 data-testid="oda-fornitore"
-                            />
+                            >
+                                <option value="">Seleziona fornitore...</option>
+                                {fornitori.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                            </select>
                         </div>
 
                         {/* Line items table with pricing */}
