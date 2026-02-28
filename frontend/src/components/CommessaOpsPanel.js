@@ -499,21 +499,19 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     };
 
     const handleSendRdpEmail = async (rdpId) => {
-        setSendingEmail(rdpId);
-        try {
-            const res = await apiRequest(`/commesse/${commessaId}/approvvigionamento/richieste/${rdpId}/send-email`, { method: 'POST' });
-            toast.success(res.message || 'Email inviata');
-            fetchData(); onRefresh?.();
-        } catch (e) { toast.error(e.message); } finally { setSendingEmail(null); }
+        setEmailPreview({
+            open: true,
+            previewUrl: `/api/commesse/${commessaId}/approvvigionamento/richieste/${rdpId}/preview-email`,
+            sendUrl: `/api/commesse/${commessaId}/approvvigionamento/richieste/${rdpId}/send-email`,
+        });
     };
 
     const handleSendOdaEmail = async (ordineId) => {
-        setSendingEmail(ordineId);
-        try {
-            const res = await apiRequest(`/commesse/${commessaId}/approvvigionamento/ordini/${ordineId}/send-email`, { method: 'POST' });
-            toast.success(res.message || 'Email inviata');
-            fetchData(); onRefresh?.();
-        } catch (e) { toast.error(e.message); } finally { setSendingEmail(null); }
+        setEmailPreview({
+            open: true,
+            previewUrl: `/api/commesse/${commessaId}/approvvigionamento/ordini/${ordineId}/preview-email`,
+            sendUrl: `/api/commesse/${commessaId}/approvvigionamento/ordini/${ordineId}/send-email`,
+        });
     };
 
     // Open certificate linking dialog for an arrival
