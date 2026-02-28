@@ -314,6 +314,15 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Bug fix response.text**: Fixato parsing risposta emergentintegrations (stringa diretta, non oggetto)
 - Testing: 100% backend (8/8), 100% frontend (iteration_62)
 
+### DDT Conto Lavoro Completo (Phase 57)
+- **Dialog CL Avanzato**: Form completo con Tipo, Fornitore (dropdown da anagrafica), RAL (visibile per verniciatura), Causale Trasporto, Tabella Righe (descrizione, qtà, u.m., peso kg) con add/remove, Note
+- **PDF DDT Conto Lavoro**: Generazione PDF professionale con header azienda/destinatario, tabella materiali, totale peso, box RAL, firme mittente/destinatario
+- **Invio Email CL**: Endpoint per invio DDT via Resend con allegato PDF al fornitore (ricerca email da client_id, PEC, email, contacts)
+- **Lista CL Migliorata**: Ogni C/L mostra tipo, fornitore, RAL, n. materiali, peso totale, status badge, bottoni PDF/Email
+- **Transizioni Stato**: da_inviare → inviato → in_lavorazione → rientrato → verificato
+- **Bug Fix Backend**: Aggiunto `send_email_with_attachment` a email_service.py, fixato CSS PDF (aggiunto COMMON_CSS), fixato query fornitore (`client_id` vs `id`)
+- Testing: 100% backend (11/11), 100% frontend (iteration_63)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
