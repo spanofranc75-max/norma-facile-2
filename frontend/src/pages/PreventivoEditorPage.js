@@ -330,6 +330,13 @@ export default function PreventivoEditorPage() {
                             </Button>
                         )}
                         {!isNew && <Button data-testid="btn-convert-invoice" variant="outline" onClick={() => setShowInvoiceModal(true)} disabled={converting} className="border-amber-500 text-amber-600 hover:bg-amber-50 h-9 text-xs"><Receipt className="h-3.5 w-3.5 mr-1.5" /> Fattura</Button>}
+                        {!isNew && (
+                            <Button data-testid="btn-go-commessa" variant="outline" onClick={handleGoToCommessa} disabled={creatingCommessa}
+                                className={`h-9 text-xs ${linkedCommessa ? 'border-[#0055FF] text-[#0055FF] hover:bg-blue-50' : 'border-slate-400 text-slate-600 hover:bg-slate-50'}`}>
+                                {creatingCommessa ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Briefcase className="h-3.5 w-3.5 mr-1.5" />}
+                                {linkedCommessa ? `Commessa ${linkedCommessa.numero || ''}` : 'Crea Commessa'}
+                            </Button>
+                        )}
                         {!isNew && <Button data-testid="btn-convert-project" variant="outline" onClick={() => setShowFpcDialog(true)} disabled={converting} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9 text-xs"><Shield className="h-3.5 w-3.5 mr-1.5" /> Progetto FPC</Button>}
                         <Button data-testid="btn-save-preventivo" onClick={handleSave} disabled={saving} className="bg-[#0055FF] text-white hover:bg-[#0044CC] h-9 text-xs"><Save className="h-3.5 w-3.5 mr-1.5" /> {saving ? 'Salvataggio...' : 'Salva'}</Button>
                     </div>
