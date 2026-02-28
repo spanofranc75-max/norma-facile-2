@@ -140,6 +140,8 @@ export default function InvoiceEditorPage() {
         total_to_pay: 0,
     });
 
+    const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
+
     // Fetch clients on mount
     useEffect(() => {
         const fetchClients = async () => {
