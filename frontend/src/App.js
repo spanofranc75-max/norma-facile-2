@@ -201,6 +201,7 @@ function AppRouter() {
             <Route path="/validazione-foto" element={<ProtectedRoute><ValidazioneFotoPage /></ProtectedRoute>} />
 
             <Route path="/planning" element={<ProtectedRoute><PlanningPage /></ProtectedRoute>} />
+            <Route path="/commesse/:commessaId" element={<ProtectedRoute><CommessaHubPage /></ProtectedRoute>} />
             <Route path="/ebitda" element={<ProtectedRoute><EBITDAPage /></ProtectedRoute>} />
             {/* Tracciabilità EN 1090 */}
             <Route path="/tracciabilita" element={<ProtectedRoute><TracciabilitaPage /></ProtectedRoute>} />
