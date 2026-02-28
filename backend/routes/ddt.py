@@ -148,6 +148,8 @@ async def list_ddt(
     ddt_type: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
     user: dict = Depends(get_current_user),
 ):
     q = {"user_id": user["user_id"]}
@@ -161,6 +163,13 @@ async def list_ddt(
             {"subject": {"$regex": search, "$options": "i"}},
             {"client_name": {"$regex": search, "$options": "i"}},
         ]
+    if date_from or date_to:
+        date_filter = {}
+        if date_from:
+            date_filter["$gte"] = datetime.fromisoformat(date_from).replace(tzinfo=timezone.utc)
+        if date_to:
+            date_filter["$lte"] = datetime.fromisoformat(date_to).replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+        q["created_at"] = date_filter
     total = await db[COLLECTION].count_documents(q)
     items = await db[COLLECTION].find(q, {"_id": 0}).sort("created_at", -1).to_list(200)
     return {"items": items, "total": total}
