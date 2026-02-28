@@ -201,6 +201,9 @@ function AppRouter() {
 
             <Route path="/planning" element={<ProtectedRoute><PlanningPage /></ProtectedRoute>} />
             <Route path="/ebitda" element={<ProtectedRoute><EBITDAPage /></ProtectedRoute>} />
+            {/* Tracciabilità EN 1090 */}
+            <Route path="/tracciabilita" element={<ProtectedRoute><TracciabilitaPage /></ProtectedRoute>} />
+            <Route path="/tracciabilita/progetto/:projectId" element={<ProtectedRoute><FPCProjectPage /></ProtectedRoute>} />
         </Routes>
     );
 }
