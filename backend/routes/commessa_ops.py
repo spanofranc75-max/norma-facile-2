@@ -865,6 +865,138 @@ async def update_conto_lavoro(cid: str, cl_id: str, data: ContoLavoroUpdate, use
     return {"message": f"Conto lavoro aggiornato: {data.stato}"}
 
 
+# ── DDT CONTO LAVORO: Preview PDF ──
+@router.post("/{cid}/conto-lavoro/{cl_id}/preview-pdf")
+async def preview_cl_pdf(cid: str, cl_id: str, user: dict = Depends(get_current_user)):
+    """Generate DDT PDF for Conto Lavoro."""
+    comm = await get_commessa_or_404(cid, user["user_id"])
+    cl_list = comm.get("conto_lavoro", [])
+    cl = next((c for c in cl_list if c["cl_id"] == cl_id), None)
+    if not cl:
+        raise HTTPException(404, "Conto lavoro non trovato")
+
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+
+    from services.pdf_procurement import generate_procurement_pdf
+
+    tipo_labels = {"verniciatura": "VERNICIATURA", "zincatura": "ZINCATURA A CALDO", "sabbiatura": "SABBIATURA", "altro": "LAVORAZIONE ESTERNA"}
+    tipo_label = tipo_labels.get(cl["tipo"], cl["tipo"].upper())
+    title = f"DDT CONTO LAVORO — {tipo_label}"
+
+    righe_pdf = []
+    for i, r in enumerate(cl.get("righe", []), 1):
+        righe_pdf.append({
+            "n": i,
+            "descrizione": r.get("descrizione", ""),
+            "quantita": r.get("quantita", ""),
+            "unita": r.get("unita", "pz"),
+            "peso_kg": r.get("peso_kg", ""),
+        })
+
+    # Build extra info for the header
+    extra_info = f"Commessa: {comm.get('numero', cid)}"
+    if cl.get("ral"):
+        extra_info += f" — RAL {cl['ral']}"
+    extra_info += f"\nCausale Trasporto: {cl.get('causale_trasporto', 'Conto Lavorazione')}"
+
+    pdf_bytes = generate_procurement_pdf(
+        doc_type="ddt_cl",
+        doc_title=title,
+        numero=cl["cl_id"],
+        data_doc=cl.get("created_at", ""),
+        fornitore_nome=cl.get("fornitore_nome", ""),
+        commessa_numero=comm.get("numero", cid),
+        righe=righe_pdf,
+        company=company,
+        extra_info=extra_info,
+        note=cl.get("note", ""),
+    )
+
+    return StreamingResponse(
+        BytesIO(pdf_bytes), media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="DDT_CL_{cl_id}.pdf"'}
+    )
+
+
+# ── DDT CONTO LAVORO: Send Email ──
+@router.post("/{cid}/conto-lavoro/{cl_id}/send-email")
+async def send_cl_email(cid: str, cl_id: str, user: dict = Depends(get_current_user)):
+    """Send DDT Conto Lavoro via email to the supplier."""
+    comm = await get_commessa_or_404(cid, user["user_id"])
+    cl_list = comm.get("conto_lavoro", [])
+    cl = next((c for c in cl_list if c["cl_id"] == cl_id), None)
+    if not cl:
+        raise HTTPException(404, "Conto lavoro non trovato")
+
+    # Get supplier email
+    supplier = await db.clients.find_one(
+        {"id": cl.get("fornitore_id"), "user_id": user["user_id"]}, {"_id": 0}
+    )
+    supplier_email = (supplier or {}).get("email", "")
+    if not supplier_email:
+        raise HTTPException(400, "Email fornitore non disponibile. Aggiungila nell'anagrafica fornitori.")
+
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+
+    # Generate PDF
+    from services.pdf_procurement import generate_procurement_pdf
+
+    tipo_labels = {"verniciatura": "VERNICIATURA", "zincatura": "ZINCATURA A CALDO", "sabbiatura": "SABBIATURA", "altro": "LAVORAZIONE ESTERNA"}
+    tipo_label = tipo_labels.get(cl["tipo"], cl["tipo"].upper())
+    title = f"DDT CONTO LAVORO — {tipo_label}"
+
+    righe_pdf = [{"n": i, "descrizione": r.get("descrizione", ""), "quantita": r.get("quantita", ""), "unita": r.get("unita", "pz"), "peso_kg": r.get("peso_kg", "")} for i, r in enumerate(cl.get("righe", []), 1)]
+
+    extra_info = f"Commessa: {comm.get('numero', cid)}"
+    if cl.get("ral"):
+        extra_info += f" — RAL {cl['ral']}"
+    extra_info += f"\nCausale Trasporto: {cl.get('causale_trasporto', 'Conto Lavorazione')}"
+
+    pdf_bytes = generate_procurement_pdf(
+        doc_type="ddt_cl", doc_title=title, numero=cl["cl_id"],
+        data_doc=cl.get("created_at", ""), fornitore_nome=cl.get("fornitore_nome", ""),
+        commessa_numero=comm.get("numero", cid), righe=righe_pdf,
+        company=company, extra_info=extra_info, note=cl.get("note", ""),
+    )
+
+    # Send email
+    from services.email_service import send_email_with_attachment
+    company_name = company.get("business_name", "Officina")
+    subject = f"DDT Conto Lavoro {tipo_label} — {company_name} — Rif. {comm.get('numero', cid)}"
+    ral_note = f"\nColore RAL: {cl['ral']}" if cl.get("ral") else ""
+    body = f"""Gentile {cl.get('fornitore_nome', '')},
+
+in allegato il DDT per lavorazione in conto terzi.
+Tipo: {tipo_label}
+Commessa: {comm.get('numero', cid)}{ral_note}
+Causale: {cl.get('causale_trasporto', 'Conto Lavorazione')}
+
+Cordiali saluti,
+{company_name}"""
+
+    await send_email_with_attachment(
+        to_email=supplier_email,
+        subject=subject,
+        body=body,
+        pdf_bytes=pdf_bytes,
+        filename=f"DDT_CL_{cl_id}.pdf",
+    )
+
+    # Update status
+    await db[COLL].update_one(
+        {"commessa_id": cid},
+        {"$set": {
+            "conto_lavoro.$[elem].stato": "inviato",
+            "conto_lavoro.$[elem].stato_email": "inviata",
+            "conto_lavoro.$[elem].data_invio": ts().isoformat(),
+        }},
+        array_filters=[{"elem.cl_id": cl_id}],
+    )
+    await db[COLL].update_one({"commessa_id": cid}, push_event(cid, "CL_EMAIL_INVIATA", user, f"DDT C/L inviato a {supplier_email}"))
+
+    return {"message": f"DDT inviato a {supplier_email}"}
+
+
 # ══════════════════════════════════════════════════════════════════
 #  REPOSITORY DOCUMENTI (per commessa)
 # ══════════════════════════════════════════════════════════════════
