@@ -225,6 +225,17 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Add/Remove Lines**: Bottoni per aggiungere/rimuovere righe dinamicamente
 - Testing: 12/12 backend, 100% frontend (iteration_54)
 
+### PDF Preview + Email Workflow per Procurement (Phase 49)
+- **PDF Generator**: Nuovo servizio `/app/backend/services/pdf_procurement.py` per RdP e OdA
+- **Anteprima PDF**: Modal con iframe per visualizzare il PDF prima di inviare
+- **API PDF**: `GET /api/commesse/{id}/approvvigionamento/richieste/{rdp_id}/pdf` e `.../ordini/{ordine_id}/pdf`
+- **Invio Email**: `POST .../send-email` genera PDF, invia via Resend al fornitore, traccia lo stato
+- **Status Badge**: Verde "Inviata" se `email_sent=true`, Rosso "Bozza" se `email_sent=false`
+- **Email Tracking**: Campi `email_sent`, `email_sent_to`, `email_sent_at` su ogni RdP/OdA
+- **Template Email**: Email professionale con riferimento commessa e dettaglio materiali
+- **PDF Professionale**: Layout a due colonne, tabella righe con badge Cert. 3.1, riferimento cantiere
+- Testing: 12/12 backend, 100% frontend (iteration_55)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
