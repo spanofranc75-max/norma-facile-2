@@ -365,6 +365,47 @@ async def get_ddt_pdf(ddt_id: str, user: dict = Depends(get_current_user)):
 
 # ── Send DDT via Email ──
 
+@router.get("/{ddt_id}/preview-email")
+async def preview_ddt_email(ddt_id: str, user: dict = Depends(get_current_user)):
+    """Preview email that would be sent for a DDT."""
+    doc = await db[COLLECTION].find_one(
+        {"ddt_id": ddt_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "DDT non trovato")
+
+    client = None
+    to_email = ""
+    client_name = ""
+    if doc.get("client_id"):
+        client = await db.clients.find_one({"client_id": doc["client_id"]}, {"_id": 0})
+        if client:
+            client_name = client.get("business_name", "")
+            to_email = client.get("pec") or client.get("email") or ""
+            if not to_email:
+                for contact in client.get("contacts", []):
+                    if contact.get("email"):
+                        to_email = contact["email"]
+                        break
+
+    from services.email_preview import build_ddt_email
+    ddt_number = doc.get("number", ddt_id)
+    preview = build_ddt_email(
+        client_name=client_name,
+        ddt_number=ddt_number,
+        ddt_type=doc.get("ddt_type", "vendita"),
+    )
+    return {
+        "to_email": to_email,
+        "to_name": client_name,
+        "subject": preview["subject"],
+        "html_body": preview["html_body"],
+        "has_attachment": True,
+        "attachment_name": f"DDT_{ddt_number}.pdf",
+    }
+
+
+
 @router.post("/{ddt_id}/send-email")
 async def send_ddt_email(ddt_id: str, user: dict = Depends(get_current_user)):
     """Generate PDF and send DDT via email to client."""
