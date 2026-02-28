@@ -67,6 +67,7 @@ export default function ClientsPage() {
     const [editingClient, setEditingClient] = useState(null);
     const [formData, setFormData] = useState(emptyClient);
     const [saving, setSaving] = useState(false);
+    const [emailLog, setEmailLog] = useState([]);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [clientToDelete, setClientToDelete] = useState(null);
     const [activeTab, setActiveTab] = useState('anagrafica');
