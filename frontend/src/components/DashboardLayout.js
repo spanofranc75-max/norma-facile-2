@@ -41,7 +41,8 @@ const NAV_GROUPS = [
         children: [
             { path: '/clients', label: 'Clienti', icon: Users },
             { path: '/preventivi', label: 'Preventivi', icon: ClipboardList },
-            { path: '/invoices', label: 'Fatture Emesse', icon: Receipt },
+            { path: '/invoices', label: 'Fatturazione', icon: Receipt },
+            { path: '/fatture-ricevute', label: 'Fatture Ricevute', icon: FileInput },
             { path: '/ddt', label: 'DDT', icon: Truck },
         ],
     },
@@ -55,7 +56,6 @@ const NAV_GROUPS = [
             { path: '/rilievi', label: 'Rilievi', icon: Ruler },
             { path: '/distinte', label: 'Distinte', icon: Package },
             { path: '/sicurezza', label: 'Sicurezza POS', icon: HardHat },
-            { path: '/fascicolo-cantiere', label: 'Fascicolo Cantiere', icon: FileText },
         ],
     },
     {
@@ -64,7 +64,7 @@ const NAV_GROUPS = [
         icon: Award,
         type: 'group',
         children: [
-            { path: '/certificazioni', label: 'Marcatura CE', icon: Shield },
+            { path: '/certificazioni', label: 'Certificazioni CE', icon: Shield },
             { path: '/core-engine', label: 'Core Engine', icon: Shield },
             { path: '/validazione-foto', label: 'Validazione Foto AI', icon: Camera },
         ],
@@ -76,7 +76,6 @@ const NAV_GROUPS = [
         type: 'group',
         children: [
             { path: '/fornitori', label: 'Fornitori', icon: Factory },
-            { path: '/fatture-ricevute', label: 'Fatture Ricevute', icon: FileInput },
             { path: '/catalogo', label: 'Catalogo Profili', icon: Warehouse },
             { path: '/articoli', label: 'Catalogo Articoli', icon: BoxIcon },
         ],
@@ -89,6 +88,16 @@ const NAV_GROUPS = [
         children: [
             { path: '/perizie', label: 'Perizie Sinistro', icon: ShieldAlert },
             { path: '/archivio-sinistri', label: 'Archivio Sinistri', icon: BarChart3 },
+        ],
+    },
+    {
+        id: 'impostazioni',
+        label: 'Impostazioni',
+        icon: Settings,
+        type: 'group',
+        children: [
+            { path: '/settings', label: 'Dati Azienda', icon: Settings },
+            { path: '/impostazioni/pagamenti', label: 'Tipi Pagamento', icon: CreditCard },
         ],
     },
 ];
