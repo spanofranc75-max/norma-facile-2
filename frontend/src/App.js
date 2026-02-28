@@ -192,6 +192,8 @@ function AppRouter() {
             <Route path="/fatture-ricevute" element={<ProtectedRoute><FattureRicevutePage /></ProtectedRoute>} />
             {/* Core Engine */}
             <Route path="/core-engine" element={<ProtectedRoute><CoreEnginePage /></ProtectedRoute>} />
+
+            <Route path="/validazione-foto" element={<ProtectedRoute><ValidazioneFotoPage /></ProtectedRoute>} />
         </Routes>
     );
 }
