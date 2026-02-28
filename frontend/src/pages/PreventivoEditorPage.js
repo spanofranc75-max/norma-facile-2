@@ -269,6 +269,20 @@ export default function PreventivoEditorPage() {
         } catch (e) { toast.error(e.message); } finally { setConverting(false); }
     };
 
+    const handleGoToCommessa = async () => {
+        if (linkedCommessa) {
+            navigate(`/commesse/${linkedCommessa.commessa_id}`);
+            return;
+        }
+        setCreatingCommessa(true);
+        try {
+            const res = await apiRequest(`/commesse/from-preventivo/${prevId}`, { method: 'POST' });
+            toast.success(`Commessa ${res.numero || ''} creata!`);
+            setLinkedCommessa(res);
+            navigate(`/commesse/${res.commessa_id}`);
+        } catch (e) { toast.error(e.message); } finally { setCreatingCommessa(false); }
+    };
+
     const activeLine = activeLineIdx !== null ? form.lines[activeLineIdx] : null;
     const activeThermal = activeLine?.thermal_data;
 
