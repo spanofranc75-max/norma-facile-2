@@ -18,7 +18,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import { toast } from 'sonner';
 import {
     Plus, Trash2, Save, ArrowLeft, FileDown, Truck,
-    MapPin, CreditCard, StickyNote, Package, Weight, ArrowRightLeft,
+    MapPin, CreditCard, StickyNote, Package, Weight, ArrowRightLeft, Mail,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import { PDFPreviewButton } from '../components/PDFPreviewModal';
