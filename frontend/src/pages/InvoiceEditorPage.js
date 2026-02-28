@@ -609,11 +609,11 @@ export default function InvoiceEditorPage() {
                                                 />
                                             </TableCell>
                                             <TableCell className="p-1">
-                                                <Textarea
+                                                <AutoExpandTextarea
                                                     data-testid={`line-desc-${index}`}
                                                     value={line.description}
                                                     onChange={(e) => updateLine(index, 'description', e.target.value)}
-                                                    className="min-h-[32px] h-8 text-sm resize-none"
+                                                    className="text-sm"
                                                     placeholder="Descrizione prodotto/servizio"
                                                 />
                                             </TableCell>
