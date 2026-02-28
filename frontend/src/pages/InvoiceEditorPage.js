@@ -378,6 +378,39 @@ export default function InvoiceEditorPage() {
                     </div>
                     <div className="flex gap-2">
                         {isEditing && <PDFPreviewButton pdfUrl={`/invoices/${invoiceId}/pdf`} title="Anteprima Fattura" className="border-emerald-500 text-emerald-600 hover:bg-emerald-50" />}
+                        {isEditing && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                data-testid="btn-send-email"
+                                onClick={async () => {
+                                    try {
+                                        const r = await apiRequest(`/invoices/${invoiceId}/send-email`, { method: 'POST' });
+                                        toast.success(r.message);
+                                    } catch (e) { toast.error(e.message); }
+                                }}
+                                className="border-violet-400 text-violet-600 hover:bg-violet-50 text-xs h-9"
+                            >
+                                <Mail className="h-3.5 w-3.5 mr-1" /> Email
+                            </Button>
+                        )}
+                        {isEditing && (invoice.document_type === 'FT' || invoice.document_type === 'NC') && invoice.status !== 'bozza' && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                data-testid="btn-send-sdi"
+                                onClick={async () => {
+                                    if (!window.confirm('Confermi l\'invio al SDI?')) return;
+                                    try {
+                                        const r = await apiRequest(`/invoices/${invoiceId}/send-sdi`, { method: 'POST' });
+                                        toast.success(r.message);
+                                    } catch (e) { toast.error(e.message); }
+                                }}
+                                className="border-amber-400 text-amber-600 hover:bg-amber-50 text-xs h-9"
+                            >
+                                <Send className="h-3.5 w-3.5 mr-1" /> SDI
+                            </Button>
+                        )}
                         <Button
                             data-testid="btn-save-invoice"
                         onClick={handleSave}
