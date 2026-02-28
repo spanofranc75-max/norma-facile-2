@@ -60,6 +60,8 @@ class PreventivoCreate(BaseModel):
     acconto: float = 0
     sconto_globale: float = 0
     lines: List[QuoteLine] = []
+    # Normativa di riferimento per carpenteria metallica
+    normativa: Optional[str] = None  # "EN_1090", "EN_13241", "NESSUNA"
 
 
 class PreventivoUpdate(BaseModel):
@@ -78,6 +80,7 @@ class PreventivoUpdate(BaseModel):
     sconto_globale: Optional[float] = None
     lines: Optional[List[QuoteLine]] = None
     status: Optional[str] = None
+    normativa: Optional[str] = None  # "EN_1090", "EN_13241", "NESSUNA"
 
 
 class ProgressiveInvoiceRequest(BaseModel):
