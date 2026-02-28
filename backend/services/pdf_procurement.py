@@ -287,12 +287,18 @@ def generate_oda_pdf(
     cantiere = commessa.get("cantiere", {})
     cantiere_str = f"{cantiere.get('indirizzo', '')} - {cantiere.get('citta', '')}" if cantiere else ""
     
-    # Company info
+    # Company info with logo
     company_name = company.get("business_name", "")
     company_address = f"{company.get('address', '')}, {company.get('city', '')} ({company.get('province', '')})"
     company_piva = company.get("vat_number", "")
     company_phone = company.get("phone", "")
     company_email = company.get("email", "")
+    
+    # Logo handling
+    logo_html = ""
+    logo_url = company.get("logo_url", "")
+    if logo_url and logo_url.startswith("data:image"):
+        logo_html = f'<img src="{logo_url}" class="logo" style="max-width: 140px; max-height: 55px; margin-bottom: 6px;" />'
     
     # Format date
     try:
