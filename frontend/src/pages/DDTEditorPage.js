@@ -423,7 +423,7 @@ export default function DDTEditorPage() {
                                             <TableRow key={l.line_id} data-testid={`line-${i}`}>
                                                 <TableCell className="text-[10px] text-slate-400 font-mono">{i + 1}</TableCell>
                                                 <TableCell><Input value={l.codice_articolo} onChange={e => updateLine(i, 'codice_articolo', e.target.value)} className="h-7 text-xs font-mono" /></TableCell>
-                                                <TableCell><Input value={l.description} onChange={e => updateLine(i, 'description', e.target.value)} className="h-7 text-xs" /></TableCell>
+                                                <TableCell><AutoExpandTextarea value={l.description} onChange={e => updateLine(i, 'description', e.target.value)} className="text-xs" /></TableCell>
                                                 <TableCell>
                                                     <Select value={l.unit} onValueChange={v => updateLine(i, 'unit', v)}>
                                                         <SelectTrigger className="h-7 text-[10px] w-14"><SelectValue /></SelectTrigger>

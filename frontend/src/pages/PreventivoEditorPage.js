@@ -419,7 +419,7 @@ export default function PreventivoEditorPage() {
                                             return (
                                                 <TableRow key={l.line_id} data-testid={`line-${i}`}>
                                                     <TableCell className="text-[10px] text-slate-400 font-mono">{i + 1}</TableCell>
-                                                    <TableCell><Input value={l.description} onChange={e => updateLine(i, 'description', e.target.value)} placeholder="Descrizione" className="h-7 text-xs" /></TableCell>
+                                                    <TableCell><AutoExpandTextarea value={l.description} onChange={e => updateLine(i, 'description', e.target.value)} placeholder="Descrizione" className="text-xs" /></TableCell>
                                                     <TableCell><Input type="number" value={l.quantity} onChange={e => updateLine(i, 'quantity', e.target.value)} className="h-7 text-xs text-right font-mono" /></TableCell>
                                                     <TableCell>
                                                         <Select value={l.unit} onValueChange={v => updateLine(i, 'unit', v)}>
