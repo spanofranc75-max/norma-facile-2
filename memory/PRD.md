@@ -170,6 +170,18 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - Caso d'uso end-to-end dal sopralluogo alla fatturazione
 - Suggerimenti miglioramento: collegamento Commessa<->FPC, avanzamento Kanban automatico
 
+### Progressive Invoicing - Acconto & SAL (Phase 44)
+- Nuovo endpoint `POST /api/preventivi/{id}/progressive-invoice` con 3 modalita: Acconto %, SAL (righe o importo libero), Saldo Finale
+- Endpoint `GET /api/preventivi/{id}/invoicing-status` per stato fatturazione (total_invoiced, remaining, linked_invoices)
+- Tracciamento `total_invoiced`, `linked_invoices` su preventivi collection
+- Campo `invoicing_progress` calcolato al volo nella lista preventivi
+- Saldo Finale: include automaticamente righe negative "A detrarre acconto Ft. XXX"
+- Validazione: rifiuta importi superiori al residuo, rifiuta se gia completamente fatturato
+- Frontend: InvoiceGenerationModal con 3 scelte (Acconto/SAL/Saldo), progress bar, anteprima importo
+- Frontend: Barra progresso "Fatturato: X%" nella lista preventivi
+- Frontend: Timeline workflow aggiornata (Preventivo → Fatturazione → Completato)
+- Testing: 15/15 backend, 100% frontend (iteration_49)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
