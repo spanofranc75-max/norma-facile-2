@@ -224,10 +224,7 @@ export default function Dashboard() {
                             )}
                         </CardContent>
                     </Card>
-                </div>
 
-                {/* Widgets Row */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Materiale da Ordinare */}
                     <Card className="border-gray-200" data-testid="widget-materiale">
                         <CardHeader className="bg-slate-50 border-b border-gray-200 py-3 px-5">
