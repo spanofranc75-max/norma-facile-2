@@ -4,17 +4,22 @@ Gestione conformità ambientale per carpenteria metallica.
 DM 23 giugno 2022 n. 256
 """
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from typing import Optional, List
 from datetime import datetime, timezone
 from pydantic import BaseModel
+from io import BytesIO
 import uuid
+import logging
 
-from auth import get_current_user
-from database import db
+from core.security import get_current_user
+from core.database import db
 from models.cam import (
     DatiCAMMateriale, MetodoProduttivo, TipoCertificazioneCAM,
     calcola_cam_commessa, calcola_conformita_cam, SOGLIE_CAM_ACCIAIO
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/cam", tags=["CAM - Criteri Ambientali Minimi"])
 
