@@ -516,14 +516,26 @@ export default function RilievoEditorPage() {
                     </div>
                     <div className="flex gap-3">
                         {isEditing && (
-                            <Button
-                                variant="outline"
-                                onClick={handleDownloadPDF}
-                                className="h-12 px-6"
-                            >
-                                <Download className="h-5 w-5 mr-2" />
-                                PDF
-                            </Button>
+                            <>
+                                <Button
+                                    data-testid="btn-genera-pos"
+                                    variant="outline"
+                                    onClick={handleGeneraPos}
+                                    disabled={creatingPos}
+                                    className="h-12 px-6 border-amber-500 text-amber-600 hover:bg-amber-50"
+                                >
+                                    <HardHat className="h-5 w-5 mr-2" />
+                                    {creatingPos ? 'Creazione...' : 'Genera POS'}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    onClick={handleDownloadPDF}
+                                    className="h-12 px-6"
+                                >
+                                    <Download className="h-5 w-5 mr-2" />
+                                    PDF
+                                </Button>
+                            </>
                         )}
                         <Button
                             data-testid="btn-save-rilievo"
