@@ -281,25 +281,22 @@ function ProjectsTab() {
 // ═══════════════════════════════════════════════════════
 export default function TracciabilitaPage() {
   return (
-    <div className="flex h-screen bg-zinc-950 text-white">
-      <Sidebar />
-      <main className="flex-1 overflow-auto p-6">
-        <div className="max-w-6xl mx-auto">
-          <h1 className="text-2xl font-bold mb-1" data-testid="tracciabilita-title">Tracciabilit&agrave; EN 1090</h1>
-          <p className="text-zinc-400 mb-6">Factory Production Control — Gestione materiali, saldatori e progetti</p>
+    <DashboardLayout>
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-2xl font-bold mb-1" data-testid="tracciabilita-title">Tracciabilit&agrave; EN 1090</h1>
+        <p className="text-slate-500 mb-6">Factory Production Control — Gestione materiali, saldatori e progetti</p>
 
-          <Tabs defaultValue="batches" className="w-full">
-            <TabsList className="bg-zinc-800 border border-zinc-700 mb-4">
-              <TabsTrigger data-testid="tab-batches" value="batches" className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"><Package className="h-4 w-4 mr-1" /> Lotti Materiale</TabsTrigger>
-              <TabsTrigger data-testid="tab-welders" value="welders" className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"><Users className="h-4 w-4 mr-1" /> Saldatori</TabsTrigger>
-              <TabsTrigger data-testid="tab-projects" value="projects" className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"><FolderOpen className="h-4 w-4 mr-1" /> Progetti FPC</TabsTrigger>
-            </TabsList>
-            <TabsContent value="batches"><BatchesTab /></TabsContent>
-            <TabsContent value="welders"><WeldersTab /></TabsContent>
-            <TabsContent value="projects"><ProjectsTab /></TabsContent>
-          </Tabs>
-        </div>
-      </main>
-    </div>
+        <Tabs defaultValue="batches" className="w-full">
+          <TabsList className="bg-white border mb-4">
+            <TabsTrigger data-testid="tab-batches" value="batches"><Package className="h-4 w-4 mr-1" /> Lotti Materiale</TabsTrigger>
+            <TabsTrigger data-testid="tab-welders" value="welders"><Users className="h-4 w-4 mr-1" /> Saldatori</TabsTrigger>
+            <TabsTrigger data-testid="tab-projects" value="projects"><FolderOpen className="h-4 w-4 mr-1" /> Progetti FPC</TabsTrigger>
+          </TabsList>
+          <TabsContent value="batches"><BatchesTab /></TabsContent>
+          <TabsContent value="welders"><WeldersTab /></TabsContent>
+          <TabsContent value="projects"><ProjectsTab /></TabsContent>
+        </Tabs>
+      </div>
+    </DashboardLayout>
   );
 }
