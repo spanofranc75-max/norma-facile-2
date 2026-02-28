@@ -476,6 +476,12 @@ export default function DDTEditorPage() {
                     </div>
                 </div>
             </div>
+            <EmailPreviewDialog
+                open={emailPreviewOpen}
+                onOpenChange={setEmailPreviewOpen}
+                previewUrl={`/api/ddt/${ddtId}/preview-email`}
+                sendUrl={`/api/ddt/${ddtId}/send-email`}
+            />
         </DashboardLayout>
     );
 }
