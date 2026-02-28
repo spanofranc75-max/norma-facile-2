@@ -325,10 +325,6 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     };
 
     // PDF Preview handlers
-    const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
-    const [pdfPreviewTitle, setPdfPreviewTitle] = useState('');
-    const [sendingEmail, setSendingEmail] = useState(null); // Track which item is sending email
-
     const handlePreviewRdpPdf = async (rdpId) => {
         try {
             const url = `${API}/api/commesse/${commessaId}/approvvigionamento/richieste/${rdpId}/pdf`;
