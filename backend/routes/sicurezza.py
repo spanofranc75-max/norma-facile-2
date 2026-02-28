@@ -93,6 +93,64 @@ async def create_pos(data: PosCreate, user: dict = Depends(get_current_user)):
     return PosResponse(**created)
 
 
+@router.post("/from-rilievo/{rilievo_id}", response_model=PosResponse, status_code=201)
+async def create_pos_from_rilievo(rilievo_id: str, user: dict = Depends(get_current_user)):
+    """Create a POS pre-filled from a Rilievo (on-site survey). Auto-fills cantiere address, client, and description."""
+    uid = user["user_id"]
+    rilievo = await db.rilievi.find_one({"rilievo_id": rilievo_id, "user_id": uid}, {"_id": 0})
+    if not rilievo:
+        raise HTTPException(404, "Rilievo non trovato")
+
+    # Get client name
+    client_id = rilievo.get("client_id", "")
+    client_name = ""
+    if client_id:
+        client = await db.clients.find_one({"client_id": client_id}, {"_id": 0, "business_name": 1})
+        client_name = client.get("business_name", "") if client else ""
+
+    now = datetime.now(timezone.utc)
+    pos_id = f"pos_{uuid.uuid4().hex[:12]}"
+
+    # Parse location for cantiere address
+    location = rilievo.get("location", "")
+    location_parts = [p.strip() for p in location.split(",") if p.strip()] if location else []
+    address = location_parts[0] if location_parts else location
+    city = location_parts[1] if len(location_parts) > 1 else ""
+
+    cantiere = {
+        "address": address,
+        "city": city,
+        "duration_days": 30,
+        "start_date": rilievo.get("survey_date"),
+        "committente": client_name,
+        "responsabile_lavori": "",
+        "coordinatore_sicurezza": "",
+    }
+
+    doc = {
+        "pos_id": pos_id,
+        "user_id": uid,
+        "project_name": f"POS — {rilievo.get('project_name', 'Cantiere')}",
+        "client_id": client_id,
+        "distinta_id": None,
+        "cantiere": cantiere,
+        "selected_risks": [],
+        "selected_machines": [],
+        "selected_dpi": [],
+        "ai_risk_assessment": None,
+        "status": PosStatus.BOZZA.value,
+        "notes": f"Generato da Rilievo: {rilievo.get('project_name', '')}. {rilievo.get('notes', '') or ''}".strip(),
+        "linked_rilievo_id": rilievo_id,
+        "created_at": now,
+        "updated_at": now,
+    }
+    await db.pos_documents.insert_one(doc)
+    created = await db.pos_documents.find_one({"pos_id": pos_id}, {"_id": 0})
+    await _populate_names(created)
+    logger.info(f"POS {pos_id} created from rilievo {rilievo_id}")
+    return PosResponse(**created)
+
+
 @router.put("/{pos_id}", response_model=PosResponse)
 async def update_pos(pos_id: str, data: PosUpdate, user: dict = Depends(get_current_user)):
     existing = await db.pos_documents.find_one({"pos_id": pos_id, "user_id": user["user_id"]}, {"_id": 0})
