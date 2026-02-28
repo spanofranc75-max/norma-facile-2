@@ -80,7 +80,14 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     // Form states with righe
     const [rdpForm, setRdpForm] = useState({ fornitore_nome: '', fornitore_id: '', righe: [emptyRdpLine()], note: '' });
     const [odaForm, setOdaForm] = useState({ fornitore_nome: '', fornitore_id: '', righe: [emptyOdaLine()], note: '' });
-    const [arrivoForm, setArrivoForm] = useState({ ddt_fornitore: '', ordine_id: '', note: '' });
+    const [arrivoForm, setArrivoForm] = useState({ 
+        ddt_fornitore: '', 
+        data_ddt: '', 
+        fornitore_nome: '', 
+        fornitore_id: '',
+        materiali: [{ descrizione: '', quantita: 1, unita_misura: 'kg', ordine_id: '', richiede_cert_31: false }],
+        note: '' 
+    });
     const [clForm, setClForm] = useState({ tipo: 'verniciatura', fornitore_nome: '', fornitore_id: '' });
 
     // PDF Preview and Email states (must be before any conditional return)
