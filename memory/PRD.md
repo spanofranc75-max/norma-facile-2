@@ -269,6 +269,16 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Helper Functions**: `build_header()`, `build_info_boxes()`, `build_footer()` riutilizzabili per tutti i documenti
 - Testing: 100% backend (iteration_58)
 
+### Tracciabilità Materiali con AI OCR (Phase 53)
+- **Bottone "Analizza AI" Esteso**: Appare su qualsiasi PDF (certificato_31, altro, ddt_fornitore) non ancora analizzato
+- **Dati Estratti Visibili**: Card verde con Colata, Qualità, Fornitore, Normativa mostrata direttamente nel Repository
+- **Sezione "Tracciabilità Materiali"**: Nuova sezione che aggrega tutti i materiali tracciati per la commessa
+- **Doppia Fonte**: Mostra sia i record da `material_batches` (EN 1090) sia i documenti con `metadata_estratti`
+- **Layout Professionale**: Grid 2x4 con etichette e valori per ogni materiale tracciato
+- **Empty State**: Messaggio chiaro "Nessun materiale tracciato - Carica un certificato e clicca Analizza AI"
+- **Bug Fix**: Corretto endpoint `/material-batches` → `/fpc/batches`
+- Testing: 100% backend, 100% frontend (iteration_59)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
