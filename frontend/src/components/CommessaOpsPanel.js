@@ -402,13 +402,11 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     };
 
     const handleSendClEmail = async (clId) => {
-        setSendingEmail(clId);
-        try {
-            await apiRequest(`/commesse/${commessaId}/conto-lavoro/${clId}/send-email`, { method: 'POST' });
-            toast.success('DDT inviato via email');
-            fetchData();
-        } catch (e) { toast.error(e.message); }
-        finally { setSendingEmail(null); }
+        setEmailPreview({
+            open: true,
+            previewUrl: `/api/commesse/${commessaId}/conto-lavoro/${clId}/preview-email`,
+            sendUrl: `/api/commesse/${commessaId}/conto-lavoro/${clId}/send-email`,
+        });
     };
 
     const handleUploadDoc = async (e) => {
