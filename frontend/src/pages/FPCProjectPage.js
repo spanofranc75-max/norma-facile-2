@@ -21,6 +21,7 @@ export default function FPCProjectPage() {
   const [welders, setWelders] = useState([]);
   const [batches, setBatches] = useState([]);
   const [ceCheck, setCeCheck] = useState(null);
+  const [generatingDossier, setGeneratingDossier] = useState(false);
 
   const load = useCallback(async () => {
     const [pRes, wRes, bRes] = await Promise.all([
