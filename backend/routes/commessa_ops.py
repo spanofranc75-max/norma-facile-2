@@ -1009,8 +1009,17 @@ Estrai i seguenti dati in formato JSON PURO (senza markdown, senza ```):
   "composizione_chimica": "breve riepilogo (C, Mn, Si, P, S, ecc.)",
   "proprieta_meccaniche": "Rp0.2, Rm, A%, KV se presenti",
   "conforme": true/false se il certificato indica conformità,
-  "note": "eventuali note aggiuntive"
+  "note": "eventuali note aggiuntive",
+  "percentuale_riciclato": "percentuale di contenuto riciclato se indicata (numero, es. 85), altrimenti null",
+  "metodo_produttivo": "forno_elettrico_non_legato oppure forno_elettrico_legato oppure ciclo_integrale se desumibile, altrimenti null",
+  "certificazione_ambientale": "tipo di certificazione ambientale se presente (es. EPD, ReMade in Italy, dichiarazione produttore), altrimenti null",
+  "ente_certificatore_ambientale": "ente che ha rilasciato la certificazione ambientale se indicato, altrimenti null"
 }
+
+NOTA IMPORTANTE per i campi CAM (Criteri Ambientali Minimi):
+- "percentuale_riciclato": cerca diciture come "contenuto riciclato", "recycled content", "% riciclato", "materia prima secondaria", "rottame" nel documento.
+- "metodo_produttivo": se il certificato menziona "forno elettrico" o "EAF" → "forno_elettrico_non_legato" (o "forno_elettrico_legato" se acciaio legato/inox). Se menziona "altoforno" o "BOF" o "ciclo integrale" → "ciclo_integrale".
+- Se il produttore è noto come acciaieria a forno elettrico italiana (es. Acciaierie di Calvisano, Feralpi, Pittini, Alfa Acciai, Ori Martin, Arvedi) → presumere "forno_elettrico_non_legato".
 
 Se un campo non è leggibile o non presente, usa null. Rispondi SOLO con il JSON."""
 
