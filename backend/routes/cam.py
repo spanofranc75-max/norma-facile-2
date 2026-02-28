@@ -269,14 +269,14 @@ async def calcola_cam_per_commessa(commessa_id: str, user: dict = Depends(get_cu
     # Calcola
     risultato = calcola_cam_commessa([
         {
-            "descrizione": l.get("descrizione", "Materiale"),
-            "peso_kg": l.get("peso_kg", 0),
-            "percentuale_riciclato": l.get("percentuale_riciclato", 0),
-            "metodo_produttivo": l.get("metodo_produttivo", "forno_elettrico_non_legato"),
-            "uso_strutturale": l.get("uso_strutturale", True),
-            "certificazione": l.get("tipo_certificazione") or l.get("certificazione", "nessuna"),
+            "descrizione": mat.get("descrizione", "Materiale"),
+            "peso_kg": mat.get("peso_kg", 0),
+            "percentuale_riciclato": mat.get("percentuale_riciclato", 0),
+            "metodo_produttivo": mat.get("metodo_produttivo", "forno_elettrico_non_legato"),
+            "uso_strutturale": mat.get("uso_strutturale", True),
+            "certificazione": mat.get("tipo_certificazione") or mat.get("certificazione", "nessuna"),
         }
-        for l in lotti
+        for mat in lotti
     ])
     
     risultato["commessa_id"] = commessa_id
