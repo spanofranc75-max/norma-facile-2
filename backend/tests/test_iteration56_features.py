@@ -84,13 +84,9 @@ def test_commessa(auth_headers):
     """Create a test commessa for arrivo testing"""
     headers, user_id = auth_headers
     commessa_data = {
-        "numero": f"TEST-ITER56-{int(time.time())}",
-        "cliente_id": "",
-        "cliente_nome": "Test Client Iteration 56",
-        "descrizione": "Test commessa for iteration 56 arrivo materiale testing",
-        "data_inizio": datetime.now().strftime("%Y-%m-%d"),
+        "title": f"Test Commessa Iteration 56 - {int(time.time())}",
+        "client_id": "",
         "normativa": "EN_1090",  # Set normativa for material batch testing
-        "stato": "in_corso",
     }
     
     response = requests.post(f"{BASE_URL}/api/commesse/", headers=headers, json=commessa_data)
