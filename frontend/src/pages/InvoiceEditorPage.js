@@ -843,6 +843,12 @@ export default function InvoiceEditorPage() {
                     onSelect={handleQuickFill}
                 />
             </div>
+            <EmailPreviewDialog
+                open={emailPreviewOpen}
+                onOpenChange={setEmailPreviewOpen}
+                previewUrl={`/api/invoices/${invoiceId}/preview-email`}
+                sendUrl={`/api/invoices/${invoiceId}/send-email`}
+            />
         </DashboardLayout>
     );
 }
