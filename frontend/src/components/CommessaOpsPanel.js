@@ -227,6 +227,29 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         } catch (e) { toast.error(e.message); }
     };
 
+    // Create OdA pre-filled from accepted RdP
+    const handleCreateOdaFromRdp = (rdp) => {
+        // Pre-fill OdA with RdP data - just need to add prices
+        const righeFromRdp = (rdp.righe || []).map(r => ({
+            id: `l${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            descrizione: r.descrizione,
+            quantita: r.quantita || 1,
+            unita_misura: r.unita_misura || 'kg',
+            prezzo_unitario: 0, // User will fill this
+            richiede_cert_31: r.richiede_cert_31 || false,
+        }));
+        
+        setOdaForm({
+            fornitore_nome: rdp.fornitore_nome,
+            fornitore_id: rdp.fornitore_id || '',
+            righe: righeFromRdp.length > 0 ? righeFromRdp : [emptyOdaLine()],
+            note: `Rif. RdP: ${rdp.rdp_id}`,
+            riferimento_rdp_id: rdp.rdp_id,
+        });
+        setOdaOpen(true);
+        toast.info('OdA pre-compilato dalla RdP - aggiungi i prezzi e invia!');
+    };
+
     const handleCreateArrivo = async () => {
         if (!arrivoForm.ddt_fornitore.trim()) {
             toast.error('Inserisci il numero DDT fornitore');
