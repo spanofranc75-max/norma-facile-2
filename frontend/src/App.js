@@ -36,6 +36,8 @@ import CoreEnginePage from './pages/CoreEnginePage';
 import ValidazioneFotoPage from './pages/ValidazioneFotoPage';
 import PlanningPage from './pages/PlanningPage';
 import EBITDAPage from './pages/EBITDAPage';
+import TracciabilitaPage from './pages/TracciabilitaPage';
+import FPCProjectPage from './pages/FPCProjectPage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
