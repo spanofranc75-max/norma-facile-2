@@ -430,6 +430,73 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         } catch (e) { toast.error(e.message); } finally { setSendingEmail(null); }
     };
 
+    // Open certificate linking dialog for an arrival
+    const handleOpenCertLink = (arrivo) => {
+        setSelectedArrivo(arrivo);
+        setCertLinkOpen(true);
+    };
+
+    // Handle certificate file upload and AI OCR parsing
+    const handleCertificateUpload = async (arrivoId, matIdx, file) => {
+        if (!file) return;
+        setLinkingCert({ arrivo_id: arrivoId, mat_idx: matIdx });
+        
+        try {
+            // First upload the certificate to the repository
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('tipo', 'certificato_31');
+            
+            const uploadRes = await fetch(`${API}/api/commesse/${commessaId}/documenti`, {
+                method: 'POST',
+                body: formData,
+                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+            });
+            
+            if (!uploadRes.ok) throw new Error('Errore upload certificato');
+            const uploadData = await uploadRes.json();
+            const docId = uploadData.doc_id;
+            
+            toast.info('Analisi AI del certificato in corso...');
+            
+            // Parse the certificate with AI OCR
+            const parseRes = await apiRequest(`/commesse/${commessaId}/documenti/${docId}/parse-certificate`, { method: 'POST' });
+            
+            // Link the certificate to the material with extracted data
+            const linkForm = new FormData();
+            linkForm.append('certificato_doc_id', docId);
+            if (parseRes.extracted?.numero_colata) linkForm.append('numero_colata', parseRes.extracted.numero_colata);
+            if (parseRes.extracted?.qualita_materiale) linkForm.append('qualita_materiale', parseRes.extracted.qualita_materiale);
+            if (parseRes.extracted?.fornitore) linkForm.append('fornitore_materiale', parseRes.extracted.fornitore);
+            
+            await fetch(`${API}/api/commesse/${commessaId}/approvvigionamento/arrivi/${arrivoId}/materiale/${matIdx}/certificato`, {
+                method: 'PUT',
+                body: linkForm,
+                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+            });
+            
+            toast.success(`Certificato collegato! Colata: ${parseRes.extracted?.numero_colata || 'N/D'}`);
+            fetchData();
+            onRefresh?.();
+            
+            // Update local state
+            if (selectedArrivo) {
+                const updatedMateriali = [...selectedArrivo.materiali];
+                updatedMateriali[matIdx] = {
+                    ...updatedMateriali[matIdx],
+                    certificato_doc_id: docId,
+                    numero_colata: parseRes.extracted?.numero_colata || '',
+                    qualita_materiale: parseRes.extracted?.qualita_materiale || '',
+                };
+                setSelectedArrivo({ ...selectedArrivo, materiali: updatedMateriali });
+            }
+        } catch (e) {
+            toast.error(e.message || 'Errore collegamento certificato');
+        } finally {
+            setLinkingCert(null);
+        }
+    };
+
     return (
         <div className="space-y-3" data-testid="commessa-ops">
             {/* ── APPROVVIGIONAMENTO ── */}
