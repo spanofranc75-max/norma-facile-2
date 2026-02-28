@@ -114,6 +114,14 @@ export default function PreventivoEditorPage() {
                 linked_invoices: data.linked_invoices || [],
             });
         }).catch(() => toast.error('Preventivo non trovato'));
+
+        // Check if a commessa already exists for this preventivo
+        apiRequest('/commesse/').then(data => {
+            const linked = (data.items || []).find(c =>
+                c.moduli?.preventivo_id === prevId || c.linked_preventivo_id === prevId
+            );
+            if (linked) setLinkedCommessa(linked);
+        }).catch(() => {});
     }, [prevId, isNew]);
 
     // Quick Fill — auto-populate from client
