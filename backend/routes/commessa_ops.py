@@ -296,34 +296,156 @@ async def update_ordine(cid: str, ordine_id: str, stato: str = Form(...), user: 
 
 @router.post("/{cid}/approvvigionamento/arrivi")
 async def register_arrivo_materiale(cid: str, data: ArrivoMateriale, user: dict = Depends(get_current_user)):
-    """Register material arrival."""
-    await get_commessa_or_404(cid, user["user_id"])
+    """Register material arrival with detailed tracking.
+    
+    Supports:
+    - Single DDT containing materials for multiple orders
+    - Certificate linking per material
+    - EN 1090 traceability integration
+    """
+    doc = await get_commessa_or_404(cid, user["user_id"])
     await ensure_ops_fields(cid)
+    
+    # Convert materiali to dict for MongoDB
+    materiali_dict = []
+    for m in (data.materiali or []):
+        mat = m.model_dump() if hasattr(m, 'model_dump') else (m.dict() if hasattr(m, 'dict') else m)
+        # Default commessa_id to current if not specified
+        if not mat.get("commessa_id"):
+            mat["commessa_id"] = cid
+        materiali_dict.append(mat)
+    
     arrivo = {
         "arrivo_id": new_id("arr_"),
-        "ordine_id": data.ordine_id or "",
-        "ddt_fornitore": data.ddt_fornitore or "",
-        "materiali": data.materiali or [],
+        "ddt_fornitore": data.ddt_fornitore,
+        "data_ddt": data.data_ddt or ts().isoformat()[:10],
+        "fornitore_nome": data.fornitore_nome or "",
+        "fornitore_id": data.fornitore_id or "",
+        "materiali": materiali_dict,
+        "ordine_id": data.ordine_id or "",  # Legacy support
         "note": data.note or "",
         "stato": "da_verificare",
         "data_arrivo": ts().isoformat(),
         "data_verifica": None,
     }
+    
+    # Build summary for event
+    n_mat = len(materiali_dict)
+    cert_count = sum(1 for m in materiali_dict if m.get("certificato_doc_id") or m.get("numero_colata"))
+    note_summary = f"DDT {data.ddt_fornitore} — {n_mat} materiali"
+    if cert_count:
+        note_summary += f" ({cert_count} con certificato)"
+    
     await db[COLL].update_one(
         {"commessa_id": cid},
         build_update_with_event(
             push_items={"approvvigionamento.arrivi": arrivo},
-            tipo="MATERIALE_ARRIVATO", user=user, note=f"Arrivo materiale DDT: {data.ddt_fornitore}"
+            tipo="MATERIALE_ARRIVATO", user=user, note=note_summary
         ),
     )
-    # If linked to an order, mark it as consegnato
+    
+    # If linked to a specific order, mark it as consegnato
     if data.ordine_id:
         await db[COLL].update_one(
             {"commessa_id": cid},
             {"$set": {"approvvigionamento.ordini.$[elem].stato": "consegnato"}},
             array_filters=[{"elem.ordine_id": data.ordine_id}],
         )
-    return {"message": "Arrivo materiale registrato", "arrivo": arrivo}
+    
+    # Also mark orders for materials that reference different orders
+    order_ids_to_update = set()
+    for mat in materiali_dict:
+        if mat.get("ordine_id") and mat["ordine_id"] != data.ordine_id:
+            order_ids_to_update.add(mat["ordine_id"])
+    
+    for oid in order_ids_to_update:
+        await db[COLL].update_one(
+            {"commessa_id": cid},
+            {"$set": {"approvvigionamento.ordini.$[elem].stato": "consegnato"}},
+            array_filters=[{"elem.ordine_id": oid}],
+        )
+    
+    return {"message": f"Arrivo materiale registrato (DDT: {data.ddt_fornitore})", "arrivo": arrivo}
+
+
+@router.put("/{cid}/approvvigionamento/arrivi/{arrivo_id}/materiale/{mat_idx}/certificato")
+async def link_certificato_to_materiale(
+    cid: str, 
+    arrivo_id: str, 
+    mat_idx: int,
+    certificato_doc_id: str = Form(None),
+    numero_colata: str = Form(None),
+    qualita_materiale: str = Form(None),
+    fornitore_materiale: str = Form(None),
+    user: dict = Depends(get_current_user)
+):
+    """Link a certificate to a specific material in an arrival.
+    Also registers in EN 1090 material_batches if normativa is 1090.
+    """
+    doc = await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
+    
+    # Find the arrival and material
+    approv = doc.get("approvvigionamento", {})
+    arrivo = next((a for a in approv.get("arrivi", []) if a.get("arrivo_id") == arrivo_id), None)
+    if not arrivo:
+        raise HTTPException(404, "Arrivo non trovato")
+    
+    materiali = arrivo.get("materiali", [])
+    if mat_idx < 0 or mat_idx >= len(materiali):
+        raise HTTPException(400, "Indice materiale non valido")
+    
+    # Update the material with certificate info
+    update_fields = {}
+    if certificato_doc_id:
+        update_fields[f"approvvigionamento.arrivi.$[arr].materiali.{mat_idx}.certificato_doc_id"] = certificato_doc_id
+    if numero_colata:
+        update_fields[f"approvvigionamento.arrivi.$[arr].materiali.{mat_idx}.numero_colata"] = numero_colata
+    if qualita_materiale:
+        update_fields[f"approvvigionamento.arrivi.$[arr].materiali.{mat_idx}.qualita_materiale"] = qualita_materiale
+    if fornitore_materiale:
+        update_fields[f"approvvigionamento.arrivi.$[arr].materiali.{mat_idx}.fornitore_materiale"] = fornitore_materiale
+    
+    if update_fields:
+        await db[COLL].update_one(
+            {"commessa_id": cid},
+            {"$set": update_fields},
+            array_filters=[{"arr.arrivo_id": arrivo_id}],
+        )
+    
+    # If this is an EN 1090 project, also register in material_batches
+    normativa = doc.get("normativa") or doc.get("moduli", {}).get("normativa")
+    if normativa == "EN_1090" and numero_colata:
+        materiale = materiali[mat_idx]
+        batch_data = {
+            "batch_id": new_id("batch_"),
+            "user_id": user["user_id"],
+            "commessa_id": cid,
+            "fornitore": fornitore_materiale or arrivo.get("fornitore_nome", ""),
+            "tipo_materiale": materiale.get("descrizione", ""),
+            "numero_colata": numero_colata,
+            "qualita": qualita_materiale or "",
+            "ddt_riferimento": arrivo.get("ddt_fornitore", ""),
+            "certificato_31_base64": "",  # Will be filled if document is uploaded
+            "certificato_doc_id": certificato_doc_id or "",
+            "data_registrazione": ts().isoformat(),
+            "note": f"Auto-registrato da arrivo {arrivo_id}",
+        }
+        await db.material_batches.insert_one(batch_data)
+        
+        # Update material with batch reference
+        await db[COLL].update_one(
+            {"commessa_id": cid},
+            {"$set": {f"approvvigionamento.arrivi.$[arr].materiali.{mat_idx}.material_batch_id": batch_data["batch_id"]}},
+            array_filters=[{"arr.arrivo_id": arrivo_id}],
+        )
+        
+        await db[COLL].update_one({"commessa_id": cid}, push_event(
+            cid, "MATERIALE_TRACCIATO", user, 
+            f"Colata {numero_colata} registrata per EN 1090"
+        ))
+    
+    return {"message": "Certificato collegato al materiale"}
 
 
 @router.put("/{cid}/approvvigionamento/arrivi/{arrivo_id}/verifica")
