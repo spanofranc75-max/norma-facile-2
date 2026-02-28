@@ -234,10 +234,10 @@ async def register_arrivo_materiale(cid: str, data: ArrivoMateriale, user: dict 
     }
     await db[COLL].update_one(
         {"commessa_id": cid},
-        {
-            "$push": {"approvvigionamento.arrivi": arrivo},
-            **push_event(cid, "MATERIALE_ARRIVATO", user, f"Arrivo materiale DDT: {data.ddt_fornitore}")
-        },
+        build_update_with_event(
+            push_items={"approvvigionamento.arrivi": arrivo},
+            tipo="MATERIALE_ARRIVATO", user=user, note=f"Arrivo materiale DDT: {data.ddt_fornitore}"
+        ),
     )
     # If linked to an order, mark it as consegnato
     if data.ordine_id:
