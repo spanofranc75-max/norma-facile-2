@@ -134,6 +134,7 @@ export default function ArticoliPage() {
             unita_misura: art.unita_misura,
             prezzo_unitario: art.prezzo_unitario,
             aliquota_iva: art.aliquota_iva,
+            fornitore_id: art.fornitore_id || '',
             fornitore_nome: art.fornitore_nome || '',
             note: art.note || '',
         });
