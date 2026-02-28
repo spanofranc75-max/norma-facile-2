@@ -850,25 +850,25 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                         <div key={b.batch_id} className="p-2 bg-emerald-50 rounded border border-emerald-200 text-xs" data-testid={`batch-${b.batch_id}`}>
                             <div className="flex items-center gap-2 mb-1">
                                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                                <span className="font-semibold text-emerald-800">{b.tipo_materiale || 'Materiale'}</span>
+                                <span className="font-semibold text-emerald-800">{b.dimensions || b.material_type || 'Materiale'}</span>
                                 <Badge className="bg-emerald-100 text-emerald-700 text-[9px]">EN 1090</Badge>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px]">
                                 <div>
                                     <span className="text-slate-500 block">N. Colata</span>
-                                    <span className="font-mono font-bold text-emerald-700">{b.numero_colata}</span>
+                                    <span className="font-mono font-bold text-emerald-700">{b.heat_number || '-'}</span>
                                 </div>
                                 <div>
                                     <span className="text-slate-500 block">Qualità</span>
-                                    <span className="font-mono">{b.qualita || '-'}</span>
+                                    <span className="font-mono">{b.material_type || '-'}</span>
                                 </div>
                                 <div>
                                     <span className="text-slate-500 block">Fornitore</span>
-                                    <span className="font-mono">{b.fornitore || '-'}</span>
+                                    <span className="font-mono">{b.supplier_name || '-'}</span>
                                 </div>
                                 <div>
-                                    <span className="text-slate-500 block">DDT Rif.</span>
-                                    <span className="font-mono">{b.ddt_riferimento || '-'}</span>
+                                    <span className="text-slate-500 block">Profilo</span>
+                                    <span className="font-mono">{b.dimensions || '-'}</span>
                                 </div>
                             </div>
                         </div>
