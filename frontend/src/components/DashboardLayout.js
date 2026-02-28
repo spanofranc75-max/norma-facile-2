@@ -35,6 +35,7 @@ import {
     BarChart3,
     BoxIcon,
     FileInput,
+    Camera,
 } from 'lucide-react';
 
 const navItems = [
