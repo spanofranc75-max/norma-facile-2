@@ -562,6 +562,23 @@ export default function PreventivoEditorPage() {
                     )}
                 </SheetContent>
             </Sheet>
+
+            {/* FPC Project Conversion Dialog */}
+            <Dialog open={showFpcDialog} onOpenChange={setShowFpcDialog}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader><DialogTitle>Converti in Progetto FPC</DialogTitle></DialogHeader>
+                    <p className="text-sm text-slate-500 mb-3">Seleziona la classe di esecuzione EN 1090 per questo progetto.</p>
+                    <select data-testid="exc-class-select" value={excClass} onChange={e => setExcClass(e.target.value)} className="w-full border rounded px-3 py-2 text-sm">
+                        <option value="EXC1">EXC1 — Strutture semplici</option>
+                        <option value="EXC2">EXC2 — Strutture standard (pi&ugrave; comune)</option>
+                        <option value="EXC3">EXC3 — Strutture ad alta sollecitazione</option>
+                        <option value="EXC4">EXC4 — Strutture speciali / ponti</option>
+                    </select>
+                    <DialogFooter>
+                        <Button data-testid="confirm-fpc-btn" onClick={handleConvertToProject} className="bg-emerald-600 hover:bg-emerald-500">Crea Progetto</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </DashboardLayout>
     );
 }
