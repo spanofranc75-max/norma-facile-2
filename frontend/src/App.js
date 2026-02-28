@@ -33,6 +33,7 @@ import ArchivioSinistriPage from './pages/ArchivioSinistriPage';
 import ArticoliPage from './pages/ArticoliPage';
 import FattureRicevutePage from './pages/FattureRicevutePage';
 import CoreEnginePage from './pages/CoreEnginePage';
+import ValidazioneFotoPage from './pages/ValidazioneFotoPage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
