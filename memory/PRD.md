@@ -103,6 +103,17 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 ### Migrazione Configurazione Produzione (Phase 36)
 - Config centralizzata, Email Resend, Aruba SDI, FattureInCloud API
 
+### Email Sending + SDI Integration (Phase 37)
+- Endpoint POST /api/invoices/{id}/send-email — genera PDF, invia via Resend con allegato
+- Endpoint POST /api/invoices/{id}/send-sdi — genera XML FatturaPA, invia ad Aruba SDI
+- Endpoint POST /api/ddt/{id}/send-email — genera PDF DDT, invia via Resend
+- Endpoint POST /api/preventivi/{id}/send-email — genera PDF preventivo, invia via Resend
+- Tracking email: email_sent, email_sent_to, email_sent_at in MongoDB
+- Pulsanti "Email" in: InvoiceEditorPage, PreventivoEditorPage, DDTEditorPage
+- Pulsante "Invia a SDI" in InvoiceEditorPage + InvoicesPage dropdown
+- Validazione SDI: blocca bozze, verifica configurazione chiavi
+- Testing: 16/16 backend, 100% frontend (iteration_44)
+
 ## Issue Pendenti
 - **P0**: Firma digitale DDT - pulsante "Salva" bloccato
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
