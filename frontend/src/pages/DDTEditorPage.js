@@ -247,12 +247,7 @@ export default function DDTEditorPage() {
                                 type="button"
                                 variant="outline"
                                 data-testid="btn-send-email-ddt"
-                                onClick={async () => {
-                                    try {
-                                        const r = await apiRequest(`/ddt/${ddtId}/send-email`, { method: 'POST' });
-                                        toast.success(r.message);
-                                    } catch (e) { toast.error(e.message); }
-                                }}
+                                onClick={() => setEmailPreviewOpen(true)}
                                 className="border-violet-400 text-violet-600 hover:bg-violet-50 h-9 text-xs"
                             >
                                 <Mail className="h-3.5 w-3.5 mr-1" /> Email
