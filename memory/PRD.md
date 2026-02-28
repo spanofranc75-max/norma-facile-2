@@ -134,6 +134,25 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - Gestione robusta valori None in tutti i campi
 - Testing: 17/17 test passati (iteration_46)
 
+### PDF Template Unification (Phase 40)
+- Modulo condiviso `services/pdf_template.py` con CSS, header builder, totals builder
+- Fatture: Riscrittura da ReportLab a WeasyPrint — layout unificato con IBAN/banca nel footer
+- DDT: Riscrittura da ReportLab a WeasyPrint — layout unificato con info trasporto + firme mittente/vettore/destinatario
+- Preventivo: Refactoring per usare il modulo condiviso
+- Font/colori/margini identici su tutti e 3 i tipi di documento
+
+### EN 1090 FPC System (Phase 41)
+- **Registro Saldatori**: CRUD completo con qualifica ISO 9606-1, scadenza, allarme scadenza
+- **Tracciabilità Materiali**: CRUD lotti con fornitore, tipo materiale, numero colata, certificato 3.1 (base64)
+- **Progetti FPC**: Conversione preventivo→progetto con classe EXC obbligatoria (EXC1-EXC4)
+- **Assegnazione materiali**: Link lotto→riga distinta con heat_number e material_type
+- **Controlli FPC**: 7 checklist (dimensionale, visivo, certificati, WPS, superfici, marcatura)
+- **CE Label**: Verifica requisiti (blockers) + generazione etichetta CE
+- **Workflow completo**: Blocco generazione CE se materiali non collegati, saldatore non assegnato, controlli non completati
+- **Frontend**: Pagina `/tracciabilita` con 3 tab + pagina dettaglio progetto FPC
+- **Sidebar**: Link aggiunto sotto "Produzione"
+- Testing: 27/27 backend, 100% frontend (iteration_47)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
