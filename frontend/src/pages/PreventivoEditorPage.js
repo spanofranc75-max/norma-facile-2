@@ -390,17 +390,19 @@ export default function PreventivoEditorPage() {
                         <CardContent className="py-3 px-5">
                             <div className="flex items-center gap-0">
                                 <TimelineStep active label="Preventivo" sub={workflow.number} icon={FileText} color="bg-[#0055FF]" />
+                                <div className={`flex-1 h-0.5 ${isAccepted ? 'bg-emerald-400' : 'bg-slate-200'}`} />
+                                <TimelineStep active={isAccepted} label="Accettato" icon={CheckCircle2} color="bg-emerald-500" />
                                 <div className={`flex-1 h-0.5 ${workflow.invoicing_progress > 0 ? 'bg-amber-400' : 'bg-slate-200'}`} />
                                 <TimelineStep active={workflow.invoicing_progress > 0} label="Fatturazione" sub={workflow.invoicing_progress > 0 ? `${workflow.invoicing_progress}%` : ''} icon={Receipt} color="bg-amber-500" />
                                 <div className={`flex-1 h-0.5 ${workflow.invoicing_progress >= 100 ? 'bg-emerald-400' : 'bg-slate-200'}`} />
-                                <TimelineStep active={workflow.invoicing_progress >= 100} label="Completato" icon={CheckCircle2} color="bg-emerald-500" />
+                                <TimelineStep active={workflow.invoicing_progress >= 100} label="Saldato" icon={Euro} color="bg-emerald-500" />
                             </div>
                             {/* Progress bar */}
                             {workflow.invoicing_progress > 0 && (
                                 <div className="mt-2">
                                     <div className="flex justify-between text-[10px] text-slate-500 mb-1">
                                         <span>Fatturato: {workflow.invoicing_progress}%</span>
-                                        <span>{workflow.linked_invoices?.length || 0} fatture</span>
+                                        <span>{workflow.linked_invoices?.length || 0} fatture emesse</span>
                                     </div>
                                     <div className="w-full bg-slate-200 rounded-full h-1.5">
                                         <div
@@ -409,6 +411,12 @@ export default function PreventivoEditorPage() {
                                         />
                                     </div>
                                 </div>
+                            )}
+                            {/* Not accepted prompt */}
+                            {!isAccepted && (
+                                <p className="text-xs text-slate-400 mt-2 text-center">
+                                    Clicca <strong>"Accetta Preventivo"</strong> per procedere alla fatturazione
+                                </p>
                             )}
                         </CardContent>
                     </Card>
