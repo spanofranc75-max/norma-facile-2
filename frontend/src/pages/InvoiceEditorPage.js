@@ -503,15 +503,27 @@ export default function InvoiceEditorPage() {
                     <CardHeader className="pb-4 bg-blue-50 border-b border-gray-200">
                         <div className="flex items-center justify-between">
                             <CardTitle className="text-lg font-semibold">Righe Documento</CardTitle>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                data-testid="btn-add-line"
-                                onClick={addLine}
-                            >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Aggiungi Riga
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    data-testid="btn-quick-fill"
+                                    onClick={() => setQuickFillOpen(true)}
+                                    className="border-amber-400 text-amber-600 hover:bg-amber-50"
+                                >
+                                    <FileText className="h-4 w-4 mr-2" />
+                                    Importa da Preventivo/DDT
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    data-testid="btn-add-line"
+                                    onClick={addLine}
+                                >
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Aggiungi Riga
+                                </Button>
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent className="p-0">
