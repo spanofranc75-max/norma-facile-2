@@ -598,9 +598,14 @@ async def get_oda_pdf(cid: str, ordine_id: str, user: dict = Depends(get_current
     # Get company info
     company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
     
-    # Generate PDF
-    from services.pdf_procurement import generate_oda_pdf
-    pdf_bytes = generate_oda_pdf(oda, doc, company)
+    # Get fornitore details if available
+    fornitore = None
+    if oda.get("fornitore_id"):
+        fornitore = await db.clients.find_one({"client_id": oda["fornitore_id"]}, {"_id": 0})
+    
+    # Generate PDF using V2 template
+    from services.pdf_template_v2 import generate_oda_pdf_v2
+    pdf_bytes = generate_oda_pdf_v2(oda, doc, company, fornitore)
     
     filename = f"OdA_{ordine_id}.pdf"
     return StreamingResponse(
