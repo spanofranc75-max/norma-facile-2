@@ -141,7 +141,6 @@ def build_oda_email(fornitore_name: str, ordine_id: str, commessa_numero: str, c
 def build_cl_email(fornitore_nome: str, tipo: str, ral: str, commessa_numero: str, company_name: str) -> dict:
     tipo_labels = {"verniciatura": "VERNICIATURA", "zincatura": "ZINCATURA A CALDO", "sabbiatura": "SABBIATURA", "altro": "LAVORAZIONE ESTERNA"}
     tipo_label = tipo_labels.get(tipo, tipo.upper())
-    ral_note = f"\nColore RAL: {ral}" if ral else ""
     subject = f"DDT Conto Lavoro {tipo_label} — {company_name} — Rif. {commessa_numero}"
     inner = f"""
         <div style="text-align: center; margin-bottom: 24px;">
