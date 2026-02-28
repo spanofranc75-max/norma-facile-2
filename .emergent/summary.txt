@@ -1,74 +1,99 @@
 <analysis>**original_problem_statement:**
-The user wants to build a SaaS application named Norma Facile 2.0. The project initially started as a LegalTech SaaS but has pivoted to be a comprehensive CRM and compliance tool for Metalworkers (Fabbri) in Italy.
+The user wants to build a SaaS application named Norma Facile 2.0 for Italian metalworkers (Fabbri). The application aims to be a comprehensive CRM, compliance, and operational management tool.
+
+The user's most recent requests were:
+1.  **Replicate Old Architecture:** The user provided a detailed prompt describing the architecture of their previous application (Norma Facile 1.0). They requested that this architecture, centered around a Commessa (Job Order) as the single source of truth, be implemented and improved in the new application.
+2.  **Implement Operational Workflows:** Within the new Commessa hub, the user requested a full operational workflow, including:
+    *   Requesting quotes from suppliers.
+    *   Sending purchase orders.
+    *   Tracking production steps (cutting, drilling, assembly, etc.).
+    *   Managing subcontracted work (e.g., painting, galvanizing), including generating specific DDTs (Delivery Documents).
+    *   A central repository for all project-related files (certificates, drawings, etc.).
+3.  **AI-Powered Certificate Parsing:** A key part of the workflow is to automatically parse material certificates (like certificati 3.1) using AI (GPT-4o Vision) to extract crucial data like heat number (n. colata), supplier, material quality, etc., upon upload.
+4.  **Supplier Integration:** The user asked for supplier suggestions from the existing supplier directory to be automatically populated when creating purchase requests or orders.
 
 **PRODUCT REQUIREMENTS:**
-The application has evolved significantly. The current high-level goals are:
-1.  **Full-Featured CRM:** Manage clients, suppliers, invoices, quotes, and delivery documents (DDT).
-2.  **Advanced Invoicing & Payments:** Include a product catalog, payment tracking with installments, and quick-fill options from other documents.
-3.  **On-Site & Workshop Tools:** Rilievo Misure (On-Site Survey) with a drawing canvas and Distinta Materiali (Bill of Materials) for workshop optimization.
-4.  **AI-Powered Compliance & Quoting:**
-    *   Sicurezza Cantieri (Site Safety): An AI generator for safety plans (POS).
-    *   Perizia Sinistro (Insurance Claim Assessment): An AI-driven wizard for creating detailed insurance claim quotes, including photo analysis and legal letter generation.
-    *   **Core Engine for CE Marking:** A dynamic, data-driven engine to configure products against technical standards (e.g., UNI EN 14351-1), calculate performance values (like thermal transmittance), validate compliance, and automatically generate the complete legal technical dossier (CE Mark, DoP, etc.).
-5.  **Supplier & Procurement Management:** Manage suppliers and import/parse electronic invoices (FatturaPA XML) to automatically build a product/price catalog.
+*   **Commessa-Centric Architecture:** The Commessa (Job Order) is the central entity. All other modules (Survey, Quote, Production, Invoicing, Compliance) are linked to and controlled by the Commessa.
+*   **Event Sourcing & State Machine:** The Commessa's lifecycle is managed by an immutable log of events and follows a strict, defined state progression (e.g., DRAFT, SIGNED, IN_PRODUCTION, INVOICED, CLOSED).
+*   **Full-Featured CRM:** Manage clients, suppliers, invoices, quotes, and delivery documents (DDT).
+*   **Advanced Invoicing & Payments:** Progressive invoicing (deposits, work-in-progress, final balance) and payment tracking.
+*   **Workshop & On-Site Tools:** On-Site Survey, Bill of Materials (BOM), cutting lists.
+*   **Operational Management:** Supplier procurement, production step tracking, and subcontracting management.
+*   **AI-Powered Features:** AI for safety plans, insurance assessments, and now, **AI OCR for parsing compliance documents**.
+*   **Core Engine for CE Marking:** Dynamic engine for EN 1090 / EN 13241 compliance and technical dossier generation.
+*   **Document Aggregation:** Ability to generate a complete Dossier Unico di Commessa on demand.
 
 **User's preferred language**: Italian. The user communicates exclusively in Italian. The next agent **MUST** respond in Italian.
 
 **what currently exists?**
-A sophisticated, full-stack SaaS application for Italian metalworkers. The app features a modular architecture with a React frontend, FastAPI backend, and MongoDB database.
+A sophisticated full-stack SaaS application (React/FastAPI/MongoDB). In this session, the application underwent a major architectural refactor to align with the user's Commessa-centric vision.
 
-In this session, the agent accomplished several major tasks:
-1.  **Bug Fix:** Resolved a critical React crash ( error) that occurred on the new invoice page by implementing a global  and fixing an anti-pattern in  components across the app.
-2.  **Invoicing & Catalog:** Implemented a full product catalog (), integrated payment tracking () into the invoice list, and added an autocomplete search for catalog items when creating invoices.
-3.  **Received Invoices Module:** Built a new module () to upload and parse Italian electronic invoices (FatturaPA XML). This feature automatically extracts line items and adds them to the product catalog, creating a self-populating price list.
-4.  **Core Engine for CE Marking:** Developed a powerful, data-driven Core Engine for managing technical compliance. This includes:
-    *   A backend to define technical standards () as JSON rules.
-    *   CRUD interfaces for managing product components (glass, frames, etc.).
-    *   A universal calculation and validation engine.
-    *   A new frontend Product Configurator page for users to build products and see real-time compliance checks and performance calculations.
-    *   An automated document generator () that creates the complete, compliant technical dossier (DoP, CE Label, Manual) as a PDF based on the engine's output.
-
-All new features were tested successfully using the testing agent.
+Key functionalities implemented in this session:
+*   **Commessa Hub Architecture:** A new, central Commessa model was created, acting as the single source of truth. It's driven by an event-sourcing pattern and a strict state machine. A new frontend page () serves as the main interface for managing a job order's entire lifecycle.
+*   **Progressive Invoicing:** The quote-to-invoice flow was upgraded to support partial billing: deposit (Acconto), work-in-progress (SAL), and final balance (Saldo), complete with a frontend modal wizard.
+*   **Operational Workflows:** A new  component was added to the Commessa Hub, providing tabs and functionality for:
+    *   **Procurement:** Creating and managing Requests for Quotes (RdP) and Purchase Orders (OdA) to suppliers.
+    *   **Production:** Tracking the status of various production phases (cutting, drilling, assembly, finishing).
+    *   **Subcontracting (Conto Lavoro):** Managing items sent out for external processing (e.g., galvanizing) and their return.
+    *   **Document Repository:** A central place to upload and manage all files related to the job order.
+*   **AI Certificate Parser:** A backend service () was created that uses **GPT-4o Vision** to receive an uploaded material certificate, process it, and extract key data like heat number, supplier, and material type, which is then recorded in the system.
+*   **UI/UX Enhancements:** The quote editor page was updated with a clearer workflow for accepting a quote and then issuing an invoice. A button was also added to directly create or navigate to the associated Commessa from a quote.
 
 **Last working item**:
-- **Last item agent was working:** The agent was analyzing the existing codebase to plan the implementation of a new set of P1 features requested by the user. The user prioritized three specific enhancements: (1) a DDT Register, (2) a Quick Fill feature for invoices, and (3) AI validation for installation photos.
-- **Status:** NOT STARTED
-- **Agent Testing Done:** N/A
-- **Which testing method agent to use?** both. This will involve new backend endpoints and significant frontend changes.
+- **Last item agent was working:** The user requested that the forms for creating a new Request for Quote (RdP), Purchase Order (OdA), or Subcontracting (Conto Lavoro) should automatically suggest suppliers from the existing supplier directory (). The agent acknowledged the request and began analyzing the relevant files to implement it.
+- **Status:** IN PROGRESS
+- **Agent Testing Done:** N
+- **Which testing method agent to use?** both. The frontend testing agent should be used to verify that the supplier dropdown/search component appears and functions correctly within the respective modals on the  page. The backend testing agent should verify that when a supplier is selected, its  is correctly saved with the new RdP/OdA/Conto Lavoro entry.
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-There are no known pending issues. A significant React crash was successfully identified and fixed in this session.
+*   **Issue 1: (P0) Implement Automatic Supplier Suggestion in Commessa Forms:** This is the highest priority as it was the user's last direct request.
+    *   **Attempted fixes:** None yet. Analysis just started.
+    *   **Next debug checklist:**
+        *   In , add a  hook to fetch the list of suppliers when the component mounts.
+        *   Store the supplier list in component state.
+        *   In the dialogs for Nuova RdP, Nuovo OdA, and Nuovo Conto Lavoro, replace the simple text input for Fornitore with a searchable dropdown component (e.g., Shadcn's Combobox) that is populated with the fetched supplier data.
+        *   Ensure the selected supplier's ID is passed to the backend API when creating the new entry.
+    *   **Why fix this issue and what will be achieved with the fix?** To streamline the procurement workflow, reduce manual data entry, and prevent errors from typos in supplier names.
+    - **Status:** NOT STARTED
+    *   **Is recurring issue?** N
+    *   **Should Test frontend/backend/both after fix?** Both.
+    *   **Blocked on other issue:** None.
 
 **In progress Task List**:
-None. All previously assigned tasks have been completed and verified. The agent is about to start a new set of tasks.
+None apart from the pending issue above.
 
 **Upcoming and Future Tasks**
-**Upcoming Tasks (P1 - Prioritized by User):**
-- **1. Registro DDT (DDT Register):** Create a new dedicated page to list, search, filter, and manage all Delivery Documents (DDTs), similar to the existing .
-- **2. Quick Fill Fatture (Invoice Quick Fill):** In the , add functionality (e.g., a button or search modal) to allow users to select an existing Quote or DDT and automatically populate the invoice line items from it.
-- **3. Validazione AI Foto Posa (AI Validation of Installation Photos):** In the Core Engine module, add a feature for users to upload photos of the finished installation. The system should use an AI Vision model (GPT-4o) to analyze the photos and validate them against the manufacturer's installation requirements (e.g., confirm 4 screws are visible at the hinge).
+**Upcoming Tasks:**
+*   **P0: Finalize EBITDA Dashboard:** Implement the backend financial calculations for the  endpoint and connect them to charts on the frontend .
+*   **P1: Finalize PDF Preview Modal:** Fully integrate and verify the  component for all document types (Invoices, Quotes, DDTs) across all relevant pages.
+*   **P1: Activate SDI Integration:** Get the final API keys from the user for Aruba SDI / FattureInCloud and activate the  function to make live calls.
 
-**Future Tasks (P2/P3 - Mentioned by user as future ideas):**
-- **Digitalizzazione Documenti Cartacei:** An AI-powered feature to scan and digitize paper documents.
-- **Integrazione Calendario:** Syncing deadlines and payment schedules with Google Calendar or Outlook.
-- **Firma Elettronica Avanzata (FEA):** Integration of a certified advanced electronic signature service.
-- **App Mobile Nativa:** A dedicated native mobile application for iOS and Android.
+**Future Tasks:**
+*   **Technical:**
+    *   Esportazione CSV distinta di taglio per CNC.
+    *   Versioning fatture e fascicoli tecnici.
+    *   Modalità offline (PWA improvements).
+    *   Migrate Base64 certificate storage to a dedicated object storage solution.
+    *   Add a SOSPESA state for job orders.
+    *   Implement webhooks/notifications for job order events.
+*   **Features:**
+    *   Estensione Distinta Facile (grata 2 ante, cancello scorrevole).
+    *   Aggiungere Categoria CANCELLI al listino prezzi.
+    *   Migrazione dati per normativa EN 13241.
+    *   Integrazione Stripe per pagamenti.
+    *   Automazione invio credenziali ai nuovi utenti.
 
 **Completed work in this session**
-- **React Crash Fix:** Implemented a global  and refactored  components to resolve a recurring  DOM error.
-- **Invoicing Module Enhancements:**
-    - **Catalogo Articoli:** Full CRUD for a product catalog.
-    - **Tracciamento Pagamenti:** Added payment status, installment tracking, and a management modal to the invoice list.
-    - **Ricerca Articoli:** Added an autocomplete search for catalog items in the invoice editor.
-- **Fatture Ricevute Module (SDI Import):**
-    - Built a new module to upload and parse FatturaPA XML files.
-    - Automatically extracts line items to populate the .
-- **Core Engine for CE Marking (Data-Driven):**
-    - **Backend Engine:** Built a dynamic engine to manage compliance standards as JSON, handle component data, and run universal calculations/validations.
-    - **Frontend Configurator:** Created a new page for users to configure products against standards and get real-time feedback.
-    - **Automated Document Generation:** Implemented a universal PDF generator to create the full technical dossier (CE Mark, DoP, Manual) from the engine's output.
-- **Continuous Testing:** All major features were successfully validated with , which found and fixed minor bugs along the way.
+- **Major Architecture: Commessa Hub:** Successfully implemented the user's requested Commessa-centric architecture, refactoring the application core around a new  model that acts as a central hub, driven by event sourcing and a state machine.
+- **Major Feature: Operational Workflows:** Built the backend and frontend for Procurement (RdP, OdA), Production Tracking, and Subcontracting (Conto Lavoro) within the Commessa Hub.
+- **Major Feature: AI Certificate Parser:** Integrated GPT-4o Vision to create an OCR service that automatically extracts key data from uploaded material certificates (e.g., heat number).
+- **Feature: Progressive Invoicing:** Implemented a complete deposit (Acconto), work-in-progress (SAL), and final balance (Saldo) invoicing flow, starting from a Quote.
+- **UI/UX Flow Improvements:**
+    - Added a Crea Commessa button directly on the Quote Editor page for a smoother workflow.
+    - Redesigned the Quote Editor toolbar to create a clear lifecycle:  ->  -> .
+- **Bug Fix:** Resolved a critical MongoDB bug () by refactoring all database updates involving event pushes to use a centralized, safe helper function (). This was found and fixed after a testing agent run.
+- **Testing:** Used  multiple times, achieving a 100% pass rate after the major architectural changes and bug fixes.
 
 **Earlier issues found/mentioned but not fixed**
 None.
@@ -80,83 +105,96 @@ None.
 
 
 **Key Technical Concepts**
-- **Backend:** FastAPI, Pydantic, WeasyPrint (for PDF generation),  (for XML parsing).
-- **Frontend:** React, React Router, Tailwind CSS, Shadcn/UI.
-- **Database:** MongoDB.
-- **Architecture:** Data-Driven Rule Engine for compliance, modular API structure.
-- **AI Integration:** OpenAI GPT-4o (Vision) for analysis and text generation.
+- **Event Sourcing:** The new  model is driven by an immutable log of events, providing a full audit trail.
+- **State Machine:** The Commessa follows a strict, defined lifecycle (, , , etc.), with state transitions managed by events.
+- **Central Hub Architecture:** The Commessa document serves as a central point, linking to other documents (quotes, invoices, FPC projects) via their IDs, avoiding data duplication.
+- **AI-Powered OCR:** Using **GPT-4o Vision** via the  library to extract structured data from unstructured PDF/image documents (material certificates).
+- **MongoDB Atomic Operations:** Overcame limitations with conflicting operators () in a single update call by structuring updates correctly, using helpers and separate database calls where necessary.
 
 **key DB schema**
-- **articles:** 
-- **invoices:**  (extended)
-- **received_invoices:** 
-- **norma_configs:** 
-- **components:** 
+-   **commesse (new collection):** 
+-   **preventivi (modified):** Added  and  fields to track progressive invoicing.
 
 **changes in tech stack**
-- : Added for advanced PDF generation from HTML templates.
-- : Used from Python's standard library for parsing FatturaPA XML files.
+- No new dependencies were installed. The existing  library was used to enable the GPT-4o Vision functionality.
 
 **All files of reference**
-- **Bug Fix:** , 
-- **Invoicing & Catalog:** , , , , 
-- **Received Invoices:** , 
-- **Core Engine:** , , 
+- **New Backend Core:** , 
+- **New Backend Features:** , , , 
+- **New Frontend Core:** 
+- **New Frontend Features:** , 
+- **Modified Core Files:** , , 
 
 **Areas that need refactoring**:
-None. The agent has successfully implemented a significant architectural improvement with the Core Engine.
+- The storage of PDF certificates as Base64 strings in MongoDB could become a performance bottleneck. This should be migrated to a dedicated object storage solution in the future.
+- The  and  components are growing large. They could be broken down into smaller, more focused components for better maintainability (e.g., a separate component for each operational tab).
 
 **key api endpoints**
--  (CRUD for product catalog)
--  (POST to add a payment)
--  (POST to upload and parse FatturaPA XML)
--  (CRUD for compliance standards)
--  (CRUD for product components)
--  (POST to run compliance calculation)
--  (POST to generate the technical dossier PDF)
+- **Commessa Lifecycle:**
+    - , , 
+    -  (to trigger state changes)
+    - 
+- **Commessa Operations:**
+    -  (Request for Quote)
+    -  (Purchase Order)
+    -  (Update production status)
+    - 
+- **AI & Documents:**
+    - 
+    - 
+    - 
+- **Progressive Invoicing:**
+    - 
+    - 
 
 **Critical Info for New Agent**
-- **You MUST respond to the user in Italian.**
-- Your immediate goal is to implement the three **P1** features requested by the user: **DDT Register**, **Invoice Quick Fill**, and **AI Photo Validation**.
-- The agent has already analyzed the code and is ready to begin implementation. The logical starting point is the backend work for the DDT Register.
+- **MUST respond in Italian.**
+- The application's core logic is now the Commessa Hub. All new features should be integrated into this central entity. Your first task is to continue building it out.
+- The immediate task is to implement the automatic suggestion of suppliers in the procurement forms within the  component.
+- The event sourcing and state machine patterns in  are fundamental. Understand how events trigger state changes before modifying this logic.
+- The AI certificate parser () is a powerful, production-ready feature.
 
 **documents and test reports created in this job**
--  (Continuously updated with all new features)
-- Multiple test reports in  confirming 100% pass rates for all completed features.
+- 
+-  (Updated)
+- 
+- 
+- 
+- 
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Provides a detailed vision for a data-driven Core Engine to handle complex compliance standards. (COMPLETED)
-2.  **Agent:** Proposes a phased implementation plan for the Core Engine. (COMPLETED)
-3.  **User:** Approves the plan, prioritizing the backend engine and component CRUD first. (COMPLETED)
-4.  **Agent:** Implements and successfully tests the entire backend Core Engine and frontend configurator. (COMPLETED)
-5.  **User:** Approves moving to Fase 4: automatic document generation. (COMPLETED)
-6.  **Agent:** Implements and successfully tests the automated PDF dossier generation feature. (COMPLETED)
-7.  **User:** Asks for the agent's next suggestions.
-8.  **Agent:** Proposes a list of potential new features (DDT Register, Quick Fill, AI photo validation, etc.).
-9.  **User:** Selects three features as the next priority (P1): Registro DDT (1), Quick Fill Fatture (2), and Validazione AI Foto Posa (6).
-10. **Agent:** Confirms understanding and begins analyzing the codebase to start implementation. (IN PROGRESS)
+1.  **User:** Requests automatic suggestion of suppliers from the address book when creating purchase requests. (IN PROGRESS)
+2.  **User:** Asks for a detailed explanation of the newly implemented operational workflow, including procurement, production, subcontracting, and AI certificate parsing. (COMPLETED)
+3.  **User:** Approved the plan to use GPT-4o Vision for certificate parsing. (COMPLETED)
+4.  **User:** Provided a highly detailed prompt outlining the architecture of their old Norma Facile 1.0 app, requesting its replication and improvement, centered on the Commessa. (COMPLETED)
+5.  **User:** Points out that the flow from Quote Accepted to Invoice is missing on the frontend. (COMPLETED)
+6.  **User:** Asks for an explanation of the new link between a Quote and a Commessa, noting it was missing from the UI. (COMPLETED)
+7.  **User:** Approves the plan to implement the Commessa architecture. (COMPLETED)
+8.  **User:** Provides a new feature request: Progressive Invoicing (Deposit/SAL/Balance). (COMPLETED)
+9.  **User:** Asks the agent to create a detailed prompt for the next agent explaining the FPC workflow. (COMPLETED)
+10. **User:** Describes how job orders were linked to invoices in the old system. (COMPLETED)
 
 **Project Health Check:**
-- **Working:** The application is stable, feature-rich, and all recently added modules are functional and tested.
-- **Broken:** None.
-- **Mocked:** None.
+-   **Working:** Core CRM, standardized PDF generation, EN 1090 FPC system, Progressive Invoicing, and the new Commessa Hub with its operational and AI-powered workflows.
+-   **Broken:** None.
+-   **Mocked:** The SDI sending functionality remains inactive, pending user API keys.
 
 **3rd Party Integrations**
-- **Google Auth:** Emergent-managed.
-- **OpenAI GPT-4o (with Vision):** Uses Emergent LLM Key.
-- **WeasyPrint:** For backend PDF generation.
-- **Leaflet:** For map display.
-- **react-canvas-draw:** For sketchpads.
-- **recharts:** For dashboards.
+-   **Resend:** (Live) For transactional emails.
+-   **Google Auth:** (Live) Emergent-managed for user login.
+-   **WeasyPrint:** (Live) For backend PDF generation.
+-   **pypdf:** (Live) For backend PDF manipulation.
+-   **OpenAI GPT-4o Vision:** (Live) Used for AI OCR on certificates, via the  library and the Emergent LLM Key.
+-   **Aruba SDI / FattureInCloud:** (Installed, Inactive) Awaiting production API keys.
 
 **Testing status**
-- **Testing agent used after significant changes:** YES. The agent has rigorously used  after every major feature, achieving 100% pass rates.
-- **Troubleshoot agent used after agent stuck in loop:** NO.
-- **Test files created:** Pytest files were created by the testing agent in .
-- **Known regressions:** None.
+-   **Testing agent used after significant changes:** YES. The agent was used multiple times after the major Commessa architecture refactor and subsequent bug fixes, achieving 100% pass rates.
+-   **Troubleshoot agent used after agent stuck in loop:** NO.
+-   **Test files created:** Yes, by the testing agent in .
+-   **Known regressions:** None.
 
 **Credentials to test flow:**
-Use the Google OAuth flow. No static credentials are needed.
+Use the Google OAuth login flow available on the login page.
 
 **What agent forgot to execute**
-Nothing. The agent was in the process of starting the next batch of user-requested tasks when the session ended.</analysis>
+The agent was in the process of implementing the user's latest request (automatic supplier suggestion) when the session concluded. The task is clearly defined and ready to be picked up.</analysis>
