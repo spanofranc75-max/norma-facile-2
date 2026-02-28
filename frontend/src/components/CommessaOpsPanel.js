@@ -463,7 +463,22 @@ export default function CommessaOpsPanel({ commessaId, onRefresh }) {
             <Dialog open={odaOpen} onOpenChange={setOdaOpen}>
                 <DialogContent className="max-w-sm"><DialogHeader><DialogTitle>Nuovo Ordine Fornitore</DialogTitle></DialogHeader>
                     <div className="space-y-3">
-                        <div><Label className="text-xs">Fornitore</Label><Input value={odaForm.fornitore_nome} onChange={e => setOdaForm(f => ({ ...f, fornitore_nome: e.target.value }))} className="mt-1" data-testid="oda-fornitore" /></div>
+                        <div>
+                            <Label className="text-xs">Fornitore</Label>
+                            <Combobox
+                                options={fornitori.map(f => ({ value: f.id, label: f.nome }))}
+                                value={odaForm.fornitore_id}
+                                onValueChange={(val) => {
+                                    const f = fornitori.find(x => x.id === val);
+                                    setOdaForm(prev => ({ ...prev, fornitore_id: val, fornitore_nome: f?.nome || '' }));
+                                }}
+                                placeholder="Seleziona fornitore..."
+                                searchPlaceholder="Cerca fornitore..."
+                                emptyText="Nessun fornitore trovato"
+                                className="mt-1"
+                                data-testid="oda-fornitore"
+                            />
+                        </div>
                         <div><Label className="text-xs">Importo Totale (EUR)</Label><Input type="number" value={odaForm.importo_totale} onChange={e => setOdaForm(f => ({ ...f, importo_totale: e.target.value }))} className="mt-1" data-testid="oda-importo" /></div>
                         <div><Label className="text-xs">Note</Label><Textarea value={odaForm.note} onChange={e => setOdaForm(f => ({ ...f, note: e.target.value }))} className="mt-1 h-12" /></div>
                     </div>
