@@ -1082,6 +1082,20 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                         )}
                                     </div>
                                 )}
+                                {/* Multi-profile results */}
+                                {d.metadata_estratti?.profili?.length > 0 && (
+                                    <div className="mt-1 p-1.5 bg-blue-50 rounded border border-blue-200">
+                                        <span className="block text-[10px] text-blue-700 font-semibold">{d.metadata_estratti.profili.length} profili nel certificato</span>
+                                        {d.metadata_estratti.profili.map((p, idx) => (
+                                            <div key={idx} className="flex items-center gap-2 text-[10px] mt-0.5 py-0.5 border-b border-blue-100 last:border-0">
+                                                <span className="font-mono font-semibold text-blue-800">{p.dimensioni || '?'}</span>
+                                                <span className="text-slate-500">colata: {p.numero_colata || '?'}</span>
+                                                <span className="text-slate-500">{p.qualita_acciaio || ''}</span>
+                                                {p.peso_kg && <span className="text-slate-400">{p.peso_kg} kg</span>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             {/* AI OCR button - show for PDFs that haven't been analyzed yet OR allow re-analysis */}
                             {(d.nome_file?.toLowerCase().endsWith('.pdf') || d.content_type?.includes('pdf') || d.content_type?.includes('image')) && (
