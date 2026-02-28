@@ -148,25 +148,39 @@ class ArrivoMateriale(BaseModel):
 
 @router.post("/{cid}/approvvigionamento/richieste")
 async def create_richiesta_preventivo(cid: str, data: RichiestaPreventivo, user: dict = Depends(get_current_user)):
-    """Create a Request for Quote (RdP) to a supplier."""
+    """Create a Request for Quote (RdP) to a supplier with detailed line items."""
     await get_commessa_or_404(cid, user["user_id"])
     await ensure_ops_fields(cid)
+    
+    # Convert righe to dict for MongoDB
+    righe_dict = [r.model_dump() if hasattr(r, 'model_dump') else r.dict() for r in (data.righe or [])]
+    
     rdp = {
         "rdp_id": new_id("rdp_"),
         "fornitore_nome": data.fornitore_nome,
         "fornitore_id": data.fornitore_id or "",
-        "materiali_richiesti": data.materiali_richiesti or "",
+        "righe": righe_dict,
         "note": data.note or "",
+        # Legacy field
+        "materiali_richiesti": data.materiali_richiesti or "",
         "stato": "inviata",
         "data_richiesta": ts().isoformat(),
         "data_risposta": None,
         "importo_proposto": None,
     }
+    
+    # Build summary for event note
+    n_righe = len(righe_dict)
+    cert_count = sum(1 for r in righe_dict if r.get("richiede_cert_31"))
+    note_summary = f"RdP inviata a {data.fornitore_nome} — {n_righe} righe"
+    if cert_count > 0:
+        note_summary += f" ({cert_count} con Cert. 3.1)"
+    
     await db[COLL].update_one(
         {"commessa_id": cid},
         build_update_with_event(
             push_items={"approvvigionamento.richieste": rdp},
-            tipo="RDP_INVIATA", user=user, note=f"RdP inviata a {data.fornitore_nome}"
+            tipo="RDP_INVIATA", user=user, note=note_summary
         ),
     )
     return {"message": f"RdP inviata a {data.fornitore_nome}", "rdp": rdp}
