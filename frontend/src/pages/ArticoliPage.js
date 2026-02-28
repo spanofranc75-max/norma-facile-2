@@ -73,6 +73,7 @@ const emptyForm = {
     unita_misura: 'pz',
     prezzo_unitario: 0,
     aliquota_iva: '22',
+    fornitore_id: '',
     fornitore_nome: '',
     note: '',
 };
