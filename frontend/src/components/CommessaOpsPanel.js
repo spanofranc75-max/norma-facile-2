@@ -21,6 +21,7 @@ import {
     Download, Eye, Loader2, Sparkles, ChevronDown, ChevronUp, FileText,
     Mail, MailCheck, FileSearch, Leaf, RefreshCw,
 } from 'lucide-react';
+import EmailPreviewDialog from './EmailPreviewDialog';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
