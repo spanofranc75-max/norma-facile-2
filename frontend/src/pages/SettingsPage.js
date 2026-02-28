@@ -129,6 +129,14 @@ export default function SettingsPage() {
                             <CreditCard className="h-4 w-4" />
                             Banca
                         </TabsTrigger>
+                        <TabsTrigger value="logo" className="gap-2">
+                            <ImageIcon className="h-4 w-4" />
+                            Logo
+                        </TabsTrigger>
+                        <TabsTrigger value="condizioni" className="gap-2">
+                            <FileText className="h-4 w-4" />
+                            Condizioni
+                        </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="company">
