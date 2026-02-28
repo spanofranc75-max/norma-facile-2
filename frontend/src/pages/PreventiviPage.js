@@ -108,6 +108,7 @@ export default function PreventiviPage() {
                                         <TableHead className="font-semibold text-[#1E293B]">Cliente</TableHead>
                                         <TableHead className="font-semibold text-[#1E293B]">Oggetto</TableHead>
                                         <TableHead className="text-right font-semibold text-[#1E293B]">Totale</TableHead>
+                                        <TableHead className="font-semibold text-[#1E293B]">Fatturato</TableHead>
                                         <TableHead className="font-semibold text-[#1E293B]">Compliance</TableHead>
                                         <TableHead className="font-semibold text-[#1E293B]">Stato</TableHead>
                                         <TableHead className="w-16"></TableHead>
