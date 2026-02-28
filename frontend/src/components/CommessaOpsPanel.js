@@ -1016,8 +1016,8 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                 <div className="space-y-2">
                     <div className="flex items-center gap-2">
                         <Select value={uploadType} onValueChange={setUploadType}>
-                            <SelectTrigger className="w-44 h-8 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent>
+                            <SelectTrigger className="w-44 h-8 text-xs" data-testid="select-upload-type"><SelectValue /></SelectTrigger>
+                            <SelectContent position="popper" sideOffset={4} className="z-[9999]">
                                 <SelectItem value="certificato_31">Certificato 3.1</SelectItem>
                                 <SelectItem value="conferma_ordine">Conferma Ordine</SelectItem>
                                 <SelectItem value="disegno">Disegno</SelectItem>
