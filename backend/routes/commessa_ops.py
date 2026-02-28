@@ -877,40 +877,9 @@ async def preview_cl_pdf(cid: str, cl_id: str, user: dict = Depends(get_current_
 
     company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
 
-    from services.pdf_procurement import generate_procurement_pdf
+    from services.pdf_procurement import generate_cl_pdf
 
-    tipo_labels = {"verniciatura": "VERNICIATURA", "zincatura": "ZINCATURA A CALDO", "sabbiatura": "SABBIATURA", "altro": "LAVORAZIONE ESTERNA"}
-    tipo_label = tipo_labels.get(cl["tipo"], cl["tipo"].upper())
-    title = f"DDT CONTO LAVORO — {tipo_label}"
-
-    righe_pdf = []
-    for i, r in enumerate(cl.get("righe", []), 1):
-        righe_pdf.append({
-            "n": i,
-            "descrizione": r.get("descrizione", ""),
-            "quantita": r.get("quantita", ""),
-            "unita": r.get("unita", "pz"),
-            "peso_kg": r.get("peso_kg", ""),
-        })
-
-    # Build extra info for the header
-    extra_info = f"Commessa: {comm.get('numero', cid)}"
-    if cl.get("ral"):
-        extra_info += f" — RAL {cl['ral']}"
-    extra_info += f"\nCausale Trasporto: {cl.get('causale_trasporto', 'Conto Lavorazione')}"
-
-    pdf_bytes = generate_procurement_pdf(
-        doc_type="ddt_cl",
-        doc_title=title,
-        numero=cl["cl_id"],
-        data_doc=cl.get("created_at", ""),
-        fornitore_nome=cl.get("fornitore_nome", ""),
-        commessa_numero=comm.get("numero", cid),
-        righe=righe_pdf,
-        company=company,
-        extra_info=extra_info,
-        note=cl.get("note", ""),
-    )
+    pdf_bytes = generate_cl_pdf(cl, comm, company)
 
     return StreamingResponse(
         BytesIO(pdf_bytes), media_type="application/pdf",
