@@ -187,3 +187,46 @@ def calcola_cam_commessa(materiali: List[dict]) -> dict:
         "conforme_cam": conforme,
         "righe": righe,
     }
+
+
+# ══════════════════════════════════════════════════════════════════
+#  CO2 CALCULATION (World Steel Association factors)
+# ══════════════════════════════════════════════════════════════════
+
+# tCO2 per tonnellata di acciaio
+CO2_FATTORI = {
+    "primario_bof": 2.33,   # Ciclo integrale (BOF/BF) — World Steel 2023
+    "riciclato_eaf": 0.67,  # Forno elettrico (EAF) — World Steel 2023
+}
+
+
+def calcola_co2_risparmiata(peso_totale_kg: float, peso_riciclato_kg: float) -> dict:
+    """
+    Calcola la CO2 risparmiata usando acciaio riciclato vs primario.
+    Fonte: World Steel Association, Steel Statistical Yearbook 2023.
+    
+    Logic:
+    - Il peso riciclato è prodotto via EAF (0.67 tCO2/t)
+    - Se fosse stato primario, sarebbe stato BOF (2.33 tCO2/t)  
+    - CO2 risparmiata = peso_riciclato * (fattore_BOF - fattore_EAF)
+    """
+    peso_riciclato_t = peso_riciclato_kg / 1000
+    peso_primario_t = (peso_totale_kg - peso_riciclato_kg) / 1000
+    
+    co2_riciclato = peso_riciclato_t * CO2_FATTORI["riciclato_eaf"]
+    co2_primario_equivalente = peso_riciclato_t * CO2_FATTORI["primario_bof"]
+    co2_risparmiata = co2_primario_equivalente - co2_riciclato
+    
+    co2_totale_effettiva = (peso_riciclato_t * CO2_FATTORI["riciclato_eaf"]) + (peso_primario_t * CO2_FATTORI["primario_bof"])
+    co2_totale_se_tutto_primario = (peso_totale_kg / 1000) * CO2_FATTORI["primario_bof"]
+    
+    return {
+        "co2_risparmiata_t": round(co2_risparmiata, 3),
+        "co2_risparmiata_kg": round(co2_risparmiata * 1000, 1),
+        "co2_effettiva_t": round(co2_totale_effettiva, 3),
+        "co2_se_tutto_primario_t": round(co2_totale_se_tutto_primario, 3),
+        "riduzione_percentuale": round((co2_risparmiata / co2_totale_se_tutto_primario * 100) if co2_totale_se_tutto_primario > 0 else 0, 1),
+        "fattore_eaf": CO2_FATTORI["riciclato_eaf"],
+        "fattore_bof": CO2_FATTORI["primario_bof"],
+        "fonte": "World Steel Association, 2023",
+    }
