@@ -115,7 +115,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
             const [o, d, batches] = await Promise.all([
                 apiRequest(`/commesse/${commessaId}/ops`),
                 apiRequest(`/commesse/${commessaId}/documenti`),
-                apiRequest(`/material-batches?commessa_id=${commessaId}`).catch(() => ({ batches: [] })),
+                apiRequest(`/fpc/batches?commessa_id=${commessaId}`).catch(() => ({ batches: [] })),
             ]);
             setOps(o);
             setDocs(d.documents || []);
