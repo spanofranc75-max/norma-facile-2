@@ -1240,11 +1240,9 @@ async def _match_profili_to_commesse(
             "match_source": match_source,
         }
 
-        # ── Create CAM lotto and material_batch in the matched commessa ──
-        target_cid = matched_commessa_id or current_commessa_id
-
-        # Material batch
-        if colata:
+        # ── Create CAM lotto and material_batch ONLY if matched to a commessa ──
+        if tipo != "archivio" and colata:
+            target_cid = matched_commessa_id
             existing_batch = await db.material_batches.find_one(
                 {"heat_number": colata, "commessa_id": target_cid, "user_id": user["user_id"]}
             )
