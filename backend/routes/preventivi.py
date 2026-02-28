@@ -700,110 +700,50 @@ async def send_preventivo_email(prev_id: str, user: dict = Depends(get_current_u
 
 
 
-# ── PDF Builder (WeasyPrint HTML/CSS) ────────────────────────────
-
-def _fmt_it(n):
-    """Format number Italian style: 1.234,56"""
-    import locale
-    try:
-        val = float(n or 0)
-    except (ValueError, TypeError):
-        return "0,00"
-    # Manual Italian formatting
-    s = f"{val:,.2f}"  # e.g. "1,234.56"
-    # Swap . and , for Italian
-    s = s.replace(",", "X").replace(".", ",").replace("X", ".")
-    return s
-
+# ── PDF Builder (WeasyPrint — shared template) ──────────────────
 
 def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
-    """Generate PDF matching the Steel Project Design layout using WeasyPrint."""
-    from io import BytesIO
-    from weasyprint import HTML
-    import html as html_mod
+    """Generate Preventivo PDF using the unified template."""
+    from services.pdf_template import (
+        fmt_it, safe, build_header_html, compute_iva_groups,
+        build_totals_html, build_conditions_html, render_pdf, format_date,
+    )
 
     co = company or {}
     cl = client or {}
-    esc = html_mod.escape
 
-    # ── Company info ──
-    company_name = esc(co.get("business_name", "") or "")
-    company_addr = esc(co.get("address", "") or "")
-    company_cap = esc(co.get("cap", "") or "")
-    company_city = esc(co.get("city", "") or "")
-    company_prov = esc(co.get("province", "") or "")
-    company_full_addr = company_addr
-    if company_cap or company_city:
-        parts = [p for p in [company_cap, company_city, f"({company_prov})" if company_prov else ""] if p]
-        company_full_addr += f"<br>{' '.join(parts)}" if company_addr else ' '.join(parts)
-    company_piva = esc(co.get("partita_iva", "") or "")
-    company_cf = esc(co.get("codice_fiscale", "") or "")
-    company_phone = esc(co.get("phone", "") or co.get("tel", "") or "")
-    company_email = esc(co.get("email", "") or co.get("contact_email", "") or "")
-
-    # Logo
-    logo_html = ""
-    logo_url = co.get("logo_url", "")
-    if logo_url and logo_url.startswith("data:image"):
-        logo_html = f'<img src="{logo_url}" class="logo" />'
-
-    # ── Client info ──
-    cl_name = esc(cl.get("business_name", "") or "")
-    cl_addr = esc(cl.get("address", "") or "")
-    cl_cap = esc(cl.get("cap", "") or "")
-    cl_city = esc(cl.get("city", "") or "")
-    cl_prov = esc(cl.get("province", "") or "")
-    cl_full_addr = cl_addr
-    if cl_cap or cl_city:
-        parts = [p for p in [cl_cap, cl_city, f"({cl_prov})" if cl_prov else ""] if p]
-        cl_full_addr += f"<br>{' '.join(parts)}" if cl_addr else ' '.join(parts)
-    cl_cf = esc(cl.get("codice_fiscale", "") or "")
-    cl_piva = esc(cl.get("partita_iva", "") or "")
-    cl_sdi = esc(cl.get("codice_sdi", "") or "")
-    cl_pec = esc(cl.get("pec", "") or "")
-    cl_email = esc(cl.get("email", "") or "")
+    header = build_header_html(co, cl)
 
     # ── Document data ──
     doc_number = prev.get("number", "")
-    # Extract display number (remove PRV- prefix)
     display_num = doc_number.replace("PRV-", "").replace("/", "-") if doc_number else ""
-    created = prev.get("created_at")
-    if isinstance(created, datetime):
-        doc_date = created.strftime("%d-%m-%Y")
-    elif isinstance(created, str):
-        try:
-            doc_date = datetime.fromisoformat(created.replace("Z", "+00:00")).strftime("%d-%m-%Y")
-        except Exception:
-            doc_date = datetime.now().strftime("%d-%m-%Y")
-    else:
-        doc_date = datetime.now().strftime("%d-%m-%Y")
-
-    payment_label = esc(prev.get("payment_type_label", "") or "")
+    doc_date = format_date(prev.get("created_at", ""))
+    payment_label = safe(prev.get("payment_type_label"))
     validity = prev.get("validity_days", 30) or 30
-    subject = esc(prev.get("subject", "") or "")
-    riferimento = esc(prev.get("riferimento", "") or "")
+    riferimento = safe(prev.get("riferimento"))
+    subject = safe(prev.get("subject"))
     notes_text = prev.get("notes", "") or ""
 
     # ── Build line items HTML ──
     lines = prev.get("lines", [])
     lines_html = ""
     for ln in lines:
-        codice = esc(str(ln.get("codice_articolo", "") or ""))
-        desc = esc(str(ln.get("description", ""))).replace("\n", "<br>")
-        um = esc(str(ln.get("unit", "pz")))
-        qty = _fmt_it(ln.get("quantity", 1))
-        price = _fmt_it(ln.get("unit_price", 0))
+        codice = safe(ln.get("codice_articolo") or "")
+        desc = safe(ln.get("description") or "").replace("\n", "<br>")
+        um = safe(ln.get("unit", "pz"))
+        qty = fmt_it(ln.get("quantity", 1))
+        price = fmt_it(ln.get("unit_price", 0))
         s1 = float(ln.get("sconto_1") or 0)
         s2 = float(ln.get("sconto_2") or 0)
-        sconto_display = ""
+        sc = ""
         if s1 > 0 and s2 > 0:
-            sconto_display = f"{_fmt_it(s1)}%+{_fmt_it(s2)}%"
+            sc = f"{fmt_it(s1)}%+{fmt_it(s2)}%"
         elif s1 > 0:
-            sconto_display = f"{_fmt_it(s1)}%"
+            sc = f"{fmt_it(s1)}%"
         elif s2 > 0:
-            sconto_display = f"{_fmt_it(s2)}%"
-        importo = _fmt_it(ln.get("line_total", 0))
-        iva = esc(str(ln.get("vat_rate", "22")))
+            sc = f"{fmt_it(s2)}%"
+        importo = fmt_it(ln.get("line_total", 0))
+        iva = safe(str(ln.get("vat_rate", "22")))
 
         lines_html += f"""<tr>
             <td class="tc">{codice}</td>
@@ -811,103 +751,31 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
             <td class="tc">{um}</td>
             <td class="tr">{qty}</td>
             <td class="tr">{price}</td>
-            <td class="tc">{sconto_display}</td>
+            <td class="tc">{sc}</td>
             <td class="tr">{importo}</td>
             <td class="tc">{iva}%</td>
         </tr>"""
 
-    # ── Compute IVA breakdown ──
+    # ── IVA / Totals ──
     sconto_globale = float(prev.get("sconto_globale") or 0)
-    subtotal = sum(float(ln.get("line_total") or 0) for ln in lines)
-    sconto_val = round(subtotal * sconto_globale / 100, 2) if sconto_globale else 0
-    imponibile = round(subtotal - sconto_val, 2)
+    iva_data = compute_iva_groups(lines, sconto_globale)
+    totals_html = build_totals_html(iva_data, sconto_globale)
 
-    vat_groups = {}
-    for ln in lines:
-        rate_str = str(ln.get("vat_rate", "22"))
-        base = float(ln.get("line_total") or 0)
-        if sconto_globale and subtotal > 0:
-            base = base * (1 - sconto_globale / 100)
-        vat_groups.setdefault(rate_str, {"base": 0.0, "tax": 0.0})
-        vat_groups[rate_str]["base"] += base
-
-    total_vat = 0.0
-    iva_rows_html = ""
-    for rate_str, grp in sorted(vat_groups.items()):
-        try:
-            pct = float(rate_str)
-            tax = round(grp["base"] * pct / 100, 2)
-        except ValueError:
-            pct = 0
-            tax = 0
-        grp["tax"] = tax
-        total_vat += tax
-        iva_rows_html += f"""<tr>
-            <td>IVA {rate_str}%</td>
-            <td class="tr">{_fmt_it(grp['base'])}</td>
-            <td class="tc">{rate_str}%</td>
-            <td class="tr">{_fmt_it(tax)}</td>
-        </tr>"""
-
-    total = round(imponibile + total_vat, 2)
-
-    # ── Notes before/after table ──
+    # ── Notes ──
     ref_note_html = ""
     if riferimento:
-        ref_note_html = f'<p class="ref-note"><strong>Note:</strong> {esc(riferimento)}</p>'
+        ref_note_html = f'<p class="ref-note"><strong>Note:</strong> {riferimento}</p>'
     elif subject:
-        ref_note_html = f'<p class="ref-note"><strong>Note:</strong> {esc(subject)}</p>'
+        ref_note_html = f'<p class="ref-note"><strong>Note:</strong> {subject}</p>'
 
     tech_notes_html = ""
     if notes_text.strip():
-        tech_notes_html = f'<div class="tech-notes"><strong>Note:</strong> {esc(notes_text).replace(chr(10), "<br>")}</div>'
-
-    # ── Global discount row ──
-    sconto_row_html = ""
-    if sconto_globale > 0:
-        sconto_row_html = f"""
-        <tr class="summary-row">
-            <td>Sconto globale ({_fmt_it(sconto_globale)}%):</td>
-            <td class="tr">-{_fmt_it(sconto_val)}</td>
-        </tr>"""
-
-    # ── Condizioni di vendita ──
-    condizioni = co.get("condizioni_vendita", "")
-    condizioni_html = ""
-    if condizioni and condizioni.strip():
-        condizioni_escaped = esc(condizioni).replace("\n", "<br>")
-        condizioni_html = f"""
-        <div class="page-break"></div>
-        <h2 class="conditions-title">CONDIZIONI GENERALI DI VENDITA</h2>
-        <div class="conditions-text">{condizioni_escaped}</div>
-        <div class="acceptance-section">
-            <div class="sig-block">
-                <p>Firma e timbro per accettazione</p>
-                <div class="sig-line"></div>
-                <p class="sig-label">Data di accettazione</p>
-                <p class="sig-label">(legale rappresentante)</p>
-            </div>
-            <div class="legal-notice">
-                <p>Ai sensi e per gli effetti dell'Art. 1341 e segg. Del Codice Civile,
-                il sottoscritto Acquirente dichiara di aver preso specifica, precisa e
-                dettagliata visione di tutte le disposizioni del contratto e di approvarle
-                integralmente senza alcuna riserva.</p>
-            </div>
-            <div class="sig-block" style="margin-top: 20px;">
-                <p>li _______________</p>
-                <div class="sig-line"></div>
-                <p class="sig-label">Firma e timbro (il legale rappresentante)</p>
-            </div>
-        </div>
-        <div class="doc-footer">
-            <p>{esc(company_name)}</p>
-            <p>Documento {esc(doc_number)}</p>
-        </div>"""
+        tech_notes_html = f'<div class="info-box"><strong>Note:</strong> {safe(notes_text).replace(chr(10), "<br>")}</div>'
 
     # ── Bank details ──
     bank = co.get("bank_details", {}) or {}
-    bank_name = esc(bank.get("bank_name", "") or prev.get("banca", "") or "")
-    bank_iban = esc(bank.get("iban", "") or prev.get("iban", "") or "")
+    bank_name = safe(bank.get("bank_name") or prev.get("banca") or "")
+    bank_iban = safe(bank.get("iban") or prev.get("iban") or "")
     bank_html = ""
     if bank_name or bank_iban:
         bank_html = '<div class="bank-info">'
@@ -917,302 +785,16 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
             bank_html += f"<p><strong>IBAN:</strong> {bank_iban}</p>"
         bank_html += "</div>"
 
-    # ── Full HTML (table-based layout for WeasyPrint) ──
-    html_content = f"""<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-    @page {{
-        size: A4;
-        margin: 15mm 18mm 18mm 18mm;
-    }}
-    * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-    body {{
-        font-family: Arial, Helvetica, sans-serif;
-        font-size: 9pt;
-        color: #222;
-        line-height: 1.35;
-    }}
-    .page-break {{ page-break-before: always; }}
+    # ── Conditions page ──
+    condizioni_html = build_conditions_html(co, doc_number)
 
-    /* ── HEADER TABLE ── */
-    .header-table {{
-        width: 100%;
-        border: none;
-        border-collapse: collapse;
-        margin-bottom: 10px;
-    }}
-    .header-table td {{
-        vertical-align: top;
-        border: none;
-        padding: 0;
-    }}
-    .company-cell {{
-        width: 55%;
-        padding-right: 15px;
-    }}
-    .client-cell {{
-        width: 45%;
-        border: 1px solid #999 !important;
-        padding: 8px 10px !important;
-        font-size: 8.5pt;
-    }}
-    .logo {{
-        max-width: 140px;
-        max-height: 55px;
-        margin-bottom: 6px;
-    }}
-    .company-name {{
-        font-size: 13pt;
-        font-weight: bold;
-        color: #222;
-        margin-bottom: 3px;
-    }}
-    .company-details {{
-        font-size: 8pt;
-        color: #333;
-        line-height: 1.55;
-    }}
-    .cl-label {{
-        font-size: 8pt;
-        color: #555;
-        font-weight: bold;
-    }}
-    .cl-name {{
-        font-weight: bold;
-        font-size: 10pt;
-        margin: 2px 0;
-    }}
-    .cl-details {{
-        font-size: 8pt;
-        color: #333;
-        line-height: 1.55;
-    }}
-
-    /* ── TITLE ── */
-    .doc-title {{
-        text-align: center;
-        margin: 14px 0 6px 0;
-    }}
-    .doc-title h1 {{
-        font-size: 18pt;
-        font-weight: bold;
-        color: #222;
-        letter-spacing: 2px;
-        margin: 0 0 2px 0;
-    }}
-    .doc-num {{
-        font-size: 14pt;
-        font-weight: bold;
-        color: #333;
-    }}
-
-    /* ── QUOTE META ── */
-    .meta-table {{
-        margin: 8px 0;
-        font-size: 9pt;
-        border: none;
-        border-collapse: collapse;
-    }}
-    .meta-table td {{
-        border: none;
-        padding: 1px 6px 1px 0;
-        vertical-align: top;
-    }}
-    .meta-label {{
-        font-weight: bold;
-        white-space: nowrap;
-        width: 80px;
-    }}
-    .ref-note {{
-        margin: 8px 0;
-        padding: 5px 8px;
-        background: #f5f5f5;
-        border-left: 3px solid #888;
-        font-size: 8.5pt;
-    }}
-
-    /* ── ITEMS TABLE ── */
-    .items-table {{
-        width: 100%;
-        border-collapse: collapse;
-        margin: 10px 0 6px 0;
-        font-size: 8pt;
-    }}
-    .items-table th {{
-        background: #eee;
-        border: 1px solid #999;
-        padding: 5px 4px;
-        font-weight: bold;
-        text-transform: uppercase;
-        font-size: 7.5pt;
-        text-align: center;
-    }}
-    .items-table td {{
-        border: 1px solid #bbb;
-        padding: 4px 4px;
-        vertical-align: top;
-    }}
-    .items-table .desc-cell {{
-        text-align: left;
-        line-height: 1.4;
-    }}
-    .items-table .tc {{ text-align: center; }}
-    .items-table .tr {{ text-align: right; }}
-    .items-table col.c-codice {{ width: 8%; }}
-    .items-table col.c-desc {{ width: 38%; }}
-    .items-table col.c-um {{ width: 6%; }}
-    .items-table col.c-qty {{ width: 8%; }}
-    .items-table col.c-price {{ width: 12%; }}
-    .items-table col.c-sconto {{ width: 8%; }}
-    .items-table col.c-importo {{ width: 12%; }}
-    .items-table col.c-iva {{ width: 8%; }}
-
-    /* ── TECH NOTES ── */
-    .tech-notes {{
-        margin: 8px 0;
-        padding: 6px 8px;
-        background: #fafafa;
-        border: 1px solid #ddd;
-        font-size: 8pt;
-        line-height: 1.4;
-    }}
-
-    /* ── TOTALS (right-aligned block) ── */
-    .totals-block {{
-        width: 55%;
-        margin-left: auto;
-        margin-top: 10px;
-    }}
-    .iva-table {{
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 8.5pt;
-        margin-bottom: 6px;
-    }}
-    .iva-table th {{
-        background: #eee;
-        border: 1px solid #999;
-        padding: 4px 5px;
-        font-size: 7.5pt;
-        text-transform: uppercase;
-        text-align: center;
-    }}
-    .iva-table td {{
-        border: 1px solid #bbb;
-        padding: 3px 5px;
-    }}
-    .summary-table {{
-        width: 100%;
-        font-size: 9pt;
-        margin-top: 4px;
-        border: none;
-        border-collapse: collapse;
-    }}
-    .summary-table td {{
-        padding: 2px 5px;
-        border: none;
-    }}
-    .summary-row td {{ font-size: 9pt; }}
-    .total-final td {{
-        font-size: 13pt;
-        font-weight: bold;
-        border-top: 2px solid #333;
-        padding-top: 6px;
-    }}
-
-    /* ── BANK INFO ── */
-    .bank-info {{
-        margin-top: 12px;
-        padding: 6px 8px;
-        border: 1px solid #ccc;
-        font-size: 8pt;
-        background: #fafafa;
-    }}
-
-    /* ── CONDITIONS (PAGE 2) ── */
-    .conditions-title {{
-        font-size: 11pt;
-        font-weight: bold;
-        text-align: center;
-        margin-bottom: 12px;
-        text-transform: uppercase;
-    }}
-    .conditions-text {{
-        font-size: 7.5pt;
-        line-height: 1.45;
-        text-align: justify;
-    }}
-    .acceptance-section {{
-        margin-top: 30px;
-    }}
-    .sig-block {{
-        margin: 15px 0;
-    }}
-    .sig-line {{
-        border-bottom: 1px solid #333;
-        width: 250px;
-        height: 30px;
-        margin: 4px 0;
-    }}
-    .sig-label {{
-        font-size: 7.5pt;
-        color: #666;
-    }}
-    .legal-notice {{
-        margin-top: 20px;
-        font-size: 7pt;
-        line-height: 1.4;
-        border: 1px solid #ccc;
-        padding: 6px 8px;
-        background: #fafafa;
-    }}
-    .doc-footer {{
-        margin-top: 40px;
-        text-align: right;
-        font-size: 8pt;
-        color: #555;
-    }}
-</style>
-</head>
-<body>
-    <!-- HEADER (table layout for WeasyPrint) -->
-    <table class="header-table">
-        <tr>
-            <td class="company-cell">
-                {logo_html}
-                <div class="company-name">{company_name}</div>
-                <div class="company-details">
-                    {company_full_addr}
-                    {"<br>P.IVA: " + company_piva if company_piva else ""}
-                    {"<br>Cod. Fisc.: " + company_cf if company_cf else ""}
-                    {"<br>Tel: " + company_phone if company_phone else ""}
-                    {"<br>Email: " + company_email if company_email else ""}
-                </div>
-            </td>
-            <td class="client-cell">
-                <div class="cl-label">Spett.le</div>
-                <div class="cl-name">{cl_name}</div>
-                <div class="cl-details">
-                    {cl_full_addr}
-                    {"<br>P.IVA: " + cl_piva if cl_piva else ""}
-                    {"<br>Cod. Fisc.: " + cl_cf if cl_cf else ""}
-                    {"<br>Cod. SDI: " + cl_sdi if cl_sdi else ""}
-                    {"<br>PEC: " + cl_pec if cl_pec else ""}
-                    {"<br>Email: " + cl_email if cl_email and not cl_pec else ""}
-                </div>
-            </td>
-        </tr>
-    </table>
-
-    <!-- TITLE -->
+    # ── Assemble ──
+    body = f"""
+    {header}
     <div class="doc-title">
         <h1>PREVENTIVO</h1>
-        <div class="doc-num">{esc(display_num)}</div>
+        <div class="doc-num">{safe(display_num)}</div>
     </div>
-
-    <!-- META (table for alignment) -->
     <table class="meta-table">
         <tr><td class="meta-label">DATA:</td><td>{doc_date}</td></tr>
         <tr><td class="meta-label">Pagamento:</td><td>{payment_label}</td></tr>
@@ -1221,77 +803,24 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
 
     {ref_note_html}
 
-    <!-- ITEMS TABLE -->
     <table class="items-table">
         <colgroup>
-            <col class="c-codice">
-            <col class="c-desc">
-            <col class="c-um">
-            <col class="c-qty">
-            <col class="c-price">
-            <col class="c-sconto">
-            <col class="c-importo">
-            <col class="c-iva">
+            <col style="width:8%"><col style="width:38%"><col style="width:6%">
+            <col style="width:8%"><col style="width:12%"><col style="width:8%">
+            <col style="width:12%"><col style="width:8%">
         </colgroup>
-        <thead>
-            <tr>
-                <th>Codice</th>
-                <th>Descrizione</th>
-                <th>u.m.</th>
-                <th>Quantit&agrave;</th>
-                <th>Prezzo</th>
-                <th>Sconti</th>
-                <th>Importo</th>
-                <th>Iva</th>
-            </tr>
-        </thead>
-        <tbody>
-            {lines_html}
-        </tbody>
+        <thead><tr>
+            <th>Codice</th><th>Descrizione</th><th>u.m.</th>
+            <th>Quantit&agrave;</th><th>Prezzo</th><th>Sconti</th>
+            <th>Importo</th><th>Iva</th>
+        </tr></thead>
+        <tbody>{lines_html}</tbody>
     </table>
 
     {tech_notes_html}
-
-    <!-- TOTALS -->
-    <div class="totals-block">
-        <table class="iva-table">
-            <thead>
-                <tr>
-                    <th>Dettaglio IVA</th>
-                    <th>Imponibile</th>
-                    <th>% IVA</th>
-                    <th>Imposta</th>
-                </tr>
-            </thead>
-            <tbody>
-                {iva_rows_html}
-            </tbody>
-        </table>
-        <table class="summary-table">
-            {sconto_row_html}
-            <tr class="summary-row">
-                <td><strong>TOTALE IMPONIBILE:</strong></td>
-                <td class="tr">{_fmt_it(imponibile)}</td>
-            </tr>
-            <tr class="summary-row">
-                <td><strong>Totale IVA:</strong></td>
-                <td class="tr">{_fmt_it(total_vat)}</td>
-            </tr>
-            <tr class="total-final">
-                <td><strong>Totale:</strong></td>
-                <td class="tr"><strong>{_fmt_it(total)} &euro;</strong></td>
-            </tr>
-        </table>
-    </div>
-
+    {totals_html}
     {bank_html}
-
     {condizioni_html}
+    """
 
-</body>
-</html>"""
-
-    buffer = BytesIO()
-    HTML(string=html_content).write_pdf(buffer)
-    buffer.seek(0)
-    return buffer
+    return render_pdf(body)
