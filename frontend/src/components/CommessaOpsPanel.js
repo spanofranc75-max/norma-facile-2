@@ -1649,35 +1649,90 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
 
             {/* Conto Lavoro Dialog */}
             <Dialog open={clOpen} onOpenChange={setClOpen}>
-                <DialogContent className="max-w-sm"><DialogHeader><DialogTitle>Nuovo Conto Lavoro</DialogTitle></DialogHeader>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader><DialogTitle>Nuovo Conto Lavoro (DDT)</DialogTitle><DialogDescription>Compila i dati per la lavorazione esterna</DialogDescription></DialogHeader>
                     <div className="space-y-3">
-                        <div><Label className="text-xs">Tipo</Label>
-                            <select value={clForm.tipo} onChange={e => setClForm(f => ({ ...f, tipo: e.target.value }))}
-                                className="mt-1 w-full h-9 text-sm rounded-md border border-input bg-transparent px-3 shadow-sm focus:outline-none focus:ring-1 focus:ring-ring">
-                                <option value="verniciatura">Verniciatura</option>
-                                <option value="zincatura">Zincatura a caldo</option>
-                                <option value="sabbiatura">Sabbiatura</option>
-                                <option value="altro">Altro</option>
-                            </select>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div><Label className="text-xs">Tipo Lavorazione</Label>
+                                <select value={clForm.tipo} onChange={e => setClForm(f => ({ ...f, tipo: e.target.value }))}
+                                    className="mt-1 w-full h-9 text-sm rounded-md border border-input bg-transparent px-3 shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                    data-testid="cl-tipo">
+                                    <option value="verniciatura">Verniciatura</option>
+                                    <option value="zincatura">Zincatura a caldo</option>
+                                    <option value="sabbiatura">Sabbiatura</option>
+                                    <option value="altro">Altro</option>
+                                </select>
+                            </div>
+                            <div>
+                                <Label className="text-xs">Fornitore</Label>
+                                <select
+                                    value={clForm.fornitore_id}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        const f = fornitori.find(x => x.id === val);
+                                        setClForm(prev => ({ ...prev, fornitore_id: val, fornitore_nome: f?.nome || '' }));
+                                    }}
+                                    className="mt-1 w-full h-9 text-sm rounded-md border border-input bg-transparent px-3 shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                    data-testid="cl-fornitore"
+                                >
+                                    <option value="">Seleziona fornitore...</option>
+                                    {fornitori.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                                </select>
+                            </div>
                         </div>
+                        {clForm.tipo === 'verniciatura' && (
+                            <div><Label className="text-xs">Colore RAL</Label>
+                                <Input placeholder="es. RAL 9005, RAL 7016..." value={clForm.ral} onChange={e => setClForm(f => ({ ...f, ral: e.target.value }))} className="mt-1 text-sm" data-testid="cl-ral" />
+                            </div>
+                        )}
+                        <div><Label className="text-xs">Causale Trasporto</Label>
+                            <Input value={clForm.causale_trasporto} onChange={e => setClForm(f => ({ ...f, causale_trasporto: e.target.value }))} className="mt-1 text-sm" data-testid="cl-causale" />
+                        </div>
+
+                        {/* Righe materiali */}
                         <div>
-                            <Label className="text-xs">Fornitore</Label>
-                            <select
-                                value={clForm.fornitore_id}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    const f = fornitori.find(x => x.id === val);
-                                    setClForm(prev => ({ ...prev, fornitore_id: val, fornitore_nome: f?.nome || '' }));
-                                }}
-                                className="mt-1 w-full h-9 text-sm rounded-md border border-input bg-transparent px-3 shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                                data-testid="cl-fornitore"
-                            >
-                                <option value="">Seleziona fornitore...</option>
-                                {fornitori.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
-                            </select>
+                            <Label className="text-xs font-semibold">Materiali da inviare</Label>
+                            <div className="mt-1 border rounded-md overflow-hidden">
+                                <table className="w-full text-xs">
+                                    <thead><tr className="bg-slate-100 text-left">
+                                        <th className="p-2 w-[40%]">Descrizione</th>
+                                        <th className="p-2 w-[14%]">Qtà</th>
+                                        <th className="p-2 w-[14%]">U.M.</th>
+                                        <th className="p-2 w-[18%]">Peso (kg)</th>
+                                        <th className="p-2 w-[14%]"></th>
+                                    </tr></thead>
+                                    <tbody>
+                                        {(clForm.righe || []).map((riga, idx) => (
+                                            <tr key={riga.id || idx} className="border-t">
+                                                <td className="p-1"><Input placeholder="es. IPE 200 L=3000mm" value={riga.descrizione} onChange={e => { const nR = [...clForm.righe]; nR[idx] = { ...nR[idx], descrizione: e.target.value }; setClForm(f => ({ ...f, righe: nR })); }} className="h-7 text-xs" data-testid={`cl-riga-desc-${idx}`} /></td>
+                                                <td className="p-1"><Input type="number" value={riga.quantita} onChange={e => { const nR = [...clForm.righe]; nR[idx] = { ...nR[idx], quantita: e.target.value }; setClForm(f => ({ ...f, righe: nR })); }} className="h-7 text-xs" /></td>
+                                                <td className="p-1">
+                                                    <select value={riga.unita} onChange={e => { const nR = [...clForm.righe]; nR[idx] = { ...nR[idx], unita: e.target.value }; setClForm(f => ({ ...f, righe: nR })); }} className="h-7 w-full text-xs rounded border border-input px-1">
+                                                        <option value="pz">pz</option><option value="kg">kg</option><option value="m">m</option><option value="mq">mq</option>
+                                                    </select>
+                                                </td>
+                                                <td className="p-1"><Input type="number" step="0.1" value={riga.peso_kg} onChange={e => { const nR = [...clForm.righe]; nR[idx] = { ...nR[idx], peso_kg: e.target.value }; setClForm(f => ({ ...f, righe: nR })); }} className="h-7 text-xs" /></td>
+                                                <td className="p-1 text-center">
+                                                    {clForm.righe.length > 1 && <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-500" onClick={() => { const nR = clForm.righe.filter((_, i) => i !== idx); setClForm(f => ({ ...f, righe: nR })); }}><Trash2 className="h-3 w-3" /></Button>}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                <Button variant="ghost" size="sm" className="w-full h-7 text-xs text-blue-600 rounded-none border-t" onClick={() => setClForm(f => ({ ...f, righe: [...f.righe, emptyClLine()] }))} data-testid="cl-add-riga">
+                                    <Plus className="h-3 w-3 mr-1" /> Aggiungi riga
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div><Label className="text-xs">Note</Label>
+                            <Textarea placeholder="Note aggiuntive..." value={clForm.note} onChange={e => setClForm(f => ({ ...f, note: e.target.value }))} className="mt-1 text-sm" rows={2} data-testid="cl-note" />
                         </div>
                     </div>
-                    <DialogFooter><Button size="sm" disabled={!clForm.fornitore_nome} onClick={handleCreateCL} className="bg-[#0055FF] text-white" data-testid="btn-confirm-cl">Crea</Button></DialogFooter>
+                    <DialogFooter>
+                        <Button variant="outline" size="sm" onClick={() => setClOpen(false)}>Annulla</Button>
+                        <Button size="sm" disabled={!clForm.fornitore_nome || clForm.righe.filter(r => r.descrizione.trim()).length === 0} onClick={handleCreateCL} className="bg-[#0055FF] text-white" data-testid="btn-confirm-cl">Crea DDT Conto Lavoro</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 
