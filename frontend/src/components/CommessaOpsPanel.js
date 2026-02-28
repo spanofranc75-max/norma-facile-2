@@ -357,11 +357,21 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     };
 
     const handleCreateCL = async () => {
+        if (clForm.righe.filter(r => r.descrizione.trim()).length === 0) {
+            toast.error('Inserisci almeno una riga materiale'); return;
+        }
         try {
-            await apiRequest(`/commesse/${commessaId}/conto-lavoro`, { method: 'POST', body: clForm });
+            await apiRequest(`/commesse/${commessaId}/conto-lavoro`, {
+                method: 'POST',
+                body: {
+                    tipo: clForm.tipo, fornitore_nome: clForm.fornitore_nome, fornitore_id: clForm.fornitore_id,
+                    ral: clForm.ral, note: clForm.note, causale_trasporto: clForm.causale_trasporto,
+                    righe: clForm.righe.filter(r => r.descrizione.trim()).map(r => ({ descrizione: r.descrizione, quantita: parseFloat(r.quantita) || 0, unita: r.unita, peso_kg: parseFloat(r.peso_kg) || 0 })),
+                },
+            });
             toast.success('Conto lavoro creato');
             setClOpen(false);
-            setClForm({ tipo: 'verniciatura', fornitore_nome: '' });
+            setClForm({ tipo: 'verniciatura', fornitore_nome: '', fornitore_id: '', ral: '', righe: [emptyClLine()], note: '', causale_trasporto: 'Conto Lavorazione' });
             fetchData(); onRefresh?.();
         } catch (e) { toast.error(e.message); }
     };
