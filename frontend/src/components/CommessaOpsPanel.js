@@ -399,8 +399,12 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         try {
             const res = await apiRequest(`/commesse/${commessaId}/documenti/${docId}/parse-certificato`, { method: 'POST' });
             const m = res.metadata;
-            toast.success(`Colata: ${m?.numero_colata || '?'} — ${m?.qualita_acciaio || '?'} — ${m?.fornitore || '?'}`);
-            fetchData(); onRefresh?.();
+            const camInfo = res.cam_auto_created ? ' — Lotto CAM creato automaticamente!' : '';
+            toast.success(`Colata: ${m?.numero_colata || '?'} — ${m?.qualita_acciaio || '?'} — ${m?.fornitore || '?'}${camInfo}`, { duration: 5000 });
+            if (m?.percentuale_riciclato != null) {
+                toast.info(`CAM: ${m.percentuale_riciclato}% riciclato — ${(m.metodo_produttivo || '').replace(/_/g, ' ')}`, { duration: 4000 });
+            }
+            fetchData(); fetchCamData(); onRefresh?.();
         } catch (e) { toast.error(e.message); } finally { setParsing(null); }
     };
 
