@@ -1058,118 +1058,287 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
         except json.JSONDecodeError:
             metadata = {"raw_response": response_text, "parse_error": True}
 
+        # ── NORMALIZE: Ensure profili array exists ──
+        profili = metadata.get("profili", [])
+        if not profili and metadata.get("numero_colata"):
+            # Old single-profile format → wrap in array
+            profili = [{
+                "dimensioni": metadata.get("dimensioni", ""),
+                "numero_colata": metadata.get("numero_colata", ""),
+                "qualita_acciaio": metadata.get("qualita_acciaio", ""),
+                "peso_kg": metadata.get("peso_kg"),
+                "composizione_chimica": metadata.get("composizione_chimica", ""),
+                "proprieta_meccaniche": metadata.get("proprieta_meccaniche", ""),
+                "conforme": metadata.get("conforme", True),
+            }]
+        metadata["profili"] = profili
+
         # Save extracted metadata to the document
         await db[DOC_COLL].update_one(
             {"doc_id": doc_id},
             {"$set": {"metadata_estratti": metadata, "tipo": "certificato_31"}},
         )
 
-        # Auto-register in material_batches if heat number found
-        batch_id = None
-        if metadata.get("numero_colata") and not metadata.get("parse_error"):
-            existing = await db.material_batches.find_one({"heat_number": metadata["numero_colata"], "user_id": user["user_id"]})
-            if not existing:
-                batch_id = f"bat_{uuid.uuid4().hex[:10]}"
-                batch_doc = {
-                    "batch_id": batch_id,
-                    "user_id": user["user_id"],
-                    "heat_number": metadata["numero_colata"],
-                    "material_type": metadata.get("qualita_acciaio", ""),
-                    "supplier_name": metadata.get("fornitore", ""),
-                    "dimensions": metadata.get("dimensioni", ""),
-                    "normativa": metadata.get("normativa_riferimento", ""),
-                    "certificate_base64": doc.get("file_base64", ""),
-                    "source_doc_id": doc_id,
-                    "commessa_id": cid,
-                    "notes": f"Auto-registrato da certificato {metadata.get('n_certificato', '')}",
-                    "created_at": ts(),
-                }
-                await db.material_batches.insert_one(batch_doc)
-                logger.info(f"Auto-registered batch {batch_id} (colata: {metadata['numero_colata']})")
-            else:
-                batch_id = existing.get("batch_id")
+        # ── SMART MATCHING: Match profiles to commesse via OdA, RdP, DDT ──
+        risultati_match = await _match_profili_to_commesse(
+            profili=profili,
+            metadata_cert=metadata,
+            current_commessa_id=cid,
+            doc_id=doc_id,
+            doc=doc,
+            user=user,
+        )
 
-        # ── AUTO-CREATE CAM LOTTO from AI-extracted data ──
-        cam_lotto_id = None
-        if metadata.get("numero_colata") and not metadata.get("parse_error"):
-            existing_cam = await db.lotti_cam.find_one({
-                "numero_colata": metadata["numero_colata"],
-                "commessa_id": cid,
-                "user_id": user["user_id"],
-            })
-            if not existing_cam:
-                # Determine metodo_produttivo from AI extraction
-                metodo = metadata.get("metodo_produttivo") or "forno_elettrico_non_legato"
-                if metodo not in ("forno_elettrico_non_legato", "forno_elettrico_legato", "ciclo_integrale"):
-                    metodo = "forno_elettrico_non_legato"
-                
-                # Determine percentuale_riciclato
-                perc_ric = metadata.get("percentuale_riciclato")
-                if perc_ric is None:
-                    # Default based on production method (conservative estimate)
-                    perc_ric = {"forno_elettrico_non_legato": 80, "forno_elettrico_legato": 65, "ciclo_integrale": 10}.get(metodo, 75)
-                else:
-                    perc_ric = float(perc_ric)
-                
-                # Map certification type
-                cert_type = "dichiarazione_produttore"
-                cert_ai = (metadata.get("certificazione_ambientale") or "").lower()
-                if "epd" in cert_ai:
-                    cert_type = "epd"
-                elif "remade" in cert_ai:
-                    cert_type = "remade_in_italy"
-                
-                # Calculate conformity
-                soglie = {"forno_elettrico_non_legato": 75, "forno_elettrico_legato": 60, "ciclo_integrale": 12}
-                soglia = soglie.get(metodo, 75)
-                peso_kg = float(metadata.get("peso_kg") or 0)
-                descrizione = metadata.get("dimensioni") or metadata.get("qualita_acciaio") or "Materiale da certificato"
-                
-                cam_lotto_id = f"cam_{uuid.uuid4().hex[:10]}"
-                cam_doc = {
-                    "lotto_id": cam_lotto_id,
-                    "user_id": user["user_id"],
-                    "commessa_id": cid,
-                    "descrizione": descrizione,
-                    "fornitore": metadata.get("fornitore", ""),
-                    "numero_colata": metadata["numero_colata"],
-                    "peso_kg": peso_kg,
-                    "qualita_acciaio": metadata.get("qualita_acciaio", ""),
-                    "percentuale_riciclato": perc_ric,
-                    "metodo_produttivo": metodo,
-                    "tipo_certificazione": cert_type,
-                    "numero_certificazione": metadata.get("n_certificato", ""),
-                    "ente_certificatore": metadata.get("ente_certificatore_ambientale", ""),
-                    "uso_strutturale": True,
-                    "soglia_minima_cam": soglia,
-                    "conforme_cam": perc_ric >= soglia,
-                    "source_doc_id": doc_id,
-                    "note": f"Auto-creato da AI OCR certificato 3.1",
-                    "created_at": ts(),
-                }
-                await db.lotti_cam.insert_one(cam_doc)
-                logger.info(f"Auto-created CAM lotto {cam_lotto_id} from cert AI (colata: {metadata['numero_colata']}, ric: {perc_ric}%)")
-            else:
-                cam_lotto_id = existing_cam.get("lotto_id")
+        # Build backward-compatible metadata with first matched profile
+        first_matched = next((r for r in risultati_match if r["commessa_id"] == cid), None)
+        if first_matched:
+            metadata["numero_colata"] = first_matched["numero_colata"]
+            metadata["qualita_acciaio"] = first_matched.get("qualita_acciaio", "")
+            metadata["dimensioni"] = first_matched.get("dimensioni", "")
+            metadata["peso_kg"] = first_matched.get("peso_kg")
 
         await db[COLL].update_one({"commessa_id": cid}, push_event(
             cid, "CERTIFICATO_ANALIZZATO", user,
-            f"Colata: {metadata.get('numero_colata', '?')} — {metadata.get('qualita_acciaio', '?')} — {metadata.get('fornitore', '?')}",
-            {"doc_id": doc_id, "batch_id": batch_id, "cam_lotto_id": cam_lotto_id, "metadata": metadata}
+            f"{len(profili)} profili trovati — {sum(1 for r in risultati_match if r['tipo'] == 'commessa_corrente')} per questa commessa",
+            {"doc_id": doc_id, "risultati_match": risultati_match, "metadata": metadata}
         ))
 
         return {
             "message": "Certificato analizzato con successo",
             "metadata": metadata,
-            "batch_id": batch_id,
-            "cam_lotto_id": cam_lotto_id,
-            "auto_registered": batch_id is not None,
-            "cam_auto_created": cam_lotto_id is not None,
+            "profili_trovati": len(profili),
+            "risultati_match": risultati_match,
         }
 
     except Exception as e:
         logger.error(f"Certificate parsing error: {e}")
         raise HTTPException(500, f"Errore analisi certificato: {str(e)}")
+
+
+# ── Helper: normalize profile name for matching ──
+def _normalize_profilo(text: str) -> str:
+    """Normalize profile description for fuzzy matching. IPE 100 = ipe100 = IPE100."""
+    import re
+    t = (text or "").upper().strip()
+    # Remove common separators and normalize spaces
+    t = re.sub(r'[x×\*]', 'X', t)  # 60x60 → 60X60
+    t = re.sub(r'\s+', '', t)  # Remove spaces: IPE 100 → IPE100
+    return t
+
+
+async def _match_profili_to_commesse(
+    profili: list, metadata_cert: dict, current_commessa_id: str,
+    doc_id: str, doc: dict, user: dict,
+) -> list:
+    """
+    Smart matching: for each profile in the certificate, find which commessa it belongs to.
+    Cross-references: OdA righe, RdP righe, DDT arrivi, documents.
+    """
+    risultati = []
+    fornitore = metadata_cert.get("fornitore", "")
+    metodo = metadata_cert.get("metodo_produttivo") or "forno_elettrico_non_legato"
+    if metodo not in ("forno_elettrico_non_legato", "forno_elettrico_legato", "ciclo_integrale"):
+        metodo = "forno_elettrico_non_legato"
+    perc_ric = metadata_cert.get("percentuale_riciclato")
+    cert_amb = metadata_cert.get("certificazione_ambientale", "")
+    ente_cert = metadata_cert.get("ente_certificatore_ambientale", "")
+    n_cert = metadata_cert.get("n_certificato", "")
+
+    # 1. Get ALL user's commesse with their procurement data
+    cursor = db[COLL].find(
+        {"user_id": user["user_id"]},
+        {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "approvvigionamento": 1}
+    )
+    all_commesse = await cursor.to_list(500)
+
+    # 2. Build a lookup: normalized_profile → [commessa_ids]
+    # From OdA righe, RdP righe, and DDT arrivi
+    profilo_to_commesse = {}
+    for comm in all_commesse:
+        cid_item = comm["commessa_id"]
+        approv = comm.get("approvvigionamento", {})
+        descriptions = []
+        # From OdA righe
+        for oda in approv.get("ordini", []):
+            for riga in oda.get("righe", []):
+                descriptions.append(riga.get("descrizione", ""))
+        # From RdP righe
+        for rdp in approv.get("richieste", []):
+            for riga in rdp.get("righe", []):
+                descriptions.append(riga.get("descrizione", ""))
+        # From arrivi/DDT
+        for arrivo in approv.get("arrivi", []):
+            for mat in arrivo.get("materiali", []):
+                descriptions.append(mat.get("descrizione", ""))
+
+        for desc in descriptions:
+            norm = _normalize_profilo(desc)
+            if norm:
+                if norm not in profilo_to_commesse:
+                    profilo_to_commesse[norm] = set()
+                profilo_to_commesse[norm].add(cid_item)
+
+    # 3. Also check DDT documents uploaded in repository
+    ddt_docs_cursor = db[DOC_COLL].find(
+        {"user_id": user["user_id"], "tipo": {"$in": ["ddt_fornitore", "altro"]}},
+        {"_id": 0, "doc_id": 1, "commessa_id": 1, "nome_file": 1}
+    )
+    ddt_docs = await ddt_docs_cursor.to_list(200)
+
+    # 4. For each profile, find the matching commessa
+    for profilo in profili:
+        dim = profilo.get("dimensioni", "")
+        norm_dim = _normalize_profilo(dim)
+        colata = profilo.get("numero_colata", "")
+        qualita = profilo.get("qualita_acciaio", "")
+        peso = profilo.get("peso_kg")
+
+        matched_commessa_id = None
+        match_source = "nessuno"
+
+        # Try exact match first
+        if norm_dim and norm_dim in profilo_to_commesse:
+            matched_ids = profilo_to_commesse[norm_dim]
+            if current_commessa_id in matched_ids:
+                matched_commessa_id = current_commessa_id
+                match_source = "ordine/richiesta"
+            else:
+                matched_commessa_id = next(iter(matched_ids))
+                match_source = "ordine/richiesta altra commessa"
+        else:
+            # Try partial match: check if any profilo_to_commesse key contains our dim or vice versa
+            for norm_key, cids_set in profilo_to_commesse.items():
+                if norm_dim and (norm_dim in norm_key or norm_key in norm_dim):
+                    if current_commessa_id in cids_set:
+                        matched_commessa_id = current_commessa_id
+                        match_source = "ordine/richiesta (parziale)"
+                    else:
+                        matched_commessa_id = next(iter(cids_set))
+                        match_source = "ordine/richiesta altra commessa (parziale)"
+                    break
+
+        # Determine tipo
+        if matched_commessa_id == current_commessa_id:
+            tipo = "commessa_corrente"
+        elif matched_commessa_id:
+            tipo = "altra_commessa"
+        else:
+            tipo = "archivio"
+
+        # Get commessa info
+        comm_info = next((c for c in all_commesse if c["commessa_id"] == matched_commessa_id), {})
+
+        result_entry = {
+            "dimensioni": dim,
+            "numero_colata": colata,
+            "qualita_acciaio": qualita,
+            "peso_kg": peso,
+            "tipo": tipo,
+            "commessa_id": matched_commessa_id or "",
+            "commessa_numero": comm_info.get("numero", ""),
+            "commessa_titolo": comm_info.get("title", ""),
+            "match_source": match_source,
+        }
+
+        # ── Create CAM lotto and material_batch in the matched commessa ──
+        target_cid = matched_commessa_id or current_commessa_id
+
+        # Material batch
+        if colata:
+            existing_batch = await db.material_batches.find_one(
+                {"heat_number": colata, "commessa_id": target_cid, "user_id": user["user_id"]}
+            )
+            if not existing_batch:
+                batch_id = f"bat_{uuid.uuid4().hex[:10]}"
+                await db.material_batches.insert_one({
+                    "batch_id": batch_id, "user_id": user["user_id"],
+                    "heat_number": colata, "material_type": qualita,
+                    "supplier_name": fornitore, "dimensions": dim,
+                    "normativa": metadata_cert.get("normativa_riferimento", ""),
+                    "source_doc_id": doc_id, "commessa_id": target_cid,
+                    "notes": f"Auto da cert {n_cert}", "created_at": ts(),
+                })
+                result_entry["batch_id"] = batch_id
+
+            # CAM lotto
+            existing_cam = await db.lotti_cam.find_one(
+                {"numero_colata": colata, "commessa_id": target_cid, "user_id": user["user_id"]}
+            )
+            if not existing_cam:
+                perc = perc_ric if perc_ric is not None else {"forno_elettrico_non_legato": 80, "forno_elettrico_legato": 65, "ciclo_integrale": 10}.get(metodo, 75)
+                perc = float(perc)
+                cert_type = "dichiarazione_produttore"
+                if cert_amb and "epd" in cert_amb.lower():
+                    cert_type = "epd"
+                elif cert_amb and "remade" in cert_amb.lower():
+                    cert_type = "remade_in_italy"
+                soglie = {"forno_elettrico_non_legato": 75, "forno_elettrico_legato": 60, "ciclo_integrale": 12}
+                soglia = soglie.get(metodo, 75)
+
+                cam_id = f"cam_{uuid.uuid4().hex[:10]}"
+                await db.lotti_cam.insert_one({
+                    "lotto_id": cam_id, "user_id": user["user_id"],
+                    "commessa_id": target_cid,
+                    "descrizione": dim or qualita or "Materiale da certificato",
+                    "fornitore": fornitore, "numero_colata": colata,
+                    "peso_kg": float(peso or 0), "qualita_acciaio": qualita,
+                    "percentuale_riciclato": perc, "metodo_produttivo": metodo,
+                    "tipo_certificazione": cert_type,
+                    "numero_certificazione": n_cert,
+                    "ente_certificatore": ente_cert,
+                    "uso_strutturale": True, "soglia_minima_cam": soglia,
+                    "conforme_cam": perc >= soglia, "source_doc_id": doc_id,
+                    "note": f"Auto AI - Match: {match_source}",
+                    "created_at": ts(),
+                })
+                result_entry["cam_lotto_id"] = cam_id
+
+        # ── If matched to another commessa, copy the certificate there ──
+        if tipo == "altra_commessa" and matched_commessa_id:
+            existing_copy = await db[DOC_COLL].find_one({
+                "commessa_id": matched_commessa_id,
+                "source_doc_id": doc_id,
+                "user_id": user["user_id"],
+            })
+            if not existing_copy:
+                copy_doc = {
+                    "doc_id": f"doc_{uuid.uuid4().hex[:10]}",
+                    "user_id": user["user_id"],
+                    "commessa_id": matched_commessa_id,
+                    "nome_file": doc.get("nome_file", "certificato.pdf"),
+                    "tipo": "certificato_31",
+                    "content_type": doc.get("content_type", ""),
+                    "file_base64": doc.get("file_base64", ""),
+                    "metadata_estratti": metadata_cert,
+                    "source_doc_id": doc_id,
+                    "note": f"Copia automatica da {current_commessa_id} — profilo {dim}",
+                    "created_at": ts(),
+                }
+                await db[DOC_COLL].insert_one(copy_doc)
+                result_entry["certificato_copiato"] = True
+                logger.info(f"Certificate {doc_id} copied to commessa {matched_commessa_id} for profile {dim}")
+
+        # ── Archive unmatched ──
+        if tipo == "archivio" and colata:
+            await db.archivio_certificati.update_one(
+                {"numero_colata": colata, "user_id": user["user_id"]},
+                {"$set": {
+                    "numero_colata": colata, "user_id": user["user_id"],
+                    "dimensioni": dim, "qualita_acciaio": qualita,
+                    "fornitore": fornitore, "peso_kg": peso,
+                    "n_certificato": n_cert,
+                    "source_doc_id": doc_id,
+                    "percentuale_riciclato": perc_ric,
+                    "metodo_produttivo": metodo,
+                    "updated_at": ts(),
+                }, "$setOnInsert": {"created_at": ts()}},
+                upsert=True,
+            )
+            result_entry["archiviato"] = True
+
+        risultati.append(result_entry)
+
+    return risultati
 
 
 # ══════════════════════════════════════════════════════════════════
