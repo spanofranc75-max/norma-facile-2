@@ -36,6 +36,7 @@ const TABS = [
     { key: 'contatti', label: 'Contatti' },
     { key: 'pagamento', label: 'Pagamento' },
     { key: 'note', label: 'Note' },
+    { key: 'email_log', label: 'Email Inviate' },
 ];
 
 const CONTACT_TYPES = ['Titolare', 'Commerciale', 'Amministrativo', 'Tecnico', 'Logistica', 'Altro'];
