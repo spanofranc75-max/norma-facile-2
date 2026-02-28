@@ -1,0 +1,97 @@
+{
+  "summary": "Iteration 54: Complete testing of RdP and OdA Line Items features. Backend: 12/12 tests passed (100%). Frontend: All UI components working correctly. Fixed bug where commessaNumero was not being passed to CommessaOpsPanel.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Dialog components",
+        "issues": ["React warning: 'Missing Description or aria-describedby={undefined}' for DialogContent - cosmetic accessibility warning, not affecting functionality"]
+      }
+    ]
+  },
+  "test_results": {
+    "backend_api_tests": {
+      "rdp_line_items": {
+        "create_rdp_single_line": "PASS - RdP with single line item including richiede_cert_31",
+        "create_rdp_multiple_lines": "PASS - RdP with 3 lines (Lamiera, Tubo, Bulloneria), mixed cert requirements",
+        "rdp_validates_empty_lines": "PASS - Empty lines filtered/handled correctly",
+        "rdp_righe_persisted_in_ops": "PASS - GET /ops returns righe with all fields"
+      },
+      "oda_line_items": {
+        "create_oda_with_pricing": "PASS - OdA stores prezzo_unitario and calculates importo_totale (415.00)",
+        "auto_calculates_total": "PASS - Backend auto-calculates total from righe when not provided",
+        "respects_provided_total": "PASS - Uses explicit importo_totale when given (discount scenario)",
+        "cert_31_flag": "PASS - richiede_cert_31 stored correctly for each riga",
+        "oda_righe_persisted_in_ops": "PASS - GET /ops returns ordine righe with pricing"
+      },
+      "commessa_numero": {
+        "has_numero": "PASS - /hub returns commessa.numero",
+        "passed_to_ops_panel": "PASS - numero accessible via hub.commessa.numero"
+      },
+      "unita_misura": {
+        "all_units_accepted": "PASS - kg, pz, ml, mq, t all accepted in righe"
+      }
+    },
+    "frontend_ui_tests": {
+      "rdp_dialog": {
+        "line_items_table": "PASS - Table with Descrizione, Quantità, U.M., Cert. 3.1 columns",
+        "add_line_button": "PASS - 'Aggiungi riga' button adds new row",
+        "remove_line_button": "PASS - Trash icon removes row (visible when >1 row)",
+        "cert_31_checkbox": "PASS - Checkbox toggleable for each row",
+        "commessa_reference": "PASS - 'Riferimento: Commessa {numero}' shown in dialog header"
+      },
+      "oda_dialog": {
+        "line_items_table": "PASS - Table with Descrizione, Quantità, U.M., Prezzo Unit., Importo, 3.1 columns",
+        "add_line_button": "PASS - 'Aggiungi riga' button works",
+        "price_input": "PASS - Prezzo Unitario input accepts decimal values",
+        "importo_column": "PASS - Importo auto-calculated per row (qty × price)",
+        "total_display": "PASS - 'Totale Ordine: €X,XXX.XX' shown below table",
+        "total_calculation": "PASS - Total updates in real-time as prices/quantities change",
+        "commessa_reference": "PASS - 'Riferimento: Commessa {numero}' shown in dialog header"
+      },
+      "supplier_combobox": {
+        "rdp_fornitore": "PASS - data-testid='rdp-fornitore' searchable combobox",
+        "oda_fornitore": "PASS - data-testid='oda-fornitore' searchable combobox"
+      }
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_rdp_oda_line_items.py",
+    "/app/test_reports/pytest/rdp_oda_line_items_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "RigaRdP and RigaOdA Pydantic models correctly include richiede_cert_31: bool field",
+    "Backend auto-calculates importo_totale from righe when not provided",
+    "Frontend correctly filters empty description lines before API call",
+    "OdA Importo column shows calculated value (qty × price) per row",
+    "Totale Ordine updates reactively using useMemo-like calculation",
+    "commessaNumero now correctly passed as c?.numero (hub.commessa.numero)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_rdp_oda_line_items.py",
+    "/app/frontend/src/pages/CommessaHubPage.js"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 tests passed)",
+    "frontend": "100% (all dialog features working)"
+  },
+  "test_credentials": "Session token: rdp_oda_ui_test_1772285818165 for user rdp-oda-ui-1772285818165",
+  "seed_data_creation": "Created test commessa com_uitest_1772285818520 with numero COM-UI-1772285818520, test fornitore 'Fornitore Test UI'",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "RdP and OdA line items features fully tested. Key changes: CommessaOpsPanel.js has detailed line items tables for RdP/OdA dialogs with Descrizione, Quantità, U.M., Cert. 3.1 fields. OdA additionally has Prezzo Unitario and auto-calculated Importo. Backend models RigaRdP/RigaOdA in commessa_ops.py support all fields. Fixed bug in CommessaHubPage.js where commessaNumero was incorrectly passed as hub?.numero instead of c?.numero.",
+  "bugs_fixed": [
+    {
+      "file": "/app/frontend/src/pages/CommessaHubPage.js",
+      "issue": "commessaNumero was passed as hub?.numero but should be c?.numero (hub.commessa.numero)",
+      "fix": "Changed prop from hub?.numero to c?.numero",
+      "impact": "Commessa reference now correctly displays in RdP/OdA dialog headers"
+    }
+  ]
+}
