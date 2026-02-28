@@ -35,6 +35,7 @@ import FattureRicevutePage from './pages/FattureRicevutePage';
 import CoreEnginePage from './pages/CoreEnginePage';
 import ValidazioneFotoPage from './pages/ValidazioneFotoPage';
 import PlanningPage from './pages/PlanningPage';
+import CommessaHubPage from './pages/CommessaHubPage';
 import EBITDAPage from './pages/EBITDAPage';
 import TracciabilitaPage from './pages/TracciabilitaPage';
 import FPCProjectPage from './pages/FPCProjectPage';
