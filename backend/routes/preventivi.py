@@ -1260,42 +1260,37 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
 
     {tech_notes_html}
 
-    <!-- TOTALS (right-aligned via table) -->
-    <table class="totals-outer">
-        <tr>
-            <td class="totals-spacer"></td>
-            <td class="totals-content">
-                <table class="iva-table">
-                    <thead>
-                        <tr>
-                            <th>Dettaglio IVA</th>
-                            <th>Imponibile</th>
-                            <th>% IVA</th>
-                            <th>Imposta</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {iva_rows_html}
-                    </tbody>
-                </table>
-                <table class="summary-table">
-                    {sconto_row_html}
-                    <tr class="summary-row">
-                        <td><strong>TOTALE IMPONIBILE:</strong></td>
-                        <td class="tr">{_fmt_it(imponibile)}</td>
-                    </tr>
-                    <tr class="summary-row">
-                        <td><strong>Totale IVA:</strong></td>
-                        <td class="tr">{_fmt_it(total_vat)}</td>
-                    </tr>
-                    <tr class="total-final">
-                        <td><strong>Totale:</strong></td>
-                        <td class="tr"><strong>{_fmt_it(total)} &euro;</strong></td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
+    <!-- TOTALS -->
+    <div class="totals-block">
+        <table class="iva-table">
+            <thead>
+                <tr>
+                    <th>Dettaglio IVA</th>
+                    <th>Imponibile</th>
+                    <th>% IVA</th>
+                    <th>Imposta</th>
+                </tr>
+            </thead>
+            <tbody>
+                {iva_rows_html}
+            </tbody>
+        </table>
+        <table class="summary-table">
+            {sconto_row_html}
+            <tr class="summary-row">
+                <td><strong>TOTALE IMPONIBILE:</strong></td>
+                <td class="tr">{_fmt_it(imponibile)}</td>
+            </tr>
+            <tr class="summary-row">
+                <td><strong>Totale IVA:</strong></td>
+                <td class="tr">{_fmt_it(total_vat)}</td>
+            </tr>
+            <tr class="total-final">
+                <td><strong>Totale:</strong></td>
+                <td class="tr"><strong>{_fmt_it(total)} &euro;</strong></td>
+            </tr>
+        </table>
+    </div>
 
     {bank_html}
 
