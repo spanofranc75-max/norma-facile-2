@@ -918,7 +918,7 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
             bank_html += f"<p><strong>IBAN:</strong> {bank_iban}</p>"
         bank_html += "</div>"
 
-    # ── Full HTML ──
+    # ── Full HTML (table-based layout for WeasyPrint) ──
     html_content = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -937,86 +937,100 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
     }}
     .page-break {{ page-break-before: always; }}
 
-    /* ── HEADER ── */
-    .header {{
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 14px;
+    /* ── HEADER TABLE ── */
+    .header-table {{
+        width: 100%;
+        border: none;
+        border-collapse: collapse;
+        margin-bottom: 10px;
     }}
-    .company-col {{ width: 55%; }}
-    .client-col {{
-        width: 40%;
-        text-align: left;
-        border: 1px solid #bbb;
-        padding: 8px 10px;
+    .header-table td {{
+        vertical-align: top;
+        border: none;
+        padding: 0;
+    }}
+    .company-cell {{
+        width: 55%;
+        padding-right: 15px;
+    }}
+    .client-cell {{
+        width: 45%;
+        border: 1px solid #999 !important;
+        padding: 8px 10px !important;
         font-size: 8.5pt;
     }}
     .logo {{
         max-width: 140px;
         max-height: 55px;
         margin-bottom: 6px;
-        display: block;
     }}
     .company-name {{
         font-size: 13pt;
         font-weight: bold;
-        color: #333;
-        margin-bottom: 2px;
+        color: #222;
+        margin-bottom: 3px;
     }}
     .company-details {{
         font-size: 8pt;
-        color: #444;
-        line-height: 1.5;
+        color: #333;
+        line-height: 1.55;
     }}
-    .client-col .label {{
-        font-weight: bold;
+    .cl-label {{
         font-size: 8pt;
-        color: #666;
-        margin-bottom: 2px;
+        color: #555;
+        font-weight: bold;
     }}
-    .client-col .cl-name {{
+    .cl-name {{
         font-weight: bold;
         font-size: 10pt;
-        margin-bottom: 2px;
+        margin: 2px 0;
+    }}
+    .cl-details {{
+        font-size: 8pt;
+        color: #333;
+        line-height: 1.55;
     }}
 
     /* ── TITLE ── */
     .doc-title {{
         text-align: center;
-        margin: 16px 0 4px 0;
+        margin: 14px 0 6px 0;
     }}
     .doc-title h1 {{
         font-size: 18pt;
         font-weight: bold;
         color: #222;
         letter-spacing: 2px;
-        margin: 0;
+        margin: 0 0 2px 0;
     }}
-    .doc-title .doc-num {{
+    .doc-num {{
         font-size: 14pt;
         font-weight: bold;
         color: #333;
     }}
 
     /* ── QUOTE META ── */
-    .meta-section {{
-        margin: 10px 0;
+    .meta-table {{
+        margin: 8px 0;
         font-size: 9pt;
+        border: none;
+        border-collapse: collapse;
     }}
-    .meta-section p {{
-        margin: 2px 0;
+    .meta-table td {{
+        border: none;
+        padding: 1px 6px 1px 0;
+        vertical-align: top;
     }}
-    .meta-section .meta-label {{
+    .meta-label {{
         font-weight: bold;
-        display: inline-block;
+        white-space: nowrap;
         width: 80px;
     }}
     .ref-note {{
         margin: 8px 0;
         padding: 5px 8px;
         background: #f5f5f5;
-        border-left: 3px solid #999;
+        border-left: 3px solid #888;
         font-size: 8.5pt;
     }}
 
@@ -1028,8 +1042,8 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
         font-size: 8pt;
     }}
     .items-table th {{
-        background: #f0f0f0;
-        border: 1px solid #aaa;
+        background: #eee;
+        border: 1px solid #999;
         padding: 5px 4px;
         font-weight: bold;
         text-transform: uppercase;
@@ -1047,14 +1061,14 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
     }}
     .items-table .tc {{ text-align: center; }}
     .items-table .tr {{ text-align: right; }}
-    .items-table col.col-codice {{ width: 8%; }}
-    .items-table col.col-desc {{ width: 38%; }}
-    .items-table col.col-um {{ width: 6%; }}
-    .items-table col.col-qty {{ width: 8%; }}
-    .items-table col.col-price {{ width: 12%; }}
-    .items-table col.col-sconto {{ width: 8%; }}
-    .items-table col.col-importo {{ width: 12%; }}
-    .items-table col.col-iva {{ width: 8%; }}
+    .items-table col.c-codice {{ width: 8%; }}
+    .items-table col.c-desc {{ width: 38%; }}
+    .items-table col.c-um {{ width: 6%; }}
+    .items-table col.c-qty {{ width: 8%; }}
+    .items-table col.c-price {{ width: 12%; }}
+    .items-table col.c-sconto {{ width: 8%; }}
+    .items-table col.c-importo {{ width: 12%; }}
+    .items-table col.c-iva {{ width: 8%; }}
 
     /* ── TECH NOTES ── */
     .tech-notes {{
@@ -1066,13 +1080,20 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
         line-height: 1.4;
     }}
 
-    /* ── TOTALS ── */
-    .totals-wrapper {{
-        display: flex;
-        justify-content: flex-end;
+    /* ── TOTALS (right-aligned via table) ── */
+    .totals-outer {{
+        width: 100%;
+        border: none;
+        border-collapse: collapse;
         margin-top: 10px;
     }}
-    .totals-block {{ width: 55%; }}
+    .totals-outer td {{
+        border: none;
+        padding: 0;
+        vertical-align: top;
+    }}
+    .totals-spacer {{ width: 45%; }}
+    .totals-content {{ width: 55%; }}
     .iva-table {{
         width: 100%;
         border-collapse: collapse;
@@ -1080,8 +1101,8 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
         margin-bottom: 6px;
     }}
     .iva-table th {{
-        background: #f0f0f0;
-        border: 1px solid #aaa;
+        background: #eee;
+        border: 1px solid #999;
         padding: 4px 5px;
         font-size: 7.5pt;
         text-transform: uppercase;
@@ -1095,18 +1116,20 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
         width: 100%;
         font-size: 9pt;
         margin-top: 4px;
+        border: none;
+        border-collapse: collapse;
     }}
     .summary-table td {{
         padding: 2px 5px;
+        border: none;
     }}
     .summary-row td {{ font-size: 9pt; }}
-    .total-final {{
+    .total-final td {{
         font-size: 13pt;
         font-weight: bold;
         border-top: 2px solid #333;
-        padding-top: 4px;
+        padding-top: 6px;
     }}
-    .total-final td {{ padding-top: 6px; }}
 
     /* ── BANK INFO ── */
     .bank-info {{
@@ -1163,30 +1186,34 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
 </style>
 </head>
 <body>
-    <!-- HEADER -->
-    <div class="header">
-        <div class="company-col">
-            {logo_html}
-            <div class="company-name">{company_name}</div>
-            <div class="company-details">
-                {company_full_addr}
-                {"<br>P.IVA: " + company_piva if company_piva else ""}
-                {"<br>Cod. Fisc.: " + company_cf if company_cf else ""}
-                {"<br>Tel: " + company_phone if company_phone else ""}
-                {"<br>Email: " + company_email if company_email else ""}
-            </div>
-        </div>
-        <div class="client-col">
-            <div class="label">Spett.le</div>
-            <div class="cl-name">{cl_name}</div>
-            {cl_full_addr}
-            {"<br>P.IVA: " + cl_piva if cl_piva else ""}
-            {"<br>Cod. Fisc.: " + cl_cf if cl_cf else ""}
-            {"<br>Cod. SDI: " + cl_sdi if cl_sdi else ""}
-            {"<br>PEC: " + cl_pec if cl_pec else ""}
-            {"<br>Email: " + cl_email if cl_email and not cl_pec else ""}
-        </div>
-    </div>
+    <!-- HEADER (table layout for WeasyPrint) -->
+    <table class="header-table">
+        <tr>
+            <td class="company-cell">
+                {logo_html}
+                <div class="company-name">{company_name}</div>
+                <div class="company-details">
+                    {company_full_addr}
+                    {"<br>P.IVA: " + company_piva if company_piva else ""}
+                    {"<br>Cod. Fisc.: " + company_cf if company_cf else ""}
+                    {"<br>Tel: " + company_phone if company_phone else ""}
+                    {"<br>Email: " + company_email if company_email else ""}
+                </div>
+            </td>
+            <td class="client-cell">
+                <div class="cl-label">Spett.le</div>
+                <div class="cl-name">{cl_name}</div>
+                <div class="cl-details">
+                    {cl_full_addr}
+                    {"<br>P.IVA: " + cl_piva if cl_piva else ""}
+                    {"<br>Cod. Fisc.: " + cl_cf if cl_cf else ""}
+                    {"<br>Cod. SDI: " + cl_sdi if cl_sdi else ""}
+                    {"<br>PEC: " + cl_pec if cl_pec else ""}
+                    {"<br>Email: " + cl_email if cl_email and not cl_pec else ""}
+                </div>
+            </td>
+        </tr>
+    </table>
 
     <!-- TITLE -->
     <div class="doc-title">
@@ -1194,26 +1221,26 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
         <div class="doc-num">{esc(display_num)}</div>
     </div>
 
-    <!-- META -->
-    <div class="meta-section">
-        <p><span class="meta-label">DATA:</span> {doc_date}</p>
-        <p><span class="meta-label">Pagamento:</span> {payment_label}</p>
-        <p><span class="meta-label">Validit&agrave;:</span> {validity} giorni</p>
-    </div>
+    <!-- META (table for alignment) -->
+    <table class="meta-table">
+        <tr><td class="meta-label">DATA:</td><td>{doc_date}</td></tr>
+        <tr><td class="meta-label">Pagamento:</td><td>{payment_label}</td></tr>
+        <tr><td class="meta-label">Validit&agrave;:</td><td>{validity} giorni</td></tr>
+    </table>
 
     {ref_note_html}
 
     <!-- ITEMS TABLE -->
     <table class="items-table">
         <colgroup>
-            <col class="col-codice">
-            <col class="col-desc">
-            <col class="col-um">
-            <col class="col-qty">
-            <col class="col-price">
-            <col class="col-sconto">
-            <col class="col-importo">
-            <col class="col-iva">
+            <col class="c-codice">
+            <col class="c-desc">
+            <col class="c-um">
+            <col class="c-qty">
+            <col class="c-price">
+            <col class="c-sconto">
+            <col class="c-importo">
+            <col class="c-iva">
         </colgroup>
         <thead>
             <tr>
@@ -1234,39 +1261,42 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
 
     {tech_notes_html}
 
-    <!-- TOTALS -->
-    <div class="totals-wrapper">
-        <div class="totals-block">
-            <table class="iva-table">
-                <thead>
-                    <tr>
-                        <th>Dettaglio IVA</th>
-                        <th>Imponibile</th>
-                        <th>% IVA</th>
-                        <th>Imposta</th>
+    <!-- TOTALS (right-aligned via table) -->
+    <table class="totals-outer">
+        <tr>
+            <td class="totals-spacer"></td>
+            <td class="totals-content">
+                <table class="iva-table">
+                    <thead>
+                        <tr>
+                            <th>Dettaglio IVA</th>
+                            <th>Imponibile</th>
+                            <th>% IVA</th>
+                            <th>Imposta</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {iva_rows_html}
+                    </tbody>
+                </table>
+                <table class="summary-table">
+                    {sconto_row_html}
+                    <tr class="summary-row">
+                        <td><strong>TOTALE IMPONIBILE:</strong></td>
+                        <td class="tr">{_fmt_it(imponibile)}</td>
                     </tr>
-                </thead>
-                <tbody>
-                    {iva_rows_html}
-                </tbody>
-            </table>
-            <table class="summary-table">
-                {sconto_row_html}
-                <tr class="summary-row">
-                    <td><strong>TOTALE IMPONIBILE:</strong></td>
-                    <td class="tr">{_fmt_it(imponibile)}</td>
-                </tr>
-                <tr class="summary-row">
-                    <td><strong>Totale IVA:</strong></td>
-                    <td class="tr">{_fmt_it(total_vat)}</td>
-                </tr>
-                <tr class="total-final">
-                    <td><strong>Totale:</strong></td>
-                    <td class="tr"><strong>{_fmt_it(total)} &euro;</strong></td>
-                </tr>
-            </table>
-        </div>
-    </div>
+                    <tr class="summary-row">
+                        <td><strong>Totale IVA:</strong></td>
+                        <td class="tr">{_fmt_it(total_vat)}</td>
+                    </tr>
+                    <tr class="total-final">
+                        <td><strong>Totale:</strong></td>
+                        <td class="tr"><strong>{_fmt_it(total)} &euro;</strong></td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 
     {bank_html}
 
