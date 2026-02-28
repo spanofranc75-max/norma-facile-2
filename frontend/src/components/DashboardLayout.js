@@ -23,7 +23,6 @@ import {
     Briefcase, Wrench, Award, ShoppingCart, FileText, LayoutGrid,
     CreditCard, TrendingUp,
 } from 'lucide-react';
-import { Leaf } from 'lucide-react';
 
 // ── Navigation Structure ────────────────────────────────────────
 
