@@ -406,7 +406,10 @@ def _build_cap4_pcq(ctx: dict) -> bytes:
         applicabile = f.get("applicabile", True)
         bg = 'style="background:#f5f5f5;"' if not applicabile else ''
         esito_html = '<span style="color:#999;">N/A</span>' if not applicabile else f'{_chk(False)} Pos {_chk(False)} Neg'
-        rows += f'<tr {bg}><td style="text-align:center;">{i}</td><td style="text-align:left;">{fase}</td><td style="font-size:7pt;">{doc_rif}</td><td style="text-align:center;"></td><td style="text-align:center;"></td><td style="text-align:center;">{esito_html}</td><td style="text-align:center;"></td></tr>'
+        periodo = ""
+        if f.get("completed_at") or f.get("data_fine"):
+            periodo = _safe_date(f.get("completed_at") or f.get("data_fine", ""))
+        rows += f'<tr {bg}><td style="text-align:center;">{i}</td><td style="text-align:left;">{fase}</td><td style="font-size:7pt;">{doc_rif}</td><td style="text-align:center;font-size:7pt;">{periodo}</td><td style="text-align:center;"></td><td style="text-align:center;">{esito_html}</td><td style="text-align:center;"></td></tr>'
 
     header_html = _header_html(biz, addr, piva, phone, email, "Piano di Controllo Qualita'", 'MOD. 02', logo)
     css = BASE_CSS.replace("size: A4;", "size: A4 landscape;").replace("margin: 12mm 15mm;", "margin: 10mm 8mm;")
