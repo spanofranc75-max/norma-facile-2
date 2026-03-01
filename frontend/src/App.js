@@ -216,6 +216,7 @@ function AppRouter() {
             <Route path="/archivio-certificati" element={<ProtectedRoute><ArchivioCertificatiPage /></ProtectedRoute>} />
             <Route path="/sistema-qualita" element={<ProtectedRoute><QualitySystemPage /></ProtectedRoute>} />
             <Route path="/strumenti" element={<ProtectedRoute><InstrumentsPage /></ProtectedRoute>} />
+            <Route path="/saldatori" element={<ProtectedRoute><WeldersPage /></ProtectedRoute>} />
         </Routes>
     );
 }
