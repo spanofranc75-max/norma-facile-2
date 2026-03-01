@@ -141,18 +141,97 @@ async def _get_context(cid: str, user: dict):
 async def get_fascicolo_data(cid: str, user: dict = Depends(get_current_user)):
     commessa = await _get_commessa(cid, user["user_id"])
     ft = commessa.get("fascicolo_tecnico", {})
-    # Initialize default phases if not set
+
+    # ── Auto-populate from preventivo ──
+    prev_id = commessa.get("preventivo_id") or (commessa.get("moduli") or {}).get("preventivo_id")
+    preventivo = None
+    if prev_id:
+        preventivo = await db.preventivi.find_one({"preventivo_id": prev_id}, {"_id": 0})
+    client_name = ""
+    if commessa.get("client_id"):
+        cl = await db.clients.find_one({"client_id": commessa["client_id"]}, {"_id": 0, "name": 1})
+        client_name = cl.get("name", "") if cl else ""
+    if preventivo and not client_name:
+        client_name = preventivo.get("client_name", "")
+
+    auto = {}  # fields auto-populated
+    if preventivo:
+        if preventivo.get("numero_disegno"):
+            auto["disegno_numero"] = preventivo["numero_disegno"]
+            auto["disegno_riferimento"] = preventivo["numero_disegno"]
+        if preventivo.get("ingegnere_disegno"):
+            auto["redatto_da"] = preventivo["ingegnere_disegno"]
+        if preventivo.get("classe_esecuzione"):
+            auto["classe_esecuzione"] = preventivo["classe_esecuzione"]
+        if preventivo.get("giorni_consegna"):
+            auto["giorni_consegna"] = preventivo["giorni_consegna"]
+    auto["client_name"] = client_name
+    auto["commessa_numero"] = commessa.get("numero", "")
+    auto["commessa_title"] = commessa.get("title", "")
+
+    # Merge auto into ft (don't overwrite user edits)
+    for k, v in auto.items():
+        if not ft.get(k) and v:
+            ft[k] = v
+
+    # ── Auto-populate from material batches ──
+    batches = await db.material_batches.find(
+        {"commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0}
+    ).to_list(50)
+    if batches:
+        types = list(set(b.get("material_type", "") for b in batches if b.get("material_type")))
+        dims = list(set(b.get("dimensions", "") for b in batches if b.get("dimensions")))
+        if not ft.get("materiale") and types:
+            ft["materiale"] = " / ".join(types)
+            auto["materiale"] = ft["materiale"]
+        if not ft.get("profilato") and dims:
+            ft["profilato"] = " + ".join(dims)
+            auto["profilato"] = ft["profilato"]
+        if not ft.get("materiali_saldabilita") and types:
+            ft["materiali_saldabilita"] = " - ".join(types) + " in accordo alla EN 10025-2"
+            auto["materiali_saldabilita"] = ft["materiali_saldabilita"]
+
+    # ── Initialize defaults ──
     if not ft.get("fasi"):
         from services.pdf_fascicolo_tecnico import DEFAULT_PHASES
         ft["fasi"] = [dict(p) for p in DEFAULT_PHASES]
-    # Initialize default requisiti for Riesame Tecnico
     if not ft.get("requisiti"):
         from services.pdf_fascicolo_tecnico import DEFAULT_REQUISITI
         ft["requisiti"] = [{"requisito": r["requisito"], "risposta": "si", "note": r["note_default"]} for r in DEFAULT_REQUISITI]
-    # Initialize default ITT
     if not ft.get("itt"):
         from services.pdf_fascicolo_tecnico import DEFAULT_ITT
         ft["itt"] = [dict(c) for c in DEFAULT_ITT]
+
+    # ── Timeline from produzione ──
+    fasi_prod = commessa.get("fasi_produzione", [])
+    timeline = []
+    for fp in fasi_prod:
+        timeline.append({
+            "fase": fp.get("label", fp.get("tipo", "")),
+            "stato": fp.get("stato", "da_fare"),
+            "data_inizio": fp.get("data_inizio"),
+            "data_fine": fp.get("data_fine"),
+        })
+    # Auto-populate piano controllo dates from produzione
+    fase_map = {
+        "taglio": ["Taglio - Foratura (a freddo sega/trapano)", "Taglio - Foratura lamiere/profili grigliati"],
+        "foratura": ["Taglio - Foratura (a freddo sega/trapano)"],
+        "assemblaggio": ["Puntatura lembi ed attacchi temporanei"],
+        "saldatura": ["Esecuzione ed accettabilita' saldatura", "Preparazione lembi di saldatura"],
+        "pulizia": ["Preparazione superficiale per finiture"],
+    }
+    for fp in fasi_prod:
+        if fp.get("data_inizio") or fp.get("data_fine"):
+            target_fasi = fase_map.get(fp.get("tipo"), [])
+            for fase in ft.get("fasi", []):
+                if fase.get("fase") in target_fasi and not fase.get("data_effettiva"):
+                    fase["data_effettiva"] = fp.get("data_fine") or fp.get("data_inizio") or ""
+                    if fp.get("stato") == "completato":
+                        fase["esito"] = "positivo"
+
+    ft["_auto_fields"] = list(auto.keys())
+    ft["_timeline"] = timeline
+    ft["_giorni_consegna"] = auto.get("giorni_consegna", 0)
     return ft
 
 
