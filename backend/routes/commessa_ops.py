@@ -1399,15 +1399,22 @@ def _normalize_profilo(text: str) -> str:
     return t
 
 
-async def _assign_profili_to_commessa(
-    profili: list, metadata_cert: dict, commessa_id: str,
-    doc_id: str, user: dict,
+async def _match_profili_to_commesse(
+    profili: list, metadata_cert: dict, current_commessa_id: str,
+    doc_id: str, doc: dict, user: dict,
 ) -> list:
     """
-    Deterministic assignment: ALL profiles from the certificate are assigned
-    to the commessa where the certificate was uploaded.
-    Creates material_batches (EN 1090 traceability) and lotti_cam (CAM compliance)
-    for each profile with a heat number.
+    Smart matching: for each profile in the certificate, find which commessa it belongs to.
+    Cross-references: OdA righe, RdP righe, DDT arrivi, documents.
+    
+    Flow:
+    1. Build lookup of normalized profile descriptions → commessa_ids from ALL user's OdA/RdP/arrivi
+    2. For each certificate profile:
+       a. Try exact match → assign to matched commessa (prefer current)
+       b. Try partial match → assign to matched commessa (prefer current)
+       c. No match → FALLBACK to current commessa (the user uploaded it here intentionally)
+    3. Create material_batch + CAM lotto for the assigned commessa
+    4. If assigned to another commessa, copy the certificate document there
     """
     risultati = []
     fornitore = metadata_cert.get("fornitore", "")
@@ -1419,28 +1426,112 @@ async def _assign_profili_to_commessa(
     ente_cert = metadata_cert.get("ente_certificatore_ambientale", "")
     n_cert = metadata_cert.get("n_certificato", "")
 
+    # 1. Get ALL user's commesse with their procurement data
+    cursor = db[COLL].find(
+        {"user_id": user["user_id"]},
+        {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "approvvigionamento": 1}
+    )
+    all_commesse = await cursor.to_list(500)
+    logger.info(f"Smart matching: {len(profili)} profili, {len(all_commesse)} commesse, current={current_commessa_id}")
+
+    # 2. Build a lookup: normalized_profile → [commessa_ids]
+    # From OdA righe, RdP righe, and DDT arrivi
+    profilo_to_commesse = {}
+    for comm in all_commesse:
+        cid_item = comm["commessa_id"]
+        approv = comm.get("approvvigionamento", {})
+        descriptions = []
+        # From OdA righe
+        for oda in approv.get("ordini", []):
+            for riga in oda.get("righe", []):
+                descriptions.append(riga.get("descrizione", ""))
+        # From RdP righe
+        for rdp in approv.get("richieste", []):
+            for riga in rdp.get("righe", []):
+                descriptions.append(riga.get("descrizione", ""))
+        # From arrivi/DDT
+        for arrivo in approv.get("arrivi", []):
+            for mat in arrivo.get("materiali", []):
+                descriptions.append(mat.get("descrizione", ""))
+
+        for desc in descriptions:
+            norm = _normalize_profilo(desc)
+            if norm:
+                if norm not in profilo_to_commesse:
+                    profilo_to_commesse[norm] = set()
+                profilo_to_commesse[norm].add(cid_item)
+
+    logger.info(f"Smart matching lookup: {len(profilo_to_commesse)} profili normalizzati da OdA/RdP/DDT")
+
+    # 3. For each profile, find the matching commessa
     for profilo in profili:
         dim = profilo.get("dimensioni", "")
+        norm_dim = _normalize_profilo(dim)
         colata = profilo.get("numero_colata", "")
         qualita = profilo.get("qualita_acciaio", "")
         peso = profilo.get("peso_kg")
+
+        matched_commessa_id = None
+        match_source = "nessuno"
+
+        # Try exact match first
+        if norm_dim and norm_dim in profilo_to_commesse:
+            matched_ids = profilo_to_commesse[norm_dim]
+            if current_commessa_id in matched_ids:
+                matched_commessa_id = current_commessa_id
+                match_source = "ordine/richiesta"
+            else:
+                matched_commessa_id = next(iter(matched_ids))
+                match_source = "ordine/richiesta altra commessa"
+        else:
+            # Try partial match: check if any profilo_to_commesse key contains our dim or vice versa
+            for norm_key, cids_set in profilo_to_commesse.items():
+                if norm_dim and (norm_dim in norm_key or norm_key in norm_dim):
+                    if current_commessa_id in cids_set:
+                        matched_commessa_id = current_commessa_id
+                        match_source = "ordine/richiesta (parziale)"
+                    else:
+                        matched_commessa_id = next(iter(cids_set))
+                        match_source = "ordine/richiesta altra commessa (parziale)"
+                    break
+
+        # BUG FIX: Fallback to current commessa if no procurement match found.
+        # The user explicitly uploaded this certificate to this commessa.
+        # Profiles that match other commesse go there; unmatched ones stay HERE (not archive).
+        if not matched_commessa_id:
+            matched_commessa_id = current_commessa_id
+            match_source = "commessa corrente (nessun match OdA/RdP)"
+
+        # Determine tipo
+        if matched_commessa_id == current_commessa_id:
+            tipo = "commessa_corrente"
+        elif matched_commessa_id:
+            tipo = "altra_commessa"
+        else:
+            tipo = "archivio"
+
+        logger.info(f"Profile '{dim}' (colata={colata}): tipo={tipo}, match={match_source}, commessa={matched_commessa_id}")
+
+        # Get commessa info
+        comm_info = next((c for c in all_commesse if c["commessa_id"] == matched_commessa_id), {})
 
         result_entry = {
             "dimensioni": dim,
             "numero_colata": colata,
             "qualita_acciaio": qualita,
             "peso_kg": peso,
-            "tipo": "commessa_corrente",
-            "commessa_id": commessa_id,
-            "commessa_numero": "",
-            "commessa_titolo": "",
-            "match_source": "caricamento diretto",
+            "tipo": tipo,
+            "commessa_id": matched_commessa_id or "",
+            "commessa_numero": comm_info.get("numero", ""),
+            "commessa_titolo": comm_info.get("title", ""),
+            "match_source": match_source,
         }
 
-        # ── Create material_batch (EN 1090 traceability) ──
-        if colata:
+        # ── Create CAM lotto and material_batch for the matched commessa ──
+        if colata and matched_commessa_id:
+            target_cid = matched_commessa_id
             existing_batch = await db.material_batches.find_one(
-                {"heat_number": colata, "commessa_id": commessa_id, "user_id": user["user_id"]}
+                {"heat_number": colata, "commessa_id": target_cid, "user_id": user["user_id"]}
             )
             if not existing_batch:
                 batch_id = f"bat_{uuid.uuid4().hex[:10]}"
@@ -1449,41 +1540,31 @@ async def _assign_profili_to_commessa(
                     "heat_number": colata, "material_type": qualita,
                     "supplier_name": fornitore, "dimensions": dim,
                     "normativa": metadata_cert.get("normativa_riferimento", ""),
-                    "source_doc_id": doc_id, "commessa_id": commessa_id,
+                    "source_doc_id": doc_id, "commessa_id": target_cid,
                     "notes": f"Auto da cert {n_cert}", "created_at": ts(),
                 })
                 result_entry["batch_id"] = batch_id
-                logger.info(f"Created material_batch {batch_id} for commessa {commessa_id}, colata {colata}")
-            else:
-                result_entry["batch_id"] = existing_batch.get("batch_id", "")
-                logger.info(f"Material batch already exists for colata {colata} in commessa {commessa_id}")
+                logger.info(f"Created material_batch {batch_id} for commessa {target_cid}, colata {colata}")
 
-        # ── Create CAM lotto (environmental compliance) ──
-        if colata:
+            # CAM lotto
             existing_cam = await db.lotti_cam.find_one(
-                {"numero_colata": colata, "commessa_id": commessa_id, "user_id": user["user_id"]}
+                {"numero_colata": colata, "commessa_id": target_cid, "user_id": user["user_id"]}
             )
             if not existing_cam:
-                perc = perc_ric if perc_ric is not None else {
-                    "forno_elettrico_non_legato": 80,
-                    "forno_elettrico_legato": 65,
-                    "ciclo_integrale": 10,
-                }.get(metodo, 75)
+                perc = perc_ric if perc_ric is not None else {"forno_elettrico_non_legato": 80, "forno_elettrico_legato": 65, "ciclo_integrale": 10}.get(metodo, 75)
                 perc = float(perc)
-
                 cert_type = "dichiarazione_produttore"
                 if cert_amb and "epd" in cert_amb.lower():
                     cert_type = "epd"
                 elif cert_amb and "remade" in cert_amb.lower():
                     cert_type = "remade_in_italy"
-
                 soglie = {"forno_elettrico_non_legato": 75, "forno_elettrico_legato": 60, "ciclo_integrale": 12}
                 soglia = soglie.get(metodo, 75)
 
                 cam_id = f"cam_{uuid.uuid4().hex[:10]}"
                 await db.lotti_cam.insert_one({
                     "lotto_id": cam_id, "user_id": user["user_id"],
-                    "commessa_id": commessa_id,
+                    "commessa_id": target_cid,
                     "descrizione": dim or qualita or "Materiale da certificato",
                     "fornitore": fornitore, "numero_colata": colata,
                     "peso_kg": float(peso or 0), "qualita_acciaio": qualita,
@@ -1493,14 +1574,36 @@ async def _assign_profili_to_commessa(
                     "ente_certificatore": ente_cert,
                     "uso_strutturale": True, "soglia_minima_cam": soglia,
                     "conforme_cam": perc >= soglia, "source_doc_id": doc_id,
-                    "note": "Auto AI - caricamento diretto",
+                    "note": f"Auto AI - Match: {match_source}",
                     "created_at": ts(),
                 })
                 result_entry["cam_lotto_id"] = cam_id
-                logger.info(f"Created CAM lotto {cam_id} for commessa {commessa_id}, colata {colata}")
-            else:
-                result_entry["cam_lotto_id"] = existing_cam.get("lotto_id", "")
-                logger.info(f"CAM lotto already exists for colata {colata} in commessa {commessa_id}")
+                logger.info(f"Created CAM lotto {cam_id} for commessa {target_cid}, colata {colata}")
+
+        # ── If matched to another commessa, copy the certificate there ──
+        if tipo == "altra_commessa" and matched_commessa_id:
+            existing_copy = await db[DOC_COLL].find_one({
+                "commessa_id": matched_commessa_id,
+                "source_doc_id": doc_id,
+                "user_id": user["user_id"],
+            })
+            if not existing_copy:
+                copy_doc = {
+                    "doc_id": f"doc_{uuid.uuid4().hex[:10]}",
+                    "user_id": user["user_id"],
+                    "commessa_id": matched_commessa_id,
+                    "nome_file": doc.get("nome_file", "certificato.pdf"),
+                    "tipo": "certificato_31",
+                    "content_type": doc.get("content_type", ""),
+                    "file_base64": doc.get("file_base64", ""),
+                    "metadata_estratti": metadata_cert,
+                    "source_doc_id": doc_id,
+                    "note": f"Copia automatica da {current_commessa_id} — profilo {dim}",
+                    "created_at": ts(),
+                }
+                await db[DOC_COLL].insert_one(copy_doc)
+                result_entry["certificato_copiato"] = True
+                logger.info(f"Certificate {doc_id} copied to commessa {matched_commessa_id} for profile {dim}")
 
         risultati.append(result_entry)
 
