@@ -275,10 +275,10 @@ def generate_green_certificate(
 
     # Materials rows
     mat_rows = ""
-    for l in lotti:
-        peso = l.get("peso_kg", 0)
-        perc = l.get("percentuale_riciclato", 0)
-        conforme = l.get("conforme_cam", False)
+    for lot in lotti:
+        peso = lot.get("peso_kg", 0)
+        perc = lot.get("percentuale_riciclato", 0)
+        conforme = lot.get("conforme_cam", False)
         badge = '<span class="badge-conforme">CONFORME</span>' if conforme else '<span class="badge-non-conforme">NON CONF.</span>'
         mat_rows += f"""
         <tr>
