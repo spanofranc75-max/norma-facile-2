@@ -223,6 +223,10 @@ export default function PreventivoEditorPage() {
                 })),
                 acconto: parseFloat(form.acconto) || 0,
                 sconto_globale: parseFloat(form.sconto_globale) || 0,
+                giorni_consegna: form.giorni_consegna ? parseInt(form.giorni_consegna) : null,
+                numero_disegno: form.numero_disegno || null,
+                ingegnere_disegno: form.ingegnere_disegno || null,
+                classe_esecuzione: form.classe_esecuzione || null,
             };
             if (isNew) {
                 const res = await apiRequest('/preventivi/', { method: 'POST', body: payload });
