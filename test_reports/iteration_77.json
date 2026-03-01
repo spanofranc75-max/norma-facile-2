@@ -1,0 +1,130 @@
+{
+  "summary": "Iteration 77 tested auto-compilation features: (1) GET /api/fascicolo-tecnico/{cid} returns _auto_fields, _timeline, and auto-populated data from preventivo, (2) GET /api/fascicolo-tecnico/{cid}/fascicolo-completo-pdf?docs=X combines PDFs using pypdf, (3) POST/GET/PUT preventivi with giorni_consegna works correctly. All 18 backend tests passed. UI verified: Document cards show completion indicators (filled/total), cards with missing fields have amber border, 'Genera Fascicolo Tecnico Completo' button opens dialog with 6 checkboxes, SmartField shows AUTO/DA COMPILARE badges, Timeline produzione strip shows in Piano di Controllo edit dialog, Preventivo editor has 'Tempi di Consegna (giorni)' input field.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration77_features.py",
+    "/app/test_reports/pytest/iteration77_features_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100% (18/18 passed)",
+    "frontend": "Verified via Playwright - all features working"
+  },
+  "test_credentials": "Test users created/cleaned during pytest run and UI tests",
+  "seed_data_creation": "Test preventivi, commesse with fasi_produzione created during tests, cleaned up after",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 77 adds: (1) Auto-compilation - _auto_fields list and auto-populated fields from preventivo (numero_disegno, ingegnere_disegno, classe_esecuzione) and commessa (numero, title, client_name), (2) Timeline produzione - _timeline array from fasi_produzione synced to Piano di Controllo dates, (3) Fascicolo Completo PDF - /api/fascicolo-tecnico/{cid}/fascicolo-completo-pdf?docs=dop,ce,piano,vt,registro,riesame combines selected PDFs using pypdf, (4) giorni_consegna field in preventivo. Frontend shows completion indicators on document cards (e.g., '8/16'), amber borders for incomplete docs, 'Da completare' hints, AUTO/DA COMPILARE badges on SmartField, timeline strip in Piano edit dialog.",
+  "features_tested": {
+    "health_endpoint": {
+      "status": "PASS",
+      "details": "GET /api/health returns {status: healthy}"
+    },
+    "preventivo_giorni_consegna_create": {
+      "status": "PASS",
+      "details": "POST /api/preventivi with giorni_consegna=60 saves and returns correctly"
+    },
+    "preventivo_giorni_consegna_get": {
+      "status": "PASS",
+      "details": "GET /api/preventivi/{id} returns giorni_consegna=45"
+    },
+    "preventivo_giorni_consegna_update": {
+      "status": "PASS",
+      "details": "PUT /api/preventivi/{id} updates giorni_consegna from 45 to 90"
+    },
+    "fascicolo_auto_fields": {
+      "status": "PASS",
+      "details": "GET /api/fascicolo-tecnico/{cid} returns _auto_fields list with disegno_numero, disegno_riferimento, redatto_da, etc."
+    },
+    "fascicolo_timeline": {
+      "status": "PASS",
+      "details": "GET /api/fascicolo-tecnico/{cid} returns _timeline array from fasi_produzione (taglio, foratura, assemblaggio, saldatura)"
+    },
+    "fascicolo_auto_populated_disegno": {
+      "status": "PASS",
+      "details": "disegno_numero and disegno_riferimento auto-populated from preventivo.numero_disegno"
+    },
+    "fascicolo_auto_populated_redatto_da": {
+      "status": "PASS",
+      "details": "redatto_da auto-populated from preventivo.ingegnere_disegno"
+    },
+    "fascicolo_giorni_consegna": {
+      "status": "PASS",
+      "details": "GET /api/fascicolo-tecnico/{cid} returns _giorni_consegna from linked preventivo"
+    },
+    "fascicolo_completo_all_docs": {
+      "status": "PASS",
+      "details": "GET /api/fascicolo-tecnico/{cid}/fascicolo-completo-pdf returns combined PDF (default: all 6 docs)"
+    },
+    "fascicolo_completo_dop_ce": {
+      "status": "PASS",
+      "details": "GET ...?docs=dop,ce combines only DOP and CE PDFs"
+    },
+    "fascicolo_completo_single_doc": {
+      "status": "PASS",
+      "details": "GET ...?docs=piano generates single Piano di Controllo PDF"
+    },
+    "fascicolo_completo_custom_selection": {
+      "status": "PASS",
+      "details": "GET ...?docs=dop,piano,vt,registro combines 4 selected PDFs"
+    },
+    "individual_dop_pdf": {
+      "status": "PASS",
+      "details": "GET /api/fascicolo-tecnico/{cid}/dop-pdf generates valid PDF"
+    },
+    "individual_ce_pdf": {
+      "status": "PASS",
+      "details": "GET /api/fascicolo-tecnico/{cid}/ce-pdf generates valid PDF"
+    },
+    "individual_piano_pdf": {
+      "status": "PASS",
+      "details": "GET /api/fascicolo-tecnico/{cid}/piano-controllo-pdf generates valid PDF"
+    },
+    "auth_fascicolo": {
+      "status": "PASS",
+      "details": "GET /api/fascicolo-tecnico/{cid} returns 401 without auth"
+    },
+    "auth_fascicolo_completo": {
+      "status": "PASS",
+      "details": "GET /api/fascicolo-tecnico/{cid}/fascicolo-completo-pdf returns 401 without auth"
+    },
+    "frontend_giorni_consegna_input": {
+      "status": "PASS (UI verified)",
+      "details": "Preventivo editor shows 'Tempi di Consegna (giorni)' input field with data-testid='input-giorni-consegna'"
+    },
+    "frontend_document_cards_completion": {
+      "status": "PASS (UI verified)",
+      "details": "Document cards show completion indicator (e.g., '8/16', '7/14') as badge"
+    },
+    "frontend_amber_border_incomplete": {
+      "status": "PASS (UI verified)",
+      "details": "Cards with missing fields have 'border-amber-200 bg-amber-50/30' styling"
+    },
+    "frontend_fascicolo_completo_dialog": {
+      "status": "PASS (UI verified)",
+      "details": "'Genera Fascicolo Tecnico Completo' button opens dialog with 6 checkboxes, completion %, Tutti/Nessuno buttons"
+    },
+    "frontend_smartfield_auto_badge": {
+      "status": "PASS (UI verified)",
+      "details": "SmartField shows 'AUTO' badge (green) for auto-populated fields, 'DA COMPILARE' badge (amber) for empty required fields"
+    },
+    "frontend_timeline_in_piano_edit": {
+      "status": "PASS (UI verified)",
+      "details": "Piano di Controllo edit dialog shows 'Stato Produzione (date auto-sincronizzate)' timeline strip with phase progress"
+    },
+    "frontend_timeline_produzione": {
+      "status": "PASS (UI verified)",
+      "details": "Fascicolo Tecnico section shows Timeline Produzione strip with colored segments (green=completed, blue=in_corso, gray=da_fare)"
+    }
+  }
+}
