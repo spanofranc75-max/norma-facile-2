@@ -44,6 +44,7 @@ import ArchivioCertificatiPage from './pages/ArchivioCertificatiPage';
 import QualitySystemPage from './pages/QualitySystemPage';
 import InstrumentsPage from './pages/InstrumentsPage';
 import WeldersPage from './pages/WeldersPage';
+import AuditPage from './pages/AuditPage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -217,6 +218,7 @@ function AppRouter() {
             <Route path="/sistema-qualita" element={<ProtectedRoute><QualitySystemPage /></ProtectedRoute>} />
             <Route path="/strumenti" element={<ProtectedRoute><InstrumentsPage /></ProtectedRoute>} />
             <Route path="/saldatori" element={<ProtectedRoute><WeldersPage /></ProtectedRoute>} />
+            <Route path="/audit" element={<ProtectedRoute><AuditPage /></ProtectedRoute>} />
         </Routes>
     );
 }
