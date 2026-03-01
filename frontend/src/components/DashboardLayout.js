@@ -78,6 +78,7 @@ const NAV_GROUPS = [
             { path: '/validazione-foto', label: 'Validazione Foto AI', icon: Camera },
             { path: '/report-cam', label: 'Sostenibilita & CO2', icon: Award },
             { path: '/sistema-qualita', label: 'Sistema Qualita', icon: FileText },
+            { path: '/strumenti', label: 'Apparecchiature', icon: Wrench },
         ],
     },
     {
