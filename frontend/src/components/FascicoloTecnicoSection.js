@@ -24,7 +24,7 @@ const DOCUMENTS = [
 ];
 
 // Common fields that are auto-populated
-const SHARED_AUTO = ['client_name','commessa_numero','commessa_title','disegno_numero','disegno_riferimento','redatto_da','classe_esecuzione','materiale','profilato','materiali_saldabilita'];
+const SHARED_AUTO = ['client_name','commessa_numero','commessa_title','disegno_numero','disegno_riferimento','redatto_da','classe_esecuzione','materiale','profilato','materiali_saldabilita','spessore'];
 
 export default function FascicoloTecnicoSection({ commessaId }) {
     const [ftData, setFtData] = useState({});
