@@ -329,12 +329,16 @@ async def get_fascicolo_data(cid: str, user: dict = Depends(get_current_user)):
     if batches:
         mat_types = list(set(b.get("material_type", "") for b in batches if b.get("material_type")))
         dims = list(set(b.get("dimensions", "") for b in batches if b.get("dimensions")))
+        spessori = list(set(b.get("spessore", "") for b in batches if b.get("spessore")))
         if not ft.get("materiale") and mat_types:
             ft["materiale"] = " / ".join(mat_types)
             auto["materiale"] = ft["materiale"]
         if not ft.get("profilato") and dims:
             ft["profilato"] = " + ".join(dims)
             auto["profilato"] = ft["profilato"]
+        if not ft.get("spessore") and spessori:
+            ft["spessore"] = " / ".join(spessori)
+            auto["spessore"] = ft["spessore"]
         if not ft.get("materiali_saldabilita") and mat_types:
             ft["materiali_saldabilita"] = " - ".join(mat_types) + " in accordo alla EN 10025-2"
             auto["materiali_saldabilita"] = ft["materiali_saldabilita"]
