@@ -135,6 +135,14 @@ async def get_fascicolo_data(cid: str, user: dict = Depends(get_current_user)):
     if not ft.get("fasi"):
         from services.pdf_fascicolo_tecnico import DEFAULT_PHASES
         ft["fasi"] = [dict(p) for p in DEFAULT_PHASES]
+    # Initialize default requisiti for Riesame Tecnico
+    if not ft.get("requisiti"):
+        from services.pdf_fascicolo_tecnico import DEFAULT_REQUISITI
+        ft["requisiti"] = [{"requisito": r["requisito"], "risposta": "si", "note": r["note_default"]} for r in DEFAULT_REQUISITI]
+    # Initialize default ITT
+    if not ft.get("itt"):
+        from services.pdf_fascicolo_tecnico import DEFAULT_ITT
+        ft["itt"] = [dict(c) for c in DEFAULT_ITT]
     return ft
 
 
