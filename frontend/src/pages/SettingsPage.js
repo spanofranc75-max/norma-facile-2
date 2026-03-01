@@ -69,6 +69,8 @@ export default function SettingsPage() {
                     ente_certificatore: data.ente_certificatore || '',
                     ente_certificatore_numero: data.ente_certificatore_numero || '',
                     certificato_en1090_numero: data.certificato_en1090_numero || '',
+                    classe_esecuzione_default: data.classe_esecuzione_default || '',
+                    certificato_en13241_numero: data.certificato_en13241_numero || '',
                     condizioni_vendita: data.condizioni_vendita || '',
                     aruba_username: data.aruba_username || '',
                     aruba_password: data.aruba_password || '',
