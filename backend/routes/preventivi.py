@@ -93,6 +93,15 @@ class PreventivoUpdate(BaseModel):
     classe_esecuzione: Optional[str] = None
     giorni_consegna: Optional[int] = None
 
+    @validator("giorni_consegna", pre=True)
+    def parse_giorni(cls, v):
+        if v is None or v == "":
+            return None
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            return None
+
 
 class ProgressiveInvoiceRequest(BaseModel):
     """Request body for progressive invoicing (acconto / SAL / saldo)."""
