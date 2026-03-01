@@ -249,9 +249,15 @@ async def get_fascicolo_data(cid: str, user: dict = Depends(get_current_user)):
         preventivo = await db.preventivi.find_one({"preventivo_id": prev_id}, {"_id": 0})
     client_name = ""
     if commessa.get("client_id"):
-        cl = await db.clients.find_one({"client_id": commessa["client_id"]}, {"_id": 0, "name": 1})
-        client_name = cl.get("name", "") if cl else ""
-    if preventivo and not client_name:
+        cl = await db.clients.find_one({"client_id": commessa["client_id"]}, {"_id": 0, "name": 1, "business_name": 1})
+        if cl:
+            client_name = cl.get("business_name") or cl.get("name", "")
+    # Fallback: client from preventivo header
+    if not client_name and preventivo and preventivo.get("client_id"):
+        cl_p = await db.clients.find_one({"client_id": preventivo["client_id"]}, {"_id": 0, "name": 1, "business_name": 1})
+        if cl_p:
+            client_name = cl_p.get("business_name") or cl_p.get("name", "")
+    if not client_name and preventivo:
         client_name = preventivo.get("client_name", "")
 
     auto = {}  # track which fields were auto-populated
@@ -264,6 +270,9 @@ async def get_fascicolo_data(cid: str, user: dict = Depends(get_current_user)):
             auto["classe_esecuzione"] = preventivo["classe_esecuzione"]
         if preventivo.get("giorni_consegna"):
             auto["giorni_consegna"] = preventivo["giorni_consegna"]
+    # Classe esecuzione fallback from settings
+    if not auto.get("classe_esecuzione") and company.get("classe_esecuzione_default"):
+        auto["classe_esecuzione"] = company["classe_esecuzione_default"]
     auto["client_name"] = client_name
     auto["commessa_numero"] = commessa.get("numero", "")
     auto["commessa_title"] = commessa.get("title", "")
@@ -282,12 +291,14 @@ async def get_fascicolo_data(cid: str, user: dict = Depends(get_current_user)):
     if company.get("responsabile_nome"):
         auto["redatto_da"] = company["responsabile_nome"]
         auto["firma_cs"] = company["responsabile_nome"]
-    # Mandatario = cliente
+    # Mandatario = cliente (from preventivo header)
     if client_name:
         auto["mandatario"] = client_name
     # DOP numero = commessa numero
     if commessa.get("numero"):
         auto["dop_numero"] = commessa["numero"]
+        auto["report_numero"] = commessa["numero"]
+        auto["ordine_numero"] = commessa["numero"]
 
     # DDT auto — suffisso commessa/01, /02
     comm_num = commessa.get("numero", "")
@@ -300,6 +311,7 @@ async def get_fascicolo_data(cid: str, user: dict = Depends(get_current_user)):
     today = datetime.now(timezone.utc).strftime("%d/%m/%Y")
     auto["ddt_data"] = today
     auto["data_emissione"] = today
+    auto["report_data"] = today
     city = company.get("city", "")
     if city:
         auto["luogo_data_firma"] = f"{city}, {today}"
