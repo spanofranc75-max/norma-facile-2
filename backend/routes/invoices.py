@@ -730,8 +730,9 @@ async def preview_invoice_email(invoice_id: str, user: dict = Depends(get_curren
 
 
 @router.post("/{invoice_id}/send-email")
-async def send_invoice_email(invoice_id: str, user: dict = Depends(get_current_user)):
+async def send_invoice_email(invoice_id: str, payload: dict = None, user: dict = Depends(get_current_user)):
     """Generate PDF and send invoice via email to client."""
+    payload = payload or {}
     invoice = await db.invoices.find_one(
         {"invoice_id": invoice_id, "user_id": user["user_id"]}, {"_id": 0}
     )
