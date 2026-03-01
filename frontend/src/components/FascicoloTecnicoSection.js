@@ -267,12 +267,19 @@ export default function FascicoloTecnicoSection({ commessaId }) {
                 })}
             </div>
 
-            {/* Genera Fascicolo Completo */}
-            <div className="mt-3 flex justify-center">
-                <Button variant="default" className="bg-slate-900 hover:bg-slate-800 text-white text-xs"
-                    data-testid="btn-fascicolo-completo" onClick={() => setCompletoOpen(true)}>
-                    <PackageOpen className="h-4 w-4 mr-1.5" /> Genera Fascicolo Tecnico Completo
+            {/* Genera Fascicolo Tecnico */}
+            <div className="mt-4 space-y-2">
+                <Button variant="default" className="w-full bg-[#1a3a6b] hover:bg-[#15325c] text-white font-bold text-sm h-11 shadow-md"
+                    data-testid="btn-super-fascicolo" disabled={superLoading} onClick={handleDownloadSuperFascicolo}>
+                    {superLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                    Scarica Fascicolo Tecnico Completo (PDF Unico)
                 </Button>
+                <div className="flex justify-center">
+                    <Button variant="outline" size="sm" className="text-xs text-slate-500 border-slate-300"
+                        data-testid="btn-fascicolo-completo" onClick={() => setCompletoOpen(true)}>
+                        <PackageOpen className="h-3.5 w-3.5 mr-1.5" /> Seleziona documenti singoli
+                    </Button>
+                </div>
             </div>
 
             {/* Dialog Fascicolo Completo */}
