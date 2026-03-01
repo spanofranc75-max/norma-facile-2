@@ -88,6 +88,7 @@ class PreventivoUpdate(BaseModel):
     normativa: Optional[str] = None  # "EN_1090", "EN_13241", "NESSUNA"
     numero_disegno: Optional[str] = None
     ingegnere_disegno: Optional[str] = None
+    classe_esecuzione: Optional[str] = None
 
 
 class ProgressiveInvoiceRequest(BaseModel):
