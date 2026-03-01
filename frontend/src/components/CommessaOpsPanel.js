@@ -20,6 +20,7 @@ import {
     Play, CheckCircle2, Clock, AlertTriangle, Plus, Trash2,
     Download, Eye, Loader2, Sparkles, ChevronDown, ChevronUp, FileText,
     Mail, MailCheck, FileSearch, Leaf, RefreshCw,
+    Maximize2, Minimize2,
 } from 'lucide-react';
 import EmailPreviewDialog from './EmailPreviewDialog';
 
