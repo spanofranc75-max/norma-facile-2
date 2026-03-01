@@ -463,6 +463,11 @@ async def report_aziendale_cam(
             "metodi_produttivi": {},
             "commesse_conformi": 0,
             "commesse_totali": 0,
+            # Sustainability Dashboard KPIs (empty state)
+            "alberi_equivalenti": 0,
+            "indice_economia_circolare": 0,
+            "co2_per_commessa": [],
+            "trend_mensile": [],
         }
     
     # Aggregate by commessa
