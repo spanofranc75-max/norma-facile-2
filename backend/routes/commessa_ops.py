@@ -1491,6 +1491,12 @@ async def _match_profili_to_commesse(
                         match_source = "ordine/richiesta altra commessa (parziale)"
                     break
 
+        # FALLBACK: If no match found via procurement data, assign to the current commessa.
+        # The user explicitly uploaded this certificate to this commessa, so that's the intent.
+        if not matched_commessa_id:
+            matched_commessa_id = current_commessa_id
+            match_source = "commessa corrente (caricamento diretto)"
+
         # Determine tipo
         if matched_commessa_id == current_commessa_id:
             tipo = "commessa_corrente"
