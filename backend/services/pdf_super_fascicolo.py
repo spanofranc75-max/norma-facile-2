@@ -605,12 +605,65 @@ async def generate_super_fascicolo(commessa_id: str, user_id: str) -> BytesIO:
         ]}, {"_id": 0}
     ) if prev_id else None
 
-    # Welder
-    welder = None
+    # Welders — find all assigned via Smart Assign in fascicolo_tecnico.saldature
+    assigned_welders = []
+    saldature = ft.get("saldature", [])
+    seen_welder_ids = set()
+    for s in saldature:
+        wid = s.get("_source_welder_id")
+        if wid and wid not in seen_welder_ids:
+            seen_welder_ids.add(wid)
+    
+    # Also check FPC project welder
     if fpc_project and fpc_project.get("fpc_data", {}).get("welder_id"):
-        welder = await db.welders.find_one(
-            {"welder_id": fpc_project["fpc_data"]["welder_id"]}, {"_id": 0}
-        )
+        fpc_wid = fpc_project["fpc_data"]["welder_id"]
+        if fpc_wid not in seen_welder_ids:
+            seen_welder_ids.add(fpc_wid)
+
+    if seen_welder_ids:
+        from datetime import date as _date, timedelta
+        today_str = _date.today().isoformat()
+        threshold_str = (_date.today() + timedelta(days=30)).isoformat()
+        for wid in seen_welder_ids:
+            w_doc = await db.welders.find_one({"welder_id": wid}, {"_id": 0})
+            if not w_doc:
+                continue
+            quals = w_doc.get("qualifications", [])
+            enriched_quals = []
+            has_expired = False
+            has_expiring = False
+            for q in quals:
+                exp = q.get("expiry_date", "")
+                status = "attivo"
+                if exp and exp < today_str:
+                    status = "scaduto"
+                    has_expired = True
+                elif exp and exp <= threshold_str:
+                    status = "in_scadenza"
+                    has_expiring = True
+                enriched_quals.append({
+                    "qual_id": q.get("qual_id", ""),
+                    "standard": q.get("standard", ""),
+                    "process": q.get("process", ""),
+                    "expiry_date": exp,
+                    "status": status,
+                    "has_file": bool(q.get("safe_filename")),
+                    "safe_filename": q.get("safe_filename", ""),
+                })
+            overall = "ok"
+            if not quals:
+                overall = "no_qual"
+            elif has_expired and not any(q["status"] == "attivo" for q in enriched_quals):
+                overall = "expired"
+            elif has_expired or has_expiring:
+                overall = "warning"
+            assigned_welders.append({
+                "welder_id": wid,
+                "name": w_doc.get("name", ""),
+                "stamp_id": w_doc.get("stamp_id", ""),
+                "overall_status": overall,
+                "qualifications": enriched_quals,
+            })
 
     # Conto Lavoro items (for certificates from subcontractors)
     conto_lavoro = commessa.get("conto_lavoro", [])
