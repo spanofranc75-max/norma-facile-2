@@ -28,19 +28,28 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa cen
 - started_at, completed_at, operator_name (opzionali, backward compat)
 - Modale completamento con date + operatore
 
-### Consegne al Cliente (NUOVO - Mar 2026)
+### Consegne al Cliente
 - Sezione "Consegne al Cliente" nella commessa
 - POST /api/commesse/{cid}/consegne: crea DDT pre-compilato con materiali dalla commessa
 - GET /api/commesse/{cid}/consegne/{id}/pacchetto-pdf: PDF unico DDT + DoP + Etichetta CE
-- DDT creato in ddt_documents con link commessa_id
-- Bottone "DDT + DoP + CE" per download pacchetto completo
-- Bottone "Modifica DDT" per aprire editor DDT
 
 ### Impostazioni
 - Tab Certificazioni: EN 1090-1 + EN 13241 + Classe Esecuzione Default + Ente Certificatore
 
+## Bug Fix Critici (Mar 2026)
+
+### P0: Bug Loop/Reload Editor Preventivi - RISOLTO
+- **Problema:** Digitando in campi come "Tempi di Consegna" o "Ing. Disegno", la pagina entrava in loop mostrando spinner e perdendo tutti i dati del form
+- **Causa Root:** ErrorBoundary wrappava l'intera app (BrowserRouter + AuthProvider). Quando errori DOM venivano catturati (es. da estensioni browser come Grammarly), l'ErrorBoundary faceva remount di tutto, incluso AuthProvider che resettava loading=true e user=null
+- **Fix applicati:**
+  1. ErrorBoundary spostato sotto AuthProvider (App.js) - lo stato auth non viene mai resettato
+  2. ProtectedRoute usa sessionStorage ('nf_was_authenticated') per sopravvivere ai remount
+  3. PreventivoEditorPage ha auto-save su sessionStorage con debounce 300ms
+- **Testato:** 8/8 test passati con testing agent (iteration_85.json)
+
 ## Backlog
-- P1: Fatture in Cloud SDI, verifica parsing AI
-- P2: Test e2e, seeding dati
-- P3: CSV per CNC, stato SOSPESA, repository miglioramenti
+- P1: Fatture in Cloud SDI (necessita credenziali utente), verifica parsing AI
+- P2: Test e2e completo, seeding dati, coesione flusso
+- P3: CSV per CNC, stato SOSPESA, miglioramenti repository documenti
 - Futuro: PWA, object storage, versioning, Stripe
+- Refactoring: CommessaOpsPanel.js troppo grande, da dividere
