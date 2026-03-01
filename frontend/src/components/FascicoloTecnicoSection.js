@@ -18,8 +18,8 @@ const DOCUMENTS = [
     { key: 'dop', label: 'DOP', desc: 'Dichiarazione di Prestazione', endpoint: 'dop-pdf', mod: 'All. 4', requiredFields: ['certificato_numero','ente_notificato','firmatario','luogo_data_firma','ddt_riferimento','ddt_data'] },
     { key: 'ce', label: 'Marcatura CE', desc: 'Etichetta CE EN 1090', endpoint: 'ce-pdf', mod: 'All. 5', requiredFields: ['certificato_numero','ente_notificato','ente_numero','disegno_riferimento'] },
     { key: 'piano', label: 'Piano di Controllo', desc: 'Piano Controllo Qualita\'', endpoint: 'piano-controllo-pdf', mod: 'MOD. 02', requiredFields: ['disegno_numero'] },
-    { key: 'vt', label: 'Rapporto VT', desc: 'Esame Visivo Dimensionale', endpoint: 'rapporto-vt-pdf', mod: 'MOD. 06', requiredFields: ['report_numero','report_data','processo_saldatura','materiale'] },
-    { key: 'registro', label: 'Registro Saldatura', desc: 'Registro di Saldatura', endpoint: 'registro-saldatura-pdf', mod: 'MOD. 04', requiredFields: ['data_emissione','firma_cs'] },
+    { key: 'vt', label: 'Rapporto VT', desc: 'Esame Visivo Dimensionale', endpoint: 'rapporto-vt-pdf', mod: 'MOD. 06', requiredFields: ['processo_saldatura'] },
+    { key: 'registro', label: 'Registro Saldatura', desc: 'Registro di Saldatura', endpoint: 'registro-saldatura-pdf', mod: 'MOD. 04', requiredFields: [] },
     { key: 'riesame', label: 'Riesame Tecnico', desc: 'Riesame Tecnico EN 1090', endpoint: 'riesame-tecnico-pdf', mod: 'MOD. 01', requiredFields: [] },
 ];
 
