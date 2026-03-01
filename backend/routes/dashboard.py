@@ -282,14 +282,14 @@ async def get_quality_score(user: dict = Depends(get_current_user)):
     categories.append(("documentation", "Documentazione", min(doc_score, 15), 15))
 
     # 3. Certificazioni CE — only if user does EN 1090 work
-    if en1090_count > 0 or total_certs > 0:
-        if total_commesse > 0:
-            ce_ratio = min(total_certs / max(en1090_count, total_commesse, 1), 1.0)
+    if en1090_count > 0 or total_ce_effective > 0:
+        if en1090_count > 0:
+            ce_ratio = min(total_ce_effective / max(en1090_count, 1), 1.0)
             ce_score = round(ce_ratio * 20)
         else:
-            ce_score = 5 if total_certs > 0 else 0
+            ce_score = 5 if total_ce_effective > 0 else 0
         categories.append(("ce", "Certificazioni CE", min(ce_score, 20), 20))
-        if total_certs == 0:
+        if total_ce_effective == 0:
             insights.append({
                 "type": "warning",
                 "text": "Nessuna certificazione CE emessa. Genera il fascicolo tecnico per i tuoi prodotti!",
