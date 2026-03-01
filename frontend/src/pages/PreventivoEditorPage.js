@@ -121,6 +121,7 @@ export default function PreventivoEditorPage() {
                 numero_disegno: data.numero_disegno || '',
                 ingegnere_disegno: data.ingegnere_disegno || '',
                 classe_esecuzione: data.classe_esecuzione || '',
+                giorni_consegna: data.giorni_consegna || '',
             });
             if (data.compliance_detail) setCompliance(data.compliance_detail);
             setWorkflow({
