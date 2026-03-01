@@ -3,8 +3,8 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Literal
 from datetime import datetime, timezone
 
-CATEGORIES = ["manuali", "procedure", "certificazioni", "template", "normative", "altro"]
-CategoryType = Literal["manuali", "procedure", "certificazioni", "template", "normative", "altro"]
+CATEGORIES = ["manuali", "procedure", "certificazioni", "template", "normative", "organigramma", "altro"]
+CategoryType = Literal["manuali", "procedure", "certificazioni", "template", "normative", "organigramma", "altro"]
 
 
 class CompanyDocumentCreate(BaseModel):
