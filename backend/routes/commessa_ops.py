@@ -1393,19 +1393,20 @@ def _normalize_profilo(text: str) -> str:
     """Normalize profile description for fuzzy matching. IPE 100 = ipe100 = IPE100."""
     import re
     t = (text or "").upper().strip()
-    # Remove common separators and normalize spaces
     t = re.sub(r'[x×\*]', 'X', t)  # 60x60 → 60X60
     t = re.sub(r'\s+', '', t)  # Remove spaces: IPE 100 → IPE100
     return t
 
 
-async def _match_profili_to_commesse(
-    profili: list, metadata_cert: dict, current_commessa_id: str,
-    doc_id: str, doc: dict, user: dict,
+async def _assign_profili_to_commessa(
+    profili: list, metadata_cert: dict, commessa_id: str,
+    doc_id: str, user: dict,
 ) -> list:
     """
-    Smart matching: for each profile in the certificate, find which commessa it belongs to.
-    Cross-references: OdA righe, RdP righe, DDT arrivi, documents.
+    Deterministic assignment: ALL profiles from the certificate are assigned
+    to the commessa where the certificate was uploaded.
+    Creates material_batches (EN 1090 traceability) and lotti_cam (CAM compliance)
+    for each profile with a heat number.
     """
     risultati = []
     fornitore = metadata_cert.get("fornitore", "")
@@ -1416,6 +1417,93 @@ async def _match_profili_to_commesse(
     cert_amb = metadata_cert.get("certificazione_ambientale", "")
     ente_cert = metadata_cert.get("ente_certificatore_ambientale", "")
     n_cert = metadata_cert.get("n_certificato", "")
+
+    for profilo in profili:
+        dim = profilo.get("dimensioni", "")
+        colata = profilo.get("numero_colata", "")
+        qualita = profilo.get("qualita_acciaio", "")
+        peso = profilo.get("peso_kg")
+
+        result_entry = {
+            "dimensioni": dim,
+            "numero_colata": colata,
+            "qualita_acciaio": qualita,
+            "peso_kg": peso,
+            "tipo": "commessa_corrente",
+            "commessa_id": commessa_id,
+            "commessa_numero": "",
+            "commessa_titolo": "",
+            "match_source": "caricamento diretto",
+        }
+
+        # ── Create material_batch (EN 1090 traceability) ──
+        if colata:
+            existing_batch = await db.material_batches.find_one(
+                {"heat_number": colata, "commessa_id": commessa_id, "user_id": user["user_id"]}
+            )
+            if not existing_batch:
+                batch_id = f"bat_{uuid.uuid4().hex[:10]}"
+                await db.material_batches.insert_one({
+                    "batch_id": batch_id, "user_id": user["user_id"],
+                    "heat_number": colata, "material_type": qualita,
+                    "supplier_name": fornitore, "dimensions": dim,
+                    "normativa": metadata_cert.get("normativa_riferimento", ""),
+                    "source_doc_id": doc_id, "commessa_id": commessa_id,
+                    "notes": f"Auto da cert {n_cert}", "created_at": ts(),
+                })
+                result_entry["batch_id"] = batch_id
+                logger.info(f"Created material_batch {batch_id} for commessa {commessa_id}, colata {colata}")
+            else:
+                result_entry["batch_id"] = existing_batch.get("batch_id", "")
+                logger.info(f"Material batch already exists for colata {colata} in commessa {commessa_id}")
+
+        # ── Create CAM lotto (environmental compliance) ──
+        if colata:
+            existing_cam = await db.lotti_cam.find_one(
+                {"numero_colata": colata, "commessa_id": commessa_id, "user_id": user["user_id"]}
+            )
+            if not existing_cam:
+                perc = perc_ric if perc_ric is not None else {
+                    "forno_elettrico_non_legato": 80,
+                    "forno_elettrico_legato": 65,
+                    "ciclo_integrale": 10,
+                }.get(metodo, 75)
+                perc = float(perc)
+
+                cert_type = "dichiarazione_produttore"
+                if cert_amb and "epd" in cert_amb.lower():
+                    cert_type = "epd"
+                elif cert_amb and "remade" in cert_amb.lower():
+                    cert_type = "remade_in_italy"
+
+                soglie = {"forno_elettrico_non_legato": 75, "forno_elettrico_legato": 60, "ciclo_integrale": 12}
+                soglia = soglie.get(metodo, 75)
+
+                cam_id = f"cam_{uuid.uuid4().hex[:10]}"
+                await db.lotti_cam.insert_one({
+                    "lotto_id": cam_id, "user_id": user["user_id"],
+                    "commessa_id": commessa_id,
+                    "descrizione": dim or qualita or "Materiale da certificato",
+                    "fornitore": fornitore, "numero_colata": colata,
+                    "peso_kg": float(peso or 0), "qualita_acciaio": qualita,
+                    "percentuale_riciclato": perc, "metodo_produttivo": metodo,
+                    "tipo_certificazione": cert_type,
+                    "numero_certificazione": n_cert,
+                    "ente_certificatore": ente_cert,
+                    "uso_strutturale": True, "soglia_minima_cam": soglia,
+                    "conforme_cam": perc >= soglia, "source_doc_id": doc_id,
+                    "note": "Auto AI - caricamento diretto",
+                    "created_at": ts(),
+                })
+                result_entry["cam_lotto_id"] = cam_id
+                logger.info(f"Created CAM lotto {cam_id} for commessa {commessa_id}, colata {colata}")
+            else:
+                result_entry["cam_lotto_id"] = existing_cam.get("lotto_id", "")
+                logger.info(f"CAM lotto already exists for colata {colata} in commessa {commessa_id}")
+
+        risultati.append(result_entry)
+
+    return risultati
 
     # 1. Get ALL user's commesse with their procurement data
     cursor = db[COLL].find(
