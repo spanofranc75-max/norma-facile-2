@@ -98,6 +98,8 @@ class CompanySettingsUpdate(BaseModel):
     ente_certificatore: Optional[str] = None
     ente_certificatore_numero: Optional[str] = None
     certificato_en1090_numero: Optional[str] = None
+    classe_esecuzione_default: Optional[str] = None
+    certificato_en13241_numero: Optional[str] = None
     condizioni_vendita: Optional[str] = None
     aruba_username: Optional[str] = None
     aruba_password: Optional[str] = None
