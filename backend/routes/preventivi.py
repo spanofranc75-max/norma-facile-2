@@ -1002,7 +1002,8 @@ async def send_preventivo_email(prev_id: str, payload: dict = None, user: dict =
     filename = f"preventivo_{prev_number.replace(' ', '_').replace('/', '_')}.pdf"
 
     from services.email_service import send_invoice_email as _send, send_email_with_attachment
-    total = doc.get("totals", {}).get("total_document", 0)
+    totals = doc.get("totals", {})
+    total = totals.get("total_document") or totals.get("total", 0)
 
     if payload.get("custom_subject") or payload.get("custom_body"):
         custom_subject = payload.get("custom_subject") or f"Preventivo n. {prev_number}"
