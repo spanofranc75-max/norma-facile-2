@@ -112,7 +112,7 @@ def generate_dop_pdf(company: dict, commessa: dict, client_name: str, dop_data: 
     rows = "".join(f'<tr><td style="text-align:center;width:18%;">{r}</td><td style="width:45%;">{c}</td><td style="text-align:center;width:37%;">{p}</td></tr>' for r, c, p in chars)
 
     html = f"""<!DOCTYPE html><html><head><style>{BASE_CSS}</style></head><body>
-    {_header_html(biz, addr, piva, phone, email, 'Dichiarazione di Prestazione', f'All. 4 Rev. 0')}
+    {_header_html(biz, addr, piva, phone, email, 'Dichiarazione di Prestazione', 'All. 4 Rev. 0', logo)}
     <p style="text-align:center;font-size:9pt;margin:6px 0;">(Secondo Regolamento UE 574/2014)</p>
     <table class="info-table">
         <tr><td class="info-lbl">1. Codice prodotto-tipo:</td><td>{comm_num}</td></tr>
@@ -121,6 +121,8 @@ def generate_dop_pdf(company: dict, commessa: dict, client_name: str, dop_data: 
         <tr><td class="info-lbl">4. Mandatario:</td><td>{mandatario}</td></tr>
         <tr><td class="info-lbl">5. Sistema valutazione:</td><td>Sistema 2+ — {ente}</td></tr>
         <tr><td class="info-lbl">6. Norma armonizzata:</td><td>UNI EN 1090-1 — Certificato n. {cert_num}</td></tr>
+        <tr><td class="info-lbl">Classe di esecuzione:</td><td>{classe_exec}</td></tr>
+        <tr><td class="info-lbl">Redatto da:</td><td>{redatto_da}</td></tr>
     </table>
     <div class="section-title">7. Prestazione Dichiarata — EN 1090-2:2024 Appendice B6, B8</div>
     <table class="main">
