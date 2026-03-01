@@ -475,24 +475,30 @@ def generate_cl_pdf(
     tipo_label = tipo_labels.get(tipo, tipo.upper())
 
     commessa_numero = commessa.get("numero", "N/D")
-    cantiere = commessa.get("cantiere", {})
+    cantiere = commessa.get("cantiere") or {}
     cantiere_str = f"{cantiere.get('indirizzo', '')} - {cantiere.get('citta', '')}" if cantiere else ""
 
     company_name = company.get("business_name", "")
     company_address = f"{company.get('address', '')}, {company.get('city', '')} ({company.get('province', '')})"
-    company_piva = company.get("vat_number", "")
+    company_piva = company.get("vat_number", "") or company.get("partita_iva", "")
     company_phone = company.get("phone", "")
     company_email = company.get("email", "")
 
     logo_html = ""
     logo_url = company.get("logo_url", "")
-    if logo_url and logo_url.startswith("data:image"):
+    if logo_url and (logo_url.startswith("data:image") or logo_url.startswith("http")):
         logo_html = f'<img src="{logo_url}" class="logo" style="max-width: 140px; max-height: 55px; margin-bottom: 6px;" />'
 
+    # Safe date formatting — handles str, datetime, None
     try:
-        dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-        data_fmt = dt.strftime("%d/%m/%Y")
-    except (ValueError, AttributeError):
+        if isinstance(created_at, datetime):
+            data_fmt = created_at.strftime("%d/%m/%Y")
+        elif isinstance(created_at, str) and created_at:
+            dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+            data_fmt = dt.strftime("%d/%m/%Y")
+        else:
+            data_fmt = datetime.now().strftime("%d/%m/%Y")
+    except (ValueError, AttributeError, TypeError):
         data_fmt = datetime.now().strftime("%d/%m/%Y")
 
     # Build rows
