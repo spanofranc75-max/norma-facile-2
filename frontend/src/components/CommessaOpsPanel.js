@@ -440,21 +440,17 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
             const matches = res.risultati_match || [];
             const nProfili = res.profili_trovati || 0;
             
-            // Show results per profile
-            const corrente = matches.filter(r => r.tipo === 'commessa_corrente');
-            const altre = matches.filter(r => r.tipo === 'altra_commessa');
-            const archivio = matches.filter(r => r.tipo === 'archivio');
-            
-            if (corrente.length > 0) {
-                toast.success(`${corrente.map(p => p.dimensioni).join(', ')} → assegnato a questa commessa (+ CAM auto)`, { duration: 6000 });
-            }
-            if (altre.length > 0) {
-                toast.info(`${altre.map(p => `${p.dimensioni} → ${p.commessa_numero || p.commessa_id}`).join(' | ')} — certificato copiato automaticamente`, { duration: 8000 });
-            }
-            if (archivio.length > 0) {
-                toast.warning(`${archivio.map(p => p.dimensioni).join(', ')} → archiviato (nessuna commessa trovata)`, { duration: 6000 });
-            }
-            if (nProfili === 0) {
+            if (nProfili > 0) {
+                const profiliNames = matches.map(p => p.dimensioni || p.qualita_acciaio || 'profilo').join(', ');
+                const camCount = matches.filter(r => r.cam_lotto_id).length;
+                const batchCount = matches.filter(r => r.batch_id).length;
+                toast.success(
+                    `${nProfili} profili trovati: ${profiliNames} → assegnati a questa commessa` +
+                    (camCount > 0 ? ` (${camCount} lotti CAM creati)` : '') +
+                    (batchCount > 0 ? ` (${batchCount} batch tracciabilità)` : ''),
+                    { duration: 6000 }
+                );
+            } else {
                 toast.info(`Fornitore: ${m?.fornitore || '?'} — nessun profilo specifico trovato`, { duration: 4000 });
             }
             
