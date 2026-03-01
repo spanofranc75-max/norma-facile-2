@@ -960,22 +960,44 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                     <Button size="sm" variant="outline" onClick={() => setClOpen(true)} className="text-xs" data-testid="btn-new-cl">
                         <Plus className="h-3 w-3 mr-1" /> Nuovo C/L
                     </Button>
-                    {cl.map(c => (
+                    {cl.map(c => {
+                        const pesoInviato = (c.righe || []).reduce((s, r) => s + (parseFloat(r.peso_kg) || 0), 0);
+                        return (
                         <div key={c.cl_id} className="p-2.5 bg-slate-50 rounded border text-xs space-y-1.5" data-testid={`cl-${c.cl_id}`}>
                             <div className="flex items-center gap-2">
                                 <Paintbrush className="h-3.5 w-3.5 text-purple-500 shrink-0" />
-                                <span className="font-semibold flex-1 truncate capitalize">{c.tipo} → {c.fornitore_nome}</span>
+                                <span className="font-semibold flex-1 truncate capitalize">{c.tipo} &rarr; {c.fornitore_nome}</span>
                                 <StatoBadge stato={c.stato} />
+                                {c.esito_qc && c.stato !== 'da_inviare' && (
+                                    <Badge className={`text-[8px] ${c.esito_qc === 'conforme' ? 'bg-emerald-100 text-emerald-700' : c.esito_qc === 'non_conforme' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                                        QC: {(c.esito_qc || '').replace(/_/g,' ')}
+                                    </Badge>
+                                )}
                                 {c.stato_email === 'inviata' && <Badge className="bg-green-100 text-green-700 text-[8px]"><MailCheck className="h-2.5 w-2.5 mr-0.5" />Email</Badge>}
                             </div>
                             {c.ral && <div className="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded inline-block">RAL: {c.ral}</div>}
-                            {(c.righe || []).length > 0 && <div className="text-[10px] text-slate-500">{c.righe.length} materiali — {c.righe.reduce((sum, r) => sum + (parseFloat(r.peso_kg) || 0), 0).toFixed(1)} kg</div>}
+                            {(c.righe || []).length > 0 && <div className="text-[10px] text-slate-500">{c.righe.length} materiali &mdash; {pesoInviato.toFixed(1)} kg inviati{c.peso_rientrato_kg ? ` / ${parseFloat(c.peso_rientrato_kg).toFixed(1)} kg rientrati` : ''}</div>}
+                            {c.ddt_fornitore_numero && <div className="text-[10px] text-slate-500">DDT Forn.: {c.ddt_fornitore_numero} del {c.ddt_fornitore_data || ''}</div>}
                             <div className="flex items-center gap-1 flex-wrap pt-1">
                                 {/* Status transition buttons */}
                                 {c.stato === 'da_inviare' && <Button size="sm" variant="ghost" className="h-6 text-[10px] text-blue-600" onClick={() => handleUpdateCL(c.cl_id, 'inviato')}>Invia</Button>}
                                 {c.stato === 'inviato' && <Button size="sm" variant="ghost" className="h-6 text-[10px] text-amber-600" onClick={() => handleUpdateCL(c.cl_id, 'in_lavorazione')}>In Lav.</Button>}
-                                {c.stato === 'in_lavorazione' && <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => handleUpdateCL(c.cl_id, 'rientrato')}>Rientrato</Button>}
-                                {c.stato === 'rientrato' && <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => handleUpdateCL(c.cl_id, 'verificato')}>Verifica</Button>}
+                                {(c.stato === 'inviato' || c.stato === 'in_lavorazione') && (
+                                    <Button size="sm" variant="default" className="h-6 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => openRientroModal(c)} data-testid={`cl-rientro-${c.cl_id}`}>
+                                        <Package className="h-3 w-3 mr-0.5" /> Registra Rientro
+                                    </Button>
+                                )}
+                                {c.stato === 'rientrato' && (
+                                    <Button size="sm" variant="default" className="h-6 text-[10px] bg-blue-600 hover:bg-blue-700 text-white" onClick={() => handleVerificaCL(c.cl_id)} data-testid={`cl-verifica-${c.cl_id}`}>
+                                        <CheckCircle2 className="h-3 w-3 mr-0.5" /> Verifica e Chiudi
+                                    </Button>
+                                )}
+                                {c.stato === 'verificato' && <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5"><CheckCircle2 className="h-3 w-3" /> Chiuso</span>}
+                                {c.esito_qc === 'non_conforme' && (
+                                    <Button size="sm" variant="ghost" className="h-6 text-[10px] text-red-600" onClick={() => handleDownloadNCR(c.cl_id)} data-testid={`cl-ncr-${c.cl_id}`}>
+                                        <AlertTriangle className="h-3 w-3 mr-0.5" /> NCR PDF
+                                    </Button>
+                                )}
                                 <div className="h-4 w-px bg-slate-200 mx-0.5" />
                                 {/* PDF Preview */}
                                 <Button size="sm" variant="ghost" className="h-6 text-[10px] text-blue-600" onClick={() => handlePreviewClPdf(c.cl_id)} data-testid={`cl-preview-${c.cl_id}`}>
@@ -988,7 +1010,8 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                 </Button>
                             </div>
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </Section>
 
