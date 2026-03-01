@@ -456,6 +456,14 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Logo nei PDF**: Tutti i PDF ora mostrano il logo aziendale nell'intestazione (se caricato).
 - Testing: 100% backend (15/15 - iteration_76)
 
+### Auto-compilazione Intelligente + Fascicolo Completo + Timeline (Phase 65 - Mar 2026)
+- **Auto-compilazione 70%**: Il GET `/api/fascicolo-tecnico/{cid}` ora restituisce `_auto_fields` (lista campi auto-compilati da preventivo/commessa) e `_timeline` (fasi produzione). I campi auto: client_name, commessa_numero, commessa_title, disegno_numero, disegno_riferimento, redatto_da, classe_esecuzione, materiale, profilato, materiali_saldabilita.
+- **Evidenziazione campi mancanti**: Frontend con `SmartField` — badge "AUTO" (verde) per campi auto-compilati, "DA COMPILARE" (ambra) per campi vuoti richiesti. Ogni card mostra indicatore completamento (es. "12/18") con bordo emerald/amber.
+- **Timeline Produzione**: Striscia visiva con segmenti colorati (verde=completato, blu=in_corso, grigio=da_fare) sincronizzata da `fasi_produzione` della commessa. Le date delle fasi produzione auto-compilano le date del Piano di Controllo.
+- **Genera Fascicolo Tecnico Completo**: Bottone "Genera Fascicolo Tecnico Completo" → dialog con checkboxes per selezionare documenti + bottoni "Tutti/Nessuno". Endpoint `GET /api/fascicolo-tecnico/{cid}/fascicolo-completo-pdf?docs=dop,ce,...` combina PDF selezionati con pypdf.
+- **Tempi di Consegna**: Nuovo campo `giorni_consegna` nel preventivo (es. 30 giorni) — mostrato nell'editor con input numerico.
+- Testing: 100% backend (18/18 - iteration_77), frontend verificato Playwright
+
 ## Issue Pendenti
 - **P2**: Radix UI Select/Popover dentro Dialog (workaround nativo attivo)
 - **P2**: Verifica utente parsing AI certificati (richiede test manuale dall'utente)
