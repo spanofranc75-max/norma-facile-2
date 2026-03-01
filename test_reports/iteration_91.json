@@ -1,0 +1,123 @@
+{
+  "summary": "Iteration 91: Complete testing of 'Audit & Non Conformità' module at /audit. Backend: 51/51 pytest tests passed (100%). Frontend: All 20 UI features verified successfully including KPI cards, tabs, audit/NC CRUD dialogs, search filtering, close/reopen NC flow, delete confirmations, and sidebar link.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_audit_nc_module.py",
+    "/app/test_reports/pytest/audit_nc_module_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "All data-testid attributes properly implemented for testing (audit-page, btn-add-audit, btn-add-nc, search-audit, audit-tabs, tab-audits, tab-ncs, audit-row-{id}, nc-row-{id}, audit-form-dialog, nc-form-dialog, nc-detail-dialog, delete-audit-dialog, delete-nc-dialog)",
+    "NC auto-numbering (NC-YYYY-NNN format) working correctly with year-based counter",
+    "days_open calculation correct for both open NCs (days since creation) and closed NCs (days between creation and closure)",
+    "Audit deletion correctly unlinks associated NCs (sets audit_id to null) without deleting them",
+    "KPI cards (NC Aperte, Audit Anno, Prossimo Audit, NC Chiuse) showing correct stats values",
+    "Status badges correctly implemented: Aperta (red), In Lavorazione (amber), Chiusa (green)",
+    "Priority badges correctly implemented: Alta (red), Media (amber), Bassa (gray)",
+    "Audit type badges working: Interno (blue), Ente Certificatore (purple), Cliente (teal)",
+    "Audit outcome badges working: Positivo (green), Negativo (red), Con Osservazioni (amber)",
+    "Close NC sets closure_date and closed_by from current user; Reopen NC clears these fields"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_audit_nc_module.py"
+  ],
+  "success_rate": {
+    "backend": "100% (51/51 pytest tests passed)",
+    "frontend": "100% (all 20 UI features verified)"
+  },
+  "test_credentials": {
+    "auth_token": "TGOMljLQmmdDakMy3F9zTH_X1-_w2HFsTfcSo8Kbq3Q",
+    "auth_method": "Bearer token OR session_token cookie"
+  },
+  "seed_data_creation": "Test data created and cleaned up during testing. Original seed data preserved: 2 audits (aud_test000001, aud_test000002) and 4 NCs (NC-2025-001, NC-2025-002, NC-2026-001, NC-2026-002).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Audit & NC module is fully functional. Key data-testids: audit-page, audit-stats-bar, audit-tabs, tab-audits, tab-ncs, search-audit, btn-add-audit, btn-add-nc, audit-row-{audit_id}, nc-row-{nc_id}, btn-edit-audit-{id}, btn-del-audit-{id}, btn-add-nc-audit-{id}, btn-close-nc-{id}, btn-reopen-nc-{id}, btn-view-nc-{id}, btn-del-nc-{id}, audit-form-dialog, nc-form-dialog, nc-detail-dialog, delete-audit-dialog, delete-nc-dialog. Seed data: 2 audits (1 interno con_osservazioni + 1 esterno_ente positivo), 4 NCs (2 aperte, 1 in_lavorazione, 1 chiusa). Stats: nc_open=2, audits_this_year=1, next_audit_date=2026-06-15, nc_closed=1.",
+  "features_verified": {
+    "backend_list_audits": "PASS - GET /api/audits returns list with stats (audits_this_year, nc_open, nc_closed, next_audit_date)",
+    "backend_audit_stats_values": "PASS - Stats match seeded data: 2 audits, 1 this year, next_audit=2026-06-15",
+    "backend_search_audits": "PASS - GET /api/audits?search=Marco filters by auditor/scope/notes",
+    "backend_create_audit": "PASS - POST /api/audits (multipart form with optional file upload)",
+    "backend_update_audit": "PASS - PUT /api/audits/{id} updates audit info",
+    "backend_delete_audit": "PASS - DELETE /api/audits/{id} unlinks NCs without deleting them",
+    "backend_list_ncs": "PASS - GET /api/ncs returns list with stats (aperte, in_lavorazione, chiuse, by priority)",
+    "backend_nc_stats_values": "PASS - Stats match seeded data: 4 total, 2 aperte, 1 in_lavorazione, 1 chiusa",
+    "backend_search_ncs": "PASS - GET /api/ncs?search=... filters by description/nc_number/cause/source",
+    "backend_filter_ncs_by_status": "PASS - GET /api/ncs?status=chiusa works",
+    "backend_filter_ncs_by_priority": "PASS - GET /api/ncs?priority=alta works",
+    "backend_create_standalone_nc": "PASS - POST /api/ncs creates NC not linked to audit",
+    "backend_create_nc_linked_to_audit": "PASS - POST /api/audits/{id}/ncs creates NC linked to audit",
+    "backend_nc_auto_numbering": "PASS - NC numbers follow NC-YYYY-NNN format",
+    "backend_days_open_calculation": "PASS - Correct calculation for open and closed NCs",
+    "backend_update_nc": "PASS - PUT /api/ncs/{id} updates cause, corrective_action, preventive_action, priority, status, notes",
+    "backend_close_nc": "PASS - PUT /api/ncs/{id}/close sets closure_date and closed_by",
+    "backend_reopen_nc": "PASS - PUT /api/ncs/{id}/reopen clears closure_date and closed_by, sets status=aperta",
+    "backend_delete_nc": "PASS - DELETE /api/ncs/{id} removes NC",
+    "backend_error_handling": "PASS - 404 for nonexistent resources, 400 for invalid operations, 422 for validation errors",
+    "frontend_page_load": "PASS - /audit loads with DashboardLayout, title 'Audit & Miglioramento'",
+    "frontend_kpi_cards": "PASS - 4 cards (NC Aperte, Audit Anno, Prossimo Audit, NC Chiuse) with correct icons and values",
+    "frontend_tabs": "PASS - 'Registro Audit' and 'Non Conformità' tabs switch content correctly",
+    "frontend_audit_table": "PASS - Shows audits with type/outcome badges, NC count, action buttons",
+    "frontend_nc_table": "PASS - Shows NCs with priority/status badges, days_open, action buttons",
+    "frontend_search_filter": "PASS - Single search input filters both audit and NC tabs",
+    "frontend_nuovo_audit_dialog": "PASS - Form with date, type, auditor, scope, outcome, next_audit_date, notes, file upload",
+    "frontend_modifica_audit_dialog": "PASS - Opens with pre-filled data, title 'Modifica Audit'",
+    "frontend_nuova_nc_dialog": "PASS - Form with date, description, source, priority",
+    "frontend_add_nc_from_audit_row": "PASS - Click triangle icon on audit row opens NC dialog linked to that audit",
+    "frontend_nc_detail_dialog": "PASS - Shows cause, corrective_action, preventive_action fields + Close/Reopen buttons",
+    "frontend_close_nc_button": "PASS - Close NC button visible for open NCs, triggers /close endpoint",
+    "frontend_reopen_nc_button": "PASS - Reopen NC button visible for closed NCs, triggers /reopen endpoint",
+    "frontend_delete_audit_dialog": "PASS - Confirmation dialog with warning about NC unlinking",
+    "frontend_delete_nc_dialog": "PASS - Confirmation dialog",
+    "frontend_sidebar_link": "PASS - 'Audit & NC' link under Certificazioni group in sidebar"
+  },
+  "tests_executed": [
+    {
+      "test_type": "Backend API (pytest)",
+      "file": "/app/backend/tests/test_audit_nc_module.py",
+      "results": "51 passed",
+      "test_classes": [
+        "TestAuditList (8 tests) - list, structure, stats, item structure, enum validation, search",
+        "TestAuditCRUD (7 tests) - create, read, update, verify persistence, delete",
+        "TestNCList (12 tests) - list, structure, stats, NC number format, enum validation, days_open, search, filters",
+        "TestNCCRUD (12 tests) - create standalone, auto-numbering, read, update details, close, close-already-closed, reopen, reopen-non-closed, delete",
+        "TestNCLinkedToAudit (5 tests) - create audit, create linked NC, audit shows nc_count, delete audit unlinks NCs",
+        "TestErrorHandling (8 tests) - 404 for nonexistent, 400 for invalid ops, 422 for validation"
+      ]
+    },
+    {
+      "test_type": "Frontend UI (Playwright)",
+      "results": "All 20 flows verified successfully",
+      "tests": [
+        "Page load with DashboardLayout",
+        "audit-page data-testid present",
+        "KPI cards (NC Aperte, Audit Anno, Prossimo Audit, NC Chiuse)",
+        "Tabs (Registro Audit, Non Conformità) switching",
+        "Audit table with type/outcome badges",
+        "NC table with priority/status badges and days_open",
+        "Search input filtering",
+        "Nuovo Audit dialog with all form fields",
+        "Modifica Audit dialog opens with pre-filled data",
+        "Nuova NC dialog with all form fields",
+        "Add NC from audit row (linked to audit)",
+        "NC detail dialog with cause/corrective/preventive fields",
+        "Close NC button (for open NCs)",
+        "Reopen NC button (for closed NCs)",
+        "Delete audit confirmation dialog",
+        "Delete NC confirmation dialog",
+        "Sidebar 'Audit & NC' link under Certificazioni",
+        "Create audit CRUD flow",
+        "Create NC CRUD flow",
+        "Cleanup test data"
+      ]
+    }
+  ]
+}
