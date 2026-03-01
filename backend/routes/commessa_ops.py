@@ -591,20 +591,29 @@ async def send_rdp_email_endpoint(cid: str, rdp_id: str, payload: dict = None, u
     filename = f"RdP_{rdp_id}.pdf"
     
     # Send email
-    from services.email_service import send_rdp_email
+    from services.email_service import send_rdp_email, send_email_with_attachment
+    payload = payload or {}
     num_righe = len(rdp.get("righe", []))
     commessa_numero = doc.get("numero", "N/D")
-    
-    success = await send_rdp_email(
-        to_email=to_email,
-        fornitore_name=fornitore_nome,
-        rdp_id=rdp_id,
-        commessa_numero=commessa_numero,
-        company_name=company_name,
-        num_righe=num_righe,
-        pdf_bytes=pdf_bytes,
-        filename=filename,
-    )
+
+    if payload.get("custom_subject") or payload.get("custom_body"):
+        custom_subject = payload.get("custom_subject") or f"Richiesta Preventivo {rdp_id} - Commessa {commessa_numero} - {company_name}"
+        custom_body = payload.get("custom_body") or ""
+        success = await send_email_with_attachment(
+            to_email=to_email, subject=custom_subject, body=custom_body,
+            pdf_bytes=pdf_bytes, filename=filename,
+        )
+    else:
+        success = await send_rdp_email(
+            to_email=to_email,
+            fornitore_name=fornitore_nome,
+            rdp_id=rdp_id,
+            commessa_numero=commessa_numero,
+            company_name=company_name,
+            num_righe=num_righe,
+            pdf_bytes=pdf_bytes,
+            filename=filename,
+        )
     
     if not success:
         raise HTTPException(500, "Invio email fallito. Verifica la configurazione Resend in Impostazioni.")
