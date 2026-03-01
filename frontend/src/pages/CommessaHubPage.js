@@ -73,6 +73,8 @@ export default function CommessaHubPage() {
     const [linkOpen, setLinkOpen] = useState(false);
     const [linkType, setLinkType] = useState('preventivo');
     const [linkId, setLinkId] = useState('');
+    const [availableModules, setAvailableModules] = useState([]);
+    const [loadingModules, setLoadingModules] = useState(false);
     const [eventNote, setEventNote] = useState('');
     const [confirmEvent, setConfirmEvent] = useState(null);
 
