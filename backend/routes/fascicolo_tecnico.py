@@ -271,6 +271,10 @@ async def get_fascicolo_data(cid: str, user: dict = Depends(get_current_user)):
             auto["classe_esecuzione"] = preventivo["classe_esecuzione"]
         if preventivo.get("giorni_consegna"):
             auto["giorni_consegna"] = preventivo["giorni_consegna"]
+    # Fallback: use commessa numero as disegno riferimento
+    if not auto.get("disegno_numero") and not ft.get("disegno_numero"):
+        auto["disegno_numero"] = commessa.get("numero", "")
+        auto["disegno_riferimento"] = commessa.get("numero", "")
     # Classe esecuzione fallback from settings
     if not auto.get("classe_esecuzione") and company.get("classe_esecuzione_default"):
         auto["classe_esecuzione"] = company["classe_esecuzione_default"]
