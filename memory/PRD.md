@@ -336,6 +336,13 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Backend aggiornato**: Tutti i 6 endpoint `send-email` (CL, RdP, OdA, Fattura, DDT, Preventivo) accettano `custom_subject` e `custom_body` opzionali
 - Testing: 100% backend (9/9), 100% frontend (iteration_65)
 
+### Fix Flusso Completo Fatturazione + Allega Modulo (Mar 2026)
+- **BUG CRITICO FIXATO: Fatturazione vuota** — Il filtro anno usava regex `-2026-` che non matchava `FT-2026/0001` (separatore `/`). Corretto a `-2026[-/]`
+- **BUG FIXATO: Fatture non collegate alla Commessa** — Quando si genera fattura progressiva dal preventivo, ora l'invoice viene auto-aggiunta a `moduli.fatture_ids` della commessa collegata
+- **BUG FIXATO: "Allega Modulo" non funzionava** — Il dialog richiedeva di digitare l'ID interno a mano. Rifatto con dropdown automatico: selezionando il tipo (Fattura, Preventivo, DDT...), carica la lista documenti dell'utente via nuovo endpoint `GET /api/commesse/{id}/available-modules`
+- **BUG FIXATO: Select dentro Dialog** — Sostituito Radix Select con native `<select>` nel dialog Allega Modulo
+- Dati reali fixati: collegate le 2 fatture progressive alla commessa nel DB
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
