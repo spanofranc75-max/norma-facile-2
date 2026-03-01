@@ -408,6 +408,30 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         setFaseComplOpen(false);
     };
 
+    const handleCreaConsegna = async () => {
+        setConsegnaLoading(true);
+        try {
+            const result = await apiRequest(`/commesse/${commessaId}/consegne`, { method: 'POST', body: { note: '', peso_kg: 0, num_colli: 1 } });
+            toast.success(result.message || 'Consegna creata');
+            fetchData(); onRefresh?.();
+        } catch (e) { toast.error(e.message); }
+        finally { setConsegnaLoading(false); }
+    };
+
+    const handleDownloadPacchetto = async (consegnaId) => {
+        try {
+            const res = await fetch(`${API}/api/commesse/${commessaId}/consegne/${consegnaId}/pacchetto-pdf`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+            });
+            if (!res.ok) throw new Error('Errore generazione pacchetto');
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = `Pacchetto_Consegna_${consegnaId}.pdf`; a.click();
+            URL.revokeObjectURL(url);
+            toast.success('Pacchetto DDT + DoP + CE scaricato');
+        } catch (e) { toast.error(e.message); }
+    };
+
     const handleCreateCL = async () => {
         if (clForm.righe.filter(r => r.descrizione.trim()).length === 0) {
             toast.error('Inserisci almeno una riga materiale'); return;
