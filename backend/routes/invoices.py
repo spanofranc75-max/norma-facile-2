@@ -805,7 +805,7 @@ async def send_invoice_email(invoice_id: str, payload: dict = None, user: dict =
 
 @router.post("/{invoice_id}/send-sdi")
 async def send_invoice_to_sdi(invoice_id: str, user: dict = Depends(get_current_user)):
-    """Generate FatturaPA XML and send to SDI via Aruba."""
+    """Sync invoice to Fatture in Cloud and send to SDI."""
     invoice = await db.invoices.find_one(
         {"invoice_id": invoice_id, "user_id": user["user_id"]}, {"_id": 0}
     )
@@ -818,68 +818,86 @@ async def send_invoice_to_sdi(invoice_id: str, user: dict = Depends(get_current_
     if invoice.get("status") == "bozza":
         raise HTTPException(400, "Non puoi inviare una bozza al SDI. Prima emetti il documento.")
 
-    client = await db.clients.find_one({"client_id": invoice.get("client_id")}, {"_id": 0})
-    if not client:
+    client_doc = await db.clients.find_one({"client_id": invoice.get("client_id")}, {"_id": 0})
+    if not client_doc:
         raise HTTPException(400, "Cliente non trovato")
 
     company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0})
     if not company or not company.get("partita_iva"):
         raise HTTPException(400, "Configura i dati aziendali (P.IVA obbligatoria) prima di inviare al SDI")
 
-    # Generate XML
-    from services.aruba_sdi import fatturapa_generator, send_invoice_to_sdi as _send_sdi
-    xml_content = fatturapa_generator.generate_xml(invoice, company, client)
-    piva = company.get("partita_iva", "").replace(" ", "")
-    doc_num = invoice.get("document_number", "").replace("-", "_").replace("/", "_")
-    filename = f"IT{piva}_{doc_num}.xml"
+    # Get Fatture in Cloud credentials from company settings
+    fic_token = company.get("fic_access_token")
+    fic_company_id = company.get("fic_company_id")
+    if not fic_token or not fic_company_id:
+        raise HTTPException(400, "Configura le credenziali Fatture in Cloud in Impostazioni → Integrazioni")
 
-    # Save XML on invoice
-    await db.invoices.update_one(
-        {"invoice_id": invoice_id},
-        {"$set": {"xml_fatturapa": xml_content, "xml_filename": filename}}
-    )
+    try:
+        from services.fattureincloud_api import get_fic_client, map_fattura_to_fic
+        fic = get_fic_client(access_token=fic_token, company_id=int(fic_company_id))
 
-    # Send to SDI via Aruba (reads credentials from DB company_settings)
-    result = await _send_sdi(xml_content, filename, user["user_id"])
+        # Map invoice to FIC format
+        fic_data = map_fattura_to_fic(invoice, client_doc)
 
-    if not result.get("success"):
-        raise HTTPException(500, f"Invio SDI fallito: {result.get('error', 'Errore sconosciuto')}")
+        # Create invoice on FIC
+        result = await fic.create_issued_invoice(fic_data)
+        fic_doc_id = result.get("data", {}).get("id")
 
-    # Update invoice status
-    await db.invoices.update_one(
-        {"invoice_id": invoice_id},
-        {"$set": {
-            "status": "inviata_sdi",
-            "sdi_id": result.get("sdi_id"),
-            "sdi_sent_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-        }}
-    )
+        if not fic_doc_id:
+            raise HTTPException(500, "Fatture in Cloud non ha restituito un ID documento")
 
-    logger.info(f"Invoice {doc_num} sent to SDI: {result.get('sdi_id')}")
-    return {"message": "Fattura inviata al SDI con successo", "sdi_id": result.get("sdi_id")}
+        # Send to SDI via FIC
+        sdi_result = await fic.send_to_sdi(fic_doc_id)
+
+        # Update invoice status
+        await db.invoices.update_one(
+            {"invoice_id": invoice_id},
+            {"$set": {
+                "status": "inviata_sdi",
+                "fic_document_id": fic_doc_id,
+                "sdi_sent_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }}
+        )
+
+        doc_num = invoice.get("document_number", "")
+        logger.info(f"Invoice {doc_num} synced to FIC (id={fic_doc_id}) and sent to SDI")
+        return {"message": "Fattura sincronizzata con Fatture in Cloud e inviata al SDI", "fic_document_id": fic_doc_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"FIC/SDI error: {e}")
+        raise HTTPException(500, f"Errore invio SDI via Fatture in Cloud: {str(e)}")
 
 
 @router.get("/{invoice_id}/stato-sdi")
 async def check_invoice_sdi_status(invoice_id: str, user: dict = Depends(get_current_user)):
-    """Check SDI status for a sent invoice."""
+    """Check SDI status for a sent invoice via Fatture in Cloud."""
     invoice = await db.invoices.find_one(
         {"invoice_id": invoice_id, "user_id": user["user_id"]}, {"_id": 0}
     )
     if not invoice:
         raise HTTPException(404, "Documento non trovato")
 
-    sdi_id = invoice.get("sdi_id")
-    if not sdi_id:
-        raise HTTPException(400, "Documento non ancora inviato al SDI")
+    fic_doc_id = invoice.get("fic_document_id")
+    if not fic_doc_id:
+        raise HTTPException(400, "Documento non ancora sincronizzato con Fatture in Cloud")
 
-    from services.aruba_sdi import check_sdi_status
-    result = await check_sdi_status(sdi_id, user["user_id"])
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    fic_token = company.get("fic_access_token") if company else None
+    fic_company_id = company.get("fic_company_id") if company else None
+    if not fic_token or not fic_company_id:
+        raise HTTPException(400, "Credenziali Fatture in Cloud non configurate")
 
-    if not result.get("success"):
-        raise HTTPException(500, f"Errore verifica stato: {result.get('error')}")
-
-    return {"sdi_id": sdi_id, "status_data": result.get("data")}
+    try:
+        from services.fattureincloud_api import get_fic_client
+        fic = get_fic_client(access_token=fic_token, company_id=int(fic_company_id))
+        result = await fic.get_sdi_status(int(fic_doc_id))
+        return {"fic_document_id": fic_doc_id, "status_data": result}
+    except Exception as e:
+        logger.error(f"FIC status check error: {e}")
+        raise HTTPException(500, f"Errore verifica stato: {str(e)}")
 
 
 
