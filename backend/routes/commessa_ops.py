@@ -981,6 +981,156 @@ async def update_conto_lavoro(cid: str, cl_id: str, data: ContoLavoroUpdate, use
     return {"message": f"Conto lavoro aggiornato: {data.stato}"}
 
 
+# ── RIENTRO CONTO LAVORO ──
+@router.post("/{cid}/conto-lavoro/{cl_id}/rientro")
+async def registra_rientro_cl(
+    cid: str, cl_id: str,
+    data_rientro: str = Form(""),
+    ddt_fornitore_numero: str = Form(""),
+    ddt_fornitore_data: str = Form(""),
+    peso_rientrato_kg: float = Form(0),
+    esito_qc: str = Form("conforme"),
+    note_rientro: str = Form(""),
+    motivo_non_conformita: str = Form(""),
+    certificato_file: Optional[UploadFile] = File(None),
+    user: dict = Depends(get_current_user),
+):
+    """Register material return from subcontractor with document upload."""
+    comm = await get_commessa_or_404(cid, user["user_id"])
+    cl_list = comm.get("conto_lavoro", [])
+    cl = next((c for c in cl_list if c["cl_id"] == cl_id), None)
+    if not cl:
+        raise HTTPException(404, "Conto Lavoro non trovato")
+    if cl.get("stato") not in ("inviato", "in_lavorazione"):
+        raise HTTPException(400, f"Stato attuale '{cl.get('stato')}' non consente il rientro")
+
+    if not data_rientro:
+        data_rientro = ts().strftime("%Y-%m-%d")
+
+    # Save uploaded certificate
+    cert_b64 = None
+    cert_filename = None
+    if certificato_file:
+        cert_bytes = await certificato_file.read()
+        cert_b64 = base64.b64encode(cert_bytes).decode("utf-8")
+        cert_filename = certificato_file.filename
+
+    upd = {
+        "conto_lavoro.$[elem].stato": "rientrato",
+        "conto_lavoro.$[elem].data_rientro": data_rientro,
+        "conto_lavoro.$[elem].ddt_fornitore_numero": ddt_fornitore_numero,
+        "conto_lavoro.$[elem].ddt_fornitore_data": ddt_fornitore_data,
+        "conto_lavoro.$[elem].peso_rientrato_kg": peso_rientrato_kg,
+        "conto_lavoro.$[elem].esito_qc": esito_qc,
+        "conto_lavoro.$[elem].note_rientro": note_rientro,
+        "conto_lavoro.$[elem].motivo_non_conformita": motivo_non_conformita if esito_qc == "non_conforme" else "",
+    }
+    if cert_b64:
+        upd["conto_lavoro.$[elem].certificato_rientro_base64"] = cert_b64
+        upd["conto_lavoro.$[elem].certificato_rientro_filename"] = cert_filename
+
+    await db[COLL].update_one(
+        {"commessa_id": cid},
+        {"$set": upd},
+        array_filters=[{"elem.cl_id": cl_id}],
+    )
+    await db[COLL].update_one(
+        {"commessa_id": cid},
+        push_event(cid, "CL_RIENTRATO", user, f"C/L {cl.get('tipo','')} rientrato — QC: {esito_qc}")
+    )
+    return {
+        "message": f"Rientro registrato — Esito QC: {esito_qc}",
+        "stato": "rientrato",
+        "esito_qc": esito_qc,
+    }
+
+
+# ── VERIFICA CONTO LAVORO (chiusura + automazioni) ──
+@router.patch("/{cid}/conto-lavoro/{cl_id}/verifica")
+async def verifica_cl(cid: str, cl_id: str, user: dict = Depends(get_current_user)):
+    """Verify returned material — closes C/L, updates production phase, links cert to fascicolo."""
+    comm = await get_commessa_or_404(cid, user["user_id"])
+    cl_list = comm.get("conto_lavoro", [])
+    cl = next((c for c in cl_list if c["cl_id"] == cl_id), None)
+    if not cl:
+        raise HTTPException(404, "Conto Lavoro non trovato")
+    if cl.get("stato") != "rientrato":
+        raise HTTPException(400, "Il C/L deve essere nello stato 'rientrato' per la verifica")
+
+    upd = {"conto_lavoro.$[elem].stato": "verificato"}
+    await db[COLL].update_one(
+        {"commessa_id": cid}, {"$set": upd},
+        array_filters=[{"elem.cl_id": cl_id}],
+    )
+
+    # Auto-complete related production phase (trattamenti superficiali)
+    tipo_cl = (cl.get("tipo") or "").lower()
+    fase_map = {
+        "verniciatura": "trattamenti superficiali",
+        "zincatura": "trattamenti superficiali",
+        "sabbiatura": "sabbiatura",
+        "galvanica": "trattamenti superficiali",
+    }
+    fase_target = fase_map.get(tipo_cl, "trattamenti superficiali")
+    fasi = comm.get("fasi_produzione", [])
+    for i, f in enumerate(fasi):
+        nome = (f.get("nome") or "").lower()
+        if fase_target in nome or tipo_cl in nome:
+            await db[COLL].update_one(
+                {"commessa_id": cid},
+                {"$set": {
+                    f"fasi_produzione.{i}.stato": "completata",
+                    f"fasi_produzione.{i}.progresso": 100,
+                    f"fasi_produzione.{i}.data_completamento": ts().isoformat(),
+                }},
+            )
+            break
+
+    # Link certificate to document repository (if uploaded)
+    cert_b64 = cl.get("certificato_rientro_base64")
+    if cert_b64:
+        doc_id = new_id("doc_")
+        doc_entry = {
+            "doc_id": doc_id,
+            "titolo": f"Certificato {cl.get('tipo','')} — {cl.get('fornitore_nome','')}",
+            "tipo": "certificato_fornitore",
+            "source": "conto_lavoro_rientro",
+            "cl_id": cl_id,
+            "uploaded_at": ts().isoformat(),
+            "filename": cl.get("certificato_rientro_filename", "certificato.pdf"),
+        }
+        await db[COLL].update_one(
+            {"commessa_id": cid},
+            {"$push": {"documenti": doc_entry}},
+        )
+
+    await db[COLL].update_one(
+        {"commessa_id": cid},
+        push_event(cid, "CL_VERIFICATO", user, f"C/L {cl.get('tipo','')} verificato e chiuso")
+    )
+    return {"message": "Conto lavoro verificato e chiuso", "stato": "verificato"}
+
+
+# ── NCR PDF (Non Conformity Report) ──
+@router.get("/{cid}/conto-lavoro/{cl_id}/ncr-pdf")
+async def generate_ncr_pdf(cid: str, cl_id: str, user: dict = Depends(get_current_user)):
+    """Generate Non-Conformity Report when QC fails."""
+    comm = await get_commessa_or_404(cid, user["user_id"])
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    cl_list = comm.get("conto_lavoro", [])
+    cl = next((c for c in cl_list if c["cl_id"] == cl_id), None)
+    if not cl:
+        raise HTTPException(404, "Conto Lavoro non trovato")
+
+    from services.pdf_ncr import generate_ncr_pdf as gen_ncr
+    pdf_buf = gen_ncr(company, comm, cl)
+    filename = f"NCR_{cl.get('tipo','')}_{cl_id}.pdf"
+    return StreamingResponse(
+        pdf_buf, media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 # ── DDT CONTO LAVORO: Preview PDF ──
 @router.get("/{cid}/conto-lavoro/{cl_id}/preview-pdf")
 async def preview_cl_pdf(cid: str, cl_id: str, user: dict = Depends(get_current_user)):
