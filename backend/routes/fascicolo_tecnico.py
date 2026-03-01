@@ -72,6 +72,17 @@ class FascicoloData(BaseModel):
     calibro_info: Optional[str] = ""
     oggetti_controllati: Optional[List[Dict[str, Any]]] = None
     note_vt: Optional[str] = ""
+    # Registro Saldatura
+    data_emissione: Optional[str] = ""
+    firma_cs: Optional[str] = ""
+    perc_vt: Optional[str] = "100"
+    perc_mt_pt: Optional[str] = "0"
+    perc_rx_ut: Optional[str] = "0"
+    saldature: Optional[List[Dict[str, Any]]] = None
+    # Riesame Tecnico
+    requisiti: Optional[List[Dict[str, Any]]] = None
+    itt: Optional[List[Dict[str, Any]]] = None
+    decisione: Optional[str] = "procedere"
 
 
 async def _get_commessa(cid: str, uid: str):
