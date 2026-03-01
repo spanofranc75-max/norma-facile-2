@@ -4,7 +4,7 @@ Integrates NormaCore engine for thermal compliance validation.
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from typing import Optional, List
 import uuid
 from datetime import datetime, timezone, date
