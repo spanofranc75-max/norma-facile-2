@@ -1503,33 +1503,44 @@ async def _match_profili_to_commesse(
         matched_commessa_id = None
         match_source = "nessuno"
 
-        # Try exact match first
-        if norm_dim and norm_dim in profilo_to_commesse:
-            matched_ids = profilo_to_commesse[norm_dim]
+        # Extract profile base from certificate (e.g. "IPE 100X55X4.1" → "IPE100")
+        cert_base = _extract_profile_base(dim)
+
+        # STEP A: Match by profile base (most reliable)
+        # "IPE100" from certificate matches "IPE100" extracted from OdA "Trave IPE 100 in S275 JR"
+        if cert_base and cert_base in base_to_commesse:
+            matched_ids = base_to_commesse[cert_base]
             if current_commessa_id in matched_ids:
                 matched_commessa_id = current_commessa_id
-                match_source = "ordine/richiesta"
+                match_source = f"profilo base {cert_base} (ordine/richiesta)"
             else:
                 matched_commessa_id = next(iter(matched_ids))
-                match_source = "ordine/richiesta altra commessa"
-        else:
-            # Try partial match: check if any profilo_to_commesse key contains our dim or vice versa
-            for norm_key, cids_set in profilo_to_commesse.items():
+                match_source = f"profilo base {cert_base} (altra commessa)"
+
+        # STEP B: Try exact normalized match (fallback)
+        if not matched_commessa_id and norm_dim and norm_dim in norm_to_commesse:
+            matched_ids = norm_to_commesse[norm_dim]
+            if current_commessa_id in matched_ids:
+                matched_commessa_id = current_commessa_id
+                match_source = "match esatto normalizzato"
+            else:
+                matched_commessa_id = next(iter(matched_ids))
+                match_source = "match esatto normalizzato (altra commessa)"
+
+        # STEP C: Try partial substring match (last resort before archive)
+        if not matched_commessa_id:
+            for norm_key, cids_set in norm_to_commesse.items():
                 if norm_dim and (norm_dim in norm_key or norm_key in norm_dim):
                     if current_commessa_id in cids_set:
                         matched_commessa_id = current_commessa_id
-                        match_source = "ordine/richiesta (parziale)"
+                        match_source = "match parziale"
                     else:
                         matched_commessa_id = next(iter(cids_set))
-                        match_source = "ordine/richiesta altra commessa (parziale)"
+                        match_source = "match parziale (altra commessa)"
                     break
 
-        # BUG FIX: Fallback to current commessa if no procurement match found.
-        # The user explicitly uploaded this certificate to this commessa.
-        # Profiles that match other commesse go there; unmatched ones stay HERE (not archive).
-        if not matched_commessa_id:
-            matched_commessa_id = current_commessa_id
-            match_source = "commessa corrente (nessun match OdA/RdP)"
+        # NO FALLBACK: if no match found, profile goes to archive
+        # This is by design — only profiles that match OdA/RdP/DDT belong to a commessa
 
         # Determine tipo
         if matched_commessa_id == current_commessa_id:
@@ -1539,7 +1550,7 @@ async def _match_profili_to_commesse(
         else:
             tipo = "archivio"
 
-        logger.info(f"Profile '{dim}' (colata={colata}): tipo={tipo}, match={match_source}, commessa={matched_commessa_id}")
+        logger.info(f"Profile '{dim}' base='{cert_base}' (colata={colata}): tipo={tipo}, match={match_source}, commessa={matched_commessa_id or 'ARCHIVIO'}")
 
         # Get commessa info
         comm_info = next((c for c in all_commesse if c["commessa_id"] == matched_commessa_id), {})
