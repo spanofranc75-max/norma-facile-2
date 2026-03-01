@@ -1,179 +1,196 @@
 <analysis>**original_problem_statement:**
 The user wants to build a comprehensive SaaS application named Norma Facile 2.0 for Italian metalworkers (Fabbri). The application functions as a CRM, compliance, and operational management tool, architected around a central Commessa (Job Order) entity.
 
-The main requirements include:
+PRODUCT REQUIREMENTS:
 *   A Commessa-centric architecture where the Job Order is the single source of truth.
-*   Complete operational workflows: supplier quote requests (RdP), purchase orders (OdA), production tracking, subcontracting, and a central document repository.
-*   AI-powered parsing of material certificates (e.g., certificati 3.1) using GPT-4o Vision to automatically extract key data like heat number, supplier, material quality, etc.
-*   **A new, critical requirement**: Implement a module for CAM (Criteri Ambientali Minimi - Minimum Environmental Criteria) compliance. This involves tracking the percentage of recycled material for each batch of steel, calculating the total recycled content for a project, and automatically generating a CAM compliance declaration. This is envisioned as a premium feature. The AI OCR should be enhanced to extract this recycled content percentage directly from certificates.
+*   Complete operational workflows: supplier quote requests (RdP), purchase orders (OdA), production tracking, subcontracting (Conto Lavoro), and a central document repository.
+*   AI-powered parsing of material certificates (e.g., certificati 3.1) using GPT-4o Vision to automatically extract key data and match it to the correct job order.
+*   A module for CAM (Minimum Environmental Criteria) compliance, involving tracking recycled material percentages and generating declarations.
+*   Generation of professional PDF documents (DDT, OdA, RdP, etc.), which must be structurally identical to user-provided examples and allow for editing of non-automated fields.
+*   An enhancement to the CAM module to calculate CO2 savings.
+*   A workflow for managing invoices from draft to submission to the Italian SDI, using **Fatture in Cloud**.
+*   A Fascicolo Tecnico (Technical Dossier) module for generating all compliance documents required by EN 1090, with near-total auto-compilation from data across the application. This includes a combined PDF generation feature.
+*   Additional compliance fields for job orders (, , ).
+*   A digital signature upload feature for embedding signatures into generated PDFs.
+*   A compliance dashboard to provide a high-level overview of job order status.
 
 **User's preferred language**: Italian. The user communicates exclusively in Italian. The next agent **MUST** respond in Italian.
 
 **what currently exists?**
-A full-stack application (React/FastAPI/MongoDB) with a Commessa-centric architecture. The  serves as the central UI for managing a job order's lifecycle.
-
-Key functionalities implemented:
-*   **Advanced Procurement:** The Request for Quote (RdP) and Purchase Order (OdA) forms have been upgraded from simple text fields to detailed, multi-row tables allowing for itemized entries (description, quantity, price, etc.).
-*   **Automated Supplier Selection:** A reusable, searchable  component was created and integrated into all relevant forms (procurement, inventory) to allow users to select from the existing supplier directory, reducing manual entry.
-*   **PDF & Email Workflow:** A complete Preview PDF - Email workflow was implemented for procurement documents (RdP, OdA). This includes generating a professional, standardized PDF (with company logo and a user-specified layout) and tracking the email status with visual indicators (green for sent, red for draft).
-*   **Intelligent Material Arrival:** The system for logging incoming materials was enhanced. It can now process a single supplier delivery that contains materials for multiple job orders and provides a UI to link uploaded compliance certificates to specific material lines.
-*   **Create Order from Quote:** A workflow was added to allow users to create a Purchase Order (OdA) directly from an accepted Request for Quote (RdP), automatically pre-filling all the line items.
-*   **Material Traceability Dashboard:** A new Tracciabilità Materiali section was added to the Commessa Hub, which displays a consolidated list of all materials used in a job and the key data extracted from their associated certificates (e.g., heat number, quality).
-*   **AI OCR PDF Fix:** A critical bug was fixed where the AI certificate parser failed on PDF files. The solution was to implement a backend service that converts the PDF to an image ( library) before sending it to the GPT-4o Vision API.
+A full-stack React/FastAPI/MongoDB application. The core functionalities for procurement, AI certificate parsing, and basic document generation are in place. The main focus of recent sessions has been the Fascicolo Tecnico (EN 1090) feature, which is now highly advanced. It includes aggressive auto-compilation for six different compliance documents (DOP, CE, Control Plan, etc.), pulling data from Job Orders, Quotes, and Company Settings. The system now supports digital signature uploads, a combined Full Dossier PDF generation, a compliance dashboard widget, and an Acciaieria (Steel Mill) field for material traceability. A long-standing UI bug with dropdowns in modals has also been fixed.
 
 **Last working item**:
-- **Last item agent was working:** The user introduced a major new requirement to build a CAM (Criteri Ambientali Minimi) compliance module. The agent performed initial web research to understand the regulations, acknowledged the user's detailed plan, and began structuring the implementation.
+- **Last item agent was working:** The user reported that despite the extensive auto-compilation work, some fields in the Etichetta CE (CE Label) and other modules were still marked as DA COMPILARE (To be filled). The agent acknowledged the issue and was about to start making the auto-compilation logic even more aggressive to cover all possible fields across all six Fascicolo Tecnico documents.
 - **Status:** IN PROGRESS
 - **Agent Testing Done:** N
-- **Which testing method agent to use?** both. Backend testing is needed for the new CAM data models, recycled content calculations, and PDF declaration generation. Frontend testing is needed for the new UI fields in the materials database and the workflow for generating the CAM report.
+- **Which testing method agent to use?** both. The backend logic in  needs to be updated to populate more fields automatically and correctly track them in the  metadata. The frontend () must then correctly render these fields as auto-populated. The testing agent is required to verify this complex logic across all PDF modules.
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-*   **Issue 1: (P0) Implement CAM (Criteri Ambientali Minimi) Module:** This is the highest priority feature request. It's a significant value-add that turns the app into a compliance platform.
-    *   **Attempted fixes:** None. The agent was in the initial planning and investigation stage.
-    *   **Next debug checklist:**
-        *   **Backend:**
-            1.  Modify the  model (in  or a new ) to include CAM-specific fields:  (recycled %),  (e.g., EPD, ReMade in Italy), and  (distance, optional).
-            2.  Enhance the  service to have the AI OCR extract the recycled content percentage and certification type from uploaded certificates.
-            3.  Create a new API endpoint (e.g., ) to calculate the total recycled mass for a job order and generate the official CAM declaration as a PDF.
-            4.  Build a new PDF generation service/template for the CAM declaration document.
-        *   **Frontend:**
-            1.  Update the material management UI to display and edit the new CAM fields for each material batch.
-            2.  Update the certificate upload/analysis UI in  to display the extracted CAM data alongside other metadata.
-            3.  Add a button in the  to trigger the generation and download of the CAM Declaration PDF.
-    *   **Why fix this issue and what will be achieved with the fix?** This feature will provide a strong competitive advantage for users bidding on public contracts by automating a complex and error-prone compliance requirement.
-    *   **Status:** NOT STARTED
-    *   **Is recurring issue?** N
-    *   **Should Test frontend/backend/both after fix?** Both.
-    *   **Blocked on other issue:** None.
+- **Issue 1: (P0) Complete the Aggressive Auto-compilation.**
+- **Issue 2: (P1) AI Certificate Parsing Logic Verification.**
+- **Issue 3: (P2) Holistic End-to-End Flow Cohesion.**
+- **Issue 4: (P3) Recurring PDF Preview Bug for Conto Lavoro.**
+
+**Issues Detail:**
+- **Issue 1: Complete the Aggressive Auto-compilation**
+    - **Attempted fixes:** The agent implemented several rounds of auto-compilation, pulling data from , , and . However, the user's latest feedback indicates it's still incomplete.
+    - **Next debug checklist:**
+        1.  Analyze the user's last screenshot and message ().
+        2.  Review , specifically the  function and the main  endpoint.
+        3.  Identify every field in the CE Label and other PDF templates that can be sourced from existing data but is not currently being auto-filled.
+        4.  Update the logic to populate these fields and add them to the  list returned to the frontend.
+        5.  Run the testing agent to confirm that the UI correctly reflects the changes and shows fewer DA COMPILARE fields.
+    - **Why fix this issue and what will be achieved with the fix?** This is the user's top priority. Completing this will fulfill the core promise of the Fascicolo Tecnico feature: nearly zero manual data entry for compliance documents.
+    - **Status:** IN PROGRESS
+    - **Is recurring issue?** Y
+    - **Should Test frontend/backend/both after fix?** Both.
+    - **Blocked on other issue:** None.
+
+- **Issue 2: AI Certificate Parsing Logic Verification**
+    - **Attempted fixes:** The matching logic was rewritten to use a robust base profile extraction method. This fix is believed to be correct but awaits formal user validation.
+    - **Next debug checklist:** Prompt the user to test the certificate upload flow again on a clean  and verify that material traceability is now 100% accurate.
+    - **Why fix this issue and what will be achieved with the fix?** This was a critical bug. User confirmation is needed to close this chapter and restore confidence in the AI feature.
+    - **Status:** USER VERIFICATION PENDING
+    - **Is recurring issue?** Y
+    - **Should Test frontend/backend/both after fix?** Backend.
+    - **Blocked on other issue:** None.
+
+- **Issue 3: Holistic End-to-End Flow Cohesion**
+    - **Attempted fixes:** None beyond individual bug fixes.
+    - **Next debug checklist:** Once P0 and P1 issues are resolved, propose a full, manual end-to-end test of the entire application workflow to the user.
+    - **Why fix this issue and what will be achieved with the fix?** To ensure the application feels like a cohesive product, not a collection of disconnected features.
+    - **Status:** NOT STARTED
+    - **Is recurring issue?** Y
+    - **Should Test frontend/backend/both after fix?** Both.
+    - **Blocked on other issue:** Issue 1, Issue 2.
+
+- **Issue 4: Recurring PDF Preview Bug for Conto Lavoro**
+    - **Attempted fixes:** The agent investigated the code in  and concluded it looked correct, but no test was performed.
+    - **Next debug checklist:** Ask the user to re-verify if the preview for Conto Lavoro PDFs is still failing. If it is, debug  in  again, focusing on how the  URL is handled.
+    - **Why fix this issue and what will be achieved with the fix?** To resolve a long-standing UI annoyance in the subcontracting workflow.
+    - **Status:** NOT STARTED
+    - **Is recurring issue?** Y
+    - **Should Test frontend/backend/both after fix?** Frontend.
+    - **Blocked on other issue:** None.
 
 **In progress Task List**:
-*   **Task 1: CAM (Criteri Ambientali Minimi) Module Implementation**
-    *   **Where to resume:** Begin implementation by modifying the backend data models and enhancing the AI certificate parser as outlined in the checklist above. The agent had just created  and .
-    *   **What will be achieved with this?** A complete, automated compliance module for CAM.
-    *   **Status:** IN PROGRESS
-    *   **Should Test frontend/backend/both after fix?** Both.
-    *   **Blocked on something:** None.
+- **Task 1: (P0) Implement Aggressive Auto-compilation**
+    - **Where to resume:** .
+    - **What will be achieved with this?** A near-fully automated EN 1090 document generation system, addressing the user's primary request.
+    - **Status:** IN PROGRESS
+    - **Should Test frontend/backend/both after fix?** Both.
+    - **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
-*   **P0: Finalize EBITDA Dashboard:** Implement backend financial calculations for the  endpoint and connect them to charts on the .
-*   **P1: Finalize PDF Preview Modal:** Fully integrate and verify the  component for all remaining document types (Invoices, DDTs, Quotes).
-*   **P1: Activate SDI Integration:** Get final API keys from the user for Aruba SDI / FattureInCloud and activate the  function.
+*   **P1: User Verification for Fatture in Cloud SDI Integration:** Guide the user to enter their credentials and test the e-invoicing flow.
+*   **P2: Data Seeding/Migration Strategy:** The user asked about recovering data. Propose a simple seeding script to populate new environments with test data.
+*   **P3: Further Enhancements to Document Repository:** The current repository UI is functional but could be improved with more advanced search, sorting, and bulk actions.
 
 **Future Tasks:**
-*   **Technical:**
-    *   Export cutting list (distinta di taglio) as CSV for CNC machines.
-    *   Implement versioning for invoices and technical dossiers.
-    *   Improve PWA for offline mode.
-    *   Migrate Base64 certificate storage to a dedicated object storage solution.
-    *   Add a SOSPESA (Suspended) state for job orders.
-*   **Features:**
-    *   Extend Distinta Facile for more complex products (e.g., sliding gates).
-    *   Add GATES category to the price list.
-    *   Data migration for EN 13241 compliance.
-    *   Stripe integration for payments.
+*   Implement PWA for offline mode.
+*   Migrate Base64 certificate storage to a dedicated object storage solution.
+*   Export cutting list (distinta di taglio) as CSV for CNC machines.
+*   Implement versioning for invoices and technical dossiers.
+*   Add a SOSPESA (Suspended) state for job orders.
+*   Stripe integration for payments.
 
 **Completed work in this session**
-- **Feature: Detailed Procurement Forms & Workflow:** Reworked the RdP and OdA forms to support detailed line items. Implemented a full workflow: Create RdP -> Accept RdP -> Create OdA from RdP -> Add Prices -> Preview PDF -> Send Email.
-- **Feature: Reusable Supplier Combobox:** Created and integrated a searchable  component for selecting suppliers across the application, improving UX and data consistency.
-- **Feature: Standardized PDF Generation:** Implemented a new, professional PDF template (based on user design) for all outgoing procurement documents, including company logo and dynamic content.
-- **Feature: Advanced Material Arrival & Certificate Linking:** Built the UI and backend logic to register incoming materials (even when a single delivery covers multiple orders) and to link uploaded certificates to specific material lines.
-- **Feature: Material Traceability Section:** Added a new dashboard panel to the Commessa Hub that provides a clear overview of all materials used in a project and the data extracted from their compliance certificates.
-- **Bug Fix: AI OCR on PDF Files:** Resolved a critical bug where the AI parser failed on PDFs. The fix involved converting the PDF to an image on the backend before calling the GPT-4o Vision API.
-- **Bug Fix: Network Error on Commessa Hub:** Diagnosed and fixed a generic Network Error that was caused by the AI OCR bug.
-- **Testing:** The  was used extensively after each major feature implementation, successfully identifying and helping to fix several bugs, resulting in 100% pass rates.
+- **Feature (Aggressive Auto-compilation V1):** Implemented a massive auto-population system for all Fascicolo Tecnico documents, pulling data from , , and . This includes a system to track and display auto-filled fields in the UI.
+- **Feature (Firma Digitale):** Added a feature for users to upload a signature image in settings and have it automatically embedded in all generated PDFs.
+- **Feature (Combined PDF Generation):** Created an endpoint and UI to generate a single, combined PDF containing all selected Fascicolo Tecnico documents.
+- **Feature (Compliance Dashboard):** Created a new backend endpoint and frontend widget to display high-level compliance statistics on the main dashboard.
+- **Feature (Acciaieria Field):** Added an Acciaieria (Steel Mill) field to material batches, including a backend PATCH endpoint and a frontend inline-editing UI.
+- **Bug Fix (Radix UI Dropdown):** Fixed the recurring bug where dropdowns inside modals were unclickable by preventing pointer event propagation.
+- **Refactoring:** Extracted the complex Fascicolo Tecnico UI into a dedicated  component, improving the maintainability of .
+- **Feature Enhancement (Document Repository):** Added document type filters to the repository UI.
 
 **Earlier issues found/mentioned but not fixed**
-*   **UX issue on disabled button:** The user reported that the Emetti Ordine (Issue Order) button was disabled. The agent found this was correct behavior (the line item description was empty), but it highlights a minor UX friction point where the user isn't clearly notified why an action is blocked. This could be improved with a tooltip or clearer field validation message.
+*   **Conto Lavoro PDF Preview:** This recurring bug was investigated, but its resolution was not verified. It remains pending user confirmation or further debugging.
 
 **Known issue recurrence from previous fork**
-None.
+- **Issue recurrence:** The  dependency was missing, causing PDF parsing errors.
+- **Recurrence count:** 2
+- **Status:** RESOLVED (for this session). This may reappear in future forks.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-*   **AI-Powered OCR for Compliance:** Using GPT-4o Vision to extract structured data (heat number, quality, and soon, recycled content %) from unstructured documents (certificates) for EN 1090 and CAM compliance.
-*   **Backend PDF Preprocessing:** Using the  library to convert PDF files into images, enabling compatibility with image-only AI Vision APIs.
-*   **Complex Dynamic Forms:** Managing React state for UI with dynamically added/removed line items (e.g., the tables in RdP/OdA dialogs).
-*   **Backend PDF Generation:** Using WeasyPrint and Jinja2 templates to create highly-styled, data-driven PDF documents.
-*   **Component-based Refactoring:** Identifying monolithic components like  as candidates for being broken down into smaller, more focused child components.
+*   **Aggressive Auto-Compilation:** Using a central function () to gather data from disparate models (, , , ) to pre-fill complex documents, and returning metadata () to drive the UI state.
+*   **Dynamic PDF Composition:** Generating a single, combined PDF from multiple, selectable sub-documents using .
+*   **Data-Driven UI State:** Using backend-provided metadata to dynamically render UI elements like completion badges () and highlighting fields that need user input.
+*   **DOM Event Interception Fix:** Solving a /portal conflict in a UI library by preventing default event propagation on .
+*   **Inline Editing:** Implementing a simple but effective inline edit feature for the Acciaieria field that triggers an API call on blur.
 
 **key DB schema**
-*   **commesse:** The  array items were updated to include  (line items) and . A new  array was added to store detailed material arrival records.
-*   **preventivi:** Modified to include a  field (e.g., EN 1090).
-*   **material_batches (in  collection):** To be modified to include  and .
-
-**changes in tech stack**
-*   The pre-installed  library was utilized to fix the AI OCR workflow for PDF files. No new dependencies were installed.
+- **impostazioni:** Added , , , , .
+- **preventivi:** Added , .
+- **material_batches:** Added .
 
 **All files of reference**
-*   **New/Modified Backend:** , , , 
-*   **New/Modified Frontend:** , , 
+*   **Core Logic:** , 
+*   **Core UI:** 
+*   **Models & Settings:** , , 
+*   **Settings UI:** 
+*   **Quote UI:** 
+*   **Dashboard:** , 
 
 **Areas that need refactoring**:
-*   The  component has become a monolith (over 1000 lines), managing the state and UI for procurement, production, subcontracting, arrivals, and traceability. It should be refactored by breaking out each tab's functionality into its own dedicated component to improve maintainability.
-*   The long-term plan to migrate Base64 file storage in MongoDB to a dedicated object storage solution remains.
+*    is becoming very large. The individual PDF generation functions and the complex  logic could be broken down into smaller, more manageable helper modules.
+*    is also very large. The timeline visualization and the document card grid could be extracted into their own sub-components.
 
 **key api endpoints**
-*   
-*   
-*   
-*   
-*   
-*   
-*   
+*   : Returns rich data for the entire Fascicolo Tecnico UI, including auto-filled values and completion metadata.
+*   : Generates a single combined PDF of selected documents.
+*   : Provides data for the new compliance widget.
+*   : Updates a single material batch (used for inline editing of Acciaieria).
 
 **Critical Info for New Agent**
 *   **MUST respond in Italian.**
-*   The top priority is to build the **CAM (Criteri Ambientali Minimi) module**. The user has provided very specific and valuable business logic for this. This feature is the next major step for the application.
-*   The AI certificate parser in  now correctly handles PDFs by converting them to images first. This pattern is crucial for any future file-based AI analysis.
-*   The  component is very large and complex. Be mindful when making changes, and consider it a prime candidate for refactoring if time permits.
-*   The user is highly engaged and provides detailed feedback, including UI layouts and specific workflows. Adhering closely to their requests is key to success.
+*   The absolute highest priority is to **complete the auto-compilation feature**. The user wants the application to fill in *every possible field* in the Fascicolo Tecnico documents automatically. Your first task is to analyze the user's last message () and update the backend logic in  to be more aggressive in finding and populating data.
+*   The user is testing the application in parallel. Ensure all changes are robust and well-tested before finishing. Use the testing agent extensively.
+*   The AI certificate parsing logic, while believed to be fixed, still needs explicit user verification. Prompt the user for this after you've addressed the auto-compilation task.
 
 **documents and test reports created in this job**
-*   /app/memory/PRD.md (Updated multiple times)
-*   /app/test_reports/iteration_9.json
-*   /app/test_reports/iteration_10.json
-*   /app/test_reports/iteration_11.json
-*   /app/test_reports/iteration_12.json
-*   /app/test_reports/iteration_13.json
-*   /app/test_reports/iteration_14.json
-*   /app/test_reports/iteration_15.json
+*    (updated multiple times)
+*   Test reports up to  (Note: iteration number has been reset in this long session)
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **User:** Describes the need to implement CAM (Criteri Ambientali Minimi) compliance, detailing how it should work, from data capture to automated report generation. (IN PROGRESS)
-9.  **User:** Reports a network error on the Commessa Hub page. (COMPLETED - Bug was fixed)
-8.  **User:** Asks where the AI data extraction (magic) happens after uploading a certificate. (COMPLETED - Led to UI/UX improvements and the Traceability section).
-7.  **User:** Provides a specific PDF layout and requests that all outgoing documents follow this format. (COMPLETED)
-6.  **User:** Accepts the suggestion to add a UI for linking certificates to materials with AI OCR. Also requests that Purchase Orders be pre-filled from accepted Quote Requests. (COMPLETED)
-5.  **User:** Points out that the Issue Order button is blocked and that PDFs should include the company logo. Suggests a complex workflow for handling material arrivals where one supplier delivery may cover multiple job orders, and certificates need to be intelligently matched. Also suggests adding a Normativa (e.g., EN 1090) field to quotes. (COMPLETED)
-4.  **User:** Requests a PDF preview before sending any document via email, and a visual status indicator (green/red) to show if an email has been sent. (COMPLETED)
-3.  **User:** Explains that for Purchase Orders (OdA) and Quote Requests (RdP), the line items are manual, as they break down a larger quoted item (e.g., iron staircase) into raw materials (pipes, plates). (COMPLETED - Implemented manual line items).
-2.  **User:** Points out that the current Quote Request (RdP) form is too simple and needs detailed line items (description, quantity, certificate requirement). (COMPLETED)
-1.  **User:** Approves the plan to implement supplier auto-population and asks the agent to find other areas where this could be applied. (COMPLETED)
+10. **(PENDING)** User points out that Etichetta CE and other modules still have fields to be filled manually, requesting the agent to make the auto-compilation more aggressive for ALL modules.
+9. User asks for massive auto-compilation on the DOP, providing specific sources for each field (client from quote, company from settings, resilience from tables, DDT with auto-suffix).
+8. Agent confirms it will fix the Radix dropdown bug, build the document repository, and create a compliance dashboard.
+7. User confirms that the production phases in the  can be used for the control plan timeline.
+6. User asks for smart auto-compilation (70% auto, 30% editable with highlighting), a timeline in the Piano di Controllo based on delivery dates, and a button to generate the complete technical dossier.
+5. User provides extensive details on how the Fascicolo Tecnico documents should be populated automatically from  and .
+4. Agent asks clarifying questions about the new fields.
+3. User asks the agent to proceed with implementing Fascicolo Tecnico.
+2. Agent provides plan to implement editable PDFs.
+1. User confirms the plan and clarifies that all PDFs must be editable, structurally identical to samples, and include signature spaces.
 
 **Project Health Check:**
-*   **Working:** The entire application is in a working state. All newly implemented features (detailed procurement, PDF/email workflow, intelligent arrivals, traceability) have been successfully tested.
-*   **Broken:** None.
-*   **Mocked:** The SDI (Sistema di Interscambio) integration for electronic invoicing is installed but inactive, pending user-provided API keys.
+*   **Working:** Most of the application is highly functional. The Fascicolo Tecnico feature is powerful and nearly complete. The compliance dashboard and digital signature feature are working. A critical UI dropdown bug is fixed.
+*   **Broken:** The auto-compilation logic is not yet 100% complete, which is the user's current primary focus.
+*   **Mocked:** The Fatture in Cloud integration is coded but still requires the user to input their real credentials for a full end-to-end test.
 
 **3rd Party Integrations**
-*   **OpenAI GPT-4o Vision:** (Live) Used for AI OCR on certificates via  and the Emergent LLM Key. The implementation was fixed to support PDF files.
+*   **OpenAI GPT-4o Vision:** (Live) Used for AI OCR of material certificates.
+*   **Fatture in Cloud:** (Live, Needs User Credentials) Replaces Aruba for SDI e-invoicing.
 *   **Resend:** (Live) For transactional emails.
 *   **Google Auth:** (Live) Emergent-managed for user login.
-*   **WeasyPrint & pypdf:** (Live) For backend PDF generation and manipulation.
-*   **Aruba SDI / FattureInCloud:** (Installed, Inactive) Awaiting production API keys for e-invoicing.
+*   **WeasyPrint & pypdf:** (Live) For backend PDF generation and composition.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES. The testing agent was used after every major feature implementation and was instrumental in finding and fixing several bugs, including a critical issue with React hooks and an incorrect API endpoint call. All final test runs passed at 100%.
--   **Troubleshoot agent used after agent stuck in loop:** NO.
--   **Test files created:** Yes, the testing agent created and maintained backend test files in .
--   **Known regressions:** None.
+- **Testing agent used after significant changes:** YES. The agent has consistently used the testing agent after every major feature push, which has been successful in catching bugs before they reach the user.
+- **Troubleshoot agent used after agent stuck in loop:** NO.
+- **Test files created:** Multiple  files were created and used.
+- **Known regressions:** None from this session.
 
 **Credentials to test flow:**
-Use the Google OAuth login flow available on the login page.
+*   Use the Google OAuth login flow on the login page.
+*   For Fatture in Cloud testing, the user must provide their  and  via the frontend Settings page.
 
 **What agent forgot to execute**
-*   The agent correctly diagnosed that a disabled button reported by the user was due to an empty required field, but did not implement a specific UX improvement (like a tooltip or validation message) to make the reason more obvious to the user. This is a minor pending enhancement.</analysis>
+*   The agent has not yet fulfilled the user's latest request to make the auto-compilation logic exhaustive across all six Fascicolo Tecnico documents. This is the immediate next step.
+*   The agent investigated the recurring Conto Lavoro PDF preview bug but did not definitively confirm a fix, leaving it in an ambiguous state.</analysis>
