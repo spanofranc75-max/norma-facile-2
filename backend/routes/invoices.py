@@ -860,6 +860,28 @@ async def send_invoice_to_sdi(invoice_id: str, user: dict = Depends(get_current_
     return {"message": "Fattura inviata al SDI con successo", "sdi_id": result.get("sdi_id")}
 
 
+@router.get("/{invoice_id}/stato-sdi")
+async def check_invoice_sdi_status(invoice_id: str, user: dict = Depends(get_current_user)):
+    """Check SDI status for a sent invoice."""
+    invoice = await db.invoices.find_one(
+        {"invoice_id": invoice_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not invoice:
+        raise HTTPException(404, "Documento non trovato")
+
+    sdi_id = invoice.get("sdi_id")
+    if not sdi_id:
+        raise HTTPException(400, "Documento non ancora inviato al SDI")
+
+    from services.aruba_sdi import check_sdi_status
+    result = await check_sdi_status(sdi_id, user["user_id"])
+
+    if not result.get("success"):
+        raise HTTPException(500, f"Errore verifica stato: {result.get('error')}")
+
+    return {"sdi_id": sdi_id, "status_data": result.get("data")}
+
+
 
 @router.delete("/{invoice_id}")
 async def delete_invoice(
