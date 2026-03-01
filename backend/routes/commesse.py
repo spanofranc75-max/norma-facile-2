@@ -114,6 +114,9 @@ class CommessaCreate(BaseModel):
     deadline: Optional[str] = None
     priority: Optional[str] = "media"
     notes: Optional[str] = ""
+    # Normativa fields
+    classe_exc: Optional[str] = ""          # EXC1, EXC2, EXC3, EXC4
+    tipologia_chiusura: Optional[str] = ""  # cancello, ringhiera, porta, scala, struttura, altro
     # Shortcut — pre-link a module at creation
     linked_preventivo_id: Optional[str] = None
     linked_distinta_id: Optional[str] = None
@@ -132,6 +135,8 @@ class CommessaUpdate(BaseModel):
     deadline: Optional[str] = None
     priority: Optional[str] = None
     notes: Optional[str] = None
+    classe_exc: Optional[str] = None
+    tipologia_chiusura: Optional[str] = None
 
 class EventoRequest(BaseModel):
     tipo: str
