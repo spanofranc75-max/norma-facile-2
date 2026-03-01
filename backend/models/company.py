@@ -77,3 +77,6 @@ class CompanySettingsUpdate(BaseModel):
     bank_details: Optional[BankDetails] = None
     logo_url: Optional[str] = None
     condizioni_vendita: Optional[str] = None
+    aruba_username: Optional[str] = None
+    aruba_password: Optional[str] = None
+    aruba_sandbox: Optional[bool] = None
