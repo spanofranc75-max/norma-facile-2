@@ -47,6 +47,10 @@ async def ensure_ops_fields(commessa_id):
         {"commessa_id": commessa_id, "conto_lavoro": {"$exists": False}},
         {"$set": {"conto_lavoro": []}}
     )
+    await db[COLL].update_one(
+        {"commessa_id": commessa_id, "consegne": {"$exists": False}},
+        {"$set": {"consegne": []}}
+    )
 
 
 def ts():
