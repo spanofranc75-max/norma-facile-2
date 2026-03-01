@@ -282,8 +282,8 @@ def generate_green_certificate(
         badge = '<span class="badge-conforme">CONFORME</span>' if conforme else '<span class="badge-non-conforme">NON CONF.</span>'
         mat_rows += f"""
         <tr>
-            <td>{safe(l.get('descrizione', ''))}</td>
-            <td>{safe(l.get('fornitore', '-'))}</td>
+            <td>{safe(lot.get('descrizione', ''))}</td>
+            <td>{safe(lot.get('fornitore', '-'))}</td>
             <td class="tr">{fmt_it(peso)} kg</td>
             <td class="tc">{perc}%</td>
             <td class="tc">{badge}</td>
