@@ -191,6 +191,22 @@ export default function InvoicesPage() {
         }
     };
 
+    const handleChangeStatus = async (invoice, newStatus) => {
+        const labels = { emessa: 'Emetti', pagata: 'Segna come Pagata', annullata: 'Annulla' };
+        const label = labels[newStatus] || newStatus;
+        if (!window.confirm(`Confermi: ${label} il documento ${invoice.document_number}?`)) return;
+        try {
+            await apiRequest(`/invoices/${invoice.invoice_id}/status`, {
+                method: 'PATCH',
+                body: { status: newStatus },
+            });
+            toast.success(`Documento ${newStatus === 'emessa' ? 'emesso' : newStatus}`);
+            fetchInvoices();
+        } catch (error) {
+            toast.error(error.message);
+        }
+    };
+
 
     const handleDelete = async (invoice) => {
         if (!window.confirm('Sei sicuro di voler eliminare questo documento?')) return;
