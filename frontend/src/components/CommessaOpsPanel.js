@@ -1024,6 +1024,11 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                 <Download className="h-3 w-3 mr-1" /> Dichiarazione CAM PDF
                             </Button>
                         )}
+                        {camLotti.length > 0 && (
+                            <Button size="sm" variant="outline" onClick={handleDownloadGreenCert} className="text-xs border-green-500 text-green-700 hover:bg-green-50" data-testid="btn-green-certificate">
+                                <Leaf className="h-3 w-3 mr-1" /> Green Certificate
+                            </Button>
+                        )}
                     </div>
 
                     {/* Import from AI-analyzed certificates */}
