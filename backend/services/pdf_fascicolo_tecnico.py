@@ -287,9 +287,10 @@ def generate_piano_controllo_pdf(company: dict, commessa: dict, client_name: str
 # 4. Rapporto VT — Esame Visivo Dimensionale (MOD. 06)
 # ══════════════════════════════════════════════════════════════
 def generate_rapporto_vt_pdf(company: dict, commessa: dict, client_name: str, vt_data: dict) -> BytesIO:
-    biz, addr, piva, phone, email = _co(company)
+    biz, addr, piva, phone, email, logo, firma = _co(company)
     comm_num = commessa.get("numero", "")
     comm_title = commessa.get("title", "")
+    classe_exec = commessa.get("classe_esecuzione", "EXC2")
     disegno = vt_data.get("disegno_numero", "")
     report_num = vt_data.get("report_numero", comm_num)
     report_data = vt_data.get("report_data", "")
