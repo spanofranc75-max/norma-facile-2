@@ -206,6 +206,12 @@ export default function CommessaHubPage() {
                                 <h1 className="text-xl font-bold text-[#1E293B] mt-1">{c.title}</h1>
                                 <p className="text-sm text-slate-500 mt-1">{c.client_name || 'Nessun cliente'}</p>
                                 {c.riferimento && <p className="text-xs text-slate-400 mt-0.5">Rif: {c.riferimento}</p>}
+                                {(c.classe_exc || c.tipologia_chiusura) && (
+                                    <div className="flex items-center gap-2 mt-1.5">
+                                        {c.classe_exc && <Badge className="bg-blue-100 text-blue-800 text-[10px]" data-testid="badge-exc">{c.classe_exc}</Badge>}
+                                        {c.tipologia_chiusura && <Badge className="bg-slate-100 text-slate-700 text-[10px]" data-testid="badge-chiusura">{c.tipologia_chiusura.replace(/_/g, ' ')}</Badge>}
+                                    </div>
+                                )}
                             </div>
                             <div className="text-right space-y-1.5">
                                 <Badge className={`${statoStyle.bg} ${statoStyle.text} text-xs px-2.5`} data-testid="stato-badge">
