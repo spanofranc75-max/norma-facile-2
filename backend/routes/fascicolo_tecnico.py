@@ -114,6 +114,7 @@ class FascicoloData(BaseModel):
     requisiti: Optional[List[Dict[str, Any]]] = None
     itt: Optional[List[Dict[str, Any]]] = None
     decisione: Optional[str] = "procedere"
+    redatto_da: Optional[str] = ""
 
 
 async def _get_commessa(cid: str, uid: str):
