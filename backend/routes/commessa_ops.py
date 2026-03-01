@@ -1747,6 +1747,30 @@ async def get_commessa_ops(cid: str, user: dict = Depends(get_current_user)):
 #  SCHEDA RINTRACCIABILITA' MATERIALI PDF (MOD. 07 — EN 1090)
 # ══════════════════════════════════════════════════════════════════
 
+class BatchUpdate(BaseModel):
+    acciaieria: Optional[str] = None
+    supplier_name: Optional[str] = None
+    ddt_numero: Optional[str] = None
+    posizione: Optional[str] = None
+    n_pezzi: Optional[int] = None
+    numero_certificato: Optional[str] = None
+
+@router.patch("/{cid}/material-batches/{batch_id}")
+async def update_material_batch(cid: str, batch_id: str, data: BatchUpdate, user: dict = Depends(get_current_user)):
+    """Update editable fields on a material batch."""
+    update_fields = {k: v for k, v in data.dict().items() if v is not None}
+    if not update_fields:
+        raise HTTPException(400, "Nessun campo da aggiornare")
+    result = await db.material_batches.update_one(
+        {"batch_id": batch_id, "commessa_id": cid, "user_id": user["user_id"]},
+        {"$set": update_fields}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(404, "Lotto non trovato")
+    return {"message": "Lotto aggiornato"}
+
+
+
 @router.get("/{cid}/scheda-rintracciabilita-pdf")
 async def scheda_rintracciabilita_pdf(cid: str, user: dict = Depends(get_current_user)):
     """Generate the EN 1090 Materials Traceability Sheet PDF for a commessa."""
