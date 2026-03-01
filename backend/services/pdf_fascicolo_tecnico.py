@@ -80,9 +80,11 @@ def _chk(val):
 # 1. DOP — Dichiarazione di Prestazione
 # ══════════════════════════════════════════════════════════════
 def generate_dop_pdf(company: dict, commessa: dict, client_name: str, dop_data: dict) -> BytesIO:
-    biz, addr, piva, phone, email = _co(company)
+    biz, addr, piva, phone, email, logo, firma = _co(company)
     comm_num = commessa.get("numero", "")
     comm_title = commessa.get("title", "")
+    redatto_da = dop_data.get("redatto_da", "")
+    classe_exec = commessa.get("classe_esecuzione", "EXC2")
     ddt_ref = dop_data.get("ddt_riferimento", "")
     ddt_data = dop_data.get("ddt_data", "")
     mandatario = dop_data.get("mandatario", client_name)
