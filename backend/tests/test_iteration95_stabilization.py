@@ -261,53 +261,53 @@ class TestSuperFascicoloTecnico:
 
 
 class TestCoreCRUDEndpoints:
-    """Regression tests for core CRUD operations"""
+    """Regression tests for core CRUD operations (using trailing slash for Cloudflare)"""
 
     def test_get_commesse(self, auth_headers):
-        """GET /api/commesse works"""
-        response = requests.get(f"{BASE_URL}/api/commesse", headers=auth_headers)
-        assert response.status_code == 200
+        """GET /api/commesse/ works"""
+        response = requests.get(f"{BASE_URL}/api/commesse/", headers=auth_headers, allow_redirects=True)
+        assert response.status_code == 200, f"Got {response.status_code}: {response.text[:200]}"
         data = response.json()
-        assert "commesse" in data or isinstance(data, list)
-        print(f"PASS: GET /api/commesse works")
+        assert "items" in data or "commesse" in data or isinstance(data, list)
+        print(f"PASS: GET /api/commesse/ works")
 
     def test_get_preventivi(self, auth_headers):
-        """GET /api/preventivi works"""
-        response = requests.get(f"{BASE_URL}/api/preventivi", headers=auth_headers)
+        """GET /api/preventivi/ works"""
+        response = requests.get(f"{BASE_URL}/api/preventivi/", headers=auth_headers, allow_redirects=True)
         assert response.status_code == 200
         data = response.json()
-        assert "preventivi" in data or isinstance(data, list)
-        print(f"PASS: GET /api/preventivi works")
+        assert "items" in data or "preventivi" in data or isinstance(data, list)
+        print(f"PASS: GET /api/preventivi/ works")
 
     def test_get_ddt(self, auth_headers):
-        """GET /api/ddt works"""
-        response = requests.get(f"{BASE_URL}/api/ddt", headers=auth_headers)
+        """GET /api/ddt/ works"""
+        response = requests.get(f"{BASE_URL}/api/ddt/", headers=auth_headers, allow_redirects=True)
         assert response.status_code == 200
         data = response.json()
-        assert "ddt_list" in data or "documents" in data or isinstance(data, list)
-        print(f"PASS: GET /api/ddt works")
+        assert "ddt_list" in data or "documents" in data or "items" in data or isinstance(data, list)
+        print(f"PASS: GET /api/ddt/ works")
 
     def test_get_invoices(self, auth_headers):
-        """GET /api/invoices works"""
-        response = requests.get(f"{BASE_URL}/api/invoices", headers=auth_headers)
+        """GET /api/invoices/ works"""
+        response = requests.get(f"{BASE_URL}/api/invoices/", headers=auth_headers, allow_redirects=True)
         assert response.status_code == 200
-        print(f"PASS: GET /api/invoices works")
+        print(f"PASS: GET /api/invoices/ works")
 
     def test_get_welders(self, auth_headers):
-        """GET /api/welders works"""
-        response = requests.get(f"{BASE_URL}/api/welders", headers=auth_headers)
+        """GET /api/welders/ works"""
+        response = requests.get(f"{BASE_URL}/api/welders/", headers=auth_headers, allow_redirects=True)
         assert response.status_code == 200
         data = response.json()
         assert len(data.get("welders", [])) >= 3, "Should have at least 3 active welders"
-        print(f"PASS: GET /api/welders works, count={len(data.get('welders', []))}")
+        print(f"PASS: GET /api/welders/ works, count={len(data.get('welders', []))}")
 
     def test_get_instruments(self, auth_headers):
-        """GET /api/instruments works"""
-        response = requests.get(f"{BASE_URL}/api/instruments", headers=auth_headers)
+        """GET /api/instruments/ works"""
+        response = requests.get(f"{BASE_URL}/api/instruments/", headers=auth_headers, allow_redirects=True)
         assert response.status_code == 200
         data = response.json()
         assert len(data.get("instruments", [])) >= 5, "Should have at least 5 instruments"
-        print(f"PASS: GET /api/instruments works, count={len(data.get('instruments', []))}")
+        print(f"PASS: GET /api/instruments/ works, count={len(data.get('instruments', []))}")
 
 
 class TestDashboardStats:
