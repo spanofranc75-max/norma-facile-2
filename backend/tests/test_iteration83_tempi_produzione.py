@@ -28,19 +28,41 @@ assert BASE_URL, "REACT_APP_BACKEND_URL must be set for tests"
 
 @pytest.fixture(scope="module")
 def auth_token():
-    """Get auth token via test login"""
+    """Get auth token via MongoDB session creation"""
+    import subprocess
+    import re
+    
+    # Create test user and session in MongoDB
+    cmd = '''mongosh --quiet --eval "
+use('test_database');
+var userId = 'test-tempi-prod-' + Date.now();
+var sessionToken = 'test_session_tempi_' + Date.now();
+db.users.insertOne({
+  user_id: userId,
+  email: 'test.tempi.' + Date.now() + '@example.com',
+  name: 'Test Tempi User',
+  picture: 'https://via.placeholder.com/150',
+  created_at: new Date()
+});
+db.user_sessions.insertOne({
+  user_id: userId,
+  session_token: sessionToken,
+  expires_at: new Date(Date.now() + 7*24*60*60*1000),
+  created_at: new Date()
+});
+print('TOKEN=' + sessionToken);
+print('USER_ID=' + userId);
+"'''
     try:
-        # Try Google OAuth test endpoint if available
-        response = requests.post(f"{BASE_URL}/api/auth/google/test-login", json={
-            "email": "test-tempi-produzione@example.com",
-            "name": "Test Tempi Produzione User"
-        }, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            return data.get("token") or data.get("access_token")
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+        output = result.stdout
+        token_match = re.search(r'TOKEN=(\S+)', output)
+        if token_match:
+            return token_match.group(1)
     except Exception as e:
-        print(f"Auth failed: {e}")
-    pytest.skip("Authentication not available")
+        print(f"Auth creation failed: {e}")
+    
+    pytest.skip("Could not create auth session")
 
 
 @pytest.fixture(scope="module")
