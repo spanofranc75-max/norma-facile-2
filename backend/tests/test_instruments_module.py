@@ -246,7 +246,7 @@ class TestInstrumentsCRUD:
 
     def test_verify_update_persisted(self, api_client):
         """Verify update was persisted in database"""
-        response = api_client.get(f"{BASE_URL}/api/instruments/?search=TEST_Termometro UPDATED")
+        response = api_client.get(f"{BASE_URL}/api/instruments/?search=UPDATED")
         assert response.status_code == 200
         
         data = response.json()
