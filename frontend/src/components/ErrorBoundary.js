@@ -3,16 +3,20 @@ import { Component } from 'react';
 export class ErrorBoundary extends Component {
     constructor(props) {
         super(props);
-        this.state = { hasError: false, error: null };
+        this.state = { hasError: false, error: null, retryKey: 0 };
     }
 
     static getDerivedStateFromError(error) {
         // Known React DOM errors from browser extensions (Grammarly, Google Translate, etc.)
+        // These errors occur when extensions modify the DOM between React renders.
+        // We increment retryKey to force a fresh render of children without showing error UI.
         if (error?.message?.includes('removeChild') ||
             error?.message?.includes('insertBefore') ||
-            error?.message?.includes('appendChild')) {
-            console.warn('[ErrorBoundary] DOM manipulation error caught (likely browser extension):', error.message);
-            return { hasError: false };
+            error?.message?.includes('appendChild') ||
+            error?.message?.includes('Failed to execute') ||
+            error?.message?.includes('Node')) {
+            console.warn('[ErrorBoundary] DOM manipulation error (likely browser extension):', error.message);
+            return (prev) => ({ hasError: false, error: null, retryKey: prev.retryKey + 1 });
         }
         return { hasError: true, error };
     }
@@ -20,8 +24,10 @@ export class ErrorBoundary extends Component {
     componentDidCatch(error, errorInfo) {
         if (error?.message?.includes('removeChild') ||
             error?.message?.includes('insertBefore') ||
-            error?.message?.includes('appendChild')) {
-            return; // Silently ignore DOM manipulation errors
+            error?.message?.includes('appendChild') ||
+            error?.message?.includes('Failed to execute') ||
+            error?.message?.includes('Node')) {
+            return;
         }
         console.error('[ErrorBoundary] Uncaught error:', error, errorInfo);
     }
