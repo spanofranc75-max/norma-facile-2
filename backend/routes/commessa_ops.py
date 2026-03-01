@@ -1740,3 +1740,54 @@ async def get_commessa_ops(cid: str, user: dict = Depends(get_current_user)):
         "conto_lavoro": cl,
         "documenti_count": doc_count,
     }
+
+
+# ══════════════════════════════════════════════════════════════════
+#  SCHEDA RINTRACCIABILITA' MATERIALI PDF (MOD. 07 — EN 1090)
+# ══════════════════════════════════════════════════════════════════
+
+@router.get("/{cid}/scheda-rintracciabilita-pdf")
+async def scheda_rintracciabilita_pdf(cid: str, user: dict = Depends(get_current_user)):
+    """Generate the EN 1090 Materials Traceability Sheet PDF for a commessa."""
+    from fastapi.responses import StreamingResponse
+    from services.pdf_scheda_rintracciabilita import generate_scheda_rintracciabilita_pdf
+
+    commessa = await get_commessa_or_404(cid, user["user_id"])
+
+    # Get company settings
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+
+    # Get client name
+    client_name = ""
+    if commessa.get("client_id"):
+        client_doc = await db.clients.find_one({"client_id": commessa["client_id"]}, {"_id": 0, "name": 1})
+        client_name = client_doc.get("name", "") if client_doc else ""
+
+    # Get linked preventivo (for disegno number)
+    preventivo = None
+    if commessa.get("preventivo_id"):
+        preventivo = await db.preventivi.find_one(
+            {"preventivo_id": commessa["preventivo_id"]}, {"_id": 0}
+        )
+
+    # Get material batches for this commessa
+    cursor = db.material_batches.find(
+        {"commessa_id": cid, "user_id": user["user_id"]},
+        {"_id": 0, "certificate_base64": 0}
+    )
+    batches = await cursor.to_list(200)
+
+    buf = generate_scheda_rintracciabilita_pdf(
+        company=company,
+        commessa=commessa,
+        preventivo=preventivo,
+        batches=batches,
+        client_name=client_name,
+    )
+
+    filename = f"Scheda_Rintracciabilita_{commessa.get('numero', cid)}.pdf"
+    return StreamingResponse(
+        buf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )
