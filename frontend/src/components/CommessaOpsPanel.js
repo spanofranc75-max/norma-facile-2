@@ -375,12 +375,33 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         } catch (e) { toast.error(e.message); }
     };
 
-    const handleUpdateFase = async (tipo, stato) => {
+    const handleUpdateFase = async (tipo, stato, extra = {}) => {
         try {
-            await apiRequest(`/commesse/${commessaId}/produzione/${tipo}`, { method: 'PUT', body: { stato } });
+            await apiRequest(`/commesse/${commessaId}/produzione/${tipo}`, { method: 'PUT', body: { stato, ...extra } });
             toast.success(`Fase aggiornata`);
             fetchData(); onRefresh?.();
         } catch (e) { toast.error(e.message); }
+    };
+
+    const openFaseCompletaModal = (fase) => {
+        const now = new Date().toISOString().slice(0, 16);
+        setFaseComplTarget(fase);
+        setFaseComplForm({
+            started_at: fase.data_inizio ? fase.data_inizio.slice(0, 16) : now,
+            completed_at: now,
+            operator_name: fase.operator_name || '',
+        });
+        setFaseComplOpen(true);
+    };
+
+    const handleConfirmCompleta = async () => {
+        if (!faseComplTarget) return;
+        await handleUpdateFase(faseComplTarget.tipo, 'completato', {
+            started_at: faseComplForm.started_at,
+            completed_at: faseComplForm.completed_at,
+            operator_name: faseComplForm.operator_name,
+        });
+        setFaseComplOpen(false);
     };
 
     const handleCreateCL = async () => {
