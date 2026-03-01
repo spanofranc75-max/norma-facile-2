@@ -227,6 +227,18 @@ class TestFascicoloAuth:
         r = session.get(f"{BASE_URL}/api/fascicolo-tecnico/{test_commessa}/rapporto-vt-pdf")
         assert r.status_code == 401, f"Expected 401, got {r.status_code}"
         print("✓ Rapporto VT PDF requires auth (401 without token)")
+    
+    def test_registro_saldatura_pdf_requires_auth(self, session, test_commessa):
+        """GET /api/fascicolo-tecnico/{cid}/registro-saldatura-pdf returns 401 without token"""
+        r = session.get(f"{BASE_URL}/api/fascicolo-tecnico/{test_commessa}/registro-saldatura-pdf")
+        assert r.status_code == 401, f"Expected 401, got {r.status_code}"
+        print("✓ Registro Saldatura PDF requires auth (401 without token)")
+    
+    def test_riesame_tecnico_pdf_requires_auth(self, session, test_commessa):
+        """GET /api/fascicolo-tecnico/{cid}/riesame-tecnico-pdf returns 401 without token"""
+        r = session.get(f"{BASE_URL}/api/fascicolo-tecnico/{test_commessa}/riesame-tecnico-pdf")
+        assert r.status_code == 401, f"Expected 401, got {r.status_code}"
+        print("✓ Riesame Tecnico PDF requires auth (401 without token)")
 
 # ═══════════════════════════════════════════════════════════════
 # PDF GENERATION TESTS
