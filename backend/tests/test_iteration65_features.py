@@ -102,7 +102,10 @@ def setup_test_data(auth_session):
         "client_type": "fornitore",
         "email": "test.fornitore@testverniciatore.it",
         "pec": "test.fornitore.pec@testverniciatore.it",
-        "address": {"via": "Via Fornitore 1", "cap": "12345", "citta": "Milano", "provincia": "MI"}
+        "address": "Via Fornitore 1",
+        "cap": "12345",
+        "city": "Milano",
+        "province": "MI"
     }
     response = session.post(f"{BASE_URL}/api/clients/", json=fornitore_data)
     assert response.status_code == 201, f"Failed to create fornitore: {response.text}"
@@ -116,7 +119,10 @@ def setup_test_data(auth_session):
         "client_type": "cliente",
         "email": "test.cliente@testcliente.it",
         "pec": "test.cliente.pec@testcliente.it",
-        "address": {"via": "Via Cliente 1", "cap": "12345", "citta": "Milano", "provincia": "MI"}
+        "address": "Via Cliente 1",
+        "cap": "12345",
+        "city": "Milano",
+        "province": "MI"
     }
     response = session.post(f"{BASE_URL}/api/clients/", json=cliente_data)
     assert response.status_code == 201, f"Failed to create cliente: {response.text}"
