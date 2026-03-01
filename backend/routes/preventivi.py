@@ -400,6 +400,7 @@ async def create_preventivo(data: PreventivoCreate, user: dict = Depends(get_cur
         "normativa": data.normativa,  # EN_1090, EN_13241, NESSUNA
         "numero_disegno": data.numero_disegno,
         "ingegnere_disegno": data.ingegnere_disegno,
+        "classe_esecuzione": data.classe_esecuzione,  # EXC1, EXC2, EXC3, EXC4
         "lines": lines,
         "totals": totals,
         "compliance_status": compliance["all_compliant"],
