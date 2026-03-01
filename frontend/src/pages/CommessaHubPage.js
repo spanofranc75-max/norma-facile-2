@@ -437,22 +437,46 @@ export default function CommessaHubPage() {
                         <div className="space-y-3">
                             <div>
                                 <Label className="text-xs">Tipo Modulo</Label>
-                                <Select value={linkType} onValueChange={setLinkType}>
-                                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="preventivo">Preventivo</SelectItem>
-                                        <SelectItem value="rilievo">Rilievo</SelectItem>
-                                        <SelectItem value="distinta">Distinta</SelectItem>
-                                        <SelectItem value="fattura">Fattura</SelectItem>
-                                        <SelectItem value="ddt">DDT</SelectItem>
-                                        <SelectItem value="fpc_project">Progetto FPC</SelectItem>
-                                        <SelectItem value="certificazione">Certificazione CE</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <select
+                                    value={linkType}
+                                    onChange={(e) => {
+                                        const tipo = e.target.value;
+                                        setLinkType(tipo);
+                                        fetchAvailableModules(tipo);
+                                    }}
+                                    className="mt-1 w-full h-9 text-sm rounded-md border border-input bg-transparent px-3 shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                    data-testid="select-link-type"
+                                >
+                                    <option value="preventivo">Preventivo</option>
+                                    <option value="fattura">Fattura</option>
+                                    <option value="ddt">DDT</option>
+                                    <option value="rilievo">Rilievo</option>
+                                    <option value="distinta">Distinta</option>
+                                    <option value="fpc_project">Progetto FPC</option>
+                                    <option value="certificazione">Certificazione CE</option>
+                                </select>
                             </div>
                             <div>
-                                <Label className="text-xs">ID Modulo</Label>
-                                <Input value={linkId} onChange={e => setLinkId(e.target.value)} placeholder="es. prev_abc123..." className="mt-1" data-testid="input-module-id" />
+                                <Label className="text-xs">Seleziona Documento</Label>
+                                {loadingModules ? (
+                                    <div className="mt-1 flex items-center gap-2 text-xs text-slate-500 h-9">
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Caricamento...
+                                    </div>
+                                ) : availableModules.length > 0 ? (
+                                    <select
+                                        value={linkId}
+                                        onChange={(e) => setLinkId(e.target.value)}
+                                        className="mt-1 w-full h-9 text-sm rounded-md border border-input bg-transparent px-3 shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                        data-testid="select-link-id"
+                                    >
+                                        <option value="">Seleziona...</option>
+                                        {availableModules.map(m => (
+                                            <option key={m.id} value={m.id}>{m.label}{m.status ? ` [${m.status}]` : ''}</option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <p className="mt-1 text-xs text-slate-400">Nessun documento disponibile per questo tipo</p>
+                                )}
                             </div>
                         </div>
                         <DialogFooter>
