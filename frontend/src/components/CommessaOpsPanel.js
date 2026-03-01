@@ -630,6 +630,23 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         } catch (e) { toast.error(e.message); }
     };
 
+    const handleDownloadGreenCert = async () => {
+        try {
+            const res = await fetch(`${API}/api/cam/green-certificate/${commessaId}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+            });
+            if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Errore'); }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Green_Certificate_${commessaNumero || commessaId}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+            toast.success('Green Certificate generato');
+        } catch (e) { toast.error(e.message); }
+    };
+
     const handleImportCamFromCert = async (docId) => {
         setCamLoading(true);
         try {
