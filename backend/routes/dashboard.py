@@ -219,41 +219,68 @@ async def get_compliance_overview(user: dict = Depends(get_current_user)):
 
 @router.get("/quality-score")
 async def get_quality_score(user: dict = Depends(get_current_user)):
-    """Calculate Officina Quality Score (0-100) based on safety, CE, photos, activity."""
+    """Calculate Officina Quality Score (0-100) — adaptive based on user's actual workflow."""
     uid = user["user_id"]
     now = datetime.now(timezone.utc)
     insights = []
 
-    # ── Safety Score (max 30 pts): % of rilievi/commesse with a POS
+    # ── Count base entities ──
     total_rilievi = await db.rilievi.count_documents({"user_id": uid})
     total_pos = await db.pos_documents.count_documents({"user_id": uid})
-    if total_rilievi > 0:
-        safety_pct = min(total_pos / total_rilievi, 1.0)
-        safety_score = round(safety_pct * 30)
-        missing_pos = max(total_rilievi - total_pos, 0)
-        if missing_pos > 0:
-            insights.append({
-                "type": "warning",
-                "text": f"{missing_pos} cantier{'e' if missing_pos == 1 else 'i'} senza POS. Generali per migliorare la sicurezza!",
-                "action": "/sicurezza",
-                "points": min(missing_pos * 5, 15),
-            })
-    else:
-        safety_score = 0
-        if total_pos == 0:
-            insights.append({
-                "type": "info",
-                "text": "Crea il tuo primo Rilievo e genera un POS per iniziare a guadagnare punti sicurezza.",
-                "action": "/rilievi",
-                "points": 10,
-            })
-
-    # ── CE Score (max 25 pts): % of certificazioni vs invoices
     total_invoices = await db.invoices.count_documents({"user_id": uid})
     total_certs = await db.certificazioni.count_documents({"user_id": uid})
-    if total_invoices > 0:
-        ce_pct = min(total_certs / max(total_invoices, 1), 1.0)
-        ce_score = round(ce_pct * 25)
+    total_prev = await db.preventivi.count_documents({"user_id": uid})
+    total_distinte = await db.distinte.count_documents({"user_id": uid})
+    total_commesse = await db.commesse.count_documents({"user_id": uid, "stato": {"$nin": ["bozza"]}})
+    total_ddt = await db.ddt_documents.count_documents({"user_id": uid})
+
+    # Quality Hub data
+    total_welders = await db.welders.count_documents({"is_active": True})
+    total_instruments = await db.instruments.count_documents({"status": {"$nin": ["fuori_uso"]}})
+    total_audits = await db.audits.count_documents({"user_id": uid})
+    open_ncs = await db.non_conformities.count_documents({"user_id": uid, "status": {"$ne": "chiusa"}})
+
+    # Check if user has EN 1090 commesse (with fascicolo tecnico data)
+    en1090_count = 0
+    async for c in db.commesse.find({"user_id": uid, "stato": {"$nin": ["bozza"]}}, {"_id": 0, "fascicolo_tecnico": 1, "classe_esecuzione": 1}).limit(50):
+        ft = c.get("fascicolo_tecnico", {})
+        has_ft = any(v for k, v in ft.items() if k != "_id" and v) if ft else False
+        if has_ft or c.get("classe_esecuzione"):
+            en1090_count += 1
+
+    # ── Build adaptive categories ──
+    # Each category: (key, label, calculator, relevance_check)
+    categories = []
+
+    # 1. Commesse & Produzione — always relevant if user has commesse
+    if total_commesse > 0 or total_prev > 0:
+        commesse_score = 0
+        max_pts = 0
+        # Has commesse: up to 10 pts
+        if total_commesse > 0:
+            commesse_score += min(total_commesse, 5) * 2  # max 10
+            max_pts += 10
+        # Has DDT: up to 5 pts
+        if total_commesse > 0:
+            ddt_ratio = min(total_ddt / max(total_commesse, 1), 1.0)
+            commesse_score += round(ddt_ratio * 5)
+            max_pts += 5
+        categories.append(("production", "Commesse & Produzione", min(commesse_score, max_pts), max_pts))
+
+    # 2. Documentazione — always relevant
+    doc_items = sum(1 for x in [total_prev, total_distinte, total_invoices, total_commesse, total_ddt] if x > 0)
+    doc_max = 5
+    doc_score = round((doc_items / doc_max) * 15)
+    categories.append(("documentation", "Documentazione", min(doc_score, 15), 15))
+
+    # 3. Certificazioni CE — only if user does EN 1090 work
+    if en1090_count > 0 or total_certs > 0:
+        if total_commesse > 0:
+            ce_ratio = min(total_certs / max(en1090_count, total_commesse, 1), 1.0)
+            ce_score = round(ce_ratio * 20)
+        else:
+            ce_score = 5 if total_certs > 0 else 0
+        categories.append(("ce", "Certificazioni CE", min(ce_score, 20), 20))
         if total_certs == 0:
             insights.append({
                 "type": "warning",
@@ -261,50 +288,64 @@ async def get_quality_score(user: dict = Depends(get_current_user)):
                 "action": "/certificazioni",
                 "points": 15,
             })
-    else:
-        ce_score = 5 if total_certs > 0 else 0
 
-    # ── Documentation Score (max 20 pts): preventivi + distinte + completeness
-    total_prev = await db.preventivi.count_documents({"user_id": uid})
-    total_distinte = await db.distinte.count_documents({"user_id": uid})
-    total_commesse = await db.commesse.count_documents({"user_id": uid})
-    doc_items = sum(1 for x in [total_prev, total_distinte, total_commesse, total_rilievi] if x > 0)
-    doc_score = round((doc_items / 4) * 20)
-    if total_prev == 0:
-        insights.append({
-            "type": "info",
-            "text": "Crea il tuo primo preventivo per tracciare le commesse dall'offerta al cantiere.",
-            "action": "/preventivi",
-            "points": 5,
-        })
-
-    # ── Photo Score (max 10 pts): rilievi with photos
-    rilievi_with_photos = await db.rilievi.count_documents({"user_id": uid, "photos.0": {"$exists": True}})
-    if total_rilievi > 0:
-        photo_pct = min(rilievi_with_photos / total_rilievi, 1.0)
-        photo_score = round(photo_pct * 10)
-        missing_photos = total_rilievi - rilievi_with_photos
-        if missing_photos > 0:
+    # 4. Sicurezza — only if user does rilievi/POS
+    if total_rilievi > 0 or total_pos > 0:
+        if total_rilievi > 0:
+            safety_pct = min(total_pos / total_rilievi, 1.0)
+            safety_score = round(safety_pct * 15)
+        else:
+            safety_score = 10 if total_pos > 0 else 0
+        categories.append(("safety", "Sicurezza Cantieri", min(safety_score, 15), 15))
+        missing_pos = max(total_rilievi - total_pos, 0)
+        if missing_pos > 0:
             insights.append({
-                "type": "tip",
-                "text": f"{missing_photos} riliev{'o' if missing_photos == 1 else 'i'} senza foto. Aggiungi foto per documentare il lavoro!",
-                "action": "/rilievi",
-                "points": min(missing_photos * 2, 5),
+                "type": "warning",
+                "text": f"{missing_pos} cantier{'e' if missing_pos == 1 else 'i'} senza POS.",
+                "action": "/sicurezza",
+                "points": min(missing_pos * 3, 10),
             })
-    else:
-        photo_score = 0
 
-    # ── Activity Score (max 15 pts): recent activity
+    # 5. Qualità (Registro Saldatori, Strumenti, Audit) — relevant if user has any
+    if total_welders > 0 or total_instruments > 0 or total_audits > 0:
+        quality_items = sum(1 for x in [total_welders, total_instruments, total_audits] if x > 0)
+        quality_score = round((quality_items / 3) * 10)
+        # Bonus for closed NCs
+        if total_audits > 0 and open_ncs == 0:
+            quality_score = min(quality_score + 5, 15)
+        categories.append(("quality", "Sistema Qualità", min(quality_score, 15), 15))
+        if open_ncs > 0:
+            insights.append({
+                "type": "warning",
+                "text": f"{open_ncs} non conformità aperte da risolvere.",
+                "action": "/audit",
+                "points": min(open_ncs * 3, 10),
+            })
+
+    # 6. Attività Recente — always relevant
     week_ago = now - timedelta(days=7)
     recent_sessions = await db.user_sessions.count_documents({"user_id": uid, "created_at": {"$gte": week_ago}})
     recent_docs = 0
     for coll_name in ["invoices", "preventivi", "rilievi", "distinte", "ddt_documents"]:
         recent_docs += await db[coll_name].count_documents({"user_id": uid, "created_at": {"$gte": week_ago}})
     activity_raw = min(recent_sessions, 7) + min(recent_docs, 8)
-    activity_score = round(min(activity_raw / 15, 1.0) * 15)
+    activity_score = round(min(activity_raw / 15, 1.0) * 10)
+    categories.append(("activity", "Attività Recente", min(activity_score, 10), 10))
 
-    # ── Total
-    total_score = min(safety_score + ce_score + doc_score + photo_score + activity_score, 100)
+    # ── Adaptive scoring: normalize to 100 ──
+    raw_total = sum(c[2] for c in categories)
+    raw_max = sum(c[3] for c in categories)
+    total_score = round((raw_total / raw_max) * 100) if raw_max > 0 else 0
+    total_score = min(total_score, 100)
+
+    # Add onboarding insights if very few items
+    if total_prev == 0:
+        insights.append({
+            "type": "info",
+            "text": "Crea il tuo primo preventivo per iniziare a tracciare le commesse.",
+            "action": "/preventivi",
+            "points": 5,
+        })
 
     # Sort insights by points (highest first), keep top 3
     insights.sort(key=lambda x: x.get("points", 0), reverse=True)
@@ -324,17 +365,19 @@ async def get_quality_score(user: dict = Depends(get_current_user)):
         level = "Apprendista"
         level_color = "slate"
 
+    # Build breakdown from categories (normalized to display)
+    breakdown = {}
+    for key, label, score, max_pts in categories:
+        # Scale each category proportionally to 100
+        display_max = round((max_pts / raw_max) * 100) if raw_max > 0 else 0
+        display_score = round((score / raw_max) * 100) if raw_max > 0 else 0
+        breakdown[key] = {"score": display_score, "max": display_max, "label": label}
+
     return {
         "total_score": total_score,
         "level": level,
         "level_color": level_color,
-        "breakdown": {
-            "safety": {"score": safety_score, "max": 30, "label": "Sicurezza Cantieri"},
-            "ce": {"score": ce_score, "max": 25, "label": "Certificazioni CE"},
-            "documentation": {"score": doc_score, "max": 20, "label": "Documentazione"},
-            "photos": {"score": photo_score, "max": 10, "label": "Foto & Rilievi"},
-            "activity": {"score": activity_score, "max": 15, "label": "Attività Recente"},
-        },
+        "breakdown": breakdown,
         "insights": insights,
         "stats": {
             "total_rilievi": total_rilievi,
@@ -343,6 +386,9 @@ async def get_quality_score(user: dict = Depends(get_current_user)):
             "total_invoices": total_invoices,
             "total_prev": total_prev,
             "total_distinte": total_distinte,
+            "total_commesse": total_commesse,
+            "total_welders": total_welders,
+            "total_instruments": total_instruments,
         },
     }
 
