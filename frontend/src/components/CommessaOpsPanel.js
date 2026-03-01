@@ -1757,32 +1757,40 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
             </Dialog>
 
             {/* PDF Preview Dialog */}
-            <Dialog open={!!pdfPreviewUrl} onOpenChange={(open) => !open && setPdfPreviewUrl(null)}>
-                <DialogContent className="max-w-4xl h-[85vh]">
+            <Dialog open={!!pdfPreviewUrl} onOpenChange={(open) => { if (!open) { setPdfPreviewUrl(null); setPdfExpanded(false); } }}>
+                <DialogContent className={`${pdfExpanded ? 'max-w-[95vw] w-[95vw] h-[95vh]' : 'max-w-4xl h-[85vh]'} flex flex-col transition-all duration-200`}>
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <FileSearch className="h-5 w-5 text-blue-600" />
-                            {pdfPreviewTitle}
-                        </DialogTitle>
-                        <DialogDescription>
-                            Verifica il documento prima di inviarlo via email
-                        </DialogDescription>
+                        <div className="flex items-center justify-between">
+                            <DialogTitle className="flex items-center gap-2">
+                                <FileSearch className="h-5 w-5 text-blue-600" />
+                                {pdfPreviewTitle}
+                            </DialogTitle>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-slate-500 hover:text-slate-800"
+                                onClick={() => setPdfExpanded(!pdfExpanded)}
+                                data-testid="pdf-toggle-expand"
+                            >
+                                {pdfExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                            </Button>
+                        </div>
+                        <DialogDescription>Verifica il documento prima di inviarlo via email</DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 h-full min-h-0">
                         {pdfPreviewUrl && (
                             <iframe
                                 src={pdfPreviewUrl.startsWith('blob:') ? pdfPreviewUrl : `${pdfPreviewUrl}?token=${localStorage.getItem('auth_token')}`}
-                                className="w-full h-[calc(85vh-120px)] border rounded"
+                                className={`w-full ${pdfExpanded ? 'h-[calc(95vh-140px)]' : 'h-[calc(85vh-140px)]'} border rounded`}
                                 title="PDF Preview"
                             />
                         )}
                     </div>
                     <DialogFooter className="gap-2">
-                        <Button variant="outline" onClick={() => setPdfPreviewUrl(null)}>Chiudi</Button>
+                        <Button variant="outline" onClick={() => { setPdfPreviewUrl(null); setPdfExpanded(false); }}>Chiudi</Button>
                         <Button
                             className="bg-[#0055FF] text-white"
                             onClick={() => {
-                                // Extract type and ID from URL
                                 if (pdfPreviewUrl?.includes('/richieste/')) {
                                     const rdpId = pdfPreviewUrl.split('/richieste/')[1]?.split('/')[0];
                                     if (rdpId) handleSendRdpEmail(rdpId);
@@ -1791,6 +1799,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                     if (ordineId) handleSendOdaEmail(ordineId);
                                 }
                                 setPdfPreviewUrl(null);
+                                setPdfExpanded(false);
                             }}
                         >
                             <Mail className="h-4 w-4 mr-1" /> Invia Email
