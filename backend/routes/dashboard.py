@@ -137,6 +137,73 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
     }
 
 
+@router.get("/compliance-en1090")
+async def get_compliance_overview(user: dict = Depends(get_current_user)):
+    """Dashboard widget: EN 1090 compliance status for all active commesse."""
+    uid = user["user_id"]
+    active_states = ["confermata", "in_produzione"]
+    commesse = await db.commesse.find(
+        {"user_id": uid, "stato": {"$in": active_states}},
+        {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "stato": 1,
+         "client_id": 1, "fascicolo_tecnico": 1, "fasi_produzione": 1,
+         "classe_esecuzione": 1}
+    ).sort("created_at", -1).to_list(50)
+
+    # Required doc fields per document type
+    shared_auto = ["client_name", "commessa_numero", "commessa_title"]
+    doc_reqs = {
+        "DOP": ["certificato_numero", "ente_notificato", "firmatario", "luogo_data_firma", "ddt_riferimento"],
+        "CE": ["certificato_numero", "ente_notificato", "ente_numero", "disegno_riferimento"],
+        "Piano Ctrl": ["disegno_numero"],
+        "Rapporto VT": ["report_numero", "report_data", "processo_saldatura", "materiale"],
+        "Reg. Saldatura": ["data_emissione", "firma_cs"],
+        "Riesame": [],
+    }
+
+    results = []
+    for c in commesse:
+        ft = c.get("fascicolo_tecnico", {})
+        # Count completed docs
+        docs_status = {}
+        total_filled = 0
+        total_fields = 0
+        for doc_name, req_fields in doc_reqs.items():
+            all_fields = shared_auto + req_fields
+            filled = sum(1 for f in all_fields if ft.get(f) and str(ft[f]).strip())
+            total_filled += filled
+            total_fields += len(all_fields)
+            docs_status[doc_name] = {"filled": filled, "total": len(all_fields), "complete": filled == len(all_fields)}
+
+        # Production progress
+        fasi = c.get("fasi_produzione", [])
+        prod_done = sum(1 for f in fasi if f.get("stato") == "completato")
+        prod_total = len(fasi) if fasi else 0
+
+        # Client name
+        cl_name = ""
+        if c.get("client_id"):
+            cl = await db.clients.find_one({"client_id": c["client_id"]}, {"_id": 0, "name": 1})
+            cl_name = cl.get("name", "") if cl else ""
+
+        pct = round((total_filled / total_fields * 100)) if total_fields else 0
+        results.append({
+            "commessa_id": c["commessa_id"],
+            "numero": c.get("numero", ""),
+            "title": c.get("title", ""),
+            "stato": c.get("stato", ""),
+            "client_name": cl_name,
+            "classe_esecuzione": c.get("classe_esecuzione", ""),
+            "compliance_pct": pct,
+            "docs": docs_status,
+            "prod_progress": {"done": prod_done, "total": prod_total},
+        })
+
+    # Sort: incomplete first
+    results.sort(key=lambda x: x["compliance_pct"])
+    return {"commesse": results, "total": len(results)}
+
+
+
 # ── Officina Quality Score (SRA) ────────────────────────────────
 
 @router.get("/quality-score")
