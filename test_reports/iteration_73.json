@@ -1,0 +1,107 @@
+{
+  "summary": "Iteration 73 tested the new EN 1090 Scheda Rintracciabilità Materiali feature. All 12 backend tests passed. Fixed frontend URL mismatch (/api/commessa-ops/ → /api/commesse/). Frontend testing confirmed all new UI fields are present and working.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Scheda Rintracciabilità PDF download",
+        "issue": "FIXED - Frontend was calling /api/commessa-ops/{cid}/scheda-rintracciabilita-pdf but backend route is at /api/commesse/{cid}/scheda-rintracciabilita-pdf",
+        "affected_selectors": ["[data-testid=\"btn-scheda-rintracciabilita\"]"],
+        "status": "RESOLVED"
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration73_features.py",
+    "/app/test_reports/pytest/iteration73_features_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "PreventivoCreate/PreventivoUpdate models correctly include numero_disegno and ingegnere_disegno fields (lines 66-67, 87-88 in preventivi.py)",
+    "MaterialBatchCreate model includes new fields: posizione, n_pezzi, numero_certificato, ddt_numero, disegno_numero (lines 38-44 in models/fpc.py)",
+    "FPC batch create/update routes correctly handle new fields (lines 125-149, 152-178 in routes/fpc.py)",
+    "PDF generation service uses WeasyPrint with landscape A4 format (pdf_scheda_rintracciabilita.py)",
+    "_extract_profile_base correctly extracts base profiles like IPE100 from various formats (lines 1442-1464 in commessa_ops.py)",
+    "Cascade delete removes lotti_cam by colata numbers from certificate metadata (lines 1227-1245 in commessa_ops.py)",
+    "Frontend CommessaOpsPanel.js correctly displays all new batch fields in Tracciabilità section (lines 948-988)"
+  ],
+  "updated_files": [
+    "/app/frontend/src/components/CommessaOpsPanel.js"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 passed)",
+    "frontend": "100%"
+  },
+  "test_credentials": "test_session_iter73_*, test_session_fe_iter73_*, test_session_fe2_iter73_* (all cleaned up)",
+  "seed_data_creation": "Created test preventivi, material batches, commesse, and documents for testing. All cleaned up after tests.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 73 adds Scheda Rintracciabilità Materiali feature for EN 1090 compliance. Key endpoints: POST/PUT /api/preventivi now accept numero_disegno and ingegnere_disegno. POST/PUT /api/fpc/batches accept posizione, n_pezzi, numero_certificato, ddt_numero, disegno_numero. GET /api/commesse/{cid}/scheda-rintracciabilita-pdf generates PDF report. Frontend fix applied: URL changed from /api/commessa-ops/ to /api/commesse/.",
+  "features_tested": {
+    "health_endpoint": {
+      "status": "PASS",
+      "details": "GET /api/health returns {status: healthy}"
+    },
+    "preventivo_create_with_disegno_fields": {
+      "status": "PASS",
+      "details": "POST /api/preventivi/ accepts numero_disegno and ingegnere_disegno"
+    },
+    "preventivo_update_disegno_fields": {
+      "status": "PASS",
+      "details": "PUT /api/preventivi/{id} updates numero_disegno and ingegnere_disegno"
+    },
+    "preventivo_get_disegno_fields": {
+      "status": "PASS",
+      "details": "GET /api/preventivi/{id} returns disegno fields"
+    },
+    "fpc_batch_create_with_new_fields": {
+      "status": "PASS",
+      "details": "POST /api/fpc/batches creates batch with posizione, n_pezzi, numero_certificato, ddt_numero, disegno_numero"
+    },
+    "fpc_batch_update_new_fields": {
+      "status": "PASS",
+      "details": "PUT /api/fpc/batches/{id} updates new fields"
+    },
+    "fpc_batch_get_new_fields": {
+      "status": "PASS",
+      "details": "GET /api/fpc/batches/{id} returns new fields"
+    },
+    "scheda_rintracciabilita_pdf_generation": {
+      "status": "PASS",
+      "details": "GET /api/commesse/{cid}/scheda-rintracciabilita-pdf returns valid PDF (application/pdf)"
+    },
+    "extract_profile_base_function": {
+      "status": "PASS",
+      "details": "_extract_profile_base correctly extracts IPE100 from 'Trave IPE 100 in S275 JR', 'IPE 100X55X4.1', HEB200, UPN120, etc."
+    },
+    "cascade_delete_by_colata": {
+      "status": "PASS",
+      "details": "Deleting certificate document cascades to delete linked lotti_cam by colata number"
+    },
+    "frontend_preventivo_disegno_fields": {
+      "status": "PASS",
+      "details": "PreventivoEditorPage shows N. Disegno and Redatto dall'Ing. input fields in Riferimento tab"
+    },
+    "frontend_tracciabilita_new_fields": {
+      "status": "PASS",
+      "details": "CommessaOpsPanel Tracciabilità section displays N. Certificato, DDT N., Posizione, N. Pezzi fields"
+    },
+    "frontend_scheda_pdf_button": {
+      "status": "PASS",
+      "details": "Scheda Rintracciabilità PDF button visible and functional when batches exist"
+    }
+  },
+  "bug_fix_applied": {
+    "file": "/app/frontend/src/components/CommessaOpsPanel.js",
+    "line": 928,
+    "issue": "Frontend URL mismatch for Scheda Rintracciabilità PDF",
+    "old_value": "${API}/api/commessa-ops/${commessaId}/scheda-rintracciabilita-pdf",
+    "new_value": "${API}/api/commesse/${commessaId}/scheda-rintracciabilita-pdf",
+    "reason": "Backend router prefix is /commesse, not /commessa-ops"
+  }
+}
