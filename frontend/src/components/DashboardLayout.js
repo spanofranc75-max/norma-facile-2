@@ -79,6 +79,7 @@ const NAV_GROUPS = [
             { path: '/report-cam', label: 'Sostenibilita & CO2', icon: Award },
             { path: '/sistema-qualita', label: 'Sistema Qualita', icon: FileText },
             { path: '/strumenti', label: 'Apparecchiature', icon: Wrench },
+            { path: '/saldatori', label: 'Saldatori', icon: Users },
         ],
     },
     {
