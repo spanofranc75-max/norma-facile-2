@@ -343,14 +343,31 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **BUG FIXATO: Select dentro Dialog** — Sostituito Radix Select con native `<select>` nel dialog Allega Modulo
 - Dati reali fixati: collegate le 2 fatture progressive alla commessa nel DB
 
+### Dashboard Sostenibilita & CO2 (Phase 58 - Mar 2026)
+- **Backend Potenziato**: Endpoint `GET /api/cam/report-aziendale` arricchito con KPI sostenibilita:
+  - `alberi_equivalenti`: CO2 risparmiata / 22 kg CO2 per albero/anno (fonte EEA)
+  - `indice_economia_circolare`: % media ponderata acciaio riciclato
+  - `co2_per_commessa`: breakdown CO2 risparmiata per ogni commessa (per bar chart)
+  - `trend_mensile`: aggregazione mensile peso/riciclato/CO2 (per area chart)
+- **Frontend Dashboard**: Pagina `/report-cam` riscritta con:
+  - 3 Hero Cards: Eco-Counter CO2, Effetto Foresta (alberi equivalenti), Indice Circolare (gauge Recharts)
+  - KPI Strip: 5 mini-KPI (Acciaio Totale, Riciclato, Commesse, Lotti, Riduzione CO2)
+  - 2 Grafici Recharts: AreaChart trend mensile CO2 + BarChart CO2 per commessa
+  - Tabelle: Commesse, Fornitori, Metodi Produttivi (preservate)
+  - Empty state con messaggio localizzato
+- **Sidebar**: Label aggiornata a "Sostenibilita & CO2"
+- Testing: 100% backend (10/10), 100% frontend (iteration_66)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
+- **P2**: PDF Preview Conto Lavoro — fix blob URL gia presente nel codice, necessita verifica utente
 
 ## Task Futuri
 - [ ] P0: Finalizzare Dashboard EBITDA (calcoli finanziari + grafici)
 - [ ] P1: Modal Anteprima PDF per tutti i documenti
 - [ ] P1: Attivazione SDI (chiavi API Aruba)
+- [ ] P2: Tooltip su bottoni disabilitati
 - [ ] Collegamento diretto Commessa <-> Progetto FPC
 - [ ] Esportazione CSV distinta di taglio per CNC
 - [ ] Estensione Distinta Facile (grata 2 ante, cancello scorrevole)
