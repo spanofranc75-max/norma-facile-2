@@ -479,6 +479,8 @@ export default function PreventivoEditorPage() {
                                             </Select>
                                             <p className="text-[10px] text-slate-500 mt-0.5">Determina requisiti di tracciabilità materiali</p>
                                         </div>
+                                        <div><Label className="text-xs">N. Disegno</Label><Input value={form.numero_disegno} onChange={e => setForm(f => ({ ...f, numero_disegno: e.target.value }))} placeholder="es. STR-01" className="h-8 text-xs" data-testid="input-numero-disegno" /></div>
+                                        <div><Label className="text-xs">Redatto dall'Ing.</Label><Input value={form.ingegnere_disegno} onChange={e => setForm(f => ({ ...f, ingegnere_disegno: e.target.value }))} placeholder="Nome Cognome" className="h-8 text-xs" data-testid="input-ingegnere-disegno" /></div>
                                         <div><Label className="text-xs">Sconto Globale (%)</Label><Input type="number" step="0.1" value={form.sconto_globale} onChange={e => setForm(f => ({ ...f, sconto_globale: parseFloat(e.target.value) || 0 }))} className="h-8 text-xs font-mono" /></div>
                                         <div><Label className="text-xs">Acconto</Label><Input type="number" step="0.01" value={form.acconto} onChange={e => setForm(f => ({ ...f, acconto: parseFloat(e.target.value) || 0 }))} className="h-8 text-xs font-mono" /></div>
                                     </div>
