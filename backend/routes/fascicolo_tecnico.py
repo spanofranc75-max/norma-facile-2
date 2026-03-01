@@ -124,16 +124,16 @@ async def _get_commessa(cid: str, uid: str):
 
 
 async def _get_context(cid: str, user: dict):
-    """Get all context data needed for PDF generation."""
+    """Get all context data needed for PDF generation — auto-populates ~70% of fields."""
     commessa = await _get_commessa(cid, user["user_id"])
     company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
     client_name = ""
     if commessa.get("client_id"):
         cl = await db.clients.find_one({"client_id": commessa["client_id"]}, {"_id": 0, "name": 1})
         client_name = cl.get("name", "") if cl else ""
-    # Get fascicolo data stored on commessa
     ft = commessa.get("fascicolo_tecnico", {})
-    # Get preventivo for disegno / classe esecuzione / ingegnere
+
+    # ── From preventivo ──
     preventivo = None
     prev_id = commessa.get("preventivo_id") or (commessa.get("moduli") or {}).get("preventivo_id")
     if prev_id:
@@ -143,27 +143,72 @@ async def _get_context(cid: str, user: dict):
             ft["disegno_numero"] = preventivo.get("numero_disegno", "")
         if not ft.get("disegno_riferimento"):
             ft["disegno_riferimento"] = preventivo.get("numero_disegno", "")
-        if not ft.get("redatto_da"):
-            ft["redatto_da"] = preventivo.get("ingegnere_disegno", "")
-        # Classe esecuzione: preventivo sovrascrive commessa
         classe_prev = preventivo.get("classe_esecuzione", "")
         if classe_prev:
             commessa["classe_esecuzione"] = classe_prev
-        # Client name from preventivo if not yet set
         if not client_name:
             client_name = preventivo.get("client_name", "")
-    # Auto-populate materiali from batches
-    if not ft.get("materiale") or not ft.get("profilato"):
-        batches = await db.material_batches.find(
-            {"commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0}
-        ).to_list(50)
-        if batches:
-            types = list(set(b.get("material_type", "") for b in batches if b.get("material_type")))
-            dims = list(set(b.get("dimensions", "") for b in batches if b.get("dimensions")))
-            if not ft.get("materiale"):
-                ft["materiale"] = " / ".join(types)
-            if not ft.get("profilato"):
-                ft["profilato"] = " + ".join(dims)
+
+    # ── From company settings ──
+    if not ft.get("firmatario"):
+        ft["firmatario"] = company.get("business_name", "")
+    if not ft.get("ruolo_firmatario"):
+        ft["ruolo_firmatario"] = company.get("ruolo_firmatario", "Legale Rappresentante")
+    if not ft.get("ente_notificato"):
+        ft["ente_notificato"] = company.get("ente_certificatore", "")
+    if not ft.get("ente_numero"):
+        ft["ente_numero"] = company.get("ente_certificatore_numero", "")
+    if not ft.get("certificato_numero"):
+        ft["certificato_numero"] = company.get("certificato_en1090_numero", "")
+    if not ft.get("redatto_da"):
+        ft["redatto_da"] = company.get("responsabile_nome", "")
+    if not ft.get("firma_cs"):
+        ft["firma_cs"] = company.get("responsabile_nome", "")
+    # Mandatario = cliente
+    if not ft.get("mandatario"):
+        ft["mandatario"] = client_name
+
+    # ── From material batches ──
+    batches = await db.material_batches.find(
+        {"commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0}
+    ).to_list(50)
+    mat_types = []
+    if batches:
+        mat_types = list(set(b.get("material_type", "") for b in batches if b.get("material_type")))
+        dims = list(set(b.get("dimensions", "") for b in batches if b.get("dimensions")))
+        if not ft.get("materiale"):
+            ft["materiale"] = " / ".join(mat_types)
+        if not ft.get("profilato"):
+            ft["profilato"] = " + ".join(dims)
+        if not ft.get("materiali_saldabilita") and mat_types:
+            ft["materiali_saldabilita"] = " - ".join(mat_types) + " in accordo alla EN 10025-2"
+
+    # ── Resilienza auto from material type ──
+    if not ft.get("resilienza") and mat_types:
+        res_val = _lookup_resilienza(mat_types)
+        if res_val:
+            ft["resilienza"] = res_val
+
+    # ── DDT auto — suffisso commessa/01, /02 etc. ──
+    comm_num = commessa.get("numero", "")
+    if not ft.get("ddt_riferimento") and comm_num:
+        # Count existing DDT for this commessa
+        ddt_count = await db.ddt_counter.find_one({"commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0})
+        suffix = (ddt_count.get("count", 0) if ddt_count else 0) + 1
+        ft["ddt_riferimento"] = f"{comm_num}/{str(suffix).zfill(2)}"
+    if not ft.get("ddt_data"):
+        # Use today's date as default
+        ft["ddt_data"] = datetime.now(timezone.utc).strftime("%d/%m/%Y")
+
+    # Luogo e data firma
+    if not ft.get("luogo_data_firma"):
+        city = company.get("city", "")
+        ft["luogo_data_firma"] = f"{city}, {datetime.now(timezone.utc).strftime('%d/%m/%Y')}" if city else ""
+
+    # Data emissione for Registro Saldatura
+    if not ft.get("data_emissione"):
+        ft["data_emissione"] = datetime.now(timezone.utc).strftime("%d/%m/%Y")
+
     return commessa, company, client_name, ft
 
 
