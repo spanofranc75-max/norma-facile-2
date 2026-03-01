@@ -85,6 +85,20 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa cen
 - File patentini salvati su disco locale (/app/backend/uploads/welder_certs/)
 - Testato: 31/33 backend pytest + 17/17 frontend (iteration_90.json)
 
+### Gestione Audit & Non Conformità (Mar 2026)
+- Pagina isolata /audit accessibile dalla sidebar (gruppo Certificazioni)
+- Backend: /api/audits (CRUD audit con upload PDF verbale) + /api/ncs (CRUD NC indipendenti o collegate)
+- Tab UI: [Registro Audit] + [Non Conformità]
+- KPI Cards: NC Aperte, Audit Anno Corrente, Prossimo Audit, NC Chiuse
+- Tipi audit: interno, esterno_ente, cliente
+- Esiti audit: positivo, negativo, con_osservazioni
+- NC con priorità (alta/media/bassa) e stati (aperta, in_lavorazione, chiusa)
+- NC auto-numerate (NC-YYYY-NNN), collegabili a audit o standalone (reclami, errori)
+- Workflow NC: apertura → analisi causa → azione correttiva → chiusura (con data e responsabile)
+- Riapertura NC chiuse, eliminazione audit con scollegamento NC
+- Calcolo giorni apertura NC
+- Testato: 51/51 backend pytest + 20/20 frontend (iteration_91.json)
+
 ## Backlog
 - P1: Integrare patentini saldatori nel "Super Fascicolo Tecnico" (auto-allegare PDF validi per saldatori della commessa)
 - P1: Fatture in Cloud SDI (necessita credenziali utente), verifica parsing AI
