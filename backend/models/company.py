@@ -49,10 +49,14 @@ class CompanySettings(BaseModel):
     # Condizioni di vendita
     condizioni_vendita: Optional[str] = None
     
-    # Aruba SDI Integration
+    # Aruba SDI Integration (legacy)
     aruba_username: Optional[str] = None
     aruba_password: Optional[str] = None
     aruba_sandbox: bool = True
+    
+    # Fatture in Cloud Integration
+    fic_company_id: Optional[str] = None
+    fic_access_token: Optional[str] = None
     
     # Timestamps
     updated_at: Optional[datetime] = None
@@ -80,3 +84,5 @@ class CompanySettingsUpdate(BaseModel):
     aruba_username: Optional[str] = None
     aruba_password: Optional[str] = None
     aruba_sandbox: Optional[bool] = None
+    fic_company_id: Optional[str] = None
+    fic_access_token: Optional[str] = None
