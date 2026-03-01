@@ -275,7 +275,7 @@ def generate_piano_controllo_pdf(company: dict, commessa: dict, client_name: str
         <tbody>{rows}</tbody>
     </table>
     <div class="sign-area">
-        <div class="sign-box"><div class="sign-label">Data e Firma per Emissione</div><div class="sign-line"></div></div>
+        <div class="sign-box"><div class="sign-label">Data e Firma per Emissione</div>{_firma_img_html(firma)}<div class="sign-line"></div></div>
         <div class="sign-box"><div class="sign-label">Data e Firma per Approvazione</div><div class="sign-line"></div></div>
     </div>
     <div class="footer-mod">MOD. 02 Rev. 00 | {biz}</div>
