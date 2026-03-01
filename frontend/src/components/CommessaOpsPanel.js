@@ -1220,7 +1220,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                         )}
                     </div>
                     {docs.map(d => (
-                        <div key={d.doc_id} className="flex items-center gap-2 p-2 bg-slate-50 rounded text-xs" data-testid={`doc-${d.doc_id}`}>
+                        <div key={d.doc_id} data-doc-type={d.tipo} className="flex items-center gap-2 p-2 bg-slate-50 rounded text-xs" data-testid={`doc-${d.doc_id}`}>
                             <FileUp className="h-3.5 w-3.5 text-[#0055FF] shrink-0" />
                             <div className="flex-1 min-w-0">
                                 <span className="font-medium truncate block">{d.nome_file}</span>
