@@ -120,6 +120,7 @@ export default function PreventivoEditorPage() {
                 normativa: data.normativa || '',
                 numero_disegno: data.numero_disegno || '',
                 ingegnere_disegno: data.ingegnere_disegno || '',
+                classe_esecuzione: data.classe_esecuzione || '',
             });
             if (data.compliance_detail) setCompliance(data.compliance_detail);
             setWorkflow({
