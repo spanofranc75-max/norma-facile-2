@@ -392,6 +392,14 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - Fix: rimosso vincolo `ge=0` su `unit_price` per supportare note di credito
 - Testing: 100% backend (12/12), 100% frontend (iteration_68)
 
+### Workflow SDI Aruba Completo (Phase 59b - Mar 2026)
+- **Backend SDI Riscritto**: `aruba_sdi.py` ora legge credenziali dal DB (`company_settings.aruba_username/password/sandbox`), non piu dal `.env`
+- **3 Endpoint SDI**: `POST send-sdi` (genera XML + invia), `GET stato-sdi` (verifica stato), `POST genera-xml` (generazione XML)
+- **Frontend Impostazioni**: Nuovo tab "Integrazioni" in Settings con campi Aruba username/password/sandbox
+- **Workflow UI Completo**: Emetti (bozza→emessa) → Invia SDI → Verifica Stato con bottoni condizionali
+- **Modello Aggiornato**: `CompanySettings` e `CompanySettingsUpdate` con campi `aruba_*`
+- Testing: 100% backend (11/11), 100% frontend (iteration_69)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
