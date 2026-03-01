@@ -127,7 +127,9 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa cen
 - Pagina DDT (/ddt): aggiunta colonna "Commessa" con numero commessa cliccabile (link a /commesse/:id)
 - Editor DDT (/ddt/:id): aggiunto badge "Commessa NF-XXX" nell'header cliccabile
 - Backend: arricchimento dati DDT con info commessa (numero, titolo) in lista e dettaglio
-- Zero modifiche allo schema dati — solo lookup commessa_id → commessa info
+- Conto Lavoro: auto-creazione DDT in ddt_documents quando stato → "inviato" (con tipo "conto_lavoro")
+- Backfill: script retroattivo per creare DDT per i conto lavoro già inviati/rientrati
+- Zero modifiche allo schema commessa — solo aggiunta ddt_invio_id al conto lavoro
 
 ## Backlog
 - P1: Integrare patentini saldatori nel "Super Fascicolo Tecnico" (auto-allegare PDF validi per saldatori della commessa)
