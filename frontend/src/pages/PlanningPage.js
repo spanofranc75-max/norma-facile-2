@@ -392,6 +392,42 @@ function CreateCommessaModal({ open, onOpenChange, clients, onCreated }) {
                             </SelectContent>
                         </Select>
                     </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <Label className="text-xs">Classe EXC (EN 1090)</Label>
+                            <select
+                                value={form.classe_exc}
+                                onChange={e => setForm(f => ({ ...f, classe_exc: e.target.value }))}
+                                className="w-full h-9 text-sm rounded-md border border-input bg-transparent px-2 shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                data-testid="select-classe-exc"
+                            >
+                                <option value="">-- Non spec. --</option>
+                                <option value="EXC1">EXC1</option>
+                                <option value="EXC2">EXC2</option>
+                                <option value="EXC3">EXC3</option>
+                                <option value="EXC4">EXC4</option>
+                            </select>
+                        </div>
+                        <div>
+                            <Label className="text-xs">Tipologia Chiusura</Label>
+                            <select
+                                value={form.tipologia_chiusura}
+                                onChange={e => setForm(f => ({ ...f, tipologia_chiusura: e.target.value }))}
+                                className="w-full h-9 text-sm rounded-md border border-input bg-transparent px-2 shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                data-testid="select-tipologia-chiusura"
+                            >
+                                <option value="">-- Non spec. --</option>
+                                <option value="cancello">Cancello</option>
+                                <option value="ringhiera">Ringhiera</option>
+                                <option value="porta">Porta</option>
+                                <option value="scala">Scala</option>
+                                <option value="struttura">Struttura</option>
+                                <option value="recinzione">Recinzione</option>
+                                <option value="pensilina">Pensilina</option>
+                                <option value="altro">Altro</option>
+                            </select>
+                        </div>
+                    </div>
                     <div>
                         <Label className="text-xs">Descrizione</Label>
                         <Textarea
