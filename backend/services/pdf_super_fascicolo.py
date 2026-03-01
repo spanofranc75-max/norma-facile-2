@@ -160,6 +160,19 @@ def _build_cover(ctx: dict) -> bytes:
 # ══════════════════════════════════════════════════════════════
 # CAP 1: DATI GENERALI (Dossier Commessa)
 # ══════════════════════════════════════════════════════════════
+def _safe_date(val, fmt: str = "%d/%m/%Y") -> str:
+    """Safely convert datetime or string to date string."""
+    if val is None:
+        return ""
+    if isinstance(val, datetime):
+        return val.strftime(fmt)
+    s = str(val)
+    # If ISO format string, extract date part
+    if len(s) >= 10 and (s[4] == '-' or s[2] == '/'):
+        return s[:10]
+    return s
+
+
 def _build_cap1(ctx: dict) -> bytes:
     co = ctx["company"]
     comm = ctx["commessa"]
@@ -171,10 +184,12 @@ def _build_cap1(ctx: dict) -> bytes:
         color = "#059669" if stato == "completata" else "#CA8A04" if stato == "in_corso" else "#999"
         fasi_rows += f'<tr><td>{_s(f.get("nome",""))}</td><td style="text-align:center;color:{color};font-weight:600;">{_s(stato)}</td><td style="text-align:center;">{_s(f.get("data_completamento",""))}</td></tr>'
 
+    created_at = _safe_date(comm.get('created_at'))
+
     html = f"""{hdr}
     <h2>1.1 Dati Commessa</h2>
     <table class="info">
-        <tr><td class="lbl">Numero Commessa:</td><td>{_s(comm.get('numero'))}</td><td class="lbl">Data Creazione:</td><td>{_s(comm.get('created_at','')[:10])}</td></tr>
+        <tr><td class="lbl">Numero Commessa:</td><td>{_s(comm.get('numero'))}</td><td class="lbl">Data Creazione:</td><td>{created_at}</td></tr>
         <tr><td class="lbl">Descrizione Lavoro:</td><td colspan="3">{_s(comm.get('title'))}</td></tr>
         <tr><td class="lbl">Cliente:</td><td>{_s(ctx.get('client_name'))}</td><td class="lbl">Classe Esecuzione:</td><td>{_s(comm.get('classe_esecuzione','EXC2'))}</td></tr>
         <tr><td class="lbl">Stato:</td><td>{_s(comm.get('stato','in_corso'))}</td><td class="lbl">Tipologia:</td><td>{_s(comm.get('tipologia_chiusura',''))}</td></tr>
