@@ -137,6 +137,9 @@ async def create_lotto_cam(data: LottoMaterialeCAM, user: dict = Depends(get_cur
     }
     
     await db.lotti_cam.insert_one(doc)
+    doc.pop("_id", None)
+    
+    return {"message": "Lotto CAM creato", "lotto": doc}
 
 
 @router.get("/lotti")
