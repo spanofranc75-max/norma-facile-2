@@ -1059,9 +1059,12 @@ async def send_cl_email(cid: str, cl_id: str, payload: dict = None, user: dict =
     company_name = company.get("business_name", "Officina")
     tipo_labels = {"verniciatura": "VERNICIATURA", "zincatura": "ZINCATURA A CALDO", "sabbiatura": "SABBIATURA", "altro": "LAVORAZIONE ESTERNA"}
     tipo_label = tipo_labels.get(cl["tipo"], cl["tipo"].upper())
-    subject = f"DDT Conto Lavoro {tipo_label} — {company_name} — Rif. {comm.get('numero', cid)}"
-    ral_note = f"\nColore RAL: {cl['ral']}" if cl.get("ral") else ""
-    body = f"""Gentile {cl.get('fornitore_nome', '')},
+    subject = payload.get("custom_subject") or f"DDT Conto Lavoro {tipo_label} — {company_name} — Rif. {comm.get('numero', cid)}"
+    if payload.get("custom_body"):
+        body = payload["custom_body"]
+    else:
+        ral_note = f"\nColore RAL: {cl['ral']}" if cl.get("ral") else ""
+        body = f"""Gentile {cl.get('fornitore_nome', '')},
 
 in allegato il DDT per lavorazione in conto terzi.
 Tipo: {tipo_label}
