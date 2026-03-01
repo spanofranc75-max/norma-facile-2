@@ -40,6 +40,13 @@ class WelderCreate(BaseModel):
     hire_date: Optional[str] = None
     notes: Optional[str] = None
 
+    @field_validator("name", "stamp_id")
+    @classmethod
+    def not_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Il campo non può essere vuoto")
+        return v.strip()
+
 
 class WelderResponse(BaseModel):
     welder_id: str
