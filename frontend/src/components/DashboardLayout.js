@@ -73,6 +73,7 @@ const NAV_GROUPS = [
         icon: Award,
         type: 'group',
         children: [
+            { path: '/quality-hub', label: 'Quality Hub', icon: LayoutGrid },
             { path: '/certificazioni', label: 'Certificazioni CE', icon: Shield },
             { path: '/core-engine', label: 'Core Engine', icon: Shield },
             { path: '/validazione-foto', label: 'Validazione Foto AI', icon: Camera },
