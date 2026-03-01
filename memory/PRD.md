@@ -39,12 +39,12 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa cen
 ### Archivio Documentale Aziendale (Mar 2026)
 - Pagina isolata /sistema-qualita accessibile dalla sidebar (gruppo Certificazioni)
 - Backend: /api/company/documents/ (CRUD completo con upload file)
-- Categorie: Manuali Qualita, Procedure, Certificazioni, Template, Normative, Altro
-- Filtro per categoria (tab pills), ricerca full-text (titolo, tag, filename)
-- Upload con drag area, titolo, categoria, tag
-- Grid di card documenti con download/elimina
+- Categorie: Manuali Qualita, Procedure, Certificazioni, Template, Normative, Organigramma, Altro
+- UI: Shadcn Table con header scuro (bg-[#1E293B]), toolbar Card (Search + Select), Badge colorate
+- Upload con dialog (drop zone, titolo, categoria, tag), download, delete con conferma
 - File salvati su disco locale (/app/backend/uploads/company_docs/)
-- Testato: 13/13 backend + tutti flussi frontend (iteration_86.json)
+- Design coerente con Norma Facile 2.0 (stile identico a ArticoliPage)
+- Testato: 14/14 frontend test passati (iteration_87.json)
 
 ## Bug Fix Critici (Mar 2026)
 
