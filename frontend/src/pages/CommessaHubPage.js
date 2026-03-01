@@ -188,7 +188,7 @@ export default function CommessaHubPage() {
                         <ArrowLeft className="h-4 w-4 mr-1" /> Planning
                     </Button>
                     <div className="flex-1" />
-                    <Button variant="outline" size="sm" onClick={() => setLinkOpen(true)} data-testid="btn-link-module">
+                    <Button variant="outline" size="sm" onClick={() => { setLinkOpen(true); fetchAvailableModules(linkType); }} data-testid="btn-link-module">
                         <Link2 className="h-3.5 w-3.5 mr-1.5" /> Collega Modulo
                     </Button>
                     <Button size="sm" onClick={handleDownloadDossier} className="bg-[#0055FF] text-white hover:bg-[#0044CC]" data-testid="btn-dossier">
