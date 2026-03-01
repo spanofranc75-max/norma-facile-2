@@ -172,6 +172,25 @@ async def list_ddt(
         q["created_at"] = date_filter
     total = await db[COLLECTION].count_documents(q)
     items = await db[COLLECTION].find(q, {"_id": 0}).sort("created_at", -1).to_list(200)
+
+    # Enrich items that have commessa_id with commessa info
+    commessa_ids = [d["commessa_id"] for d in items if d.get("commessa_id")]
+    commessa_map = {}
+    if commessa_ids:
+        comm_cursor = db.commesse.find(
+            {"commessa_id": {"$in": commessa_ids}},
+            {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1}
+        )
+        async for c in comm_cursor:
+            commessa_map[c["commessa_id"]] = {
+                "commessa_id": c["commessa_id"],
+                "numero": c.get("numero", ""),
+                "title": c.get("title", ""),
+            }
+    for d in items:
+        cid = d.get("commessa_id")
+        d["commessa_info"] = commessa_map.get(cid) if cid else None
+
     return {"items": items, "total": total}
 
 
