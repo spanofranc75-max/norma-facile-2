@@ -871,6 +871,17 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
         }},
     })
 
+    # Auto-link invoice to commessa if preventivo is linked to one
+    commessa = await db.commesse.find_one(
+        {"linked_preventivo_id": prev_id, "user_id": user["user_id"]},
+        {"_id": 0, "commessa_id": 1}
+    )
+    if commessa:
+        await db.commesse.update_one(
+            {"commessa_id": commessa["commessa_id"]},
+            {"$addToSet": {"moduli.fatture_ids": invoice_id}},
+        )
+
     logger.info(f"Progressive invoice {doc_number} ({body.invoice_type}) created from preventivo {prev_id}: {progressive_amount:.2f} EUR")
     return {
         "message": f"Fattura {type_labels.get(body.invoice_type, body.invoice_type)} {doc_number} creata — {fmtEur_py(progressive_amount)}",
