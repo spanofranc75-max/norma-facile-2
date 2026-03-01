@@ -216,6 +216,7 @@ async def _get_context(cid: str, user: dict):
 @router.get("/{cid}")
 async def get_fascicolo_data(cid: str, user: dict = Depends(get_current_user)):
     commessa = await _get_commessa(cid, user["user_id"])
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
     ft = commessa.get("fascicolo_tecnico", {})
 
     # ── Auto-populate from preventivo ──
@@ -230,13 +231,12 @@ async def get_fascicolo_data(cid: str, user: dict = Depends(get_current_user)):
     if preventivo and not client_name:
         client_name = preventivo.get("client_name", "")
 
-    auto = {}  # fields auto-populated
+    auto = {}  # track which fields were auto-populated
+    # From preventivo
     if preventivo:
         if preventivo.get("numero_disegno"):
             auto["disegno_numero"] = preventivo["numero_disegno"]
             auto["disegno_riferimento"] = preventivo["numero_disegno"]
-        if preventivo.get("ingegnere_disegno"):
-            auto["redatto_da"] = preventivo["ingegnere_disegno"]
         if preventivo.get("classe_esecuzione"):
             auto["classe_esecuzione"] = preventivo["classe_esecuzione"]
         if preventivo.get("giorni_consegna"):
@@ -245,27 +245,71 @@ async def get_fascicolo_data(cid: str, user: dict = Depends(get_current_user)):
     auto["commessa_numero"] = commessa.get("numero", "")
     auto["commessa_title"] = commessa.get("title", "")
 
+    # From company settings
+    if company.get("business_name"):
+        auto["firmatario"] = company["business_name"]
+    if company.get("ruolo_firmatario"):
+        auto["ruolo_firmatario"] = company["ruolo_firmatario"]
+    if company.get("ente_certificatore"):
+        auto["ente_notificato"] = company["ente_certificatore"]
+    if company.get("ente_certificatore_numero"):
+        auto["ente_numero"] = company["ente_certificatore_numero"]
+    if company.get("certificato_en1090_numero"):
+        auto["certificato_numero"] = company["certificato_en1090_numero"]
+    if company.get("responsabile_nome"):
+        auto["redatto_da"] = company["responsabile_nome"]
+        auto["firma_cs"] = company["responsabile_nome"]
+    # Mandatario = cliente
+    if client_name:
+        auto["mandatario"] = client_name
+    # DOP numero = commessa numero
+    if commessa.get("numero"):
+        auto["dop_numero"] = commessa["numero"]
+
+    # DDT auto — suffisso commessa/01, /02
+    comm_num = commessa.get("numero", "")
+    if comm_num:
+        ddt_count = await db.ddt_counter.find_one({"commessa_id": commessa["commessa_id"], "user_id": user["user_id"]}, {"_id": 0})
+        suffix = (ddt_count.get("count", 0) if ddt_count else 0) + 1
+        auto["ddt_riferimento"] = f"{comm_num}/{str(suffix).zfill(2)}"
+
+    # Date auto
+    today = datetime.now(timezone.utc).strftime("%d/%m/%Y")
+    auto["ddt_data"] = today
+    auto["data_emissione"] = today
+    city = company.get("city", "")
+    if city:
+        auto["luogo_data_firma"] = f"{city}, {today}"
+
     # Merge auto into ft (don't overwrite user edits)
     for k, v in auto.items():
         if not ft.get(k) and v:
             ft[k] = v
 
-    # ── Auto-populate from material batches ──
+    # ── From material batches ──
     batches = await db.material_batches.find(
-        {"commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0}
+        {"commessa_id": commessa["commessa_id"], "user_id": user["user_id"]}, {"_id": 0}
     ).to_list(50)
+    mat_types = []
     if batches:
-        types = list(set(b.get("material_type", "") for b in batches if b.get("material_type")))
+        mat_types = list(set(b.get("material_type", "") for b in batches if b.get("material_type")))
         dims = list(set(b.get("dimensions", "") for b in batches if b.get("dimensions")))
-        if not ft.get("materiale") and types:
-            ft["materiale"] = " / ".join(types)
+        if not ft.get("materiale") and mat_types:
+            ft["materiale"] = " / ".join(mat_types)
             auto["materiale"] = ft["materiale"]
         if not ft.get("profilato") and dims:
             ft["profilato"] = " + ".join(dims)
             auto["profilato"] = ft["profilato"]
-        if not ft.get("materiali_saldabilita") and types:
-            ft["materiali_saldabilita"] = " - ".join(types) + " in accordo alla EN 10025-2"
+        if not ft.get("materiali_saldabilita") and mat_types:
+            ft["materiali_saldabilita"] = " - ".join(mat_types) + " in accordo alla EN 10025-2"
             auto["materiali_saldabilita"] = ft["materiali_saldabilita"]
+
+    # Resilienza auto
+    if not ft.get("resilienza") and mat_types:
+        res_val = _lookup_resilienza(mat_types)
+        if res_val:
+            ft["resilienza"] = res_val
+            auto["resilienza"] = res_val
 
     # ── Initialize defaults ──
     if not ft.get("fasi"):
