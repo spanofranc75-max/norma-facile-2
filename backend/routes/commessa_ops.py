@@ -1399,6 +1399,31 @@ def _normalize_profilo(text: str) -> str:
     return t
 
 
+def _extract_profile_base(text: str) -> str:
+    """
+    Extract the BASE profile type from a description.
+    Examples:
+      "Trave IPE 100 in S275 JR"  → "IPE100"
+      "IPE 100X55X4.1"            → "IPE100"
+      "IPE 80X4.6X3.8"            → "IPE80"
+      "HEB 200 S355 JR"           → "HEB200"
+      "Tubo 60x60x3"              → "TUBO60"
+      "UPN 120"                   → "UPN120"
+      "L 50x50x5"                 → "L50"
+    """
+    import re
+    t = (text or "").upper().strip()
+    # Match common steel profile families followed by a number
+    # Families: IPE, HEB, HEA, HEM, INP, UPN, UNP, L, T, Tubo, Piatto, Tondo, Angolare, Omega
+    pattern = r'(IPE|HEB|HEA|HEM|INP|UPN|UNP|IPN|TUBO|PIATTO|TONDO|ANGOLARE|OMEGA|L)\s*(\d+)'
+    match = re.search(pattern, t)
+    if match:
+        family = match.group(1)
+        size = match.group(2)
+        return f"{family}{size}"
+    return ""
+
+
 async def _match_profili_to_commesse(
     profili: list, metadata_cert: dict, current_commessa_id: str,
     doc_id: str, doc: dict, user: dict,
