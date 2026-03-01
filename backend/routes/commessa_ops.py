@@ -713,7 +713,7 @@ async def preview_oda_email(cid: str, ordine_id: str, user: dict = Depends(get_c
 
 
 @router.post("/{cid}/approvvigionamento/ordini/{ordine_id}/send-email")
-async def send_oda_email_endpoint(cid: str, ordine_id: str, user: dict = Depends(get_current_user)):
+async def send_oda_email_endpoint(cid: str, ordine_id: str, payload: dict = None, user: dict = Depends(get_current_user)):
     """Generate PDF and send OdA via email to supplier."""
     doc = await get_commessa_or_404(cid, user["user_id"])
     await ensure_ops_fields(cid)
