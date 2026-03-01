@@ -585,12 +585,12 @@ def generate_riesame_tecnico_pdf(company: dict, commessa: dict, client_name: str
         <p style="font-size:9pt;margin:2px 0;">alla Pianificazione delle lavorazioni dell'Officina.</p>
         <div class="sign-area" style="margin-top:8px;">
             <div class="sign-box"><div class="sign-label">Data</div><div class="sign-line"></div></div>
-            <div class="sign-box"><div class="sign-label">Firma CS</div><div class="sign-line"></div></div>
+            <div class="sign-box"><div class="sign-label">Firma CS</div>{_firma_img_html(firma)}<div class="sign-line"></div></div>
         </div>
     </div>
 
     <div style="page-break-before:always;"></div>
-    {_header_html(biz, addr, piva, phone, email, 'ITT di Commessa', 'MOD. 01 Rev. 00')}
+    {_header_html(biz, addr, piva, phone, email, 'ITT di Commessa', 'MOD. 01 Rev. 00', logo)}
     <table class="info-table" style="margin-top:4px;">
         <tr><td class="info-lbl">Commessa:</td><td>{comm_num}</td><td class="info-lbl">Cliente:</td><td>{client_name}</td></tr>
     </table>
