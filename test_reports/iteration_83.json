@@ -1,0 +1,112 @@
+{
+  "summary": "Iteration 83 backend testing completed successfully. All 16 tests passed (100%). Tested the new 'Tempi Produzione' feature: PUT /api/commesse/{cid}/produzione/{fase_tipo} now accepts started_at, completed_at, operator_name fields. Backend stores these new fields alongside existing data_inizio, data_fine for backward compatibility. GET /api/commesse/{cid}/ops returns fasi_produzione with new fields when set (null-safe). PDF Fascicolo Tecnico uses completed_at with fallback to data_fine. Regression tests confirm C/L workflow (rientro, verifica) still works.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration83_tempi_produzione.py",
+    "/app/test_reports/pytest/iteration83_tempi_produzione_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Backend implementation is correct: FaseUpdate model accepts started_at, completed_at, operator_name (all Optional[str])",
+    "Backward compatible: Both old fields (data_inizio, data_fine) and new fields (started_at, completed_at) are stored",
+    "PDF _build_cap1 uses cascading fallback: completed_at -> data_completamento -> data_fine",
+    "Frontend CommessaOpsPanel.js has dialog data-testid='dialog-fase-completa' with datetime inputs and operator field"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration83_tempi_produzione.py"
+  ],
+  "success_rate": {
+    "backend": "100% (16/16 passed)",
+    "frontend": "Not tested (backend-only request)"
+  },
+  "test_credentials": "MongoDB session tokens created/cleaned during pytest run",
+  "seed_data_creation": "Test commesse with initialized fasi_produzione created during tests, cleaned up after",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 83 adds production timing fields (started_at, completed_at, operator_name) to fasi_produzione. Key endpoints: PUT /api/commesse/{cid}/produzione/{fase_tipo} accepts new fields in JSON body, GET /api/commesse/{cid}/ops returns fasi with new fields. Frontend has dialog data-testid='dialog-fase-completa' with inputs data-testid='input-fase-started', 'input-fase-completed', 'input-fase-operator'. Backward compatibility preserved: both old (data_inizio, data_fine) and new fields are stored.",
+  "features_tested": {
+    "health_endpoint": {
+      "status": "PASS",
+      "details": "GET /api/health returns {status: healthy}"
+    },
+    "avvia_fase_with_started_at": {
+      "status": "PASS",
+      "details": "PUT produzione with stato='in_corso' and started_at saves both started_at and data_inizio"
+    },
+    "completa_fase_with_all_fields": {
+      "status": "PASS",
+      "details": "PUT produzione with stato='completato', started_at, completed_at, operator_name saves all fields"
+    },
+    "completa_fase_only_completed_at": {
+      "status": "PASS",
+      "details": "PUT produzione with only completed_at works correctly"
+    },
+    "completa_fase_only_operator_name": {
+      "status": "PASS",
+      "details": "PUT produzione with only operator_name works, auto-fills data_fine"
+    },
+    "backward_compat_update_without_new_fields": {
+      "status": "PASS",
+      "details": "PUT produzione without new fields still works (data_inizio auto-set)"
+    },
+    "backward_compat_complete_without_new_fields": {
+      "status": "PASS",
+      "details": "PUT completato without new fields uses auto-timestamps for data_fine"
+    },
+    "backward_compat_data_preserved": {
+      "status": "PASS",
+      "details": "New fields coexist with old operatore and note fields"
+    },
+    "get_ops_returns_new_fields": {
+      "status": "PASS",
+      "details": "GET ops returns fasi_produzione with started_at, completed_at, operator_name accessible"
+    },
+    "get_ops_null_safe": {
+      "status": "PASS",
+      "details": "GET ops doesn't error when new fields are absent"
+    },
+    "regression_create_conto_lavoro": {
+      "status": "PASS",
+      "details": "POST /api/commesse/{cid}/conto-lavoro still works"
+    },
+    "regression_rientro": {
+      "status": "PASS",
+      "details": "POST /api/commesse/{cid}/conto-lavoro/{cl_id}/rientro still works"
+    },
+    "regression_verifica": {
+      "status": "PASS",
+      "details": "PATCH /api/commesse/{cid}/conto-lavoro/{cl_id}/verifica still works"
+    },
+    "unauthorized_update_fase": {
+      "status": "PASS",
+      "details": "PUT produzione returns 401/403 without auth"
+    },
+    "unauthorized_get_ops": {
+      "status": "PASS",
+      "details": "GET ops returns 401/403 without auth"
+    }
+  },
+  "api_schema_verified": {
+    "FaseUpdate_model": {
+      "stato": "str (required: da_fare|in_corso|completato)",
+      "operatore": "Optional[str]",
+      "note": "Optional[str]",
+      "started_at": "Optional[str] (NEW - ISO datetime)",
+      "completed_at": "Optional[str] (NEW - ISO datetime)",
+      "operator_name": "Optional[str] (NEW - operator name string)"
+    },
+    "storage_mapping": {
+      "started_at_input": "stored in fasi_produzione.$[elem].started_at AND data_inizio",
+      "completed_at_input": "stored in fasi_produzione.$[elem].completed_at AND data_fine",
+      "operator_name_input": "stored in fasi_produzione.$[elem].operator_name"
+    }
+  }
+}
