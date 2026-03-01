@@ -2023,3 +2023,210 @@ async def download_super_fascicolo(commessa_id: str, user: dict = Depends(get_cu
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# ═══════════════════════════════════════════════════════════════
+# CONSEGNE — DDT Cliente + DoP + Etichetta CE
+# ═══════════════════════════════════════════════════════════════
+
+class ConsegnaCreate(BaseModel):
+    note: Optional[str] = ""
+    peso_kg: Optional[float] = 0
+    num_colli: Optional[int] = 1
+
+
+@router.post("/{cid}/consegne")
+async def crea_consegna(cid: str, data: ConsegnaCreate, user: dict = Depends(get_current_user)):
+    """Create a new delivery (consegna) for this commessa.
+    Auto-creates a DDT linked to the commessa and marks DoP + CE as generated."""
+    comm = await get_commessa_or_404(cid, user["user_id"])
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+
+    # Resolve client
+    client_name = ""
+    client_doc = None
+    if comm.get("client_id"):
+        client_doc = await db.clients.find_one({"client_id": comm["client_id"]}, {"_id": 0})
+        if client_doc:
+            client_name = client_doc.get("business_name") or client_doc.get("name", "")
+
+    # Count existing consegne for this commessa
+    existing = comm.get("consegne", [])
+    suffix = len(existing) + 1
+    comm_num = comm.get("numero", cid)
+
+    # Create DDT in ddt_documents collection
+    ddt_id = f"ddt_{uuid.uuid4().hex[:12]}"
+    year = ts().strftime("%Y")
+    ddt_count = await db.ddt_documents.count_documents({"user_id": user["user_id"], "ddt_type": "vendita"})
+    ddt_number = f"DDT-{year}-{ddt_count + 1:04d}"
+
+    # Build DDT lines from material batches
+    batches = await db.material_batches.find(
+        {"commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0}
+    ).to_list(100)
+
+    lines = []
+    for i, b in enumerate(batches):
+        lines.append({
+            "line_id": f"ln_{uuid.uuid4().hex[:8]}",
+            "codice_articolo": b.get("heat_number", ""),
+            "description": f"{b.get('material_type','')} {b.get('dimensions','')}".strip(),
+            "unit": "kg",
+            "quantity": float(b.get("peso_kg", 0) or 0),
+            "qta_fatturata": 0,
+            "unit_price": 0,
+            "sconto_1": 0, "sconto_2": 0,
+            "vat_rate": "22",
+            "notes": f"Colata: {b.get('heat_number','')}",
+        })
+    if not lines:
+        lines.append({
+            "line_id": f"ln_{uuid.uuid4().hex[:8]}",
+            "codice_articolo": comm_num,
+            "description": comm.get("title", "Struttura metallica"),
+            "unit": "pz",
+            "quantity": 1,
+            "qta_fatturata": 0,
+            "unit_price": 0,
+            "sconto_1": 0, "sconto_2": 0,
+            "vat_rate": "22",
+            "notes": "",
+        })
+
+    now = ts()
+    ddt_doc = {
+        "ddt_id": ddt_id,
+        "user_id": user["user_id"],
+        "number": ddt_number,
+        "ddt_type": "vendita",
+        "ddt_type_label": "DDT di Vendita",
+        "client_id": comm.get("client_id", ""),
+        "client_name": client_name,
+        "subject": f"Consegna {suffix} — Commessa {comm_num}",
+        "destinazione": {},
+        "causale_trasporto": "Vendita",
+        "aspetto_beni": "Strutture metalliche",
+        "vettore": "",
+        "mezzo_trasporto": "Mittente",
+        "porto": "Franco",
+        "data_ora_trasporto": now.strftime("%d/%m/%Y %H:%M"),
+        "num_colli": data.num_colli or 1,
+        "peso_lordo_kg": data.peso_kg or 0,
+        "peso_netto_kg": data.peso_kg or 0,
+        "payment_type_id": None,
+        "payment_type_label": None,
+        "stampa_prezzi": False,
+        "riferimento": f"Commessa {comm_num}",
+        "acconto": 0, "sconto_globale": 0,
+        "notes": data.note or "",
+        "lines": lines,
+        "totals": {"subtotal": 0, "total": 0, "line_count": len(lines)},
+        "status": "non_fatturato",
+        "commessa_id": cid,
+        "created_at": now,
+        "updated_at": now,
+    }
+    await db.ddt_documents.insert_one(ddt_doc)
+
+    # Add consegna record to commessa
+    consegna = {
+        "consegna_id": f"cons_{uuid.uuid4().hex[:8]}",
+        "numero": suffix,
+        "ddt_id": ddt_id,
+        "ddt_number": ddt_number,
+        "data": now.isoformat()[:10],
+        "peso_kg": data.peso_kg or 0,
+        "num_colli": data.num_colli or 1,
+        "note": data.note or "",
+        "dop_generata": False,
+        "ce_generata": False,
+    }
+    await db[COLL].update_one(
+        {"commessa_id": cid},
+        {"$push": {"consegne": consegna}},
+    )
+    await db[COLL].update_one({"commessa_id": cid}, push_event(cid, "CONSEGNA_CREATA", user, f"Consegna {suffix} — DDT {ddt_number}"))
+
+    return {
+        "message": f"Consegna {suffix} creata — DDT {ddt_number}",
+        "consegna": consegna,
+        "ddt_id": ddt_id,
+    }
+
+
+@router.get("/{cid}/consegne/{consegna_id}/pacchetto-pdf")
+async def download_pacchetto_consegna(cid: str, consegna_id: str, user: dict = Depends(get_current_user)):
+    """Generate combined PDF: DDT + DoP + Etichetta CE for a delivery."""
+    from pypdf import PdfWriter, PdfReader
+    from services.pdf_fascicolo_tecnico import generate_dop_pdf, generate_ce_pdf
+
+    comm = await get_commessa_or_404(cid, user["user_id"])
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+
+    consegne = comm.get("consegne", [])
+    cons = next((c for c in consegne if c["consegna_id"] == consegna_id), None)
+    if not cons:
+        raise HTTPException(404, "Consegna non trovata")
+
+    # Client name
+    client_name = ""
+    if comm.get("client_id"):
+        cl = await db.clients.find_one({"client_id": comm["client_id"]}, {"_id": 0, "business_name": 1, "name": 1})
+        if cl:
+            client_name = cl.get("business_name") or cl.get("name", "")
+
+    ft = comm.get("fascicolo_tecnico", {})
+    if not ft.get("mandatario"):
+        ft["mandatario"] = client_name
+    if not ft.get("redatto_da"):
+        ft["redatto_da"] = company.get("responsabile_nome", "")
+
+    merger = PdfWriter()
+
+    # 1. DDT PDF
+    ddt_doc = await db.ddt_documents.find_one({"ddt_id": cons["ddt_id"], "user_id": user["user_id"]}, {"_id": 0})
+    if ddt_doc:
+        from services.ddt_pdf_service import generate_ddt_pdf
+        ddt_buf = generate_ddt_pdf(ddt_doc, company)
+        reader = PdfReader(ddt_buf)
+        for page in reader.pages:
+            merger.add_page(page)
+
+    # 2. DoP PDF
+    try:
+        dop_buf = generate_dop_pdf(company, comm, client_name, ft)
+        reader = PdfReader(dop_buf)
+        for page in reader.pages:
+            merger.add_page(page)
+    except Exception as e:
+        logger.warning(f"DoP generation error: {e}")
+
+    # 3. Etichetta CE PDF
+    try:
+        ce_buf = generate_ce_pdf(company, comm, client_name, ft)
+        reader = PdfReader(ce_buf)
+        for page in reader.pages:
+            merger.add_page(page)
+    except Exception as e:
+        logger.warning(f"CE generation error: {e}")
+
+    # Mark as generated
+    for i, c in enumerate(consegne):
+        if c["consegna_id"] == consegna_id:
+            await db[COLL].update_one(
+                {"commessa_id": cid},
+                {"$set": {f"consegne.{i}.dop_generata": True, f"consegne.{i}.ce_generata": True}},
+            )
+            break
+
+    output = BytesIO()
+    merger.write(output)
+    output.seek(0)
+
+    comm_num = comm.get("numero", cid).replace("/", "-")
+    filename = f"Pacchetto_Consegna_{cons['numero']}_{comm_num}.pdf"
+    return StreamingResponse(
+        output, media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
