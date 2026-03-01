@@ -40,7 +40,7 @@ async def get_invoices(
     if client_id:
         query["client_id"] = client_id
     if year:
-        query["document_number"] = {"$regex": f"-{year}-"}
+        query["document_number"] = {"$regex": f"-{year}[-/]"}
     
     total = await db.invoices.count_documents(query)
     
