@@ -266,10 +266,12 @@ export default function PreventivoEditorPage() {
             if (isNew) {
                 const res = await apiRequest('/preventivi/', { method: 'POST', body: payload });
                 toast.success('Preventivo creato');
+                clearDraft();
                 navigate(`/preventivi/${res.preventivo_id}`, { replace: true });
             } else {
                 await apiRequest(`/preventivi/${prevId}`, { method: 'PUT', body: payload });
                 toast.success('Preventivo salvato');
+                clearDraft();
             }
         } catch (e) { toast.error(e.message); } finally { setSaving(false); }
     };
