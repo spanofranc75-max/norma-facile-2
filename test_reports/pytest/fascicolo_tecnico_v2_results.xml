@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="10" skipped="0" tests="20" time="4.109" timestamp="2026-03-01T14:17:46.947433+00:00" hostname="agent-env-f1cd16e8-8ae6-4c2b-a79c-bb8cab47e4d5"><testcase classname="backend.tests.test_fascicolo_tecnico.TestHealth" name="test_health_endpoint" time="0.305" /><testcase classname="backend.tests.test_fascicolo_tecnico.TestFascicoloTecnicoData" name="test_get_fascicolo_returns_default_phases" time="2.022"><failure message="AssertionError: Expected 200, got 500: Internal Server Error&#10;assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_fascicolo_tecnico.py:121: in test_get_fascicolo_returns_default_phases
+    assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text}"
+E   AssertionError: Expected 200, got 500: Internal Server Error
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_fascicolo_tecnico.TestFascicoloTecnicoData" name="test_get_fascicolo_returns_default_requisiti" time="0.072"><failure message="AssertionError: Expected 200, got 500: Internal Server Error&#10;assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_fascicolo_tecnico.py:141: in test_get_fascicolo_returns_default_requisiti
+    assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text}"
+E   AssertionError: Expected 200, got 500: Internal Server Error
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_fascicolo_tecnico.TestFascicoloTecnicoData" name="test_get_fascicolo_returns_default_itt" time="0.056"><failure message="AssertionError: Expected 200, got 500: Internal Server Error&#10;assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_fascicolo_tecnico.py:161: in test_get_fascicolo_returns_default_itt
+    assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text}"
+E   AssertionError: Expected 200, got 500: Internal Server Error
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_fascicolo_tecnico.TestFascicoloTecnicoData" name="test_put_fascicolo_saves_editable_data" time="0.112"><failure message="assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_fascicolo_tecnico.py:217: in test_put_fascicolo_saves_editable_data
+    assert r2.status_code == 200
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_fascicolo_tecnico.TestFascicoloAuth" name="test_get_fascicolo_requires_auth" time="0.051" /><testcase classname="backend.tests.test_fascicolo_tecnico.TestFascicoloAuth" name="test_put_fascicolo_requires_auth" time="0.044" /><testcase classname="backend.tests.test_fascicolo_tecnico.TestFascicoloAuth" name="test_dop_pdf_requires_auth" time="0.048" /><testcase classname="backend.tests.test_fascicolo_tecnico.TestFascicoloAuth" name="test_ce_pdf_requires_auth" time="0.046" /><testcase classname="backend.tests.test_fascicolo_tecnico.TestFascicoloAuth" name="test_piano_controllo_pdf_requires_auth" time="0.056" /><testcase classname="backend.tests.test_fascicolo_tecnico.TestFascicoloAuth" name="test_rapporto_vt_pdf_requires_auth" time="0.046" /><testcase classname="backend.tests.test_fascicolo_tecnico.TestFascicoloAuth" name="test_registro_saldatura_pdf_requires_auth" time="0.050" /><testcase classname="backend.tests.test_fascicolo_tecnico.TestFascicoloAuth" name="test_riesame_tecnico_pdf_requires_auth" time="0.076" /><testcase classname="backend.tests.test_fascicolo_tecnico.TestFascicoloPDFs" name="test_dop_pdf_returns_pdf" time="0.066"><failure message="AssertionError: Expected 200, got 500: Internal Server Error&#10;assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_fascicolo_tecnico.py:295: in test_dop_pdf_returns_pdf
+    assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text}"
+E   AssertionError: Expected 200, got 500: Internal Server Error
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_fascicolo_tecnico.TestFascicoloPDFs" name="test_ce_pdf_returns_pdf" time="0.050"><failure message="AssertionError: Expected 200, got 500: Internal Server Error&#10;assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_fascicolo_tecnico.py:308: in test_ce_pdf_returns_pdf
+    assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text}"
+E   AssertionError: Expected 200, got 500: Internal Server Error
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_fascicolo_tecnico.TestFascicoloPDFs" name="test_piano_controllo_pdf_returns_pdf" time="0.058"><failure message="AssertionError: Expected 200, got 500: Internal Server Error&#10;assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_fascicolo_tecnico.py:319: in test_piano_controllo_pdf_returns_pdf
+    assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text}"
+E   AssertionError: Expected 200, got 500: Internal Server Error
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_fascicolo_tecnico.TestFascicoloPDFs" name="test_rapporto_vt_pdf_returns_pdf" time="0.051"><failure message="AssertionError: Expected 200, got 500: Internal Server Error&#10;assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_fascicolo_tecnico.py:330: in test_rapporto_vt_pdf_returns_pdf
+    assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text}"
+E   AssertionError: Expected 200, got 500: Internal Server Error
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_fascicolo_tecnico.TestFascicoloPDFs" name="test_registro_saldatura_pdf_returns_pdf" time="0.059"><failure message="AssertionError: Expected 200, got 500: Internal Server Error&#10;assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_fascicolo_tecnico.py:341: in test_registro_saldatura_pdf_returns_pdf
+    assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text}"
+E   AssertionError: Expected 200, got 500: Internal Server Error
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_fascicolo_tecnico.TestFascicoloPDFs" name="test_riesame_tecnico_pdf_returns_pdf" time="0.060"><failure message="AssertionError: Expected 200, got 500: Internal Server Error&#10;assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_fascicolo_tecnico.py:352: in test_riesame_tecnico_pdf_returns_pdf
+    assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text}"
+E   AssertionError: Expected 200, got 500: Internal Server Error
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase><testcase classname="backend.tests.test_fascicolo_tecnico.TestPreventivoDisegnoFields" name="test_create_preventivo_with_disegno_fields" time="0.577" /></testsuite></testsuites>
