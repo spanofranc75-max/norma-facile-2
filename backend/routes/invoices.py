@@ -762,19 +762,27 @@ async def send_invoice_email(invoice_id: str, payload: dict = None, user: dict =
     filename = f"{doc_num}.pdf"
 
     # Send email
-    from services.email_service import send_invoice_email as _send
+    from services.email_service import send_invoice_email as _send, send_email_with_attachment
     doc_type = invoice.get("document_type", "FT")
     total = invoice.get("totals", {}).get("total_document", 0)
 
-    success = await _send(
-        to_email=to_email,
-        client_name=client.get("business_name", ""),
-        document_number=doc_num,
-        document_type=doc_type,
-        total=total,
-        pdf_bytes=pdf_bytes,
-        filename=filename,
-    )
+    if payload.get("custom_subject") or payload.get("custom_body"):
+        custom_subject = payload.get("custom_subject") or f"Documento {doc_num}"
+        custom_body = payload.get("custom_body") or ""
+        success = await send_email_with_attachment(
+            to_email=to_email, subject=custom_subject, body=custom_body,
+            pdf_bytes=pdf_bytes, filename=filename,
+        )
+    else:
+        success = await _send(
+            to_email=to_email,
+            client_name=client.get("business_name", ""),
+            document_number=doc_num,
+            document_type=doc_type,
+            total=total,
+            pdf_bytes=pdf_bytes,
+            filename=filename,
+        )
 
     if not success:
         raise HTTPException(500, "Invio email fallito. Verifica la configurazione Resend in Impostazioni.")
