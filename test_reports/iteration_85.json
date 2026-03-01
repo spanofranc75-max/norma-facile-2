@@ -1,0 +1,96 @@
+{
+  "summary": "Iteration 85: Bug Fix Verification - Preventivo Editor Page Loading Loop. All 8 tests PASSED (100%). The critical P0 bug where typing in input fields caused page reload/loop and data loss has been FIXED. Verified: 1) ingegnere_disegno field works correctly, 2) giorni_consegna field works correctly, 3) numero_disegno field works correctly, 4) Classe di Esecuzione dropdown works, 5) sessionStorage auto-save working, 6) Save button works, 7) Rapid sequential field filling works, 8) Tab switching preserves values.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_85.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "ErrorBoundary moved below AuthProvider in App.js - prevents auth state reset on DOM errors",
+    "ProtectedRoute.js now uses sessionStorage 'nf_was_authenticated' flag to survive remounts",
+    "PreventivoEditorPage.js has sessionStorage auto-save with STORAGE_KEY pattern 'preventivo_draft_{prevId}'",
+    "Auto-save uses 300ms debounce (line 103-108) to avoid excessive writes",
+    "Draft is cleared on successful save via clearDraft() callback",
+    "All input fields have proper data-testid attributes for testing"
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (frontend-only testing)",
+    "frontend": "100% (8/8 tests passed)"
+  },
+  "test_credentials": {
+    "session_token": "test_session_3ce08f7a2e65452aa6e466779454ceb0",
+    "test_preventivo_id": "prev_2ab3bd7032"
+  },
+  "seed_data_creation": "None - used existing test preventivo",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The P0 bug on Preventivo Editor page is FIXED. Key fix involved: 1) Moving ErrorBoundary below AuthProvider to prevent auth state reset on DOM errors from browser extensions, 2) Adding sessionStorage 'nf_was_authenticated' flag in ProtectedRoute to survive component remounts, 3) Adding sessionStorage auto-save for form drafts in PreventivoEditorPage. All critical input fields (ingegnere_disegno, giorni_consegna, numero_disegno) and the Classe di Esecuzione dropdown work correctly without page reload.",
+  "bugs_verified_fixed": [
+    {
+      "bug_type": "P0 Critical - Data Loss",
+      "description": "Page entering loading loop/reload when typing in input fields (ingegnere_disegno, giorni_consegna), causing all unsaved form data to be lost",
+      "root_cause": "ErrorBoundary wrapped entire app including BrowserRouter and AuthProvider. DOM errors from browser extensions caused ErrorBoundary recovery which remounted AuthProvider, resetting loading=true and user=null, causing ProtectedRoute to show spinner",
+      "fix_applied": "1) ErrorBoundary moved below AuthProvider, 2) sessionStorage auth flag for ProtectedRoute, 3) sessionStorage form draft auto-save",
+      "verification_status": "VERIFIED FIXED"
+    }
+  ],
+  "tests_executed": [
+    {
+      "test_id": "TEST_1",
+      "name": "ingegnere_disegno field input",
+      "status": "PASSED",
+      "details": "Typed 'Ing. Mario Rossi', value preserved, no page reload"
+    },
+    {
+      "test_id": "TEST_2",
+      "name": "giorni_consegna field input",
+      "status": "PASSED",
+      "details": "Typed '45', value preserved, previous field value also preserved"
+    },
+    {
+      "test_id": "TEST_3",
+      "name": "numero_disegno field input",
+      "status": "PASSED",
+      "details": "Typed 'STR-2025-001', value preserved"
+    },
+    {
+      "test_id": "TEST_4",
+      "name": "Classe di Esecuzione dropdown",
+      "status": "PASSED",
+      "details": "Selected 'EXC3', value shown in dropdown, no page reload"
+    },
+    {
+      "test_id": "TEST_5",
+      "name": "sessionStorage auto-save",
+      "status": "PASSED",
+      "details": "Draft exists in sessionStorage with key 'preventivo_draft_prev_2ab3bd7032', contains entered values"
+    },
+    {
+      "test_id": "TEST_6",
+      "name": "Save button (Salva)",
+      "status": "PASSED",
+      "details": "Clicked Save, toast 'Preventivo salvato' appeared, values preserved after save"
+    },
+    {
+      "test_id": "TEST_7",
+      "name": "Rapid sequential field filling",
+      "status": "PASSED",
+      "details": "Filled 3 fields rapidly (<200ms between each), all values preserved"
+    },
+    {
+      "test_id": "TEST_8",
+      "name": "Tab switching value preservation",
+      "status": "PASSED",
+      "details": "Switched to Pagamento tab and back to Riferimento, all values preserved"
+    }
+  ]
+}
