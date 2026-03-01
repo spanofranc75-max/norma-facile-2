@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Textarea } from '../components/ui/textarea';
 import { toast } from 'sonner';
-import { Save, Building2, CreditCard, FileText, ImageIcon, Upload, X, Plug } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Save, Building2, CreditCard, FileText, ImageIcon, Upload, X, Plug, ShieldCheck } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
 export default function SettingsPage() {
