@@ -19,6 +19,7 @@ import {
 import DashboardLayout from '../components/DashboardLayout';
 import QuickActionFAB from '../components/QuickActionFAB';
 import QualityScoreWidget from '../components/QualityScoreWidget';
+import ComplianceWidget from '../components/ComplianceWidget';
 
 const formatCurrency = (v) =>
     new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
