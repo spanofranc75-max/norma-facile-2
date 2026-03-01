@@ -912,6 +912,16 @@ class ContoLavoroUpdate(BaseModel):
     note: Optional[str] = None
 
 
+class RientroData(BaseModel):
+    data_rientro: Optional[str] = None
+    ddt_fornitore_numero: Optional[str] = ""
+    ddt_fornitore_data: Optional[str] = ""
+    peso_rientrato_kg: Optional[float] = 0
+    esito_qc: Optional[str] = "conforme"  # conforme, non_conforme, conforme_con_riserva
+    note_rientro: Optional[str] = ""
+    motivo_non_conformita: Optional[str] = ""
+
+
 @router.post("/{cid}/conto-lavoro")
 async def create_conto_lavoro(cid: str, data: ContoLavoroCreate, user: dict = Depends(get_current_user)):
     await get_commessa_or_404(cid, user["user_id"])
