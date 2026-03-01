@@ -41,6 +41,8 @@ export default function SettingsPage() {
         aruba_username: '',
         aruba_password: '',
         aruba_sandbox: true,
+        fic_company_id: '',
+        fic_access_token: '',
     });
 
     useEffect(() => {
@@ -56,6 +58,8 @@ export default function SettingsPage() {
                     aruba_username: data.aruba_username || '',
                     aruba_password: data.aruba_password || '',
                     aruba_sandbox: data.aruba_sandbox !== false,
+                    fic_company_id: data.fic_company_id || '',
+                    fic_access_token: data.fic_access_token || '',
                 }));
             } catch (error) {
                 console.error('Error loading settings:', error);
