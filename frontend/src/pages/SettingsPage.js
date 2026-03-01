@@ -168,6 +168,10 @@ export default function SettingsPage() {
                             <Plug className="h-4 w-4" />
                             Integrazioni
                         </TabsTrigger>
+                        <TabsTrigger value="certificazioni" className="gap-2">
+                            <ShieldCheck className="h-4 w-4" />
+                            Certificazioni
+                        </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="company">
