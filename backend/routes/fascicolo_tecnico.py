@@ -102,15 +102,25 @@ async def _get_context(cid: str, user: dict):
         client_name = cl.get("name", "") if cl else ""
     # Get fascicolo data stored on commessa
     ft = commessa.get("fascicolo_tecnico", {})
-    # Get preventivo for disegno info
+    # Get preventivo for disegno / classe esecuzione / ingegnere
     preventivo = None
-    if commessa.get("preventivo_id"):
-        preventivo = await db.preventivi.find_one({"preventivo_id": commessa["preventivo_id"]}, {"_id": 0})
-    # Auto-populate disegno from preventivo if not set
-    if not ft.get("disegno_numero") and preventivo:
-        ft["disegno_numero"] = preventivo.get("numero_disegno", "")
-    if not ft.get("disegno_riferimento") and preventivo:
-        ft["disegno_riferimento"] = preventivo.get("numero_disegno", "")
+    prev_id = commessa.get("preventivo_id") or (commessa.get("moduli") or {}).get("preventivo_id")
+    if prev_id:
+        preventivo = await db.preventivi.find_one({"preventivo_id": prev_id}, {"_id": 0})
+    if preventivo:
+        if not ft.get("disegno_numero"):
+            ft["disegno_numero"] = preventivo.get("numero_disegno", "")
+        if not ft.get("disegno_riferimento"):
+            ft["disegno_riferimento"] = preventivo.get("numero_disegno", "")
+        if not ft.get("redatto_da"):
+            ft["redatto_da"] = preventivo.get("ingegnere_disegno", "")
+        # Classe esecuzione: preventivo sovrascrive commessa
+        classe_prev = preventivo.get("classe_esecuzione", "")
+        if classe_prev:
+            commessa["classe_esecuzione"] = classe_prev
+        # Client name from preventivo if not yet set
+        if not client_name:
+            client_name = preventivo.get("client_name", "")
     # Auto-populate materiali from batches
     if not ft.get("materiale") or not ft.get("profilato"):
         batches = await db.material_batches.find(
