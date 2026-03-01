@@ -49,6 +49,11 @@ class CompanySettings(BaseModel):
     # Condizioni di vendita
     condizioni_vendita: Optional[str] = None
     
+    # Aruba SDI Integration
+    aruba_username: Optional[str] = None
+    aruba_password: Optional[str] = None
+    aruba_sandbox: bool = True
+    
     # Timestamps
     updated_at: Optional[datetime] = None
 
