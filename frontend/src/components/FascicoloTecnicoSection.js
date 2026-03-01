@@ -108,6 +108,23 @@ export default function FascicoloTecnicoSection({ commessaId }) {
         finally { setCompletoLoading(false); }
     };
 
+    const handleDownloadSuperFascicolo = async () => {
+        setSuperLoading(true);
+        try {
+            const res = await fetch(`${API}/api/commesse/${commessaId}/fascicolo-tecnico-completo`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+            });
+            if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Errore generazione fascicolo');
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `Fascicolo_Tecnico_Unico_${commessaId}.pdf`; a.click();
+            URL.revokeObjectURL(url);
+            toast.success('Fascicolo Tecnico Unico scaricato con successo');
+        } catch (e) { toast.error(e.message); }
+        finally { setSuperLoading(false); }
+    };
+
     const openEdit = (sectionKey) => {
         setEditSection(sectionKey);
         setEditForm({ ...ftData });
