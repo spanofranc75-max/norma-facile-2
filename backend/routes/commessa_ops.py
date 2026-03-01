@@ -1196,17 +1196,57 @@ async def download_document(cid: str, doc_id: str, user: dict = Depends(get_curr
 
 @router.delete("/{cid}/documenti/{doc_id}")
 async def delete_document(cid: str, doc_id: str, user: dict = Depends(get_current_user)):
-    r = await db[DOC_COLL].delete_one({"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"]})
-    if r.deleted_count == 0:
+    # Read document BEFORE deleting to extract metadata for cascade
+    doc = await db[DOC_COLL].find_one({"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0})
+    if not doc:
         raise HTTPException(404, "Documento non trovato")
     
+    await db[DOC_COLL].delete_one({"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"]})
+    
     # Cascade delete: remove linked CAM lotti, material_batches, and copies
+    # Step 1: Delete by source_doc_id (standard cascade)
     cam_del = await db.lotti_cam.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"]})
     batch_del = await db.material_batches.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"]})
     copies_del = await db[DOC_COLL].delete_many({"source_doc_id": doc_id, "user_id": user["user_id"]})
     archive_del = await db.archivio_certificati.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"]})
     
-    cascade_info = f"CAM:{cam_del.deleted_count} Batch:{batch_del.deleted_count} Copie:{copies_del.deleted_count} Archivio:{archive_del.deleted_count}"
+    # Step 2: For certificate documents, also delete by colata numbers from metadata
+    # This catches orphaned records from previous uploads/analyses with different doc_ids
+    cam_extra = 0
+    batch_extra = 0
+    if doc.get("tipo") == "certificato_31" and doc.get("metadata_estratti"):
+        meta = doc["metadata_estratti"]
+        profili = meta.get("profili", [])
+        colate = set()
+        for p in profili:
+            colata = p.get("numero_colata", "")
+            if colata:
+                colate.add(colata)
+        # Also check top-level colata
+        if meta.get("numero_colata"):
+            colate.add(meta["numero_colata"])
+        
+        if colate:
+            # Delete orphaned CAM lotti by colata + commessa_id (auto-generated only)
+            cam_extra_res = await db.lotti_cam.delete_many({
+                "commessa_id": cid,
+                "user_id": user["user_id"],
+                "numero_colata": {"$in": list(colate)},
+            })
+            cam_extra = cam_extra_res.deleted_count
+            # Delete orphaned material_batches by colata + commessa_id
+            batch_extra_res = await db.material_batches.delete_many({
+                "commessa_id": cid,
+                "user_id": user["user_id"],
+                "heat_number": {"$in": list(colate)},
+            })
+            batch_extra = batch_extra_res.deleted_count
+            if cam_extra or batch_extra:
+                logger.info(f"Extra cascade by colata {colate}: CAM:{cam_extra} Batch:{batch_extra}")
+    
+    total_cam = cam_del.deleted_count + cam_extra
+    total_batch = batch_del.deleted_count + batch_extra
+    cascade_info = f"CAM:{total_cam} Batch:{total_batch} Copie:{copies_del.deleted_count} Archivio:{archive_del.deleted_count}"
     logger.info(f"Cascade delete for doc {doc_id}: {cascade_info}")
     
     await db[COLL].update_one({"commessa_id": cid}, push_event(cid, "DOCUMENTO_ELIMINATO", user, f"Doc {doc_id} eliminato ({cascade_info})"))
