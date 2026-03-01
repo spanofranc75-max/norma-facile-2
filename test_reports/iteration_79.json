@@ -1,0 +1,108 @@
+{
+  "summary": "Iteration 79 tested major auto-compilation update for Fascicolo Tecnico EN 1090. All 14 backend tests passed (100%). Frontend verified: Settings page shows EN 1090 certification section with 5 new fields (responsabile_nome, ruolo_firmatario, ente_certificatore, ente_certificatore_numero, certificato_en1090_numero). Fascicolo Tecnico section shows 6 document cards with high completion percentages (100% for most). DOP dialog shows 12 AUTO badges confirming auto-population from: company settings (firmatario, ente, certificato, responsabile, ruolo), client (mandatario), material batches (materiale, saldabilita, resilienza), dates (ddt_data, data_emissione, luogo_data_firma), commessa (ddt_riferimento with /01 suffix).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration79_auto_compilation.py",
+    "/app/test_reports/pytest/iteration79_auto_compilation_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration79_auto_compilation.py"
+  ],
+  "success_rate": {
+    "backend": "100% (14/14 passed)",
+    "frontend": "100% - all features verified via Playwright"
+  },
+  "test_credentials": "Test users created/cleaned during pytest run and UI tests",
+  "seed_data_creation": "Test commesse, clients, preventivi, material_batches created during tests, cleaned up after",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 79 adds comprehensive auto-compilation for Fascicolo Tecnico: (1) Company settings now include 5 EN 1090 fields: responsabile_nome, ruolo_firmatario, ente_certificatore, ente_certificatore_numero, certificato_en1090_numero - all save/load correctly via /api/company/settings. (2) GET /api/fascicolo-tecnico/{cid} auto-populates ~12 fields from various sources and returns _auto_fields list. (3) RESILIENZA_TABLE lookup normalizes material types (removes +AR, +N, +M suffixes) - S355JR returns '27 J a 20 °C', S275J2 returns '27 J a -20 °C'. (4) DDT numbering uses commessa/01 suffix format. (5) SmartField component shows AUTO/DA COMPILARE badges. (6) FascicoloTecnicoSection shows 6 document cards with filled/total completion indicators.",
+  "features_tested": {
+    "health_endpoint": {
+      "status": "PASS",
+      "details": "GET /api/health returns {status: healthy}"
+    },
+    "company_settings_en1090_save": {
+      "status": "PASS",
+      "details": "PUT /api/company/settings saves all 5 EN 1090 fields correctly"
+    },
+    "company_settings_en1090_load": {
+      "status": "PASS",
+      "details": "GET /api/company/settings returns all 5 EN 1090 fields"
+    },
+    "fascicolo_firmatario_from_business_name": {
+      "status": "PASS",
+      "details": "firmatario auto-populated from company business_name"
+    },
+    "fascicolo_mandatario_from_client_name": {
+      "status": "PASS",
+      "details": "mandatario auto-populated from client_name"
+    },
+    "fascicolo_ente_notificato_from_company": {
+      "status": "PASS",
+      "details": "ente_notificato auto-populated from company ente_certificatore"
+    },
+    "fascicolo_certificato_numero_from_company": {
+      "status": "PASS",
+      "details": "certificato_numero auto-populated from company certificato_en1090_numero"
+    },
+    "fascicolo_redatto_da_from_company": {
+      "status": "PASS",
+      "details": "redatto_da auto-populated from company responsabile_nome"
+    },
+    "fascicolo_ddt_riferimento_suffix": {
+      "status": "PASS",
+      "details": "ddt_riferimento auto-populated with commessa/01 suffix (e.g., UI-COMM-2025-001/01)"
+    },
+    "fascicolo_ddt_data_today": {
+      "status": "PASS",
+      "details": "ddt_data auto-populated with today's date"
+    },
+    "fascicolo_luogo_data_firma": {
+      "status": "PASS",
+      "details": "luogo_data_firma auto-populated with city and today's date"
+    },
+    "resilienza_s355jr_lookup": {
+      "status": "PASS",
+      "details": "S355JR returns '27 J a 20 °C' from RESILIENZA_TABLE"
+    },
+    "resilienza_s275j2_lookup": {
+      "status": "PASS",
+      "details": "S275J2 (with +N suffix normalized) returns '27 J a -20 °C'"
+    },
+    "auto_fields_list_complete": {
+      "status": "PASS",
+      "details": "_auto_fields list in response includes all auto-populated field names"
+    },
+    "frontend_settings_en1090_section": {
+      "status": "PASS (UI verified)",
+      "details": "Settings page Logo tab shows 'Certificazione EN 1090' card with all 5 fields and correct data-testids"
+    },
+    "frontend_fascicolo_6_document_cards": {
+      "status": "PASS (UI verified)",
+      "details": "Fascicolo Tecnico EN 1090 section shows 6 document cards: DOP, Marcatura CE, Piano di Controllo, Rapporto VT, Registro Saldatura, Riesame Tecnico"
+    },
+    "frontend_completion_percentages": {
+      "status": "PASS (UI verified)",
+      "details": "Document cards show filled/total completion (e.g., 16/16, 14/14)"
+    },
+    "frontend_auto_badges": {
+      "status": "PASS (UI verified)",
+      "details": "DOP edit dialog shows 12 AUTO badges indicating auto-populated fields with green border styling"
+    },
+    "frontend_dop_auto_population": {
+      "status": "PASS (UI verified)",
+      "details": "All expected fields auto-populated in DOP dialog: DDT Riferimento, Data DDT, Mandatario, Firmatario, Ruolo Firmatario, Luogo e Data Firma, Certificato Numero, Ente Notificato, Materiali/Saldabilita, Resilienza, Redatto da"
+    }
+  }
+}
