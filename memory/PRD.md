@@ -131,8 +131,16 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa cen
 - Backfill: script retroattivo per creare DDT per i conto lavoro già inviati/rientrati
 - Zero modifiche allo schema commessa — solo aggiunta ddt_invio_id al conto lavoro
 
+### Patentini Saldatori nel Super Fascicolo Tecnico (Mar 2026)
+- Il "Fascicolo Tecnico Unico" (PDF) ora include automaticamente tutti i saldatori assegnati alla commessa
+- Sorgenti saldatori: (1) `_source_welder_id` nel registro saldatura (Smart Assign), (2) `welder_id` dal progetto FPC
+- Sezione 4.4: tabella riepilogativa con nome, punzone, stato qualifiche, dettaglio patentini (standard, processo, scadenza)
+- Appendice B: auto-allegamento dei PDF patentini originali (solo qualifiche attive/in_scadenza con file)
+- Calcolo stato qualifiche in tempo reale: attivo (>30gg), in_scadenza (<=30gg), scaduto
+- Se nessun saldatore assegnato, mostra messaggio informativo senza errori
+- Testato: 9/9 backend pytest (iteration_93.json)
+
 ## Backlog
-- P1: Integrare patentini saldatori nel "Super Fascicolo Tecnico" (auto-allegare PDF validi per saldatori della commessa)
 - P1: Fatture in Cloud SDI (necessita credenziali utente), verifica parsing AI
 - P2: Test e2e completo, seeding dati, coesione flusso
 - P3: CSV per CNC, stato SOSPESA, miglioramenti repository documenti
