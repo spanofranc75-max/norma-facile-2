@@ -1769,7 +1769,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                     <div className="flex-1 h-full min-h-0">
                         {pdfPreviewUrl && (
                             <iframe
-                                src={`${pdfPreviewUrl}?token=${localStorage.getItem('auth_token')}`}
+                                src={pdfPreviewUrl.startsWith('blob:') ? pdfPreviewUrl : `${pdfPreviewUrl}?token=${localStorage.getItem('auth_token')}`}
                                 className="w-full h-[calc(85vh-120px)] border rounded"
                                 title="PDF Preview"
                             />
