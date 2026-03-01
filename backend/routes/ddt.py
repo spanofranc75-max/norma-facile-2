@@ -440,15 +440,23 @@ async def send_ddt_email(ddt_id: str, payload: dict = None, user: dict = Depends
     ddt_number = doc.get("number", ddt_id)
     filename = f"ddt_{ddt_number.replace('/', '_')}.pdf"
 
-    from services.email_service import send_ddt_email as _send
-    success = await _send(
-        to_email=to_email,
-        client_name=client.get("business_name", "") if client else "",
-        ddt_number=ddt_number,
-        ddt_type=doc.get("ddt_type", "vendita"),
-        pdf_bytes=pdf_bytes,
-        filename=filename,
-    )
+    from services.email_service import send_ddt_email as _send, send_email_with_attachment
+    if payload.get("custom_subject") or payload.get("custom_body"):
+        custom_subject = payload.get("custom_subject") or f"DDT n. {ddt_number}"
+        custom_body = payload.get("custom_body") or ""
+        success = await send_email_with_attachment(
+            to_email=to_email, subject=custom_subject, body=custom_body,
+            pdf_bytes=pdf_bytes, filename=filename,
+        )
+    else:
+        success = await _send(
+            to_email=to_email,
+            client_name=client.get("business_name", "") if client else "",
+            ddt_number=ddt_number,
+            ddt_type=doc.get("ddt_type", "vendita"),
+            pdf_bytes=pdf_bytes,
+            filename=filename,
+        )
 
     if not success:
         raise HTTPException(500, "Invio email fallito. Verifica la configurazione Resend.")
