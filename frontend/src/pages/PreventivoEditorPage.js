@@ -78,6 +78,41 @@ export default function PreventivoEditorPage() {
 
     const isAccepted = workflow.status === 'accettato' || workflow.invoicing_progress > 0;
 
+    // ── Auto-save form to sessionStorage ──
+    const STORAGE_KEY = `preventivo_draft_${prevId || 'new'}`;
+    const isRestoredRef = useRef(false);
+
+    // Restore draft on mount (only once, before API data arrives)
+    useEffect(() => {
+        try {
+            const saved = sessionStorage.getItem(STORAGE_KEY);
+            if (saved && !isRestoredRef.current) {
+                const parsed = JSON.parse(saved);
+                if (parsed && parsed.subject !== undefined) {
+                    setForm(parsed);
+                    isRestoredRef.current = true;
+                }
+            }
+        } catch { /* ignore parse errors */ }
+    }, [STORAGE_KEY]);
+
+    // Save draft on every form change (debounced via ref)
+    const saveTimerRef = useRef(null);
+    useEffect(() => {
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(() => {
+            try {
+                sessionStorage.setItem(STORAGE_KEY, JSON.stringify(form));
+            } catch { /* storage full, ignore */ }
+        }, 300);
+        return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+    }, [form, STORAGE_KEY]);
+
+    // Clear draft on successful save
+    const clearDraft = useCallback(() => {
+        try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
+    }, [STORAGE_KEY]);
+
     const handleAcceptPreventivo = async () => {
         if (isNew) return;
         try {
