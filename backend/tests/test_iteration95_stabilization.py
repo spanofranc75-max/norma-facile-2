@@ -298,16 +298,18 @@ class TestCoreCRUDEndpoints:
         response = requests.get(f"{BASE_URL}/api/welders/", headers=auth_headers, allow_redirects=True)
         assert response.status_code == 200
         data = response.json()
-        assert len(data.get("welders", [])) >= 3, "Should have at least 3 active welders"
-        print(f"PASS: GET /api/welders/ works, count={len(data.get('welders', []))}")
+        items = data.get("items") or data.get("welders") or []
+        assert len(items) >= 3, f"Should have at least 3 active welders, got {len(items)}"
+        print(f"PASS: GET /api/welders/ works, count={len(items)}")
 
     def test_get_instruments(self, auth_headers):
         """GET /api/instruments/ works"""
         response = requests.get(f"{BASE_URL}/api/instruments/", headers=auth_headers, allow_redirects=True)
         assert response.status_code == 200
         data = response.json()
-        assert len(data.get("instruments", [])) >= 5, "Should have at least 5 instruments"
-        print(f"PASS: GET /api/instruments/ works, count={len(data.get('instruments', []))}")
+        items = data.get("items") or data.get("instruments") or []
+        assert len(items) >= 5, f"Should have at least 5 instruments, got {len(items)}"
+        print(f"PASS: GET /api/instruments/ works, count={len(items)}")
 
 
 class TestDashboardStats:
