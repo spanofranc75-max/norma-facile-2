@@ -301,6 +301,7 @@ function CreateCommessaModal({ open, onOpenChange, clients, onCreated }) {
     const [form, setForm] = useState({
         title: '', client_id: '', description: '',
         value: '', deadline: '', priority: 'media',
+        classe_exc: '', tipologia_chiusura: '',
     });
     const [saving, setSaving] = useState(false);
 
