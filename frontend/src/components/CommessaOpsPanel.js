@@ -966,13 +966,19 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                             <div key={f.tipo} className="flex items-center gap-2 p-2 bg-slate-50 rounded text-xs" data-testid={`fase-${f.tipo}`}>
                                 <span className="font-medium flex-1">{f.label || f.tipo}</span>
                                 <StatoBadge stato={f.stato} />
+                                {f.stato === 'completato' && f.completed_at && (
+                                    <span className="text-[9px] text-slate-400">{new Date(f.completed_at).toLocaleDateString('it-IT')}</span>
+                                )}
+                                {f.stato === 'completato' && f.operator_name && (
+                                    <span className="text-[9px] text-slate-400 italic">{f.operator_name}</span>
+                                )}
                                 {f.stato === 'da_fare' && (
-                                    <Button size="sm" variant="ghost" className="h-6 text-[10px] text-blue-600" onClick={() => handleUpdateFase(f.tipo, 'in_corso')}>
+                                    <Button size="sm" variant="ghost" className="h-6 text-[10px] text-blue-600" onClick={() => handleUpdateFase(f.tipo, 'in_corso')} data-testid={`fase-avvia-${f.tipo}`}>
                                         <Play className="h-3 w-3 mr-0.5" /> Avvia
                                     </Button>
                                 )}
                                 {f.stato === 'in_corso' && (
-                                    <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => handleUpdateFase(f.tipo, 'completato')}>
+                                    <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => openFaseCompletaModal(f)} data-testid={`fase-completa-${f.tipo}`}>
                                         <CheckCircle2 className="h-3 w-3 mr-0.5" /> Completa
                                     </Button>
                                 )}
