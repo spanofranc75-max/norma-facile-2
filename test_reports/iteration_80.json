@@ -1,0 +1,100 @@
+{
+  "summary": "Iteration 80 backend testing completed successfully. All 17 tests passed (100%). Tested: 1) GET /api/company/settings returns new fields classe_esecuzione_default and certificato_en13241_numero, 2) PUT /api/company/settings saves these new fields correctly (EXC1-EXC4 values, certification numbers), 3) GET /api/fascicolo-tecnico/{commessa_id} returns auto-populated fields report_numero, report_data, ordine_numero, spessore in _auto_fields, plus mandatario and client_name.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration80_certificazioni.py",
+    "/app/test_reports/pytest/iteration80_certificazioni_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration80_certificazioni.py"
+  ],
+  "success_rate": {
+    "backend": "100% (17/17 passed)",
+    "frontend": "Not tested (backend-only request)"
+  },
+  "test_credentials": "Test users created/cleaned during pytest run",
+  "seed_data_creation": "Test commesse, clients, material_batches with spessore values created during tests, cleaned up after",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 80 adds two new fields to company settings: classe_esecuzione_default (dropdown EXC1-EXC4) and certificato_en13241_numero (certification number for EN 13241). GET/PUT /api/company/settings handles these correctly. The GET /api/fascicolo-tecnico/{cid} endpoint returns auto-populated fields including report_numero, report_data, ordine_numero, and spessore in the _auto_fields array. The mandatario is auto-populated from the client business_name. Settings page has a 'Certificazioni' tab with EN 1090-1 section (including classe_esecuzione_default dropdown and certificato_en1090_numero) and EN 13241 section (certificato_en13241_numero). Also has 'Dati Ente Certificatore' card with responsabile_nome, ruolo_firmatario, ente_certificatore, ente_certificatore_numero fields.",
+  "features_tested": {
+    "health_endpoint": {
+      "status": "PASS",
+      "details": "GET /api/health returns {status: healthy}"
+    },
+    "company_settings_new_fields_response": {
+      "status": "PASS",
+      "details": "GET /api/company/settings returns classe_esecuzione_default and certificato_en13241_numero fields"
+    },
+    "company_settings_save_classe_esecuzione": {
+      "status": "PASS",
+      "details": "PUT /api/company/settings saves classe_esecuzione_default=EXC3"
+    },
+    "company_settings_save_en13241": {
+      "status": "PASS",
+      "details": "PUT /api/company/settings saves certificato_en13241_numero=1234-CPR-9012"
+    },
+    "company_settings_save_both_fields": {
+      "status": "PASS",
+      "details": "PUT /api/company/settings saves both new fields together with other certification fields"
+    },
+    "company_settings_persistence": {
+      "status": "PASS",
+      "details": "GET /api/company/settings returns previously saved new fields (classe_esecuzione_default=EXC4, certificato_en13241_numero=PERSIST-TEST-001)"
+    },
+    "fascicolo_report_numero": {
+      "status": "PASS",
+      "details": "GET /api/fascicolo-tecnico/{cid} returns report_numero in _auto_fields, auto-populated from commessa numero"
+    },
+    "fascicolo_report_data": {
+      "status": "PASS",
+      "details": "GET /api/fascicolo-tecnico/{cid} returns report_data in _auto_fields, auto-populated with today's date (dd/mm/yyyy)"
+    },
+    "fascicolo_ordine_numero": {
+      "status": "PASS",
+      "details": "GET /api/fascicolo-tecnico/{cid} returns ordine_numero in _auto_fields, auto-populated from commessa numero"
+    },
+    "fascicolo_spessore": {
+      "status": "PASS",
+      "details": "GET /api/fascicolo-tecnico/{cid} returns spessore auto-populated from material_batches (8mm / 10mm)"
+    },
+    "fascicolo_all_auto_fields": {
+      "status": "PASS",
+      "details": "_auto_fields list includes commessa_numero, report_data, data_emissione, ddt_data and other auto-populated fields"
+    },
+    "fascicolo_client_name": {
+      "status": "PASS",
+      "details": "GET /api/fascicolo-tecnico/{cid} returns client_name in _auto_fields from client business_name"
+    },
+    "fascicolo_mandatario": {
+      "status": "PASS",
+      "details": "GET /api/fascicolo-tecnico/{cid} returns mandatario in _auto_fields, auto-populated from client business_name"
+    },
+    "classe_esecuzione_EXC1": {
+      "status": "PASS",
+      "details": "classe_esecuzione_default=EXC1 saved and retrieved correctly"
+    },
+    "classe_esecuzione_EXC2": {
+      "status": "PASS",
+      "details": "classe_esecuzione_default=EXC2 saved and retrieved correctly"
+    },
+    "classe_esecuzione_EXC3": {
+      "status": "PASS",
+      "details": "classe_esecuzione_default=EXC3 saved and retrieved correctly"
+    },
+    "classe_esecuzione_EXC4": {
+      "status": "PASS",
+      "details": "classe_esecuzione_default=EXC4 saved and retrieved correctly"
+    }
+  }
+}
