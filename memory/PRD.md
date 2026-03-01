@@ -401,12 +401,16 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - Testing: 100% backend (11/11), 100% frontend (iteration_69)
 
 ### Fix AI Certificate Processing + Migrazione SDI a Fatture in Cloud (Phase 60 - Mar 2026)
-- **BUG CRITICO FIXATO: AI Certificate Processing inconsistente** — Profili non matchati via OdA/RdP/DDT venivano archiviati (`tipo="archivio"`) e non creavano lotti CAM/material_batches. FIX: aggiunto fallback alla commessa corrente quando nessun match procurement trovato. L'utente carica un certificato su una commessa specifica → i profili vengono sempre assegnati a quella commessa.
-- **Migrazione SDI da Aruba a Fatture in Cloud**: Endpoint `send-sdi` e `stato-sdi` ora usano `FattureInCloudClient` (API v2) per sincronizzare fatture e inviarle al SDI
+- **BUG CRITICO FIXATO: AI Certificate Processing inconsistente** — Profili senza match OdA/RdP/DDT venivano archiviati (`tipo="archivio"`) e non creavano lotti CAM/material_batches.
+  - **Root cause**: Condizione `if tipo != "archivio"` + mancanza di fallback alla commessa corrente
+  - **FIX**: Aggiunto fallback (riga 1498-1503): profili senza match procurement → assegnati alla commessa corrente. Condizione cambiata a `if colata and matched_commessa_id:`
+  - **Logica smart matching PRESERVATA**: 1) Match esatto via OdA/RdP/DDT 2) Match parziale 3) Cross-commessa assignment + copia certificato 4) Fallback alla commessa corrente se nessun match trovato
+  - **Logging dettagliato**: ogni step del matching è ora loggato per debug futuro
+- **Migrazione SDI da Aruba a Fatture in Cloud**: Endpoint `send-sdi` e `stato-sdi` ora usano `FattureInCloudClient` (API v2)
 - **Backend**: `invoices.py` aggiornato, credenziali lette da `company_settings.fic_company_id` e `fic_access_token`
 - **Modello**: Aggiunti `fic_company_id`, `fic_access_token` a `CompanySettings` e `CompanySettingsUpdate`
-- **Frontend Impostazioni**: Tab "Integrazioni" aggiornata con campi Fatture in Cloud (Company ID, Access Token) al posto di Aruba
-- Testing: 100% backend (10/10), 100% frontend (iteration_70)
+- **Frontend Impostazioni**: Tab "Integrazioni" aggiornata con campi Fatture in Cloud (Company ID, Access Token)
+- Testing: 100% backend (13/13 iteration_72), 100% backend (10/10 iteration_70)
 
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
