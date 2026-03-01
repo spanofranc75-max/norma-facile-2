@@ -80,6 +80,7 @@ const NAV_GROUPS = [
             { path: '/sistema-qualita', label: 'Sistema Qualita', icon: FileText },
             { path: '/strumenti', label: 'Apparecchiature', icon: Wrench },
             { path: '/saldatori', label: 'Saldatori', icon: Users },
+            { path: '/audit', label: 'Audit & NC', icon: ClipboardCheck },
         ],
     },
     {
