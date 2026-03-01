@@ -174,6 +174,7 @@ export default function InvoiceEditorPage() {
                     internal_notes: data.internal_notes || '',
                     tax_settings: data.tax_settings || formData.tax_settings,
                     lines: data.lines.length > 0 ? data.lines : [{ ...emptyLine }],
+                    status: data.status || 'bozza',
                 });
                 setTotals(data.totals);
             } catch (error) {
