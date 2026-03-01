@@ -109,7 +109,7 @@ export default function DDTEditorPage() {
                 notes: data.notes || '',
                 lines: data.lines?.length ? data.lines : [emptyLine()],
             });
-            setDdtInfo({ number: data.number, status: data.status || 'non_fatturato', converted_to: data.converted_to || null });
+            setDdtInfo({ number: data.number, status: data.status || 'non_fatturato', converted_to: data.converted_to || null, commessa_id: data.commessa_id || null, commessa_numero: data.commessa_numero || null });
         }).catch(() => toast.error('DDT non trovato'));
     }, [ddtId, isNew]);
 
