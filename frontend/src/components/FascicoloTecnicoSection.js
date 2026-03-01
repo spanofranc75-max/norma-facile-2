@@ -441,12 +441,31 @@ function CeEditForm({ form, update, autoFields }) {
 
 // ─── Piano di Controllo Form with Timeline ───
 function PianoEditForm({ form, update, autoFields, timeline }) {
+    const [regInstruments, setRegInstruments] = useState([]);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await fetch(`${API}/api/smart-assign/instruments`, { credentials: 'include' });
+                if (res.ok) { const d = await res.json(); setRegInstruments(d.instruments || []); }
+            } catch { /* silent */ }
+        })();
+    }, []);
+
     const fasi = form.fasi || [];
     const toggleApplicabile = (idx) => {
         const n = [...fasi]; n[idx] = { ...n[idx], applicabile: !n[idx].applicabile }; update('fasi', n);
     };
     const updateFase = (idx, key, val) => {
         const n = [...fasi]; n[idx] = { ...n[idx], [key]: val }; update('fasi', n);
+    };
+    const handleSelectInstrument = (idx, instrumentId) => {
+        if (!instrumentId) { updateFase(idx, 'strumento_usato', ''); return; }
+        const inst = regInstruments.find(x => x.instrument_id === instrumentId);
+        if (inst) {
+            updateFase(idx, 'strumento_usato', `${inst.name} (S/N: ${inst.serial_number})`);
+            updateFase(idx, '_instrument_status', inst.calibration_status);
+        }
     };
 
     return (
