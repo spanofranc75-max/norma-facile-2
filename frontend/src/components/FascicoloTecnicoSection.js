@@ -575,10 +575,111 @@ function VtEditForm({ form, update, autoFields }) {
 
 // ─── Registro Saldatura Form ───
 function RegistroEditForm({ form, update, autoFields, addSaldatura, updateSaldatura, removeSaldatura }) {
+    const [regWelders, setRegWelders] = useState([]);
+    const [loadingWelders, setLoadingWelders] = useState(false);
+    const [selectedWelderInfo, setSelectedWelderInfo] = useState(null);
+
+    useEffect(() => {
+        (async () => {
+            setLoadingWelders(true);
+            try {
+                const res = await fetch(`${API}/api/smart-assign/welders`, { credentials: 'include' });
+                if (res.ok) { const d = await res.json(); setRegWelders(d.welders || []); }
+            } catch { /* silent */ }
+            finally { setLoadingWelders(false); }
+        })();
+    }, []);
+
+    const handleImportWelder = (welderId) => {
+        if (!welderId) { setSelectedWelderInfo(null); return; }
+        const w = regWelders.find(x => x.welder_id === welderId);
+        if (!w) return;
+        setSelectedWelderInfo(w);
+    };
+
+    const addFromRegistry = () => {
+        if (!selectedWelderInfo) { addSaldatura(); return; }
+        const w = selectedWelderInfo;
+        const bestQual = w.qualifications?.find(q => q.status === 'attivo') || w.qualifications?.[0];
+        const saldature = form.saldature || [];
+        const newRow = {
+            numero_disegno: '', numero_saldatura: '', periodo: '',
+            saldatore: w.name, punzone: w.stamp_id,
+            diametro: '', spessore: '', materiale_base: '',
+            wps_numero: bestQual?.process || '',
+            vt_esito: '', vt_data: '', vt_firma: '',
+            cnd_tipo: '', cnd_rapporto: '', cnd_data: '', cnd_firma: '',
+            cnd_tratto: '', rip_rapporto: '', rip_esito: '', rip_data: '',
+            _source_welder_id: w.welder_id,
+        };
+        update('saldature', [...saldature, newRow]);
+    };
+
     const saldature = form.saldature || [];
     return (
         <div className="space-y-3">
             <p className="text-xs text-slate-500 italic">Registro di Saldatura — MOD. 04</p>
+
+            {/* ── Smart Assign: Importa Saldatore ── */}
+            <div className="border border-blue-200 bg-blue-50/40 rounded-lg p-3 space-y-2" data-testid="smart-assign-welders">
+                <div className="flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5 text-blue-600" />
+                    <span className="text-xs font-bold text-blue-800">Importa da Registro Saldatori</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <select
+                        data-testid="select-import-welder"
+                        className="flex-1 h-8 text-sm rounded-md border border-input bg-background px-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                        onChange={e => handleImportWelder(e.target.value)}
+                        defaultValue=""
+                    >
+                        <option value="">-- Seleziona saldatore dal registro --</option>
+                        {loadingWelders && <option disabled>Caricamento...</option>}
+                        {regWelders.map(w => {
+                            const status = w.overall_status === 'ok' ? '  OK' : w.overall_status === 'warning' ? '  ATT.' : w.overall_status === 'expired' ? '  SCADUTO' : '  N/Q';
+                            return (
+                                <option key={w.welder_id} value={w.welder_id}>
+                                    {w.name} ({w.stamp_id}) —{status}
+                                </option>
+                            );
+                        })}
+                    </select>
+                    <Button size="sm" className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white" data-testid="btn-add-from-registry" onClick={addFromRegistry}>
+                        <Plus className="h-3 w-3 mr-1" /> Aggiungi Riga
+                    </Button>
+                </div>
+                {selectedWelderInfo && (
+                    <div className={`flex items-center gap-2 text-xs p-1.5 rounded ${
+                        selectedWelderInfo.overall_status === 'ok' ? 'bg-emerald-50 text-emerald-700' :
+                        selectedWelderInfo.overall_status === 'expired' ? 'bg-red-50 text-red-700' :
+                        'bg-amber-50 text-amber-700'
+                    }`} data-testid="welder-status-alert">
+                        {selectedWelderInfo.overall_status === 'ok' && <><CheckCircle2 className="h-3.5 w-3.5" /> Tutti i patentini validi</>}
+                        {selectedWelderInfo.overall_status === 'expired' && <><AlertTriangle className="h-3.5 w-3.5" /> ATTENZIONE: Tutti i patentini scaduti!</>}
+                        {selectedWelderInfo.overall_status === 'warning' && <><AlertTriangle className="h-3.5 w-3.5" /> Attenzione: Alcuni patentini in scadenza/scaduti</>}
+                        {selectedWelderInfo.overall_status === 'no_qual' && <><AlertCircle className="h-3.5 w-3.5" /> Nessun patentino registrato</>}
+                        {selectedWelderInfo.qualifications?.length > 0 && (
+                            <span className="ml-auto text-[10px]">
+                                {selectedWelderInfo.qualifications.filter(q => q.status === 'attivo').length}/{selectedWelderInfo.qualifications.length} validi
+                            </span>
+                        )}
+                    </div>
+                )}
+                {selectedWelderInfo?.qualifications?.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                        {selectedWelderInfo.qualifications.map(q => (
+                            <Badge key={q.qual_id} className={`text-[9px] border ${
+                                q.status === 'attivo' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                                q.status === 'in_scadenza' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                                'bg-red-100 text-red-700 border-red-200'
+                            }`}>
+                                {q.standard} {q.process} — Scad. {new Date(q.expiry_date).toLocaleDateString('it-IT')}
+                            </Badge>
+                        ))}
+                    </div>
+                )}
+            </div>
+
             <div className="grid grid-cols-3 gap-3">
                 <SmartField label="Data Emissione" value={form.data_emissione} onChange={v => update('data_emissione', v)} placeholder="GG/MM/AAAA" autoFields={autoFields} fieldKey="data_emissione" />
                 <SmartField label="Firma CS" value={form.firma_cs} onChange={v => update('firma_cs', v)} autoFields={autoFields} fieldKey="firma_cs" />
@@ -591,17 +692,22 @@ function RegistroEditForm({ form, update, autoFields, addSaldatura, updateSaldat
                 <div className="bg-slate-100 px-3 py-1.5 flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-700">Saldature Registrate</span>
                     <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={addSaldatura} data-testid="btn-add-saldatura">
-                        <Plus className="h-3 w-3 mr-1" /> Aggiungi Riga
+                        <Plus className="h-3 w-3 mr-1" /> Riga Manuale
                     </Button>
                 </div>
                 <div className="max-h-64 overflow-y-auto">
                     {saldature.length === 0 && (
-                        <p className="text-center text-xs text-slate-400 py-4">Nessuna saldatura. Aggiungi righe o il PDF conterra' righe vuote.</p>
+                        <p className="text-center text-xs text-slate-400 py-4">Nessuna saldatura. Usa "Importa da Registro" o aggiungi righe manuali.</p>
                     )}
                     {saldature.map((s, i) => (
                         <div key={i} className="p-2 border-b space-y-1">
                             <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-slate-500">#{i + 1}</span>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] font-bold text-slate-500">#{i + 1}</span>
+                                    {s._source_welder_id && (
+                                        <Badge className="bg-blue-50 text-blue-600 border-blue-200 border text-[8px]">Da Registro</Badge>
+                                    )}
+                                </div>
                                 <button onClick={() => removeSaldatura(i)} className="text-red-400 hover:text-red-600"><Trash2 className="h-3 w-3" /></button>
                             </div>
                             <div className="grid grid-cols-4 gap-1">
@@ -610,7 +716,7 @@ function RegistroEditForm({ form, update, autoFields, addSaldatura, updateSaldat
                                   ['wps_numero','WPS'],['vt_esito','VT Esito'],['vt_data','VT Data'],['vt_firma','VT Firma']
                                 ].map(([key,ph]) => (
                                     <input key={key} value={s[key]||''} onChange={e => updateSaldatura(i,key,e.target.value)}
-                                        placeholder={ph} className="h-6 text-[10px] border rounded px-1" />
+                                        placeholder={ph} className={`h-6 text-[10px] border rounded px-1 ${s._source_welder_id && (key === 'saldatore' || key === 'punzone') ? 'border-blue-300 bg-blue-50/30' : ''}`} />
                                 ))}
                             </div>
                         </div>
