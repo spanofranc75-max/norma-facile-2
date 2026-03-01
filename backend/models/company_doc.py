@@ -1,7 +1,6 @@
 """Company Document model for the Archivio Documentale Aziendale module."""
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import Optional, List, Literal
-from datetime import datetime, timezone
 
 CATEGORIES = ["manuali", "procedure", "certificazioni", "template", "normative", "organigramma", "altro"]
 CategoryType = Literal["manuali", "procedure", "certificazioni", "template", "normative", "organigramma", "altro"]
@@ -11,6 +10,17 @@ class CompanyDocumentCreate(BaseModel):
     title: str
     category: CategoryType
     tags: List[str] = []
+
+
+class VersionEntry(BaseModel):
+    version: int
+    filename: str
+    safe_filename: str
+    content_type: str
+    size_kb: int = 0
+    uploaded_by: Optional[str] = None
+    upload_date: str
+    note: str = ""
 
 
 class CompanyDocumentResponse(BaseModel):
@@ -23,8 +33,17 @@ class CompanyDocumentResponse(BaseModel):
     tags: List[str] = []
     uploaded_by: Optional[str] = None
     upload_date: str
+    version: int = 1
+    version_count: int = 1
 
 
 class CompanyDocumentList(BaseModel):
     items: List[CompanyDocumentResponse]
     total: int
+
+
+class VersionListResponse(BaseModel):
+    doc_id: str
+    title: str
+    current_version: int
+    versions: List[VersionEntry]
