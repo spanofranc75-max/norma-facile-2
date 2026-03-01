@@ -133,7 +133,7 @@ def generate_dop_pdf(company: dict, commessa: dict, client_name: str, dop_data: 
     <p style="font-size:8.5pt;">9. La prestazione del prodotto sopra identificato e' conforme all'insieme delle prestazioni dichiarate. La presente dichiarazione viene emessa sotto la responsabilita' del fabbricante sopra identificato.</p>
     <div class="sign-area">
         <div class="sign-box"><div class="sign-label">Nome e Cognome: {firmatario}</div><div class="sign-label" style="margin-top:4px;">Posizione: {ruolo}</div></div>
-        <div class="sign-box"><div class="sign-label">Luogo e data: {luogo_data}</div><div class="sign-label" style="margin-top:6px;">Firma:</div><div class="sign-line"></div></div>
+        <div class="sign-box"><div class="sign-label">Luogo e data: {luogo_data}</div><div class="sign-label" style="margin-top:6px;">Firma:</div>{_firma_img_html(firma)}<div class="sign-line"></div></div>
     </div>
     <div class="footer-mod">All. 4 Rev. 0 | {biz}</div>
     </body></html>"""
