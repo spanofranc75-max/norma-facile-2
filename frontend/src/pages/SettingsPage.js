@@ -53,6 +53,9 @@ export default function SettingsPage() {
                     bank_details: data.bank_details || prev.bank_details,
                     logo_url: data.logo_url || '',
                     condizioni_vendita: data.condizioni_vendita || '',
+                    aruba_username: data.aruba_username || '',
+                    aruba_password: data.aruba_password || '',
+                    aruba_sandbox: data.aruba_sandbox !== false,
                 }));
             } catch (error) {
                 console.error('Error loading settings:', error);
