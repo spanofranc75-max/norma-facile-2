@@ -1645,6 +1645,25 @@ async def _match_profili_to_commesse(
                 result_entry["certificato_copiato"] = True
                 logger.info(f"Certificate {doc_id} copied to commessa {matched_commessa_id} for profile {dim}")
 
+        # ── Archive unmatched profiles ──
+        if tipo == "archivio" and colata:
+            await db.archivio_certificati.update_one(
+                {"numero_colata": colata, "user_id": user["user_id"]},
+                {"$set": {
+                    "numero_colata": colata, "user_id": user["user_id"],
+                    "dimensioni": dim, "qualita_acciaio": qualita,
+                    "fornitore": fornitore, "peso_kg": peso,
+                    "n_certificato": n_cert,
+                    "source_doc_id": doc_id,
+                    "percentuale_riciclato": perc_ric,
+                    "metodo_produttivo": metodo,
+                    "updated_at": ts(),
+                }, "$setOnInsert": {"created_at": ts()}},
+                upsert=True,
+            )
+            result_entry["archiviato"] = True
+            logger.info(f"Profile '{dim}' (colata={colata}) archived — no OdA/RdP match found")
+
         risultati.append(result_entry)
 
     return risultati
