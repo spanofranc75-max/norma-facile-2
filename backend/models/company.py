@@ -83,6 +83,7 @@ class CompanySettingsUpdate(BaseModel):
     website: Optional[str] = None
     bank_details: Optional[BankDetails] = None
     logo_url: Optional[str] = None
+    firma_digitale: Optional[str] = None
     condizioni_vendita: Optional[str] = None
     aruba_username: Optional[str] = None
     aruba_password: Optional[str] = None
