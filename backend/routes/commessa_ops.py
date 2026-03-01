@@ -546,7 +546,7 @@ async def preview_rdp_email(cid: str, rdp_id: str, user: dict = Depends(get_curr
 
 
 @router.post("/{cid}/approvvigionamento/richieste/{rdp_id}/send-email")
-async def send_rdp_email_endpoint(cid: str, rdp_id: str, user: dict = Depends(get_current_user)):
+async def send_rdp_email_endpoint(cid: str, rdp_id: str, payload: dict = None, user: dict = Depends(get_current_user)):
     """Generate PDF and send RdP via email to supplier."""
     doc = await get_commessa_or_404(cid, user["user_id"])
     await ensure_ops_fields(cid)
