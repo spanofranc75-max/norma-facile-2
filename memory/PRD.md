@@ -25,34 +25,28 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa con
 
 ### Fascicolo Tecnico EN 1090
 - 6 documenti singoli: DOP, Etichetta CE, Piano di Controllo, Rapporto VT, Registro Saldatura, Riesame Tecnico
-- Auto-compilazione aggressiva (~90%) da Commessa, Preventivo, Impostazioni, Material Batches
-- Mandatario = cliente dall'intestazione preventivo
+- Auto-compilazione aggressiva (~90%)
 - Firma digitale incorporata nei PDF
-- Timeline produzione sincronizzata
 
-### Super Fascicolo Tecnico Unico (NUOVO - Mar 2026)
-- PDF unico aggregato con Copertina + Indice + 5 capitoli:
-  - Cap 1: Dati Generali (Dossier Commessa)
-  - Cap 2: Riesame Tecnico & ITT
-  - Cap 3: Tracciabilita' Materiali & Sostenibilita' (Lotti + CAM + Green Cert + Appendice A: Cert 3.1)
-  - Cap 4: Processo di Saldatura (PCQ + Registro + VT + Appendice B: Patentini)
-  - Cap 5: Marcatura CE (DoP + Etichetta CE)
+### Super Fascicolo Tecnico Unico (Mar 2026)
+- PDF unico aggregato: Copertina + Indice + 5 Capitoli
+- Include certificati 3.1 + certificati conto lavoro (rientro)
 - Endpoint: GET /api/commesse/{cid}/fascicolo-tecnico-completo
-- Service: /app/backend/services/pdf_super_fascicolo.py
-- Header/Footer coerenti con logo e numero commessa su ogni pagina
+
+### Rientro Conto Lavoro (NUOVO - Mar 2026)
+- Workflow completo: inviato -> rientrato -> verificato
+- Modale rientro con: data, DDT fornitore, peso rientrato, esito QC, upload certificato
+- 3 esiti QC: conforme, non_conforme, conforme_con_riserva
+- NCR PDF auto-generato per non conformita'
+- Verifica auto-completa fase produzione correlata
+- Certificato rientro linkato automaticamente al repository documenti e Super Fascicolo
+- Endpoints: POST .../rientro, PATCH .../verifica, GET .../ncr-pdf
 
 ### Impostazioni - Tab Certificazioni
-- EN 1090-1: Numero certificazione + Classe Esecuzione Default (EXC1-EXC4)
-- EN 13241: Numero certificazione
-- Dati Ente Certificatore
-
-### Integrazioni
-- Fatture in Cloud (SDI) - richiede credenziali utente
-- Resend (email transazionali)
-- Google Auth (Emergent-managed)
+- EN 1090-1 + EN 13241 + Classe Esecuzione Default
 
 ### Bug Fix
-- Select dropdown Radix UI: fix propagazione eventi con onPointerDownOutside e onCloseAutoFocus
+- Select dropdown Radix UI: fix propagazione eventi
 
 ## Backlog
 
@@ -61,8 +55,8 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa con
 - Verifica parsing certificati AI
 
 ### P2
-- Test end-to-end completo flusso applicativo
-- Bug preview PDF Conto Lavoro
+- Test end-to-end completo
+- Bug preview PDF Conto Lavoro (DDT invio)
 - Strategia seeding dati
 
 ### P3
@@ -71,17 +65,10 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa con
 - Stato "SOSPESA" per commesse
 
 ### Futuro
-- PWA offline mode
-- Migrazione object storage certificati
-- Versioning fatture/fascicolo
-- Stripe pagamenti
+- PWA offline, object storage, versioning, Stripe
 
 ## File Principali
-- `/app/backend/services/pdf_super_fascicolo.py` - Super Fascicolo Tecnico Unico (NUOVO)
-- `/app/backend/routes/commessa_ops.py` - Endpoint fascicolo-tecnico-completo (NUOVO)
-- `/app/backend/routes/fascicolo_tecnico.py` - Auto-compilazione aggressiva
-- `/app/backend/services/pdf_fascicolo_tecnico.py` - Generazione PDF singoli
-- `/app/backend/models/company.py` - Modello impostazioni
-- `/app/frontend/src/pages/SettingsPage.js` - Tab Certificazioni
-- `/app/frontend/src/components/FascicoloTecnicoSection.js` - UI Fascicolo + bottone Scarica PDF Unico
-- `/app/frontend/src/components/ui/select.jsx` - Fix bug Radix Select
+- `/app/backend/routes/commessa_ops.py` - Rientro + Verifica + NCR endpoints
+- `/app/backend/services/pdf_ncr.py` - NCR PDF generator (NUOVO)
+- `/app/backend/services/pdf_super_fascicolo.py` - Super Fascicolo (include cert CL)
+- `/app/frontend/src/components/CommessaOpsPanel.js` - UI Rientro modale
