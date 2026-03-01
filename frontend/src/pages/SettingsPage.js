@@ -38,6 +38,9 @@ export default function SettingsPage() {
         },
         logo_url: '',
         condizioni_vendita: '',
+        aruba_username: '',
+        aruba_password: '',
+        aruba_sandbox: true,
     });
 
     useEffect(() => {
