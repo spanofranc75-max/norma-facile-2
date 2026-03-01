@@ -36,6 +36,16 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa cen
 ### Impostazioni
 - Tab Certificazioni: EN 1090-1 + EN 13241 + Classe Esecuzione Default + Ente Certificatore
 
+### Archivio Documentale Aziendale (Mar 2026)
+- Pagina isolata /sistema-qualita accessibile dalla sidebar (gruppo Certificazioni)
+- Backend: /api/company/documents/ (CRUD completo con upload file)
+- Categorie: Manuali Qualita, Procedure, Certificazioni, Template, Normative, Altro
+- Filtro per categoria (tab pills), ricerca full-text (titolo, tag, filename)
+- Upload con drag area, titolo, categoria, tag
+- Grid di card documenti con download/elimina
+- File salvati su disco locale (/app/backend/uploads/company_docs/)
+- Testato: 13/13 backend + tutti flussi frontend (iteration_86.json)
+
 ## Bug Fix Critici (Mar 2026)
 
 ### P0: Bug Loop/Reload Editor Preventivi - RISOLTO
