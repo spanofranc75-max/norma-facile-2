@@ -404,6 +404,7 @@ async def create_preventivo(data: PreventivoCreate, user: dict = Depends(get_cur
         "numero_disegno": data.numero_disegno,
         "ingegnere_disegno": data.ingegnere_disegno,
         "classe_esecuzione": data.classe_esecuzione,  # EXC1, EXC2, EXC3, EXC4
+        "giorni_consegna": data.giorni_consegna,
         "lines": lines,
         "totals": totals,
         "compliance_status": compliance["all_compliant"],
