@@ -1,0 +1,67 @@
+{
+  "summary": "Iteration 94: Dashboard bugs verified fixed. Backend: 14/14 tests passed (100%). Bug #1 (empty compliance widget): compliance-en1090 now returns NF-2026-000002 (stato=chiuso) because it has 34 FT fields, excludes NF-2026-000001 (no FT data). Bug #2 (unreachable quality score): quality-score now uses adaptive categories - 'Sicurezza Cantieri' excluded (user has 0 rilievi/POS), score is 45/100 which is achievable.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration94_dashboard_bugs.py",
+    "/app/test_reports/pytest/iteration94_dashboard_bugs_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "dashboard.py L145-161: compliance-en1090 correctly filters commesse by stato != bozza AND (has FT data OR has classe_esecuzione)",
+    "dashboard.py L293-307: Sicurezza category only added when total_rilievi > 0 OR total_pos > 0",
+    "dashboard.py L277-283: CE category only added when en1090_count > 0 OR total_certs > 0",
+    "dashboard.py L310-316: Quality category only added when welders/instruments/audits present",
+    "dashboard.py L335-339: Score normalized to 100 based on raw_max of active categories only"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration94_dashboard_bugs.py"
+  ],
+  "success_rate": {
+    "backend": "100% (14/14 pytest tests passed)",
+    "frontend": "N/A (backend-only testing requested)"
+  },
+  "test_credentials": {
+    "user_id": "user_97c773827822",
+    "session_token": "yDZ9JAQM_3ct2TZ0UE3BFkZDQcc6YRSFWMlv888wRhQ"
+  },
+  "seed_data_creation": "Used existing user data - no new seed data created",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Dashboard bugs are fixed. compliance-en1090 at GET /api/dashboard/compliance-en1090 now filters by fascicolo_tecnico data presence (not stato). quality-score at GET /api/dashboard/quality-score now uses adaptive categories - categories only appear when user has relevant data. Test user user_97c773827822 has: 2 commesse (1 with FT data), 5 invoices, 2 preventivi, 5 DDT, 3 welders, 0 rilievi, 0 POS, 0 certificazioni.",
+  "bugs_verified": {
+    "bug_1_compliance_widget_empty": {
+      "status": "FIXED",
+      "before": "Only returned commesse with stato=confermata/in_produzione",
+      "after": "Returns any commessa with FT data, regardless of stato (except bozza)",
+      "evidence": "NF-2026-000002 (stato=chiuso, 34 FT fields) now appears in widget"
+    },
+    "bug_2_quality_score_unreachable": {
+      "status": "FIXED",
+      "before": "All categories shown, making 65 points unreachable for users without rilievi/POS/CE",
+      "after": "Adaptive categories - Sicurezza only if has rilievi/POS, CE only if has EN1090 commesse/certs",
+      "evidence": "User with 0 rilievi/POS sees 5 categories (no Sicurezza), score 45/100 is achievable"
+    }
+  },
+  "tests_executed": [
+    {
+      "test_type": "Backend API (pytest)",
+      "file": "/app/backend/tests/test_iteration94_dashboard_bugs.py",
+      "results": "14 passed in 2.22s",
+      "test_classes": [
+        "TestHealthCheck (1 test) - backend health",
+        "TestComplianceEN1090Endpoint (3 tests) - Bug #1 fix verification",
+        "TestQualityScoreEndpoint (7 tests) - Bug #2 fix verification",
+        "TestQualityScoreEdgeCases (1 test) - insights relevance",
+        "TestAuthRequirement (2 tests) - auth required for both endpoints"
+      ]
+    }
+  ]
+}
