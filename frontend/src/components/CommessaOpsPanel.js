@@ -104,6 +104,18 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     const [emailPreview, setEmailPreview] = useState({ open: false, previewUrl: '', sendUrl: '' });
     const [pdfExpanded, setPdfExpanded] = useState(false);
 
+    // Rientro Conto Lavoro states
+    const [rientroOpen, setRientroOpen] = useState(false);
+    const [rientroTarget, setRientroTarget] = useState(null);
+    const [rientroForm, setRientroForm] = useState({
+        data_rientro: new Date().toISOString().slice(0, 10),
+        ddt_fornitore_numero: '', ddt_fornitore_data: '',
+        peso_rientrato_kg: 0, esito_qc: 'conforme',
+        note_rientro: '', motivo_non_conformita: '',
+    });
+    const [rientroFile, setRientroFile] = useState(null);
+    const [rientroLoading, setRientroLoading] = useState(false);
+
     // Certificate linking states
     const [certLinkOpen, setCertLinkOpen] = useState(false);
     const [selectedArrivo, setSelectedArrivo] = useState(null);
