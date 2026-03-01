@@ -118,9 +118,23 @@ export default function CommessaHubPage() {
             toast.success('Modulo collegato');
             setLinkOpen(false);
             setLinkId('');
+            setAvailableModules([]);
             fetchHub();
         } catch (e) {
             toast.error(e.message);
+        }
+    };
+
+    const fetchAvailableModules = async (tipo) => {
+        setLoadingModules(true);
+        setLinkId('');
+        try {
+            const data = await apiRequest(`/commesse/${commessaId}/available-modules?tipo=${tipo}`);
+            setAvailableModules(data.modules || []);
+        } catch {
+            setAvailableModules([]);
+        } finally {
+            setLoadingModules(false);
         }
     };
 
