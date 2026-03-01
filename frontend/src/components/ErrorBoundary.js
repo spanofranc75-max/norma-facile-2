@@ -16,7 +16,7 @@ export class ErrorBoundary extends Component {
             error?.message?.includes('Failed to execute') ||
             error?.message?.includes('Node')) {
             console.warn('[ErrorBoundary] DOM manipulation error (likely browser extension):', error.message);
-            return (prev) => ({ hasError: false, error: null, retryKey: prev.retryKey + 1 });
+            return { hasError: false, error: null };
         }
         return { hasError: true, error };
     }
