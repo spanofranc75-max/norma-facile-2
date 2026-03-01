@@ -303,3 +303,44 @@ async def riesame_tecnico_pdf(cid: str, user: dict = Depends(get_current_user)):
     buf = generate_riesame_tecnico_pdf(company, commessa, client_name, ft)
     return StreamingResponse(buf, media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="Riesame_Tecnico_{commessa.get("numero","")}.pdf"'})
+
+
+@router.get("/{cid}/fascicolo-completo-pdf")
+async def fascicolo_completo_pdf(cid: str, docs: str = "dop,ce,piano,vt,registro,riesame", user: dict = Depends(get_current_user)):
+    """Generate a combined PDF with all selected Fascicolo Tecnico documents."""
+    from services.pdf_fascicolo_tecnico import (
+        generate_dop_pdf, generate_ce_pdf, generate_piano_controllo_pdf,
+        generate_rapporto_vt_pdf, generate_registro_saldatura_pdf,
+        generate_riesame_tecnico_pdf, DEFAULT_PHASES
+    )
+    from pypdf import PdfReader, PdfWriter
+
+    commessa, company, client_name, ft = await _get_context(cid, user)
+    if not ft.get("fasi"):
+        ft["fasi"] = [dict(p) for p in DEFAULT_PHASES]
+
+    selected = [d.strip() for d in docs.split(",")]
+    generators = {
+        "dop": generate_dop_pdf,
+        "ce": generate_ce_pdf,
+        "piano": generate_piano_controllo_pdf,
+        "vt": generate_rapporto_vt_pdf,
+        "registro": generate_registro_saldatura_pdf,
+        "riesame": generate_riesame_tecnico_pdf,
+    }
+
+    writer = PdfWriter()
+    for key in selected:
+        gen = generators.get(key)
+        if gen:
+            buf = gen(company, commessa, client_name, ft)
+            reader = PdfReader(buf)
+            for page in reader.pages:
+                writer.add_page(page)
+
+    from io import BytesIO
+    output = BytesIO()
+    writer.write(output)
+    output.seek(0)
+    return StreamingResponse(output, media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="Fascicolo_Tecnico_{commessa.get("numero","")}.pdf"'})
