@@ -1,0 +1,91 @@
+{
+  "summary": "Iteration 95: STABILIZATION PASS - All 23 backend tests passed. Dashboard changes verified: (1) compliance-en1090 returns commesse in ALL states with FT data, (2) quality-score uses adaptive categories, (3) CAM report-aziendale datetime filter works, (4) Super Fascicolo PDF generates with welder section. Frontend dashboard loads correctly showing badge '1 commessa' and dynamic quality score breakdown.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration95_stabilization.py",
+    "/app/test_reports/pytest/iteration95_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "dashboard.py L145-161: compliance-en1090 correctly filters commesse by stato != bozza AND (has FT data OR has classe_esecuzione) - VERIFIED",
+    "dashboard.py L243-257: ft_ce_count correctly counts commesse with CE fields in fascicolo_tecnico - VERIFIED",
+    "dashboard.py L301-307: Sicurezza category only added when total_rilievi > 0 OR total_pos > 0 - VERIFIED",
+    "cam.py L443-447: report-aziendale uses $or with datetime and string for created_at filter - VERIFIED",
+    "cam.py L564-568: trend_mensile handles both datetime objects and ISO strings - VERIFIED",
+    "pdf_super_fascicolo.py L451-499: _build_cap4_welder builds welder summary table from assigned_welders - VERIFIED",
+    "pdf_super_fascicolo.py L608-667: assigned_welders populated from fascicolo_tecnico.saldature._source_welder_id - VERIFIED"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration95_stabilization.py"
+  ],
+  "success_rate": {
+    "backend": "100% (23/23 pytest tests passed)",
+    "frontend": "100% (Dashboard widgets verified via Playwright)"
+  },
+  "test_credentials": {
+    "user_id": "user_97c773827822",
+    "session_token": "yDZ9JAQM_3ct2TZ0UE3BFkZDQcc6YRSFWMlv888wRhQ",
+    "expires_at": "2026-03-08"
+  },
+  "seed_data_creation": "Used existing production user data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Stabilization pass completed. All dashboard bugs from iterations 93-94 verified fixed. Test user user_97c773827822 has: 2 commesse (NF-2026-000001 fatturato, NF-2026-000002 chiuso with 34 FT fields), 2 lotti_cam, 5 material_batches, 3 welders, 5 instruments, 5 invoices. Session token valid until 2026-03-08.",
+  "bugs_verified": {
+    "compliance_en1090_shows_all_states": {
+      "status": "VERIFIED FIXED",
+      "evidence": "NF-2026-000002 (stato=chiuso) appears in compliance widget with 41% completion"
+    },
+    "quality_score_adaptive_categories": {
+      "status": "VERIFIED FIXED",
+      "evidence": "5 categories shown: production, documentation, ce, quality, activity (no safety - user has 0 rilievi)"
+    },
+    "cam_datetime_filter": {
+      "status": "VERIFIED FIXED",
+      "evidence": "report-aziendale?anno=2026 returns 2 lotti, 4731.73 kg, 2 months trend data"
+    },
+    "super_fascicolo_welder_section": {
+      "status": "VERIFIED WORKING",
+      "evidence": "PDF endpoint returns 98KB+ PDF with welder section 4.4"
+    },
+    "badge_text_fix": {
+      "status": "VERIFIED FIXED",
+      "evidence": "Playwright screenshot shows badge '1 commessa' correctly formatted"
+    }
+  },
+  "tests_executed": [
+    {
+      "test_type": "Backend API (pytest)",
+      "file": "/app/backend/tests/test_iteration95_stabilization.py",
+      "results": "23 passed in 6.85s",
+      "test_classes": [
+        "TestHealthCheck (1 test) - backend health",
+        "TestComplianceEN1090 (3 tests) - widget shows all states with FT data",
+        "TestQualityScoreAdaptive (4 tests) - adaptive categories, CE from FT",
+        "TestCAMReportAziendale (4 tests) - datetime filter, trend_mensile",
+        "TestSuperFascicoloTecnico (2 tests) - PDF generation, auth",
+        "TestCoreCRUDEndpoints (6 tests) - commesse, preventivi, ddt, invoices, welders, instruments",
+        "TestDashboardStats (1 test) - dashboard stats",
+        "TestAuthFlow (2 tests) - auth me, invalid token"
+      ]
+    },
+    {
+      "test_type": "Frontend (Playwright)",
+      "results": "PASS - Dashboard loads, widgets render correctly",
+      "verified": [
+        "ComplianceWidget badge shows '1 commessa' (not garbled)",
+        "QualityScoreWidget shows 72/100, level 'Artigiano Esperto'",
+        "Dynamic breakdown categories visible",
+        "No JS errors on dashboard"
+      ]
+    }
+  ]
+}
