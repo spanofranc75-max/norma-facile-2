@@ -987,7 +987,25 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                 </div>
                                 <div>
                                     <span className="text-slate-500 block">Acciaieria</span>
-                                    <span className="font-mono">{b.acciaieria || '-'}</span>
+                                    <input
+                                        defaultValue={b.acciaieria || ''}
+                                        placeholder="es. AFV Beltrame"
+                                        className="font-mono text-[10px] w-full border border-slate-200 rounded px-1 h-5 bg-white focus:border-emerald-400 focus:outline-none"
+                                        data-testid={`acciaieria-${b.batch_id}`}
+                                        onBlur={async (e) => {
+                                            const val = e.target.value.trim();
+                                            if (val === (b.acciaieria || '')) return;
+                                            try {
+                                                await fetch(`${API}/api/commesse/${commessaId}/material-batches/${b.batch_id}`, {
+                                                    method: 'PATCH',
+                                                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                                                    body: JSON.stringify({ acciaieria: val })
+                                                });
+                                                toast.success('Acciaieria salvata');
+                                                loadData();
+                                            } catch { toast.error('Errore salvataggio'); }
+                                        }}
+                                    />
                                 </div>
                             </div>
                         </div>
