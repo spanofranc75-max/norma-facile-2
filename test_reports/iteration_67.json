@@ -1,0 +1,63 @@
+{
+  "summary": "Iteration 67: Green Certificate feature testing complete. 6/6 backend tests passed (100%). Frontend tests passed: Green Certificate button visible and functional, PDF download triggered successfully, CAM section displays correctly, Sidebar shows 'Sostenibilita & CO2' label. DisabledTooltip component verified to exist and be properly integrated in 3 locations.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "backend_api_tests": {
+      "GET /api/cam/green-certificate/{commessa_id} returns PDF when CAM lotti exist": "PASS - Returns 200 with application/pdf content type and valid PDF file",
+      "GET /api/cam/green-certificate/{commessa_id} returns 400 when no CAM lotti": "PASS - Returns 400 with descriptive error message",
+      "GET /api/cam/green-certificate/{commessa_id} returns 404 for non-existent commessa": "PASS - Returns 404",
+      "GET /api/cam/green-certificate/{commessa_id} requires authentication": "PASS - Returns 401/403 without auth token",
+      "Green Certificate PDF content structure": "PASS - PDF size reasonable (>10KB), valid PDF header",
+      "Green Certificate with real data": "PASS - Works with existing commessa com_a91eab07a36e"
+    },
+    "frontend_ui_tests": {
+      "sidebar_label_sostenibilita": "PASS - 'Sostenibilita & CO2' label found under Certificazioni menu",
+      "commessa_hub_navigation": "PASS - /commesse/{commessaId} route works correctly",
+      "cam_section_data_testid": "PASS - [data-testid=\"section-cam---criteri-ambientali-minimi\"] found and clickable",
+      "green_certificate_button": "PASS - [data-testid=\"btn-green-certificate\"] visible and enabled when camLotti > 0",
+      "green_certificate_download": "PASS - Click triggers PDF download with filename Green_Certificate_{numero}.pdf",
+      "success_toast": "PASS - 'Green Certificate generato' toast appears after download",
+      "cam_summary_display": "PASS - Shows CONFORME CAM, Peso Totale, Peso Riciclato, % Riciclato, Soglia Min",
+      "disabled_tooltip_component": "PASS - DisabledTooltip.js exists and imported in 3 components"
+    },
+    "disabled_tooltip_usage": {
+      "CommessaHubPage.js_line_485": "Collega Modulo button - show={!linkId}",
+      "PreventivoEditorPage.js_line_367": "Compliance button - show={isNew}",
+      "CommessaOpsPanel.js_line_1777": "Crea DDT C/L button - show={!fornitore || no materials}"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_green_certificate.py",
+    "/app/test_reports/pytest/green_certificate_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Green Certificate endpoint correctly validates commessa ownership, CAM lotti existence, and returns proper error codes",
+    "PDF generation uses WeasyPrint with branded CSS styling matching the app's green/sustainability theme",
+    "CO2 calculations use World Steel Association factors: EAF=0.67 tCO2/t, BOF=2.33 tCO2/t",
+    "Trees equivalent formula: co2_risparmiata_kg / 22 (EEA standard)",
+    "DisabledTooltip properly wraps disabled buttons in a span with tabIndex={0} for accessibility",
+    "Green Certificate button only appears when camLotti.length > 0 (line 1044-1048 in CommessaOpsPanel.js)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_green_certificate.py"
+  ],
+  "success_rate": {
+    "backend": "100% (6/6 tests passed)",
+    "frontend": "100% (all UI features verified)"
+  },
+  "test_credentials": "Used existing user session (user_97c773827822) with real CAM data",
+  "seed_data_creation": "Created temporary test commessa and CAM lotti for isolated backend testing - automatically cleaned up",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Green Certificate feature fully implemented and tested. Endpoint at GET /api/cam/green-certificate/{commessa_id} generates branded sustainability PDF. Frontend button appears in CAM section when camLotti > 0. DisabledTooltip component is used for UX improvement on Compliance (PreventivoEditorPage), Collega Modulo (CommessaHubPage), and Crea DDT C/L (CommessaOpsPanel) buttons. All data-testid attributes are in place for future testing.",
+  "rca_of_the_issue": "N/A - No issues found during testing"
+}
