@@ -1621,6 +1621,7 @@ async def _match_profili_to_commesse(
                     "supplier_name": fornitore, "dimensions": dim,
                     "normativa": metadata_cert.get("normativa_riferimento", ""),
                     "source_doc_id": doc_id, "commessa_id": target_cid,
+                    "numero_certificato": n_cert,
                     "notes": f"Auto da cert {n_cert}", "created_at": ts(),
                 })
                 result_entry["batch_id"] = batch_id
