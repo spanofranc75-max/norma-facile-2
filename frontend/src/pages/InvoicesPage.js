@@ -494,9 +494,19 @@ export default function InvoicesPage() {
                                                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleSendEmail(inv); }} data-testid="btn-send-email">
                                                                 <Mail className="mr-2 h-4 w-4" />Invia via Email
                                                             </DropdownMenuItem>
+                                                            {inv.status === 'bozza' && (inv.document_type === 'FT' || inv.document_type === 'NC') && (
+                                                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleChangeStatus(inv, 'emessa'); }} data-testid="btn-emetti" className="text-blue-700 font-medium">
+                                                                    <CheckCircle2 className="mr-2 h-4 w-4" />Emetti Documento
+                                                                </DropdownMenuItem>
+                                                            )}
                                                             {(inv.document_type === 'FT' || inv.document_type === 'NC') && inv.status !== 'bozza' && (
                                                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleSendSDI(inv); }} data-testid="btn-send-sdi">
                                                                     <Send className="mr-2 h-4 w-4" />Invia a SDI
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            {inv.status === 'emessa' && (
+                                                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleChangeStatus(inv, 'pagata'); }} data-testid="btn-mark-paid" className="text-emerald-700">
+                                                                    <CircleDollarSign className="mr-2 h-4 w-4" />Segna Pagata
                                                                 </DropdownMenuItem>
                                                             )}
                                                             <DropdownMenuSeparator />
