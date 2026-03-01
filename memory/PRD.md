@@ -433,6 +433,19 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Frontend**: 4 card con bottoni PDF nella sezione "Fascicolo Tecnico EN 1090" del CommessaOpsPanel
 - Testing: 100% backend (14/14), 100% frontend (iteration_74)
 
+### Fascicolo Tecnico EN 1090 — Completamento 6 Documenti + Form Editabili (Phase 63 - Mar 2026)
+- **Registro di Saldatura (MOD. 04)**: PDF landscape con tabella gerarchica saldature (20 colonne), gruppi VISUAL TEST, CND, RIPARAZIONE. Struttura fedele all'originale.
+- **Riesame Tecnico (MOD. 01)**: PDF 2 pagine con checklist 28 requisiti (Si/No/N.A.), sezione Fattibilità (PROCEDERE/NON PROCEDERE), tabella ITT 10 caratteristiche.
+- **Template PDF riscritti**: Tutti i 6 PDF (DOP, CE, Piano Controllo, Rapporto VT, Registro Saldatura, Riesame Tecnico) riscritti con layout fedele ai documenti originali. Header standard con logo/titolo/mod, bordi neri, font Calibri.
+- **Etichetta CE fedele**: Bordo singolo, marchio CE grande centrato, campi label:value senza tabella, identica all'originale.
+- **Form editabili**: Nuovo componente `FascicoloTecnicoSection.js` con dialog di editing per ciascun documento. Form specifici: DopEditForm, CeEditForm, PianoEditForm, VtEditForm, RegistroEditForm, RiesameEditForm.
+- **Saldature dinamiche**: Aggiunta/rimozione righe saldatura nel Registro, con campi per tutti i 20 parametri.
+- **Requisiti editabili**: Checklist Riesame con radio Si/No/N.A. per ogni requisito + campo note.
+- **Fasi personalizzabili**: Toggle applicabile/non-applicabile per fasi Piano di Controllo con esito e data.
+- **Endpoints**: 2 nuovi → `/registro-saldatura-pdf`, `/riesame-tecnico-pdf`
+- **Frontend**: 6 card con bottoni "Compila" (apre editor) e "PDF" (scarica). Componente estratto dal panel principale.
+- Testing: 100% backend (20/20 - iteration_75)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
