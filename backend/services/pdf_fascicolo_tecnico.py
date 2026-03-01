@@ -46,13 +46,20 @@ table.main td { padding: 3px 4px; font-size: 8pt; border: 1px solid #000; }
 .section-title { font-size: 10pt; font-weight: 700; margin: 10px 0 4px 0; border-bottom: 1px solid #000; padding-bottom: 2px; }
 """
 
-def _header_html(biz, addr, piva, phone, email, title, mod_text=""):
+def _header_html(biz, addr, piva, phone, email, title, mod_text="", logo_url=""):
+    logo_html = f'<img src="{logo_url}" style="max-height:40px;max-width:100%;" /><br/>' if logo_url else ""
     return f"""<table class="header-table">
     <tr>
-        <td class="logo-cell"><div class="co-name">{biz}</div><div class="co-sub">{addr}</div></td>
+        <td class="logo-cell">{logo_html}<div class="co-name">{biz}</div><div class="co-sub">{addr}</div></td>
         <td class="title-cell">{title}</td>
         <td class="meta-cell">{mod_text}<br/><span style="font-size:7pt;">P.IVA: {piva}</span></td>
     </tr></table>"""
+
+def _firma_img_html(firma_b64):
+    """Returns an <img> tag for the firma digitale if available."""
+    if firma_b64:
+        return f'<img src="{firma_b64}" style="max-height:40px;max-width:140px;margin-top:2px;" />'
+    return ""
 
 def _co(company):
     return (company.get("business_name",""), 
