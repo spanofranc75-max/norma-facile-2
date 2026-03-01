@@ -271,6 +271,8 @@ async def create_commessa(data: CommessaCreate, user: dict = Depends(get_current
         "moduli": moduli,
         "eventi": [build_event(initial_event_type, user, f"Commessa {numero} creata")],
         "notes": data.notes or "",
+        "classe_exc": data.classe_exc or "",
+        "tipologia_chiusura": data.tipologia_chiusura or "",
         "status_history": [{"status": initial_kanban, "date": now.isoformat(), "note": "Creazione"}],
         # Keep old fields for backward compat
         "linked_preventivo_id": data.linked_preventivo_id,
