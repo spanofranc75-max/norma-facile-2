@@ -9,7 +9,7 @@ import sys
 from datetime import datetime
 
 class DistinteAPITester:
-    def __init__(self, base_url="https://commessa-hub-1.preview.emergentagent.com"):
+    def __init__(self, base_url="https://norma-facile-preview-1.preview.emergentagent.com"):
         self.base_url = base_url
         self.session_token = "test_session_1772177028714"  # From auth setup
         self.user_id = "test-user-1772177028714"
