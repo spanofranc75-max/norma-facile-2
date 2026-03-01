@@ -1430,16 +1430,18 @@ async def _match_profili_to_commesse(
 ) -> list:
     """
     Smart matching: for each profile in the certificate, find which commessa it belongs to.
-    Cross-references: OdA righe, RdP righe, DDT arrivi, documents.
+    Cross-references: OdA righe, RdP righe, DDT arrivi.
     
     Flow:
-    1. Build lookup of normalized profile descriptions → commessa_ids from ALL user's OdA/RdP/arrivi
+    1. Build lookup of profile bases (e.g. "IPE100") → commessa_ids from ALL user's OdA/RdP/arrivi
     2. For each certificate profile:
-       a. Try exact match → assign to matched commessa (prefer current)
-       b. Try partial match → assign to matched commessa (prefer current)
-       c. No match → FALLBACK to current commessa (the user uploaded it here intentionally)
+       a. Try match by profile base (IPE100 from cert vs IPE100 from OdA) → preferred
+       b. Try exact normalized match → secondary
+       c. Try partial substring match → tertiary
+       d. No match → ARCHIVIO (the profile doesn't belong to any commessa)
     3. Create material_batch + CAM lotto for the assigned commessa
     4. If assigned to another commessa, copy the certificate document there
+    5. If no match → archive in archivio_certificati
     """
     risultati = []
     fornitore = metadata_cert.get("fornitore", "")
