@@ -10,7 +10,7 @@ import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { toast } from 'sonner';
-import { Plus, Search, Truck, Pencil, Trash2, Package, FileCheck, BarChart3, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Truck, Pencil, Trash2, Package, FileCheck, BarChart3, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import EmptyState from '../components/EmptyState';
 
