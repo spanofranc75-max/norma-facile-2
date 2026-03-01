@@ -1892,11 +1892,17 @@ async def _match_profili_to_commesse(
 
 @router.get("/{cid}/ops")
 async def get_commessa_ops(cid: str, user: dict = Depends(get_current_user)):
-    """Get all operational data for a commessa: procurement, production, subcontracting, documents."""
+    """Get all operational data for a commessa: procurement, production, subcontracting, deliveries, documents."""
     doc = await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
+    
+    # Refresh doc after ensure_ops_fields
+    doc = await db[COLL].find_one({"commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0})
+    
     approv = doc.get("approvvigionamento", {"richieste": [], "ordini": [], "arrivi": []})
     fasi = doc.get("fasi_produzione", [])
     cl = doc.get("conto_lavoro", [])
+    consegne = doc.get("consegne", [])
 
     # Count documents
     doc_count = await db[DOC_COLL].count_documents({"commessa_id": cid, "user_id": user["user_id"]})
@@ -1914,6 +1920,7 @@ async def get_commessa_ops(cid: str, user: dict = Depends(get_current_user)):
             "percentage": round(fasi_completed / fasi_total * 100) if fasi_total > 0 else 0,
         },
         "conto_lavoro": cl,
+        "consegne": consegne,
         "documenti_count": doc_count,
     }
 
