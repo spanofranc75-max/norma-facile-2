@@ -242,11 +242,19 @@ async def get_quality_score(user: dict = Depends(get_current_user)):
 
     # Check if user has EN 1090 commesse (with fascicolo tecnico data)
     en1090_count = 0
+    ft_ce_count = 0  # Commesse with CE/DoP data in fascicolo tecnico
     async for c in db.commesse.find({"user_id": uid, "stato": {"$nin": ["bozza"]}}, {"_id": 0, "fascicolo_tecnico": 1, "classe_esecuzione": 1}).limit(50):
         ft = c.get("fascicolo_tecnico", {})
         has_ft = any(v for k, v in ft.items() if k != "_id" and v) if ft else False
         if has_ft or c.get("classe_esecuzione"):
             en1090_count += 1
+            # Check if CE/DoP fields are filled in the fascicolo tecnico
+            ce_fields = ["certificato_numero", "ente_notificato", "dop_numero"]
+            if any(ft.get(f) for f in ce_fields):
+                ft_ce_count += 1
+
+    # Total CE: standalone certificazioni + commesse with CE in fascicolo tecnico
+    total_ce_effective = total_certs + ft_ce_count
 
     # ── Build adaptive categories ──
     # Each category: (key, label, calculator, relevance_check)
