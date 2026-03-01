@@ -14,29 +14,33 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa cen
 
 ### Core
 - Commesse, Preventivi, Clienti, Fornitori, Procurement, DDT, Fatture
-- AI parsing certificati materiali, CAM compliance + CO2, Repository documenti, Compliance Dashboard
+- AI parsing certificati, CAM compliance + CO2, Repository documenti, Dashboard
 
 ### Fascicolo Tecnico EN 1090
-- 6 documenti singoli + Super Fascicolo Tecnico Unico (PDF aggregato 5 capitoli)
+- 6 documenti singoli + Super Fascicolo Unico (PDF 5 capitoli)
 - Auto-compilazione aggressiva (~90%)
 
-### Rientro Conto Lavoro (Mar 2026)
+### Rientro Conto Lavoro
 - Workflow: inviato -> rientrato -> verificato
-- Modale rientro: data, DDT forn., peso, QC, upload certificato
-- NCR PDF auto per non conformita', verifica auto-completa fase produzione
+- Modale rientro, NCR PDF, auto-fase, cert nel fascicolo
 
-### Tempi Produzione (NUOVO - Mar 2026)
-- Campi opzionali: started_at, completed_at, operator_name
-- Modale conferma completamento con date precompilate
-- Badge date/operatore accanto allo stato completato
-- Backward compatible: vecchi campi data_inizio/data_fine preservati
-- PDF Fascicolo usa completed_at con fallback sicuro
+### Tempi Produzione
+- started_at, completed_at, operator_name (opzionali, backward compat)
+- Modale completamento con date + operatore
+
+### Consegne al Cliente (NUOVO - Mar 2026)
+- Sezione "Consegne al Cliente" nella commessa
+- POST /api/commesse/{cid}/consegne: crea DDT pre-compilato con materiali dalla commessa
+- GET /api/commesse/{cid}/consegne/{id}/pacchetto-pdf: PDF unico DDT + DoP + Etichetta CE
+- DDT creato in ddt_documents con link commessa_id
+- Bottone "DDT + DoP + CE" per download pacchetto completo
+- Bottone "Modifica DDT" per aprire editor DDT
 
 ### Impostazioni
-- Tab Certificazioni: EN 1090-1 + EN 13241 + Classe Esecuzione Default
+- Tab Certificazioni: EN 1090-1 + EN 13241 + Classe Esecuzione Default + Ente Certificatore
 
 ## Backlog
 - P1: Fatture in Cloud SDI, verifica parsing AI
-- P2: Test e2e, bug preview PDF CL, seeding dati
-- P3: Repository miglioramenti, CSV per CNC, stato SOSPESA
+- P2: Test e2e, seeding dati
+- P3: CSV per CNC, stato SOSPESA, repository miglioramenti
 - Futuro: PWA, object storage, versioning, Stripe
