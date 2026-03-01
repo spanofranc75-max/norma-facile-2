@@ -363,6 +363,13 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Applicato su**: PreventivoEditorPage (Compliance), CommessaHubPage (Collega Modulo), CommessaOpsPanel (Crea DDT C/L)
 - Nuovo file: `/app/frontend/src/components/DisabledTooltip.js`
 
+### Green Certificate per Commessa (Phase 58c - Mar 2026)
+- **Endpoint**: `GET /api/cam/green-certificate/{commessa_id}` genera PDF brandizzato di sostenibilita
+- **PDF Professionale**: Bordo verde, logo aziendale, 4 KPI (CO2 risparmiata, alberi equivalenti, acciaio riciclato, indice circolare), tabella materiali con badge conformita CAM, sezione firma
+- **Frontend**: Bottone "Green Certificate" nella sezione CAM del CommessaHub (visibile solo con lotti CAM)
+- Nuovi file: `backend/services/pdf_green_certificate.py`
+- Testing: 100% backend (6/6), 100% frontend (iteration_67)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
