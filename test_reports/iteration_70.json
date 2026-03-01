@@ -1,0 +1,69 @@
+{
+  "summary": "Iteration 70 tested Fatture in Cloud integration, AI certificate fallback logic, and SDI workflow. All 10 backend tests passed. Frontend tests confirmed Settings page has FIC fields (Company ID, Access Token) in Integrazioni tab instead of Aruba. The bug fix for AI certificate parsing fallback logic is verified in code - unmatched profiles now assign to current commessa instead of archiving.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration70_fic_workflow.py",
+    "/app/test_reports/pytest/iteration70_fic_workflow_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "AI certificate fallback logic in commessa_ops.py lines 1494-1498 correctly assigns unmatched profiles to current_commessa_id",
+    "FIC credentials fields (fic_company_id, fic_access_token) properly added to Company model and SettingsPage.js",
+    "SDI send endpoint returns clear 'Fatture in Cloud' credential error when FIC credentials missing"
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100% (10/10 passed)",
+    "frontend": "100%"
+  },
+  "test_credentials": "session_token=test_session_iter70_ui_1772359342 (cleaned up)",
+  "seed_data_creation": "Created test users, clients, invoices, commesse for testing - all cleaned up after tests",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 70 all features working correctly. FIC integration replaces Aruba for SDI. The key bug fix: _match_profili_to_commesse function in commessa_ops.py now falls back to current_commessa_id when no match found via procurement data (lines 1494-1498). This ensures certificates uploaded to a commessa without existing OdA/RdP/DDT procurement data still get assigned to that commessa rather than archived.",
+  "features_tested": {
+    "health_endpoint": {
+      "status": "PASS",
+      "details": "GET /api/health returns {status: healthy, service: Norma Facile 2.0, version: 2.0.1}"
+    },
+    "company_settings_fic_fields": {
+      "status": "PASS",
+      "details": "PUT /api/company/settings accepts and stores fic_company_id and fic_access_token fields correctly"
+    },
+    "send_sdi_fic_error": {
+      "status": "PASS",
+      "details": "POST /api/invoices/{id}/send-sdi returns clear error about FIC credentials when not configured (not Aruba error)"
+    },
+    "stato_sdi_fic_error": {
+      "status": "PASS",
+      "details": "GET /api/invoices/{id}/stato-sdi returns clear error when invoice not synced with FIC"
+    },
+    "cam_report_auth": {
+      "status": "PASS",
+      "details": "GET /api/cam/report-aziendale returns 401 without authentication token"
+    },
+    "commessa_ops_structure": {
+      "status": "PASS",
+      "details": "GET /api/commesse/{id}/ops endpoint responds correctly"
+    },
+    "ai_certificate_fallback_logic": {
+      "status": "PASS",
+      "details": "Code review confirmed fallback logic assigns unmatched profiles to current_commessa_id (lines 1494-1498)"
+    },
+    "frontend_settings_fic_fields": {
+      "status": "PASS",
+      "details": "SettingsPage.js Integrazioni tab shows 'Fatture in Cloud (SDI)' section with Company ID and Access Token fields"
+    }
+  },
+  "mocked_apis": {
+    "FattureInCloud": "FIC API is live but requires real credentials. SDI workflow returns clear credential error when not configured."
+  }
+}
