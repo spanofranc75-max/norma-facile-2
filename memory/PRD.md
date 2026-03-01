@@ -447,22 +447,22 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - Testing: 100% backend (20/20 - iteration_75)
 
 ## Issue Pendenti
-- **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
-- **P2**: Account test non funziona da UI
 - **P2**: Radix UI Select/Popover dentro Dialog (workaround nativo attivo)
+- **P2**: Verifica utente parsing AI certificati (richiede test manuale dall'utente)
 
 ## Task Futuri
+- [ ] P1: Verifica integrazione Fatture in Cloud SDI (richiede credenziali utente)
 - [ ] P1: Repository Documenti UI — nuova tab nel CommessaHub per gestire tutti i documenti
-- [ ] P1: Modal Anteprima PDF per tutti i documenti
 - [ ] P2: Fix Radix UI dropdown dentro modal (root cause investigation)
+- [ ] P2: Data Seeding/Migrazione dati di test
 - [ ] Collegamento diretto Commessa <-> Progetto FPC
 - [ ] Esportazione CSV distinta di taglio per CNC
 - [ ] Estensione Distinta Facile (grata 2 ante, cancello scorrevole)
 - [ ] Categoria "CANCELLI" al listino prezzi
 - [ ] Migrazione dati EN 13241
-- [ ] Versioning fatture
+- [ ] Versioning fatture e fascicoli tecnici
 - [ ] Integrazione Stripe (pagamenti online)
-- [ ] Automazione invio credenziali
+- [ ] Firma Elettronica Avanzata (FEA) per PDF
 - [ ] Modalita offline (PWA)
-- [ ] Firma Elettronica Avanzata (FEA)
 - [ ] App Mobile Nativa
+- [ ] Stato "SOSPESA" per commesse
