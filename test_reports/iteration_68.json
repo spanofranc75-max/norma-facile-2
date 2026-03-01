@@ -1,0 +1,67 @@
+{
+  "summary": "Iteration 68 tested 5 features: poppler-utils fix, normativa fields, dashboard fatturato fix, email importo fix, and invoice workflow buttons. All backend tests passed (12/12). Frontend tests confirmed all features working. Fixed missing status field in InvoiceEditorPage.js.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "fixed_bugs": [
+      {
+        "component": "InvoiceEditorPage.js",
+        "issue": "Missing status field in setFormData when loading invoice - Emetti button was not showing",
+        "fix": "Added status: data.status || 'bozza' to setFormData call at line 177",
+        "priority": "HIGH"
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration68_features.py",
+    "/app/test_reports/pytest/iteration68_features_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/frontend/src/pages/InvoiceEditorPage.js"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100%"
+  },
+  "test_credentials": "session_token=test_session_iter68_57316073",
+  "seed_data_creation": "Created test user, client, and invoices for testing workflow",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 68 features all working. InvoiceEditorPage.js was fixed to include status field. SDI integration is MOCKED (Aruba keys not configured). Test data cleanup: 2 test invoices remain in emessa status (inv_de3c40e206c1, inv_106086303209), 1 test client (cli_ef4758ec7e38), 1 test commessa (created during testing).",
+  "features_tested": {
+    "poppler_utils_installation": {
+      "status": "PASS",
+      "details": "pdftoppm found at /usr/bin/pdftoppm, pdf2image imports successfully"
+    },
+    "dashboard_fatturato_mensile": {
+      "status": "PASS",
+      "details": "Months are consecutive (Ott, Nov, Dic, Gen, Feb, Mar), February 2026 included with correct data"
+    },
+    "commesse_normativa_fields": {
+      "status": "PASS",
+      "details": "classe_exc and tipologia_chiusura fields work in create/update API and show as badges in CommessaHubPage"
+    },
+    "invoice_status_transitions": {
+      "status": "PASS",
+      "details": "PATCH /api/invoices/{id}/status works for bozza→emessa and emessa→pagata. Invalid transitions correctly rejected"
+    },
+    "invoice_workflow_buttons": {
+      "status": "PASS",
+      "details": "InvoicesPage: Emetti Documento for bozza, Segna Pagata/Invia SDI for emessa. InvoiceEditorPage: Emetti button for bozza FT/NC, Invia SDI for non-bozza (after fix)"
+    },
+    "preventivi_email_total": {
+      "status": "PASS",
+      "details": "GET /api/preventivi/{id}/preview-email returns data correctly"
+    }
+  },
+  "mocked_apis": {
+    "SDI_Aruba": "send-sdi endpoint returns config error due to empty API keys"
+  }
+}
