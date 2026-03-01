@@ -147,6 +147,18 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa cen
 - **Fix:** Query `$or` per gestire entrambi i tipi (datetime e string), trend mensile gestisce entrambi i formati
 - Ora la dashboard mostra: 4.731 kg acciaio, 80% riciclato, 2 lotti conformi CAM
 
+### Bug Fix: Dashboard — Conformità EN 1090 vuota (Mar 2026)
+- **Problema:** Widget "Conformità EN 1090" mostrava "Nessuna commessa" nonostante 2 commesse EN 1090 lavorate
+- **Causa:** Filtro cercava solo stato `confermata/in_produzione`, ma le commesse reali erano `fatturato/chiuso`
+- **Fix:** Ora include tutte le commesse (escluse bozze) che hanno dati nel fascicolo tecnico o classe_esecuzione
+- Testato: 14/14 (iteration_94.json)
+
+### Bug Fix: Dashboard — Quality Score ingiusto (Mar 2026)
+- **Problema:** Punteggio 19/100 "Apprendista" perché 65 punti erano legati a rilievi/POS/CE che l'utente non usa
+- **Causa:** Categorie fisse (Sicurezza 30pt, CE 25pt, Foto 10pt) penalizzavano chi non fa cantieri
+- **Fix:** Score adattivo — solo categorie rilevanti al workflow dell'utente. Nuove: Commesse & Produzione, Sistema Qualità. Normalizzato a 100
+- Risultato: score realistico 47/100 "Artigiano in Crescita" per lo stesso utente
+
 ## Backlog
 - P1: Fatture in Cloud SDI (necessita credenziali utente), verifica parsing AI
 - P2: Test e2e completo, seeding dati, coesione flusso
