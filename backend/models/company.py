@@ -46,6 +46,9 @@ class CompanySettings(BaseModel):
     # Logo (base64 data URI)
     logo_url: Optional[str] = None
     
+    # Firma digitale (base64 data URI - immagine PNG/JPG)
+    firma_digitale: Optional[str] = None
+    
     # Condizioni di vendita
     condizioni_vendita: Optional[str] = None
     
