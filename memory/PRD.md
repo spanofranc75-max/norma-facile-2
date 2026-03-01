@@ -370,6 +370,28 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - Nuovi file: `backend/services/pdf_green_certificate.py`
 - Testing: 100% backend (6/6), 100% frontend (iteration_67)
 
+### Bug Fix: AI Certificate Parsing (Phase 59 - Mar 2026)
+- **Fix**: Installato `poppler-utils` (system dependency per `pdf2image`) — parsing certificati 3.1 PDF con AI tornato funzionante
+- File: `/app/apt-packages.txt` creato per persistenza
+
+### Campi Normativa Commesse (Phase 59 - Mar 2026)
+- Aggiunti campi `classe_exc` (EXC1-EXC4) e `tipologia_chiusura` (cancello, ringhiera, porta, scala, struttura, recinzione, pensilina, altro) a `CommessaCreate`/`CommessaUpdate`
+- Badge visibili nel CommessaHubPage, selettori nel form creazione PlanningPage
+
+### Fix Dashboard Fatturato (Phase 59 - Mar 2026)
+- Corretto calcolo mesi nel grafico fatturato: sostituito `timedelta(days=30)` con aritmetica mesi precisa
+- Feb 2026 ora correttamente visibile con 5 fatture emesse per EUR 3.877,75
+
+### Fix Importo Email Preventivo (Phase 59 - Mar 2026)
+- Email preview/send per preventivi ora legge `totals.total` (non `totals.total_document` che non esiste nei preventivi)
+
+### Workflow Fatture: Emetti → SDI (Phase 59 - Mar 2026)
+- Bottone "Emetti" in InvoiceEditorPage e dropdown InvoicesPage (bozza → emessa)
+- Bottone "Invia SDI" visibile solo per documenti emessi (non bozze)
+- Opzione "Segna Pagata" per fatture emesse
+- Fix: rimosso vincolo `ge=0` su `unit_price` per supportare note di credito
+- Testing: 100% backend (12/12), 100% frontend (iteration_68)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
