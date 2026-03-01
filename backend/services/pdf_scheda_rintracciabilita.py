@@ -164,6 +164,7 @@ def generate_scheda_rintracciabilita_pdf(
 <html><head><style>{CSS}</style></head><body>
 <div class="header-bar">
     <div class="header-left">
+        {'<img src="' + logo + '" style="max-height:35px;max-width:120px;" /><br/>' if logo else ''}
         <div class="company-name">{biz}</div>
         <div class="company-sub">{addr}</div>
         <div class="company-sub">P.IVA: {piva} | Tel: {phone}</div>
