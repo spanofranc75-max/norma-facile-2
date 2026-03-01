@@ -38,8 +38,8 @@ export default function ComplianceWidget() {
                     <Shield className="h-4 w-4 text-[#0055FF]" /> Compliance EN 1090
                 </CardTitle>
                 {commesse.length > 0 && (
-                    <Badge className="bg-blue-100 text-[#0055FF] text-xs">
-                        {commesse.length} commess{commesse.length === 1 ? 'a' : 'e'}
+                    <Badge className="bg-blue-100 text-[#0055FF] text-xs" data-testid="compliance-badge">
+                        {commesse.length === 1 ? '1 commessa' : `${commesse.length} commesse`}
                     </Badge>
                 )}
             </CardHeader>
