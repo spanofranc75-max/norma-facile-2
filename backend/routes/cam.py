@@ -442,8 +442,8 @@ async def report_aziendale_cam(
     query = {"user_id": user["user_id"]}
     if anno:
         query["created_at"] = {
-            "$gte": f"{anno}-01-01",
-            "$lte": f"{anno}-12-31T23:59:59",
+            "$gte": datetime(anno, 1, 1),
+            "$lte": datetime(anno, 12, 31, 23, 59, 59),
         }
     
     # Get all CAM lots
