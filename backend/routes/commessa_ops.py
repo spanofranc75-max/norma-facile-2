@@ -971,7 +971,7 @@ async def create_conto_lavoro(cid: str, data: ContoLavoroCreate, user: dict = De
 
 @router.put("/{cid}/conto-lavoro/{cl_id}")
 async def update_conto_lavoro(cid: str, cl_id: str, data: ContoLavoroUpdate, user: dict = Depends(get_current_user)):
-    await get_commessa_or_404(cid, user["user_id"])
+    comm = await get_commessa_or_404(cid, user["user_id"])
     await ensure_ops_fields(cid)
     upd = {"conto_lavoro.$[elem].stato": data.stato}
     if data.stato == "inviato":
@@ -987,13 +987,71 @@ async def update_conto_lavoro(cid: str, cl_id: str, data: ContoLavoroUpdate, use
     if data.note is not None:
         upd["conto_lavoro.$[elem].note"] = data.note
 
+    # ── Auto-create DDT when transitioning to "inviato" ──
+    ddt_invio_id = None
+    if data.stato == "inviato":
+        cl_list = comm.get("conto_lavoro", [])
+        cl_item = next((c for c in cl_list if c.get("cl_id") == cl_id), None)
+        if cl_item and not cl_item.get("ddt_invio_id"):
+            comm_num = comm.get("numero", cid)
+            year = ts().strftime("%Y")
+            ddt_count = await db.ddt_documents.count_documents({"user_id": user["user_id"]})
+            ddt_invio_id = f"ddt_{uuid.uuid4().hex[:12]}"
+            ddt_number = f"DDT-{year}-{ddt_count + 1:04d}"
+            tipo_lav = cl_item.get("tipo", "lavorazione")
+            fornitore = cl_item.get("fornitore_nome", "")
+            lines = []
+            for r in cl_item.get("righe", []):
+                lines.append({
+                    "description": r.get("descrizione", r.get("description", "")),
+                    "quantity": r.get("quantita", r.get("quantity", 1)),
+                    "unit": r.get("um", r.get("unit", "pz")),
+                    "weight": f'{r.get("peso_kg", 0)} kg',
+                    "unit_price": 0, "sconto_1": 0, "sconto_2": 0, "vat_rate": "22",
+                    "notes": r.get("note", ""),
+                })
+            now = ts()
+            ddt_doc = {
+                "ddt_id": ddt_invio_id,
+                "user_id": user["user_id"],
+                "number": ddt_number,
+                "ddt_type": "conto_lavoro",
+                "ddt_type_label": f"DDT C/Lavoro — {tipo_lav.capitalize()}",
+                "client_id": cl_item.get("fornitore_id", ""),
+                "client_name": fornitore,
+                "subject": f"C/Lavoro {tipo_lav} — Commessa {comm_num}",
+                "destinazione": {},
+                "causale_trasporto": cl_item.get("causale_trasporto", "Conto Lavorazione"),
+                "aspetto_beni": "Strutture metalliche",
+                "vettore": "", "mezzo_trasporto": "Mittente", "porto": "Franco",
+                "data_ora_trasporto": now.strftime("%d/%m/%Y %H:%M"),
+                "num_colli": 1,
+                "peso_lordo_kg": sum(float(r.get("peso_kg", 0)) for r in cl_item.get("righe", [])),
+                "peso_netto_kg": sum(float(r.get("peso_kg", 0)) for r in cl_item.get("righe", [])),
+                "stampa_prezzi": False,
+                "riferimento": f"Commessa {comm_num} — C/L {tipo_lav}",
+                "notes": cl_item.get("note", ""),
+                "lines": lines,
+                "totals": {"subtotal": 0, "total": 0, "line_count": len(lines)},
+                "status": "non_fatturato",
+                "commessa_id": cid,
+                "cl_id": cl_id,
+                "created_at": now,
+                "updated_at": now,
+            }
+            await db.ddt_documents.insert_one(ddt_doc)
+            upd["conto_lavoro.$[elem].ddt_invio_id"] = ddt_invio_id
+
     await db[COLL].update_one(
         {"commessa_id": cid},
         {"$set": upd},
         array_filters=[{"elem.cl_id": cl_id}],
     )
     await db[COLL].update_one({"commessa_id": cid}, push_event(cid, f"CL_{data.stato.upper()}", user, f"C/L {cl_id} → {data.stato}"))
-    return {"message": f"Conto lavoro aggiornato: {data.stato}"}
+    result = {"message": f"Conto lavoro aggiornato: {data.stato}"}
+    if ddt_invio_id:
+        result["ddt_invio_id"] = ddt_invio_id
+    return result
 
 
 # ── RIENTRO CONTO LAVORO ──
