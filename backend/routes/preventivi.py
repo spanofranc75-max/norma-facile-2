@@ -989,18 +989,26 @@ async def send_preventivo_email(prev_id: str, payload: dict = None, user: dict =
     prev_number = doc.get("number", prev_id)
     filename = f"preventivo_{prev_number.replace(' ', '_').replace('/', '_')}.pdf"
 
-    from services.email_service import send_invoice_email as _send
+    from services.email_service import send_invoice_email as _send, send_email_with_attachment
     total = doc.get("totals", {}).get("total_document", 0)
 
-    success = await _send(
-        to_email=to_email,
-        client_name=client.get("business_name", "") if client else "",
-        document_number=prev_number,
-        document_type="PRV",
-        total=total,
-        pdf_bytes=pdf_bytes,
-        filename=filename,
-    )
+    if payload.get("custom_subject") or payload.get("custom_body"):
+        custom_subject = payload.get("custom_subject") or f"Preventivo n. {prev_number}"
+        custom_body = payload.get("custom_body") or ""
+        success = await send_email_with_attachment(
+            to_email=to_email, subject=custom_subject, body=custom_body,
+            pdf_bytes=pdf_bytes, filename=filename,
+        )
+    else:
+        success = await _send(
+            to_email=to_email,
+            client_name=client.get("business_name", "") if client else "",
+            document_number=prev_number,
+            document_type="PRV",
+            total=total,
+            pdf_bytes=pdf_bytes,
+            filename=filename,
+        )
 
     if not success:
         raise HTTPException(500, "Invio email fallito. Verifica la configurazione Resend.")
