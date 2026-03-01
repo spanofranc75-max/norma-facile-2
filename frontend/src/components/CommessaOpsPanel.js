@@ -117,7 +117,6 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
 
     // Consegne (Deliveries)
     const [consegnaLoading, setConsegnaLoading] = useState(false);
-    const consegne = opsData?.consegne || [];
     const [rientroForm, setRientroForm] = useState({
         data_rientro: new Date().toISOString().slice(0, 10),
         ddt_fornitore_numero: '', ddt_fornitore_data: '',
