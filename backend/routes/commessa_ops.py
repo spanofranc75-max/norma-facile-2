@@ -1020,8 +1020,9 @@ async def preview_cl_email(cid: str, cl_id: str, user: dict = Depends(get_curren
 
 # ── DDT CONTO LAVORO: Send Email ──
 @router.post("/{cid}/conto-lavoro/{cl_id}/send-email")
-async def send_cl_email(cid: str, cl_id: str, user: dict = Depends(get_current_user)):
+async def send_cl_email(cid: str, cl_id: str, payload: dict = None, user: dict = Depends(get_current_user)):
     """Send DDT Conto Lavoro via email to the supplier."""
+    payload = payload or {}
     comm = await get_commessa_or_404(cid, user["user_id"])
     cl_list = comm.get("conto_lavoro", [])
     cl = next((c for c in cl_list if c["cl_id"] == cl_id), None)
