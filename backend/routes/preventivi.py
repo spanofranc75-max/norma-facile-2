@@ -62,6 +62,9 @@ class PreventivoCreate(BaseModel):
     lines: List[QuoteLine] = []
     # Normativa di riferimento per carpenteria metallica
     normativa: Optional[str] = None  # "EN_1090", "EN_13241", "NESSUNA"
+    # Disegno tecnico
+    numero_disegno: Optional[str] = None
+    ingegnere_disegno: Optional[str] = None
 
 
 class PreventivoUpdate(BaseModel):
@@ -81,6 +84,8 @@ class PreventivoUpdate(BaseModel):
     lines: Optional[List[QuoteLine]] = None
     status: Optional[str] = None
     normativa: Optional[str] = None  # "EN_1090", "EN_13241", "NESSUNA"
+    numero_disegno: Optional[str] = None
+    ingegnere_disegno: Optional[str] = None
 
 
 class ProgressiveInvoiceRequest(BaseModel):
