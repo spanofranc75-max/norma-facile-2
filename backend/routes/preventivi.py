@@ -958,8 +958,9 @@ async def preview_preventivo_email(prev_id: str, user: dict = Depends(get_curren
 
 
 @router.post("/{prev_id}/send-email")
-async def send_preventivo_email(prev_id: str, user: dict = Depends(get_current_user)):
+async def send_preventivo_email(prev_id: str, payload: dict = None, user: dict = Depends(get_current_user)):
     """Generate PDF and send preventivo via email to client."""
+    payload = payload or {}
     doc = await db.preventivi.find_one(
         {"preventivo_id": prev_id, "user_id": user["user_id"]}, {"_id": 0}
     )
