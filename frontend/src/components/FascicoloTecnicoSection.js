@@ -701,13 +701,13 @@ function RegistroEditForm({ form, update, autoFields, addSaldatura, updateSaldat
                 {selectedWelderInfo?.qualifications?.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                         {selectedWelderInfo.qualifications.map(q => (
-                            <Badge key={q.qual_id} className={`text-[9px] border ${
+                            <span key={q.qual_id} className={`text-[9px] border rounded-full px-1.5 py-0.5 font-medium inline-block ${
                                 q.status === 'attivo' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
                                 q.status === 'in_scadenza' ? 'bg-amber-100 text-amber-700 border-amber-200' :
                                 'bg-red-100 text-red-700 border-red-200'
                             }`}>
                                 {q.standard} {q.process} — Scad. {new Date(q.expiry_date).toLocaleDateString('it-IT')}
-                            </Badge>
+                            </span>
                         ))}
                     </div>
                 )}
@@ -738,7 +738,7 @@ function RegistroEditForm({ form, update, autoFields, addSaldatura, updateSaldat
                                 <div className="flex items-center gap-1.5">
                                     <span className="text-[10px] font-bold text-slate-500">#{i + 1}</span>
                                     {s._source_welder_id && (
-                                        <Badge className="bg-blue-50 text-blue-600 border-blue-200 border text-[8px]">Da Registro</Badge>
+                                        <span className="bg-blue-50 text-blue-600 border-blue-200 border text-[8px] rounded-full px-1.5 py-0.5 font-medium">Da Registro</span>
                                     )}
                                 </div>
                                 <button onClick={() => removeSaldatura(i)} className="text-red-400 hover:text-red-600"><Trash2 className="h-3 w-3" /></button>
