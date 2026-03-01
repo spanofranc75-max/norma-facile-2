@@ -1970,6 +1970,85 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                 </DialogContent>
             </Dialog>
 
+            {/* ── RIENTRO CONTO LAVORO DIALOG ── */}
+            <Dialog open={rientroOpen} onOpenChange={setRientroOpen}>
+                <DialogContent className="max-w-lg" data-testid="dialog-rientro-cl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-emerald-700">
+                            <Package className="h-5 w-5" /> Registra Rientro Materiale
+                        </DialogTitle>
+                        <DialogDescription>
+                            {rientroTarget && <span className="capitalize">{rientroTarget.tipo} &rarr; {rientroTarget.fornitore_nome}</span>}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {rientroTarget && (
+                    <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+                        {/* Dati invio (readonly reference) */}
+                        <div className="bg-slate-50 rounded border p-2.5 text-xs space-y-1">
+                            <div className="font-semibold text-slate-600 mb-1">Dati di Invio (riferimento)</div>
+                            <div>Materiali: {(rientroTarget.righe || []).map(r => r.descrizione).join(', ')}</div>
+                            <div>Peso inviato: <strong>{(rientroTarget.righe || []).reduce((s, r) => s + (parseFloat(r.peso_kg) || 0), 0).toFixed(1)} kg</strong></div>
+                            <div>Data invio: {rientroTarget.data_invio || 'N/D'}</div>
+                        </div>
+                        {/* Rientro fields */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label className="text-xs">Data Rientro</Label>
+                                <Input type="date" data-testid="input-rientro-data" value={rientroForm.data_rientro} onChange={e => setRientroForm(f => ({...f, data_rientro: e.target.value}))} />
+                            </div>
+                            <div>
+                                <Label className="text-xs">Peso Rientrato (kg)</Label>
+                                <Input type="number" step="0.1" data-testid="input-rientro-peso" value={rientroForm.peso_rientrato_kg} onChange={e => setRientroForm(f => ({...f, peso_rientrato_kg: parseFloat(e.target.value) || 0}))} />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label className="text-xs">DDT Fornitore N.</Label>
+                                <Input data-testid="input-rientro-ddt-num" placeholder="Numero DDT fornitore" value={rientroForm.ddt_fornitore_numero} onChange={e => setRientroForm(f => ({...f, ddt_fornitore_numero: e.target.value}))} />
+                            </div>
+                            <div>
+                                <Label className="text-xs">Data DDT Fornitore</Label>
+                                <Input type="date" data-testid="input-rientro-ddt-data" value={rientroForm.ddt_fornitore_data} onChange={e => setRientroForm(f => ({...f, ddt_fornitore_data: e.target.value}))} />
+                            </div>
+                        </div>
+                        <div>
+                            <Label className="text-xs">Esito Controllo Qualita'</Label>
+                            <Select value={rientroForm.esito_qc} onValueChange={v => setRientroForm(f => ({...f, esito_qc: v}))}>
+                                <SelectTrigger data-testid="select-rientro-qc"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="conforme">Conforme</SelectItem>
+                                    <SelectItem value="non_conforme">Non Conforme</SelectItem>
+                                    <SelectItem value="conforme_con_riserva">Conforme con Riserva</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {rientroForm.esito_qc === 'non_conforme' && (
+                            <div>
+                                <Label className="text-xs text-red-600">Motivo Non Conformita' *</Label>
+                                <Textarea data-testid="input-rientro-motivo-nc" className="text-xs border-red-300" rows={2} placeholder="Descrivi il motivo della non conformita'..." value={rientroForm.motivo_non_conformita} onChange={e => setRientroForm(f => ({...f, motivo_non_conformita: e.target.value}))} />
+                            </div>
+                        )}
+                        <div>
+                            <Label className="text-xs">Carica DDT / Certificato Fornitore (PDF)</Label>
+                            <Input type="file" accept=".pdf,.jpg,.jpeg,.png" data-testid="input-rientro-file" className="text-xs" onChange={e => setRientroFile(e.target.files?.[0] || null)} />
+                            {!rientroFile && <p className="text-[10px] text-amber-600 mt-0.5">Upload consigliato per il fascicolo tecnico</p>}
+                        </div>
+                        <div>
+                            <Label className="text-xs">Note</Label>
+                            <Textarea data-testid="input-rientro-note" className="text-xs" rows={2} placeholder="Note aggiuntive..." value={rientroForm.note_rientro} onChange={e => setRientroForm(f => ({...f, note_rientro: e.target.value}))} />
+                        </div>
+                    </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" size="sm" onClick={() => setRientroOpen(false)}>Annulla</Button>
+                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" disabled={rientroLoading} onClick={handleSubmitRientro} data-testid="btn-confirm-rientro">
+                            {rientroLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1" />}
+                            Conferma Rientro
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {/* PDF Preview Dialog */}
             <Dialog open={!!pdfPreviewUrl} onOpenChange={(open) => { if (!open) { setPdfPreviewUrl(null); setPdfExpanded(false); } }}>
                 <DialogContent className={`${pdfExpanded ? 'max-w-[95vw] w-[95vw] h-[95vh]' : 'max-w-4xl h-[85vh]'} flex flex-col transition-all duration-200`}>
