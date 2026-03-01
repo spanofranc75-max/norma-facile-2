@@ -208,6 +208,13 @@ async def get_ddt(ddt_id: str, user: dict = Depends(get_current_user)):
     )
     if not doc:
         raise HTTPException(404, "DDT non trovato")
+    # Enrich with commessa info if linked
+    cid = doc.get("commessa_id")
+    if cid:
+        comm = await db.commesse.find_one({"commessa_id": cid}, {"_id": 0, "numero": 1, "title": 1})
+        if comm:
+            doc["commessa_numero"] = comm.get("numero", "")
+            doc["commessa_title"] = comm.get("title", "")
     return doc
 
 
