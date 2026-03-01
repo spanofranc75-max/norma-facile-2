@@ -222,11 +222,13 @@ DEFAULT_PHASES = [
 ]
 
 def generate_piano_controllo_pdf(company: dict, commessa: dict, client_name: str, pc_data: dict) -> BytesIO:
-    biz, addr, piva, phone, email = _co(company)
+    biz, addr, piva, phone, email, logo, firma = _co(company)
     comm_num = commessa.get("numero", "")
     comm_title = commessa.get("title", "")
+    classe_exec = commessa.get("classe_esecuzione", "EXC2")
     disegno = pc_data.get("disegno_numero", "")
     ordine_num = pc_data.get("ordine_numero", comm_num)
+    redatto_da = pc_data.get("redatto_da", "")
     fasi = pc_data.get("fasi", [])
 
     rows = ""
