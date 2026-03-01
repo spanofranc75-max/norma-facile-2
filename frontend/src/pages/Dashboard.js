@@ -189,8 +189,11 @@ export default function Dashboard() {
                         </CardContent>
                     </Card>
 
-                    {/* Quality Score */}
-                    <QualityScoreWidget />
+                    {/* Quality Score + Compliance */}
+                    <div className="space-y-6">
+                        <QualityScoreWidget />
+                        <ComplianceWidget />
+                    </div>
                 </div>
 
                 {/* Widgets Row — 3 columns */}
