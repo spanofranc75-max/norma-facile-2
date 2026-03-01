@@ -985,6 +985,10 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                     <span className="text-slate-500 block">N. Pezzi</span>
                                     <span className="font-mono">{b.n_pezzi || '-'}</span>
                                 </div>
+                                <div>
+                                    <span className="text-slate-500 block">Acciaieria</span>
+                                    <span className="font-mono">{b.acciaieria || '-'}</span>
+                                </div>
                             </div>
                         </div>
                     ))}
