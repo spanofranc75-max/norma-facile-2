@@ -118,6 +118,8 @@ export default function PreventivoEditorPage() {
                 acconto: data.acconto || 0,
                 sconto_globale: data.sconto_globale || 0,
                 normativa: data.normativa || '',
+                numero_disegno: data.numero_disegno || '',
+                ingegnere_disegno: data.ingegnere_disegno || '',
             });
             if (data.compliance_detail) setCompliance(data.compliance_detail);
             setWorkflow({
