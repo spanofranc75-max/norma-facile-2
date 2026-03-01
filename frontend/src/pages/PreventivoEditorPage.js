@@ -243,7 +243,7 @@ export default function PreventivoEditorPage() {
         if (isNew) { toast.error('Salva il preventivo prima'); return; }
         setChecking(true);
         try {
-            const payload = { ...form, client_id: form.client_id || null, lines: form.lines.map(l => ({ ...l, quantity: parseFloat(l.quantity) || 1, unit_price: parseFloat(l.unit_price) || 0 })) };
+            const payload = { ...form, client_id: form.client_id || null, giorni_consegna: form.giorni_consegna ? parseInt(form.giorni_consegna) : null, lines: form.lines.map(l => ({ ...l, quantity: parseFloat(l.quantity) || 1, unit_price: parseFloat(l.unit_price) || 0 })) };
             await apiRequest(`/preventivi/${prevId}`, { method: 'PUT', body: payload });
             const result = await apiRequest(`/preventivi/${prevId}/check-compliance`, { method: 'POST' });
             setCompliance(result);
