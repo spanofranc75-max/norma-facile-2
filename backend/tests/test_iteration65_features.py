@@ -195,7 +195,7 @@ def setup_test_data(auth_session):
     # 8. Create Invoice for testing
     invoice_data = {
         "client_id": test_data['cliente_id'],
-        "document_type": "fattura",
+        "document_type": "FT",
         "issue_date": "2026-01-15",
         "payment_method": "bonifico",
         "payment_terms": "30gg",
