@@ -660,8 +660,8 @@ async def green_certificate_pdf(
         raise HTTPException(400, "Nessun lotto CAM per questa commessa. Aggiungi materiali dalla sezione CAM.")
 
     # Calculate CO2
-    peso_totale = sum(l.get("peso_kg", 0) for l in lotti)
-    peso_riciclato = sum(l.get("peso_kg", 0) * l.get("percentuale_riciclato", 0) / 100 for l in lotti)
+    peso_totale = sum(lot.get("peso_kg", 0) for lot in lotti)
+    peso_riciclato = sum(lot.get("peso_kg", 0) * lot.get("percentuale_riciclato", 0) / 100 for lot in lotti)
     co2_data = calcola_co2_risparmiata(peso_totale, peso_riciclato)
 
     # Get company settings
