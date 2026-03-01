@@ -407,8 +407,9 @@ async def preview_ddt_email(ddt_id: str, user: dict = Depends(get_current_user))
 
 
 @router.post("/{ddt_id}/send-email")
-async def send_ddt_email(ddt_id: str, user: dict = Depends(get_current_user)):
+async def send_ddt_email(ddt_id: str, payload: dict = None, user: dict = Depends(get_current_user)):
     """Generate PDF and send DDT via email to client."""
+    payload = payload or {}
     doc = await db[COLLECTION].find_one(
         {"ddt_id": ddt_id, "user_id": user["user_id"]}, {"_id": 0}
     )
