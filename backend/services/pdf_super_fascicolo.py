@@ -449,26 +449,52 @@ def _build_cap4_vt(ctx: dict) -> bytes:
 
 
 def _build_cap4_welder(ctx: dict) -> bytes:
-    """Welder qualification summary."""
+    """Welder qualification summary — lists all welders assigned to this commessa."""
     co = ctx["company"]
     comm = ctx["commessa"]
-    welder = ctx.get("welder")
-    hdr = _header(co.get("logo_url",""), co.get("business_name",""), comm.get("numero",""), "Cap. 4 — Qualifica Saldatore")
+    assigned_welders = ctx.get("assigned_welders", [])
+    hdr = _header(co.get("logo_url",""), co.get("business_name",""), comm.get("numero",""), "Cap. 4 — Patentini Saldatori")
 
-    if not welder:
+    if not assigned_welders:
         html = f"""{hdr}
-        <h2>4.4 Patentino Saldatore</h2>
-        <div class="note-box">Nessun saldatore assegnato al progetto FPC per questa commessa.</div>"""
+        <h2>4.4 Appendice B — Patentini Saldatori</h2>
+        <div class="note-box">Nessun saldatore assegnato dalla sezione Registro Saldatura di questa commessa.</div>"""
         return _render(html)
 
+    rows = ""
+    for w in assigned_welders:
+        quals = w.get("qualifications", [])
+        valid_quals = [q for q in quals if q.get("status") == "attivo" or q.get("status") == "in_scadenza"]
+        qual_list = ""
+        for q in valid_quals:
+            exp = _s(q.get("expiry_date", ""))
+            st_color = "#059669" if q.get("status") == "attivo" else "#ea580c"
+            has_pdf = "PDF allegato" if q.get("has_file") else "Nessun PDF"
+            qual_list += f'<div style="font-size:8pt;margin:1px 0;"><span style="color:{st_color};font-weight:700;">&#9679;</span> {_s(q.get("standard",""))} — {_s(q.get("process",""))} (scad. {exp}) — <em style="color:#777;">{has_pdf}</em></div>'
+        if not qual_list:
+            qual_list = '<span style="color:#999;font-size:8pt;">Nessuna qualifica valida</span>'
+
+        status_label = {"ok": "Valido", "warning": "Attenzione", "expired": "Scaduto", "no_qual": "N/A"}.get(w.get("overall_status"), "")
+        status_color = {"ok": "#059669", "warning": "#ea580c", "expired": "#dc2626", "no_qual": "#999"}.get(w.get("overall_status"), "#999")
+
+        rows += f"""<tr>
+            <td style="font-weight:700;">{_s(w.get('name',''))}</td>
+            <td style="text-align:center;font-family:monospace;">{_s(w.get('stamp_id',''))}</td>
+            <td style="text-align:center;"><span style="color:{status_color};font-weight:700;">{status_label}</span></td>
+            <td>{qual_list}</td>
+        </tr>"""
+
+    n_pdfs = sum(1 for w in assigned_welders for q in w.get("qualifications", []) if q.get("has_file") and q.get("status") in ("attivo", "in_scadenza"))
+    note = f'<div class="note-box" style="margin-top:8px;">Le copie dei {n_pdfs} patentini PDF validi sono allegate nelle pagine successive.</div>' if n_pdfs > 0 else ""
+
     html = f"""{hdr}
-    <h2>4.4 Patentino Saldatore</h2>
-    <table class="info">
-        <tr><td class="lbl">Nome:</td><td>{_s(welder.get('name',''))}</td></tr>
-        <tr><td class="lbl">Qualifica:</td><td>{_s(welder.get('qualification_level',''))}</td></tr>
-        <tr><td class="lbl">Scadenza Patentino:</td><td>{_s(welder.get('license_expiry','N/A'))}</td></tr>
-        <tr><td class="lbl">Note:</td><td>{_s(welder.get('notes',''))}</td></tr>
+    <h2>4.4 Appendice B — Patentini Saldatori</h2>
+    <p style="font-size:9pt;color:#555;margin-bottom:6px;">Saldatori assegnati alla commessa {_s(comm.get('numero',''))} con le rispettive qualifiche valide.</p>
+    <table class="data">
+        <thead><tr><th style="text-align:left;">Saldatore</th><th>Punzone</th><th>Stato</th><th style="text-align:left;">Qualifiche</th></tr></thead>
+        <tbody>{rows}</tbody>
     </table>
+    {note}
     """
     return _render(html)
 
