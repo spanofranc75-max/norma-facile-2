@@ -12,6 +12,37 @@ from core.security import get_current_user
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/fascicolo-tecnico", tags=["fascicolo_tecnico"])
 
+# ── Tabella resilienza per tipo acciaio (EN 10025) ──
+RESILIENZA_TABLE = {
+    "S235JR": "27 J a 20 °C",
+    "S235J0": "27 J a 0 °C",
+    "S235J2": "27 J a -20 °C",
+    "S275JR": "27 J a 20 °C",
+    "S275J0": "27 J a 0 °C",
+    "S275J2": "27 J a -20 °C",
+    "S355JR": "27 J a 20 °C",
+    "S355J0": "27 J a 0 °C",
+    "S355J2": "27 J a -20 °C",
+    "S355K2": "40 J a -20 °C",
+    "S420J2": "27 J a -20 °C",
+    "S450J0": "27 J a 0 °C",
+    "S460J2": "27 J a -20 °C",
+    "S460N": "40 J a -20 °C",
+    "S460NL": "27 J a -40 °C",
+}
+
+def _lookup_resilienza(material_types: list) -> str:
+    """Lookup resilienza from material type list."""
+    for mt in material_types:
+        key = mt.strip().upper().replace("+AR", "").replace("+N", "").replace("+M", "").strip()
+        if key in RESILIENZA_TABLE:
+            return RESILIENZA_TABLE[key]
+        # Partial match
+        for k, v in RESILIENZA_TABLE.items():
+            if k in key or key in k:
+                return v
+    return ""
+
 
 # ── Models ──
 class FasePianoControllo(BaseModel):
