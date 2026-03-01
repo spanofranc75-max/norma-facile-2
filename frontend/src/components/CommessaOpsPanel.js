@@ -1017,6 +1017,38 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
             </Section>
 
             {/* ── CONTO LAVORO ── */}
+            {/* ── CONSEGNE (DDT + DoP + CE) ── */}
+            <Section title="Consegne al Cliente" icon={Truck} count={consegne.length}>
+                <div className="space-y-2">
+                    <Button size="sm" variant="outline" onClick={handleCreaConsegna} disabled={consegnaLoading} className="text-xs" data-testid="btn-nuova-consegna">
+                        {consegnaLoading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />} Nuova Consegna (DDT + DoP + CE)
+                    </Button>
+                    {consegne.length === 0 && <p className="text-[10px] text-slate-400 italic">Nessuna consegna registrata</p>}
+                    {consegne.map(c => (
+                        <div key={c.consegna_id} className="p-2.5 bg-slate-50 rounded border text-xs space-y-1.5" data-testid={`consegna-${c.consegna_id}`}>
+                            <div className="flex items-center gap-2">
+                                <Truck className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                                <span className="font-semibold flex-1">Consegna #{c.numero} — {c.ddt_number}</span>
+                                <span className="text-[10px] text-slate-400">{c.data}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                {c.dop_generata && <Badge className="bg-emerald-100 text-emerald-700 text-[8px]">DoP</Badge>}
+                                {c.ce_generata && <Badge className="bg-blue-100 text-blue-700 text-[8px]">CE</Badge>}
+                                {c.note && <span className="text-[10px] text-slate-500 truncate">{c.note}</span>}
+                            </div>
+                            <div className="flex items-center gap-1 pt-1">
+                                <Button size="sm" variant="default" className="h-6 text-[10px] bg-[#1a3a6b] hover:bg-[#15325c] text-white" onClick={() => handleDownloadPacchetto(c.consegna_id)} data-testid={`consegna-pacchetto-${c.consegna_id}`}>
+                                    <Download className="h-3 w-3 mr-0.5" /> DDT + DoP + CE
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-6 text-[10px] text-blue-600" onClick={() => window.open(`/ddt/${c.ddt_id}`, '_blank')} data-testid={`consegna-ddt-${c.consegna_id}`}>
+                                    <Eye className="h-3 w-3 mr-0.5" /> Modifica DDT
+                                </Button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </Section>
+
             <Section title="Conto Lavoro" icon={Paintbrush} count={cl.length}>
                 <div className="space-y-2">
                     <Button size="sm" variant="outline" onClick={() => setClOpen(true)} className="text-xs" data-testid="btn-new-cl">
