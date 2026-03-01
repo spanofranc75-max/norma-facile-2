@@ -39,6 +39,7 @@ from routes.cam import router as cam_router
 from routes.fascicolo_tecnico import router as fascicolo_tecnico_router
 from routes.company_docs import router as company_docs_router
 from routes.instruments import router as instruments_router
+from routes.welders import router as welders_router
 
 # Configure logging
 logging.basicConfig(
