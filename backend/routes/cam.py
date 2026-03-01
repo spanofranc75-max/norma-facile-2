@@ -636,9 +636,52 @@ async def report_aziendale_cam_pdf(
     )
 
 
-# ══════════════════════════════════════════════════════════════════
-#  ARCHIVIO CERTIFICATI NON ASSEGNATI
-# ══════════════════════════════════════════════════════════════════
+@router.get("/green-certificate/{commessa_id}")
+async def green_certificate_pdf(
+    commessa_id: str,
+    user: dict = Depends(get_current_user)
+):
+    """Generate a branded Green Certificate PDF for a specific commessa."""
+    uid = user["user_id"]
+
+    # Get commessa
+    commessa = await db.commesse.find_one(
+        {"commessa_id": commessa_id, "user_id": uid}, {"_id": 0}
+    )
+    if not commessa:
+        raise HTTPException(404, "Commessa non trovata")
+
+    # Get CAM lotti for this commessa
+    cursor = db.lotti_cam.find(
+        {"commessa_id": commessa_id, "user_id": uid}, {"_id": 0}
+    )
+    lotti = await cursor.to_list(500)
+    if not lotti:
+        raise HTTPException(400, "Nessun lotto CAM per questa commessa. Aggiungi materiali dalla sezione CAM.")
+
+    # Calculate CO2
+    peso_totale = sum(l.get("peso_kg", 0) for l in lotti)
+    peso_riciclato = sum(l.get("peso_kg", 0) * l.get("percentuale_riciclato", 0) / 100 for l in lotti)
+    co2_data = calcola_co2_risparmiata(peso_totale, peso_riciclato)
+
+    # Get company settings
+    company = await db.company_settings.find_one({"user_id": uid}, {"_id": 0}) or {}
+
+    from services.pdf_green_certificate import generate_green_certificate
+    try:
+        pdf_buf = generate_green_certificate(company, commessa, lotti, co2_data)
+    except Exception as e:
+        logger.error(f"Green Certificate PDF error: {e}")
+        raise HTTPException(500, f"Errore generazione certificato: {str(e)}")
+
+    numero = commessa.get("numero", commessa_id)
+    filename = f"Green_Certificate_{numero}.pdf"
+
+    return StreamingResponse(
+        pdf_buf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'}
+    )
 
 @router.get("/archivio-certificati")
 async def get_archivio_certificati(user: dict = Depends(get_current_user)):
