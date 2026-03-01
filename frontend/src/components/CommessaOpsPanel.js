@@ -915,6 +915,33 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
 
             {/* ── TRACCIABILITÀ MATERIALI (EN 1090) ── */}
             <Section title="Tracciabilità Materiali" icon={FileText} count={materialBatches.length + docs.filter(d => d.metadata_estratti?.numero_colata).length}>
+                {/* Download Scheda Rintracciabilità button */}
+                {materialBatches.length > 0 && (
+                    <div className="flex justify-end mb-2">
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            data-testid="btn-scheda-rintracciabilita"
+                            className="text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                            onClick={async () => {
+                                try {
+                                    const res = await fetch(`${API}/api/commessa-ops/${commessaId}/scheda-rintracciabilita-pdf`, {
+                                        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+                                    });
+                                    if (!res.ok) throw new Error('Errore generazione PDF');
+                                    const blob = await res.blob();
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement('a'); a.href = url; a.download = `Scheda_Rintracciabilita_${commessaId}.pdf`; a.click();
+                                    URL.revokeObjectURL(url);
+                                    toast.success('Scheda Rintracciabilità scaricata');
+                                } catch (e) { toast.error(e.message); }
+                            }}
+                        >
+                            <Download className="h-3.5 w-3.5 mr-1" />
+                            Scheda Rintracciabilità PDF
+                        </Button>
+                    </div>
+                )}
                 <div className="space-y-2">
                     {/* From material_batches collection */}
                     {materialBatches.map(b => (
@@ -940,6 +967,22 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                 <div>
                                     <span className="text-slate-500 block">Profilo</span>
                                     <span className="font-mono">{b.dimensions || '-'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-slate-500 block">N. Certificato</span>
+                                    <span className="font-mono">{b.numero_certificato || '-'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-slate-500 block">DDT N.</span>
+                                    <span className="font-mono">{b.ddt_numero || '-'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-slate-500 block">Posizione</span>
+                                    <span className="font-mono">{b.posizione || '-'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-slate-500 block">N. Pezzi</span>
+                                    <span className="font-mono">{b.n_pezzi || '-'}</span>
                                 </div>
                             </div>
                         </div>
