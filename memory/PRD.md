@@ -471,6 +471,17 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Endpoint**: `GET /api/dashboard/compliance-en1090` — ritorna commesse con compliance_pct, docs status (filled/total/complete per tipo), prod_progress.
 - Testing: 100% backend (12/12 - iteration_78), frontend verificato Playwright
 
+### Auto-compilazione 95% + Impostazioni EN 1090 + Resilienza + DDT Suffisso (Phase 67 - Mar 2026)
+- **Impostazioni EN 1090**: 5 nuovi campi in company settings: `responsabile_nome`, `ruolo_firmatario`, `ente_certificatore`, `ente_certificatore_numero`, `certificato_en1090_numero`. Sezione dedicata "Certificazione EN 1090" nella pagina Impostazioni.
+- **Auto-compilazione ~95%**: Tutti i campi ora auto-compilati da diverse fonti:
+  - **Da Impostazioni**: firmatario (=ragione_sociale), ruolo_firmatario, ente_notificato (=ente_certificatore), ente_numero, certificato_numero, redatto_da (=responsabile_nome), firma_cs
+  - **Da Preventivo/Commessa**: mandatario (=cliente), classe_esecuzione, disegno_numero, disegno_riferimento, dop_numero (=numero commessa)
+  - **Da Lotti Materiale**: materiale, profilato, materiali_saldabilita, resilienza (tabella EN 10025)
+  - **Da Sistema**: ddt_riferimento (commessa/01 suffix), ddt_data (oggi), data_emissione (oggi), luogo_data_firma (citta' + oggi)
+- **Tabella Resilienza EN 10025**: Lookup automatico per 15 tipi acciaio (S235JR/J0/J2, S275, S355, S420, S450, S460). Normalizzazione suffissi (+AR, +N, +M).
+- **DDT con Suffisso**: Numerazione progressiva commessa/01, /02, /03... per gestire multiple consegne.
+- Testing: 100% (14/14 backend + frontend - iteration_79)
+
 ## Issue Pendenti
 - **P2**: Radix UI Select/Popover dentro Dialog (workaround nativo attivo)
 - **P2**: Verifica utente parsing AI certificati (richiede test manuale dall'utente)
