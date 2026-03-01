@@ -16,7 +16,7 @@ import time
 # Test endpoint from env
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
 if not BASE_URL:
-    BASE_URL = "https://fabbri-workflow-beta.preview.emergentagent.com"
+    BASE_URL = "https://commessa-hub-2.preview.emergentagent.com"
 
 # Test user setup
 TEST_USER_ID = f"test-user-{uuid.uuid4().hex[:8]}"
