@@ -1,4 +1,4 @@
-"""Routes for Fascicolo Tecnico EN 1090 — DOP, CE, Piano di Controllo, Rapporto VT."""
+"""Routes for Fascicolo Tecnico EN 1090 — DOP, CE, Piano di Controllo, Rapporto VT, Registro Saldatura, Riesame Tecnico."""
 import logging
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends
