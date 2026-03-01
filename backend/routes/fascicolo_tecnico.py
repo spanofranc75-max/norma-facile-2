@@ -124,13 +124,14 @@ async def _get_commessa(cid: str, uid: str):
 
 
 async def _get_context(cid: str, user: dict):
-    """Get all context data needed for PDF generation — auto-populates ~70% of fields."""
+    """Get all context data needed for PDF generation — auto-populates ~90% of fields."""
     commessa = await _get_commessa(cid, user["user_id"])
     company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
     client_name = ""
     if commessa.get("client_id"):
-        cl = await db.clients.find_one({"client_id": commessa["client_id"]}, {"_id": 0, "name": 1})
-        client_name = cl.get("name", "") if cl else ""
+        cl = await db.clients.find_one({"client_id": commessa["client_id"]}, {"_id": 0, "name": 1, "business_name": 1})
+        if cl:
+            client_name = cl.get("business_name") or cl.get("name", "")
     ft = commessa.get("fascicolo_tecnico", {})
 
     # ── From preventivo ──
@@ -146,8 +147,17 @@ async def _get_context(cid: str, user: dict):
         classe_prev = preventivo.get("classe_esecuzione", "")
         if classe_prev:
             commessa["classe_esecuzione"] = classe_prev
+        # Mandatario = client from preventivo header
+        if not client_name and preventivo.get("client_id"):
+            cl_p = await db.clients.find_one({"client_id": preventivo["client_id"]}, {"_id": 0, "name": 1, "business_name": 1})
+            if cl_p:
+                client_name = cl_p.get("business_name") or cl_p.get("name", "")
         if not client_name:
             client_name = preventivo.get("client_name", "")
+
+    # ── Classe esecuzione fallback from settings ──
+    if not commessa.get("classe_esecuzione") and company.get("classe_esecuzione_default"):
+        commessa["classe_esecuzione"] = company["classe_esecuzione_default"]
 
     # ── From company settings ──
     if not ft.get("firmatario"):
@@ -168,6 +178,18 @@ async def _get_context(cid: str, user: dict):
     if not ft.get("mandatario"):
         ft["mandatario"] = client_name
 
+    # DOP numero = commessa numero
+    if not ft.get("dop_numero"):
+        ft["dop_numero"] = commessa.get("numero", "")
+    # Report VT numero = commessa numero
+    if not ft.get("report_numero"):
+        ft["report_numero"] = commessa.get("numero", "")
+    if not ft.get("report_data"):
+        ft["report_data"] = datetime.now(timezone.utc).strftime("%d/%m/%Y")
+    # Ordine numero = commessa numero
+    if not ft.get("ordine_numero"):
+        ft["ordine_numero"] = commessa.get("numero", "")
+
     # ── From material batches ──
     batches = await db.material_batches.find(
         {"commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0}
@@ -176,10 +198,13 @@ async def _get_context(cid: str, user: dict):
     if batches:
         mat_types = list(set(b.get("material_type", "") for b in batches if b.get("material_type")))
         dims = list(set(b.get("dimensions", "") for b in batches if b.get("dimensions")))
+        spessori = list(set(b.get("spessore", "") for b in batches if b.get("spessore")))
         if not ft.get("materiale"):
             ft["materiale"] = " / ".join(mat_types)
         if not ft.get("profilato"):
             ft["profilato"] = " + ".join(dims)
+        if not ft.get("spessore") and spessori:
+            ft["spessore"] = " / ".join(spessori)
         if not ft.get("materiali_saldabilita") and mat_types:
             ft["materiali_saldabilita"] = " - ".join(mat_types) + " in accordo alla EN 10025-2"
 
@@ -192,12 +217,10 @@ async def _get_context(cid: str, user: dict):
     # ── DDT auto — suffisso commessa/01, /02 etc. ──
     comm_num = commessa.get("numero", "")
     if not ft.get("ddt_riferimento") and comm_num:
-        # Count existing DDT for this commessa
         ddt_count = await db.ddt_counter.find_one({"commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0})
         suffix = (ddt_count.get("count", 0) if ddt_count else 0) + 1
         ft["ddt_riferimento"] = f"{comm_num}/{str(suffix).zfill(2)}"
     if not ft.get("ddt_data"):
-        # Use today's date as default
         ft["ddt_data"] = datetime.now(timezone.utc).strftime("%d/%m/%Y")
 
     # Luogo e data firma
