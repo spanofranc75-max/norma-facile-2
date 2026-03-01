@@ -1,6 +1,7 @@
 /**
- * FascicoloTecnicoSection — Sezione Fascicolo Tecnico EN 1090.
- * Gestisce editing dati + download PDF per tutti e 6 i documenti.
+ * FascicoloTecnicoSection — Fascicolo Tecnico EN 1090.
+ * Auto-compilazione intelligente + evidenziazione campi mancanti.
+ * Timeline produzione + download Fascicolo Completo.
  */
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../components/ui/button';
@@ -9,27 +10,34 @@ import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../components/ui/dialog';
 import { toast } from 'sonner';
-import { Download, Edit3, Plus, Trash2, Loader2, Save, FileText } from 'lucide-react';
+import { Download, Edit3, Plus, Trash2, Loader2, Save, FileText, CheckCircle2, AlertCircle, PackageOpen, Clock } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
 const DOCUMENTS = [
-    { key: 'dop', label: 'DOP', desc: 'Dichiarazione di Prestazione', endpoint: 'dop-pdf', mod: 'All. 4' },
-    { key: 'ce', label: 'Marcatura CE', desc: 'Etichetta CE EN 1090', endpoint: 'ce-pdf', mod: 'All. 5' },
-    { key: 'piano', label: 'Piano di Controllo', desc: 'Piano Controllo Qualita\'', endpoint: 'piano-controllo-pdf', mod: 'MOD. 02' },
-    { key: 'vt', label: 'Rapporto VT', desc: 'Esame Visivo Dimensionale', endpoint: 'rapporto-vt-pdf', mod: 'MOD. 06' },
-    { key: 'registro', label: 'Registro Saldatura', desc: 'Registro di Saldatura', endpoint: 'registro-saldatura-pdf', mod: 'MOD. 04' },
-    { key: 'riesame', label: 'Riesame Tecnico', desc: 'Riesame Tecnico EN 1090', endpoint: 'riesame-tecnico-pdf', mod: 'MOD. 01' },
+    { key: 'dop', label: 'DOP', desc: 'Dichiarazione di Prestazione', endpoint: 'dop-pdf', mod: 'All. 4', requiredFields: ['certificato_numero','ente_notificato','firmatario','luogo_data_firma','ddt_riferimento','ddt_data'] },
+    { key: 'ce', label: 'Marcatura CE', desc: 'Etichetta CE EN 1090', endpoint: 'ce-pdf', mod: 'All. 5', requiredFields: ['certificato_numero','ente_notificato','ente_numero','disegno_riferimento'] },
+    { key: 'piano', label: 'Piano di Controllo', desc: 'Piano Controllo Qualita\'', endpoint: 'piano-controllo-pdf', mod: 'MOD. 02', requiredFields: ['disegno_numero'] },
+    { key: 'vt', label: 'Rapporto VT', desc: 'Esame Visivo Dimensionale', endpoint: 'rapporto-vt-pdf', mod: 'MOD. 06', requiredFields: ['report_numero','report_data','processo_saldatura','materiale'] },
+    { key: 'registro', label: 'Registro Saldatura', desc: 'Registro di Saldatura', endpoint: 'registro-saldatura-pdf', mod: 'MOD. 04', requiredFields: ['data_emissione','firma_cs'] },
+    { key: 'riesame', label: 'Riesame Tecnico', desc: 'Riesame Tecnico EN 1090', endpoint: 'riesame-tecnico-pdf', mod: 'MOD. 01', requiredFields: [] },
 ];
+
+// Common fields that are auto-populated
+const SHARED_AUTO = ['client_name','commessa_numero','commessa_title','disegno_numero','disegno_riferimento','redatto_da','classe_esecuzione','materiale','profilato','materiali_saldabilita'];
 
 export default function FascicoloTecnicoSection({ commessaId }) {
     const [ftData, setFtData] = useState({});
-    const [loading, setLoading] = useState(false);
+    const [autoFields, setAutoFields] = useState([]);
+    const [timeline, setTimeline] = useState([]);
     const [downloading, setDownloading] = useState(null);
     const [editOpen, setEditOpen] = useState(false);
     const [editSection, setEditSection] = useState(null);
     const [editForm, setEditForm] = useState({});
     const [saving, setSaving] = useState(false);
+    const [completoOpen, setCompletoOpen] = useState(false);
+    const [completoSel, setCompletoSel] = useState({dop:true,ce:true,piano:true,vt:true,registro:true,riesame:true});
+    const [completoLoading, setCompletoLoading] = useState(false);
 
     const loadData = useCallback(async () => {
         if (!commessaId) return;
@@ -39,6 +47,11 @@ export default function FascicoloTecnicoSection({ commessaId }) {
             });
             if (res.ok) {
                 const data = await res.json();
+                setAutoFields(data._auto_fields || []);
+                setTimeline(data._timeline || []);
+                delete data._auto_fields;
+                delete data._timeline;
+                delete data._giorni_consegna;
                 setFtData(data);
             }
         } catch (e) { /* silent */ }
@@ -46,29 +59,52 @@ export default function FascicoloTecnicoSection({ commessaId }) {
 
     useEffect(() => { loadData(); }, [loadData]);
 
+    // Calculate completion for each document
+    const getCompletion = (doc) => {
+        const allFields = [...SHARED_AUTO, ...doc.requiredFields];
+        const filled = allFields.filter(f => ftData[f] && String(ftData[f]).trim()).length;
+        return { filled, total: allFields.length, pct: allFields.length ? Math.round((filled / allFields.length) * 100) : 100 };
+    };
+
+    const getMissing = (doc) => {
+        return doc.requiredFields.filter(f => !ftData[f] || !String(ftData[f]).trim());
+    };
+
     const handleDownload = async (doc) => {
         setDownloading(doc.key);
         try {
             const res = await fetch(`${API}/api/fascicolo-tecnico/${commessaId}/${doc.endpoint}`, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
             });
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(err.detail || 'Errore generazione PDF');
-            }
+            if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Errore');
             const blob = await res.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
-            a.download = `${doc.label.replace(/\s/g, '_')}_${commessaId}.pdf`;
-            a.click();
+            a.href = url; a.download = `${doc.label.replace(/\s/g, '_')}_${commessaId}.pdf`; a.click();
             URL.revokeObjectURL(url);
             toast.success(`${doc.label} scaricato`);
-        } catch (e) {
-            toast.error(e.message);
-        } finally {
-            setDownloading(null);
-        }
+        } catch (e) { toast.error(e.message); }
+        finally { setDownloading(null); }
+    };
+
+    const handleDownloadCompleto = async () => {
+        const sel = Object.entries(completoSel).filter(([,v])=>v).map(([k])=>k).join(',');
+        if (!sel) { toast.error('Seleziona almeno un documento'); return; }
+        setCompletoLoading(true);
+        try {
+            const res = await fetch(`${API}/api/fascicolo-tecnico/${commessaId}/fascicolo-completo-pdf?docs=${sel}`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+            });
+            if (!res.ok) throw new Error('Errore generazione');
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `Fascicolo_Tecnico_Completo_${commessaId}.pdf`; a.click();
+            URL.revokeObjectURL(url);
+            toast.success('Fascicolo Tecnico Completo scaricato');
+            setCompletoOpen(false);
+        } catch (e) { toast.error(e.message); }
+        finally { setCompletoLoading(false); }
     };
 
     const openEdit = (sectionKey) => {
@@ -82,84 +118,61 @@ export default function FascicoloTecnicoSection({ commessaId }) {
         try {
             const res = await fetch(`${API}/api/fascicolo-tecnico/${commessaId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${localStorage.getItem('auth_token')}`
-                },
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
                 body: JSON.stringify(editForm)
             });
             if (!res.ok) throw new Error('Errore salvataggio');
             toast.success('Dati fascicolo salvati');
             setFtData(editForm);
             setEditOpen(false);
-        } catch (e) {
-            toast.error(e.message);
-        } finally {
-            setSaving(false);
-        }
+        } catch (e) { toast.error(e.message); }
+        finally { setSaving(false); }
     };
 
     const updateField = (key, val) => setEditForm(p => ({ ...p, [key]: val }));
 
     const addSaldatura = () => {
-        const saldature = editForm.saldature || [];
         setEditForm(p => ({
-            ...p,
-            saldature: [...saldature, {
-                numero_disegno: '', numero_saldatura: '', periodo: '', saldatore: '',
-                punzone: '', diametro: '', spessore: '', materiale_base: '', wps_numero: '',
-                vt_esito: '', vt_data: '', vt_firma: '',
-                cnd_tipo: '', cnd_rapporto: '', cnd_data: '', cnd_firma: '', cnd_tratto: '',
-                rip_rapporto: '', rip_esito: '', rip_data: ''
+            ...p, saldature: [...(p.saldature || []), {
+                numero_disegno: '', numero_saldatura: '', periodo: '', saldatore: '', punzone: '',
+                diametro: '', spessore: '', materiale_base: '', wps_numero: '',
+                vt_esito: '', vt_data: '', vt_firma: '', cnd_tipo: '', cnd_rapporto: '',
+                cnd_data: '', cnd_firma: '', cnd_tratto: '', rip_rapporto: '', rip_esito: '', rip_data: ''
             }]
         }));
     };
-
     const updateSaldatura = (idx, key, val) => {
-        const saldature = [...(editForm.saldature || [])];
-        saldature[idx] = { ...saldature[idx], [key]: val };
-        setEditForm(p => ({ ...p, saldature }));
+        const s = [...(editForm.saldature || [])];
+        s[idx] = { ...s[idx], [key]: val };
+        setEditForm(p => ({ ...p, saldature: s }));
     };
-
     const removeSaldatura = (idx) => {
-        const saldature = [...(editForm.saldature || [])];
-        saldature.splice(idx, 1);
-        setEditForm(p => ({ ...p, saldature }));
+        const s = [...(editForm.saldature || [])];
+        s.splice(idx, 1);
+        setEditForm(p => ({ ...p, saldature: s }));
     };
-
     const updateRequisito = (idx, key, val) => {
-        const requisiti = [...(editForm.requisiti || [])];
-        requisiti[idx] = { ...requisiti[idx], [key]: val };
-        setEditForm(p => ({ ...p, requisiti }));
+        const r = [...(editForm.requisiti || [])];
+        r[idx] = { ...r[idx], [key]: val };
+        setEditForm(p => ({ ...p, requisiti: r }));
     };
-
     const updateItt = (idx, key, val) => {
-        const itt = [...(editForm.itt || [])];
-        itt[idx] = { ...itt[idx], [key]: val };
-        setEditForm(p => ({ ...p, itt }));
+        const r = [...(editForm.itt || [])];
+        r[idx] = { ...r[idx], [key]: val };
+        setEditForm(p => ({ ...p, itt: r }));
     };
 
-    // Render edit sections based on document type
     const renderEditContent = () => {
         if (!editSection) return null;
-
+        const props = { form: editForm, update: updateField, autoFields, ftData };
         switch (editSection) {
-            case 'dop':
-                return <DopEditForm form={editForm} update={updateField} />;
-            case 'ce':
-                return <CeEditForm form={editForm} update={updateField} />;
-            case 'piano':
-                return <PianoEditForm form={editForm} update={updateField} />;
-            case 'vt':
-                return <VtEditForm form={editForm} update={updateField} />;
-            case 'registro':
-                return <RegistroEditForm form={editForm} update={updateField}
-                    addSaldatura={addSaldatura} updateSaldatura={updateSaldatura} removeSaldatura={removeSaldatura} />;
-            case 'riesame':
-                return <RiesameEditForm form={editForm} update={updateField}
-                    updateRequisito={updateRequisito} updateItt={updateItt} />;
-            default:
-                return null;
+            case 'dop': return <DopEditForm {...props} />;
+            case 'ce': return <CeEditForm {...props} />;
+            case 'piano': return <PianoEditForm {...props} timeline={timeline} />;
+            case 'vt': return <VtEditForm {...props} />;
+            case 'registro': return <RegistroEditForm {...props} addSaldatura={addSaldatura} updateSaldatura={updateSaldatura} removeSaldatura={removeSaldatura} />;
+            case 'riesame': return <RiesameEditForm {...props} updateRequisito={updateRequisito} updateItt={updateItt} />;
+            default: return null;
         }
     };
 
@@ -167,51 +180,138 @@ export default function FascicoloTecnicoSection({ commessaId }) {
 
     return (
         <div data-testid="fascicolo-tecnico-section">
+            {/* Timeline produzione */}
+            {timeline.length > 0 && (
+                <div className="mb-3 p-2.5 bg-slate-50 rounded-lg border" data-testid="produzione-timeline">
+                    <div className="flex items-center gap-1.5 mb-2">
+                        <Clock className="h-3.5 w-3.5 text-slate-500" />
+                        <span className="text-[11px] font-bold text-slate-600">Timeline Produzione</span>
+                    </div>
+                    <div className="flex gap-1">
+                        {timeline.map((t, i) => {
+                            const bg = t.stato === 'completato' ? 'bg-emerald-500' : t.stato === 'in_corso' ? 'bg-blue-500' : 'bg-slate-300';
+                            return (
+                                <div key={i} className="flex-1 text-center" title={`${t.fase}: ${t.stato}`}>
+                                    <div className={`h-2 rounded-full ${bg} transition-all`} />
+                                    <span className="text-[8px] text-slate-500 mt-0.5 block truncate">{t.fase}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Document cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {DOCUMENTS.map(doc => (
-                    <div key={doc.key}
-                        className="p-3 rounded-lg border border-slate-200 bg-white hover:shadow-sm transition-shadow"
-                        data-testid={`ft-card-${doc.key}`}>
-                        <div className="flex items-center justify-between mb-1.5">
-                            <div className="min-w-0">
-                                <span className="font-bold text-slate-800 text-sm block truncate">{doc.label}</span>
-                                <p className="text-[10px] text-slate-500">{doc.desc} — {doc.mod}</p>
+                {DOCUMENTS.map(doc => {
+                    const comp = getCompletion(doc);
+                    const missing = getMissing(doc);
+                    const isComplete = missing.length === 0;
+                    return (
+                        <div key={doc.key}
+                            className={`p-3 rounded-lg border transition-shadow hover:shadow-sm ${isComplete ? 'border-emerald-200 bg-emerald-50/30' : 'border-amber-200 bg-amber-50/30'}`}
+                            data-testid={`ft-card-${doc.key}`}>
+                            <div className="flex items-start justify-between mb-1.5">
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-1.5">
+                                        {isComplete
+                                            ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                                            : <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
+                                        <span className="font-bold text-slate-800 text-sm truncate">{doc.label}</span>
+                                    </div>
+                                    <p className="text-[10px] text-slate-500 ml-5">{doc.desc} — {doc.mod}</p>
+                                </div>
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${comp.pct === 100 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                    {comp.filled}/{comp.total}
+                                </span>
+                            </div>
+                            {missing.length > 0 && (
+                                <div className="mb-1.5 ml-5">
+                                    <p className="text-[9px] text-amber-600 font-medium">
+                                        Da completare: {missing.map(f => f.replace(/_/g, ' ')).join(', ')}
+                                    </p>
+                                </div>
+                            )}
+                            <div className="flex gap-1.5 ml-5">
+                                <Button size="sm" variant="outline" className="text-xs h-7 flex-1"
+                                    data-testid={`btn-edit-${doc.key}`} onClick={() => openEdit(doc.key)}>
+                                    <Edit3 className="h-3 w-3 mr-1" /> Compila
+                                </Button>
+                                <Button size="sm" variant="default" className="text-xs h-7 flex-1 bg-slate-800 hover:bg-slate-700"
+                                    data-testid={`btn-download-${doc.key}`} disabled={downloading === doc.key}
+                                    onClick={() => handleDownload(doc)}>
+                                    {downloading === doc.key ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Download className="h-3 w-3 mr-1" />}
+                                    PDF
+                                </Button>
                             </div>
                         </div>
-                        <div className="flex gap-1.5">
-                            <Button size="sm" variant="outline"
-                                className="text-xs h-7 flex-1"
-                                data-testid={`btn-edit-${doc.key}`}
-                                onClick={() => openEdit(doc.key)}>
-                                <Edit3 className="h-3 w-3 mr-1" /> Compila
+                    );
+                })}
+            </div>
+
+            {/* Genera Fascicolo Completo */}
+            <div className="mt-3 flex justify-center">
+                <Button variant="default" className="bg-slate-900 hover:bg-slate-800 text-white text-xs"
+                    data-testid="btn-fascicolo-completo" onClick={() => setCompletoOpen(true)}>
+                    <PackageOpen className="h-4 w-4 mr-1.5" /> Genera Fascicolo Tecnico Completo
+                </Button>
+            </div>
+
+            {/* Dialog Fascicolo Completo */}
+            <Dialog open={completoOpen} onOpenChange={setCompletoOpen}>
+                <DialogContent className="max-w-md" data-testid="dialog-fascicolo-completo">
+                    <DialogHeader>
+                        <DialogTitle>Genera Fascicolo Tecnico Completo</DialogTitle>
+                        <DialogDescription>Seleziona i documenti da includere nel PDF combinato.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2 py-2">
+                        {DOCUMENTS.map(doc => {
+                            const comp = getCompletion(doc);
+                            return (
+                                <label key={doc.key} className="flex items-center gap-2 p-2 rounded hover:bg-slate-50 cursor-pointer text-sm">
+                                    <input type="checkbox" checked={completoSel[doc.key]} className="accent-slate-800"
+                                        onChange={e => setCompletoSel(p => ({...p, [doc.key]: e.target.checked}))} />
+                                    <span className="flex-1 font-medium">{doc.label}</span>
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${comp.pct === 100 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                        {comp.pct}%
+                                    </span>
+                                </label>
+                            );
+                        })}
+                        <div className="flex gap-2 pt-2">
+                            <Button size="sm" variant="ghost" className="text-xs"
+                                onClick={() => setCompletoSel({dop:true,ce:true,piano:true,vt:true,registro:true,riesame:true})}>
+                                Tutti
                             </Button>
-                            <Button size="sm" variant="default"
-                                className="text-xs h-7 flex-1 bg-slate-800 hover:bg-slate-700"
-                                data-testid={`btn-download-${doc.key}`}
-                                disabled={downloading === doc.key}
-                                onClick={() => handleDownload(doc)}>
-                                {downloading === doc.key
-                                    ? <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                    : <Download className="h-3 w-3 mr-1" />}
-                                PDF
+                            <Button size="sm" variant="ghost" className="text-xs"
+                                onClick={() => setCompletoSel({dop:false,ce:false,piano:false,vt:false,registro:false,riesame:false})}>
+                                Nessuno
                             </Button>
                         </div>
                     </div>
-                ))}
-            </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setCompletoOpen(false)}>Annulla</Button>
+                        <Button onClick={handleDownloadCompleto} disabled={completoLoading}>
+                            {completoLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Download className="h-4 w-4 mr-1" />}
+                            Scarica PDF
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
+            {/* Edit Dialog */}
             <Dialog open={editOpen} onOpenChange={setEditOpen}>
                 <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto" data-testid="fascicolo-edit-dialog">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <FileText className="h-5 w-5" />
-                            Compila — {editTitle}
+                            <FileText className="h-5 w-5" /> Compila — {editTitle}
                         </DialogTitle>
-                        <DialogDescription>Modifica i campi editabili. I dati della commessa vengono compilati automaticamente.</DialogDescription>
+                        <DialogDescription>
+                            I campi con bordo <span className="inline-block w-3 h-3 border-2 border-emerald-400 rounded align-middle mx-0.5" /> verde sono auto-compilati.
+                            I campi con sfondo <span className="inline-block w-3 h-3 bg-amber-50 border border-amber-300 rounded align-middle mx-0.5" /> ambra richiedono compilazione.
+                        </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4 py-2">
-                        {renderEditContent()}
-                    </div>
+                    <div className="space-y-4 py-2">{renderEditContent()}</div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setEditOpen(false)} data-testid="btn-cancel-edit">Annulla</Button>
                         <Button onClick={saveData} disabled={saving} data-testid="btn-save-fascicolo">
@@ -225,13 +325,20 @@ export default function FascicoloTecnicoSection({ commessaId }) {
     );
 }
 
-// ─── Field helpers ───
-function Field({ label, value, onChange, placeholder, className = '' }) {
+// ─── Smart Field with auto/manual indicator ───
+function SmartField({ label, value, onChange, placeholder, autoFields, fieldKey, className = '' }) {
+    const isAuto = autoFields?.includes(fieldKey);
+    const isEmpty = !value || !String(value).trim();
+    const borderClass = isAuto ? 'border-emerald-300 focus-within:border-emerald-500' : isEmpty ? 'border-amber-300 bg-amber-50/50' : '';
     return (
         <div className={className}>
-            <Label className="text-xs font-semibold text-slate-600">{label}</Label>
+            <div className="flex items-center gap-1">
+                <Label className="text-xs font-semibold text-slate-600">{label}</Label>
+                {isAuto && <span className="text-[8px] bg-emerald-100 text-emerald-600 px-1 rounded font-bold">AUTO</span>}
+                {!isAuto && isEmpty && <span className="text-[8px] bg-amber-100 text-amber-600 px-1 rounded font-bold">DA COMPILARE</span>}
+            </div>
             <Input value={value || ''} onChange={e => onChange(e.target.value)}
-                placeholder={placeholder} className="h-8 text-sm mt-0.5" />
+                placeholder={placeholder} className={`h-8 text-sm mt-0.5 ${borderClass}`} />
         </div>
     );
 }
@@ -244,8 +351,7 @@ function RadioGroup({ label, value, onChange, options }) {
                 {options.map(opt => (
                     <label key={opt.value} className="flex items-center gap-1 text-xs cursor-pointer">
                         <input type="radio" name={label} value={opt.value}
-                            checked={value === opt.value}
-                            onChange={() => onChange(opt.value)}
+                            checked={value === opt.value} onChange={() => onChange(opt.value)}
                             className="accent-slate-800" />
                         {opt.label}
                     </label>
@@ -264,69 +370,83 @@ function CheckField({ label, checked, onChange }) {
     );
 }
 
-
-// ─── DOP Edit Form ───
-function DopEditForm({ form, update }) {
+// ─── DOP Form ───
+function DopEditForm({ form, update, autoFields }) {
     return (
         <div className="space-y-3">
             <p className="text-xs text-slate-500 italic">Dichiarazione di Prestazione (Regolamento UE 574/2014)</p>
             <div className="grid grid-cols-2 gap-3">
-                <Field label="DDT Riferimento" value={form.ddt_riferimento} onChange={v => update('ddt_riferimento', v)} placeholder="N. DDT" />
-                <Field label="Data DDT" value={form.ddt_data} onChange={v => update('ddt_data', v)} placeholder="GG/MM/AAAA" />
-                <Field label="Mandatario" value={form.mandatario} onChange={v => update('mandatario', v)} placeholder="Nome mandatario" />
-                <Field label="Firmatario" value={form.firmatario} onChange={v => update('firmatario', v)} placeholder="Nome e cognome" />
-                <Field label="Ruolo Firmatario" value={form.ruolo_firmatario} onChange={v => update('ruolo_firmatario', v)} placeholder="Legale Rappresentante" />
-                <Field label="Luogo e Data Firma" value={form.luogo_data_firma} onChange={v => update('luogo_data_firma', v)} placeholder="Bologna, GG/MM/AAAA" />
-                <Field label="Certificato Numero" value={form.certificato_numero} onChange={v => update('certificato_numero', v)} placeholder="N. certificato" />
-                <Field label="Ente Notificato" value={form.ente_notificato} onChange={v => update('ente_notificato', v)} placeholder="Rina Service" />
+                <SmartField label="DDT Riferimento" value={form.ddt_riferimento} onChange={v => update('ddt_riferimento', v)} placeholder="N. DDT" autoFields={autoFields} fieldKey="ddt_riferimento" />
+                <SmartField label="Data DDT" value={form.ddt_data} onChange={v => update('ddt_data', v)} placeholder="GG/MM/AAAA" autoFields={autoFields} fieldKey="ddt_data" />
+                <SmartField label="Mandatario" value={form.mandatario} onChange={v => update('mandatario', v)} autoFields={autoFields} fieldKey="mandatario" />
+                <SmartField label="Firmatario" value={form.firmatario} onChange={v => update('firmatario', v)} placeholder="Nome e cognome" autoFields={autoFields} fieldKey="firmatario" />
+                <SmartField label="Ruolo Firmatario" value={form.ruolo_firmatario} onChange={v => update('ruolo_firmatario', v)} placeholder="Legale Rappresentante" autoFields={autoFields} fieldKey="ruolo_firmatario" />
+                <SmartField label="Luogo e Data Firma" value={form.luogo_data_firma} onChange={v => update('luogo_data_firma', v)} placeholder="Bologna, GG/MM/AAAA" autoFields={autoFields} fieldKey="luogo_data_firma" />
+                <SmartField label="Certificato Numero" value={form.certificato_numero} onChange={v => update('certificato_numero', v)} autoFields={autoFields} fieldKey="certificato_numero" />
+                <SmartField label="Ente Notificato" value={form.ente_notificato} onChange={v => update('ente_notificato', v)} placeholder="Rina Service" autoFields={autoFields} fieldKey="ente_notificato" />
             </div>
             <div className="grid grid-cols-2 gap-3">
-                <Field label="Materiali / Saldabilita'" value={form.materiali_saldabilita} onChange={v => update('materiali_saldabilita', v)} />
-                <Field label="Resilienza" value={form.resilienza} onChange={v => update('resilienza', v)} placeholder="27 Joule a +/- 20 C" />
+                <SmartField label="Materiali / Saldabilita'" value={form.materiali_saldabilita} onChange={v => update('materiali_saldabilita', v)} autoFields={autoFields} fieldKey="materiali_saldabilita" />
+                <SmartField label="Resilienza" value={form.resilienza} onChange={v => update('resilienza', v)} placeholder="27 Joule a +/- 20 C" autoFields={autoFields} fieldKey="resilienza" />
             </div>
+            <SmartField label="Redatto da" value={form.redatto_da} onChange={v => update('redatto_da', v)} autoFields={autoFields} fieldKey="redatto_da" />
         </div>
     );
 }
 
-// ─── CE Edit Form ───
-function CeEditForm({ form, update }) {
+// ─── CE Form ───
+function CeEditForm({ form, update, autoFields }) {
     return (
         <div className="space-y-3">
             <p className="text-xs text-slate-500 italic">Etichetta Marcatura CE — EN 1090-1:2009 + A1:2011</p>
             <div className="grid grid-cols-2 gap-3">
-                <Field label="Ente Notificato" value={form.ente_notificato} onChange={v => update('ente_notificato', v)} placeholder="Rina Service" />
-                <Field label="Numero Ente" value={form.ente_numero} onChange={v => update('ente_numero', v)} placeholder="0474" />
-                <Field label="Certificato N." value={form.certificato_numero} onChange={v => update('certificato_numero', v)} />
-                <Field label="DOP N." value={form.dop_numero} onChange={v => update('dop_numero', v)} />
-                <Field label="Disegno Riferimento" value={form.disegno_riferimento} onChange={v => update('disegno_riferimento', v)} placeholder="STR02" />
-                <Field label="Materiali" value={form.materiali_saldabilita} onChange={v => update('materiali_saldabilita', v)} />
-                <Field label="Resilienza" value={form.resilienza} onChange={v => update('resilienza', v)} />
+                <SmartField label="Ente Notificato" value={form.ente_notificato} onChange={v => update('ente_notificato', v)} autoFields={autoFields} fieldKey="ente_notificato" />
+                <SmartField label="Numero Ente" value={form.ente_numero} onChange={v => update('ente_numero', v)} placeholder="0474" autoFields={autoFields} fieldKey="ente_numero" />
+                <SmartField label="Certificato N." value={form.certificato_numero} onChange={v => update('certificato_numero', v)} autoFields={autoFields} fieldKey="certificato_numero" />
+                <SmartField label="DOP N." value={form.dop_numero} onChange={v => update('dop_numero', v)} autoFields={autoFields} fieldKey="dop_numero" />
+                <SmartField label="Disegno Riferimento" value={form.disegno_riferimento} onChange={v => update('disegno_riferimento', v)} autoFields={autoFields} fieldKey="disegno_riferimento" />
+                <SmartField label="Materiali" value={form.materiali_saldabilita} onChange={v => update('materiali_saldabilita', v)} autoFields={autoFields} fieldKey="materiali_saldabilita" />
+                <SmartField label="Resilienza" value={form.resilienza} onChange={v => update('resilienza', v)} autoFields={autoFields} fieldKey="resilienza" />
             </div>
         </div>
     );
 }
 
-// ─── Piano di Controllo Edit Form ───
-function PianoEditForm({ form, update }) {
+// ─── Piano di Controllo Form with Timeline ───
+function PianoEditForm({ form, update, autoFields, timeline }) {
     const fasi = form.fasi || [];
     const toggleApplicabile = (idx) => {
-        const newFasi = [...fasi];
-        newFasi[idx] = { ...newFasi[idx], applicabile: !newFasi[idx].applicabile };
-        update('fasi', newFasi);
+        const n = [...fasi]; n[idx] = { ...n[idx], applicabile: !n[idx].applicabile }; update('fasi', n);
     };
     const updateFase = (idx, key, val) => {
-        const newFasi = [...fasi];
-        newFasi[idx] = { ...newFasi[idx], [key]: val };
-        update('fasi', newFasi);
+        const n = [...fasi]; n[idx] = { ...n[idx], [key]: val }; update('fasi', n);
     };
 
     return (
         <div className="space-y-3">
             <p className="text-xs text-slate-500 italic">Piano di Controllo Qualita' — MOD. 02</p>
             <div className="grid grid-cols-2 gap-3">
-                <Field label="Disegno N." value={form.disegno_numero} onChange={v => update('disegno_numero', v)} placeholder="STR02" />
-                <Field label="Ordine N." value={form.ordine_numero} onChange={v => update('ordine_numero', v)} />
+                <SmartField label="Disegno N." value={form.disegno_numero} onChange={v => update('disegno_numero', v)} autoFields={autoFields} fieldKey="disegno_numero" />
+                <SmartField label="Ordine N." value={form.ordine_numero} onChange={v => update('ordine_numero', v)} autoFields={autoFields} fieldKey="ordine_numero" />
             </div>
+            {/* Mini timeline from produzione */}
+            {timeline.length > 0 && (
+                <div className="p-2 bg-blue-50 rounded border border-blue-200">
+                    <p className="text-[10px] font-bold text-blue-700 mb-1.5">Stato Produzione (date auto-sincronizzate)</p>
+                    <div className="flex gap-1">
+                        {timeline.map((t, i) => {
+                            const bg = t.stato === 'completato' ? 'bg-emerald-500' : t.stato === 'in_corso' ? 'bg-blue-500 animate-pulse' : 'bg-slate-300';
+                            return (
+                                <div key={i} className="flex-1 text-center">
+                                    <div className={`h-1.5 rounded-full ${bg}`} />
+                                    <span className="text-[7px] text-slate-600 block truncate">{t.fase}</span>
+                                    {t.data_inizio && <span className="text-[7px] text-blue-600 block">{new Date(t.data_inizio).toLocaleDateString('it-IT')}</span>}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
             <div className="border rounded-lg overflow-hidden">
                 <div className="bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700">Fasi di Controllo</div>
                 <div className="max-h-64 overflow-y-auto">
@@ -338,12 +458,10 @@ function PianoEditForm({ form, update }) {
                                 <>
                                     <select value={f.esito || ''} onChange={e => updateFase(i, 'esito', e.target.value)}
                                         className="h-6 text-[10px] rounded border px-1 w-20">
-                                        <option value="">—</option>
-                                        <option value="positivo">Positivo</option>
-                                        <option value="negativo">Negativo</option>
+                                        <option value="">--</option><option value="positivo">Pos.</option><option value="negativo">Neg.</option>
                                     </select>
                                     <input value={f.data_effettiva || ''} onChange={e => updateFase(i, 'data_effettiva', e.target.value)}
-                                        placeholder="Data" className="h-6 text-[10px] rounded border px-1 w-20" />
+                                        placeholder="Data" className={`h-6 text-[10px] rounded border px-1 w-20 ${f.data_effettiva ? 'border-emerald-300' : 'border-amber-300 bg-amber-50/50'}`} />
                                 </>
                             )}
                         </div>
@@ -354,100 +472,67 @@ function PianoEditForm({ form, update }) {
     );
 }
 
-// ─── Rapporto VT Edit Form ───
-function VtEditForm({ form, update }) {
+// ─── Rapporto VT Form ───
+function VtEditForm({ form, update, autoFields }) {
     const updateCheckGroup = (group, key, val) => {
-        const current = form[group] || {};
-        update(group, { ...current, [key]: val });
+        update(group, { ...(form[group] || {}), [key]: val });
     };
-
     const oggetti = form.oggetti_controllati || [];
-    const addOggetto = () => {
-        update('oggetti_controllati', [...oggetti, { numero: '', disegno: '', marca: '', dimensioni: '', estensione_controllo: '100', esito: '' }]);
-    };
-    const updateOggetto = (idx, key, val) => {
-        const newOgg = [...oggetti];
-        newOgg[idx] = { ...newOgg[idx], [key]: val };
-        update('oggetti_controllati', newOgg);
-    };
-    const removeOggetto = (idx) => {
-        const newOgg = [...oggetti];
-        newOgg.splice(idx, 1);
-        update('oggetti_controllati', newOgg);
-    };
+    const addOggetto = () => update('oggetti_controllati', [...oggetti, { numero:'',disegno:'',marca:'',dimensioni:'',estensione_controllo:'100',esito:'' }]);
+    const updateOggetto = (idx, key, val) => { const n=[...oggetti]; n[idx]={...n[idx],[key]:val}; update('oggetti_controllati',n); };
+    const removeOggetto = (idx) => { const n=[...oggetti]; n.splice(idx,1); update('oggetti_controllati',n); };
 
     return (
         <div className="space-y-3">
             <p className="text-xs text-slate-500 italic">Rapporto di Esame Visivo Dimensionale — MOD. 06</p>
             <div className="grid grid-cols-2 gap-3">
-                <Field label="Report N." value={form.report_numero} onChange={v => update('report_numero', v)} />
-                <Field label="Data Report" value={form.report_data} onChange={v => update('report_data', v)} placeholder="GG/MM/AAAA" />
-                <Field label="Processo Saldatura" value={form.processo_saldatura} onChange={v => update('processo_saldatura', v)} />
-                <Field label="Norma/Procedura" value={form.norma_procedura} onChange={v => update('norma_procedura', v)} />
-                <Field label="Accettabilita'" value={form.accettabilita} onChange={v => update('accettabilita', v)} />
-                <Field label="Materiale" value={form.materiale} onChange={v => update('materiale', v)} />
-                <Field label="Temp. pezzo" value={form.temperatura_pezzo} onChange={v => update('temperatura_pezzo', v)} />
-                <Field label="Profilato" value={form.profilato} onChange={v => update('profilato', v)} />
-                <Field label="Spessore" value={form.spessore} onChange={v => update('spessore', v)} />
-                <Field label="Tipo illuminatore" value={form.tipo_illuminatore} onChange={v => update('tipo_illuminatore', v)} />
-                <Field label="Distanza max (mm)" value={form.distanza_max_mm} onChange={v => update('distanza_max_mm', v)} />
-                <Field label="Angolo min (gradi)" value={form.angolo_min_gradi} onChange={v => update('angolo_min_gradi', v)} />
+                <SmartField label="Report N." value={form.report_numero} onChange={v => update('report_numero', v)} autoFields={autoFields} fieldKey="report_numero" />
+                <SmartField label="Data Report" value={form.report_data} onChange={v => update('report_data', v)} placeholder="GG/MM/AAAA" autoFields={autoFields} fieldKey="report_data" />
+                <SmartField label="Processo Saldatura" value={form.processo_saldatura} onChange={v => update('processo_saldatura', v)} autoFields={autoFields} fieldKey="processo_saldatura" />
+                <SmartField label="Norma/Procedura" value={form.norma_procedura} onChange={v => update('norma_procedura', v)} autoFields={autoFields} fieldKey="norma_procedura" />
+                <SmartField label="Accettabilita'" value={form.accettabilita} onChange={v => update('accettabilita', v)} autoFields={autoFields} fieldKey="accettabilita" />
+                <SmartField label="Materiale" value={form.materiale} onChange={v => update('materiale', v)} autoFields={autoFields} fieldKey="materiale" />
+                <SmartField label="Profilato" value={form.profilato} onChange={v => update('profilato', v)} autoFields={autoFields} fieldKey="profilato" />
+                <SmartField label="Spessore" value={form.spessore} onChange={v => update('spessore', v)} autoFields={autoFields} fieldKey="spessore" />
             </div>
             <div className="space-y-2">
                 <Label className="text-xs font-semibold text-slate-600">Condizioni di visione</Label>
                 <div className="flex gap-4 flex-wrap">
-                    {['naturale', 'artificiale', 'lampada_wood'].map(k => (
-                        <CheckField key={k} label={k.replace(/_/g, ' ')} checked={form.condizioni_visione?.[k]}
-                            onChange={v => updateCheckGroup('condizioni_visione', k, v)} />
+                    {['naturale','artificiale','lampada_wood'].map(k => (
+                        <CheckField key={k} label={k.replace(/_/g,' ')} checked={form.condizioni_visione?.[k]} onChange={v => updateCheckGroup('condizioni_visione',k,v)} />
                     ))}
                 </div>
             </div>
             <div className="space-y-2">
                 <Label className="text-xs font-semibold text-slate-600">Stato superficie</Label>
                 <div className="flex gap-4 flex-wrap">
-                    {['come_saldato', 'molato', 'spazzolato', 'lavorato_macchina', 'come_laminato', 'verniciato'].map(k => (
-                        <CheckField key={k} label={k.replace(/_/g, ' ')} checked={form.stato_superficie?.[k]}
-                            onChange={v => updateCheckGroup('stato_superficie', k, v)} />
+                    {['come_saldato','molato','spazzolato','lavorato_macchina','come_laminato','verniciato'].map(k => (
+                        <CheckField key={k} label={k.replace(/_/g,' ')} checked={form.stato_superficie?.[k]} onChange={v => updateCheckGroup('stato_superficie',k,v)} />
                     ))}
                 </div>
             </div>
             <div className="space-y-2">
                 <Label className="text-xs font-semibold text-slate-600">Tipo ispezione</Label>
                 <div className="flex gap-4 flex-wrap">
-                    {['diretto', 'remoto', 'generale', 'locale'].map(k => (
-                        <CheckField key={k} label={k.replace(/_/g, ' ')} checked={form.tipo_ispezione?.[k]}
-                            onChange={v => updateCheckGroup('tipo_ispezione', k, v)} />
+                    {['diretto','remoto','generale','locale'].map(k => (
+                        <CheckField key={k} label={k} checked={form.tipo_ispezione?.[k]} onChange={v => updateCheckGroup('tipo_ispezione',k,v)} />
                     ))}
                 </div>
             </div>
-            <div className="space-y-2">
-                <Label className="text-xs font-semibold text-slate-600">Attrezzatura</Label>
-                <div className="flex gap-4 flex-wrap">
-                    {['calibro', 'specchio', 'lente', 'endoscopio', 'fotocamera', 'videocamera'].map(k => (
-                        <CheckField key={k} label={k} checked={form.attrezzatura?.[k]}
-                            onChange={v => updateCheckGroup('attrezzatura', k, v)} />
-                    ))}
-                </div>
-            </div>
-            <Field label="Marca/Modello/Matricola calibro" value={form.calibro_info} onChange={v => update('calibro_info', v)} />
             <div className="border rounded-lg overflow-hidden">
                 <div className="bg-slate-100 px-3 py-1.5 flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-700">Oggetti Controllati</span>
-                    <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={addOggetto}>
-                        <Plus className="h-3 w-3 mr-1" /> Aggiungi
-                    </Button>
+                    <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={addOggetto}><Plus className="h-3 w-3 mr-1" /> Aggiungi</Button>
                 </div>
-                {oggetti.map((o, i) => (
+                {oggetti.map((o,i) => (
                     <div key={i} className="flex gap-1 px-2 py-1 border-b items-center">
-                        <input value={o.numero} onChange={e => updateOggetto(i, 'numero', e.target.value)} placeholder="N." className="h-6 text-[10px] border rounded px-1 w-8" />
-                        <input value={o.disegno} onChange={e => updateOggetto(i, 'disegno', e.target.value)} placeholder="Disegno" className="h-6 text-[10px] border rounded px-1 w-16" />
-                        <input value={o.marca} onChange={e => updateOggetto(i, 'marca', e.target.value)} placeholder="Marca" className="h-6 text-[10px] border rounded px-1 w-16" />
-                        <input value={o.dimensioni} onChange={e => updateOggetto(i, 'dimensioni', e.target.value)} placeholder="Dimensioni" className="h-6 text-[10px] border rounded px-1 w-20" />
-                        <input value={o.estensione_controllo} onChange={e => updateOggetto(i, 'estensione_controllo', e.target.value)} placeholder="%" className="h-6 text-[10px] border rounded px-1 w-10" />
-                        <select value={o.esito} onChange={e => updateOggetto(i, 'esito', e.target.value)} className="h-6 text-[10px] border rounded px-1 w-18">
-                            <option value="">—</option>
-                            <option value="Positivo">Positivo</option>
-                            <option value="Negativo">Negativo</option>
+                        <input value={o.numero} onChange={e => updateOggetto(i,'numero',e.target.value)} placeholder="N." className="h-6 text-[10px] border rounded px-1 w-8" />
+                        <input value={o.disegno} onChange={e => updateOggetto(i,'disegno',e.target.value)} placeholder="Disegno" className="h-6 text-[10px] border rounded px-1 w-16" />
+                        <input value={o.marca} onChange={e => updateOggetto(i,'marca',e.target.value)} placeholder="Marca" className="h-6 text-[10px] border rounded px-1 w-16" />
+                        <input value={o.dimensioni} onChange={e => updateOggetto(i,'dimensioni',e.target.value)} placeholder="Dim." className="h-6 text-[10px] border rounded px-1 w-20" />
+                        <input value={o.estensione_controllo} onChange={e => updateOggetto(i,'estensione_controllo',e.target.value)} placeholder="%" className="h-6 text-[10px] border rounded px-1 w-10" />
+                        <select value={o.esito} onChange={e => updateOggetto(i,'esito',e.target.value)} className="h-6 text-[10px] border rounded px-1 w-18">
+                            <option value="">--</option><option value="Positivo">Pos.</option><option value="Negativo">Neg.</option>
                         </select>
                         <button onClick={() => removeOggetto(i)} className="text-red-400 hover:text-red-600"><Trash2 className="h-3 w-3" /></button>
                     </div>
@@ -461,20 +546,19 @@ function VtEditForm({ form, update }) {
     );
 }
 
-// ─── Registro Saldatura Edit Form ───
-function RegistroEditForm({ form, update, addSaldatura, updateSaldatura, removeSaldatura }) {
+// ─── Registro Saldatura Form ───
+function RegistroEditForm({ form, update, autoFields, addSaldatura, updateSaldatura, removeSaldatura }) {
     const saldature = form.saldature || [];
-
     return (
         <div className="space-y-3">
             <p className="text-xs text-slate-500 italic">Registro di Saldatura — MOD. 04</p>
             <div className="grid grid-cols-3 gap-3">
-                <Field label="Data Emissione" value={form.data_emissione} onChange={v => update('data_emissione', v)} placeholder="GG/MM/AAAA" />
-                <Field label="Firma CS" value={form.firma_cs} onChange={v => update('firma_cs', v)} placeholder="Nome responsabile" />
+                <SmartField label="Data Emissione" value={form.data_emissione} onChange={v => update('data_emissione', v)} placeholder="GG/MM/AAAA" autoFields={autoFields} fieldKey="data_emissione" />
+                <SmartField label="Firma CS" value={form.firma_cs} onChange={v => update('firma_cs', v)} autoFields={autoFields} fieldKey="firma_cs" />
                 <div />
-                <Field label="% VT" value={form.perc_vt} onChange={v => update('perc_vt', v)} placeholder="100" />
-                <Field label="% MT/PT" value={form.perc_mt_pt} onChange={v => update('perc_mt_pt', v)} placeholder="0" />
-                <Field label="% RX-RY/UT" value={form.perc_rx_ut} onChange={v => update('perc_rx_ut', v)} placeholder="0" />
+                <SmartField label="% VT" value={form.perc_vt} onChange={v => update('perc_vt', v)} placeholder="100" autoFields={autoFields} fieldKey="perc_vt" />
+                <SmartField label="% MT/PT" value={form.perc_mt_pt} onChange={v => update('perc_mt_pt', v)} placeholder="0" autoFields={autoFields} fieldKey="perc_mt_pt" />
+                <SmartField label="% RX-RY/UT" value={form.perc_rx_ut} onChange={v => update('perc_rx_ut', v)} placeholder="0" autoFields={autoFields} fieldKey="perc_rx_ut" />
             </div>
             <div className="border rounded-lg overflow-hidden">
                 <div className="bg-slate-100 px-3 py-1.5 flex items-center justify-between">
@@ -485,29 +569,22 @@ function RegistroEditForm({ form, update, addSaldatura, updateSaldatura, removeS
                 </div>
                 <div className="max-h-64 overflow-y-auto">
                     {saldature.length === 0 && (
-                        <p className="text-center text-xs text-slate-400 py-4">Nessuna saldatura. Aggiungi righe o il PDF conterrà righe vuote da compilare a mano.</p>
+                        <p className="text-center text-xs text-slate-400 py-4">Nessuna saldatura. Aggiungi righe o il PDF conterra' righe vuote.</p>
                     )}
                     {saldature.map((s, i) => (
                         <div key={i} className="p-2 border-b space-y-1">
                             <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold text-slate-500">Saldatura #{i + 1}</span>
-                                <button onClick={() => removeSaldatura(i)} className="text-red-400 hover:text-red-600">
-                                    <Trash2 className="h-3 w-3" />
-                                </button>
+                                <span className="text-[10px] font-bold text-slate-500">#{i + 1}</span>
+                                <button onClick={() => removeSaldatura(i)} className="text-red-400 hover:text-red-600"><Trash2 className="h-3 w-3" /></button>
                             </div>
                             <div className="grid grid-cols-4 gap-1">
-                                <input value={s.numero_disegno} onChange={e => updateSaldatura(i, 'numero_disegno', e.target.value)} placeholder="N. Disegno" className="h-6 text-[10px] border rounded px-1" />
-                                <input value={s.numero_saldatura} onChange={e => updateSaldatura(i, 'numero_saldatura', e.target.value)} placeholder="N. Saldatura" className="h-6 text-[10px] border rounded px-1" />
-                                <input value={s.periodo} onChange={e => updateSaldatura(i, 'periodo', e.target.value)} placeholder="Periodo" className="h-6 text-[10px] border rounded px-1" />
-                                <input value={s.saldatore} onChange={e => updateSaldatura(i, 'saldatore', e.target.value)} placeholder="Saldatore" className="h-6 text-[10px] border rounded px-1" />
-                                <input value={s.punzone} onChange={e => updateSaldatura(i, 'punzone', e.target.value)} placeholder="Punzone" className="h-6 text-[10px] border rounded px-1" />
-                                <input value={s.diametro} onChange={e => updateSaldatura(i, 'diametro', e.target.value)} placeholder="Diam." className="h-6 text-[10px] border rounded px-1" />
-                                <input value={s.spessore} onChange={e => updateSaldatura(i, 'spessore', e.target.value)} placeholder="Spess." className="h-6 text-[10px] border rounded px-1" />
-                                <input value={s.materiale_base} onChange={e => updateSaldatura(i, 'materiale_base', e.target.value)} placeholder="Mat. Base" className="h-6 text-[10px] border rounded px-1" />
-                                <input value={s.wps_numero} onChange={e => updateSaldatura(i, 'wps_numero', e.target.value)} placeholder="WPS N." className="h-6 text-[10px] border rounded px-1" />
-                                <input value={s.vt_esito} onChange={e => updateSaldatura(i, 'vt_esito', e.target.value)} placeholder="VT Esito" className="h-6 text-[10px] border rounded px-1" />
-                                <input value={s.vt_data} onChange={e => updateSaldatura(i, 'vt_data', e.target.value)} placeholder="VT Data" className="h-6 text-[10px] border rounded px-1" />
-                                <input value={s.vt_firma} onChange={e => updateSaldatura(i, 'vt_firma', e.target.value)} placeholder="VT Firma" className="h-6 text-[10px] border rounded px-1" />
+                                {[['numero_disegno','N.Dis.'],['numero_saldatura','N.Sald.'],['periodo','Periodo'],['saldatore','Saldatore'],
+                                  ['punzone','Punz.'],['diametro','Diam.'],['spessore','Spess.'],['materiale_base','Mat.Base'],
+                                  ['wps_numero','WPS'],['vt_esito','VT Esito'],['vt_data','VT Data'],['vt_firma','VT Firma']
+                                ].map(([key,ph]) => (
+                                    <input key={key} value={s[key]||''} onChange={e => updateSaldatura(i,key,e.target.value)}
+                                        placeholder={ph} className="h-6 text-[10px] border rounded px-1" />
+                                ))}
                             </div>
                         </div>
                     ))}
@@ -517,8 +594,8 @@ function RegistroEditForm({ form, update, addSaldatura, updateSaldatura, removeS
     );
 }
 
-// ─── Riesame Tecnico Edit Form ───
-function RiesameEditForm({ form, update, updateRequisito, updateItt }) {
+// ─── Riesame Tecnico Form ───
+function RiesameEditForm({ form, update, autoFields, updateRequisito, updateItt }) {
     const requisiti = form.requisiti || [];
     const itt = form.itt || [];
 
@@ -526,38 +603,36 @@ function RiesameEditForm({ form, update, updateRequisito, updateItt }) {
         <div className="space-y-3">
             <p className="text-xs text-slate-500 italic">Riesame Tecnico — MOD. 01 — Checklist requisiti EN 1090</p>
             <div className="border rounded-lg overflow-hidden">
-                <div className="bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700">Requisiti</div>
+                <div className="bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700">Requisiti ({requisiti.filter(r=>r.risposta==='si').length}/{requisiti.length} confermati)</div>
                 <div className="max-h-64 overflow-y-auto">
                     {requisiti.map((r, i) => (
                         <div key={i} className="flex items-start gap-2 px-2 py-1.5 border-b text-[10px]">
                             <span className="flex-1 min-w-0 pt-0.5">{r.requisito}</span>
                             <div className="flex gap-1.5 shrink-0 items-center">
-                                {['si', 'no', 'na'].map(opt => (
+                                {['si','no','na'].map(opt => (
                                     <label key={opt} className="flex items-center gap-0.5 cursor-pointer">
                                         <input type="radio" name={`req-${i}`} value={opt}
-                                            checked={r.risposta === opt} onChange={() => updateRequisito(i, 'risposta', opt)}
-                                            className="accent-slate-800" style={{ width: 12, height: 12 }} />
+                                            checked={r.risposta===opt} onChange={() => updateRequisito(i,'risposta',opt)}
+                                            className="accent-slate-800" style={{width:12,height:12}} />
                                         <span className="uppercase">{opt}</span>
                                     </label>
                                 ))}
                             </div>
-                            <input value={r.note || ''} onChange={e => updateRequisito(i, 'note', e.target.value)}
-                                placeholder="Note/Rif." className="h-5 text-[10px] border rounded px-1 w-32" />
+                            <input value={r.note||''} onChange={e => updateRequisito(i,'note',e.target.value)}
+                                placeholder="Note" className="h-5 text-[10px] border rounded px-1 w-32" />
                         </div>
                     ))}
                 </div>
             </div>
-
-            <RadioGroup label="Decisione Fattibilita'" value={form.decisione || 'procedere'} onChange={v => update('decisione', v)}
-                options={[{ value: 'procedere', label: 'PROCEDERE' }, { value: 'non_procedere', label: 'NON PROCEDERE' }]} />
-
+            <RadioGroup label="Decisione Fattibilita'" value={form.decisione||'procedere'} onChange={v => update('decisione',v)}
+                options={[{value:'procedere',label:'PROCEDERE'},{value:'non_procedere',label:'NON PROCEDERE'}]} />
             <div className="border rounded-lg overflow-hidden">
                 <div className="bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700">ITT di Commessa</div>
                 <div className="max-h-48 overflow-y-auto">
                     {itt.map((item, i) => (
                         <div key={i} className="flex items-center gap-1 px-2 py-1 border-b text-[10px]">
                             <span className="flex-1 min-w-0 truncate" title={item.caratteristica}>{item.caratteristica}</span>
-                            <input value={item.esito_conformita || ''} onChange={e => updateItt(i, 'esito_conformita', e.target.value)}
+                            <input value={item.esito_conformita||''} onChange={e => updateItt(i,'esito_conformita',e.target.value)}
                                 placeholder="Esito" className="h-5 text-[10px] border rounded px-1 w-28" />
                         </div>
                     ))}
