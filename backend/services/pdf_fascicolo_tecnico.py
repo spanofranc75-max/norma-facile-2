@@ -242,7 +242,7 @@ def generate_piano_controllo_pdf(company: dict, commessa: dict, client_name: str
     html = f"""<!DOCTYPE html><html><head><style>{BASE_CSS}
     @page {{ size: A4 landscape; margin: 10mm 8mm; }}
     </style></head><body>
-    {_header_html(biz, addr, piva, phone, email, 'Piano di Controllo Qualita\'', 'MOD. 02 Rev. 00')}
+    {_header_html(biz, addr, piva, phone, email, "Piano di Controllo Qualita'", 'MOD. 02 Rev. 00')}
     <table class="info-table" style="margin-top:4px;">
         <tr><td class="info-lbl">Cliente:</td><td>{client_name}</td><td class="info-lbl">Commessa N.:</td><td>{comm_num}</td></tr>
         <tr><td class="info-lbl">Descrizione Lavoro:</td><td>{comm_title}</td><td class="info-lbl">Ordine N.:</td><td>{ordine_num}</td></tr>
