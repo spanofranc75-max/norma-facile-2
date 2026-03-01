@@ -1150,6 +1150,51 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                 </div>
             </Section>
 
+            {/* ── FASCICOLO TECNICO EN 1090 ── */}
+            <Section title="Fascicolo Tecnico EN 1090" icon={FileText} count={4}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2" data-testid="fascicolo-tecnico-section">
+                    {[
+                        { key: 'dop', label: 'DOP', desc: 'Dichiarazione di Prestazione', color: 'blue', endpoint: 'dop-pdf' },
+                        { key: 'ce', label: 'CE', desc: 'Marcatura CE', color: 'indigo', endpoint: 'ce-pdf' },
+                        { key: 'piano', label: 'Piano Controllo', desc: 'Piano di Controllo Qualita', color: 'amber', endpoint: 'piano-controllo-pdf' },
+                        { key: 'vt', label: 'Rapporto VT', desc: 'Esame Visivo Dimensionale', color: 'teal', endpoint: 'rapporto-vt-pdf' },
+                    ].map(doc => (
+                        <div key={doc.key} className={`p-3 rounded-lg border border-${doc.color}-200 bg-${doc.color}-50 hover:shadow-sm transition-shadow`} data-testid={`ft-card-${doc.key}`}>
+                            <div className="flex items-center justify-between mb-1">
+                                <div>
+                                    <span className={`font-bold text-${doc.color}-800 text-sm`}>{doc.label}</span>
+                                    <p className={`text-[10px] text-${doc.color}-600`}>{doc.desc}</p>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className={`text-xs border-${doc.color}-300 text-${doc.color}-700 hover:bg-${doc.color}-100 h-7`}
+                                    data-testid={`btn-download-${doc.key}`}
+                                    onClick={async () => {
+                                        try {
+                                            const res = await fetch(`${API}/api/fascicolo-tecnico/${commessaId}/${doc.endpoint}`, {
+                                                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+                                            });
+                                            if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Errore generazione PDF'); }
+                                            const blob = await res.blob();
+                                            const url = URL.createObjectURL(blob);
+                                            const a = document.createElement('a'); a.href = url; a.download = `${doc.label}_${commessaId}.pdf`; a.click();
+                                            URL.revokeObjectURL(url);
+                                            toast.success(`${doc.label} scaricato`);
+                                        } catch (e) { toast.error(e.message); }
+                                    }}
+                                >
+                                    <Download className="h-3 w-3 mr-1" /> PDF
+                                </Button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-2 text-center">
+                    Configura i dati in Impostazioni aziendali. I PDF vengono generati con i dati della commessa.
+                </p>
+            </Section>
+
             {/* ── REPOSITORY DOCUMENTI ── */}
             <Section title="Repository Documenti" icon={FileUp} count={docs.length} defaultOpen>
                 <div className="space-y-2">
