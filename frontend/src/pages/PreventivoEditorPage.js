@@ -137,27 +137,31 @@ export default function PreventivoEditorPage() {
     useEffect(() => {
         if (isNew) return;
         apiRequest(`/preventivi/${prevId}`).then(data => {
-            setForm({
-                client_id: data.client_id || '',
-                subject: data.subject || '',
-                validity_days: data.validity_days || 30,
-                notes: data.notes || '',
-                lines: data.lines?.length ? data.lines : [emptyLine()],
-                payment_type_id: data.payment_type_id || '',
-                payment_type_label: data.payment_type_label || '',
-                destinazione_merce: data.destinazione_merce || '',
-                iban: data.iban || '',
-                banca: data.banca || '',
-                note_pagamento: data.note_pagamento || '',
-                riferimento: data.riferimento || '',
-                acconto: data.acconto || 0,
-                sconto_globale: data.sconto_globale || 0,
-                normativa: data.normativa || '',
-                numero_disegno: data.numero_disegno || '',
-                ingegnere_disegno: data.ingegnere_disegno || '',
-                classe_esecuzione: data.classe_esecuzione || '',
-                giorni_consegna: data.giorni_consegna || '',
-            });
+            // Only overwrite form with API data if we haven't restored a draft
+            // (draft takes priority since it has unsaved user edits)
+            if (!isRestoredRef.current) {
+                setForm({
+                    client_id: data.client_id || '',
+                    subject: data.subject || '',
+                    validity_days: data.validity_days || 30,
+                    notes: data.notes || '',
+                    lines: data.lines?.length ? data.lines : [emptyLine()],
+                    payment_type_id: data.payment_type_id || '',
+                    payment_type_label: data.payment_type_label || '',
+                    destinazione_merce: data.destinazione_merce || '',
+                    iban: data.iban || '',
+                    banca: data.banca || '',
+                    note_pagamento: data.note_pagamento || '',
+                    riferimento: data.riferimento || '',
+                    acconto: data.acconto || 0,
+                    sconto_globale: data.sconto_globale || 0,
+                    normativa: data.normativa || '',
+                    numero_disegno: data.numero_disegno || '',
+                    ingegnere_disegno: data.ingegnere_disegno || '',
+                    classe_esecuzione: data.classe_esecuzione || '',
+                    giorni_consegna: data.giorni_consegna || '',
+                });
+            }
             if (data.compliance_detail) setCompliance(data.compliance_detail);
             setWorkflow({
                 status: data.status || 'bozza',
