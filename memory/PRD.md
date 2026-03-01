@@ -446,6 +446,16 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Frontend**: 6 card con bottoni "Compila" (apre editor) e "PDF" (scarica). Componente estratto dal panel principale.
 - Testing: 100% backend (20/20 - iteration_75)
 
+### Auto-compilazione PDF + Acciaieria + Firma Digitale (Phase 64 - Mar 2026)
+- **Classe di Esecuzione nel Preventivo**: Nuovo campo `classe_esecuzione` (EXC1-EXC4) nel modello e editor preventivo. Auto-propagato a tutti i PDF del Fascicolo Tecnico.
+- **Auto-compilazione da Preventivo**: `_get_context` ora recupera dal preventivo: cliente, classe esecuzione, n. disegno, ingegnere (redatto da). Tutti i 6 PDF e la Scheda Rintracciabilità li mostrano automaticamente.
+- **Colonna Acciaieria**: Aggiunta alla Scheda Rintracciabilità Materiali (colonna "Acciaieria" nel PDF + campo editabile inline nel frontend).
+- **Fornitore da OdA**: Il Fornitore nella Scheda Rintracciabilità viene ora cercato anche dagli Ordini di Acquisto (OdA) collegati alla commessa, non solo dal batch.
+- **PATCH Material Batches**: Nuovo endpoint `PATCH /api/commesse/{cid}/material-batches/{batch_id}` per aggiornare acciaieria, fornitore, DDT, posizione, n. pezzi, n. certificato.
+- **Firma Digitale**: Upload immagine PNG/JPG nelle Impostazioni Aziendali (tab Logo). Base64 salvato in `company_settings.firma_digitale`. Firma inserita automaticamente nelle aree firma di tutti i PDF (DOP, Piano Controllo, Rapporto VT, Registro Saldatura, Riesame Tecnico).
+- **Logo nei PDF**: Tutti i PDF ora mostrano il logo aziendale nell'intestazione (se caricato).
+- Testing: 100% backend (15/15 - iteration_76)
+
 ## Issue Pendenti
 - **P2**: Radix UI Select/Popover dentro Dialog (workaround nativo attivo)
 - **P2**: Verifica utente parsing AI certificati (richiede test manuale dall'utente)
