@@ -482,6 +482,19 @@ export default function PreventivoEditorPage() {
                                         </div>
                                         <div><Label className="text-xs">N. Disegno</Label><Input value={form.numero_disegno} onChange={e => setForm(f => ({ ...f, numero_disegno: e.target.value }))} placeholder="es. STR-01" className="h-8 text-xs" data-testid="input-numero-disegno" /></div>
                                         <div><Label className="text-xs">Redatto dall'Ing.</Label><Input value={form.ingegnere_disegno} onChange={e => setForm(f => ({ ...f, ingegnere_disegno: e.target.value }))} placeholder="Nome Cognome" className="h-8 text-xs" data-testid="input-ingegnere-disegno" /></div>
+                                        <div>
+                                            <Label className="text-xs">Classe di Esecuzione</Label>
+                                            <Select value={form.classe_esecuzione || '__none__'} onValueChange={v => setForm(f => ({ ...f, classe_esecuzione: v === '__none__' ? '' : v }))}>
+                                                <SelectTrigger className="h-8 text-xs" data-testid="select-classe-esecuzione"><SelectValue placeholder="Seleziona..." /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="__none__">-- Nessuna --</SelectItem>
+                                                    <SelectItem value="EXC1">EXC1</SelectItem>
+                                                    <SelectItem value="EXC2">EXC2</SelectItem>
+                                                    <SelectItem value="EXC3">EXC3</SelectItem>
+                                                    <SelectItem value="EXC4">EXC4</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                         <div><Label className="text-xs">Sconto Globale (%)</Label><Input type="number" step="0.1" value={form.sconto_globale} onChange={e => setForm(f => ({ ...f, sconto_globale: parseFloat(e.target.value) || 0 }))} className="h-8 text-xs font-mono" /></div>
                                         <div><Label className="text-xs">Acconto</Label><Input type="number" step="0.01" value={form.acconto} onChange={e => setForm(f => ({ ...f, acconto: parseFloat(e.target.value) || 0 }))} className="h-8 text-xs font-mono" /></div>
                                     </div>
