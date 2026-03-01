@@ -1181,7 +1181,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
             {/* ── REPOSITORY DOCUMENTI ── */}
             <Section title="Repository Documenti" icon={FileUp} count={docs.length} defaultOpen>
                 <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                         <select
                             value={uploadType}
                             onChange={(e) => setUploadType(e.target.value)}
@@ -1201,6 +1201,23 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                         <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} className="text-xs" data-testid="btn-upload-doc">
                             <FileUp className="h-3 w-3 mr-1" /> Carica File
                         </Button>
+                        {docs.length > 3 && (
+                            <select
+                                data-testid="filter-doc-type"
+                                className="h-8 text-xs rounded-md border border-input bg-transparent px-2 py-1 ml-auto"
+                                onChange={(e) => {
+                                    const v = e.target.value;
+                                    document.querySelectorAll('[data-doc-type]').forEach(el => {
+                                        el.style.display = (!v || el.dataset.docType === v) ? '' : 'none';
+                                    });
+                                }}
+                            >
+                                <option value="">Tutti i tipi</option>
+                                {[...new Set(docs.map(d => d.tipo))].map(t => (
+                                    <option key={t} value={t}>{(t || 'altro').replace(/_/g, ' ')}</option>
+                                ))}
+                            </select>
+                        )}
                     </div>
                     {docs.map(d => (
                         <div key={d.doc_id} className="flex items-center gap-2 p-2 bg-slate-50 rounded text-xs" data-testid={`doc-${d.doc_id}`}>
