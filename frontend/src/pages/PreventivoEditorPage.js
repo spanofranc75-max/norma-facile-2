@@ -56,6 +56,7 @@ export default function PreventivoEditorPage() {
         payment_type_id: '', payment_type_label: '', destinazione_merce: '',
         iban: '', banca: '', note_pagamento: '', riferimento: '',
         acconto: 0, sconto_globale: 0, normativa: '',
+        numero_disegno: '', ingegnere_disegno: '',
     });
     const [clients, setClients] = useState([]);
     const [paymentTypes, setPaymentTypes] = useState([]);
