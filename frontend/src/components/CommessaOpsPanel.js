@@ -925,7 +925,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                             className="text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                             onClick={async () => {
                                 try {
-                                    const res = await fetch(`${API}/api/commessa-ops/${commessaId}/scheda-rintracciabilita-pdf`, {
+                                    const res = await fetch(`${API}/api/commesse/${commessaId}/scheda-rintracciabilita-pdf`, {
                                         headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
                                     });
                                     if (!res.ok) throw new Error('Errore generazione PDF');
