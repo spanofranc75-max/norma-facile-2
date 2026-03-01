@@ -425,6 +425,72 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         });
     };
 
+    const openRientroModal = (clItem) => {
+        setRientroTarget(clItem);
+        const pesoInviato = (clItem.righe || []).reduce((s, r) => s + (parseFloat(r.peso_kg) || 0), 0);
+        setRientroForm({
+            data_rientro: new Date().toISOString().slice(0, 10),
+            ddt_fornitore_numero: '', ddt_fornitore_data: '',
+            peso_rientrato_kg: pesoInviato, esito_qc: 'conforme',
+            note_rientro: '', motivo_non_conformita: '',
+        });
+        setRientroFile(null);
+        setRientroOpen(true);
+    };
+
+    const handleSubmitRientro = async () => {
+        if (!rientroTarget) return;
+        setRientroLoading(true);
+        try {
+            const fd = new FormData();
+            fd.append('data_rientro', rientroForm.data_rientro);
+            fd.append('ddt_fornitore_numero', rientroForm.ddt_fornitore_numero);
+            fd.append('ddt_fornitore_data', rientroForm.ddt_fornitore_data);
+            fd.append('peso_rientrato_kg', String(rientroForm.peso_rientrato_kg));
+            fd.append('esito_qc', rientroForm.esito_qc);
+            fd.append('note_rientro', rientroForm.note_rientro);
+            fd.append('motivo_non_conformita', rientroForm.motivo_non_conformita);
+            if (rientroFile) fd.append('certificato_file', rientroFile);
+
+            const res = await fetch(`${API}/api/commesse/${commessaId}/conto-lavoro/${rientroTarget.cl_id}/rientro`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                body: fd,
+            });
+            if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Errore registrazione rientro'); }
+            const result = await res.json();
+            toast.success(result.message || 'Rientro registrato');
+            setRientroOpen(false);
+            fetchData(); onRefresh?.();
+        } catch (e) { toast.error(e.message); }
+        finally { setRientroLoading(false); }
+    };
+
+    const handleVerificaCL = async (clId) => {
+        try {
+            const res = await fetch(`${API}/api/commesse/${commessaId}/conto-lavoro/${clId}/verifica`, {
+                method: 'PATCH',
+                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}`, 'Content-Type': 'application/json' },
+            });
+            if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Errore verifica'); }
+            toast.success('C/L verificato — fase produzione aggiornata');
+            fetchData(); onRefresh?.();
+        } catch (e) { toast.error(e.message); }
+    };
+
+    const handleDownloadNCR = async (clId) => {
+        try {
+            const res = await fetch(`${API}/api/commesse/${commessaId}/conto-lavoro/${clId}/ncr-pdf`, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+            });
+            if (!res.ok) throw new Error('Errore generazione NCR');
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = `NCR_${clId}.pdf`; a.click();
+            URL.revokeObjectURL(url);
+        } catch (e) { toast.error(e.message); }
+    };
+
     const handleUploadDoc = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
