@@ -140,6 +140,13 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa cen
 - Se nessun saldatore assegnato, mostra messaggio informativo senza errori
 - Testato: 9/9 backend pytest (iteration_93.json)
 
+### Bug Fix: Dashboard Sostenibilità vuota (Mar 2026)
+- **Problema:** La pagina Sostenibilità & CO2 mostrava "Nessun dato CAM" nonostante 2 lotti CAM presenti nelle commesse
+- **Causa Root:** Il filtro per anno usava confronto stringa (`"$gte": "2026-01-01"`) ma `created_at` era salvato come `datetime` object → risultato sempre 0
+- **Secondo bug:** Il trend mensile faceva `isinstance(created, str)` ignorando i datetime → grafici mensili vuoti
+- **Fix:** Query `$or` per gestire entrambi i tipi (datetime e string), trend mensile gestisce entrambi i formati
+- Ora la dashboard mostra: 4.731 kg acciaio, 80% riciclato, 2 lotti conformi CAM
+
 ## Backlog
 - P1: Fatture in Cloud SDI (necessita credenziali utente), verifica parsing AI
 - P2: Test e2e completo, seeding dati, coesione flusso
