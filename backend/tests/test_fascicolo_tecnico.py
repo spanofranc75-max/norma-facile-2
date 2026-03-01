@@ -244,7 +244,7 @@ class TestFascicoloAuth:
 # PDF GENERATION TESTS
 # ═══════════════════════════════════════════════════════════════
 class TestFascicoloPDFs:
-    """Test all 4 PDF generation endpoints"""
+    """Test all 6 PDF generation endpoints"""
     
     def test_dop_pdf_returns_pdf(self, session, auth_headers, test_commessa):
         """GET /api/fascicolo-tecnico/{cid}/dop-pdf returns PDF (application/pdf content type)"""
@@ -291,6 +291,28 @@ class TestFascicoloPDFs:
         assert "application/pdf" in r.headers.get("Content-Type", "")
         assert r.content[:4] == b'%PDF', "Response should be valid PDF"
         print(f"✓ Rapporto VT PDF generated ({len(r.content)} bytes)")
+    
+    def test_registro_saldatura_pdf_returns_pdf(self, session, auth_headers, test_commessa):
+        """GET /api/fascicolo-tecnico/{cid}/registro-saldatura-pdf returns PDF (MOD. 04)"""
+        r = session.get(
+            f"{BASE_URL}/api/fascicolo-tecnico/{test_commessa}/registro-saldatura-pdf",
+            headers=auth_headers
+        )
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text}"
+        assert "application/pdf" in r.headers.get("Content-Type", "")
+        assert r.content[:4] == b'%PDF', "Response should be valid PDF"
+        print(f"✓ Registro Saldatura PDF generated ({len(r.content)} bytes)")
+    
+    def test_riesame_tecnico_pdf_returns_pdf(self, session, auth_headers, test_commessa):
+        """GET /api/fascicolo-tecnico/{cid}/riesame-tecnico-pdf returns PDF (MOD. 01)"""
+        r = session.get(
+            f"{BASE_URL}/api/fascicolo-tecnico/{test_commessa}/riesame-tecnico-pdf",
+            headers=auth_headers
+        )
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text}"
+        assert "application/pdf" in r.headers.get("Content-Type", "")
+        assert r.content[:4] == b'%PDF', "Response should be valid PDF"
+        print(f"✓ Riesame Tecnico PDF generated ({len(r.content)} bytes)")
 
 # ═══════════════════════════════════════════════════════════════
 # PREVENTIVO DISEGNO FIELDS TEST
