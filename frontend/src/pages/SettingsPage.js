@@ -37,6 +37,7 @@ export default function SettingsPage() {
             bic_swift: '',
         },
         logo_url: '',
+        firma_digitale: '',
         condizioni_vendita: '',
         aruba_username: '',
         aruba_password: '',
