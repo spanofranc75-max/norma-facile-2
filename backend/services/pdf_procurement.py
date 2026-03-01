@@ -472,7 +472,7 @@ def generate_cl_pdf(
     created_at = cl.get("created_at", "")
 
     tipo_labels = {"verniciatura": "VERNICIATURA", "zincatura": "ZINCATURA A CALDO", "sabbiatura": "SABBIATURA", "altro": "LAVORAZIONE ESTERNA"}
-    tipo_label = tipo_labels.get(tipo, tipo.upper())
+    tipo_label = tipo_labels.get(tipo or "", (tipo or "LAVORAZIONE").upper())
 
     commessa_numero = commessa.get("numero", "N/D")
     cantiere = commessa.get("cantiere") or {}
