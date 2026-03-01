@@ -949,7 +949,8 @@ async def preview_preventivo_email(prev_id: str, user: dict = Depends(get_curren
 
     from services.email_preview import build_invoice_email
     prev_number = doc.get("number", prev_id)
-    total = doc.get("totals", {}).get("total_document", 0)
+    totals = doc.get("totals", {})
+    total = totals.get("total_document") or totals.get("total", 0)
 
     preview = build_invoice_email(
         client_name=client_name,
