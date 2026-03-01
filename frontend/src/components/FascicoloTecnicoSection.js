@@ -38,6 +38,7 @@ export default function FascicoloTecnicoSection({ commessaId }) {
     const [completoOpen, setCompletoOpen] = useState(false);
     const [completoSel, setCompletoSel] = useState({dop:true,ce:true,piano:true,vt:true,registro:true,riesame:true});
     const [completoLoading, setCompletoLoading] = useState(false);
+    const [superLoading, setSuperLoading] = useState(false);
 
     const loadData = useCallback(async () => {
         if (!commessaId) return;
