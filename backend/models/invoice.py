@@ -65,7 +65,7 @@ class InvoiceLineBase(BaseModel):
     code: Optional[str] = None
     description: str
     quantity: float = Field(default=1.0, ge=0)
-    unit_price: float = Field(ge=0)
+    unit_price: float = Field(default=0)
     discount_percent: float = Field(default=0.0, ge=0, le=100)
     vat_rate: str = "22"  # Can be number or code like N4
     
