@@ -412,6 +412,16 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Frontend Impostazioni**: Tab "Integrazioni" aggiornata con campi Fatture in Cloud (Company ID, Access Token)
 - Testing: 100% backend (13/13 iteration_72), 100% backend (10/10 iteration_70)
 
+### Scheda Rintracciabilità Materiali EN 1090 (Phase 61 - Mar 2026)
+- **Nuova funzionalità: PDF Scheda Rintracciabilità** — Genera PDF MOD.07 EN 1090 con WeasyPrint (landscape A4) da dati material_batches
+- **Preventivo arricchito**: Aggiunti campi `numero_disegno` e `ingegnere_disegno` per collegare disegni tecnici
+- **Material Batches arricchiti**: Nuovi campi `posizione`, `n_pezzi`, `numero_certificato`, `ddt_numero`, `disegno_numero`
+- **Smart Matching migliorato**: Nuovo `_extract_profile_base()` estrae tipo profilo base (es. "IPE100") per matching affidabile tra OdA e certificati
+- **Cascade Delete potenziata**: Ora elimina lotti CAM orfani tramite numeri colata dal metadata del certificato
+- **Endpoint**: `GET /api/commesse/{cid}/scheda-rintracciabilita-pdf`
+- **Frontend**: Bottone "Scheda Rintracciabilità PDF" nella sezione Tracciabilità + campi extra visualizzati
+- Testing: 100% backend (12/12), 100% frontend (iteration_73)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
