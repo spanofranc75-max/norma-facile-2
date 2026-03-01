@@ -123,6 +123,12 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa cen
 - importPath.parentPath.parentPath era null per import top-level → null-safe check aggiunto
 - Risolto: tutte le pagine con import lucide-react compilano correttamente
 
+### Collegamento DDT ↔ Commesse (Mar 2026)
+- Pagina DDT (/ddt): aggiunta colonna "Commessa" con numero commessa cliccabile (link a /commesse/:id)
+- Editor DDT (/ddt/:id): aggiunto badge "Commessa NF-XXX" nell'header cliccabile
+- Backend: arricchimento dati DDT con info commessa (numero, titolo) in lista e dettaglio
+- Zero modifiche allo schema dati — solo lookup commessa_id → commessa info
+
 ## Backlog
 - P1: Integrare patentini saldatori nel "Super Fascicolo Tecnico" (auto-allegare PDF validi per saldatori della commessa)
 - P1: Fatture in Cloud SDI (necessita credenziali utente), verifica parsing AI
