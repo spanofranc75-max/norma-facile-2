@@ -85,6 +85,7 @@ def generate_scheda_rintracciabilita_pdf(
     preventivo: Optional[Dict[str, Any]],
     batches: List[Dict[str, Any]],
     client_name: str = "",
+    ordini: List[Dict[str, Any]] = None,
 ) -> BytesIO:
     """Generate the EN 1090 Materials Traceability Sheet PDF."""
     if not WEASYPRINT_AVAILABLE:
@@ -95,6 +96,8 @@ def generate_scheda_rintracciabilita_pdf(
     addr = f"{company.get('address', '')} {company.get('city', '')} {company.get('cap', '')}".strip()
     phone = company.get("phone", "")
     email = company.get("email", "")
+    logo = company.get("logo_url", "")
+    firma = company.get("firma_digitale", "")
 
     comm_num = commessa.get("numero", "")
     comm_title = commessa.get("title", "")
@@ -105,6 +108,17 @@ def generate_scheda_rintracciabilita_pdf(
     if preventivo:
         disegno = preventivo.get("numero_disegno", "") or ""
         ingegnere = preventivo.get("ingegnere_disegno", "") or ""
+        if not classe_exec:
+            classe_exec = preventivo.get("classe_esecuzione", "") or ""
+
+    # Build fornitore lookup from OdA
+    oda_fornitore_map = {}
+    if ordini:
+        for oda in ordini:
+            fn = oda.get("fornitore_nome", "")
+            for riga in oda.get("righe", []):
+                desc_lower = (riga.get("descrizione", "") or "").lower()
+                oda_fornitore_map[desc_lower] = fn
 
     # Build rows
     rows_html = ""
@@ -115,9 +129,17 @@ def generate_scheda_rintracciabilita_pdf(
         mat_type = b.get("material_type", "")
         n_cert = b.get("numero_certificato", "") or ""
         colata = b.get("heat_number", "")
+        # Fornitore: from batch, then try OdA match
         fornitore = b.get("supplier_name", "")
+        if not fornitore:
+            desc_lower = desc.lower()
+            for key, fn in oda_fornitore_map.items():
+                if key in desc_lower or desc_lower in key:
+                    fornitore = fn
+                    break
         ddt = b.get("ddt_numero", "") or ""
         dis = b.get("disegno_numero", "") or disegno
+        acciaieria = b.get("acciaieria", "") or ""
 
         rows_html += f"""
         <tr>
@@ -130,10 +152,11 @@ def generate_scheda_rintracciabilita_pdf(
             <td>{colata}</td>
             <td style="text-align:left; padding-left:4px;">{fornitore}</td>
             <td>{ddt}</td>
+            <td style="text-align:left; padding-left:4px;">{acciaieria}</td>
         </tr>"""
 
     if not batches:
-        rows_html = '<tr><td colspan="9" style="padding:12px; color:#888;">Nessun materiale tracciato</td></tr>'
+        rows_html = '<tr><td colspan="10" style="padding:12px; color:#888;">Nessun materiale tracciato</td></tr>'
 
     now_str = datetime.now(timezone.utc).strftime("%d/%m/%Y")
 
