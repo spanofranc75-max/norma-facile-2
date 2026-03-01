@@ -55,6 +55,7 @@ export default function SettingsPage() {
                     ...data,
                     bank_details: data.bank_details || prev.bank_details,
                     logo_url: data.logo_url || '',
+                    firma_digitale: data.firma_digitale || '',
                     condizioni_vendita: data.condizioni_vendita || '',
                     aruba_username: data.aruba_username || '',
                     aruba_password: data.aruba_password || '',
