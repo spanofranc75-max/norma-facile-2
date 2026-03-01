@@ -205,7 +205,7 @@ def _build_cap1(ctx: dict) -> bytes:
         <tr><td class="lbl">Certificato EN 1090:</td><td>{_s(co.get('certificato_en1090_numero'))}</td></tr>
         <tr><td class="lbl">Ente Certificatore:</td><td>{_s(co.get('ente_certificatore'))} n. {_s(co.get('ente_certificatore_numero'))}</td></tr>
     </table>
-    {"<h2>1.3 Fasi di Produzione</h2><table class='data'><thead><tr><th>Fase</th><th>Stato</th><th>Completamento</th></tr></thead><tbody>" + fasi_rows + "</tbody></table>" if fasi_rows else ""}
+    {"<h2>1.3 Fasi di Produzione</h2><table class='data'><thead><tr><th>Fase</th><th>Stato</th><th>Inizio</th><th>Fine</th><th>Operatore</th></tr></thead><tbody>" + fasi_rows + "</tbody></table>" if fasi_rows else ""}
     """
     return _render(html)
 
