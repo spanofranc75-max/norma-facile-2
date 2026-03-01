@@ -469,6 +469,71 @@ MODULE_FIELDS = {
     "certificazione": "certificazione_id",
 }
 
+
+@router.get("/{commessa_id}/available-modules")
+async def get_available_modules(commessa_id: str, tipo: str = "preventivo", user: dict = Depends(get_current_user)):
+    """Get available modules of a given type for linking to a commessa."""
+    uid = user["user_id"]
+    results = []
+
+    if tipo == "preventivo":
+        docs = await db.preventivi.find(
+            {"user_id": uid},
+            {"_id": 0, "preventivo_id": 1, "number": 1, "client_name": 1, "status": 1}
+        ).to_list(100)
+        for d in docs:
+            results.append({
+                "id": d["preventivo_id"],
+                "label": f"{d.get('number', d['preventivo_id'])} — {d.get('client_name', 'N/D')}",
+                "status": d.get("status", ""),
+            })
+    elif tipo == "fattura":
+        docs = await db.invoices.find(
+            {"user_id": uid},
+            {"_id": 0, "invoice_id": 1, "document_number": 1, "document_type": 1, "status": 1}
+        ).to_list(200)
+        for d in docs:
+            results.append({
+                "id": d["invoice_id"],
+                "label": f"{d.get('document_number', d['invoice_id'])} ({d.get('document_type','FT')})",
+                "status": d.get("status", ""),
+            })
+    elif tipo == "ddt":
+        docs = await db.ddt.find(
+            {"user_id": uid},
+            {"_id": 0, "ddt_id": 1, "number": 1, "ddt_type": 1, "status": 1}
+        ).to_list(200)
+        for d in docs:
+            results.append({
+                "id": d["ddt_id"],
+                "label": f"DDT {d.get('number', d['ddt_id'])} ({d.get('ddt_type','vendita')})",
+                "status": d.get("status", ""),
+            })
+    elif tipo == "rilievo":
+        docs = await db.rilievi.find(
+            {"user_id": uid},
+            {"_id": 0, "rilievo_id": 1, "title": 1, "status": 1}
+        ).to_list(100)
+        for d in docs:
+            results.append({
+                "id": d["rilievo_id"],
+                "label": d.get("title", d["rilievo_id"]),
+                "status": d.get("status", ""),
+            })
+    elif tipo == "distinta":
+        docs = await db.distinte.find(
+            {"user_id": uid},
+            {"_id": 0, "distinta_id": 1, "title": 1, "product_name": 1}
+        ).to_list(100)
+        for d in docs:
+            results.append({
+                "id": d["distinta_id"],
+                "label": d.get("title") or d.get("product_name", d["distinta_id"]),
+            })
+
+    return {"modules": results}
+
+
 @router.post("/{commessa_id}/link-module")
 async def link_module(commessa_id: str, req: LinkModuleRequest, user: dict = Depends(get_current_user)):
     """Link a module (preventivo, fattura, etc.) to this commessa."""
