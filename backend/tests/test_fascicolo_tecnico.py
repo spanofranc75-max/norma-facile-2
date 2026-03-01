@@ -1,6 +1,7 @@
 """
-Tests for Fascicolo Tecnico EN 1090 feature - DOP, CE, Piano Controllo, Rapporto VT.
-Tests: GET/PUT fascicolo data, all 4 PDF endpoints, auth requirements.
+Tests for Fascicolo Tecnico EN 1090 feature - All 6 document types:
+DOP, CE, Piano Controllo, Rapporto VT, Registro Saldatura, Riesame Tecnico.
+Tests: GET/PUT fascicolo data, all 6 PDF endpoints, auth requirements.
 """
 import pytest
 import requests
