@@ -23,6 +23,7 @@ import {
     AlertTriangle, Loader2, BookOpen, CalendarDays,
 } from 'lucide-react';
 import CommessaOpsPanel from '../components/CommessaOpsPanel';
+import { DisabledTooltip } from '../components/DisabledTooltip';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
