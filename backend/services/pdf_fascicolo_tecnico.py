@@ -362,7 +362,7 @@ def generate_rapporto_vt_pdf(company: dict, commessa: dict, client_name: str, vt
     </table>
 
     <div class="sign-area">
-        <div class="sign-box"><div class="sign-label">Resp. Controllo VT</div><div class="sign-line"></div></div>
+        <div class="sign-box"><div class="sign-label">Resp. Controllo VT</div>{_firma_img_html(firma)}<div class="sign-line"></div></div>
         <div class="sign-box"><div class="sign-label">Coordinatore della Saldatura</div><div class="sign-line"></div></div>
     </div>
     <div class="footer-mod">MOD. 06 Rev. 0 | {biz}</div>
