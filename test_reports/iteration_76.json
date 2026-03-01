@@ -1,0 +1,110 @@
+{
+  "summary": "Iteration 76 tested all new features: classe_esecuzione field in preventivo (fixed missing field in create/update), PATCH endpoint for material batches, firma_digitale in company settings, PDF generation with new fields. All 15 backend tests passed. UI verified: Preventivo editor has 'Classe di Esecuzione' dropdown, Settings page has 'Firma Digitale' upload section in Logo tab.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration76_features.py",
+    "/app/test_reports/pytest/iteration76_features_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/routes/preventivi.py"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 passed)",
+    "frontend": "Verified via Playwright"
+  },
+  "test_credentials": "Test users created/cleaned during pytest run",
+  "seed_data_creation": "Test preventivi, commesse, material_batches created during tests, cleaned up after",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 76 adds: (1) classe_esecuzione field to preventivo (EXC1-EXC4), (2) PATCH /api/commesse/{cid}/material-batches/{batch_id} for updating acciaieria and other fields, (3) firma_digitale in company settings (Logo tab), (4) PDF generators use classe_esecuzione, redatto_da from preventivo, and firma_digitale from company settings. BUG FIXED: classe_esecuzione was missing from preventivo create/update doc - added to doc dict in POST and to simple_fields list in PUT.",
+  "features_tested": {
+    "health_endpoint": {
+      "status": "PASS",
+      "details": "GET /api/health returns {status: healthy}"
+    },
+    "preventivo_classe_esecuzione_create": {
+      "status": "PASS",
+      "details": "POST /api/preventivi with classe_esecuzione=EXC3 saves and returns correctly"
+    },
+    "preventivo_classe_esecuzione_get": {
+      "status": "PASS",
+      "details": "GET /api/preventivi/{id} returns classe_esecuzione field"
+    },
+    "preventivo_classe_esecuzione_update": {
+      "status": "PASS",
+      "details": "PUT /api/preventivi/{id} updates classe_esecuzione from EXC1 to EXC4"
+    },
+    "patch_material_batch_acciaieria": {
+      "status": "PASS",
+      "details": "PATCH /api/commesse/{cid}/material-batches/{batch_id} updates acciaieria field"
+    },
+    "patch_material_batch_multiple_fields": {
+      "status": "PASS",
+      "details": "PATCH updates multiple fields: acciaieria, supplier_name, ddt_numero, posizione, n_pezzi, numero_certificato"
+    },
+    "patch_material_batch_404": {
+      "status": "PASS",
+      "details": "PATCH returns 404 for non-existent batch"
+    },
+    "company_settings_firma_digitale": {
+      "status": "PASS",
+      "details": "PUT /api/company/settings saves firma_digitale as base64, GET returns it correctly"
+    },
+    "fascicolo_tecnico_context": {
+      "status": "PASS",
+      "details": "GET /api/fascicolo-tecnico/{cid} returns fascicolo data for commessa linked to preventivo"
+    },
+    "scheda_rintracciabilita_pdf": {
+      "status": "PASS",
+      "details": "GET /api/commesse/{cid}/scheda-rintracciabilita-pdf generates valid PDF with Acciaieria column"
+    },
+    "dop_pdf_classe_esecuzione": {
+      "status": "PASS",
+      "details": "GET /api/fascicolo-tecnico/{cid}/dop-pdf generates valid PDF (includes classe_esecuzione)"
+    },
+    "piano_controllo_pdf_redatto_da": {
+      "status": "PASS",
+      "details": "GET /api/fascicolo-tecnico/{cid}/piano-controllo-pdf generates valid PDF (uses redatto_da from preventivo)"
+    },
+    "auth_patch_material_batch": {
+      "status": "PASS",
+      "details": "PATCH material-batches returns 401 without auth"
+    },
+    "auth_company_settings": {
+      "status": "PASS",
+      "details": "GET company/settings returns 401 without auth"
+    },
+    "frontend_classe_esecuzione_dropdown": {
+      "status": "PASS (UI verified)",
+      "details": "Preventivo editor shows 'Classe di Esecuzione' dropdown with default '-- Nessuna --'"
+    },
+    "frontend_firma_digitale_upload": {
+      "status": "PASS (UI verified)",
+      "details": "Settings page Logo tab has 'Firma Digitale' section with file upload button"
+    },
+    "frontend_acciaieria_field": {
+      "status": "PASS (code review)",
+      "details": "CommessaOpsPanel.js has acciaieria inline edit with data-testid='acciaieria-{batch_id}'"
+    },
+    "frontend_fascicolo_6_cards": {
+      "status": "PASS (code review)",
+      "details": "FascicoloTecnicoSection.js DOCUMENTS array has 6 items: dop, ce, piano, vt, registro, riesame"
+    }
+  },
+  "bug_fixed": {
+    "file": "/app/backend/routes/preventivi.py",
+    "issue": "classe_esecuzione field missing from preventivo create and update",
+    "cause": "Field was defined in PreventivoCreate model but not included in doc dict for POST, and not in simple_fields list for PUT",
+    "fix": "Added 'classe_esecuzione': data.classe_esecuzione to POST doc dict (line ~403), added 'classe_esecuzione' to simple_fields list in PUT (line ~429)"
+  }
+}
