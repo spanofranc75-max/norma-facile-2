@@ -400,16 +400,23 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Modello Aggiornato**: `CompanySettings` e `CompanySettingsUpdate` con campi `aruba_*`
 - Testing: 100% backend (11/11), 100% frontend (iteration_69)
 
+### Fix AI Certificate Processing + Migrazione SDI a Fatture in Cloud (Phase 60 - Mar 2026)
+- **BUG CRITICO FIXATO: AI Certificate Processing inconsistente** — Profili non matchati via OdA/RdP/DDT venivano archiviati (`tipo="archivio"`) e non creavano lotti CAM/material_batches. FIX: aggiunto fallback alla commessa corrente quando nessun match procurement trovato. L'utente carica un certificato su una commessa specifica → i profili vengono sempre assegnati a quella commessa.
+- **Migrazione SDI da Aruba a Fatture in Cloud**: Endpoint `send-sdi` e `stato-sdi` ora usano `FattureInCloudClient` (API v2) per sincronizzare fatture e inviarle al SDI
+- **Backend**: `invoices.py` aggiornato, credenziali lette da `company_settings.fic_company_id` e `fic_access_token`
+- **Modello**: Aggiunti `fic_company_id`, `fic_access_token` a `CompanySettings` e `CompanySettingsUpdate`
+- **Frontend Impostazioni**: Tab "Integrazioni" aggiornata con campi Fatture in Cloud (Company ID, Access Token) al posto di Aruba
+- Testing: 100% backend (10/10), 100% frontend (iteration_70)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
-- **P2**: PDF Preview Conto Lavoro — fix blob URL gia presente nel codice, necessita verifica utente
+- **P2**: Radix UI Select/Popover dentro Dialog (workaround nativo attivo)
 
 ## Task Futuri
-- [ ] P0: Finalizzare Dashboard EBITDA (calcoli finanziari + grafici) — GIA IMPLEMENTATA, necessita verifica utente
+- [ ] P1: Repository Documenti UI — nuova tab nel CommessaHub per gestire tutti i documenti
 - [ ] P1: Modal Anteprima PDF per tutti i documenti
-- [ ] P1: Attivazione SDI (chiavi API Aruba)
-- [ ] P2: Tooltip su bottoni disabilitati
+- [ ] P2: Fix Radix UI dropdown dentro modal (root cause investigation)
 - [ ] Collegamento diretto Commessa <-> Progetto FPC
 - [ ] Esportazione CSV distinta di taglio per CNC
 - [ ] Estensione Distinta Facile (grata 2 ante, cancello scorrevole)
