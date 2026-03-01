@@ -369,7 +369,7 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **P2**: PDF Preview Conto Lavoro — fix blob URL gia presente nel codice, necessita verifica utente
 
 ## Task Futuri
-- [ ] P0: Finalizzare Dashboard EBITDA (calcoli finanziari + grafici)
+- [ ] P0: Finalizzare Dashboard EBITDA (calcoli finanziari + grafici) — GIA IMPLEMENTATA, necessita verifica utente
 - [ ] P1: Modal Anteprima PDF per tutti i documenti
 - [ ] P1: Attivazione SDI (chiavi API Aruba)
 - [ ] P2: Tooltip su bottoni disabilitati
