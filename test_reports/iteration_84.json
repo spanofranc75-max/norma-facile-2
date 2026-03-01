@@ -1,0 +1,69 @@
+{
+  "summary": "Iteration 84 backend testing completed successfully. All 17 tests passed (100%). Tested the new 'Consegne al Cliente (DDT + DoP + CE)' feature. FIXED TWO BUGS: 1) GET /api/commesse/{cid}/ops was not returning 'consegne' array - added consegne to response, 2) Frontend CommessaOpsPanel.js line 120 had typo 'opsData' instead of 'ops' - fixed to use ops?.consegne. POST /api/commesse/{cid}/consegne creates DDT in ddt_documents collection, auto-fills lines from material_batches, adds consegna to commessa.consegne array. GET pacchetto-pdf returns merged PDF (DDT + DoP + CE). Regression tests confirm produzione and conto_lavoro workflows still work.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration84_consegne.py",
+    "/app/test_reports/pytest/iteration84_consegne_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "BUG FIXED: GET /api/commesse/{cid}/ops was missing 'consegne' key in response - now returns consegne array correctly",
+    "BUG FIXED: Frontend CommessaOpsPanel.js line 120 had undefined variable 'opsData' - fixed to use 'ops?.consegne || []'",
+    "ensure_ops_fields() now initializes consegne: [] for new commesse (line 51-53 in commessa_ops.py)",
+    "POST /{cid}/consegne creates DDT with ddt_type='vendita', links to commessa_id, auto-fills lines from material_batches",
+    "GET /{cid}/consegne/{consegna_id}/pacchetto-pdf merges DDT + DoP + CE PDFs using pypdf.PdfWriter"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration84_consegne.py",
+    "/app/backend/routes/commessa_ops.py",
+    "/app/frontend/src/components/CommessaOpsPanel.js"
+  ],
+  "success_rate": {
+    "backend": "100% (17/17 passed)",
+    "frontend": "Not tested extensively (backend-only request)"
+  },
+  "test_credentials": "MongoDB session tokens created/cleaned during pytest run",
+  "seed_data_creation": "Test commesse and DDT documents created during tests, cleaned up after",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 84 adds Consegne al Cliente feature. Key endpoints: POST /api/commesse/{cid}/consegne (creates DDT + consegna record), GET /api/commesse/{cid}/consegne/{consegna_id}/pacchetto-pdf (merged PDF). GET /api/commesse/{cid}/ops now returns 'consegne' array. Frontend has data-testid='btn-nuova-consegna' and data-testid='consegna-pacchetto-{id}' buttons. Fixed bug where opsData was undefined in CommessaOpsPanel.js.",
+  "bugs_fixed_during_testing": [
+    {
+      "file": "/app/backend/routes/commessa_ops.py",
+      "issue": "GET /api/commesse/{cid}/ops endpoint did not return consegne array in response",
+      "fix": "Added consegne = doc.get('consegne', []) and included in return dict, also added ensure_ops_fields() call and doc refresh"
+    },
+    {
+      "file": "/app/frontend/src/components/CommessaOpsPanel.js", 
+      "issue": "Line 120 referenced undefined variable 'opsData' instead of 'ops'",
+      "fix": "Moved consegne declaration to line 196 where ops data is extracted: const consegne = ops?.consegne || []"
+    }
+  ],
+  "features_tested": {
+    "health_endpoint": { "status": "PASS", "details": "GET /api/health returns healthy" },
+    "crea_consegna_basic": { "status": "PASS", "details": "POST consegne returns consegna_id, ddt_id, ddt_number" },
+    "crea_consegna_creates_ddt": { "status": "PASS", "details": "DDT created in ddt_documents with commessa_id link" },
+    "crea_consegna_autofills_lines": { "status": "PASS", "details": "DDT lines populated from material_batches or default" },
+    "crea_consegna_adds_to_array": { "status": "PASS", "details": "Consegna added to commessa.consegne array" },
+    "pacchetto_pdf_returns_pdf": { "status": "PASS", "details": "Returns valid PDF (starts with %PDF)" },
+    "pacchetto_pdf_merged_documents": { "status": "PASS", "details": "PDF has 3+ pages (DDT + DoP + CE)" },
+    "pacchetto_pdf_marks_flags": { "status": "PASS", "details": "dop_generata and ce_generata set to True" },
+    "pacchetto_pdf_404_invalid": { "status": "PASS", "details": "Returns 404 for invalid consegna_id" },
+    "get_ops_returns_consegne": { "status": "PASS", "details": "GET ops returns consegne array" },
+    "get_ops_consegne_structure": { "status": "PASS", "details": "Consegna has required fields" },
+    "ensure_ops_fields_initializes_consegne": { "status": "PASS", "details": "New commesse get empty consegne array" },
+    "regression_produzione_timing": { "status": "PASS", "details": "PUT produzione with started_at/completed_at works" },
+    "regression_produzione_basic": { "status": "PASS", "details": "PUT produzione basic stato update works" },
+    "regression_rientro_cl": { "status": "PASS", "details": "POST rientro CL still works" },
+    "unauthorized_crea_consegna": { "status": "PASS", "details": "Returns 401/403 without auth" },
+    "unauthorized_pacchetto_pdf": { "status": "PASS", "details": "Returns 401/403 without auth" }
+  }
+}
