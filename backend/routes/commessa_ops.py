@@ -1461,34 +1461,36 @@ async def _match_profili_to_commesse(
     all_commesse = await cursor.to_list(500)
     logger.info(f"Smart matching: {len(profili)} profili, {len(all_commesse)} commesse, current={current_commessa_id}")
 
-    # 2. Build a lookup: normalized_profile → [commessa_ids]
-    # From OdA righe, RdP righe, and DDT arrivi
-    profilo_to_commesse = {}
+    # 2. Build TWO lookups from OdA/RdP/DDT:
+    #    a) profile_base → set of commessa_ids  (e.g. "IPE100" → {"com_abc"})
+    #    b) normalized_full → set of commessa_ids (e.g. "TRAVEIPE100INS275JR" → {"com_abc"})
+    base_to_commesse = {}    # "IPE100" → {cid1, cid2}
+    norm_to_commesse = {}    # "TRAVEIPE100INS275JR" → {cid1}
     for comm in all_commesse:
         cid_item = comm["commessa_id"]
         approv = comm.get("approvvigionamento", {})
         descriptions = []
-        # From OdA righe
         for oda in approv.get("ordini", []):
             for riga in oda.get("righe", []):
                 descriptions.append(riga.get("descrizione", ""))
-        # From RdP righe
         for rdp in approv.get("richieste", []):
             for riga in rdp.get("righe", []):
                 descriptions.append(riga.get("descrizione", ""))
-        # From arrivi/DDT
         for arrivo in approv.get("arrivi", []):
             for mat in arrivo.get("materiali", []):
                 descriptions.append(mat.get("descrizione", ""))
 
         for desc in descriptions:
+            # Full normalized
             norm = _normalize_profilo(desc)
             if norm:
-                if norm not in profilo_to_commesse:
-                    profilo_to_commesse[norm] = set()
-                profilo_to_commesse[norm].add(cid_item)
+                norm_to_commesse.setdefault(norm, set()).add(cid_item)
+            # Profile base (e.g. "IPE100")
+            base = _extract_profile_base(desc)
+            if base:
+                base_to_commesse.setdefault(base, set()).add(cid_item)
 
-    logger.info(f"Smart matching lookup: {len(profilo_to_commesse)} profili normalizzati da OdA/RdP/DDT")
+    logger.info(f"Smart matching lookup: {len(base_to_commesse)} profili base, {len(norm_to_commesse)} normalizzati (basi: {list(base_to_commesse.keys())[:10]})")
 
     # 3. For each profile, find the matching commessa
     for profilo in profili:
