@@ -21,8 +21,9 @@ import {
     HardHat, Warehouse, ClipboardList, Truck, Factory, ShieldAlert,
     BarChart3, BoxIcon, FileInput, Camera, ChevronDown,
     Briefcase, Wrench, Award, ShoppingCart, FileText, LayoutGrid,
-    CreditCard, TrendingUp, ClipboardCheck,
+    CreditCard, TrendingUp,
 } from 'lucide-react';
+import { ClipboardCheck } from 'lucide-react';
 
 // ── Navigation Structure ────────────────────────────────────────
 
