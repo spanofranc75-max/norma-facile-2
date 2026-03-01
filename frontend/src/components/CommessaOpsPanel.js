@@ -193,6 +193,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     const fasi = ops?.fasi_produzione || [];
     const progPct = ops?.produzione_progress?.percentage || 0;
     const cl = ops?.conto_lavoro || [];
+    const consegne = ops?.consegne || [];
 
     // ── Handlers ──
     
