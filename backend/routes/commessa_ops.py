@@ -855,6 +855,9 @@ class FaseUpdate(BaseModel):
     stato: str  # da_fare, in_corso, completato
     operatore: Optional[str] = None
     note: Optional[str] = None
+    started_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    operator_name: Optional[str] = None
 
 
 @router.put("/{cid}/produzione/{fase_tipo}")
@@ -865,9 +868,17 @@ async def update_fase(cid: str, fase_tipo: str, data: FaseUpdate, user: dict = D
     now = ts().isoformat()
     upd = {"fasi_produzione.$[elem].stato": data.stato}
     if data.stato == "in_corso":
-        upd["fasi_produzione.$[elem].data_inizio"] = now
+        upd["fasi_produzione.$[elem].data_inizio"] = data.started_at or now
     elif data.stato == "completato":
-        upd["fasi_produzione.$[elem].data_fine"] = now
+        upd["fasi_produzione.$[elem].data_fine"] = data.completed_at or now
+        if data.started_at:
+            upd["fasi_produzione.$[elem].data_inizio"] = data.started_at
+    if data.started_at:
+        upd["fasi_produzione.$[elem].started_at"] = data.started_at
+    if data.completed_at:
+        upd["fasi_produzione.$[elem].completed_at"] = data.completed_at
+    if data.operator_name:
+        upd["fasi_produzione.$[elem].operator_name"] = data.operator_name
     if data.operatore is not None:
         upd["fasi_produzione.$[elem].operatore"] = data.operatore
     if data.note is not None:
