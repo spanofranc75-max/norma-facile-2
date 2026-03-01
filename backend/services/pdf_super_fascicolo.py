@@ -646,6 +646,18 @@ async def generate_super_fascicolo(commessa_id: str, user_id: str) -> BytesIO:
                     except Exception:
                         pass
 
+    # Appendice A.2: Certificati Conto Lavoro (rientro subcontractor)
+    for cl_item in conto_lavoro:
+        cl_cert_b64 = cl_item.get("certificato_rientro_base64")
+        if cl_cert_b64:
+            try:
+                cert_bytes = _decode_cert(cl_cert_b64)
+                reader = PdfReader(BytesIO(cert_bytes))
+                for page in reader.pages:
+                    merger.add_page(page)
+            except Exception as e:
+                logger.warning(f"Could not merge CL cert for {cl_item.get('tipo','?')}: {e}")
+
     # Cap 4: Saldatura
     _add_pdf(merger, _build_cap4_pcq(ctx), "Cap 4.1 - PCQ")
     _add_pdf(merger, _build_cap4_registro(ctx), "Cap 4.2 - Registro Saldatura")
