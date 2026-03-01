@@ -464,6 +464,13 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Tempi di Consegna**: Nuovo campo `giorni_consegna` nel preventivo (es. 30 giorni) — mostrato nell'editor con input numerico.
 - Testing: 100% backend (18/18 - iteration_77), frontend verificato Playwright
 
+### Dashboard Compliance + Fix Dropdown + Repository Filtri (Phase 66 - Mar 2026)
+- **Dashboard Compliance EN 1090**: Nuovo widget nella home che mostra lo stato di completamento del fascicolo tecnico per ogni commessa attiva (confermata/in_produzione). Barra di progresso colorata (rosso <50%, ambra 50-80%, verde >80%), pillole per ogni documento (DOP/CE/Piano/VT/Registro/Riesame), click per navigare alla commessa. Ordinamento: incomplete per prime.
+- **Fix Dropdown Radix UI nelle Modali**: Risolto bug ricorrente — aggiunto `onPointerDownOutside` handler nel DialogContent per prevenire chiusura quando si clicca su Select portal. SelectContent z-index alzato a `z-[100]` (sopra Dialog z-50).
+- **Repository Documenti con Filtri**: Filtro per tipo documento (appare con >3 documenti) usando attributo `data-doc-type`. Filtraggio istantaneo client-side.
+- **Endpoint**: `GET /api/dashboard/compliance-en1090` — ritorna commesse con compliance_pct, docs status (filled/total/complete per tipo), prod_progress.
+- Testing: 100% backend (12/12 - iteration_78), frontend verificato Playwright
+
 ## Issue Pendenti
 - **P2**: Radix UI Select/Popover dentro Dialog (workaround nativo attivo)
 - **P2**: Verifica utente parsing AI certificati (richiede test manuale dall'utente)
