@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
 from core.database import db
-from core.auth import get_current_user
+from core.security import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/fascicolo-tecnico", tags=["fascicolo_tecnico"])
