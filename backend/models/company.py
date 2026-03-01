@@ -55,6 +55,8 @@ class CompanySettings(BaseModel):
     ente_certificatore: Optional[str] = None  # es. "Rina Service"
     ente_certificatore_numero: Optional[str] = None  # es. "0474"
     certificato_en1090_numero: Optional[str] = None  # Numero certificato EN 1090
+    classe_esecuzione_default: Optional[str] = None  # EXC1, EXC2, EXC3, EXC4
+    certificato_en13241_numero: Optional[str] = None  # Numero certificato EN 13241
     
     # Condizioni di vendita
     condizioni_vendita: Optional[str] = None
