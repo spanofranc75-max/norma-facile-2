@@ -77,6 +77,7 @@ const NAV_GROUPS = [
             { path: '/core-engine', label: 'Core Engine', icon: Shield },
             { path: '/validazione-foto', label: 'Validazione Foto AI', icon: Camera },
             { path: '/report-cam', label: 'Sostenibilita & CO2', icon: Award },
+            { path: '/sistema-qualita', label: 'Sistema Qualita', icon: FileText },
         ],
     },
     {
