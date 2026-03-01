@@ -18,7 +18,7 @@ import requests
 import os
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://cam-compliance-lab.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://norma-facile-1.preview.emergentagent.com').rstrip('/')
 
 # Test session token created via mongosh
 TEST_SESSION_TOKEN = None
