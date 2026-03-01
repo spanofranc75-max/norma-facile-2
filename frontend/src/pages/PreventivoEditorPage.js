@@ -500,7 +500,7 @@ export default function PreventivoEditorPage() {
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                        <div><Label className="text-xs">Tempi di Consegna (giorni)</Label><Input type="number" value={form.giorni_consegna} onChange={e => setForm(f => ({ ...f, giorni_consegna: parseInt(e.target.value) || '' }))} placeholder="es. 30" className="h-8 text-xs font-mono" data-testid="input-giorni-consegna" /></div>
+                                        <div><Label className="text-xs">Tempi di Consegna (giorni)</Label><Input type="text" inputMode="numeric" pattern="[0-9]*" value={form.giorni_consegna} onChange={e => { const v = e.target.value.replace(/[^0-9]/g,''); setForm(f => ({ ...f, giorni_consegna: v })); }} placeholder="es. 30" className="h-8 text-xs font-mono" data-testid="input-giorni-consegna" /></div>
                                         <div><Label className="text-xs">Sconto Globale (%)</Label><Input type="number" step="0.1" value={form.sconto_globale} onChange={e => setForm(f => ({ ...f, sconto_globale: parseFloat(e.target.value) || 0 }))} className="h-8 text-xs font-mono" /></div>
                                         <div><Label className="text-xs">Acconto</Label><Input type="number" step="0.01" value={form.acconto} onChange={e => setForm(f => ({ ...f, acconto: parseFloat(e.target.value) || 0 }))} className="h-8 text-xs font-mono" /></div>
                                     </div>
