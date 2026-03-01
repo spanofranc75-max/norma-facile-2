@@ -460,6 +460,8 @@ export default function SettingsPage() {
                             </CardContent>
                         </Card>
                     </TabsContent>
+
+                    <TabsContent value="condizioni">
                         <Card className="border-gray-200">
                             <CardHeader className="bg-blue-50 border-b border-gray-200">
                                 <CardTitle>Condizioni di Vendita</CardTitle>
