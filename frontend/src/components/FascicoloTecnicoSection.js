@@ -502,6 +502,21 @@ function PianoEditForm({ form, update, autoFields, timeline }) {
                             <span className="flex-1 min-w-0 truncate" title={f.fase}>{f.fase}</span>
                             {f.applicabile && (
                                 <>
+                                    <div className="relative">
+                                        <select value="" onChange={e => handleSelectInstrument(i, e.target.value)}
+                                            className="h-6 text-[10px] rounded border px-1 w-28 text-slate-600"
+                                            title="Importa strumento dal registro">
+                                            <option value="">Strumento...</option>
+                                            {regInstruments.map(inst => {
+                                                const warn = inst.calibration_status === 'scaduto' ? ' SCAD.' : inst.calibration_status === 'in_scadenza' ? ' ATT.' : '';
+                                                return <option key={inst.instrument_id} value={inst.instrument_id}>{inst.name}{warn}</option>;
+                                            })}
+                                        </select>
+                                        {f._instrument_status === 'scaduto' && <AlertTriangle className="absolute -right-4 top-1 h-3 w-3 text-red-500" title="Taratura scaduta!" />}
+                                        {f._instrument_status === 'in_scadenza' && <AlertTriangle className="absolute -right-4 top-1 h-3 w-3 text-amber-500" title="Taratura in scadenza" />}
+                                    </div>
+                                    <input value={f.strumento_usato || ''} onChange={e => updateFase(i, 'strumento_usato', e.target.value)}
+                                        placeholder="Strumento" className={`h-6 text-[10px] rounded border px-1 w-36 ${f._instrument_status === 'scaduto' ? 'border-red-300 bg-red-50/30' : f._instrument_status === 'in_scadenza' ? 'border-amber-300 bg-amber-50/30' : ''}`} />
                                     <select value={f.esito || ''} onChange={e => updateFase(i, 'esito', e.target.value)}
                                         className="h-6 text-[10px] rounded border px-1 w-20">
                                         <option value="">--</option><option value="positivo">Pos.</option><option value="negativo">Neg.</option>
