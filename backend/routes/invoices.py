@@ -827,17 +827,20 @@ async def send_invoice_to_sdi(invoice_id: str, user: dict = Depends(get_current_
         raise HTTPException(400, "Configura i dati aziendali (P.IVA obbligatoria) prima di inviare al SDI")
 
     # Generate XML
-    xml_content = xml_service.generate_fattura_xml(invoice, client, company)
+    from services.aruba_sdi import fatturapa_generator, send_invoice_to_sdi as _send_sdi
+    xml_content = fatturapa_generator.generate_xml(invoice, company, client)
     piva = company.get("partita_iva", "").replace(" ", "")
     doc_num = invoice.get("document_number", "").replace("-", "_").replace("/", "_")
     filename = f"IT{piva}_{doc_num}.xml"
 
-    # Send to SDI via Aruba
-    from services.aruba_sdi import aruba_sdi
-    if not aruba_sdi.is_configured:
-        raise HTTPException(400, "SDI non configurato. Inserisci SDI_API_KEY e SDI_API_SECRET nel file .env")
+    # Save XML on invoice
+    await db.invoices.update_one(
+        {"invoice_id": invoice_id},
+        {"$set": {"xml_fatturapa": xml_content, "xml_filename": filename}}
+    )
 
-    result = await aruba_sdi.send_invoice(xml_content, filename)
+    # Send to SDI via Aruba (reads credentials from DB company_settings)
+    result = await _send_sdi(xml_content, filename, user["user_id"])
 
     if not result.get("success"):
         raise HTTPException(500, f"Invio SDI fallito: {result.get('error', 'Errore sconosciuto')}")
