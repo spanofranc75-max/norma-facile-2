@@ -2083,6 +2083,40 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                 </DialogContent>
             </Dialog>
 
+            {/* ── FASE COMPLETAMENTO DIALOG ── */}
+            <Dialog open={faseComplOpen} onOpenChange={setFaseComplOpen}>
+                <DialogContent className="max-w-sm" data-testid="dialog-fase-completa">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-emerald-700">
+                            <CheckCircle2 className="h-5 w-5" /> Conferma Completamento
+                        </DialogTitle>
+                        <DialogDescription>
+                            {faseComplTarget && <span>{faseComplTarget.label || faseComplTarget.tipo}</span>}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                        <div>
+                            <Label className="text-xs">Data/Ora Inizio</Label>
+                            <Input type="datetime-local" data-testid="input-fase-started" value={faseComplForm.started_at} onChange={e => setFaseComplForm(f => ({...f, started_at: e.target.value}))} />
+                        </div>
+                        <div>
+                            <Label className="text-xs">Data/Ora Fine</Label>
+                            <Input type="datetime-local" data-testid="input-fase-completed" value={faseComplForm.completed_at} onChange={e => setFaseComplForm(f => ({...f, completed_at: e.target.value}))} />
+                        </div>
+                        <div>
+                            <Label className="text-xs">Operatore</Label>
+                            <Input data-testid="input-fase-operator" placeholder="Nome operatore (opzionale)" value={faseComplForm.operator_name} onChange={e => setFaseComplForm(f => ({...f, operator_name: e.target.value}))} />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" size="sm" onClick={() => setFaseComplOpen(false)}>Annulla</Button>
+                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleConfirmCompleta} data-testid="btn-confirm-fase-completa">
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Conferma
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {/* PDF Preview Dialog */}
             <Dialog open={!!pdfPreviewUrl} onOpenChange={(open) => { if (!open) { setPdfPreviewUrl(null); setPdfExpanded(false); } }}>
                 <DialogContent className={`${pdfExpanded ? 'max-w-[95vw] w-[95vw] h-[95vh]' : 'max-w-4xl h-[85vh]'} flex flex-col transition-all duration-200`}>
