@@ -1823,3 +1823,32 @@ async def scheda_rintracciabilita_pdf(cid: str, user: dict = Depends(get_current
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{filename}"'},
     )
+
+
+# ═══════════════════════════════════════════════════════════════
+# SUPER FASCICOLO TECNICO UNICO (Aggregazione completa)
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/{commessa_id}/fascicolo-tecnico-completo")
+async def download_super_fascicolo(commessa_id: str, user: dict = Depends(get_current_user)):
+    """Generate the complete unified Technical Dossier (Fascicolo Tecnico Unico).
+    Aggregates: Dossier + Riesame/ITT + Materials/CAM/Green + Welding + CE/DoP."""
+    from services.pdf_super_fascicolo import generate_super_fascicolo
+
+    try:
+        pdf_buf = await generate_super_fascicolo(commessa_id, user["user_id"])
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        logger.error(f"Super fascicolo generation error: {e}")
+        raise HTTPException(500, f"Errore generazione fascicolo: {str(e)}")
+
+    commessa = await get_commessa_or_404(commessa_id, user["user_id"])
+    numero = commessa.get("numero", commessa_id).replace("/", "-")
+    filename = f"Fascicolo_Tecnico_Completo_{numero}.pdf"
+
+    return StreamingResponse(
+        pdf_buf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
