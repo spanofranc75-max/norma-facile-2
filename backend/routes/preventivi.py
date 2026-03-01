@@ -91,6 +91,7 @@ class PreventivoUpdate(BaseModel):
     numero_disegno: Optional[str] = None
     ingegnere_disegno: Optional[str] = None
     classe_esecuzione: Optional[str] = None
+    giorni_consegna: Optional[int] = None
 
 
 class ProgressiveInvoiceRequest(BaseModel):
