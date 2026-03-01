@@ -530,7 +530,7 @@ DEFAULT_ITT = [
 ]
 
 def generate_riesame_tecnico_pdf(company: dict, commessa: dict, client_name: str, rt_data: dict) -> BytesIO:
-    biz, addr, piva, phone, email = _co(company)
+    biz, addr, piva, phone, email, logo, firma = _co(company)
     comm_num = commessa.get("numero", "")
     comm_title = commessa.get("title", "")
     classe_exec = commessa.get("classe_esecuzione", "EXC2")
