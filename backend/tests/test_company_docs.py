@@ -272,24 +272,7 @@ class TestCompanyDocumentsAPI:
         assert response.status_code == 404, f"Expected 404, got {response.status_code}"
         print("✓ Non-existent document delete returns 404")
     
-    @pytest.fixture(scope="class", autouse=True)
-    def cleanup_test_documents(self, request, api_client):
-        """Cleanup TEST_ prefixed documents after all tests"""
-        yield
-        
-        print("\n--- Cleanup: Removing TEST_ documents ---")
-        session = requests.Session()
-        session.cookies.set("session_token", SESSION_TOKEN)
-        
-        for doc_id in TestCompanyDocumentsAPI.created_doc_ids:
-            try:
-                response = session.delete(f"{BASE_URL}/api/company/documents/{doc_id}")
-                if response.status_code == 200:
-                    print(f"  Cleaned up: {doc_id}")
-            except Exception as e:
-                print(f"  Failed to cleanup {doc_id}: {e}")
-        
-        TestCompanyDocumentsAPI.created_doc_ids.clear()
+    # Cleanup handled manually in each test that creates docs
 
 
 class TestCompanyDocumentsIntegration:
