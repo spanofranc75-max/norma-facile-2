@@ -580,6 +580,9 @@ async def generate_super_fascicolo(commessa_id: str, user_id: str) -> BytesIO:
             {"welder_id": fpc_project["fpc_data"]["welder_id"]}, {"_id": 0}
         )
 
+    # Conto Lavoro items (for certificates from subcontractors)
+    conto_lavoro = commessa.get("conto_lavoro", [])
+
     # Build context dict
     ctx = {
         "commessa": commessa,
@@ -590,6 +593,7 @@ async def generate_super_fascicolo(commessa_id: str, user_id: str) -> BytesIO:
         "cam_lotti": cam_lotti,
         "fpc_project": fpc_project,
         "welder": welder,
+        "conto_lavoro": conto_lavoro,
     }
 
     # ── 2. Generate each section ──
