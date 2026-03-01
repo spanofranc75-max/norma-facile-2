@@ -393,7 +393,25 @@ export default function InvoiceEditorPage() {
                                 <Mail className="h-3.5 w-3.5 mr-1" /> Email
                             </Button>
                         )}
-                        {isEditing && (formData.document_type === 'FT' || formData.document_type === 'NC') && (
+                        {isEditing && formData.status === 'bozza' && (formData.document_type === 'FT' || formData.document_type === 'NC') && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                data-testid="btn-emetti"
+                                onClick={async () => {
+                                    if (!window.confirm('Confermi l\'emissione del documento? Non sara piu modificabile.')) return;
+                                    try {
+                                        await apiRequest(`/invoices/${invoiceId}/status`, { method: 'PATCH', body: { status: 'emessa' } });
+                                        toast.success('Documento emesso');
+                                        setFormData(f => ({ ...f, status: 'emessa' }));
+                                    } catch (e) { toast.error(e.message); }
+                                }}
+                                className="border-blue-500 text-blue-700 hover:bg-blue-50 text-xs h-9 font-semibold"
+                            >
+                                <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Emetti
+                            </Button>
+                        )}
+                        {isEditing && formData.status !== 'bozza' && (formData.document_type === 'FT' || formData.document_type === 'NC') && (
                             <Button
                                 type="button"
                                 variant="outline"
@@ -407,7 +425,7 @@ export default function InvoiceEditorPage() {
                                 }}
                                 className="border-amber-400 text-amber-600 hover:bg-amber-50 text-xs h-9"
                             >
-                                <Send className="h-3.5 w-3.5 mr-1" /> SDI
+                                <Send className="h-3.5 w-3.5 mr-1" /> Invia SDI
                             </Button>
                         )}
                         <Button
