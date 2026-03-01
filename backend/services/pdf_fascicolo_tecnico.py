@@ -440,9 +440,9 @@ def generate_registro_saldatura_pdf(company: dict, commessa: dict, client_name: 
     </style></head><body>
     <table class="header-table">
         <tr>
-            <td class="logo-cell"><div class="co-name">{biz}</div><div class="co-sub">{addr}</div></td>
+            <td class="logo-cell">{'<img src="' + logo + '" style="max-height:35px;max-width:100%;" /><br/>' if logo else ''}<div class="co-name">{biz}</div><div class="co-sub">{addr}</div></td>
             <td class="title-cell">Registro di Saldatura</td>
-            <td class="meta-cell">Data di emissione: {data_emissione}<br/>Firma CS: {firma_cs}</td>
+            <td class="meta-cell">Data di emissione: {data_emissione}<br/>Firma CS: {firma_cs}{_firma_img_html(firma)}</td>
         </tr>
     </table>
     <table class="info-row">
