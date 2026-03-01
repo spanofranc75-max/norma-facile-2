@@ -361,6 +361,7 @@ export default function QualitySystemPage() {
                 <DialogContent className="max-w-sm" data-testid="delete-dialog">
                     <DialogHeader>
                         <DialogTitle className="text-red-600">Elimina Documento</DialogTitle>
+                        <DialogDescription className="sr-only">Conferma eliminazione documento</DialogDescription>
                     </DialogHeader>
                     <p className="text-sm text-slate-600 mt-2">
                         Sei sicuro di voler eliminare <strong>{deleteConfirm?.title}</strong>? L'azione non e reversibile.
