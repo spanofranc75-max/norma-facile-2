@@ -1353,12 +1353,13 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
             {"$set": {"metadata_estratti": metadata, "tipo": "certificato_31"}},
         )
 
-        # ── ASSIGN ALL PROFILES TO CURRENT COMMESSA (deterministic) ──
-        risultati_match = await _assign_profili_to_commessa(
+        # ── SMART MATCHING: Match profiles to commesse via OdA, RdP, DDT ──
+        risultati_match = await _match_profili_to_commesse(
             profili=profili,
             metadata_cert=metadata,
-            commessa_id=cid,
+            current_commessa_id=cid,
             doc_id=doc_id,
+            doc=doc,
             user=user,
         )
 
