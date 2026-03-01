@@ -203,15 +203,16 @@ def generate_scheda_rintracciabilita_pdf(
 <table class="materials">
     <thead>
         <tr>
-            <th style="width:8%">Disegno N.</th>
-            <th style="width:5%">Pos.</th>
-            <th style="width:5%">N. Pezzi</th>
-            <th style="width:18%">Descrizione</th>
-            <th style="width:10%">Tipo Mat.</th>
-            <th style="width:10%">N. Certificato</th>
-            <th style="width:12%">N. Colata</th>
-            <th style="width:20%">Fornitore</th>
-            <th style="width:12%">DDT N.</th>
+            <th style="width:7%">Disegno N.</th>
+            <th style="width:4%">Pos.</th>
+            <th style="width:4%">N. Pezzi</th>
+            <th style="width:15%">Descrizione</th>
+            <th style="width:8%">Tipo Mat.</th>
+            <th style="width:8%">N. Certificato</th>
+            <th style="width:10%">N. Colata</th>
+            <th style="width:14%">Fornitore</th>
+            <th style="width:10%">DDT N.</th>
+            <th style="width:14%">Acciaieria</th>
         </tr>
     </thead>
     <tbody>
