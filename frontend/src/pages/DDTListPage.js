@@ -200,6 +200,20 @@ export default function DDTListPage() {
                                                 <TableCell className="font-mono font-semibold text-sm text-[#0055FF]">{ddt.number}</TableCell>
                                                 <TableCell><Badge className={`${tb.color} text-[10px]`}>{tb.label}</Badge></TableCell>
                                                 <TableCell className="text-sm">{ddt.client_name || '-'}</TableCell>
+                                                <TableCell>
+                                                    {ddt.commessa_info ? (
+                                                        <button
+                                                            data-testid={`ddt-commessa-link-${ddt.ddt_id}`}
+                                                            className="flex items-center gap-1 text-xs text-[#0055FF] hover:underline font-medium"
+                                                            onClick={(e) => { e.stopPropagation(); navigate(`/commesse/${ddt.commessa_info.commessa_id}`); }}
+                                                        >
+                                                            {ddt.commessa_info.numero || 'N/A'}
+                                                            <ExternalLink className="h-2.5 w-2.5" />
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-xs text-slate-300">--</span>
+                                                    )}
+                                                </TableCell>
                                                 <TableCell className="text-xs text-slate-500">{ddt.causale_trasporto}</TableCell>
                                                 <TableCell className="text-right font-mono text-sm">{fmtEur(ddt.totals?.total)}</TableCell>
                                                 <TableCell><Badge className={`${sb.color} text-[10px]`}>{sb.label}</Badge></TableCell>
