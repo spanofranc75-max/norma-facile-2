@@ -1778,12 +1778,19 @@ async def scheda_rintracciabilita_pdf(cid: str, user: dict = Depends(get_current
     )
     batches = await cursor.to_list(200)
 
+    # Get OdA (ordini acquisto) for fornitore info
+    ordini = []
+    approv = commessa.get("approvvigionamento", {})
+    if approv:
+        ordini = approv.get("ordini", [])
+
     buf = generate_scheda_rintracciabilita_pdf(
         company=company,
         commessa=commessa,
         preventivo=preventivo,
         batches=batches,
         client_name=client_name,
+        ordini=ordini,
     )
 
     filename = f"Scheda_Rintracciabilita_{commessa.get('numero', cid)}.pdf"
