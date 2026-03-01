@@ -67,6 +67,8 @@ class PreventivoCreate(BaseModel):
     ingegnere_disegno: Optional[str] = None
     # Classe di esecuzione EN 1090
     classe_esecuzione: Optional[str] = None  # "EXC1", "EXC2", "EXC3", "EXC4"
+    # Tempi di consegna
+    giorni_consegna: Optional[int] = None  # es. 30 giorni
 
 
 class PreventivoUpdate(BaseModel):
