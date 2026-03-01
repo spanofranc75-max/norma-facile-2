@@ -561,7 +561,9 @@ async def report_aziendale_cam(
     trend_mensile = {}
     for lotto in all_lotti:
         created = lotto.get("created_at", "")
-        if isinstance(created, str) and len(created) >= 7:
+        if isinstance(created, datetime):
+            mese = created.strftime("%Y-%m")
+        elif isinstance(created, str) and len(created) >= 7:
             mese = created[:7]  # "YYYY-MM"
         else:
             continue
