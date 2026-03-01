@@ -49,6 +49,13 @@ class CompanySettings(BaseModel):
     # Firma digitale (base64 data URI - immagine PNG/JPG)
     firma_digitale: Optional[str] = None
     
+    # EN 1090 — Dati certificazione aziendali
+    responsabile_nome: Optional[str] = None  # Nome e cognome responsabile/amministratore
+    ruolo_firmatario: Optional[str] = None  # es. "Legale Rappresentante"
+    ente_certificatore: Optional[str] = None  # es. "Rina Service"
+    ente_certificatore_numero: Optional[str] = None  # es. "0474"
+    certificato_en1090_numero: Optional[str] = None  # Numero certificato EN 1090
+    
     # Condizioni di vendita
     condizioni_vendita: Optional[str] = None
     
