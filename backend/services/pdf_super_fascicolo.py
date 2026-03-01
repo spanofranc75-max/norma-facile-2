@@ -181,8 +181,11 @@ def _build_cap1(ctx: dict) -> bytes:
     fasi_rows = ""
     for f in fasi:
         stato = f.get("stato", "")
-        color = "#059669" if stato == "completata" else "#CA8A04" if stato == "in_corso" else "#999"
-        fasi_rows += f'<tr><td>{_s(f.get("nome",""))}</td><td style="text-align:center;color:{color};font-weight:600;">{_s(stato)}</td><td style="text-align:center;">{_s(f.get("data_completamento",""))}</td></tr>'
+        color = "#059669" if stato in ("completata", "completato") else "#CA8A04" if stato == "in_corso" else "#999"
+        data_compl = _safe_date(f.get("completed_at") or f.get("data_completamento") or f.get("data_fine", ""))
+        data_inizio = _safe_date(f.get("started_at") or f.get("data_inizio", ""))
+        operator = _s(f.get("operator_name", ""))
+        fasi_rows += f'<tr><td>{_s(f.get("label","") or f.get("nome",""))}</td><td style="text-align:center;color:{color};font-weight:600;">{_s(stato)}</td><td style="text-align:center;">{data_inizio}</td><td style="text-align:center;">{data_compl}</td><td style="text-align:center;font-size:8pt;">{operator}</td></tr>'
 
     created_at = _safe_date(comm.get('created_at'))
 
