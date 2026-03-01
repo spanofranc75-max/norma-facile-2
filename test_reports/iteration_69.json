@@ -1,0 +1,69 @@
+{
+  "summary": "Iteration 69 tested SDI workflow features: Aruba credentials in company_settings, send-sdi endpoint reading from DB, stato-sdi endpoint, and frontend Emetti/Invia SDI buttons. All 11 backend tests passed. All frontend tests passed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration69_sdi_workflow.py",
+    "/app/test_reports/pytest/iteration69_sdi_workflow_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100% (11/11 passed)",
+    "frontend": "100%"
+  },
+  "test_credentials": "session_token=test_session_iter69_1772358180146",
+  "seed_data_creation": "Created test user, test client (TEST_SDI_Client_*), and test invoices for SDI workflow testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 69 SDI workflow features all working. Aruba SDI credentials are stored in company_settings collection and read by send-sdi endpoint. Without real Aruba credentials, SDI sending returns clear auth error. All buttons (Emetti for bozza, Invia SDI for emessa) work correctly. Test data: 2 test invoices created during testing.",
+  "features_tested": {
+    "company_settings_aruba_fields": {
+      "status": "PASS",
+      "details": "GET/PUT /api/company/settings correctly handles aruba_username, aruba_password, aruba_sandbox fields"
+    },
+    "send_sdi_reads_from_db": {
+      "status": "PASS",
+      "details": "POST /api/invoices/{id}/send-sdi reads Aruba credentials from DB company_settings, returns clear error when credentials not configured"
+    },
+    "send_sdi_validates_status": {
+      "status": "PASS",
+      "details": "POST /api/invoices/{id}/send-sdi returns 400 for bozza invoices with clear message to emit first"
+    },
+    "stato_sdi_endpoint": {
+      "status": "PASS",
+      "details": "GET /api/invoices/{id}/stato-sdi returns 400 if invoice not yet sent to SDI"
+    },
+    "frontend_integrazioni_tab": {
+      "status": "PASS",
+      "details": "Settings page has Integrazioni tab with Aruba username/password/sandbox fields, saves successfully"
+    },
+    "frontend_emetti_button": {
+      "status": "PASS",
+      "details": "InvoiceEditorPage shows Emetti button for bozza FT/NC documents, hidden after emitting"
+    },
+    "frontend_invia_sdi_button": {
+      "status": "PASS",
+      "details": "InvoiceEditorPage shows Invia SDI button only for non-bozza FT/NC documents (after emitting)"
+    },
+    "invoices_dropdown_options": {
+      "status": "PASS",
+      "details": "InvoicesPage dropdown has Emetti/Segna Pagata/Invia SDI options based on document status"
+    },
+    "xml_generation": {
+      "status": "PASS",
+      "details": "GET /api/invoices/{id}/xml generates valid FatturaPA XML with CedentePrestatore and CessionarioCommittente sections"
+    }
+  },
+  "mocked_apis": {
+    "aruba_sdi": "MOCKED - Aruba SDI API calls fail at authentication step since no real credentials are configured. The system correctly returns 'Autenticazione Aruba fallita' error."
+  }
+}
