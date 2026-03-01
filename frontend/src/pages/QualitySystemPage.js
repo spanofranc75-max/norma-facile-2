@@ -1,7 +1,7 @@
 /**
- * QualitySystemPage — Documentazione Aziendale
+ * QualitySystemPage — Documentazione Aziendale con Versioning
  * DMS isolato per manuali, procedure, certificazioni, template, normative, organigramma.
- * Stile coerente con Design System Norma Facile 2.0.
+ * Stile coerente con Design System Norma Facile 2.0 (Shadcn Table, Card toolbar).
  */
 import { useState, useEffect, useCallback } from 'react';
 import { apiRequest, API_BASE } from '../lib/utils';
@@ -23,9 +23,10 @@ import {
 import { toast } from 'sonner';
 import {
     Upload, Search, FileText, Trash2, Download, FolderOpen,
-    Loader2, X, File, Plus,
+    Loader2, X, File, Plus, History, RefreshCw,
 } from 'lucide-react';
 
+/* ── Constants ── */
 const CATEGORIE = [
     { value: 'manuali', label: 'Manuali Qualita' },
     { value: 'procedure', label: 'Procedure' },
@@ -47,13 +48,13 @@ const CAT_COLORS = {
 };
 
 function formatSize(kb) {
-    if (!kb) return '—';
+    if (!kb) return '--';
     if (kb < 1024) return `${kb} KB`;
     return `${(kb / 1024).toFixed(1)} MB`;
 }
 
 function formatDate(iso) {
-    if (!iso) return '—';
+    if (!iso) return '--';
     return new Date(iso).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
@@ -61,16 +62,26 @@ function fileExt(filename) {
     return (filename || '').split('.').pop()?.toUpperCase() || 'FILE';
 }
 
+/* ═══════════════════════════════════════════════════════ */
+
 export default function QualitySystemPage() {
     const [docs, setDocs] = useState([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
     const [searchQ, setSearchQ] = useState('');
     const [filterCat, setFilterCat] = useState('');
+
+    // Dialogs
     const [showUpload, setShowUpload] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [deleting, setDeleting] = useState(false);
+    const [revisionTarget, setRevisionTarget] = useState(null);
+    const [revisionUploading, setRevisionUploading] = useState(false);
+    const [revisionFile, setRevisionFile] = useState(null);
+    const [historyTarget, setHistoryTarget] = useState(null);
+    const [historyData, setHistoryData] = useState(null);
+    const [historyLoading, setHistoryLoading] = useState(false);
 
     // Upload form
     const [uploadFile, setUploadFile] = useState(null);
@@ -78,6 +89,7 @@ export default function QualitySystemPage() {
     const [uploadCategory, setUploadCategory] = useState('manuali');
     const [uploadTags, setUploadTags] = useState('');
 
+    /* ── Data fetch ── */
     const fetchDocs = useCallback(async () => {
         setLoading(true);
         try {
@@ -100,6 +112,7 @@ export default function QualitySystemPage() {
         return () => clearTimeout(timer);
     }, [fetchDocs]);
 
+    /* ── Upload new doc ── */
     const handleUpload = async () => {
         if (!uploadFile) { toast.error('Seleziona un file'); return; }
         if (!uploadTitle.trim()) { toast.error('Inserisci un titolo'); return; }
@@ -127,6 +140,66 @@ export default function QualitySystemPage() {
         }
     };
 
+    /* ── Upload revision ── */
+    const handleRevisionUpload = async () => {
+        if (!revisionFile || !revisionTarget) return;
+        setRevisionUploading(true);
+        try {
+            const fd = new FormData();
+            fd.append('file', revisionFile);
+            fd.append('note', '');
+            const res = await fetch(`${API_BASE}/company/documents/${revisionTarget.doc_id}/revision`, {
+                method: 'POST', credentials: 'include', body: fd,
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || 'Errore upload revisione');
+            }
+            const data = await res.json();
+            toast.success(`Revisione v${data.version} caricata`);
+            setRevisionTarget(null);
+            setRevisionFile(null);
+            fetchDocs();
+        } catch (e) {
+            toast.error(e.message);
+        } finally {
+            setRevisionUploading(false);
+        }
+    };
+
+    /* ── Version history ── */
+    const openHistory = async (doc) => {
+        setHistoryTarget(doc);
+        setHistoryLoading(true);
+        setHistoryData(null);
+        try {
+            const data = await apiRequest(`/company/documents/${doc.doc_id}/versions`);
+            setHistoryData(data);
+        } catch {
+            toast.error('Errore caricamento storico');
+            setHistoryTarget(null);
+        } finally {
+            setHistoryLoading(false);
+        }
+    };
+
+    const downloadVersion = async (docId, versionNum, filename) => {
+        try {
+            const res = await fetch(`${API_BASE}/company/documents/${docId}/versions/${versionNum}/download`, {
+                credentials: 'include',
+            });
+            if (!res.ok) throw new Error('Errore download');
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename; a.click();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            toast.error(e.message);
+        }
+    };
+
+    /* ── Download current ── */
     const handleDownload = async (doc) => {
         try {
             const res = await fetch(`${API_BASE}/company/documents/${doc.doc_id}/download`, { credentials: 'include' });
@@ -141,6 +214,7 @@ export default function QualitySystemPage() {
         }
     };
 
+    /* ── Delete ── */
     const handleDelete = async () => {
         if (!deleteTarget) return;
         setDeleting(true);
@@ -164,6 +238,7 @@ export default function QualitySystemPage() {
         setUploadTags('');
     };
 
+    /* ═══════════════════════════════ RENDER ═══════════════════════════════ */
     return (
         <DashboardLayout>
             <div className="space-y-6" data-testid="quality-system-page">
@@ -229,20 +304,21 @@ export default function QualitySystemPage() {
                                     <TableHead className="text-white font-semibold">Categoria</TableHead>
                                     <TableHead className="text-white font-semibold">Data</TableHead>
                                     <TableHead className="text-white font-semibold">Tipo</TableHead>
+                                    <TableHead className="text-white font-semibold text-center">Rev.</TableHead>
                                     <TableHead className="text-white font-semibold text-right">Dimensione</TableHead>
-                                    <TableHead className="w-[100px]"></TableHead>
+                                    <TableHead className="w-[140px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center py-12">
+                                        <TableCell colSpan={7} className="text-center py-12">
                                             <div className="w-6 h-6 loading-spinner mx-auto" />
                                         </TableCell>
                                     </TableRow>
                                 ) : docs.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center py-16">
+                                        <TableCell colSpan={7} className="text-center py-16">
                                             <div className="flex flex-col items-center">
                                                 <FileText className="h-10 w-10 text-slate-300 mb-3" />
                                                 <p className="text-sm font-medium text-slate-500">Nessun documento trovato</p>
@@ -266,75 +342,16 @@ export default function QualitySystemPage() {
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    docs.map(doc => {
-                                        const ext = fileExt(doc.filename);
-                                        const catLabel = CATEGORIE.find(c => c.value === doc.category)?.label || doc.category;
-                                        const catColor = CAT_COLORS[doc.category] || CAT_COLORS.altro;
-                                        return (
-                                            <TableRow
-                                                key={doc.doc_id}
-                                                data-testid={`doc-row-${doc.doc_id}`}
-                                                className="hover:bg-slate-50"
-                                            >
-                                                <TableCell>
-                                                    <div className="flex items-center gap-2.5">
-                                                        <div className="flex-shrink-0 w-8 h-8 rounded bg-slate-100 flex items-center justify-center">
-                                                            <FileText className="h-4 w-4 text-slate-500" />
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <p className="text-sm font-medium text-slate-900 truncate max-w-[300px]" title={doc.title}>
-                                                                {doc.title}
-                                                            </p>
-                                                            {doc.tags?.length > 0 && (
-                                                                <div className="flex gap-1 mt-0.5">
-                                                                    {doc.tags.slice(0, 3).map((t, i) => (
-                                                                        <span key={i} className="text-[10px] px-1.5 py-0 rounded bg-slate-100 text-slate-500">{t}</span>
-                                                                    ))}
-                                                                    {doc.tags.length > 3 && (
-                                                                        <span className="text-[10px] text-slate-400">+{doc.tags.length - 3}</span>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge className={catColor}>{catLabel}</Badge>
-                                                </TableCell>
-                                                <TableCell className="text-slate-600 text-sm">
-                                                    {formatDate(doc.upload_date)}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <span className="text-xs font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
-                                                        {ext}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell className="text-right font-mono text-sm text-slate-600">
-                                                    {formatSize(doc.size_kb)}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex gap-1 justify-end">
-                                                        <Button
-                                                            variant="ghost" size="sm"
-                                                            data-testid={`btn-download-${doc.doc_id}`}
-                                                            onClick={() => handleDownload(doc)}
-                                                            title="Scarica"
-                                                        >
-                                                            <Download className="h-4 w-4 text-slate-500" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost" size="sm"
-                                                            data-testid={`btn-delete-${doc.doc_id}`}
-                                                            onClick={() => setDeleteTarget(doc)}
-                                                            title="Elimina"
-                                                        >
-                                                            <Trash2 className="h-4 w-4 text-slate-500 hover:text-red-500" />
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })
+                                    docs.map(doc => (
+                                        <DocRow
+                                            key={doc.doc_id}
+                                            doc={doc}
+                                            onDownload={() => handleDownload(doc)}
+                                            onDelete={() => setDeleteTarget(doc)}
+                                            onRevision={() => { setRevisionTarget(doc); setRevisionFile(null); }}
+                                            onHistory={() => openHistory(doc)}
+                                        />
+                                    ))
                                 )}
                             </TableBody>
                         </Table>
@@ -342,53 +359,20 @@ export default function QualitySystemPage() {
                 </Card>
             </div>
 
-            {/* ── Upload Dialog ── */}
+            {/* ══════ Upload Dialog ══════ */}
             <Dialog open={showUpload} onOpenChange={v => { if (!v) closeUpload(); else setShowUpload(true); }}>
                 <DialogContent className="max-w-md" data-testid="upload-dialog">
                     <DialogHeader>
                         <DialogTitle>Carica Documento</DialogTitle>
-                        <DialogDescription>
-                            Seleziona un file e compila i dettagli per aggiungerlo all'archivio.
-                        </DialogDescription>
+                        <DialogDescription>Seleziona un file e compila i dettagli.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 mt-2">
-                        {/* Drop zone */}
-                        <div
-                            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-                                uploadFile ? 'border-[#0055FF] bg-blue-50/40' : 'border-slate-200 hover:border-slate-300'
-                            }`}
-                            onClick={() => document.getElementById('cdoc-file-input')?.click()}
-                            data-testid="drop-zone"
-                        >
-                            <input
-                                id="cdoc-file-input"
-                                type="file"
-                                className="hidden"
-                                onChange={e => {
-                                    const f = e.target.files?.[0];
-                                    if (f) {
-                                        setUploadFile(f);
-                                        if (!uploadTitle) setUploadTitle(f.name.replace(/\.[^.]+$/, ''));
-                                    }
-                                }}
-                            />
-                            {uploadFile ? (
-                                <div className="flex items-center justify-center gap-2">
-                                    <File className="h-5 w-5 text-[#0055FF]" />
-                                    <span className="text-sm font-medium text-slate-900 truncate max-w-[250px]">{uploadFile.name}</span>
-                                    <button onClick={e => { e.stopPropagation(); setUploadFile(null); }} className="text-slate-400 hover:text-red-500">
-                                        <X className="h-4 w-4" />
-                                    </button>
-                                </div>
-                            ) : (
-                                <div>
-                                    <Plus className="h-8 w-8 text-slate-300 mx-auto mb-2" />
-                                    <p className="text-sm text-slate-500">Clicca per selezionare un file</p>
-                                    <p className="text-xs text-slate-400 mt-1">PDF, DOC, XLS, DWG, immagini (max 50 MB)</p>
-                                </div>
-                            )}
-                        </div>
-
+                        <DropZone
+                            file={uploadFile}
+                            onFileChange={f => { setUploadFile(f); if (f && !uploadTitle) setUploadTitle(f.name.replace(/\.[^.]+$/, '')); }}
+                            onClear={() => setUploadFile(null)}
+                            inputId="cdoc-file-input"
+                        />
                         <div>
                             <Label className="text-xs font-medium">Titolo *</Label>
                             <Input
@@ -399,7 +383,6 @@ export default function QualitySystemPage() {
                                 className="mt-1"
                             />
                         </div>
-
                         <div>
                             <Label className="text-xs font-medium">Categoria</Label>
                             <Select value={uploadCategory} onValueChange={setUploadCategory}>
@@ -413,7 +396,6 @@ export default function QualitySystemPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-
                         <div>
                             <Label className="text-xs font-medium">Tag (separati da virgola)</Label>
                             <Input
@@ -440,7 +422,114 @@ export default function QualitySystemPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* ── Delete Confirm ── */}
+            {/* ══════ Revision Upload Dialog ══════ */}
+            <Dialog open={!!revisionTarget} onOpenChange={v => { if (!v) { setRevisionTarget(null); setRevisionFile(null); } }}>
+                <DialogContent className="max-w-md" data-testid="revision-dialog">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <RefreshCw className="h-5 w-5 text-[#0055FF]" />
+                            Nuova Revisione
+                        </DialogTitle>
+                        <DialogDescription>
+                            Carica una nuova versione di <strong>{revisionTarget?.title}</strong>.
+                            La versione corrente (v{revisionTarget?.version}) viene archiviata automaticamente.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="mt-2">
+                        <DropZone
+                            file={revisionFile}
+                            onFileChange={setRevisionFile}
+                            onClear={() => setRevisionFile(null)}
+                            inputId="revision-file-input"
+                        />
+                    </div>
+                    <DialogFooter className="mt-4">
+                        <Button variant="outline" onClick={() => { setRevisionTarget(null); setRevisionFile(null); }}>Annulla</Button>
+                        <Button
+                            data-testid="btn-confirm-revision"
+                            onClick={handleRevisionUpload}
+                            disabled={revisionUploading || !revisionFile}
+                            className="bg-[#0055FF] text-white hover:bg-[#0044CC]"
+                        >
+                            {revisionUploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                            {revisionUploading ? 'Caricamento...' : 'Carica Revisione'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* ══════ Version History Dialog ══════ */}
+            <Dialog open={!!historyTarget} onOpenChange={v => { if (!v) { setHistoryTarget(null); setHistoryData(null); } }}>
+                <DialogContent className="max-w-lg" data-testid="history-dialog">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <History className="h-5 w-5 text-slate-600" />
+                            Storico Revisioni
+                        </DialogTitle>
+                        <DialogDescription>{historyTarget?.title}</DialogDescription>
+                    </DialogHeader>
+                    <div className="mt-2">
+                        {historyLoading ? (
+                            <div className="flex justify-center py-8">
+                                <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                            </div>
+                        ) : historyData?.versions?.length ? (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-slate-100">
+                                        <TableHead className="font-semibold text-slate-700">Versione</TableHead>
+                                        <TableHead className="font-semibold text-slate-700">File</TableHead>
+                                        <TableHead className="font-semibold text-slate-700">Data</TableHead>
+                                        <TableHead className="font-semibold text-slate-700">Autore</TableHead>
+                                        <TableHead className="font-semibold text-slate-700 text-right">Dim.</TableHead>
+                                        <TableHead className="w-[50px]"></TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {historyData.versions.map((v, i) => (
+                                        <TableRow key={v.version} className={i === 0 ? 'bg-blue-50/40' : ''}>
+                                            <TableCell>
+                                                <span className="inline-flex items-center gap-1.5">
+                                                    <span className="font-mono font-bold text-[#0055FF]">v{v.version}</span>
+                                                    {i === 0 && (
+                                                        <Badge className="bg-[#0055FF] text-white text-[9px] px-1.5 py-0">corrente</Badge>
+                                                    )}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="text-sm text-slate-600 truncate max-w-[150px]" title={v.filename}>
+                                                {v.filename}
+                                            </TableCell>
+                                            <TableCell className="text-sm text-slate-600">
+                                                {formatDate(v.upload_date)}
+                                            </TableCell>
+                                            <TableCell className="text-sm text-slate-500 truncate max-w-[100px]">
+                                                {v.uploaded_by || '--'}
+                                            </TableCell>
+                                            <TableCell className="text-right text-sm font-mono text-slate-500">
+                                                {formatSize(v.size_kb)}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Button
+                                                    variant="ghost" size="sm"
+                                                    data-testid={`btn-dl-v${v.version}`}
+                                                    onClick={() => downloadVersion(historyData.doc_id, v.version, v.filename)}
+                                                    title={`Scarica v${v.version}`}
+                                                >
+                                                    <Download className="h-4 w-4 text-slate-500" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        ) : (
+                            <p className="text-sm text-slate-500 text-center py-6">Nessuna revisione precedente</p>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* ══════ Delete Confirm ══════ */}
             <Dialog open={!!deleteTarget} onOpenChange={v => { if (!v) setDeleteTarget(null); }}>
                 <DialogContent className="max-w-sm" data-testid="delete-dialog">
                     <DialogHeader>
@@ -448,7 +537,11 @@ export default function QualitySystemPage() {
                         <DialogDescription>Questa azione non puo essere annullata.</DialogDescription>
                     </DialogHeader>
                     <p className="text-sm text-slate-600 mt-2">
-                        Sei sicuro di voler eliminare <strong>{deleteTarget?.title}</strong>?
+                        Sei sicuro di voler eliminare <strong>{deleteTarget?.title}</strong>
+                        {deleteTarget?.version_count > 1 && (
+                            <span> e tutte le {deleteTarget.version_count - 1} revisioni precedenti</span>
+                        )}
+                        ?
                     </p>
                     <DialogFooter className="mt-4">
                         <Button variant="outline" onClick={() => setDeleteTarget(null)}>Annulla</Button>
@@ -465,5 +558,131 @@ export default function QualitySystemPage() {
                 </DialogContent>
             </Dialog>
         </DashboardLayout>
+    );
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SUB-COMPONENTS
+   ══════════════════════════════════════════════════════════════ */
+
+function DocRow({ doc, onDownload, onDelete, onRevision, onHistory }) {
+    const ext = fileExt(doc.filename);
+    const catLabel = CATEGORIE.find(c => c.value === doc.category)?.label || doc.category;
+    const catColor = CAT_COLORS[doc.category] || CAT_COLORS.altro;
+    const hasMultipleVersions = (doc.version_count || 1) > 1;
+
+    return (
+        <TableRow data-testid={`doc-row-${doc.doc_id}`} className="hover:bg-slate-50">
+            <TableCell>
+                <div className="flex items-center gap-2.5">
+                    <div className="flex-shrink-0 w-8 h-8 rounded bg-slate-100 flex items-center justify-center">
+                        <FileText className="h-4 w-4 text-slate-500" />
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-900 truncate max-w-[300px]" title={doc.title}>
+                            {doc.title}
+                        </p>
+                        {doc.tags?.length > 0 && (
+                            <div className="flex gap-1 mt-0.5">
+                                {doc.tags.slice(0, 3).map((t, i) => (
+                                    <span key={i} className="text-[10px] px-1.5 py-0 rounded bg-slate-100 text-slate-500">{t}</span>
+                                ))}
+                                {doc.tags.length > 3 && (
+                                    <span className="text-[10px] text-slate-400">+{doc.tags.length - 3}</span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </TableCell>
+            <TableCell>
+                <Badge className={catColor}>{catLabel}</Badge>
+            </TableCell>
+            <TableCell className="text-slate-600 text-sm">{formatDate(doc.upload_date)}</TableCell>
+            <TableCell>
+                <span className="text-xs font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{ext}</span>
+            </TableCell>
+            <TableCell className="text-center">
+                <button
+                    data-testid={`btn-version-${doc.doc_id}`}
+                    onClick={hasMultipleVersions ? onHistory : undefined}
+                    className={`inline-flex items-center gap-1 text-xs font-mono font-bold px-2 py-0.5 rounded-full transition-colors ${
+                        hasMultipleVersions
+                            ? 'bg-[#0055FF]/10 text-[#0055FF] hover:bg-[#0055FF]/20 cursor-pointer'
+                            : 'bg-slate-100 text-slate-500'
+                    }`}
+                    title={hasMultipleVersions ? 'Vedi storico revisioni' : `Versione ${doc.version}`}
+                >
+                    v{doc.version}
+                    {hasMultipleVersions && <History className="h-3 w-3" />}
+                </button>
+            </TableCell>
+            <TableCell className="text-right font-mono text-sm text-slate-600">{formatSize(doc.size_kb)}</TableCell>
+            <TableCell>
+                <div className="flex gap-0.5 justify-end">
+                    <Button
+                        variant="ghost" size="sm"
+                        data-testid={`btn-revision-${doc.doc_id}`}
+                        onClick={onRevision}
+                        title="Carica nuova revisione"
+                    >
+                        <RefreshCw className="h-4 w-4 text-slate-500" />
+                    </Button>
+                    <Button
+                        variant="ghost" size="sm"
+                        data-testid={`btn-download-${doc.doc_id}`}
+                        onClick={onDownload}
+                        title="Scarica"
+                    >
+                        <Download className="h-4 w-4 text-slate-500" />
+                    </Button>
+                    <Button
+                        variant="ghost" size="sm"
+                        data-testid={`btn-delete-${doc.doc_id}`}
+                        onClick={onDelete}
+                        title="Elimina"
+                    >
+                        <Trash2 className="h-4 w-4 text-slate-500 hover:text-red-500" />
+                    </Button>
+                </div>
+            </TableCell>
+        </TableRow>
+    );
+}
+
+function DropZone({ file, onFileChange, onClear, inputId }) {
+    return (
+        <div
+            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                file ? 'border-[#0055FF] bg-blue-50/40' : 'border-slate-200 hover:border-slate-300'
+            }`}
+            onClick={() => document.getElementById(inputId)?.click()}
+            data-testid="drop-zone"
+        >
+            <input
+                id={inputId}
+                type="file"
+                className="hidden"
+                onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (f) onFileChange(f);
+                }}
+            />
+            {file ? (
+                <div className="flex items-center justify-center gap-2">
+                    <File className="h-5 w-5 text-[#0055FF]" />
+                    <span className="text-sm font-medium text-slate-900 truncate max-w-[250px]">{file.name}</span>
+                    <button onClick={e => { e.stopPropagation(); onClear(); }} className="text-slate-400 hover:text-red-500">
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+            ) : (
+                <div>
+                    <Plus className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                    <p className="text-sm text-slate-500">Clicca per selezionare un file</p>
+                    <p className="text-xs text-slate-400 mt-1">PDF, DOC, XLS, DWG, immagini (max 50 MB)</p>
+                </div>
+            )}
+        </div>
     );
 }
