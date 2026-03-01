@@ -49,6 +49,17 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa cen
 - File salvati su disco locale (/app/backend/uploads/company_docs/)
 - Testato: 12/12 backend + 15/15 frontend (iteration_88.json)
 
+### Registro Apparecchiature & Strumenti (Mar 2026)
+- Pagina isolata /strumenti accessibile dalla sidebar (gruppo Certificazioni)
+- Backend: /api/instruments/ (CRUD con calcolo automatico stato scadenza)
+- Tipi: Strumenti di Misura, Saldatrici, Macchinari, Altro
+- Calcolo automatico computed_status: attivo (>30gg), in_scadenza (<=30gg), scaduto (<0gg)
+- Stats bar: Totali, Attivi, In Scadenza, Scaduti, Manutenzione, Fuori Uso
+- Card grid con bordo colorato per tipo, badge stato, barra scadenza con giorni rimanenti
+- Filtri: tipo, stato, ricerca (nome, matricola, marca)
+- Dialog creazione/modifica con sezione taratura (date, intervallo mesi)
+- Testato: 22/22 backend pytest + 15/15 frontend (iteration_89.json)
+
 ## Bug Fix Critici (Mar 2026)
 
 ### P0: Bug Loop/Reload Editor Preventivi - RISOLTO
