@@ -91,6 +91,11 @@ class CompanySettingsUpdate(BaseModel):
     bank_details: Optional[BankDetails] = None
     logo_url: Optional[str] = None
     firma_digitale: Optional[str] = None
+    responsabile_nome: Optional[str] = None
+    ruolo_firmatario: Optional[str] = None
+    ente_certificatore: Optional[str] = None
+    ente_certificatore_numero: Optional[str] = None
+    certificato_en1090_numero: Optional[str] = None
     condizioni_vendita: Optional[str] = None
     aruba_username: Optional[str] = None
     aruba_password: Optional[str] = None
