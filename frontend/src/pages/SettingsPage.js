@@ -424,6 +424,57 @@ export default function SettingsPage() {
                             </CardContent>
                         </Card>
                     </TabsContent>
+
+                    <TabsContent value="integrazioni">
+                        <Card className="border-gray-200">
+                            <CardHeader className="bg-amber-50 border-b border-gray-200">
+                                <CardTitle>Fatturazione Elettronica (SDI)</CardTitle>
+                                <CardDescription>
+                                    Credenziali Aruba per l'invio delle fatture al Sistema di Interscambio
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4 pt-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <Label htmlFor="aruba_username">Username Aruba</Label>
+                                        <Input
+                                            id="aruba_username"
+                                            data-testid="input-aruba-username"
+                                            value={settings.aruba_username}
+                                            onChange={(e) => updateField('aruba_username', e.target.value)}
+                                            placeholder="username@aruba.it"
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="aruba_password">Password Aruba</Label>
+                                        <Input
+                                            id="aruba_password"
+                                            type="password"
+                                            data-testid="input-aruba-password"
+                                            value={settings.aruba_password}
+                                            onChange={(e) => updateField('aruba_password', e.target.value)}
+                                            placeholder="********"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 mt-2">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={settings.aruba_sandbox}
+                                            onChange={(e) => updateField('aruba_sandbox', e.target.checked)}
+                                            className="w-4 h-4 rounded border-gray-300"
+                                            data-testid="input-aruba-sandbox"
+                                        />
+                                        <span className="text-sm text-slate-700">Ambiente Sandbox (test)</span>
+                                    </label>
+                                </div>
+                                <p className="text-xs text-slate-400 mt-2">
+                                    Le credenziali vengono salvate in modo sicuro nel database. Disattiva "Sandbox" per inviare fatture reali al SDI.
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
                 </Tabs>
             </div>
         </DashboardLayout>
