@@ -40,6 +40,7 @@ from routes.fascicolo_tecnico import router as fascicolo_tecnico_router
 from routes.company_docs import router as company_docs_router
 from routes.instruments import router as instruments_router
 from routes.welders import router as welders_router
+from routes.audits import router as audits_router
 
 # Configure logging
 logging.basicConfig(
@@ -105,6 +106,7 @@ app.include_router(fascicolo_tecnico_router, prefix="/api")
 app.include_router(company_docs_router, prefix="/api")
 app.include_router(instruments_router, prefix="/api")
 app.include_router(welders_router, prefix="/api")
+app.include_router(audits_router, prefix="/api")
 
 
 @app.get("/api/")
