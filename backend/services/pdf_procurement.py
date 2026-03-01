@@ -501,23 +501,26 @@ def generate_cl_pdf(
     except (ValueError, AttributeError, TypeError):
         data_fmt = datetime.now().strftime("%d/%m/%Y")
 
-    # Build rows
+    # Build rows — defensive: no crash on None/invalid values
     rows_html = ""
     total_peso = 0
     for i, r in enumerate(righe, 1):
         desc = safe(r.get("descrizione", ""))
         qty = r.get("quantita", "")
-        um = safe(r.get("unita", "pz"))
+        um = safe(r.get("unita", "") or "pz")
         peso = r.get("peso_kg", "")
-        if peso:
-            total_peso += float(peso or 0)
+        try:
+            peso_f = float(peso) if peso else 0
+        except (ValueError, TypeError):
+            peso_f = 0
+        total_peso += peso_f
         rows_html += f"""
         <tr>
             <td class="tc">{i}</td>
             <td class="desc-cell">{desc}</td>
             <td class="tc">{fmt_it(qty) if qty else ''}</td>
             <td class="tc">{um}</td>
-            <td class="tr">{fmt_it(peso) if peso else ''}</td>
+            <td class="tr">{fmt_it(peso_f) if peso_f else ''}</td>
         </tr>
         """
     if total_peso > 0:
