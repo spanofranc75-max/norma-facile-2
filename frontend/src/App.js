@@ -217,14 +217,14 @@ function AppRouter() {
 
 function App() {
     return (
-        <ErrorBoundary>
-            <BrowserRouter>
-                <AuthProvider>
+        <BrowserRouter>
+            <AuthProvider>
+                <ErrorBoundary>
                     <AppRouter />
-                    <Toaster position="top-right" />
-                </AuthProvider>
-            </BrowserRouter>
-        </ErrorBoundary>
+                </ErrorBoundary>
+                <Toaster position="top-right" />
+            </AuthProvider>
+        </BrowserRouter>
     );
 }
 
