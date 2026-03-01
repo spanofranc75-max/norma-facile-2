@@ -1752,7 +1752,9 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                     </div>
                     <DialogFooter>
                         <Button variant="outline" size="sm" onClick={() => setClOpen(false)}>Annulla</Button>
+                        <DisabledTooltip show={!clForm.fornitore_nome || clForm.righe.filter(r => r.descrizione.trim()).length === 0} reason="Seleziona un fornitore e compila almeno una riga materiale">
                         <Button size="sm" disabled={!clForm.fornitore_nome || clForm.righe.filter(r => r.descrizione.trim()).length === 0} onClick={handleCreateCL} className="bg-[#0055FF] text-white" data-testid="btn-confirm-cl">Crea DDT Conto Lavoro</Button>
+                        </DisabledTooltip>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
