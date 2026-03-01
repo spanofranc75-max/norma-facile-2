@@ -749,6 +749,23 @@ async def generate_super_fascicolo(commessa_id: str, user_id: str) -> BytesIO:
     _add_pdf(merger, _build_cap4_vt(ctx), "Cap 4.3 - Rapporto VT")
     _add_pdf(merger, _build_cap4_welder(ctx), "Cap 4.4 - Patentino")
 
+    # Appendice B: Patentini Saldatori PDF originali
+    import os
+    welder_certs_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "welder_certs")
+    for w in assigned_welders:
+        for q in w.get("qualifications", []):
+            if q.get("has_file") and q.get("status") in ("attivo", "in_scadenza") and q.get("safe_filename"):
+                cert_path = os.path.join(welder_certs_dir, q["safe_filename"])
+                if os.path.isfile(cert_path):
+                    try:
+                        with open(cert_path, "rb") as f:
+                            cert_bytes = f.read()
+                        reader = PdfReader(BytesIO(cert_bytes))
+                        for page in reader.pages:
+                            merger.add_page(page)
+                    except Exception as e:
+                        logger.warning(f"Could not merge welder cert {q['safe_filename']} for {w.get('name','?')}: {e}")
+
     # Cap 5: Marcatura CE
     _add_pdf(merger, _build_cap5_dop(ctx), "Cap 5.1 - DoP")
     _add_pdf(merger, _build_cap5_ce(ctx), "Cap 5.2 - Etichetta CE")
