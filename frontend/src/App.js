@@ -214,6 +214,7 @@ function AppRouter() {
             <Route path="/report-cam" element={<ProtectedRoute><ReportCAMPage /></ProtectedRoute>} />
             <Route path="/archivio-certificati" element={<ProtectedRoute><ArchivioCertificatiPage /></ProtectedRoute>} />
             <Route path="/sistema-qualita" element={<ProtectedRoute><QualitySystemPage /></ProtectedRoute>} />
+            <Route path="/strumenti" element={<ProtectedRoute><InstrumentsPage /></ProtectedRoute>} />
         </Routes>
     );
 }
