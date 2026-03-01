@@ -135,6 +135,46 @@ class TestFascicoloTecnicoData:
         
         print(f"✓ GET fascicolo returns data with {len(fasi)} default phases")
     
+    def test_get_fascicolo_returns_default_requisiti(self, session, auth_headers, test_commessa):
+        """GET /api/fascicolo-tecnico/{cid} returns default requisiti for Riesame Tecnico (28 items)"""
+        r = session.get(f"{BASE_URL}/api/fascicolo-tecnico/{test_commessa}", headers=auth_headers)
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text}"
+        data = r.json()
+        
+        # Verify requisiti is populated with defaults
+        assert "requisiti" in data, "Response should contain 'requisiti' field"
+        requisiti = data.get("requisiti", [])
+        assert len(requisiti) == 28, f"Expected 28 default requisiti, got {len(requisiti)}"
+        
+        # Verify structure of first requisito
+        if requisiti:
+            first = requisiti[0]
+            assert "requisito" in first, "Requisito should have 'requisito' field"
+            assert "risposta" in first, "Requisito should have 'risposta' field (si/no/na)"
+            assert "note" in first, "Requisito should have 'note' field"
+        
+        print(f"✓ GET fascicolo returns data with {len(requisiti)} default requisiti")
+    
+    def test_get_fascicolo_returns_default_itt(self, session, auth_headers, test_commessa):
+        """GET /api/fascicolo-tecnico/{cid} returns default ITT for Riesame Tecnico (10 items)"""
+        r = session.get(f"{BASE_URL}/api/fascicolo-tecnico/{test_commessa}", headers=auth_headers)
+        assert r.status_code == 200, f"Expected 200, got {r.status_code}: {r.text}"
+        data = r.json()
+        
+        # Verify ITT is populated with defaults
+        assert "itt" in data, "Response should contain 'itt' field"
+        itt = data.get("itt", [])
+        assert len(itt) == 10, f"Expected 10 default ITT items, got {len(itt)}"
+        
+        # Verify structure of first ITT item
+        if itt:
+            first = itt[0]
+            assert "caratteristica" in first, "ITT item should have 'caratteristica' field"
+            assert "metodo" in first, "ITT item should have 'metodo' field"
+            assert "criterio" in first, "ITT item should have 'criterio' field"
+        
+        print(f"✓ GET fascicolo returns data with {len(itt)} default ITT items")
+    
     def test_put_fascicolo_saves_editable_data(self, session, auth_headers, test_commessa):
         """PUT /api/fascicolo-tecnico/{cid} saves editable data to commessa.fascicolo_tecnico"""
         update_data = {
