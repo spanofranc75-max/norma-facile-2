@@ -376,7 +376,7 @@ def generate_rapporto_vt_pdf(company: dict, commessa: dict, client_name: str, vt
 DEFAULT_SALDATURE = []
 
 def generate_registro_saldatura_pdf(company: dict, commessa: dict, client_name: str, rs_data: dict) -> BytesIO:
-    biz, addr, piva, phone, email = _co(company)
+    biz, addr, piva, phone, email, logo, firma = _co(company)
     comm_num = commessa.get("numero", "")
     comm_title = commessa.get("title", "")
     data_emissione = rs_data.get("data_emissione", "")
