@@ -107,6 +107,13 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     // Rientro Conto Lavoro states
     const [rientroOpen, setRientroOpen] = useState(false);
     const [rientroTarget, setRientroTarget] = useState(null);
+
+    // Fase completamento modal
+    const [faseComplOpen, setFaseComplOpen] = useState(false);
+    const [faseComplTarget, setFaseComplTarget] = useState(null);
+    const [faseComplForm, setFaseComplForm] = useState({
+        started_at: '', completed_at: '', operator_name: '',
+    });
     const [rientroForm, setRientroForm] = useState({
         data_rientro: new Date().toISOString().slice(0, 10),
         ddt_fornitore_numero: '', ddt_fornitore_data: '',
