@@ -104,6 +104,7 @@ app.include_router(cam_router, prefix="/api")
 app.include_router(fascicolo_tecnico_router, prefix="/api")
 app.include_router(company_docs_router, prefix="/api")
 app.include_router(instruments_router, prefix="/api")
+app.include_router(welders_router, prefix="/api")
 
 
 @app.get("/api/")
