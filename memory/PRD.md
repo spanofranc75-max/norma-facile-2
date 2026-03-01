@@ -422,6 +422,17 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Frontend**: Bottone "Scheda Rintracciabilità PDF" nella sezione Tracciabilità + campi extra visualizzati
 - Testing: 100% backend (12/12), 100% frontend (iteration_73)
 
+### Fascicolo Tecnico EN 1090 — 4 Documenti PDF (Phase 62 - Mar 2026)
+- **DOP (Dichiarazione di Prestazione)**: PDF auto-compilato con tabella prestazioni EN 1090-2:2024, dati azienda/commessa/mandatario
+- **CE (Marcatura CE)**: PDF con marchio CE, ente notificato, certificato, classe esecuzione, tabella caratteristiche
+- **Piano di Controllo Qualità (MOD. 02)**: PDF landscape con 16 fasi predefinite (ricezione, taglio, saldatura, VT, CND, verniciatura, montaggio...), checkbox Pos/Neg, date, firme. Dati editabili via PUT
+- **Rapporto VT (MOD. 06)**: PDF esame visivo con checkbox condizioni visione/superficie/ispezione/attrezzatura, tabella oggetti controllati con esiti
+- **Architettura aperta**: Dati salvati in `commessa.fascicolo_tecnico`, fasi Piano Controllo personalizzabili
+- **Preventivo arricchito**: Campi `numero_disegno` e `ingegnere_disegno` propagati ai documenti
+- **Endpoints**: GET/PUT `/api/fascicolo-tecnico/{cid}` + 4 endpoint PDF (`/dop-pdf`, `/ce-pdf`, `/piano-controllo-pdf`, `/rapporto-vt-pdf`)
+- **Frontend**: 4 card con bottoni PDF nella sezione "Fascicolo Tecnico EN 1090" del CommessaOpsPanel
+- Testing: 100% backend (14/14), 100% frontend (iteration_74)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
