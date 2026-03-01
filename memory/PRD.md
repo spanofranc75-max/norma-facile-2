@@ -330,6 +330,12 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Email Preview Builder**: `/app/backend/services/email_preview.py` — template HTML coerenti per ogni tipo di documento
 - Testing: 100% backend (14/14 pytest), 100% frontend (iteration_64)
 
+### Fix PDF Preview CL + Email Editing (Mar 2026)
+- **Fix PDF Preview Conto Lavoro**: Il blob URL veniva invalidato dall'aggiunta di `?token=` — ora controlla se è blob URL prima di aggiungere il token
+- **Modifica Testo Email**: Bottone "Modifica testo" nell'anteprima che permette di editare Oggetto e Corpo prima dell'invio
+- **Backend aggiornato**: Tutti i 6 endpoint `send-email` (CL, RdP, OdA, Fattura, DDT, Preventivo) accettano `custom_subject` e `custom_body` opzionali
+- Testing: 100% backend (9/9), 100% frontend (iteration_65)
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
