@@ -532,6 +532,50 @@ async def report_aziendale_cam(
     commesse_list = sorted(commesse_map.values(), key=lambda x: x["peso_kg"], reverse=True)
     fornitori_list = sorted(fornitori_map.values(), key=lambda x: x["peso_kg"], reverse=True)
     
+    # ── Sustainability KPIs ──────────────────────────────
+    # "Effetto Foresta": 1 albero assorbe ~22 kg CO2/anno (fonte: European Environment Agency)
+    KG_CO2_PER_ALBERO_ANNO = 22.0
+    alberi_equivalenti = round(co2["co2_risparmiata_kg"] / KG_CO2_PER_ALBERO_ANNO, 1) if co2["co2_risparmiata_kg"] > 0 else 0
+    
+    # Indice Economia Circolare (0-100): media ponderata % riciclato
+    indice_economia_circolare = round(perc_media, 1)
+    
+    # CO2 per commessa (for bar chart)
+    co2_per_commessa = []
+    for c in commesse_list:
+        c_co2 = calcola_co2_risparmiata(c["peso_kg"], c["peso_riciclato_kg"])
+        co2_per_commessa.append({
+            "commessa_id": c.get("commessa_id", ""),
+            "numero": c.get("numero", "N/A"),
+            "titolo": c.get("titolo", ""),
+            "co2_risparmiata_kg": c_co2["co2_risparmiata_kg"],
+            "peso_kg": round(c["peso_kg"], 1),
+        })
+    
+    # Trend mensile: aggregazione per mese di creazione lotto
+    trend_mensile = {}
+    for lotto in all_lotti:
+        created = lotto.get("created_at", "")
+        if isinstance(created, str) and len(created) >= 7:
+            mese = created[:7]  # "YYYY-MM"
+        else:
+            continue
+        if mese not in trend_mensile:
+            trend_mensile[mese] = {"mese": mese, "peso_kg": 0, "peso_riciclato_kg": 0, "co2_risparmiata_kg": 0}
+        peso_l = lotto.get("peso_kg", 0)
+        perc_l = lotto.get("percentuale_riciclato", 0)
+        peso_ric_l = peso_l * perc_l / 100
+        trend_mensile[mese]["peso_kg"] += peso_l
+        trend_mensile[mese]["peso_riciclato_kg"] += peso_ric_l
+        co2_l = calcola_co2_risparmiata(peso_l, peso_ric_l)
+        trend_mensile[mese]["co2_risparmiata_kg"] += co2_l["co2_risparmiata_kg"]
+    
+    trend_list = sorted(trend_mensile.values(), key=lambda x: x["mese"])
+    for t in trend_list:
+        t["peso_kg"] = round(t["peso_kg"], 1)
+        t["peso_riciclato_kg"] = round(t["peso_riciclato_kg"], 1)
+        t["co2_risparmiata_kg"] = round(t["co2_risparmiata_kg"], 1)
+    
     return {
         "anno": anno or datetime.now().year,
         "totale_lotti": len(all_lotti),
@@ -545,6 +589,11 @@ async def report_aziendale_cam(
         "commesse_conformi": sum(1 for c in commesse_list if c.get("conforme")),
         "commesse_totali": len(commesse_list),
         "data_report": datetime.now(timezone.utc).isoformat(),
+        # Sustainability Dashboard KPIs
+        "alberi_equivalenti": alberi_equivalenti,
+        "indice_economia_circolare": indice_economia_circolare,
+        "co2_per_commessa": co2_per_commessa,
+        "trend_mensile": trend_list,
     }
 
 
