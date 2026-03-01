@@ -1,6 +1,6 @@
 /**
  * EmailPreviewDialog — Shows email preview with editable subject + body before sending.
- * Fetches preview from backend, allows editing, then sends on confirm.
+ * Supports expand/collapse to fullscreen for better PDF/content visibility.
  */
 import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from './ui/dialog';
@@ -9,7 +9,7 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
 import { toast } from 'sonner';
-import { Mail, Send, Loader2, Paperclip, User, FileText, Pencil, Eye } from 'lucide-react';
+import { Mail, Send, Loader2, Paperclip, User, FileText, Pencil, Eye, Maximize2, Minimize2 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -21,6 +21,7 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
     const [editMode, setEditMode] = useState(false);
     const [editSubject, setEditSubject] = useState('');
     const [editBody, setEditBody] = useState('');
+    const [expanded, setExpanded] = useState(false);
     const iframeRef = useRef(null);
 
     useEffect(() => {
@@ -29,6 +30,7 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
             setError(null);
             setPreview(null);
             setEditMode(false);
+            setExpanded(false);
             fetch(`${API}${previewUrl}`, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
             })
@@ -39,10 +41,8 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
             .then(data => {
                 setPreview(data);
                 setEditSubject(data.subject || '');
-                // Extract plain text from HTML for editing
                 const tmp = document.createElement('div');
                 tmp.innerHTML = data.html_body || '';
-                // Find the main content div and extract text
                 const ps = tmp.querySelectorAll('p');
                 let text = '';
                 ps.forEach(p => {
@@ -56,7 +56,6 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
         }
     }, [open, previewUrl]);
 
-    // Write HTML to iframe in preview mode
     useEffect(() => {
         if (!editMode && preview?.html_body && iframeRef.current) {
             const doc = iframeRef.current.contentDocument;
@@ -98,14 +97,31 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
         }
     };
 
+    const sizeClass = expanded
+        ? 'max-w-[95vw] w-[95vw] max-h-[95vh] h-[95vh]'
+        : 'max-w-2xl max-h-[90vh]';
+
+    const bodyHeight = expanded ? 'calc(95vh - 260px)' : '300px';
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col" data-testid="email-preview-dialog">
+            <DialogContent className={`${sizeClass} flex flex-col transition-all duration-200`} data-testid="email-preview-dialog">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <Mail className="h-5 w-5 text-blue-600" />
-                        Anteprima Email
-                    </DialogTitle>
+                    <div className="flex items-center justify-between">
+                        <DialogTitle className="flex items-center gap-2">
+                            <Mail className="h-5 w-5 text-blue-600" />
+                            Anteprima Email
+                        </DialogTitle>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-slate-500 hover:text-slate-800"
+                            onClick={() => setExpanded(!expanded)}
+                            data-testid="email-toggle-expand"
+                        >
+                            {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                        </Button>
+                    </div>
                     <DialogDescription>Verifica e personalizza il contenuto prima dell'invio</DialogDescription>
                 </DialogHeader>
 
@@ -134,17 +150,11 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
                                 </span>
                                 {!preview.to_email && <Badge className="bg-amber-100 text-amber-700 text-[9px]">Mancante</Badge>}
                             </div>
-
                             {editMode ? (
                                 <div className="flex items-center gap-2">
                                     <FileText className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                                     <span className="text-slate-500 w-8 shrink-0">Ogg:</span>
-                                    <Input
-                                        value={editSubject}
-                                        onChange={e => setEditSubject(e.target.value)}
-                                        className="h-7 text-sm flex-1"
-                                        data-testid="email-edit-subject"
-                                    />
+                                    <Input value={editSubject} onChange={e => setEditSubject(e.target.value)} className="h-7 text-sm flex-1" data-testid="email-edit-subject" />
                                 </div>
                             ) : (
                                 <div className="flex items-center gap-2">
@@ -153,7 +163,6 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
                                     <span className="font-medium text-slate-800 truncate" data-testid="email-preview-subject">{preview.subject}</span>
                                 </div>
                             )}
-
                             {preview.has_attachment && (
                                 <div className="flex items-center gap-2">
                                     <Paperclip className="h-3.5 w-3.5 text-slate-400 shrink-0" />
@@ -165,25 +174,18 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
                             )}
                         </div>
 
-                        {/* Toggle edit/preview */}
                         <div className="flex justify-end">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs gap-1"
-                                onClick={() => setEditMode(!editMode)}
-                                data-testid="email-toggle-edit"
-                            >
+                            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => setEditMode(!editMode)} data-testid="email-toggle-edit">
                                 {editMode ? <><Eye className="h-3 w-3" /> Anteprima</> : <><Pencil className="h-3 w-3" /> Modifica testo</>}
                             </Button>
                         </div>
 
-                        {/* Email body: edit or preview */}
                         {editMode ? (
                             <Textarea
                                 value={editBody}
                                 onChange={e => setEditBody(e.target.value)}
-                                className="flex-1 min-h-[280px] text-sm font-mono resize-none"
+                                className="flex-1 text-sm font-mono resize-none"
+                                style={{ minHeight: bodyHeight }}
                                 placeholder="Scrivi il testo dell'email..."
                                 data-testid="email-edit-body"
                             />
@@ -193,7 +195,7 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
                                     ref={iframeRef}
                                     title="Email Preview"
                                     className="w-full border-0"
-                                    style={{ height: '300px' }}
+                                    style={{ height: bodyHeight }}
                                     sandbox="allow-same-origin"
                                 />
                             </div>
