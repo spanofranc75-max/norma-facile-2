@@ -35,6 +35,13 @@ class MaterialBatchCreate(BaseModel):
     certificate_filename: Optional[str] = None
     notes: Optional[str] = ""
     received_date: Optional[str] = None    # ISO date
+    # EN 1090 Scheda Rintracciabilità fields
+    dimensions: Optional[str] = None       # e.g. "IPE 100", "HEB 120"
+    posizione: Optional[str] = None        # Position in drawing
+    n_pezzi: Optional[int] = None          # Number of pieces
+    numero_certificato: Optional[str] = None  # Certificate number
+    ddt_numero: Optional[str] = None       # DDT number
+    disegno_numero: Optional[str] = None   # Drawing number
 
 
 class MaterialBatchOut(BaseModel):
