@@ -177,3 +177,21 @@ async def rapporto_vt_pdf(cid: str, user: dict = Depends(get_current_user)):
     buf = generate_rapporto_vt_pdf(company, commessa, client_name, ft)
     return StreamingResponse(buf, media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="Rapporto_VT_{commessa.get("numero","")}.pdf"'})
+
+
+@router.get("/{cid}/registro-saldatura-pdf")
+async def registro_saldatura_pdf(cid: str, user: dict = Depends(get_current_user)):
+    from services.pdf_fascicolo_tecnico import generate_registro_saldatura_pdf
+    commessa, company, client_name, ft = await _get_context(cid, user)
+    buf = generate_registro_saldatura_pdf(company, commessa, client_name, ft)
+    return StreamingResponse(buf, media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="Registro_Saldatura_{commessa.get("numero","")}.pdf"'})
+
+
+@router.get("/{cid}/riesame-tecnico-pdf")
+async def riesame_tecnico_pdf(cid: str, user: dict = Depends(get_current_user)):
+    from services.pdf_fascicolo_tecnico import generate_riesame_tecnico_pdf
+    commessa, company, client_name, ft = await _get_context(cid, user)
+    buf = generate_riesame_tecnico_pdf(company, commessa, client_name, ft)
+    return StreamingResponse(buf, media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="Riesame_Tecnico_{commessa.get("numero","")}.pdf"'})
