@@ -1,0 +1,61 @@
+{
+  "summary": "Iteration 65: PDF Blob URL Fix for CL Preview + Email Text Editing Feature. All 9 backend tests passed (100%). Frontend UI verified: CL PDF preview uses blob URL correctly (fix working), EmailPreviewDialog shows 'Modifica testo' toggle for edit mode with editable subject/body fields.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "backend_api_tests": {
+      "GET /api/commesse/{cid}/conto-lavoro/{cl_id}/preview-pdf": "PASS - Returns valid PDF (starts with %PDF, >1KB)",
+      "GET /api/commesse/{cid}/conto-lavoro/{invalid_id}/preview-pdf": "PASS - Returns 404 for non-existent CL",
+      "POST /api/commesse/{cid}/conto-lavoro/{cl_id}/send-email with custom_subject/custom_body": "PASS - Endpoint accepts custom payload",
+      "POST /api/commesse/{cid}/approvvigionamento/richieste/{rdp_id}/send-email with custom_subject/custom_body": "PASS",
+      "POST /api/commesse/{cid}/approvvigionamento/ordini/{ordine_id}/send-email with custom_subject/custom_body": "PASS",
+      "POST /api/invoices/{invoice_id}/send-email with custom_subject/custom_body": "PASS",
+      "POST /api/ddt/{ddt_id}/send-email with custom_subject/custom_body": "PASS",
+      "POST /api/preventivi/{prev_id}/send-email with custom_subject/custom_body": "PASS",
+      "GET /api/invoices/{invoice_id}/preview-email": "PASS - Returns required fields (to_email, to_name, subject, html_body, has_attachment, attachment_name)"
+    },
+    "frontend_ui_tests": {
+      "cl_pdf_preview_blob_url": "PASS - PDF preview iframe src is blob URL (not appending ?token= to blob URLs)",
+      "email_preview_dialog_opens": "PASS - EmailPreviewDialog opens with data-testid='email-preview-dialog'",
+      "email_preview_to_field": "PASS - Shows recipient with data-testid='email-preview-to'",
+      "email_preview_subject_field": "PASS - Shows subject with data-testid='email-preview-subject'",
+      "email_preview_body_field": "PASS - Shows HTML body in iframe with data-testid='email-preview-body'",
+      "email_toggle_edit_button": "PASS - Found 'Modifica testo' toggle button with data-testid='email-toggle-edit'",
+      "email_edit_mode_subject": "PASS - In edit mode, subject becomes editable Input with data-testid='email-edit-subject'",
+      "email_edit_mode_body": "PASS - In edit mode, body becomes editable Textarea with data-testid='email-edit-body'",
+      "email_send_button": "PASS - Found send button with data-testid='email-preview-send-btn'",
+      "toggle_back_to_preview": "PASS - Clicking toggle returns to preview mode"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration65_features.py",
+    "/app/test_reports/pytest/iteration65_features_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "PDF blob URL fix correctly implemented in CommessaOpsPanel.js line 1772: src={pdfPreviewUrl.startsWith('blob:') ? pdfPreviewUrl : ...}",
+    "EmailPreviewDialog correctly implements editMode state toggle between preview and edit modes",
+    "All 6 send-email endpoints (CL, RdP, OdA, Invoice, DDT, Preventivo) accept optional custom_subject/custom_body in POST body",
+    "handlePreviewClPdf fetches PDF as blob and creates blob URL via URL.createObjectURL()",
+    "Edit mode fields use proper data-testid attributes: email-edit-subject, email-edit-body"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration65_features.py"
+  ],
+  "success_rate": {
+    "backend": "100% (9/9 pytest tests passed)",
+    "frontend": "100% (all UI elements verified working)"
+  },
+  "test_credentials": "Created and cleaned up test sessions (test_session_1772347xxx)",
+  "seed_data_creation": "Created test commessa with CL entry, fornitore/cliente, invoice, DDT, preventivo - all cleaned up after testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "PDF blob URL fix verified - handlePreviewClPdf creates blob URL which is used directly in iframe src without appending ?token=. EmailPreviewDialog has editMode state with toggle button (data-testid='email-toggle-edit'). In edit mode, shows editable Input for subject (data-testid='email-edit-subject') and Textarea for body (data-testid='email-edit-body'). When sending in edit mode, POST body includes {custom_subject, custom_body}; in preview mode, POST body is empty {}. All 6 email endpoints (CL, RdP, OdA, Invoice, DDT, Preventivo) support custom text."
+}
