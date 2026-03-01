@@ -156,6 +156,12 @@ async def _get_context(cid: str, user: dict):
         if not client_name:
             client_name = preventivo.get("client_name", "")
 
+    # Fallback: disegno from commessa numero
+    if not ft.get("disegno_numero"):
+        ft["disegno_numero"] = commessa.get("numero", "")
+    if not ft.get("disegno_riferimento"):
+        ft["disegno_riferimento"] = commessa.get("numero", "")
+
     # ── Classe esecuzione fallback from settings ──
     if not commessa.get("classe_esecuzione") and company.get("classe_esecuzione_default"):
         commessa["classe_esecuzione"] = company["classe_esecuzione_default"]
