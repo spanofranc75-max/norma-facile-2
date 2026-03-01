@@ -23,6 +23,7 @@ import {
     Maximize2, Minimize2,
 } from 'lucide-react';
 import EmailPreviewDialog from './EmailPreviewDialog';
+import { DisabledTooltip } from './DisabledTooltip';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
