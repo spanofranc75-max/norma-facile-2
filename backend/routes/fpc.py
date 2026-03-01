@@ -135,6 +135,12 @@ async def create_batch(body: MaterialBatchCreate, user: dict = Depends(get_curre
         "has_certificate": bool(body.certificate_base64),
         "notes": body.notes or "",
         "received_date": body.received_date,
+        "dimensions": body.dimensions,
+        "posizione": body.posizione,
+        "n_pezzi": body.n_pezzi,
+        "numero_certificato": body.numero_certificato,
+        "ddt_numero": body.ddt_numero,
+        "disegno_numero": body.disegno_numero,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.material_batches.insert_one(doc)
@@ -151,6 +157,12 @@ async def update_batch(batch_id: str, body: MaterialBatchCreate, user: dict = De
         "heat_number": body.heat_number,
         "notes": body.notes or "",
         "received_date": body.received_date,
+        "dimensions": body.dimensions,
+        "posizione": body.posizione,
+        "n_pezzi": body.n_pezzi,
+        "numero_certificato": body.numero_certificato,
+        "ddt_numero": body.ddt_numero,
+        "disegno_numero": body.disegno_numero,
     }
     if body.certificate_base64 is not None:
         update["certificate_base64"] = body.certificate_base64
