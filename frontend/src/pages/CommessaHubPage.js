@@ -482,12 +482,14 @@ export default function CommessaHubPage() {
                         </div>
                         <DialogFooter>
                             <Button variant="outline" size="sm" onClick={() => setLinkOpen(false)}>Annulla</Button>
+                            <DisabledTooltip show={!linkId} reason="Seleziona un documento da collegare">
                             <Button size="sm" disabled={!linkId} onClick={handleLinkModule}
                                 className="bg-[#0055FF] text-white hover:bg-[#0044CC]"
                                 data-testid="btn-confirm-link"
                             >
                                 <Link2 className="h-3.5 w-3.5 mr-1.5" /> Collega
                             </Button>
+                            </DisabledTooltip>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
