@@ -319,7 +319,7 @@ function CreateCommessaModal({ open, onOpenChange, clients, onCreated }) {
             });
             toast.success('Commessa creata');
             onOpenChange(false);
-            setForm({ title: '', client_id: '', description: '', value: '', deadline: '', priority: 'media' });
+            setForm({ title: '', client_id: '', description: '', value: '', deadline: '', priority: 'media', classe_exc: '', tipologia_chiusura: '' });
             onCreated();
         } catch (e) {
             toast.error(e.message || 'Errore creazione');
