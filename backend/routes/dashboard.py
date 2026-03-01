@@ -139,15 +139,26 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
 
 @router.get("/compliance-en1090")
 async def get_compliance_overview(user: dict = Depends(get_current_user)):
-    """Dashboard widget: EN 1090 compliance status for all active commesse."""
+    """Dashboard widget: EN 1090 compliance status for all commesse with fascicolo tecnico data."""
     uid = user["user_id"]
-    active_states = ["confermata", "in_produzione"]
+    # Include all states except draft — any commessa that has been worked on
     commesse = await db.commesse.find(
-        {"user_id": uid, "stato": {"$in": active_states}},
+        {"user_id": uid, "stato": {"$nin": ["bozza"]}},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "stato": 1,
          "client_id": 1, "fascicolo_tecnico": 1, "fasi_produzione": 1,
          "classe_esecuzione": 1}
     ).sort("created_at", -1).to_list(50)
+
+    # Filter: only commesse that have fascicolo_tecnico data OR classe_esecuzione set
+    en1090_commesse = []
+    for c in commesse:
+        ft = c.get("fascicolo_tecnico", {})
+        has_ft_data = any(v for k, v in ft.items() if k != "_id" and v) if ft else False
+        has_classe = bool(c.get("classe_esecuzione"))
+        if has_ft_data or has_classe:
+            en1090_commesse.append(c)
+
+    commesse = en1090_commesse
 
     # Required doc fields per document type
     shared_auto = ["client_name", "commessa_numero", "commessa_title"]
