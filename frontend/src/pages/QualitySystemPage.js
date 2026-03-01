@@ -258,6 +258,9 @@ export default function QualitySystemPage() {
                         <DialogTitle className="flex items-center gap-2">
                             <Upload className="h-5 w-5 text-[#0055FF]" /> Carica Documento
                         </DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500">
+                            Seleziona un file e compila i dettagli per aggiungerlo all'archivio.
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 mt-2">
                         {/* File Drop */}
