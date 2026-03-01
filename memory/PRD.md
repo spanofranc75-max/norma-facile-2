@@ -71,7 +71,22 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa cen
   3. PreventivoEditorPage ha auto-save su sessionStorage con debounce 300ms
 - **Testato:** 8/8 test passati con testing agent (iteration_85.json)
 
+### Registro Saldatori & Patentini (Mar 2026)
+- Pagina isolata /saldatori accessibile dalla sidebar (gruppo Certificazioni)
+- Backend: /api/welders/ (CRUD saldatori + qualifiche con upload file PDF)
+- Layout master-detail: sidebar lista saldatori + pannello dettaglio con tabella patentini
+- Calcolo automatico stato patentino: attivo (>30gg), in_scadenza (<=30gg), scaduto (<0gg)
+- Overall status saldatore: ok, warning, expired, no_qual
+- Stats bar: Saldatori totali, Qualificati, Attenzione, Patentini Tot.
+- Dialog creazione/modifica saldatore (nome, punzone, ruolo, telefono, email, data assunzione)
+- Dialog aggiunta patentino (norma ISO 9606, processo, materiale, spessori, posizione, scadenza, PDF)
+- Ricerca per nome/punzone nella sidebar
+- Validazione backend: nome e punzone non possono essere vuoti
+- File patentini salvati su disco locale (/app/backend/uploads/welder_certs/)
+- Testato: 31/33 backend pytest + 17/17 frontend (iteration_90.json)
+
 ## Backlog
+- P1: Integrare patentini saldatori nel "Super Fascicolo Tecnico" (auto-allegare PDF validi per saldatori della commessa)
 - P1: Fatture in Cloud SDI (necessita credenziali utente), verifica parsing AI
 - P2: Test e2e completo, seeding dati, coesione flusso
 - P3: CSV per CNC, stato SOSPESA, miglioramenti repository documenti
