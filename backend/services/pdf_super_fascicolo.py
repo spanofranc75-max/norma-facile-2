@@ -677,7 +677,7 @@ async def generate_super_fascicolo(commessa_id: str, user_id: str) -> BytesIO:
         "batches": batches,
         "cam_lotti": cam_lotti,
         "fpc_project": fpc_project,
-        "welder": welder,
+        "assigned_welders": assigned_welders,
         "conto_lavoro": conto_lavoro,
     }
 
