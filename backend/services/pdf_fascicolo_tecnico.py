@@ -64,7 +64,8 @@ def _firma_img_html(firma_b64):
 def _co(company):
     return (company.get("business_name",""), 
             f"{company.get('address','')} {company.get('city','')} {company.get('cap','')}".strip(),
-            company.get("partita_iva",""), company.get("phone",""), company.get("email",""))
+            company.get("partita_iva",""), company.get("phone",""), company.get("email",""),
+            company.get("logo_url",""), company.get("firma_digitale",""))
 
 def _render(html_str):
     buf = BytesIO()
