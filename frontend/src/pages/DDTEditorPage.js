@@ -236,6 +236,15 @@ export default function DDTEditorPage() {
                                 {ddtInfo.number && <span className="text-xs font-mono text-[#0055FF]">{ddtInfo.number}</span>}
                                 <Badge className={`${TYPE_COLORS[form.ddt_type]} text-[10px]`}>{TYPE_OPTIONS.find(t => t.value === form.ddt_type)?.label}</Badge>
                                 {!isNew && <Badge className="bg-slate-100 text-slate-700 text-[10px]">{STATUS_LABELS[ddtInfo.status]}</Badge>}
+                                {ddtInfo.commessa_id && (
+                                    <button
+                                        data-testid="ddt-editor-commessa-link"
+                                        className="inline-flex items-center gap-1 text-[10px] font-medium text-[#0055FF] bg-blue-50 border border-blue-200 rounded-full px-2 py-0.5 hover:bg-blue-100 transition-colors"
+                                        onClick={() => navigate(`/commesse/${ddtInfo.commessa_id}`)}
+                                    >
+                                        Commessa {ddtInfo.commessa_numero || ''}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
