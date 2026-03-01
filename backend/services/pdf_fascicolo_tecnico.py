@@ -324,12 +324,12 @@ def generate_rapporto_vt_pdf(company: dict, commessa: dict, client_name: str, vt
     .params td {{ padding:3px 6px; font-size:8.5pt; border:1px solid #000; }}
     .params .plbl {{ font-weight:700; background:#f0f0f0; width:22%; }}
     </style></head><body>
-    {_header_html(biz, addr, piva, phone, email, 'Rapporto di Esame Visivo - Dimensionale', f'MOD. 06 Rev. 0')}
+    {_header_html(biz, addr, piva, phone, email, 'Rapporto di Esame Visivo - Dimensionale', 'MOD. 06 Rev. 0', logo)}
     <p style="text-align:center;font-size:8pt;margin:2px 0;">Report VT N. {report_num} — Data: {report_data}</p>
 
     <table class="params">
         <tr><td class="plbl">Cliente:</td><td>{client_name}</td><td class="plbl">Commessa / Ordine:</td><td>{comm_num}</td></tr>
-        <tr><td class="plbl">DWG N.:</td><td>{disegno}</td><td class="plbl">PCQ N.:</td><td>{comm_num}</td></tr>
+        <tr><td class="plbl">DWG N.:</td><td>{disegno}</td><td class="plbl">Classe Esecuzione:</td><td>{classe_exec}</td></tr>
         <tr><td class="plbl">Oggetto:</td><td colspan="3">{comm_title}</td></tr>
         <tr><td class="plbl">Processo saldatura:</td><td>{processo_saldatura}</td><td class="plbl">Norma / Procedura:</td><td>{norma_procedura}</td></tr>
         <tr><td class="plbl">Accettabilita':</td><td>{accettabilita}</td><td class="plbl">Materiale:</td><td>{materiale}</td></tr>
