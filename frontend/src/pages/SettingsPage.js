@@ -469,6 +469,38 @@ export default function SettingsPage() {
                                 </div>
                             </CardContent>
                         </Card>
+
+                        {/* Certificazione EN 1090 */}
+                        <Card className="border-gray-200 mt-4">
+                            <CardHeader className="bg-blue-50 border-b border-gray-200">
+                                <CardTitle>Certificazione EN 1090</CardTitle>
+                                <CardDescription>Dati dell'ente certificatore e del responsabile. Vengono auto-compilati nel Fascicolo Tecnico.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4 pt-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <Label htmlFor="responsabile_nome">Responsabile / Redatto da</Label>
+                                        <Input id="responsabile_nome" value={settings.responsabile_nome} onChange={e => updateField('responsabile_nome', e.target.value)} placeholder="Nome Cognome dell'amministratore" data-testid="input-responsabile-nome" />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="ruolo_firmatario">Ruolo Firmatario</Label>
+                                        <Input id="ruolo_firmatario" value={settings.ruolo_firmatario} onChange={e => updateField('ruolo_firmatario', e.target.value)} placeholder="es. Legale Rappresentante" data-testid="input-ruolo-firmatario" />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="ente_certificatore">Ente Certificatore</Label>
+                                        <Input id="ente_certificatore" value={settings.ente_certificatore} onChange={e => updateField('ente_certificatore', e.target.value)} placeholder="es. Rina Service" data-testid="input-ente-certificatore" />
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="ente_certificatore_numero">Numero Ente</Label>
+                                        <Input id="ente_certificatore_numero" value={settings.ente_certificatore_numero} onChange={e => updateField('ente_certificatore_numero', e.target.value)} placeholder="es. 0474" data-testid="input-ente-numero" />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <Label htmlFor="certificato_en1090_numero">Numero Certificato EN 1090</Label>
+                                        <Input id="certificato_en1090_numero" value={settings.certificato_en1090_numero} onChange={e => updateField('certificato_en1090_numero', e.target.value)} placeholder="Numero del certificato rilasciato dall'ente" data-testid="input-certificato-en1090" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
                     </TabsContent>
 
                     <TabsContent value="condizioni">
