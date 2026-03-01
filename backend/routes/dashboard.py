@@ -97,11 +97,17 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
     fatturato_mensile = []
     mesi_it = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"]
     for i in range(5, -1, -1):
-        m_start = (now.replace(day=1) - timedelta(days=i * 30)).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        if m_start.month == 12:
-            m_end = m_start.replace(year=m_start.year + 1, month=1)
+        # Precise month calculation using month arithmetic
+        target_month = now.month - i
+        target_year = now.year
+        while target_month <= 0:
+            target_month += 12
+            target_year -= 1
+        m_start = datetime(target_year, target_month, 1, tzinfo=timezone.utc)
+        if target_month == 12:
+            m_end = datetime(target_year + 1, 1, 1, tzinfo=timezone.utc)
         else:
-            m_end = m_start.replace(month=m_start.month + 1)
+            m_end = datetime(target_year, target_month + 1, 1, tzinfo=timezone.utc)
         pipeline_m = [
             {"$match": {
                 "user_id": uid,
