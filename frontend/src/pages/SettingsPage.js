@@ -401,9 +401,65 @@ export default function SettingsPage() {
                                 </div>
                             </CardContent>
                         </Card>
-                    </TabsContent>
 
-                    <TabsContent value="condizioni">
+                        {/* Firma Digitale */}
+                        <Card className="border-gray-200 mt-4">
+                            <CardHeader className="bg-blue-50 border-b border-gray-200">
+                                <CardTitle>Firma Digitale</CardTitle>
+                                <CardDescription>Immagine della firma che verrà inserita automaticamente nei PDF generati (Fascicolo Tecnico, DOP, ecc.)</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div>
+                                {settings.firma_digitale && (
+                                    <div className="mb-3 flex items-center gap-4">
+                                        <div className="border rounded p-2 bg-white">
+                                            <img
+                                                src={settings.firma_digitale}
+                                                alt="Firma digitale"
+                                                style={{ maxHeight: '60px', maxWidth: '200px' }}
+                                            />
+                                        </div>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-red-600"
+                                            data-testid="btn-remove-firma"
+                                            onClick={() => updateField('firma_digitale', '')}
+                                        >
+                                            Rimuovi firma
+                                        </Button>
+                                    </div>
+                                )}
+                                    <Label>Carica Firma (PNG, JPG, max 500KB)</Label>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 text-sm">
+                                            <span>{settings.firma_digitale ? 'Cambia firma' : 'Seleziona un file immagine'}</span>
+                                            <input
+                                                type="file"
+                                                accept="image/png,image/jpeg"
+                                                className="hidden"
+                                                data-testid="input-firma-upload"
+                                                onChange={(e) => {
+                                                    const file = e.target.files[0];
+                                                    if (!file) return;
+                                                    if (file.size > 500 * 1024) {
+                                                        toast.error('Il file è troppo grande (max 500KB)');
+                                                        return;
+                                                    }
+                                                    const reader = new FileReader();
+                                                    reader.onload = (ev) => {
+                                                        updateField('firma_digitale', ev.target.result);
+                                                    };
+                                                    reader.readAsDataURL(file);
+                                                    e.target.value = '';
+                                                }}
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
                         <Card className="border-gray-200">
                             <CardHeader className="bg-blue-50 border-b border-gray-200">
                                 <CardTitle>Condizioni di Vendita</CardTitle>
