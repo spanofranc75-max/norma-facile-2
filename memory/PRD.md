@@ -358,6 +358,11 @@ Applicazione full-stack per la gestione di certificazioni EN 1090 e EN 13241, pr
 - **Sidebar**: Label aggiornata a "Sostenibilita & CO2"
 - Testing: 100% backend (10/10), 100% frontend (iteration_66)
 
+### Tooltip su Bottoni Disabilitati (Phase 58b - Mar 2026)
+- **Componente DisabledTooltip**: Wrapper riutilizzabile che spiega all'utente perche un bottone e disabilitato
+- **Applicato su**: PreventivoEditorPage (Compliance), CommessaHubPage (Collega Modulo), CommessaOpsPanel (Crea DDT C/L)
+- Nuovo file: `/app/frontend/src/components/DisabledTooltip.js`
+
 ## Issue Pendenti
 - **P1**: Login post-deploy fallisce (caching PWA/Service Worker)
 - **P2**: Account test non funziona da UI
