@@ -183,6 +183,7 @@ export default function DDTListPage() {
                                         <TableHead className="text-white font-medium">Numero</TableHead>
                                         <TableHead className="text-white font-medium">Tipo</TableHead>
                                         <TableHead className="text-white font-medium">Cliente</TableHead>
+                                        <TableHead className="text-white font-medium">Commessa</TableHead>
                                         <TableHead className="text-white font-medium">Causale</TableHead>
                                         <TableHead className="text-white font-medium text-right">Totale</TableHead>
                                         <TableHead className="text-white font-medium">Stato</TableHead>
