@@ -99,6 +99,30 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa cen
 - Calcolo giorni apertura NC
 - Testato: 51/51 backend pytest + 20/20 frontend (iteration_91.json)
 
+### Quality Hub Dashboard (Mar 2026)
+- Dashboard riepilogativa /quality-hub — visione unificata di tutti gli alert qualità
+- Banner alert con conteggio totale elementi che richiedono attenzione
+- KPI Cards cliccabili: Saldatori, Apparecchiature, NC Aperte, Audit Anno, Documenti
+- Sezione Patentini: lista patentini scaduti/in scadenza con badge stato
+- Sezione Strumenti: lista tarature scadute/in scadenza
+- Sezione NC Aperte: lista non conformità con priorità e giorni apertura
+- Card prossimo audit programmato
+- Backend: /api/quality-hub/summary (aggregazione dati da 5 collection)
+- Testato: 26/26 backend + 16/16 frontend (iteration_92.json)
+
+### Smart Assign: Integrazione Registri → Commessa (Mar 2026)
+- Backend: /api/smart-assign/welders e /api/smart-assign/instruments (lookup con stato)
+- Frontend FascicoloTecnicoSection: "Importa da Registro Saldatori" con select + alert stato patentino
+- Auto-compilazione campi saldatore/punzone nel Registro Saldatura
+- Qualifiche saldatore mostrate come badge con data scadenza
+- Piano Controllo: select strumento dal registro con warning taratura scaduta
+- Campo strumento ibrido: seleziona da registro OPPURE scrivi manualmente
+
+### Fix Critico: babel-metadata-plugin (Mar 2026)
+- Corretto bug null pointer in plugins/visual-edits/babel-metadata-plugin.js (linea 936)
+- importPath.parentPath.parentPath era null per import top-level → null-safe check aggiunto
+- Risolto: tutte le pagine con import lucide-react compilano correttamente
+
 ## Backlog
 - P1: Integrare patentini saldatori nel "Super Fascicolo Tecnico" (auto-allegare PDF validi per saldatori della commessa)
 - P1: Fatture in Cloud SDI (necessita credenziali utente), verifica parsing AI
