@@ -144,7 +144,7 @@ def generate_dop_pdf(company: dict, commessa: dict, client_name: str, dop_data: 
 # 2. CE — Marcatura CE (etichetta identica all'originale)
 # ══════════════════════════════════════════════════════════════
 def generate_ce_pdf(company: dict, commessa: dict, client_name: str, ce_data: dict) -> BytesIO:
-    biz, addr, piva, phone, email = _co(company)
+    biz, addr, piva, phone, email, logo, firma = _co(company)
     comm_num = commessa.get("numero", "")
     comm_title = commessa.get("title", "")
     classe_exec = commessa.get("classe_esecuzione", "EXC2")
