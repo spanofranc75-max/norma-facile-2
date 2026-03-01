@@ -43,6 +43,7 @@ import ReportCAMPage from './pages/ReportCAMPage';
 import ArchivioCertificatiPage from './pages/ArchivioCertificatiPage';
 import QualitySystemPage from './pages/QualitySystemPage';
 import InstrumentsPage from './pages/InstrumentsPage';
+import WeldersPage from './pages/WeldersPage';
 import SettingsPage from './pages/SettingsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
