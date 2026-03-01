@@ -347,3 +347,201 @@ def generate_rapporto_vt_pdf(company: dict, commessa: dict, client_name: str, vt
     <div class="footer">{biz} | {email} | Generato da NormaFacile 2.0</div>
     </body></html>"""
     return _render(html)
+
+
+# ══════════════════════════════════════════════════════════════
+# 5. Registro di Saldatura (MOD. 04)
+# ══════════════════════════════════════════════════════════════
+DEFAULT_SALDATURE = []  # User adds welding operations manually
+
+def generate_registro_saldatura_pdf(company: dict, commessa: dict, client_name: str, rs_data: dict) -> BytesIO:
+    biz, addr, piva, phone, email = _co(company)
+    comm_num = commessa.get("numero", "")
+    comm_title = commessa.get("title", "")
+    data_emissione = rs_data.get("data_emissione", "")
+    firma_cs = rs_data.get("firma_cs", "")
+    perc_vt = rs_data.get("perc_vt", "100")
+    perc_mt_pt = rs_data.get("perc_mt_pt", "0")
+    perc_rx_ut = rs_data.get("perc_rx_ut", "0")
+    saldature = rs_data.get("saldature", [])
+
+    rows = ""
+    for s in saldature:
+        vt_esito = s.get("vt_esito", "")
+        cnd_tipo = s.get("cnd_tipo", "")
+        rip_esito = s.get("rip_esito", "")
+        rows += f"""<tr>
+            <td>{s.get('numero_disegno','')}</td>
+            <td style="font-size:7pt;text-align:left;padding-left:3px;">{s.get('numero_saldatura','')}</td>
+            <td>{s.get('periodo','')}</td>
+            <td>{s.get('punzone_saldatore','')}</td>
+            <td>{s.get('diametro','')}</td>
+            <td>{s.get('spessore','')}</td>
+            <td>{s.get('materiale_base','')}</td>
+            <td>{s.get('wps_numero','')}</td>
+            <td style="color:{'green' if vt_esito=='Pos' else ('red' if vt_esito=='Neg' else '#333')};">{vt_esito}</td>
+            <td>{s.get('vt_data','')}</td>
+            <td>{s.get('vt_firma','')}</td>
+            <td>{cnd_tipo}</td>
+            <td>{s.get('cnd_rapporto','')}</td>
+            <td>{s.get('cnd_data','')}</td>
+            <td>{s.get('cnd_firma','')}</td>
+            <td>{rip_esito}</td>
+            <td>{s.get('rip_tratto','')}</td>
+            <td>{s.get('rip_rapporto','')}</td>
+            <td>{s.get('rip_data','')}</td>
+        </tr>"""
+
+    if not saldature:
+        rows = '<tr><td colspan="19" style="padding:12px;color:#999;text-align:center;">Nessuna saldatura registrata</td></tr>'
+
+    html = f"""<!DOCTYPE html><html><head><style>{BASE_CSS}
+    @page {{ size: A4 landscape; margin: 8mm 6mm; }}
+    table.rs th {{ font-size: 6.5pt; padding: 2px 1px; }}
+    table.rs td {{ font-size: 7pt; padding: 2px 2px; text-align: center; }}
+    .perc-box {{ display: inline-block; border: 1px solid #1e3a5f; padding: 1px 6px; margin: 0 4px; font-size: 8pt; font-weight: 600; }}
+    </style></head><body>
+    {_header_html(biz, addr, piva, phone, email)}
+    <div class="doc-title" style="font-size:12pt;">Registro di Saldatura</div>
+    <div class="doc-mod">MOD. 04 Rev. 0 — Data emissione: {data_emissione}</div>
+    <table class="info" style="width:100%;border-collapse:collapse;">
+        <tr><td class="lbl">Cliente:</td><td class="val">{client_name}</td><td class="lbl">Commessa:</td><td class="val">{comm_num}</td><td class="lbl">Firma CS:</td><td class="val">{firma_cs}</td></tr>
+        <tr><td class="lbl">Descrizione:</td><td class="val" colspan="5">{comm_title}</td></tr>
+    </table>
+    <div style="margin:4px 0;font-size:8pt;">
+        % CONTROLLI: <span class="perc-box">VT {perc_vt}%</span> <span class="perc-box">MT/PT {perc_mt_pt}%</span> <span class="perc-box">RX-RY/UT {perc_rx_ut}%</span>
+    </div>
+    <table class="main rs">
+        <thead><tr>
+            <th style="width:6%">N. Disegno</th><th style="width:10%">N. Saldatura</th><th style="width:4%">Periodo</th><th style="width:6%">Punzone Saldatore</th>
+            <th style="width:3%">Diam.</th><th style="width:3%">Spess.</th><th style="width:6%">Mat. Base</th><th style="width:4%">WPS N.</th>
+            <th colspan="3" style="background:#2d5f3f;width:10%;">VISUAL TEST</th>
+            <th colspan="4" style="background:#5f3f2d;width:14%;">CND</th>
+            <th colspan="4" style="background:#4a2d5f;width:14%;">RIPARAZIONE</th>
+        </tr>
+        <tr>
+            <th></th><th></th><th></th><th></th><th></th><th></th><th></th><th></th>
+            <th style="background:#2d5f3f;">Esito</th><th style="background:#2d5f3f;">Data</th><th style="background:#2d5f3f;">Firma</th>
+            <th style="background:#5f3f2d;">Tipo</th><th style="background:#5f3f2d;">Rapp. N.</th><th style="background:#5f3f2d;">Data</th><th style="background:#5f3f2d;">Firma</th>
+            <th style="background:#4a2d5f;">Esito</th><th style="background:#4a2d5f;">Tratto</th><th style="background:#4a2d5f;">Rapp. N.</th><th style="background:#4a2d5f;">Data</th>
+        </tr></thead>
+        <tbody>{rows}</tbody>
+    </table>
+    <div class="footer">{biz} | {email} | Generato da NormaFacile 2.0</div>
+    </body></html>"""
+    return _render(html)
+
+
+# ══════════════════════════════════════════════════════════════
+# 6. Riesame Tecnico (MOD. 01) — Technical Review
+# ══════════════════════════════════════════════════════════════
+DEFAULT_REQUISITI = [
+    {"requisito": "E' stata definita, in accordo con il Cliente, la classe di esecuzione della commessa?", "note_default": ""},
+    {"requisito": "L'officina, per attrezzature e capacita di lavoro, e idonea per la commessa?", "note_default": ""},
+    {"requisito": "E' stato definito il materiale base per la commessa?", "note_default": ""},
+    {"requisito": "Sono state definite le tolleranze da applicare secondo la norma UNI EN 1090-2?", "note_default": "Tolleranza secondo UNI 1090-2 B6 Taglio - B8 Foratura"},
+    {"requisito": "Sono definite le caratteristiche del giunto saldato?", "note_default": ""},
+    {"requisito": "Sono definiti requisiti per i criteri di accettabilita delle saldature?", "note_default": ""},
+    {"requisito": "E' definita la posizione delle saldature?", "note_default": ""},
+    {"requisito": "E' definita la sequenza delle saldature?", "note_default": ""},
+    {"requisito": "E' definita l'accessibilita delle saldature, inclusa l'accessibilita per le ispezioni e CND?", "note_default": ""},
+    {"requisito": "Le WPQR coprono le caratteristiche delle saldature di questa commessa?", "note_default": ""},
+    {"requisito": "Sono disponibili le procedure per i CND?", "note_default": ""},
+    {"requisito": "Sono disponibili procedure per il trattamento termico?", "note_default": ""},
+    {"requisito": "La qualifica del personale copre le caratteristiche delle saldature di questa commessa?", "note_default": "Elenco Saldatori"},
+    {"requisito": "Le WPS emesse coprono le caratteristiche di questa commessa?", "note_default": ""},
+    {"requisito": "E' prevista la registrazione della rintracciabilita di materiali e saldature?", "note_default": "Registro di saldatura - scheda rintracciabilita"},
+    {"requisito": "E' previsto l'intervento di ente terzo?", "note_default": ""},
+    {"requisito": "Sono previsti sub-fornitori nel processo? (CND, zincatura, trattamento termico)", "note_default": ""},
+    {"requisito": "Sono previsti CND supplementari in accordo al prospetto 24 della ISO 1090-2?", "note_default": ""},
+    {"requisito": "E' stato emesso un PCQ specifico?", "note_default": ""},
+    {"requisito": "Sono previsti trattamenti termici dopo la saldatura?", "note_default": ""},
+    {"requisito": "Sono previsti trattamenti superficiali? (specificare spessore se verniciatura)", "note_default": ""},
+    {"requisito": "E' stato definito il grado di preparazione della superficie e quindi la durabilita?", "note_default": ""},
+    {"requisito": "Sono presenti altri requisiti per la saldatura?", "note_default": ""},
+    {"requisito": "Sono previsti metodi particolari per la saldatura?", "note_default": ""},
+    {"requisito": "Sono definiti dimensioni e dettagli della preparazione dei giunti saldati?", "note_default": ""},
+    {"requisito": "Le saldature sono fatte tutte in officina?", "note_default": ""},
+    {"requisito": "Le condizioni ambientali di saldatura sono accettabili?", "note_default": ""},
+    {"requisito": "E' prevista la registrazione e gestione delle Non Conformita e riparazioni?", "note_default": "Procedure Pro 07"},
+]
+
+DEFAULT_ITT = [
+    {"caratteristica": "Tolleranza delle dimensioni e della forma", "metodo": "Appendice B UNI EN 1090-2 e disegni", "criterio": "EN 1090-1:2012 secondo 5.3"},
+    {"caratteristica": "Saldabilita", "metodo": "Certificati materiale base 3.1", "criterio": "EN 1090-1:2012 secondo 5.4"},
+    {"caratteristica": "Resistenza alla rottura / Resistenza all'urto", "metodo": "Certificati materiale base 3.1", "criterio": "EN 1090-1:2012 secondo 5.5 e 5.10"},
+    {"caratteristica": "Capacita portante", "metodo": "Progetto esecutivo fornito dal Cliente", "criterio": ""},
+    {"caratteristica": "Deformazione allo stato limite di esercizio", "metodo": "Progetto esecutivo fornito dal Cliente", "criterio": ""},
+    {"caratteristica": "Resistenza alla fatica", "metodo": "Progetto esecutivo fornito dal Cliente", "criterio": ""},
+    {"caratteristica": "Resistenza al fuoco", "metodo": "Progetto esecutivo fornito dal Cliente", "criterio": ""},
+    {"caratteristica": "Reazione al fuoco", "metodo": "Certificati materiale base 3.1", "criterio": "EN 1090-1:2012 secondo 5.8"},
+    {"caratteristica": "Sostanze pericolose", "metodo": "", "criterio": ""},
+    {"caratteristica": "Durabilita", "metodo": "Grado di finitura EN 1090-2 appendice F", "criterio": "EN 1090-1:2012 secondo 5.11"},
+]
+
+def generate_riesame_tecnico_pdf(company: dict, commessa: dict, client_name: str, rt_data: dict) -> BytesIO:
+    biz, addr, piva, phone, email = _co(company)
+    comm_num = commessa.get("numero", "")
+    comm_title = commessa.get("title", "")
+    classe_exec = commessa.get("classe_esecuzione", "EXC2")
+
+    requisiti = rt_data.get("requisiti", [])
+    if not requisiti:
+        requisiti = [{"requisito": r["requisito"], "risposta": "si", "note": r["note_default"]} for r in DEFAULT_REQUISITI]
+
+    # Build requirements table
+    req_rows = ""
+    for i, r in enumerate(requisiti, 1):
+        risp = r.get("risposta", "")
+        si_chk = '<span style="color:green;">&#9745;</span>' if risp == "si" else '<span style="color:#ccc;">&#9744;</span>'
+        no_chk = '<span style="color:red;">&#9745;</span>' if risp == "no" else '<span style="color:#ccc;">&#9744;</span>'
+        na_chk = '<span style="color:#888;">&#9745;</span>' if risp == "na" else '<span style="color:#ccc;">&#9744;</span>'
+        req_rows += f'<tr><td style="text-align:left;font-size:7.5pt;padding:3px 4px;">{i}. {r.get("requisito","")}</td><td>{si_chk}</td><td>{no_chk}</td><td>{na_chk}</td><td style="text-align:left;font-size:7pt;">{r.get("note","")}</td></tr>'
+
+    # Build ITT table
+    itt_items = rt_data.get("itt", [])
+    if not itt_items:
+        itt_items = [dict(c) for c in DEFAULT_ITT]
+    itt_rows = ""
+    for item in itt_items:
+        esito = item.get("esito_conformita", "NPD")
+        itt_rows += f'<tr><td style="text-align:left;">{item.get("caratteristica","")}</td><td style="text-align:left;font-size:7pt;">{item.get("metodo","")}</td><td style="text-align:left;font-size:7pt;">{esito}</td><td style="font-size:7pt;">{item.get("criterio","")}</td></tr>'
+
+    decisione = rt_data.get("decisione", "procedere")
+    proc_chk = '<span style="color:green;font-size:12pt;">&#9745;</span>' if decisione == "procedere" else '<span style="color:#ccc;font-size:12pt;">&#9744;</span>'
+    non_proc_chk = '<span style="color:red;font-size:12pt;">&#9745;</span>' if decisione == "non_procedere" else '<span style="color:#ccc;font-size:12pt;">&#9744;</span>'
+
+    html = f"""<!DOCTYPE html><html><head><style>{BASE_CSS}
+    @page {{ size: A4; margin: 10mm 8mm; }}
+    </style></head><body>
+    {_header_html(biz, addr, piva, phone, email)}
+    <div class="doc-title">Riesame Tecnico</div>
+    <div class="doc-mod">MOD. 01 Rev. 00 — EN 1090</div>
+    <table class="info" style="width:100%;border-collapse:collapse;">
+        <tr><td class="lbl">Cliente:</td><td class="val">{client_name}</td><td class="lbl">Commessa:</td><td class="val">{comm_num}</td></tr>
+        <tr><td class="lbl">Descrizione:</td><td class="val" colspan="3">{comm_title}</td></tr>
+    </table>
+    <table class="main" style="margin-top:4px;">
+        <thead><tr><th style="width:40%;text-align:left;padding-left:4px;">Requisiti</th><th style="width:5%">Si</th><th style="width:5%">No</th><th style="width:5%">N.A.</th><th style="width:45%;text-align:left;padding-left:4px;">Note / Riferimenti</th></tr></thead>
+        <tbody>{req_rows}</tbody>
+    </table>
+    <div style="margin:8px 0;padding:6px;border:2px solid #1e3a5f;border-radius:4px;">
+        <p style="font-size:9pt;font-weight:600;color:#1e3a5f;">Sulla base dell'analisi di cui sopra si decide di:</p>
+        <p style="font-size:10pt;margin:4px 0;">{proc_chk} <strong>PROCEDERE</strong> &nbsp;&nbsp;&nbsp; {non_proc_chk} <strong>NON PROCEDERE</strong> &nbsp; alla Pianificazione delle lavorazioni dell'Officina.</p>
+    </div>
+
+    <div style="page-break-before:always;"></div>
+    {_header_html(biz, addr, piva, phone, email)}
+    <div class="doc-title" style="font-size:11pt;">ITT di Commessa — {comm_num}</div>
+    <table class="main">
+        <thead><tr><th style="width:22%;text-align:left;padding-left:4px;">Caratteristica Essenziale</th><th style="width:25%;text-align:left;padding-left:4px;">Metodo di Prova</th><th style="width:30%;text-align:left;padding-left:4px;">Esito di Conformita</th><th style="width:23%;text-align:left;padding-left:4px;">Criterio di Conformita</th></tr></thead>
+        <tbody>{itt_rows}</tbody>
+    </table>
+    <p style="font-size:7pt;color:#888;margin-top:4px;">Note: Allegare report prove dimensionali, scheda rintracciabilita materiali e relativi certificati</p>
+    <div class="sign-area">
+        <div class="sign-box"><div class="sign-label">Data e Firma</div><div class="sign-line"></div></div>
+        <div class="sign-box"><div class="sign-label">Esito PROVE ITT: C / NC</div><div class="sign-line"></div></div>
+    </div>
+    <div class="footer">{biz} | {email} | Generato da NormaFacile 2.0</div>
+    </body></html>"""
+    return _render(html)
