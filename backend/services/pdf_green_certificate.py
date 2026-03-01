@@ -263,12 +263,11 @@ def generate_green_certificate(
 
     # CO2 calculations
     co2_saved_kg = co2_data.get("co2_risparmiata_kg", 0)
-    co2_saved_t = co2_data.get("co2_risparmiata_t", 0)
     reduction_pct = co2_data.get("riduzione_percentuale", 0)
 
     # Totals from lotti
-    peso_totale = sum(l.get("peso_kg", 0) for l in lotti)
-    peso_riciclato = sum(l.get("peso_kg", 0) * l.get("percentuale_riciclato", 0) / 100 for l in lotti)
+    peso_totale = sum(lot.get("peso_kg", 0) for lot in lotti)
+    peso_riciclato = sum(lot.get("peso_kg", 0) * lot.get("percentuale_riciclato", 0) / 100 for lot in lotti)
     perc_media = round(peso_riciclato / peso_totale * 100, 1) if peso_totale > 0 else 0
     alberi = round(co2_saved_kg / KG_CO2_PER_ALBERO, 1) if co2_saved_kg > 0 else 0
 
