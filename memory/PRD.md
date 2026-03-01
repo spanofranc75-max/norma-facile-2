@@ -159,6 +159,11 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa cen
 - **Fix:** Score adattivo — solo categorie rilevanti al workflow dell'utente. Nuove: Commesse & Produzione, Sistema Qualità. Normalizzato a 100
 - Risultato: score realistico 47/100 "Artigiano in Crescita" per lo stesso utente
 
+### Stabilizzazione (Mar 2026)
+- Test di stabilizzazione completo: 23/23 backend + frontend Playwright
+- Tutti i fix della sessione verificati senza regressioni (iteration_95.json)
+- Score qualità realistico: 72/100 "Artigiano Esperto"
+
 ## Backlog
 - P1: Fatture in Cloud SDI (necessita credenziali utente), verifica parsing AI
 - P2: Test e2e completo, seeding dati, coesione flusso
