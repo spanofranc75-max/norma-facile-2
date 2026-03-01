@@ -757,20 +757,29 @@ async def send_oda_email_endpoint(cid: str, ordine_id: str, payload: dict = None
     filename = f"OdA_{ordine_id}.pdf"
     
     # Send email
-    from services.email_service import send_oda_email
+    from services.email_service import send_oda_email, send_email_with_attachment
+    payload = payload or {}
     importo_totale = oda.get("importo_totale", 0)
     commessa_numero = doc.get("numero", "N/D")
-    
-    success = await send_oda_email(
-        to_email=to_email,
-        fornitore_name=fornitore_nome,
-        ordine_id=ordine_id,
-        commessa_numero=commessa_numero,
-        company_name=company_name,
-        importo_totale=importo_totale,
-        pdf_bytes=pdf_bytes,
-        filename=filename,
-    )
+
+    if payload.get("custom_subject") or payload.get("custom_body"):
+        custom_subject = payload.get("custom_subject") or f"Ordine n. {ordine_id} - Commessa {commessa_numero} - {company_name}"
+        custom_body = payload.get("custom_body") or ""
+        success = await send_email_with_attachment(
+            to_email=to_email, subject=custom_subject, body=custom_body,
+            pdf_bytes=pdf_bytes, filename=filename,
+        )
+    else:
+        success = await send_oda_email(
+            to_email=to_email,
+            fornitore_name=fornitore_nome,
+            ordine_id=ordine_id,
+            commessa_numero=commessa_numero,
+            company_name=company_name,
+            importo_totale=importo_totale,
+            pdf_bytes=pdf_bytes,
+            filename=filename,
+        )
     
     if not success:
         raise HTTPException(500, "Invio email fallito. Verifica la configurazione Resend in Impostazioni.")
