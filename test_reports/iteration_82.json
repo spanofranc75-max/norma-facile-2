@@ -1,0 +1,122 @@
+{
+  "summary": "Iteration 82 backend testing completed successfully. All 22 tests passed (100%). Tested the complete 'Rientro Conto Lavoro' (return from subcontracting) workflow including: POST rientro with multipart form data, state validation (requires 'inviato' or 'in_lavorazione'), PATCH verifica for closure, NCR PDF generation for non-conformity, and certificate upload. All features working as expected.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration82_rientro_conto_lavoro.py",
+    "/app/test_reports/pytest/iteration82_rientro_cl_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration82_rientro_conto_lavoro.py"
+  ],
+  "success_rate": {
+    "backend": "100% (22/22 passed)",
+    "frontend": "Not tested (backend-only request)"
+  },
+  "test_credentials": "Test users, commesse, suppliers created/cleaned during pytest run",
+  "seed_data_creation": "Test commesse with conto_lavoro items, production phases (fasi_produzione), and suppliers created during tests, cleaned up after",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 82 adds Rientro Conto Lavoro workflow. Key endpoints tested: POST /api/commesse/{cid}/conto-lavoro/{cl_id}/rientro (multipart form with data_rientro, ddt_fornitore_numero, peso_rientrato_kg, esito_qc, certificato_file), PATCH /api/commesse/{cid}/conto-lavoro/{cl_id}/verifica (auto-completes production phase, links certificate to documenti), GET /api/commesse/{cid}/conto-lavoro/{cl_id}/ncr-pdf (generates Non-Conformity Report PDF). State validation enforced: rientro only allowed when stato='inviato' or 'in_lavorazione', verifica only when stato='rientrato'. Frontend has data-testid='cl-rientro-{cl_id}' and 'cl-verifica-{cl_id}' buttons.",
+  "features_tested": {
+    "health_endpoint": {
+      "status": "PASS",
+      "details": "GET /api/health returns {status: healthy}"
+    },
+    "create_conto_lavoro_verniciatura": {
+      "status": "PASS",
+      "details": "POST /api/commesse/{cid}/conto-lavoro creates C/L with tipo, fornitore, RAL, righe"
+    },
+    "rientro_state_validation": {
+      "status": "PASS",
+      "details": "POST rientro returns 400 when C/L stato is 'da_inviare' (requires 'inviato' or 'in_lavorazione')"
+    },
+    "rientro_conforme_without_file": {
+      "status": "PASS",
+      "details": "POST rientro with esito_qc='conforme' works without certificate file, changes stato to 'rientrato'"
+    },
+    "rientro_non_conforme_with_file": {
+      "status": "PASS",
+      "details": "POST rientro with esito_qc='non_conforme', motivo_non_conformita, and certificato_file upload works correctly"
+    },
+    "rientro_from_in_lavorazione": {
+      "status": "PASS",
+      "details": "POST rientro works when C/L stato is 'in_lavorazione' (alternative valid state)"
+    },
+    "rientro_conforme_con_riserva": {
+      "status": "PASS",
+      "details": "esito_qc='conforme_con_riserva' accepted and stored correctly"
+    },
+    "ncr_pdf_success": {
+      "status": "PASS",
+      "details": "GET /api/commesse/{cid}/conto-lavoro/{cl_id}/ncr-pdf returns valid PDF with Content-Type: application/pdf"
+    },
+    "ncr_pdf_contains_data": {
+      "status": "PASS",
+      "details": "NCR PDF generated >1KB with proper PDF header"
+    },
+    "ncr_pdf_not_found": {
+      "status": "PASS",
+      "details": "GET ncr-pdf returns 404 for non-existent cl_id"
+    },
+    "verifica_fails_when_not_rientrato": {
+      "status": "PASS",
+      "details": "PATCH verifica returns 400 when C/L stato is not 'rientrato'"
+    },
+    "verifica_success": {
+      "status": "PASS",
+      "details": "PATCH verifica changes stato to 'verificato' and closes C/L"
+    },
+    "verifica_non_conforme_cl": {
+      "status": "PASS",
+      "details": "PATCH verifica works for non_conforme C/L (allows closure even with non-conformity)"
+    },
+    "production_phase_auto_complete": {
+      "status": "PASS",
+      "details": "Verifica auto-completes related fasi_produzione (trattamenti superficiali/verniciatura)"
+    },
+    "certificate_linkage": {
+      "status": "PASS",
+      "details": "Uploaded certificate stored in C/L record (certificato_rientro_base64, certificato_rientro_filename)"
+    },
+    "regression_cl_update": {
+      "status": "PASS",
+      "details": "Standard PUT /api/commesse/{cid}/conto-lavoro/{cl_id} still works for status updates"
+    },
+    "regression_ops_endpoint": {
+      "status": "PASS",
+      "details": "GET /api/commesse/{cid}/ops returns complete conto_lavoro array"
+    },
+    "unauthorized_rientro": {
+      "status": "PASS",
+      "details": "POST rientro returns 401/403 without auth"
+    },
+    "unauthorized_verifica": {
+      "status": "PASS",
+      "details": "PATCH verifica returns 401/403 without auth"
+    },
+    "unauthorized_ncr_pdf": {
+      "status": "PASS",
+      "details": "GET ncr-pdf returns 401/403 without auth"
+    }
+  },
+  "workflow_tested": {
+    "description": "Complete Rientro Conto Lavoro workflow",
+    "steps": [
+      "1. Create C/L with tipo, fornitore, righe (POST /conto-lavoro) → stato='da_inviare'",
+      "2. Send to supplier (PUT /conto-lavoro/{cl_id}) → stato='inviato'",
+      "3. Register return (POST /conto-lavoro/{cl_id}/rientro) → stato='rientrato', stores all rientro fields",
+      "4. Verify and close (PATCH /conto-lavoro/{cl_id}/verifica) → stato='verificato', auto-completes production phase, links certificate",
+      "5. If non_conforme, generate NCR PDF (GET /conto-lavoro/{cl_id}/ncr-pdf)"
+    ]
+  }
+}
