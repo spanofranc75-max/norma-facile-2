@@ -164,6 +164,15 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa cen
 - Tutti i fix della sessione verificati senza regressioni (iteration_95.json)
 - Score qualità realistico: 72/100 "Artigiano Esperto"
 
+### Modulo Scadenziario & Imputazione Costi (Mar 2026)
+- **Scadenziario Dashboard** (`/scadenziario`): aggrega scadenze pagamenti, patentini, tarature, consegne
+- **KPI**: pagamenti scaduti, pagamenti mese, totale acquisti anno, inbox da processare
+- **Imputazione Costi**: assegna fatture ricevute a commessa (costi_reali) o magazzino (aggiorna giacenze + prezzo medio ponderato)
+- **FIC Sync**: endpoint pronto per sync FattureInCloud (attende token valido)
+- **Frontend**: pagina completa con KPIs, inbox, filtri tipo/stato, timeline raggruppata per mese
+- **Sidebar**: Scadenziario + Fatture Ricevute spostati in "Acquisti & Magazzino"
+- Testato: 23/23 backend + frontend Playwright (iteration_96.json)
+
 ## Backlog
 - P1: Fatture in Cloud SDI (necessita credenziali utente), verifica parsing AI
 - P2: Test e2e completo, seeding dati, coesione flusso
