@@ -94,6 +94,17 @@ export default function CommessaHubPage() {
 
     useEffect(() => { fetchHub(); }, [fetchHub]);
 
+    // Fetch cost analysis
+    useEffect(() => {
+        if (!commessaId) return;
+        (async () => {
+            try {
+                const data = await apiRequest(`/costs/commessa/${commessaId}`);
+                setCostAnalysis(data);
+            } catch { /* silent — no costs yet */ }
+        })();
+    }, [commessaId]);
+
     const handleEmitEvent = async (tipo) => {
         setEmitting(true);
         try {
