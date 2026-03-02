@@ -49,7 +49,7 @@ async def get_invoices(
     
     total = await db.invoices.count_documents(query)
     
-    invoices_cursor = db.invoices.find(query, {"_id": 0}).skip(skip).limit(limit).sort("created_at", -1)
+    invoices_cursor = db.invoices.find(query, {"_id": 0}).skip(skip).limit(limit).sort("issue_date", -1)
     invoices = await invoices_cursor.to_list(length=limit)
     
     # Populate client names
