@@ -53,6 +53,9 @@ from routes.consumables import router as consumables_router
 from routes.cost_control import router as cost_control_router
 from routes.backup import router as backup_router
 from routes.team import router as team_router
+from routes.notifications import router as notifications_router
+from routes.qrcode_gen import router as qrcode_router
+from routes.db_cleanup import router as cleanup_router
 
 # Configure logging
 logging.basicConfig(
@@ -66,8 +69,12 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
     logger.info("Norma Facile 2.0 starting up...")
+    # Start the watchdog scheduler
+    from services.notification_scheduler import start_scheduler, stop_scheduler
+    start_scheduler()
     yield
     # Shutdown
+    stop_scheduler()
     await close_database()
     logger.info("Norma Facile 2.0 shutting down...")
 
@@ -127,6 +134,9 @@ app.include_router(consumables_router, prefix="/api")
 app.include_router(cost_control_router, prefix="/api")
 app.include_router(backup_router, prefix="/api")
 app.include_router(team_router, prefix="/api")
+app.include_router(notifications_router, prefix="/api")
+app.include_router(qrcode_router, prefix="/api")
+app.include_router(cleanup_router, prefix="/api")
 
 
 @app.on_event("startup")
