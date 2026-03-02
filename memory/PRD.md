@@ -22,7 +22,7 @@ Italiano (l'utente comunica esclusivamente in italiano).
 
 ## Brand Identity
 - **Palette**: Navy #0F172A, Steel Grey #64748B, Lime Accent #84CC16
-- **Logo**: "1090" con "10" bianco e "90" grigio acciaio + "NORMA FACILE" in lime/grigio
+- **Logo**: logo-1090.jpeg (public folder)
 - **Stile**: Dark & Industrial, B2B, Split Screen login
 
 ---
@@ -48,17 +48,25 @@ Italiano (l'utente comunica esclusivamente in italiano).
 ### Amministrazione
 - Backup & Restore: Export JSON completo 19 collezioni
 - Migrazione dati da vecchia app
-- Fatture in Cloud ATTIVA (Company ID 1398737)
+- Fatture in Cloud ATTIVA
+
+### Legal & Compliance
+- **Disclaimer EN 1090**: Limitazione responsabilita', natura del servizio, obblighi utente (2026-03-02)
+- **Termini di Servizio**: Contratto, account, dati, proprieta' intellettuale
+- **Privacy Policy GDPR**: Informativa completa art. 13-14, diritti interessato, cookie
+- **LegalFooter**: componente riutilizzabile con P.IVA e link legali
+- **Checkbox accettazione ToS**: obbligatoria prima del login
 
 ### UI/UX
-- **Landing Page redesign**: Split Screen Dark Industrial con palette Navy/Steel/Lime (2026-03-02)
+- Landing Page Dark & Industrial Split Screen con logo reale
+- Responsive (mobile stacking)
 
 ---
 
 ## Backlog Prioritizzato
 
 ### P1 — Prossimi
-- Import reale fatture ricevute da FIC (endpoint sync-fic implementato)
+- Import reale fatture ricevute da FIC
 
 ### P2 — Futuri
 - Export CSV distinta di taglio per CNC
@@ -70,5 +78,6 @@ Italiano (l'utente comunica esclusivamente in italiano).
 ---
 
 ## Ultimo Aggiornamento: 2026-03-02
-- Redesign completo Landing Page con tema Dark & Industrial Split Screen
-- Palette allineata al nuovo logo: Navy #0F172A, Steel #64748B, Lime #84CC16
+- Implementato pacchetto compliance legale completo (Disclaimer, ToS, Privacy GDPR)
+- Checkbox accettazione obbligatoria nella landing page
+- LegalFooter in tutte le pagine (landing + dashboard)
