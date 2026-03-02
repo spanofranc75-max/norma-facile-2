@@ -748,8 +748,11 @@ def analyze_preventivo_content(preventivo: dict):
     conflict = has_1090 and has_13241
 
     # Detect motorization from full text
-    full_text = " ".join([preventivo.get("subject", ""), preventivo.get("notes", "")] +
-                         [l.get("description", "") for l in preventivo.get("lines", [])]).lower()
+    # Handle None values: .get() returns None if key exists with None value
+    subject = preventivo.get("subject") or ""
+    notes = preventivo.get("notes") or ""
+    line_descs = [(l.get("description") or "") for l in preventivo.get("lines", [])]
+    full_text = " ".join([subject, notes] + line_descs).lower()
     is_motorizzato = any(kw in full_text for kw in KW_MOTOR)
 
     if conflict:
