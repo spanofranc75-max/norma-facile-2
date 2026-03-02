@@ -46,6 +46,7 @@ from routes.smart_assign import router as smart_assign_router
 from routes.migrazione import router as migrazione_router
 from routes.gate_certification import router as gate_cert_router
 from routes.consumables import router as consumables_router
+from routes.cost_control import router as cost_control_router
 
 # Configure logging
 logging.basicConfig(
