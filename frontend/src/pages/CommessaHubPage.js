@@ -206,6 +206,9 @@ export default function CommessaHubPage() {
                     <Button variant="outline" size="sm" onClick={() => { setLinkOpen(true); fetchAvailableModules(linkType); }} data-testid="btn-link-module">
                         <Link2 className="h-3.5 w-3.5 mr-1.5" /> Collega Modulo
                     </Button>
+                    <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} data-testid="btn-qr-code">
+                        <QrCode className="h-3.5 w-3.5 mr-1.5" /> QR Code
+                    </Button>
                     <Button size="sm" onClick={handleDownloadDossier} className="bg-[#0055FF] text-white hover:bg-[#0044CC]" data-testid="btn-dossier">
                         <Download className="h-3.5 w-3.5 mr-1.5" /> Dossier PDF
                     </Button>
