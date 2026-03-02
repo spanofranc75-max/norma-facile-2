@@ -15,8 +15,11 @@ logger = logging.getLogger(__name__)
 @router.get("/commessa/{commessa_id}")
 async def generate_commessa_qr(commessa_id: str, user: dict = Depends(get_current_user)):
     """Generate a QR code PNG that links to the commessa page."""
-    # Verify commessa exists
-    commessa = await db.commesse.find_one({"commessa_id": commessa_id}, {"_id": 0, "numero": 1, "cliente_nome": 1})
+    # Verify commessa exists (scoped to user)
+    commessa = await db.commesse.find_one(
+        {"commessa_id": commessa_id, "user_id": user["user_id"]},
+        {"_id": 0, "numero": 1, "cliente_nome": 1},
+    )
     if not commessa:
         raise HTTPException(404, "Commessa non trovata")
 
@@ -44,7 +47,7 @@ async def generate_commessa_qr(commessa_id: str, user: dict = Depends(get_curren
 async def get_commessa_qr_data(commessa_id: str, user: dict = Depends(get_current_user)):
     """Return the URL and metadata for a commessa QR code (for frontend embedding)."""
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id},
+        {"commessa_id": commessa_id, "user_id": user["user_id"]},
         {"_id": 0, "numero": 1, "cliente_nome": 1, "oggetto": 1},
     )
     if not commessa:
