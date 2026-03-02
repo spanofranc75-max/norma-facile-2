@@ -73,6 +73,7 @@ Italiano (l'utente comunica esclusivamente in italiano).
 - Landing Page Dark & Industrial Split Screen con logo reale
 - Responsive (mobile stacking)
 - Tabella preventivi ottimizzata (table-fixed, colonna Descrizione allargata)
+- Tipi Pagamento stile Invoicex (quote, simulazione scadenze, codice FE)
 
 ---
 
@@ -115,4 +116,5 @@ Italiano (l'utente comunica esclusivamente in italiano).
 ---
 
 ## Ultimo Aggiornamento: 2026-03-02
+- v2.1.2: Tipi Pagamento stile Invoicex — quote personalizzate, simulazione scadenze, codice FE (MP01-MP23), divisione automatica, giorni custom
 - v2.1.1: Fix layout tabella preventivi (table-fixed), pulizia autenticazione frontend completa
