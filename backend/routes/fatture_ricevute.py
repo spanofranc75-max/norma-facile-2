@@ -503,6 +503,16 @@ async def import_xml_fattura(
     await db.fatture_ricevute.insert_one(doc)
     created = await db.fatture_ricevute.find_one({"fr_id": fr_id}, {"_id": 0, "xml_raw": 0})
 
+    # Smart Import: auto-detect welding consumables
+    try:
+        from routes.consumables import analyze_and_import_invoice_consumables
+        consumable_doc = {**doc, "fattura_id": fr_id}
+        consumables = await analyze_and_import_invoice_consumables(consumable_doc, user["user_id"])
+        if consumables:
+            logger.info(f"Auto-imported {len(consumables)} consumables from XML invoice {fr_id}")
+    except Exception as e:
+        logger.warning(f"Consumable auto-import failed for XML {fr_id}: {e}")
+
     return {
         "message": f"Fattura importata: {parsed.get('numero_documento', 'N/A')} da {parsed.get('fornitore_nome', 'N/A')}",
         "fattura": created,
