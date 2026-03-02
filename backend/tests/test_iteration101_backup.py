@@ -158,20 +158,25 @@ class TestRestoreBackup:
     
     def test_restore_invalid_json_returns_400(self, api_client):
         """Restore with invalid JSON returns 400"""
-        response = api_client.post(
+        # Remove content-type for multipart upload
+        headers = {"Cookie": f"session_token={SESSION_TOKEN}"}
+        response = requests.post(
             f"{BASE_URL}/api/admin/backup/restore",
-            files={"file": ("backup.json", b"invalid json", "application/json")}
+            files={"file": ("backup.json", b"invalid json", "application/json")},
+            cookies={"session_token": SESSION_TOKEN}
         )
-        assert response.status_code == 400, f"Expected 400 for invalid JSON, got {response.status_code}"
+        # FastAPI returns 400 for invalid JSON in restore endpoint
+        assert response.status_code == 400, f"Expected 400 for invalid JSON, got {response.status_code}: {response.text}"
     
     def test_restore_missing_metadata_returns_400(self, api_client):
         """Restore without metadata returns 400"""
         invalid_backup = json.dumps({"data": {}})
-        response = api_client.post(
+        response = requests.post(
             f"{BASE_URL}/api/admin/backup/restore",
-            files={"file": ("backup.json", invalid_backup.encode(), "application/json")}
+            files={"file": ("backup.json", invalid_backup.encode(), "application/json")},
+            cookies={"session_token": SESSION_TOKEN}
         )
-        assert response.status_code == 400, f"Expected 400 for missing metadata, got {response.status_code}"
+        assert response.status_code == 400, f"Expected 400 for missing metadata, got {response.status_code}: {response.text}"
     
     def test_restore_empty_backup_returns_200(self, api_client):
         """Restore with empty data returns 200 OK"""
@@ -180,9 +185,10 @@ class TestRestoreBackup:
             "data": {},
             "stats": {}
         })
-        response = api_client.post(
+        response = requests.post(
             f"{BASE_URL}/api/admin/backup/restore",
-            files={"file": ("backup.json", valid_backup.encode(), "application/json")}
+            files={"file": ("backup.json", valid_backup.encode(), "application/json")},
+            cookies={"session_token": SESSION_TOKEN}
         )
         assert response.status_code == 200, f"Expected 200 for valid empty backup, got {response.status_code}: {response.text}"
     
@@ -193,9 +199,10 @@ class TestRestoreBackup:
             "data": {},
             "stats": {}
         })
-        response = api_client.post(
+        response = requests.post(
             f"{BASE_URL}/api/admin/backup/restore",
-            files={"file": ("backup.json", valid_backup.encode(), "application/json")}
+            files={"file": ("backup.json", valid_backup.encode(), "application/json")},
+            cookies={"session_token": SESSION_TOKEN}
         )
         data = response.json()
         assert "message" in data, "Response should contain 'message'"
@@ -222,11 +229,12 @@ class TestRestoreWithData:
             },
             "stats": {"clients": 1}
         })
-        response = api_client.post(
+        response = requests.post(
             f"{BASE_URL}/api/admin/backup/restore",
-            files={"file": ("backup.json", backup.encode(), "application/json")}
+            files={"file": ("backup.json", backup.encode(), "application/json")},
+            cookies={"session_token": SESSION_TOKEN}
         )
-        assert response.status_code == 200
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
         data = response.json()
         # Should have inserted at least 1
         assert data["total_restored"] >= 0, "Should report restored count"
@@ -246,18 +254,20 @@ class TestRestoreWithData:
             "stats": {"clients": 1}
         })
         # First restore
-        response1 = api_client.post(
+        response1 = requests.post(
             f"{BASE_URL}/api/admin/backup/restore",
-            files={"file": ("backup.json", backup.encode(), "application/json")}
+            files={"file": ("backup.json", backup.encode(), "application/json")},
+            cookies={"session_token": SESSION_TOKEN}
         )
-        assert response1.status_code == 200
+        assert response1.status_code == 200, f"Expected 200, got {response1.status_code}: {response1.text}"
         data1 = response1.json()
         first_inserted = data1.get("details", {}).get("clients", {}).get("inserted", 0)
         
         # Second restore (should skip)
-        response2 = api_client.post(
+        response2 = requests.post(
             f"{BASE_URL}/api/admin/backup/restore",
-            files={"file": ("backup.json", backup.encode(), "application/json")}
+            files={"file": ("backup.json", backup.encode(), "application/json")},
+            cookies={"session_token": SESSION_TOKEN}
         )
         assert response2.status_code == 200
         data2 = response2.json()
