@@ -16,6 +16,7 @@ import { Save, Building2, CreditCard, FileText, ImageIcon, Upload, X, Plug, Shie
 import DashboardLayout from '../components/DashboardLayout';
 
 export default function SettingsPage() {
+    const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [settings, setSettings] = useState({
