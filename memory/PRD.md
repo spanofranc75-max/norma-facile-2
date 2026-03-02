@@ -173,6 +173,14 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa cen
 - **Sidebar**: Scadenziario + Fatture Ricevute spostati in "Acquisti & Magazzino"
 - Testato: 23/23 backend + frontend Playwright (iteration_96.json)
 
+### Migrazione Dati da Vecchia App (Mar 2026)
+- Endpoint `POST /api/migrazione/importa`: scarica dati dalla vecchia Norma Facile e importa
+- Importati: 39 anagrafiche, 31 preventivi, 12 fatture vendita, 47 fatture acquisto
+- Deduplicazione automatica per P.IVA/numero documento
+- Idempotente: re-run sicuro, salta i duplicati
+- Collegamento automatico clienti/fornitori tramite P.IVA
+- Scadenziario ora mostra 20 scadenze pagamento + 47 fatture da processare
+
 ## Backlog
 - P1: Fatture in Cloud SDI (necessita credenziali utente), verifica parsing AI
 - P2: Test e2e completo, seeding dati, coesione flusso
