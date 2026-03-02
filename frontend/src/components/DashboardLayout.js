@@ -90,6 +90,7 @@ const NAV_GROUPS = [
         type: 'group',
         children: [
             { path: '/fatture-ricevute', label: 'Fatture Ricevute', icon: FileInput },
+            { path: '/controllo-costi', label: 'Controllo Costi', icon: CircleDollarSign },
             { path: '/scadenziario', label: 'Scadenziario', icon: Calendar },
             { path: '/fornitori', label: 'Fornitori', icon: Factory },
             { path: '/catalogo', label: 'Catalogo Profili', icon: Warehouse },
