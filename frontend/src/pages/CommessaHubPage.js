@@ -569,6 +569,48 @@ export default function CommessaHubPage() {
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
+
+                {/* QR Code Dialog */}
+                <Dialog open={qrOpen} onOpenChange={setQrOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <QrCode className="h-5 w-5 text-[#0055FF]" />
+                                QR Code Commessa
+                            </DialogTitle>
+                        </DialogHeader>
+                        <div className="flex flex-col items-center gap-4 py-4">
+                            <div className="bg-white border-2 border-slate-200 rounded-xl p-4">
+                                <img
+                                    src={`${API}/api/qrcode/commessa/${commessaId}`}
+                                    alt="QR Code Commessa"
+                                    className="w-48 h-48"
+                                    data-testid="qr-code-image"
+                                />
+                            </div>
+                            <div className="text-center">
+                                <p className="text-sm font-semibold text-slate-700">{c.numero}</p>
+                                <p className="text-xs text-slate-500">{c.title}</p>
+                                <p className="text-[10px] text-slate-400 mt-1">
+                                    Scansiona per aprire questa commessa nell'app
+                                </p>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                data-testid="btn-download-qr"
+                                onClick={() => {
+                                    const a = document.createElement('a');
+                                    a.href = `${API}/api/qrcode/commessa/${commessaId}`;
+                                    a.download = `qr_commessa_${c.numero || commessaId}.png`;
+                                    a.click();
+                                }}
+                            >
+                                <Download className="h-3.5 w-3.5 mr-1.5" /> Scarica QR
+                            </Button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
         </DashboardLayout>
     );
