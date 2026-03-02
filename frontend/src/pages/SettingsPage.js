@@ -172,6 +172,10 @@ export default function SettingsPage() {
                             <ShieldCheck className="h-4 w-4" />
                             Certificazioni
                         </TabsTrigger>
+                        <TabsTrigger value="migrazione" className="gap-2">
+                            <Upload className="h-4 w-4" />
+                            Migrazione
+                        </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="company">
