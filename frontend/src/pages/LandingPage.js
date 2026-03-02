@@ -3,10 +3,12 @@
  * Split Screen: Brand Experience (Dark) | Login Area (Light)
  * Palette: Navy #0F172A, Steel Grey #64748B, Lime Accent #84CC16
  */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
+import { Checkbox } from '../components/ui/checkbox';
+import { LegalFooter } from '../components/LegalFooter';
 import {
     Shield, CheckCircle2, Lock, ArrowRight,
     Wrench, FileCheck, BarChart3, Zap,
