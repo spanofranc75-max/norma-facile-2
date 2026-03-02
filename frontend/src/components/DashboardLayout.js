@@ -258,6 +258,14 @@ export default function DashboardLayout({ children }) {
                                 <div className="flex-1 text-left min-w-0">
                                     <p className="text-xs font-medium text-white truncate">{user?.name}</p>
                                     <p className="text-[10px] text-slate-400 truncate">{user?.email}</p>
+                                    {userRole !== 'admin' && (
+                                        <span className="text-[8px] bg-lime-500/20 text-lime-400 border border-lime-500/30 rounded-full px-1.5 py-0 mt-0.5 inline-block capitalize">{
+                                            userRole === 'ufficio_tecnico' ? 'Uff. Tecnico' :
+                                            userRole === 'officina' ? 'Officina' :
+                                            userRole === 'amministrazione' ? 'Amministraz.' :
+                                            userRole === 'guest' ? 'In Attesa' : userRole
+                                        }</span>
+                                    )}
                                 </div>
                             </button>
                         </DropdownMenuTrigger>
