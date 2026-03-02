@@ -312,7 +312,7 @@ export default function DashboardLayout({ children }) {
 
 // ── Sub-components ──────────────────────────────────────────────
 
-function SingleLink({ item, active, navigate }) {
+function SingleLink({ item, active, navigate, badge = 0 }) {
     const Icon = item.icon;
     return (
         <a
@@ -326,7 +326,12 @@ function SingleLink({ item, active, navigate }) {
             }`}
         >
             <Icon className="h-[18px] w-[18px] flex-shrink-0" strokeWidth={1.5} />
-            <span>{item.label}</span>
+            <span className="flex-1">{item.label}</span>
+            {badge > 0 && (
+                <span className="bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1" data-testid="notification-badge">
+                    {badge}
+                </span>
+            )}
         </a>
     );
 }
