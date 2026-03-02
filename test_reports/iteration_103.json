@@ -1,0 +1,94 @@
+{
+  "summary": "Iteration 103: Notifications ('Il Cane da Guardia'), QR Code generation, and Database Cleanup features - Full E2E testing complete. 24/24 backend tests passed. All frontend UI elements working correctly. Features verified: notification status/check/history APIs, QR code PNG generation for commesse, database cleanup preview. Email sending via Resend confirmed working.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "NotificationsPage",
+        "issues": ["React hydration warning: <span> cannot be child of <tbody>. Minor rendering issue with map in table - doesn't affect functionality"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration103_notifications_qr_cleanup.py",
+    "/app/test_reports/pytest/iteration103_notifications_qr_cleanup_results.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: Fix React hydration warning in NotificationsPage.js (line 197-199) - wrap table row map with React.Fragment instead of span"
+  ],
+  "critical_code_review_comments": [
+    "All 3 notification endpoints working: /status returns live alerts, /check-now triggers manual check and sends emails, /history returns last 20 logs",
+    "QR Code generation working: PNG endpoint returns valid image, /data endpoint returns metadata with commessa info",
+    "Database cleanup preview working: shows counts per collection, clients/vendors can be preserved",
+    "Resend email integration confirmed working - emails sent successfully on manual check",
+    "Sidebar navigation correctly shows 'Notifiche' link for admin/ufficio_tecnico roles",
+    "Deploy tab only visible for admin users in Settings page",
+    "Background scheduler configured for 12-hour intervals (CHECK_INTERVAL_SECONDS = 43200)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration103_notifications_qr_cleanup.py (new test file)"
+  ],
+  "success_rate": {
+    "backend": "100% (24/24 pytest tests passed)",
+    "frontend": "100% (All UI elements verified)"
+  },
+  "test_credentials": "Used test_admin_token_for_api for admin auth, com_bfb82e090373 commessa for QR tests",
+  "seed_data_creation": "None - used existing data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Notifications, QR Code, and Cleanup features fully implemented. Test file at /app/backend/tests/test_iteration103_notifications_qr_cleanup.py covers all new endpoints. Notifications page at /notifiche shows live expiration alerts from welders and instruments. QR Code button added to CommessaHubPage. Deploy tab in Settings for database cleanup (admin only).",
+  "tests_executed": [
+    {
+      "test_type": "Backend API (pytest)",
+      "file": "/app/backend/tests/test_iteration103_notifications_qr_cleanup.py",
+      "results": "24 passed in 7.14s",
+      "test_classes": [
+        "TestNotificationsStatus (5 tests) - status endpoint, active flag, alerts structure, auth required",
+        "TestNotificationsCheckNow (3 tests) - manual trigger, result structure, auth required",
+        "TestNotificationsHistory (4 tests) - history endpoint, logs array, entry structure, auth required",
+        "TestQRCodeGeneration (6 tests) - PNG generation, content-type, metadata, invalid ID 404, auth required",
+        "TestDatabaseCleanupPreview (4 tests) - preview endpoint, data counts, confirm required, auth required",
+        "TestNotificationAlertDetails (2 tests) - welder and instrument alert field validation"
+      ]
+    },
+    {
+      "test_type": "Frontend UI (Playwright)",
+      "results": "PASS - All UI elements and flows verified",
+      "verified": [
+        "NotificationsPage loads with 'Il Cane da Guardia' header",
+        "Alert summary cards show total/welder/instrument counts",
+        "Welder alerts table shows name, stamp_id, qualification, expiry, status",
+        "Instrument alerts table shows name, serial, calibration date, status",
+        "History table shows check logs with date, type (Auto/Manuale), counts, email status",
+        "'Controlla Ora' button triggers manual check and shows toast",
+        "CommessaHubPage has QR Code button that opens dialog with scannable QR image",
+        "QR dialog shows commessa numero, title, and download button",
+        "Settings page Deploy tab shows cleanup preview with collection counts",
+        "Deploy tab has checkboxes to preserve clients/vendors",
+        "'Notifiche' link visible in sidebar for admin users"
+      ]
+    }
+  ],
+  "features_verified": [
+    "GET /api/notifications/status - Returns watchdog status with live alerts",
+    "POST /api/notifications/check-now - Triggers manual check, sends email via Resend",
+    "GET /api/notifications/history - Returns last 20 notification check logs",
+    "GET /api/qrcode/commessa/{id} - Generates valid QR code PNG image",
+    "GET /api/qrcode/commessa/{id}/data - Returns QR metadata (URL, numero, cliente)",
+    "GET /api/admin/cleanup/preview - Shows data counts per collection for cleanup",
+    "POST /api/admin/cleanup/execute - Requires confirm=true (NOT tested to avoid data loss)",
+    "Frontend /notifiche page with full notification dashboard",
+    "Frontend QR Code button and dialog on CommessaHubPage",
+    "Frontend Settings > Deploy tab for database cleanup preparation"
+  ],
+  "email_integration": {
+    "provider": "Resend",
+    "status": "WORKING",
+    "note": "Emails sent successfully to admin/ufficio_tecnico users when alerts found"
+  }
+}
