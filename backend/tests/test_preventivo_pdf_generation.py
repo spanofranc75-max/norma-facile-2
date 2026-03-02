@@ -431,7 +431,7 @@ class TestPDFEndpointIntegration:
     def test_health_check(self):
         """Verify backend is running."""
         import requests
-        base_url = os.environ.get('REACT_APP_BACKEND_URL', 'https://eco-certify.preview.emergentagent.com')
+        base_url = os.environ.get('REACT_APP_BACKEND_URL', 'https://norma-facile-v2.preview.emergentagent.com')
         response = requests.get(f"{base_url}/api/health")
         assert response.status_code == 200, f"Health check failed: {response.status_code}"
         data = response.json()
