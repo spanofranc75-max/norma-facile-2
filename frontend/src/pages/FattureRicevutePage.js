@@ -27,7 +27,7 @@ import { toast } from 'sonner';
 import {
     Plus, Search, Upload, MoreHorizontal, Eye, Trash2, CreditCard,
     FileCode, PackagePlus, CheckCircle2, Clock, AlertCircle,
-    CircleDollarSign, FileUp,
+    CircleDollarSign, FileUp, RefreshCw, Loader2,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import EmptyState from '../components/EmptyState';
@@ -70,6 +70,7 @@ export default function FattureRicevutePage() {
     const [savingPayment, setSavingPayment] = useState(false);
     const [extracting, setExtracting] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [syncing, setSyncing] = useState(false);
 
     const fileInputRef = useRef(null);
 
@@ -167,6 +168,30 @@ export default function FattureRicevutePage() {
             }
         }
     };
+
+    // Sync from Fatture in Cloud (SDI)
+    const handleSyncSDI = async () => {
+        setSyncing(true);
+        try {
+            const result = await apiRequest('/fatture-ricevute/sync-fic', { method: 'POST' });
+            if (result.imported > 0) {
+                toast.success(`${result.imported} fatture importate da SDI`);
+            } else if (result.skipped > 0) {
+                toast.info(`Nessuna nuova fattura (${result.skipped} già presenti)`);
+            } else {
+                toast.info('Nessuna fattura trovata su Fatture in Cloud');
+            }
+            if (result.errors?.length) {
+                result.errors.forEach(e => toast.warning(e));
+            }
+            fetchFatture();
+        } catch (err) {
+            toast.error(err.message || 'Errore sincronizzazione SDI');
+        } finally {
+            setSyncing(false);
+        }
+    };
+
 
     // View detail
     const openDetail = async (fr) => {
@@ -273,11 +298,20 @@ export default function FattureRicevutePage() {
                             data-testid="input-xml-upload"
                         />
                         <Button
+                            data-testid="btn-sync-sdi"
+                            onClick={handleSyncSDI}
+                            disabled={syncing}
+                            className="bg-[#0055FF] text-white hover:bg-[#0044CC]"
+                        >
+                            {syncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                            {syncing ? 'Sincronizzazione...' : 'Importa da SDI'}
+                        </Button>
+                        <Button
                             data-testid="btn-import-xml"
                             variant="outline"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={uploading}
-                            className="border-[#0055FF] text-[#0055FF] hover:bg-blue-50"
+                            className="border-slate-300 text-slate-600 hover:bg-slate-50"
                         >
                             <FileUp className="h-4 w-4 mr-2" />
                             {uploading ? 'Importazione...' : 'Importa XML / P7M'}
@@ -390,9 +424,9 @@ export default function FattureRicevutePage() {
                                             <EmptyState
                                                 type="fatture_ricevute"
                                                 title="Nessuna fattura ricevuta"
-                                                description="Importa fatture XML o P7M dalla PEC, oppure registra manualmente. Supporta upload multiplo."
-                                                actionLabel="Importa XML / P7M"
-                                                onAction={() => fileInputRef.current?.click()}
+                                                description="Clicca 'Importa da SDI' per sincronizzare le fatture da Fatture in Cloud, oppure importa manualmente file XML/P7M dalla PEC."
+                                                actionLabel="Importa da SDI"
+                                                onAction={handleSyncSDI}
                                             />
                                         </TableCell>
                                     </TableRow>
