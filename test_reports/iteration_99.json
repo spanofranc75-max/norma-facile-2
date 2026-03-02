@@ -1,0 +1,101 @@
+{
+  "summary": "Iteration 99: Smart ISO 3834 Consumable Traceability feature - Full E2E testing complete. 27/27 backend tests pass (100%). Frontend UI tested and working. Fixed 2 bugs: (1) normativa_target auto-determination was bypassed due to default model value, (2) analyze-invoice endpoint queried wrong field (fattura_id instead of fr_id).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration99_consumables.py",
+    "/app/test_reports/pytest/iteration99_consumables_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Fixed BUG: ConsumableBatchCreate model had default normativa_target='entrambe' which bypassed auto-determination logic",
+    "Fixed BUG: analyze-invoice endpoint queried fattura_id field instead of fr_id (primary key) in fatture_ricevute collection",
+    "Consumable detection keywords working correctly: FILO (sg2,sg3,er70,bobina,rotolo,wire), GAS (argon,co2,miscela,bombola), ELETTRODO (elettrod,bacchett,tig rod,7018,6013)",
+    "Priority order: elettrodo > filo > gas (bacchette TIG with ER70 are electrodes, not wire)",
+    "Normativa target rules: filo>=1.0mm->en_1090, filo<=0.8mm->en_13241, gas->entrambe, elettrodo->en_1090",
+    "Auto-assignment to open commesse (status: preventivo,approvvigionamento,lavorazione,in_produzione) based on normativa compatibility",
+    "Frontend FascicoloTecnicoSection.js correctly displays assigned and available consumables with color-coded badges"
+  ],
+  "updated_files": [
+    "/app/backend/routes/consumables.py (line 33: changed normativa_target default to Optional[str]=None)",
+    "/app/backend/routes/consumables.py (lines 387-416: fixed analyze-invoice to query fr_id first, then fattura_id as fallback)",
+    "/app/backend/tests/test_iteration99_consumables.py (new test file)"
+  ],
+  "success_rate": {
+    "backend": "100% (27/27 pytest tests passed)",
+    "frontend": "100% (Consumabili Disponibili section in Registro Saldatura dialog verified)"
+  },
+  "test_credentials": {
+    "user_id": "user_cons_test_bs1lq0y5",
+    "session_token": "session_cons_test_bs1lq0y5",
+    "test_commessa_id": "com_c8422ccfecdc"
+  },
+  "seed_data_creation": "Created multiple consumable batches (filo, gas, elettrodo) with test lotto numbers: GAS-UI-TEST-001, FILO-UI-TEST-001, ELET-UI-TEST-001. Auto-assigned to open commesse.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Smart ISO 3834 Consumable Traceability feature fully implemented and tested. Two bugs fixed in consumables.py. Test user session and commessa available for verification. Frontend Registro Saldatura dialog shows assigned/available consumables correctly.",
+  "tests_executed": [
+    {
+      "test_type": "Backend API (pytest)",
+      "file": "/app/backend/tests/test_iteration99_consumables.py",
+      "results": "27 passed in 3.70s",
+      "test_classes": [
+        "TestConsumableDetectionLogic (3 tests) - filo, gas, elettrodo keyword detection",
+        "TestNormativaTargetRules (5 tests) - auto-determination of normativa based on tipo/diameter",
+        "TestConsumableCRUD (6 tests) - list, filter, create, update, delete operations",
+        "TestCommessaAssignment (4 tests) - get for commessa, manual assign/unassign, 404 handling",
+        "TestInvoiceAnalysis (2 tests) - analyze-invoice endpoint, 404 for nonexistent",
+        "TestAutoTriggerOnFatturaCreation (1 test) - auto-import on fattura creation",
+        "TestEdgeCases (5 tests) - 404s, empty update 400, duplicate assignment idempotency",
+        "TestCleanup (1 test) - test data cleanup"
+      ]
+    },
+    {
+      "test_type": "Frontend UI (Playwright)",
+      "results": "PASS - Consumables UI in Registro Saldatura working correctly",
+      "verified": [
+        "Fascicolo Tecnico EN 1090 section expanded with 6 document cards",
+        "Clicked Registro Saldatura 'Compila' button - dialog opened",
+        "Found 'Consumabili Disponibili (Fili / Gas / Elettrodi)' section with data-testid='smart-consumables'",
+        "ASSEGNATI A QUESTA COMMESSA: 3 items (elettrodo, filo, gas with correct badges)",
+        "DISPONIBILI IN OFFICINA: multiple items available to assign",
+        "Color-coded badges: ELETTRODO (purple), FILO (blue), GAS (green)",
+        "Lotto numbers and diameter info displayed correctly",
+        "'auto' badge shown for auto-assigned consumables"
+      ]
+    }
+  ],
+  "features_verified": [
+    "GET /api/consumables/ - List all consumable batches with optional stato/tipo filters",
+    "POST /api/consumables/ - Create batch with auto normativa_target determination",
+    "PUT /api/consumables/{batch_id} - Update stato/note/quantita",
+    "DELETE /api/consumables/{batch_id} - Delete batch",
+    "GET /api/consumables/for-commessa/{commessa_id} - Returns assigned and available batches",
+    "POST /api/consumables/{batch_id}/assign/{commessa_id} - Manual assignment",
+    "DELETE /api/consumables/{batch_id}/assign/{commessa_id} - Remove assignment",
+    "POST /api/consumables/analyze-invoice/{fattura_id} - Analyze invoice for consumables (now supports fr_id)",
+    "Auto-trigger on POST /api/fatture-ricevute/ - Creates batches from consumable lines",
+    "Frontend RegistroEditForm shows Consumabili Disponibili section with assigned/available batches"
+  ],
+  "bugs_fixed": [
+    {
+      "issue": "normativa_target auto-determination was bypassed",
+      "root_cause": "ConsumableBatchCreate model had default normativa_target='entrambe', so `data.normativa_target or _determine_normativa_target()` always used the default",
+      "fix": "Changed model default to Optional[str]=None so auto-determination is triggered when not explicitly provided",
+      "lines_modified": "/app/backend/routes/consumables.py line 33"
+    },
+    {
+      "issue": "analyze-invoice returned 404 for valid invoices",
+      "root_cause": "Endpoint queried {fattura_id: ...} but fatture_ricevute uses fr_id as primary key",
+      "fix": "Changed to query fr_id first, then fallback to fattura_id field",
+      "lines_modified": "/app/backend/routes/consumables.py lines 387-416"
+    }
+  ]
+}
