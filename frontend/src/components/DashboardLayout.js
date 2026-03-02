@@ -219,7 +219,7 @@ export default function DashboardLayout({ children }) {
                 {/* Nav */}
                 <nav className="flex-1 overflow-y-auto px-3 pb-2 sidebar-scroll">
                     <div className="space-y-0.5">
-                        {NAV_GROUPS.map((group) => {
+                        {filteredNav.map((group) => {
                             if (group.type === 'link') {
                                 return <SingleLink key={group.id} item={group} active={activeGroupId === group.id} navigate={navigate} />;
                             }
