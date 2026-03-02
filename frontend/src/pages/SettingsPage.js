@@ -646,6 +646,11 @@ export default function SettingsPage() {
                             </CardContent>
                         </Card>
                     </TabsContent>
+
+                    {/* Tab Migrazione */}
+                    <TabsContent value="migrazione">
+                        <MigrazioneTab />
+                    </TabsContent>
                 </Tabs>
             </div>
         </DashboardLayout>
