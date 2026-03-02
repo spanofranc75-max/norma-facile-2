@@ -673,7 +673,7 @@ export default function PreventivoEditorPage() {
                                         <TableRow className="bg-slate-50">
                                             <TableHead className="w-8 text-[10px]">#</TableHead>
                                             <TableHead className="text-[10px]">Descrizione</TableHead>
-                                            <TableHead className="w-[70px] text-right text-[10px]">Q.tà</TableHead>
+                                            <TableHead className="w-[80px] text-right text-[10px]">Q.tà</TableHead>
                                             <TableHead className="w-[60px] text-[10px]">UdM</TableHead>
                                             <TableHead className="w-[90px] text-right text-[10px]">Prezzo</TableHead>
                                             <TableHead className="w-[60px] text-right text-[10px]">Sc.1%</TableHead>
