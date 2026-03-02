@@ -14,7 +14,7 @@ Italiano (l'utente comunica esclusivamente in italiano).
 ## Architettura
 - **Frontend**: React + Shadcn/UI + TailwindCSS
 - **Backend**: FastAPI + MongoDB (Motor async driver)
-- **Auth**: Google OAuth (Emergent-managed)
+- **Auth**: Google OAuth (Emergent-managed) — Session cookies (credentials: 'include')
 - **PDF**: WeasyPrint + pypdf
 - **AI OCR**: OpenAI GPT-4o Vision (Emergent LLM Key)
 - **Email**: Resend
@@ -72,6 +72,7 @@ Italiano (l'utente comunica esclusivamente in italiano).
 ### UI/UX
 - Landing Page Dark & Industrial Split Screen con logo reale
 - Responsive (mobile stacking)
+- Tabella preventivi ottimizzata (table-fixed, colonna Descrizione allargata)
 
 ---
 
@@ -83,6 +84,7 @@ Italiano (l'utente comunica esclusivamente in italiano).
 - [x] Utenti test eliminati (solo admin reale rimasto)
 - [x] Sessioni test eliminate
 - [x] Scheduler notifiche attivo
+- [x] Autenticazione frontend unificata (session cookies everywhere)
 - [ ] Pulizia dati operativi test (da fare manualmente via tab Deploy)
 - [ ] Backup "Punto Zero" dopo pulizia
 
@@ -90,16 +92,27 @@ Italiano (l'utente comunica esclusivamente in italiano).
 
 ## Backlog Prioritizzato
 
+### P0
+- Firma digitale su tablet (QR code + fasi produzione)
+- Dashboard cantiere in tempo reale ("semaforo")
+
 ### P1
 - Export CSV distinta di taglio per CNC
 - Stato "SOSPESA" per commesse
+- Generazione automatica WPS per EN 1090
 
 ### P2
+- Portale Cliente read-only per tracking commesse
+- Analisi predittiva margini per nuovi preventivi
+- Calendario produzione / Gantt
+- OCR per data entry da bolle fornitori
+- Report PDF mensili automatici
 - PWA per modalita' offline
 - Migrazione certificati Base64 -> object storage
 - Versionamento fatture e fascicoli tecnici
+- Implementare "Restore from Backup"
 
 ---
 
 ## Ultimo Aggiornamento: 2026-03-02
-- v2.1.0: Notifiche automatiche, QR Code, Deploy prep, ottimizzazioni produzione
+- v2.1.1: Fix layout tabella preventivi (table-fixed), pulizia autenticazione frontend completa
