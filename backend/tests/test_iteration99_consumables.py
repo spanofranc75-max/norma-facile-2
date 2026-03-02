@@ -487,6 +487,7 @@ class TestInvoiceAnalysis:
         if not test_fattura_with_consumables:
             pytest.skip("No test fattura available")
         
+        # Note: analyze-invoice now accepts fr_id (primary key) as the fattura_id parameter
         response = api_client.post(f"{BASE_URL}/api/consumables/analyze-invoice/{test_fattura_with_consumables}")
         assert response.status_code == 200
         data = response.json()
@@ -494,8 +495,8 @@ class TestInvoiceAnalysis:
         assert "message" in data
         assert "created" in data
         
-        # Should detect 3 consumables (filo, gas, elettrodo) but NOT the disco
-        # Note: If consumables were already created by auto-trigger, count may be 0
+        # Should detect consumables (filo, gas, elettrodo) but NOT the disco
+        # Note: If consumables were already created by auto-trigger during fattura creation, count may be 0
         print(f"Analysis result: {data['message']}")
         print(f"Created {len(data['created'])} consumables")
 
