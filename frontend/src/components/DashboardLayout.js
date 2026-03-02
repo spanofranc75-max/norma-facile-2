@@ -22,7 +22,7 @@ import {
     BarChart3, BoxIcon, FileInput, Camera, ChevronDown,
     Briefcase, Wrench, Award, ShoppingCart, FileText, LayoutGrid,
     CreditCard, TrendingUp, ClipboardCheck, Calendar, CircleDollarSign,
-    User, LogOut,
+    User, LogOut, Bell,
 } from 'lucide-react';
 
 // ── Navigation Structure ────────────────────────────────────────
@@ -43,6 +43,14 @@ const NAV_GROUPS = [
         type: 'link',
         path: '/ebitda',
         roles: ['admin', 'amministrazione'],
+    },
+    {
+        id: 'notifiche',
+        label: 'Notifiche',
+        icon: Bell,
+        type: 'link',
+        path: '/notifiche',
+        roles: ['admin', 'ufficio_tecnico'],
     },
     {
         id: 'commerciale',
