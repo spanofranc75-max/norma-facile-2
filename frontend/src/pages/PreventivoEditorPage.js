@@ -695,7 +695,7 @@ export default function PreventivoEditorPage() {
                                                 <TableRow key={l.line_id} data-testid={`line-${i}`}>
                                                     <TableCell className="text-[10px] text-slate-400 font-mono">{i + 1}</TableCell>
                                                     <TableCell><AutoExpandTextarea value={l.description} onChange={e => updateLine(i, 'description', e.target.value)} placeholder="Descrizione" className="text-xs" /></TableCell>
-                                                    <TableCell className="px-1"><Input type="number" value={l.quantity} onChange={e => updateLine(i, 'quantity', e.target.value)} className="h-7 text-xs text-right font-mono w-full" /></TableCell>
+                                                    <TableCell className="px-1"><Input type="number" value={l.quantity} onChange={e => updateLine(i, 'quantity', e.target.value)} className="h-7 text-[11px] text-right font-mono w-full" /></TableCell>
                                                     <TableCell className="px-1">
                                                         <Select value={l.unit} onValueChange={v => updateLine(i, 'unit', v)}>
                                                             <SelectTrigger className="h-7 text-[10px] w-full"><SelectValue /></SelectTrigger>
@@ -709,7 +709,7 @@ export default function PreventivoEditorPage() {
                                                             </SelectContent>
                                                         </Select>
                                                     </TableCell>
-                                                    <TableCell className="px-1"><Input type="number" step="0.01" value={l.unit_price} onChange={e => updateLine(i, 'unit_price', e.target.value)} placeholder="0,00" className="h-7 text-xs text-right font-mono text-red-600 font-semibold w-full" /></TableCell>
+                                                    <TableCell className="px-1"><Input type="number" step="0.01" value={l.unit_price} onChange={e => updateLine(i, 'unit_price', e.target.value)} placeholder="0,00" className="h-7 text-[11px] text-right font-mono text-red-600 font-semibold w-full" /></TableCell>
                                                     <TableCell className="px-1"><Input type="number" step="0.1" value={l.sconto_1} onChange={e => updateLine(i, 'sconto_1', e.target.value)} placeholder="%" className="h-7 text-[10px] text-right font-mono w-full" /></TableCell>
                                                     <TableCell className="px-1"><Input type="number" step="0.1" value={l.sconto_2} onChange={e => updateLine(i, 'sconto_2', e.target.value)} placeholder="%" className="h-7 text-[10px] text-right font-mono w-full" /></TableCell>
                                                     <TableCell className="text-right font-mono text-xs text-slate-600 px-1 truncate">{fmtEur(net)}</TableCell>
