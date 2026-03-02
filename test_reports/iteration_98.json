@@ -1,0 +1,86 @@
+{
+  "summary": "Iteration 98: Split Commessa feature for mixed-normativa quotes - Full E2E testing complete. All 15 backend tests pass (100%). Frontend Split Dialog UI tested and working. Fixed a bug in analyze_preventivo_content() where None values in notes/description fields caused TypeError.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration98_split_commessa.py",
+    "/app/test_reports/pytest/iteration98_split_commessa_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Split Commessa feature correctly implements EN 1090 (structures) vs EN 13241 (gates) conflict detection",
+    "Keywords for classification: EN 1090: tettoia, scala, soppalco, trave, struttura, pensilina, carpenteria, ringhier",
+    "Keywords for classification: EN 13241: cancell, portone, scorrevol, battente, chiusura, serranda, sezionale, barriera",
+    "Keywords for motorization: motore, motorizzat, bft, came, faac, nice, automazione, fotocellul",
+    "Split creates commesse with suffixed numbers (-A, -B) and correct normativa_tipo",
+    "EN 13241 commessa auto-creates gate_certification document as expected",
+    "Preventivo marked as 'accettato' with split_commesse metadata after split"
+  ],
+  "updated_files": [
+    "/app/backend/routes/commesse.py (lines 728-756 - Fixed None handling in analyze_preventivo_content)",
+    "/app/backend/tests/test_iteration98_split_commessa.py"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 pytest tests passed)",
+    "frontend": "100% (Split Dialog UI tested, all interactions working)"
+  },
+  "test_credentials": {
+    "user_id": "user_split_test_mm8w07pv",
+    "session_token": "split_test_session_mm8w07pv",
+    "expires_at": "2026-03-09"
+  },
+  "seed_data_creation": "Created multiple test preventivi with EN 1090, EN 13241, and mixed content. Split commesse created: NF-2026-000001-A (EN 1090), NF-2026-000001-B (EN 13241)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Split Commessa feature fully implemented and tested. Bug fixed in analyze_preventivo_content() for None values. Test user session available. Commesse with -A/-B suffixes exist for verification.",
+  "tests_executed": [
+    {
+      "test_type": "Backend API (pytest)",
+      "file": "/app/backend/tests/test_iteration98_split_commessa.py",
+      "results": "15 passed in 5.72s",
+      "test_classes": [
+        "TestAnalyzePreventivo (4 tests) - mixed conflict detection, single normativa no conflict, motorization detection, 404 for nonexistent",
+        "TestSingleCommessaCreation (2 tests) - create from structures, gates auto-creates gate cert",
+        "TestSplitCommessaCreation (3 tests) - split creates 2 commesse, requires 2 commesse min, rejects duplicate indices",
+        "TestKeywordClassification (2 tests) - EN 1090 and EN 13241 keywords",
+        "TestMotorizationDetection (1 test) - all motor keywords detected",
+        "TestEdgeCases (2 tests) - empty lines, nonexistent preventivo",
+        "TestCleanup (1 test) - test data cleanup"
+      ]
+    },
+    {
+      "test_type": "Frontend UI (Playwright)",
+      "results": "PASS - Split Dialog UI working correctly",
+      "verified": [
+        "Created mixed-normativa preventivo with tettoia (EN 1090) and cancello (EN 13241)",
+        "Clicked Commessa button - Split Dialog appeared with warning message",
+        "Dialog shows 2 groups: Commessa A (Strutture, EN 1090) and Commessa B (Cancelli, EN 13241)",
+        "Items correctly assigned to groups based on keywords",
+        "Clicked 'Crea 2 Commesse Separate' - navigated to commessa NF-2026-000001-A",
+        "Commessa timeline shows SPLIT_COMMESSA, NORMATIVA_RILEVATA events",
+        "Commessa title includes '(Strutture)' suffix"
+      ]
+    }
+  ],
+  "features_verified": [
+    "GET /api/commesse/analyze-preventivo/{preventivo_id} - Returns conflict detection with groups (en_1090, en_13241, non_classificati)",
+    "POST /api/commesse/from-preventivo/{preventivo_id} - Single commessa creation works correctly",
+    "POST /api/commesse/from-preventivo/{preventivo_id}/split - Creates 2 commesse with suffixed numbers and correct normativa",
+    "Frontend Split Dialog - Shows conflict warning, 2 groups with items, Confirm button",
+    "EN 13241 commessa auto-creates gate_certification document",
+    "Preventivo marked as 'accettato' with split_commesse metadata after split"
+  ],
+  "bug_fixed": {
+    "issue": "TypeError in analyze_preventivo_content when notes/description is None",
+    "root_cause": "Python dict.get('key', '') returns None if key exists with None value, not empty string",
+    "fix": "Changed to use 'or' pattern: preventivo.get('notes') or '' to handle None values",
+    "lines_modified": "/app/backend/routes/commesse.py lines 728-756"
+  }
+}
