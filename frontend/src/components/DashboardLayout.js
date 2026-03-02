@@ -190,8 +190,8 @@ export default function DashboardLayout({ children }) {
             <aside className="fixed left-0 top-0 h-screen w-64 bg-[#1E293B] text-slate-300 border-r border-slate-700 z-50 flex flex-col">
                 {/* Logo */}
                 <div className="px-5 pt-5 pb-4">
-                    <div className="inline-block bg-white rounded-lg p-1.5">
-                        <img src="/logo-1090.jpeg" alt="1090 Norma Facile" className="h-8 w-auto" data-testid="sidebar-brand-logo" />
+                    <div className="inline-block bg-white/10 backdrop-blur-md rounded-lg p-1.5 border border-white/10">
+                        <img src="/logo-1090.jpeg" alt="1090 Norma Facile" className="h-8 w-auto rounded" data-testid="sidebar-brand-logo" />
                     </div>
                 </div>
 
