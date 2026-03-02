@@ -606,10 +606,12 @@ function VtEditForm({ form, update, autoFields }) {
 }
 
 // ─── Registro Saldatura Form ───
-function RegistroEditForm({ form, update, autoFields, addSaldatura, updateSaldatura, removeSaldatura }) {
+function RegistroEditForm({ form, update, autoFields, addSaldatura, updateSaldatura, removeSaldatura, commessaId }) {
     const [regWelders, setRegWelders] = useState([]);
     const [loadingWelders, setLoadingWelders] = useState(false);
     const [selectedWelderInfo, setSelectedWelderInfo] = useState(null);
+    const [consumables, setConsumables] = useState({ assigned: [], available: [] });
+    const [loadingConsumables, setLoadingConsumables] = useState(false);
 
     useEffect(() => {
         (async () => {
@@ -621,6 +623,58 @@ function RegistroEditForm({ form, update, autoFields, addSaldatura, updateSaldat
             finally { setLoadingWelders(false); }
         })();
     }, []);
+
+    // Load consumables for this commessa
+    useEffect(() => {
+        if (!commessaId) return;
+        (async () => {
+            setLoadingConsumables(true);
+            try {
+                const res = await fetch(`${API}/api/consumables/for-commessa/${commessaId}`, { credentials: 'include' });
+                if (res.ok) {
+                    const d = await res.json();
+                    setConsumables({ assigned: d.assigned || [], available: d.available || [] });
+                }
+            } catch { /* silent */ }
+            finally { setLoadingConsumables(false); }
+        })();
+    }, [commessaId]);
+
+    const handleAssignConsumable = async (batchId) => {
+        try {
+            const res = await fetch(`${API}/api/consumables/${batchId}/assign/${commessaId}`, {
+                method: 'POST', credentials: 'include',
+            });
+            if (res.ok) {
+                // Move from available to assigned
+                setConsumables(prev => {
+                    const batch = prev.available.find(b => b.batch_id === batchId);
+                    if (!batch) return prev;
+                    return {
+                        assigned: [...prev.assigned, { ...batch, assegnazioni: [...(batch.assegnazioni || []), { commessa_id: commessaId, auto: false }] }],
+                        available: prev.available.filter(b => b.batch_id !== batchId),
+                    };
+                });
+            }
+        } catch { /* silent */ }
+    };
+
+    const handleUnassignConsumable = async (batchId) => {
+        try {
+            const res = await fetch(`${API}/api/consumables/${batchId}/assign/${commessaId}`, {
+                method: 'DELETE', credentials: 'include',
+            });
+            if (res.ok) {
+                setConsumables(prev => {
+                    const batch = prev.assigned.find(b => b.batch_id === batchId);
+                    if (!batch) return prev;
+                    return {
+                        assigned: prev.assigned.filter(b => b.batch_id !== batchId),
+                        available: [...prev.available, batch],
+                    };
+                });
+            }
+        } catch { /* silent */ }
 
     const handleImportWelder = (welderId) => {
         if (!welderId) { setSelectedWelderInfo(null); return; }
