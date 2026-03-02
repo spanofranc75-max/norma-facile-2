@@ -15,8 +15,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
-import {
-    Scale, LogOut, User,
+import { LegalFooter } from './LegalFooter';
     Sparkles, Receipt, Users, Settings, Ruler, Package, Shield,
     HardHat, Warehouse, ClipboardList, Truck, Factory, ShieldAlert,
     BarChart3, BoxIcon, FileInput, Camera, ChevronDown,
