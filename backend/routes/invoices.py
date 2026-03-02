@@ -908,19 +908,13 @@ async def delete_invoice(
     invoice_id: str,
     user: dict = Depends(get_current_user)
 ):
-    """Delete an invoice (only drafts)."""
+    """Delete an invoice."""
     existing = await db.invoices.find_one(
         {"invoice_id": invoice_id, "user_id": user["user_id"]},
         {"_id": 0}
     )
     if not existing:
         raise HTTPException(status_code=404, detail="Documento non trovato")
-    
-    if existing.get("status") != InvoiceStatus.BOZZA.value:
-        raise HTTPException(
-            status_code=400,
-            detail="Solo i documenti in bozza possono essere eliminati"
-        )
     
     await db.invoices.delete_one({"invoice_id": invoice_id})
     

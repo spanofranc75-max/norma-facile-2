@@ -525,14 +525,10 @@ export default function InvoicesPage() {
                                                                     <RefreshCw className="mr-2 h-4 w-4" />Converti in Fattura
                                                                 </DropdownMenuItem>
                                                             )}
-                                                            {inv.status === 'bozza' && (
-                                                                <>
-                                                                    <DropdownMenuSeparator />
-                                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(inv); }} className="text-red-600">
-                                                                        <Trash2 className="mr-2 h-4 w-4" />Elimina
-                                                                    </DropdownMenuItem>
-                                                                </>
-                                                            )}
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(inv); }} className="text-red-600">
+                                                                <Trash2 className="mr-2 h-4 w-4" />Elimina
+                                                            </DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </TableCell>
