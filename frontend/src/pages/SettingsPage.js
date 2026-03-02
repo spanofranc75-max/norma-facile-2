@@ -677,6 +677,11 @@ export default function SettingsPage() {
                             <TeamTab />
                         </TabsContent>
                     )}
+                    {user?.role === 'admin' && (
+                        <TabsContent value="deploy">
+                            <DeployTab />
+                        </TabsContent>
+                    )}
                 </Tabs>
             </div>
         </DashboardLayout>
