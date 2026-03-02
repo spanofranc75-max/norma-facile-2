@@ -83,7 +83,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Norma Facile 2.0 - Core Engine",
     description="CRM/ERP per Fabbri - Gestione commesse, fatturazione e certificazioni CE",
-    version="2.0.1",
+    version="2.1.0",
     lifespan=lifespan
 )
 
