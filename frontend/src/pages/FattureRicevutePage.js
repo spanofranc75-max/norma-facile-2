@@ -98,38 +98,73 @@ export default function FattureRicevutePage() {
 
     const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString());
 
-    // XML Upload
+    // XML Upload (single or multiple)
     const handleXmlUpload = async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        if (!file.name.toLowerCase().endsWith('.xml')) {
-            toast.error('Seleziona un file XML FatturaPA');
-            return;
-        }
-        setUploading(true);
-        try {
-            const formData = new FormData();
-            formData.append('file', file);
-            const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/fatture-ricevute/import-xml`, {
-                method: 'POST',
-                credentials: 'include',
-                body: formData,
-            });
-            if (!res.ok) {
-                const err = await res.json();
-                throw new Error(err.detail || 'Errore import');
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+
+        // Single file → use single endpoint, Multiple → batch
+        if (files.length === 1) {
+            const file = files[0];
+            const fname = file.name.toLowerCase();
+            if (!fname.endsWith('.xml') && !fname.endsWith('.p7m')) {
+                toast.error('Seleziona un file .xml o .xml.p7m (FatturaPA)');
+                return;
             }
-            const result = await res.json();
-            toast.success(result.message);
-            if (!result.fornitore_trovato) {
-                toast.info('Fornitore non trovato in anagrafica — puoi aggiungerlo dalla pagina Fornitori');
+            setUploading(true);
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/fatture-ricevute/import-xml`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData,
+                });
+                if (!res.ok) {
+                    let detail = `Errore ${res.status}`;
+                    try { const err = await res.json(); detail = err.detail || detail; } catch {}
+                    throw new Error(detail);
+                }
+                const result = await res.json();
+                toast.success(result.message);
+                if (!result.fornitore_trovato) {
+                    toast.info('Fornitore non trovato in anagrafica — puoi aggiungerlo dalla pagina Fornitori');
+                }
+                fetchFatture();
+            } catch (err) {
+                toast.error(err.message);
+            } finally {
+                setUploading(false);
+                if (fileInputRef.current) fileInputRef.current.value = '';
             }
-            fetchFatture();
-        } catch (err) {
-            toast.error(err.message);
-        } finally {
-            setUploading(false);
-            if (fileInputRef.current) fileInputRef.current.value = '';
+        } else {
+            // Multiple files → batch endpoint
+            setUploading(true);
+            try {
+                const formData = new FormData();
+                files.forEach(f => formData.append('files', f));
+                const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/fatture-ricevute/import-xml-batch`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData,
+                });
+                if (!res.ok) {
+                    let detail = `Errore ${res.status}`;
+                    try { const err = await res.json(); detail = err.detail || detail; } catch {}
+                    throw new Error(detail);
+                }
+                const result = await res.json();
+                toast.success(result.message);
+                if (result.errors?.length) {
+                    result.errors.forEach(e => toast.warning(e));
+                }
+                fetchFatture();
+            } catch (err) {
+                toast.error(err.message);
+            } finally {
+                setUploading(false);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+            }
         }
     };
 
@@ -231,7 +266,8 @@ export default function FattureRicevutePage() {
                         <input
                             ref={fileInputRef}
                             type="file"
-                            accept=".xml"
+                            accept=".xml,.p7m"
+                            multiple
                             className="hidden"
                             onChange={handleXmlUpload}
                             data-testid="input-xml-upload"
@@ -244,7 +280,7 @@ export default function FattureRicevutePage() {
                             className="border-[#0055FF] text-[#0055FF] hover:bg-blue-50"
                         >
                             <FileUp className="h-4 w-4 mr-2" />
-                            {uploading ? 'Importazione...' : 'Importa XML SDI'}
+                            {uploading ? 'Importazione...' : 'Importa XML / P7M'}
                         </Button>
                     </div>
                 </div>
@@ -354,8 +390,8 @@ export default function FattureRicevutePage() {
                                             <EmptyState
                                                 type="fatture_ricevute"
                                                 title="Nessuna fattura ricevuta"
-                                                description="Importa fatture XML dal SDI o registra manualmente le fatture dei fornitori."
-                                                actionLabel="Importa XML SDI"
+                                                description="Importa fatture XML o P7M dalla PEC, oppure registra manualmente. Supporta upload multiplo."
+                                                actionLabel="Importa XML / P7M"
                                                 onAction={() => fileInputRef.current?.click()}
                                             />
                                         </TableCell>

@@ -152,6 +152,65 @@ def find_elem(elem, tag_name):
     return None
 
 
+
+def _extract_xml_from_p7m(data: bytes) -> str | None:
+    """Extract XML content from a PKCS#7 (.p7m) signed file.
+    Tries multiple strategies: ASN.1 parsing, then brute-force XML extraction."""
+    # Strategy 1: Try to find XML content directly in the binary data
+    # FatturaPA XML always starts with <?xml and contains <FatturaElettronica
+    try:
+        text = data.decode('utf-8', errors='replace')
+        # Find XML start
+        xml_start = text.find('<?xml')
+        if xml_start == -1:
+            xml_start = text.find('<p:FatturaElettronica')
+        if xml_start == -1:
+            xml_start = text.find('<ns')
+        if xml_start == -1:
+            xml_start = text.find('<FatturaElettronica')
+        if xml_start >= 0:
+            # Find end
+            for end_tag in ['</FatturaElettronica>', '</p:FatturaElettronica>',
+                           '</ns2:FatturaElettronica>', '</ns3:FatturaElettronica>']:
+                xml_end = text.find(end_tag, xml_start)
+                if xml_end > 0:
+                    return text[xml_start:xml_end + len(end_tag)]
+            # Fallback: take from start to last >
+            last_gt = text.rfind('>')
+            if last_gt > xml_start:
+                candidate = text[xml_start:last_gt + 1]
+                # Validate it's parseable
+                try:
+                    ET.fromstring(candidate)
+                    return candidate
+                except ET.ParseError:
+                    pass
+    except Exception:
+        pass
+
+    # Strategy 2: Try OpenSSL-style extraction via subprocess
+    try:
+        import subprocess
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix='.p7m', delete=False) as tmp:
+            tmp.write(data)
+            tmp_path = tmp.name
+        result = subprocess.run(
+            ['openssl', 'smime', '-verify', '-noverify', '-in', tmp_path, '-inform', 'DER', '-out', '/dev/stdout'],
+            capture_output=True, timeout=10
+        )
+        import os
+        os.unlink(tmp_path)
+        if result.stdout:
+            xml_str = result.stdout.decode('utf-8', errors='replace')
+            if '<FatturaElettronica' in xml_str or '<?xml' in xml_str:
+                return xml_str
+    except Exception:
+        pass
+
+    return None
+
+
 def parse_fattura_xml(xml_content: str) -> dict:
     """Parse a FatturaPA XML and extract invoice data."""
     try:
@@ -445,12 +504,20 @@ async def import_xml_fattura(
     file: UploadFile = File(...),
     user: dict = Depends(get_current_user)
 ):
-    """Import a FatturaPA XML file and create a received invoice."""
-    if not file.filename.lower().endswith('.xml'):
-        raise HTTPException(400, "Il file deve essere in formato XML")
+    """Import a FatturaPA XML file (.xml or .p7m) and create a received invoice."""
+    fname = file.filename.lower()
+    if not (fname.endswith('.xml') or fname.endswith('.p7m')):
+        raise HTTPException(400, "Il file deve essere in formato .xml o .xml.p7m")
 
     content = await file.read()
-    xml_str = content.decode('utf-8', errors='replace')
+
+    # Handle .p7m (PKCS#7 signed) — extract XML from the wrapper
+    if fname.endswith('.p7m'):
+        xml_str = _extract_xml_from_p7m(content)
+        if not xml_str:
+            raise HTTPException(400, "Impossibile estrarre XML dal file .p7m. Prova a caricare il file .xml non firmato.")
+    else:
+        xml_str = content.decode('utf-8', errors='replace')
 
     try:
         parsed = parse_fattura_xml(xml_str)
@@ -459,6 +526,19 @@ async def import_xml_fattura(
 
     now = datetime.now(timezone.utc)
     fr_id = f"fr_{uuid.uuid4().hex[:12]}"
+
+    # Check for duplicate (same number + supplier + date)
+    existing = await db.fatture_ricevute.find_one({
+        "user_id": user["user_id"],
+        "numero_documento": parsed.get("numero_documento", ""),
+        "fornitore_piva": parsed.get("fornitore_piva", ""),
+        "data_documento": parsed.get("data_documento", ""),
+    }, {"_id": 0, "fr_id": 1})
+    if existing:
+        raise HTTPException(
+            409,
+            f"Fattura già importata: n. {parsed.get('numero_documento', '')} del {parsed.get('data_documento', '')} da {parsed.get('fornitore_nome', '')}"
+        )
 
     # Try to match supplier
     fornitore_id = None
@@ -514,9 +594,107 @@ async def import_xml_fattura(
         logger.warning(f"Consumable auto-import failed for XML {fr_id}: {e}")
 
     return {
-        "message": f"Fattura importata: {parsed.get('numero_documento', 'N/A')} da {parsed.get('fornitore_nome', 'N/A')}",
+        "message": f"Fattura importata: {parsed.get('numero_documento', 'N/A')} da {parsed.get('fornitore_nome', 'N/A')} — {parsed.get('totale_documento', 0):.2f}€",
         "fattura": created,
         "fornitore_trovato": fornitore_id is not None,
+    }
+
+
+@router.post("/import-xml-batch")
+async def import_xml_batch(
+    files: List[UploadFile] = File(...),
+    user: dict = Depends(get_current_user)
+):
+    """Import multiple FatturaPA XML files at once."""
+    results = {"imported": 0, "skipped": 0, "errors": [], "fatture": []}
+
+    for f in files:
+        fname = f.filename.lower()
+        if not (fname.endswith('.xml') or fname.endswith('.p7m')):
+            results["errors"].append(f"{f.filename}: formato non supportato (solo .xml o .p7m)")
+            continue
+
+        content = await f.read()
+        if fname.endswith('.p7m'):
+            xml_str = _extract_xml_from_p7m(content)
+            if not xml_str:
+                results["errors"].append(f"{f.filename}: impossibile estrarre XML dal .p7m")
+                continue
+        else:
+            xml_str = content.decode('utf-8', errors='replace')
+
+        try:
+            parsed = parse_fattura_xml(xml_str)
+        except ValueError as e:
+            results["errors"].append(f"{f.filename}: {str(e)}")
+            continue
+
+        # Check duplicate
+        existing = await db.fatture_ricevute.find_one({
+            "user_id": user["user_id"],
+            "numero_documento": parsed.get("numero_documento", ""),
+            "fornitore_piva": parsed.get("fornitore_piva", ""),
+            "data_documento": parsed.get("data_documento", ""),
+        }, {"_id": 0})
+        if existing:
+            results["skipped"] += 1
+            results["errors"].append(f"{f.filename}: già importata (n. {parsed.get('numero_documento', '')})")
+            continue
+
+        now = datetime.now(timezone.utc)
+        fr_id = f"fr_{uuid.uuid4().hex[:12]}"
+
+        fornitore_id = None
+        if parsed.get("fornitore_piva"):
+            supplier = await db.clients.find_one(
+                {"user_id": user["user_id"], "partita_iva": parsed["fornitore_piva"]},
+                {"_id": 0, "client_id": 1}
+            )
+            if supplier:
+                fornitore_id = supplier["client_id"]
+
+        doc = {
+            "fr_id": fr_id,
+            "user_id": user["user_id"],
+            "fornitore_id": fornitore_id,
+            "fornitore_nome": parsed.get("fornitore_nome", ""),
+            "fornitore_piva": parsed.get("fornitore_piva"),
+            "fornitore_cf": parsed.get("fornitore_cf"),
+            "tipo_documento": parsed.get("tipo_documento", "TD01"),
+            "numero_documento": parsed.get("numero_documento", ""),
+            "data_documento": parsed.get("data_documento", ""),
+            "data_ricezione": now.strftime("%Y-%m-%d"),
+            "status": FRStatus.DA_REGISTRARE.value,
+            "linee": parsed.get("linee", []),
+            "imponibile": parsed.get("imponibile", 0),
+            "imposta": parsed.get("imposta", 0),
+            "totale_documento": parsed.get("totale_documento", 0),
+            "modalita_pagamento": parsed.get("modalita_pagamento"),
+            "condizioni_pagamento": parsed.get("condizioni_pagamento"),
+            "data_scadenza_pagamento": parsed.get("data_scadenza_pagamento"),
+            "note": None,
+            "has_xml": True,
+            "xml_raw": xml_str,
+            "sdi_id": None,
+            "pagamenti": [],
+            "totale_pagato": 0.0,
+            "residuo": parsed.get("totale_documento", 0),
+            "payment_status": "non_pagata",
+            "created_at": now,
+            "updated_at": now,
+        }
+        await db.fatture_ricevute.insert_one(doc)
+        results["imported"] += 1
+        results["fatture"].append({
+            "filename": f.filename,
+            "numero": parsed.get("numero_documento", ""),
+            "fornitore": parsed.get("fornitore_nome", ""),
+            "totale": parsed.get("totale_documento", 0),
+        })
+
+    return {
+        "message": f"Importazione completata: {results['imported']} importate, {results['skipped']} duplicate",
+        **results,
     }
 
 
@@ -1084,7 +1262,7 @@ async def get_scadenziario_dashboard(
             "data_scadenza": scad,
             "importo": fr.get("residuo", fr.get("totale_documento", 0)),
             "stato": "scaduto" if scad and scad < today else ("in_scadenza" if scad and scad <= fine_mese else "ok"),
-            "link": f"/fatture-ricevute",
+            "link": "/fatture-ricevute",
             "processata": bool(fr.get("imputazione")),
         })
 
