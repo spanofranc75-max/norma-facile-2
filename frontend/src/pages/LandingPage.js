@@ -211,6 +211,11 @@ export default function LandingPage() {
                         <br />
                         P.IVA 02042850897
                     </p>
+                    <div className="flex items-center justify-center gap-3 mt-3">
+                        <a href="/legal/privacy" className="text-[10px] text-slate-400 hover:text-slate-600 underline">Privacy</a>
+                        <a href="/legal/terms" className="text-[10px] text-slate-400 hover:text-slate-600 underline">Termini</a>
+                        <a href="/legal/disclaimer" className="text-[10px] text-amber-500 hover:text-amber-600 underline">Disclaimer</a>
+                    </div>
                 </div>
             </div>
         </div>
