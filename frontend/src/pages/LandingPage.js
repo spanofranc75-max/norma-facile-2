@@ -48,19 +48,14 @@ export default function LandingPage() {
 
                 {/* Content */}
                 <div className="relative z-10 flex-1 flex flex-col justify-between p-8 lg:p-12 xl:p-16">
-                    {/* Top: Logo area */}
+                    {/* Top: Logo */}
                     <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            {/* Logo mark: "10" in navy, "1090" feel */}
-                            <div className="flex items-baseline gap-0">
-                                <span className="text-4xl lg:text-5xl font-black text-white tracking-tighter">10</span>
-                                <span className="text-4xl lg:text-5xl font-black text-[#64748B] tracking-tighter">90</span>
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-xs font-bold text-lime-400 uppercase tracking-[0.25em] leading-none">Norma</span>
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-[0.25em] leading-none">Facile</span>
-                            </div>
-                        </div>
+                        <img
+                            src="/logo-1090.jpeg"
+                            alt="1090 Norma Facile"
+                            className="h-16 lg:h-20 w-auto brightness-0 invert drop-shadow-lg"
+                            data-testid="brand-logo"
+                        />
                     </div>
 
                     {/* Center: Hero copy */}
