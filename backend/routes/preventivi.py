@@ -334,12 +334,14 @@ async def list_preventivi(
     if status:
         query["status"] = status
     total = await db.preventivi.count_documents(query)
-    cursor = db.preventivi.find(query, {"_id": 0}).skip(skip).limit(limit).sort("created_at", -1)
+    cursor = db.preventivi.find(query, {"_id": 0}).skip(skip).limit(limit).sort("number", -1)
     docs = await cursor.to_list(limit)
     for d in docs:
         if d.get("client_id"):
             c = await db.clients.find_one({"client_id": d["client_id"]}, {"_id": 0, "business_name": 1})
-            d["client_name"] = c.get("business_name") if c else None
+            d["client_name"] = c.get("business_name") if c else d.get("_migrated_client_name")
+        elif d.get("_migrated_client_name"):
+            d["client_name"] = d["_migrated_client_name"]
         # Compute invoicing progress
         tot = float(d.get("totals", {}).get("total", 0))
         invoiced = float(d.get("total_invoiced", 0))
