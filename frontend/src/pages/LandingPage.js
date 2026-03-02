@@ -134,12 +134,33 @@ export default function LandingPage() {
                         </p>
                     </div>
 
+                    {/* ToS Acceptance */}
+                    <label className="flex items-start gap-2.5 cursor-pointer group mb-5" data-testid="tos-checkbox-label">
+                        <Checkbox
+                            checked={tosAccepted}
+                            onCheckedChange={setTosAccepted}
+                            className="mt-0.5 h-4 w-4 border-slate-300 data-[state=checked]:bg-[#0F172A] data-[state=checked]:border-[#0F172A]"
+                            data-testid="tos-checkbox"
+                        />
+                        <span className="text-[11px] text-slate-500 leading-relaxed">
+                            Accetto i{' '}
+                            <a href="/legal/terms" target="_blank" className="text-[#0F172A] underline hover:text-blue-600 font-medium">Termini di Servizio</a>
+                            {' '}e dichiaro di aver letto il{' '}
+                            <a href="/legal/disclaimer" target="_blank" className="text-amber-600 underline hover:text-amber-700 font-medium">Disclaimer sulle responsabilità EN 1090</a>.
+                        </span>
+                    </label>
+
                     {/* Google Login Button */}
                     <Button
                         data-testid="hero-login-btn"
                         onClick={login}
+                        disabled={!tosAccepted}
                         size="lg"
-                        className="w-full h-12 bg-[#0F172A] text-white hover:bg-[#1E293B] text-sm font-semibold rounded-xl shadow-lg shadow-slate-900/10 transition-all duration-300 hover:shadow-xl hover:shadow-slate-900/20 hover:-translate-y-0.5 group"
+                        className={`w-full h-12 text-sm font-semibold rounded-xl shadow-lg transition-all duration-300 group ${
+                            tosAccepted
+                                ? 'bg-[#0F172A] text-white hover:bg-[#1E293B] shadow-slate-900/10 hover:shadow-xl hover:shadow-slate-900/20 hover:-translate-y-0.5'
+                                : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                        }`}
                     >
                         <svg className="h-5 w-5 mr-2.5" viewBox="0 0 24 24">
                             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
