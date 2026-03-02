@@ -78,7 +78,7 @@ export default function ClientsPage() {
 
     const fetchClients = useCallback(async () => {
         try {
-            const data = await apiRequest(`/clients/?search=${searchQuery}&limit=100`);
+            const data = await apiRequest(`/clients/?search=${searchQuery}&client_type=cliente&limit=100`);
             setClients(data.clients || []);
         } catch (e) { toast.error('Errore caricamento clienti'); }
         finally { setLoading(false); }
