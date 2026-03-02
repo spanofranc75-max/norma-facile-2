@@ -43,6 +43,7 @@ from routes.welders import router as welders_router
 from routes.audits import router as audits_router
 from routes.quality_hub import router as quality_hub_router
 from routes.smart_assign import router as smart_assign_router
+from routes.migrazione import router as migrazione_router
 
 # Configure logging
 logging.basicConfig(
