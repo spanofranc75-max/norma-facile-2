@@ -345,11 +345,68 @@ export default function PreventivoEditorPage() {
         }
         setCreatingCommessa(true);
         try {
+            // Step 1: Analyze preventivo for normativa conflicts
+            const analysis = await apiRequest(`/commesse/analyze-preventivo/${prevId}`);
+            if (analysis.conflict) {
+                // Mixed content detected — show split dialog
+                setSplitAnalysis(analysis);
+                setSplitGroups({
+                    en_1090: analysis.groups.en_1090.map(i => i.index),
+                    en_13241: analysis.groups.en_13241.map(i => i.index),
+                    non_classificati: analysis.groups.non_classificati.map(i => i.index),
+                });
+                setShowSplitDialog(true);
+                setCreatingCommessa(false);
+                return;
+            }
+            // No conflict — create single commessa
             const res = await apiRequest(`/commesse/from-preventivo/${prevId}`, { method: 'POST' });
             toast.success(`Commessa ${res.numero || ''} creata!`);
             setLinkedCommessa(res);
             navigate(`/commesse/${res.commessa_id}`);
         } catch (e) { toast.error(e.message); } finally { setCreatingCommessa(false); }
+    };
+
+    const handleSplitConfirm = async () => {
+        setSplittingCommesse(true);
+        try {
+            // Assign non-classified items to EN 1090 by default
+            const indices1090 = [...splitGroups.en_1090, ...splitGroups.non_classificati];
+            const indices13241 = [...splitGroups.en_13241];
+
+            if (indices1090.length === 0 && indices13241.length === 0) {
+                toast.error('Nessun item assegnato alle commesse');
+                return;
+            }
+
+            const commesse = [];
+            if (indices1090.length > 0) {
+                commesse.push({ suffix: 'A', normativa: 'EN_1090', item_indices: indices1090 });
+            }
+            if (indices13241.length > 0) {
+                commesse.push({ suffix: 'B', normativa: 'EN_13241', item_indices: indices13241 });
+            }
+
+            const res = await apiRequest(`/commesse/from-preventivo/${prevId}/split`, {
+                method: 'POST',
+                body: { commesse },
+            });
+            toast.success(res.message);
+            setShowSplitDialog(false);
+            // Navigate to first commessa
+            if (res.commesse?.length > 0) {
+                setLinkedCommessa(res.commesse[0]);
+                navigate(`/commesse/${res.commesse[0].commessa_id}`);
+            }
+        } catch (e) { toast.error(e.message); } finally { setSplittingCommesse(false); }
+    };
+
+    const moveItem = (index, from, to) => {
+        setSplitGroups(prev => ({
+            ...prev,
+            [from]: prev[from].filter(i => i !== index),
+            [to]: [...prev[to], index],
+        }));
     };
 
     const activeLine = activeLineIdx !== null ? form.lines[activeLineIdx] : null;
