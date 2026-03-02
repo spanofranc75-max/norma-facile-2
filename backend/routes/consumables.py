@@ -386,14 +386,28 @@ async def delete_consumable_batch(batch_id: str, user: dict = Depends(get_curren
 
 @router.post("/analyze-invoice/{fattura_id}")
 async def analyze_invoice_for_consumables(fattura_id: str, user: dict = Depends(get_current_user)):
-    """Manually trigger consumable analysis for a specific invoice."""
+    """Manually trigger consumable analysis for a specific invoice.
+    
+    Note: fattura_id parameter can be either fr_id or fattura_id field.
+    """
     uid = user["user_id"]
+    # Try fr_id first (primary key), then fattura_id field
     fattura = await db.fatture_ricevute.find_one(
-        {"fattura_id": fattura_id, "user_id": uid},
+        {"fr_id": fattura_id, "user_id": uid},
         {"_id": 0},
     )
     if not fattura:
+        # Fallback: try fattura_id field
+        fattura = await db.fatture_ricevute.find_one(
+            {"fattura_id": fattura_id, "user_id": uid},
+            {"_id": 0},
+        )
+    if not fattura:
         raise HTTPException(404, "Fattura non trovata")
+
+    # Ensure fattura has fattura_id field set for consumable import
+    if "fattura_id" not in fattura:
+        fattura["fattura_id"] = fattura.get("fr_id", fattura_id)
 
     created = await analyze_and_import_invoice_consumables(fattura, uid)
     return {
