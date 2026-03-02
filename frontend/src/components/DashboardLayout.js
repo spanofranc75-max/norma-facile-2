@@ -22,6 +22,7 @@ import {
     BarChart3, BoxIcon, FileInput, Camera, ChevronDown,
     Briefcase, Wrench, Award, ShoppingCart, FileText, LayoutGrid,
     CreditCard, TrendingUp, ClipboardCheck, Calendar, CircleDollarSign,
+    User, LogOut,
 } from 'lucide-react';
 
 // ── Navigation Structure ────────────────────────────────────────
