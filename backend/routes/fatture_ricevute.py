@@ -695,3 +695,458 @@ async def record_fr_payment(
 
     await db.fatture_ricevute.update_one({"fr_id": fr_id}, update)
     return {"message": "Pagamento registrato", "totale_pagato": round(new_paid, 2), "residuo": max(residuo, 0), "payment_status": ps}
+
+
+
+# ── Cost Imputation (Assign to Commessa or Magazzino) ────────────
+
+class ImputazioneDestinazione(str, Enum):
+    COMMESSA = "commessa"
+    MAGAZZINO = "magazzino"
+
+
+class ImputazioneRequest(BaseModel):
+    destinazione: ImputazioneDestinazione
+    commessa_id: Optional[str] = None
+    righe_selezionate: Optional[List[int]] = None  # line indexes, None = all
+    note: Optional[str] = None
+
+
+@router.post("/{fr_id}/imputa")
+async def imputa_costi(
+    fr_id: str,
+    data: ImputazioneRequest,
+    user: dict = Depends(get_current_user)
+):
+    """Assign invoice costs to a commessa or magazzino."""
+    fr = await db.fatture_ricevute.find_one(
+        {"fr_id": fr_id, "user_id": user["user_id"]}, {"_id": 0, "xml_raw": 0}
+    )
+    if not fr:
+        raise HTTPException(404, "Fattura ricevuta non trovata")
+
+    linee = fr.get("linee", [])
+    if data.righe_selezionate:
+        selected = [linee[i] for i in data.righe_selezionate if i < len(linee)]
+    else:
+        selected = linee
+
+    if not selected:
+        raise HTTPException(400, "Nessuna riga selezionata")
+
+    totale_imputato = sum(abs(l.get("importo", 0)) for l in selected)
+    now = datetime.now(timezone.utc)
+
+    if data.destinazione == ImputazioneDestinazione.COMMESSA:
+        if not data.commessa_id:
+            raise HTTPException(400, "commessa_id obbligatorio per destinazione commessa")
+
+        commessa = await db.commesse.find_one(
+            {"commessa_id": data.commessa_id, "user_id": user["user_id"]},
+            {"_id": 0, "commessa_id": 1, "numero": 1}
+        )
+        if not commessa:
+            raise HTTPException(404, "Commessa non trovata")
+
+        # Add cost entry to commessa
+        cost_entry = {
+            "cost_id": f"cost_{uuid.uuid4().hex[:8]}",
+            "tipo": "materiale",
+            "descrizione": f"Fatt. {fr.get('numero_documento', '')} — {fr.get('fornitore_nome', '')}",
+            "fornitore": fr.get("fornitore_nome", ""),
+            "importo": round(totale_imputato, 2),
+            "data": now.isoformat(),
+            "fr_id": fr_id,
+            "note": data.note or "",
+            "righe": [{
+                "descrizione": l.get("descrizione", ""),
+                "quantita": l.get("quantita", 0),
+                "prezzo_unitario": l.get("prezzo_unitario", 0),
+                "importo": l.get("importo", 0),
+            } for l in selected],
+        }
+
+        await db.commesse.update_one(
+            {"commessa_id": data.commessa_id},
+            {"$push": {"costi_reali": cost_entry}, "$set": {"updated_at": now}}
+        )
+
+        # Mark fattura as processed
+        await db.fatture_ricevute.update_one(
+            {"fr_id": fr_id},
+            {"$set": {
+                "imputazione": {
+                    "destinazione": "commessa",
+                    "commessa_id": data.commessa_id,
+                    "commessa_numero": commessa.get("numero", ""),
+                    "importo": round(totale_imputato, 2),
+                    "data": now.isoformat(),
+                },
+                "status": "registrata",
+                "updated_at": now,
+            }}
+        )
+
+        return {
+            "message": f"Costo di {totale_imputato:.2f}€ imputato alla commessa {commessa.get('numero', '')}",
+            "destinazione": "commessa",
+            "commessa_numero": commessa.get("numero", ""),
+            "importo": round(totale_imputato, 2),
+        }
+
+    else:  # MAGAZZINO
+        updated_count = 0
+        created_count = 0
+        for linea in selected:
+            desc = linea.get("descrizione", "").strip()
+            if not desc or len(desc) < 3:
+                continue
+
+            prezzo = abs(linea.get("prezzo_unitario", 0))
+            qty = abs(linea.get("quantita", 0))
+            codice = (linea.get("codice_articolo") or "").strip()
+
+            if codice:
+                existing = await db.articoli.find_one(
+                    {"user_id": user["user_id"], "codice": codice}, {"_id": 0}
+                )
+            else:
+                existing = None
+
+            if existing:
+                # Update stock and price
+                old_price = existing.get("prezzo_unitario", 0)
+                old_stock = existing.get("giacenza", 0)
+                new_stock = old_stock + qty
+
+                # Weighted average price
+                if old_stock + qty > 0:
+                    new_price = ((old_price * old_stock) + (prezzo * qty)) / (old_stock + qty)
+                else:
+                    new_price = prezzo
+
+                await db.articoli.update_one(
+                    {"articolo_id": existing["articolo_id"]},
+                    {
+                        "$set": {
+                            "prezzo_unitario": round(new_price, 4),
+                            "giacenza": new_stock,
+                            "updated_at": now,
+                        },
+                        "$push": {"storico_prezzi": {
+                            "prezzo": prezzo,
+                            "data": now.isoformat(),
+                            "fonte": f"Fatt. {fr.get('numero_documento', '')} — {fr.get('fornitore_nome', '')}",
+                            "quantita": qty,
+                        }}
+                    }
+                )
+                updated_count += 1
+            else:
+                # Create new article with stock
+                words = re.sub(r'[^a-zA-Z0-9\s]', '', desc).upper().split()[:3]
+                auto_codice = "-".join(words) if words else f"ART-{uuid.uuid4().hex[:4].upper()}"
+                um = (linea.get("unita_misura") or "pz").lower()
+
+                doc = {
+                    "articolo_id": f"art_{uuid.uuid4().hex[:12]}",
+                    "user_id": user["user_id"],
+                    "codice": codice or auto_codice,
+                    "descrizione": desc,
+                    "categoria": "materiale",
+                    "unita_misura": um,
+                    "prezzo_unitario": prezzo,
+                    "giacenza": qty,
+                    "aliquota_iva": (linea.get("aliquota_iva") or "22").replace('.00', ''),
+                    "fornitore_nome": fr.get("fornitore_nome", ""),
+                    "fornitore_id": fr.get("fornitore_id"),
+                    "storico_prezzi": [{"prezzo": prezzo, "data": now.isoformat(),
+                        "fonte": f"Fatt. {fr.get('numero_documento', '')} — {fr.get('fornitore_nome', '')}",
+                        "quantita": qty}],
+                    "created_at": now,
+                    "updated_at": now,
+                }
+                await db.articoli.insert_one(doc)
+                created_count += 1
+
+        # Mark fattura as processed
+        await db.fatture_ricevute.update_one(
+            {"fr_id": fr_id},
+            {"$set": {
+                "imputazione": {
+                    "destinazione": "magazzino",
+                    "importo": round(totale_imputato, 2),
+                    "data": now.isoformat(),
+                    "articoli_aggiornati": updated_count,
+                    "articoli_creati": created_count,
+                },
+                "status": "registrata",
+                "updated_at": now,
+            }}
+        )
+
+        return {
+            "message": f"Magazzino aggiornato: {created_count} articoli creati, {updated_count} aggiornati",
+            "destinazione": "magazzino",
+            "importo": round(totale_imputato, 2),
+            "created": created_count,
+            "updated": updated_count,
+        }
+
+
+# ── FattureInCloud Sync ─────────────────────────────────────────
+
+@router.post("/sync-fic")
+async def sync_fatture_from_fic(
+    user: dict = Depends(get_current_user)
+):
+    """Sync received invoices from FattureInCloud API."""
+    from services.fattureincloud_api import get_fic_client
+
+    # Get user's FIC credentials from settings or user profile
+    user_doc = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    fic_token = (user_doc or {}).get("fic_access_token") or getattr(settings, 'fic_access_token', None)
+    fic_company_id = (user_doc or {}).get("fic_company_id") or getattr(settings, 'fic_company_id', None)
+
+    if not fic_token or not fic_company_id:
+        raise HTTPException(400, "FattureInCloud non configurato. Inserisci il token API nelle impostazioni.")
+
+    client = get_fic_client(access_token=fic_token, company_id=int(fic_company_id))
+    if not client.is_configured:
+        raise HTTPException(400, "Configurazione FattureInCloud incompleta")
+
+    imported = 0
+    skipped = 0
+    errors = []
+    page = 1
+
+    try:
+        while True:
+            resp = await client.list_received_invoices(page=page, per_page=50)
+            data_list = resp.get("data", [])
+            if not data_list:
+                break
+
+            for doc_fic in data_list:
+                fic_id = str(doc_fic.get("id", ""))
+                # Skip if already imported
+                existing = await db.fatture_ricevute.find_one(
+                    {"user_id": user["user_id"], "fic_id": fic_id}, {"_id": 0, "fr_id": 1}
+                )
+                if existing:
+                    skipped += 1
+                    continue
+
+                # Map FIC document to our schema
+                entity = doc_fic.get("entity", {}) or {}
+                items = doc_fic.get("items_list", []) or []
+
+                linee = []
+                for i, item in enumerate(items):
+                    linee.append({
+                        "numero_linea": i + 1,
+                        "codice_articolo": item.get("code", ""),
+                        "descrizione": item.get("name", ""),
+                        "quantita": float(item.get("qty", 1)),
+                        "unita_misura": item.get("measure", "pz") or "pz",
+                        "prezzo_unitario": abs(float(item.get("net_price", 0))),
+                        "sconto_percent": float(item.get("discount", 0)),
+                        "aliquota_iva": str(int(item.get("vat", {}).get("value", 22))) if isinstance(item.get("vat"), dict) else "22",
+                        "importo": float(item.get("net_price", 0)) * float(item.get("qty", 1)),
+                    })
+
+                amount_net = float(doc_fic.get("amount_net", 0))
+                amount_vat = float(doc_fic.get("amount_vat", 0))
+                amount_gross = float(doc_fic.get("amount_gross", amount_net + amount_vat))
+
+                # Payment info
+                payments_list = doc_fic.get("payments_list", []) or []
+                data_scadenza = ""
+                if payments_list:
+                    data_scadenza = payments_list[0].get("due_date", "")
+
+                now = datetime.now(timezone.utc)
+                fr_id = f"fr_{uuid.uuid4().hex[:12]}"
+
+                # Match supplier by VAT
+                fornitore_id = None
+                piva = entity.get("vat_number", "")
+                if piva:
+                    supplier = await db.clients.find_one(
+                        {"user_id": user["user_id"], "partita_iva": piva},
+                        {"_id": 0, "client_id": 1}
+                    )
+                    if supplier:
+                        fornitore_id = supplier["client_id"]
+
+                fr_doc = {
+                    "fr_id": fr_id,
+                    "fic_id": fic_id,
+                    "user_id": user["user_id"],
+                    "fornitore_id": fornitore_id,
+                    "fornitore_nome": entity.get("name", ""),
+                    "fornitore_piva": piva,
+                    "fornitore_cf": entity.get("tax_code", ""),
+                    "tipo_documento": "TD01",
+                    "numero_documento": str(doc_fic.get("number", "")),
+                    "data_documento": str(doc_fic.get("date", "")),
+                    "data_ricezione": now.strftime("%Y-%m-%d"),
+                    "status": "pagata" if doc_fic.get("is_marked") else "da_registrare",
+                    "linee": linee,
+                    "imponibile": round(amount_net, 2),
+                    "imposta": round(amount_vat, 2),
+                    "totale_documento": round(amount_gross, 2),
+                    "modalita_pagamento": "",
+                    "condizioni_pagamento": "",
+                    "data_scadenza_pagamento": data_scadenza,
+                    "note": doc_fic.get("notes", ""),
+                    "has_xml": False,
+                    "sdi_id": None,
+                    "pagamenti": [],
+                    "totale_pagato": round(amount_gross, 2) if doc_fic.get("is_marked") else 0.0,
+                    "residuo": 0.0 if doc_fic.get("is_marked") else round(amount_gross, 2),
+                    "payment_status": "pagata" if doc_fic.get("is_marked") else "non_pagata",
+                    "created_at": now,
+                    "updated_at": now,
+                }
+                try:
+                    await db.fatture_ricevute.insert_one(fr_doc)
+                    imported += 1
+                except Exception as e:
+                    errors.append(f"Errore importazione doc {fic_id}: {str(e)}")
+
+            # Check pagination
+            total_pages = resp.get("last_page", resp.get("total_pages", 1))
+            if page >= total_pages:
+                break
+            page += 1
+
+    except Exception as e:
+        logger.error(f"FIC sync error: {e}")
+        if imported == 0:
+            raise HTTPException(502, f"Errore comunicazione FattureInCloud: {str(e)}")
+
+    return {
+        "message": f"Sincronizzazione completata: {imported} importate, {skipped} già presenti",
+        "imported": imported,
+        "skipped": skipped,
+        "errors": errors,
+    }
+
+
+# ── Scadenziario Dashboard ──────────────────────────────────────
+
+@router.get("/scadenziario/dashboard")
+async def get_scadenziario_dashboard(
+    user: dict = Depends(get_current_user)
+):
+    """Aggregated deadline dashboard: payments, documents, commesse milestones."""
+    uid = user["user_id"]
+    today = date.today().isoformat()
+    fine_mese = date(date.today().year, date.today().month + 1 if date.today().month < 12 else 1, 1).isoformat() if date.today().month < 12 else f"{date.today().year + 1}-01-01"
+
+    scadenze = []
+
+    # 1. Payment deadlines from fatture ricevute
+    fr_cursor = db.fatture_ricevute.find(
+        {"user_id": uid, "payment_status": {"$ne": "pagata"}},
+        {"_id": 0, "xml_raw": 0}
+    ).sort("data_scadenza_pagamento", 1)
+    async for fr in fr_cursor:
+        scad = fr.get("data_scadenza_pagamento", "")
+        scadenze.append({
+            "tipo": "pagamento",
+            "id": fr.get("fr_id"),
+            "titolo": f"Fatt. {fr.get('numero_documento', '?')}",
+            "sottotitolo": fr.get("fornitore_nome", ""),
+            "data_scadenza": scad,
+            "importo": fr.get("residuo", fr.get("totale_documento", 0)),
+            "stato": "scaduto" if scad and scad < today else ("in_scadenza" if scad and scad <= fine_mese else "ok"),
+            "link": f"/fatture-ricevute",
+            "processata": bool(fr.get("imputazione")),
+        })
+
+    # 2. Welder certificate expiries
+    async for w in db.welders.find({"is_active": True}, {"_id": 0}):
+        for q in w.get("qualifications", []):
+            exp = q.get("expiry_date", "")
+            if exp:
+                scadenze.append({
+                    "tipo": "patentino",
+                    "id": w.get("welder_id"),
+                    "titolo": f"Patentino {q.get('standard', '')}",
+                    "sottotitolo": w.get("name", ""),
+                    "data_scadenza": exp,
+                    "importo": None,
+                    "stato": "scaduto" if exp < today else ("in_scadenza" if exp <= fine_mese else "ok"),
+                    "link": "/quality-hub/welders",
+                })
+
+    # 3. Instrument calibration expiries
+    async for inst in db.instruments.find({"status": {"$nin": ["fuori_uso"]}}, {"_id": 0}):
+        exp = inst.get("next_calibration", "")
+        if exp:
+            scadenze.append({
+                "tipo": "taratura",
+                "id": inst.get("instrument_id"),
+                "titolo": f"Taratura {inst.get('name', '')}",
+                "sottotitolo": inst.get("serial_number", ""),
+                "data_scadenza": exp,
+                "importo": None,
+                "stato": "scaduto" if exp < today else ("in_scadenza" if exp <= fine_mese else "ok"),
+                "link": "/quality-hub/equipment",
+            })
+
+    # 4. Commesse delivery deadlines
+    async for c in db.commesse.find(
+        {"user_id": uid, "stato": {"$nin": ["bozza", "chiuso", "fatturato"]}},
+        {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "data_consegna": 1}
+    ):
+        dc = c.get("data_consegna", "")
+        if dc:
+            scadenze.append({
+                "tipo": "consegna",
+                "id": c.get("commessa_id"),
+                "titolo": f"Consegna {c.get('numero', '')}",
+                "sottotitolo": c.get("title", ""),
+                "data_scadenza": dc,
+                "importo": None,
+                "stato": "scaduto" if dc < today else ("in_scadenza" if dc <= fine_mese else "ok"),
+                "link": f"/commesse/{c.get('commessa_id')}",
+            })
+
+    # Sort by date
+    scadenze.sort(key=lambda x: x.get("data_scadenza") or "9999-12-31")
+
+    # KPIs
+    scadute = [s for s in scadenze if s["stato"] == "scaduto"]
+    in_scadenza = [s for s in scadenze if s["stato"] == "in_scadenza"]
+    pagamenti_scaduti = sum(s.get("importo", 0) or 0 for s in scadute if s["tipo"] == "pagamento")
+    pagamenti_mese = sum(s.get("importo", 0) or 0 for s in in_scadenza if s["tipo"] == "pagamento")
+
+    # Fatture da processare (inbox)
+    inbox_count = await db.fatture_ricevute.count_documents(
+        {"user_id": uid, "imputazione": {"$exists": False}, "status": {"$ne": "pagata"}}
+    )
+
+    # Totale acquisti anno
+    year = date.today().year
+    pipeline = [
+        {"$match": {"user_id": uid, "data_documento": {"$regex": f"^{year}"}}},
+        {"$group": {"_id": None, "totale": {"$sum": "$totale_documento"}}}
+    ]
+    agg = await db.fatture_ricevute.aggregate(pipeline).to_list(1)
+    totale_anno = agg[0]["totale"] if agg else 0
+
+    return {
+        "scadenze": scadenze,
+        "kpi": {
+            "pagamenti_scaduti": round(pagamenti_scaduti, 2),
+            "pagamenti_mese_corrente": round(pagamenti_mese, 2),
+            "totale_acquisti_anno": round(totale_anno, 2),
+            "scadenze_totali": len(scadenze),
+            "scadute": len(scadute),
+            "in_scadenza": len(in_scadenza),
+            "inbox_da_processare": inbox_count,
+        }
+    }
