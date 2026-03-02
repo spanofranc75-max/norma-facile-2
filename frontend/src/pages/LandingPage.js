@@ -50,12 +50,14 @@ export default function LandingPage() {
                 <div className="relative z-10 flex-1 flex flex-col justify-between p-8 lg:p-12 xl:p-16">
                     {/* Top: Logo */}
                     <div>
-                        <img
-                            src="/logo-1090.jpeg"
-                            alt="1090 Norma Facile"
-                            className="h-16 lg:h-20 w-auto brightness-0 invert drop-shadow-lg"
-                            data-testid="brand-logo"
-                        />
+                        <div className="inline-block bg-white/95 rounded-xl p-3 shadow-lg shadow-black/20 backdrop-blur-sm">
+                            <img
+                                src="/logo-1090.jpeg"
+                                alt="1090 Norma Facile"
+                                className="h-14 lg:h-16 w-auto"
+                                data-testid="brand-logo"
+                            />
+                        </div>
                     </div>
 
                     {/* Center: Hero copy */}
