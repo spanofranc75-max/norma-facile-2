@@ -19,6 +19,7 @@ Italiano (l'utente comunica esclusivamente in italiano).
 - **AI OCR**: OpenAI GPT-4o Vision (Emergent LLM Key)
 - **Email**: Resend
 - **Invoicing**: Fatture in Cloud (SDI) — ATTIVO, Company ID 1398737
+- **Dominio Produzione**: www.1090normafacile.it
 
 ## Brand Identity
 - **Palette**: Navy #0F172A, Steel Grey #64748B, Lime Accent #84CC16
@@ -41,34 +42,32 @@ Italiano (l'utente comunica esclusivamente in italiano).
 - Quality Score adattivo, Dashboard Sostenibilita' CO2
 
 ### Controllo Costi e Finanza
-- Controllo Costi con pagina dedicata (mock + reali)
+- Controllo Costi con pagina dedicata
 - Analisi Finanziaria Commessa (Margine Reale)
 - Scadenziario (dashboard scadenze)
 
 ### Amministrazione
-- Backup & Restore: Export JSON completo 19 collezioni
+- Backup & Restore: Export/Import JSON completo
 - Migrazione dati da vecchia app
 - Fatture in Cloud ATTIVA
 - Ruoli & Permessi (RBAC): admin, ufficio_tecnico, officina, amministrazione, guest
 - Gestione Team con inviti email
 
-### Notifiche & Monitoraggio
-- **"Il Cane da Guardia"**: scheduler background (12h) che controlla scadenze qualifiche saldatori e calibrazioni strumenti
-- Invio email automatico via Resend ai ruoli admin/ufficio_tecnico
-- Dashboard /notifiche con allarmi live, storico controlli, trigger manuale
-- **QR Code Commesse**: generazione QR code PNG che apre la commessa nell'app
+### Notifiche & Monitoraggio (v2.1.0)
+- "Il Cane da Guardia": scheduler background (12h) scadenze saldatori/strumenti
+- Email automatiche via Resend a admin/ufficio_tecnico
+- Dashboard /notifiche con allarmi live, storico, trigger manuale
+- Badge notifiche nella sidebar con conteggio allarmi attivi
+- QR Code Commesse: generazione PNG + dialog download
 
-### Deploy Preparation
-- Pulizia database test dati (tab Deploy in Impostazioni, solo admin)
-- Preview dati da eliminare con opzione mantieni clienti/fornitori
-- Audit log delle operazioni di pulizia
+### Deploy & Manutenzione (v2.1.0)
+- Tab Deploy in Impostazioni: pulizia dati test, preview, opzioni mantieni clienti/fornitori
+- Indici MongoDB ottimizzati per performance produzione
+- Pulizia utenti e sessioni test completata
 
 ### Legal & Compliance
-- Disclaimer EN 1090: Limitazione responsabilita', natura del servizio
-- Termini di Servizio: Contratto, account, dati, proprieta' intellettuale
-- Privacy Policy GDPR: Informativa completa art. 13-14
-- LegalFooter: componente riutilizzabile
-- Checkbox accettazione ToS obbligatoria prima del login
+- Disclaimer EN 1090, Termini di Servizio, Privacy Policy GDPR
+- LegalFooter riutilizzabile, Checkbox accettazione ToS
 
 ### UI/UX
 - Landing Page Dark & Industrial Split Screen con logo reale
@@ -76,17 +75,26 @@ Italiano (l'utente comunica esclusivamente in italiano).
 
 ---
 
+## Produzione — Checklist
+- [x] Dominio: www.1090normafacile.it (configurato in DOMAIN_URL e CORS)
+- [x] Email: Resend con fatture@steelprojectdesign.it (verificato funzionante)
+- [x] Credenziali: Tutte configurate (Google OAuth, FIC, Resend, LLM)
+- [x] Indici MongoDB creati per performance
+- [x] Utenti test eliminati (solo admin reale rimasto)
+- [x] Sessioni test eliminate
+- [x] Scheduler notifiche attivo
+- [ ] Pulizia dati operativi test (da fare manualmente via tab Deploy)
+- [ ] Backup "Punto Zero" dopo pulizia
+
+---
+
 ## Backlog Prioritizzato
 
-### P0 — In Corso
-- Verifica email notifiche non finiscano in spam
-- Verifica HTTPS/Dominio definitivo (app.normafacile.it)
-
-### P1 — Prossimi
+### P1
 - Export CSV distinta di taglio per CNC
 - Stato "SOSPESA" per commesse
 
-### P2 — Futuri
+### P2
 - PWA per modalita' offline
 - Migrazione certificati Base64 -> object storage
 - Versionamento fatture e fascicoli tecnici
@@ -94,7 +102,4 @@ Italiano (l'utente comunica esclusivamente in italiano).
 ---
 
 ## Ultimo Aggiornamento: 2026-03-02
-- Implementato "Il Cane da Guardia" (notifiche automatiche scadenze)
-- QR Code per commesse (generazione + dialog frontend)
-- Tab Deploy per pulizia database pre-produzione
-- Testing: 24/24 backend + 100% frontend (iteration_103)
+- v2.1.0: Notifiche automatiche, QR Code, Deploy prep, ottimizzazioni produzione
