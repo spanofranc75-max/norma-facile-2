@@ -47,20 +47,44 @@ async def create_session(user_data: dict, response: Response) -> dict:
             {"$set": {
                 "name": user_data.get("name"),
                 "picture": user_data.get("picture"),
+                "last_login": datetime.now(timezone.utc),
                 "updated_at": datetime.now(timezone.utc)
             }}
         )
     else:
-        # Create new user with custom user_id
+        # Check if this email has a pending invite
+        invite = await db.team_invites.find_one({"email": email.lower(), "status": "pending"})
+
         user_id = f"user_{uuid.uuid4().hex[:12]}"
-        await db.users.insert_one({
+        new_user = {
             "user_id": user_id,
             "email": email,
             "name": user_data.get("name"),
             "picture": user_data.get("picture"),
             "created_at": datetime.now(timezone.utc),
-            "updated_at": datetime.now(timezone.utc)
-        })
+            "updated_at": datetime.now(timezone.utc),
+            "last_login": datetime.now(timezone.utc),
+        }
+
+        if invite:
+            # Invited user: assign role and link to admin's team
+            new_user["role"] = invite["role"]
+            new_user["team_owner_id"] = invite["admin_id"]
+            # Mark invite as accepted
+            await db.team_invites.update_one(
+                {"_id": invite["_id"]},
+                {"$set": {"status": "accepted", "accepted_at": datetime.now(timezone.utc), "accepted_user_id": user_id}},
+            )
+            logger.info(f"Invited user {email} joined with role {invite['role']}")
+        else:
+            # First user or uninvited: check if any users exist for this "team"
+            total_users = await db.users.count_documents({})
+            if total_users == 0:
+                new_user["role"] = "admin"  # First user is always admin
+            else:
+                new_user["role"] = "guest"  # Uninvited users are guests
+
+        await db.users.insert_one(new_user)
     
     # Create session
     expires_at = datetime.now(timezone.utc) + timedelta(days=settings.session_expire_days)
