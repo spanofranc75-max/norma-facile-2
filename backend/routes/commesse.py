@@ -894,7 +894,7 @@ async def _create_single_commessa(preventivo, user, normativa_override=None, ite
 
     if detected_normativa:
         doc["normativa_tipo"] = detected_normativa
-        note_norm = f"EN 13241 (Cancelli)" if detected_normativa == "EN_13241" else "EN 1090 (Strutture)"
+        note_norm = "EN 13241 (Cancelli)" if detected_normativa == "EN_13241" else "EN 1090 (Strutture)"
         if detected_azionamento:
             doc["detected_azionamento"] = detected_azionamento
             note_norm += f" — {detected_azionamento.title()}"
