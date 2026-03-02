@@ -568,7 +568,6 @@ export default function PreventivoEditorPage() {
                             <CardContent className="p-3 space-y-2.5">
                                 {sidebarTab === 'riferimento' && (
                                     <div className="space-y-2.5">
-                                        <div><Label className="text-xs">Riferimento / Commessa</Label><Input value={form.riferimento} onChange={e => setForm(f => ({ ...f, riferimento: e.target.value }))} placeholder="Rif. ordine..." className="h-8 text-xs" /></div>
                                         <div>
                                             <Label className="text-xs">Normativa</Label>
                                             <select
