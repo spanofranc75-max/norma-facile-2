@@ -1,7 +1,7 @@
 # Norma Facile 2.0 — Product Requirements Document
 
 ## Problema Originale
-CRM/ERP per fabbri e carpenterie metalliche. Gestione completa di commesse, fatturazione, certificazioni CE (EN 1090 per strutture, EN 13241 per cancelli), tracciabilità materiali, quality hub.
+CRM/ERP per fabbri e carpenterie metalliche. Gestione completa di commesse, fatturazione, certificazioni CE (EN 1090 per strutture, EN 13241 per cancelli), tracciabilita' materiali, quality hub.
 
 ## Utente Target
 Titolari e responsabili di officine di carpenteria metallica in Italia.
@@ -39,6 +39,7 @@ Italiano (l'utente comunica esclusivamente in italiano).
 - **EN 13241 (Cancelli)**: DoP, analisi rischi, prove forza, etichetta CE, registro manutenzione
 - **Smart Quote Analysis**: Analisi automatica keyword preventivo per routing normativa
 - **Split Commessa**: Gestione preventivi misti EN 1090 + EN 13241 con creazione automatica di 2 commesse separate (2026-03-02)
+- **Smart ISO 3834 Consumables**: Auto-rilevamento consumabili saldatura (fili, gas, elettrodi) da fatture fornitore con assegnazione automatica a commesse compatibili (2026-03-02)
 - **Quality Score adattivo**
 - **Dashboard Sostenibilita' CO2**
 
@@ -76,5 +77,7 @@ Italiano (l'utente comunica esclusivamente in italiano).
 
 ## Ultimo Aggiornamento: 2026-03-02
 - Implementata feature "Split Commessa" per preventivi misti (EN 1090 + EN 13241)
-- 15/15 test backend superati, frontend E2E verificato
-- Bug fix: gestione valori None in analyze_preventivo_content
+- Implementata feature "Smart ISO 3834 Consumable Traceability" — auto-import consumabili da fatture con assegnazione intelligente
+- 27/27 test backend + frontend E2E verificato per consumabili
+- 15/15 test backend per Split Commessa
+- Bug fix: normativa_target default, analyze-invoice query fr_id
