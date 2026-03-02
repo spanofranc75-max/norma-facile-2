@@ -164,7 +164,12 @@ async def importa_da_vecchia_app(user: dict = Depends(get_current_user)):
         if not doc_num:
             continue
 
-        existing = await db.invoices.find_one({"user_id": uid, "document_number": doc_num}, {"_id": 0, "invoice_id": 1})
+        issue_date = (f.get("issue_date") or "").strip()
+        # Dedup by number + date (same number can exist in different months)
+        existing = await db.invoices.find_one(
+            {"user_id": uid, "document_number": doc_num, "issue_date": issue_date},
+            {"_id": 0, "invoice_id": 1},
+        )
         if existing:
             results["skipped"] += 1
             continue
@@ -195,6 +200,7 @@ async def importa_da_vecchia_app(user: dict = Depends(get_current_user)):
             "document_type": f.get("document_type", "FT"),
             "document_number": doc_num,
             "client_id": client_id,
+            "client_business_name": f.get("client_business_name", ""),
             "issue_date": f.get("issue_date", ""),
             "due_date": f.get("due_date", ""),
             "status": f.get("status", "emessa"),
