@@ -156,6 +156,21 @@ export default function DashboardLayout({ children }) {
     const [companyLogo, setCompanyLogo] = useState(null);
 
     const activeGroupId = findActiveGroup(location.pathname);
+    const userRole = user?.role || 'admin';
+
+    // Filter nav groups based on user role
+    const filteredNav = NAV_GROUPS.filter(group => {
+        if (!group.roles || group.roles.length === 0) return true;
+        return group.roles.includes(userRole);
+    }).map(group => {
+        if (!group.children) return group;
+        return {
+            ...group,
+            children: group.children.filter(child =>
+                !child.roles || child.roles.length === 0 || child.roles.includes(userRole)
+            ),
+        };
+    });
     const [openGroups, setOpenGroups] = useState(() => {
         return activeGroupId ? new Set([activeGroupId]) : new Set();
     });
