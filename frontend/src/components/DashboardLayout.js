@@ -163,6 +163,7 @@ export default function DashboardLayout({ children }) {
     const navigate = useNavigate();
     const location = useLocation();
     const [companyLogo, setCompanyLogo] = useState(null);
+    const [alertCount, setAlertCount] = useState(0);
 
     const activeGroupId = findActiveGroup(location.pathname);
     const userRole = user?.role || 'admin';
@@ -190,6 +191,15 @@ export default function DashboardLayout({ children }) {
             .then(data => { if (data?.logo_url) setCompanyLogo(data.logo_url); })
             .catch(() => {});
     }, []);
+
+    // Fetch alert count for notification badge
+    useEffect(() => {
+        if (['admin', 'ufficio_tecnico'].includes(userRole)) {
+            apiRequest('/notifications/status')
+                .then(data => { setAlertCount(data?.current_alerts?.total || 0); })
+                .catch(() => {});
+        }
+    }, [userRole]);
 
     // Keep active group open on navigation
     useEffect(() => {
