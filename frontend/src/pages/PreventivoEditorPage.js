@@ -822,6 +822,108 @@ export default function PreventivoEditorPage() {
                 previewUrl={`/api/preventivi/${prevId}/preview-email`}
                 sendUrl={`/api/preventivi/${prevId}/send-email`}
             />
+
+            {/* Split Commessa Dialog */}
+            <Dialog open={showSplitDialog} onOpenChange={setShowSplitDialog}>
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" data-testid="split-dialog">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-base">
+                            <AlertTriangle className="h-5 w-5 text-amber-500" />
+                            Preventivo con normative miste
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
+                        <p className="text-sm text-amber-800">
+                            Questo preventivo contiene elementi soggetti a normative diverse.
+                            Un cancello non può stare nello stesso fascicolo di una tettoia.
+                            <strong> Consigliamo di creare 2 commesse separate.</strong>
+                        </p>
+                    </div>
+
+                    {splitAnalysis && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            {/* Commessa A — EN 1090 */}
+                            <div className="border border-blue-200 rounded-lg overflow-hidden" data-testid="split-group-1090">
+                                <div className="bg-blue-50 px-3 py-2 flex items-center gap-2 border-b border-blue-200">
+                                    <Wrench className="h-4 w-4 text-blue-600" />
+                                    <span className="text-sm font-semibold text-blue-800">Commessa A — Strutture</span>
+                                    <Badge variant="outline" className="ml-auto text-[10px] border-blue-300 text-blue-600">EN 1090</Badge>
+                                </div>
+                                <div className="p-2 space-y-1.5 min-h-[80px]">
+                                    {splitGroups.en_1090.map(idx => {
+                                        const line = form.lines[idx];
+                                        if (!line) return null;
+                                        return (
+                                            <div key={idx} className="flex items-center justify-between bg-white border rounded px-2 py-1.5 text-xs group" data-testid={`split-item-1090-${idx}`}>
+                                                <span className="truncate flex-1 mr-2">{line.description || `Riga ${idx + 1}`}</span>
+                                                <button onClick={() => moveItem(idx, 'en_1090', 'en_13241')} className="text-slate-400 hover:text-amber-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Sposta a Cancelli">
+                                                    <ArrowRight className="h-3.5 w-3.5" />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                    {splitGroups.non_classificati.map(idx => {
+                                        const line = form.lines[idx];
+                                        if (!line) return null;
+                                        return (
+                                            <div key={`nc-${idx}`} className="flex items-center justify-between bg-slate-50 border border-dashed border-slate-300 rounded px-2 py-1.5 text-xs group" data-testid={`split-item-other-${idx}`}>
+                                                <span className="truncate flex-1 mr-2 text-slate-500">{line.description || `Riga ${idx + 1}`}</span>
+                                                <span className="text-[9px] text-slate-400 mr-1">generico</span>
+                                                <button onClick={() => moveItem(idx, 'non_classificati', 'en_13241')} className="text-slate-400 hover:text-amber-600 opacity-0 group-hover:opacity-100 transition-opacity" title="Sposta a Cancelli">
+                                                    <ArrowRight className="h-3.5 w-3.5" />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                    {splitGroups.en_1090.length === 0 && splitGroups.non_classificati.length === 0 && (
+                                        <p className="text-xs text-slate-400 text-center py-3">Nessun item</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Commessa B — EN 13241 */}
+                            <div className="border border-amber-200 rounded-lg overflow-hidden" data-testid="split-group-13241">
+                                <div className="bg-amber-50 px-3 py-2 flex items-center gap-2 border-b border-amber-200">
+                                    <DoorOpen className="h-4 w-4 text-amber-600" />
+                                    <span className="text-sm font-semibold text-amber-800">Commessa B — Cancelli</span>
+                                    <Badge variant="outline" className="ml-auto text-[10px] border-amber-300 text-amber-600">EN 13241</Badge>
+                                </div>
+                                <div className="p-2 space-y-1.5 min-h-[80px]">
+                                    {splitGroups.en_13241.map(idx => {
+                                        const line = form.lines[idx];
+                                        if (!line) return null;
+                                        return (
+                                            <div key={idx} className="flex items-center justify-between bg-white border rounded px-2 py-1.5 text-xs group" data-testid={`split-item-13241-${idx}`}>
+                                                <button onClick={() => moveItem(idx, 'en_13241', 'en_1090')} className="text-slate-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity mr-2" title="Sposta a Strutture">
+                                                    <ArrowLeft className="h-3.5 w-3.5" />
+                                                </button>
+                                                <span className="truncate flex-1">{line.description || `Riga ${idx + 1}`}</span>
+                                            </div>
+                                        );
+                                    })}
+                                    {splitGroups.en_13241.length === 0 && (
+                                        <p className="text-xs text-slate-400 text-center py-3">Nessun item</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter className="mt-4 gap-2">
+                        <Button variant="outline" onClick={() => setShowSplitDialog(false)} className="text-xs">Annulla</Button>
+                        <Button
+                            data-testid="btn-confirm-split"
+                            onClick={handleSplitConfirm}
+                            disabled={splittingCommesse}
+                            className="bg-amber-500 hover:bg-amber-600 text-white text-xs"
+                        >
+                            {splittingCommesse ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <ArrowRightLeft className="h-3.5 w-3.5 mr-1.5" />}
+                            Crea 2 Commesse Separate
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </DashboardLayout>
     );
 }
