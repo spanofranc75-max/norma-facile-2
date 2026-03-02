@@ -766,6 +766,74 @@ function RegistroEditForm({ form, update, autoFields, addSaldatura, updateSaldat
                 )}
             </div>
 
+            {/* ── Smart Consumables: Materiali d'Apporto da Fatture ── */}
+            <div className="border border-orange-200 bg-orange-50/40 rounded-lg p-3 space-y-2" data-testid="smart-consumables">
+                <div className="flex items-center gap-1.5">
+                    <Wrench className="h-3.5 w-3.5 text-orange-600" />
+                    <span className="text-xs font-bold text-orange-800">Consumabili Disponibili (Fili / Gas / Elettrodi)</span>
+                    {loadingConsumables && <Loader2 className="h-3 w-3 animate-spin text-orange-500 ml-auto" />}
+                </div>
+
+                {/* Assigned consumables */}
+                {consumables.assigned.length > 0 && (
+                    <div className="space-y-1">
+                        <span className="text-[10px] font-semibold text-orange-700 uppercase tracking-wide">Assegnati a questa commessa</span>
+                        {consumables.assigned.map(b => (
+                            <div key={b.batch_id} className="flex items-center justify-between bg-white border border-orange-200 rounded px-2 py-1.5 text-xs group" data-testid={`consumable-assigned-${b.batch_id}`}>
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
+                                        b.tipo === 'filo' ? 'bg-blue-100 text-blue-700' :
+                                        b.tipo === 'gas' ? 'bg-emerald-100 text-emerald-700' :
+                                        'bg-violet-100 text-violet-700'
+                                    }`}>{b.tipo}</span>
+                                    <span className="truncate font-medium">{b.descrizione}</span>
+                                    {b.lotto && <span className="text-[10px] text-orange-600 font-mono shrink-0">Lotto: {b.lotto}</span>}
+                                    {b.diametro_mm && <span className="text-[10px] text-slate-500 shrink-0">ø{b.diametro_mm}mm</span>}
+                                </div>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                    {b.assegnazioni?.some(a => a.auto) && (
+                                        <span className="text-[8px] bg-orange-100 text-orange-600 border border-orange-200 rounded-full px-1.5 py-0.5">auto</span>
+                                    )}
+                                    <button onClick={() => handleUnassignConsumable(b.batch_id)} className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Rimuovi assegnazione">
+                                        <Trash2 className="h-3 w-3" />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Available consumables (not yet assigned) */}
+                {consumables.available.length > 0 && (
+                    <div className="space-y-1">
+                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Disponibili in officina</span>
+                        {consumables.available.map(b => (
+                            <div key={b.batch_id} className="flex items-center justify-between bg-white/60 border border-dashed border-slate-300 rounded px-2 py-1.5 text-xs group" data-testid={`consumable-available-${b.batch_id}`}>
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
+                                        b.tipo === 'filo' ? 'bg-blue-100 text-blue-700' :
+                                        b.tipo === 'gas' ? 'bg-emerald-100 text-emerald-700' :
+                                        'bg-violet-100 text-violet-700'
+                                    }`}>{b.tipo}</span>
+                                    <span className="truncate text-slate-600">{b.descrizione}</span>
+                                    {b.lotto && <span className="text-[10px] text-slate-400 font-mono shrink-0">Lotto: {b.lotto}</span>}
+                                    {b.diametro_mm && <span className="text-[10px] text-slate-400 shrink-0">ø{b.diametro_mm}mm</span>}
+                                </div>
+                                <button onClick={() => handleAssignConsumable(b.batch_id)} className="text-orange-500 hover:text-orange-700 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-semibold shrink-0" title="Assegna a questa commessa">
+                                    + Usa
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {consumables.assigned.length === 0 && consumables.available.length === 0 && !loadingConsumables && (
+                    <p className="text-[10px] text-slate-400 text-center py-2">
+                        Nessun consumabile registrato. I lotti verranno importati automaticamente dalle fatture fornitori.
+                    </p>
+                )}
+            </div>
+
             <div className="grid grid-cols-3 gap-3">
                 <SmartField label="Data Emissione" value={form.data_emissione} onChange={v => update('data_emissione', v)} placeholder="GG/MM/AAAA" autoFields={autoFields} fieldKey="data_emissione" />
                 <SmartField label="Firma CS" value={form.firma_cs} onChange={v => update('firma_cs', v)} autoFields={autoFields} fieldKey="firma_cs" />
