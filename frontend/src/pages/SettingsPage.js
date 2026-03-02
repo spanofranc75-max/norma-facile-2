@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Textarea } from '../components/ui/textarea';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Save, Building2, CreditCard, FileText, ImageIcon, Upload, X, Plug, ShieldCheck } from 'lucide-react';
+import { Save, Building2, CreditCard, FileText, ImageIcon, Upload, X, Plug, ShieldCheck, HardDrive, Download, Loader2, RefreshCw, UploadCloud } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
 export default function SettingsPage() {
