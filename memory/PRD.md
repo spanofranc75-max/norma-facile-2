@@ -49,13 +49,26 @@ Italiano (l'utente comunica esclusivamente in italiano).
 - Backup & Restore: Export JSON completo 19 collezioni
 - Migrazione dati da vecchia app
 - Fatture in Cloud ATTIVA
+- Ruoli & Permessi (RBAC): admin, ufficio_tecnico, officina, amministrazione, guest
+- Gestione Team con inviti email
+
+### Notifiche & Monitoraggio
+- **"Il Cane da Guardia"**: scheduler background (12h) che controlla scadenze qualifiche saldatori e calibrazioni strumenti
+- Invio email automatico via Resend ai ruoli admin/ufficio_tecnico
+- Dashboard /notifiche con allarmi live, storico controlli, trigger manuale
+- **QR Code Commesse**: generazione QR code PNG che apre la commessa nell'app
+
+### Deploy Preparation
+- Pulizia database test dati (tab Deploy in Impostazioni, solo admin)
+- Preview dati da eliminare con opzione mantieni clienti/fornitori
+- Audit log delle operazioni di pulizia
 
 ### Legal & Compliance
-- **Disclaimer EN 1090**: Limitazione responsabilita', natura del servizio, obblighi utente (2026-03-02)
-- **Termini di Servizio**: Contratto, account, dati, proprieta' intellettuale
-- **Privacy Policy GDPR**: Informativa completa art. 13-14, diritti interessato, cookie
-- **LegalFooter**: componente riutilizzabile con P.IVA e link legali
-- **Checkbox accettazione ToS**: obbligatoria prima del login
+- Disclaimer EN 1090: Limitazione responsabilita', natura del servizio
+- Termini di Servizio: Contratto, account, dati, proprieta' intellettuale
+- Privacy Policy GDPR: Informativa completa art. 13-14
+- LegalFooter: componente riutilizzabile
+- Checkbox accettazione ToS obbligatoria prima del login
 
 ### UI/UX
 - Landing Page Dark & Industrial Split Screen con logo reale
@@ -65,19 +78,23 @@ Italiano (l'utente comunica esclusivamente in italiano).
 
 ## Backlog Prioritizzato
 
-### P1 — Prossimi
-- Import reale fatture ricevute da FIC
+### P0 — In Corso
+- Verifica email notifiche non finiscano in spam
+- Verifica HTTPS/Dominio definitivo (app.normafacile.it)
 
-### P2 — Futuri
+### P1 — Prossimi
 - Export CSV distinta di taglio per CNC
 - Stato "SOSPESA" per commesse
+
+### P2 — Futuri
 - PWA per modalita' offline
-- Migrazione certificati Base64 → object storage
+- Migrazione certificati Base64 -> object storage
 - Versionamento fatture e fascicoli tecnici
 
 ---
 
 ## Ultimo Aggiornamento: 2026-03-02
-- Implementato pacchetto compliance legale completo (Disclaimer, ToS, Privacy GDPR)
-- Checkbox accettazione obbligatoria nella landing page
-- LegalFooter in tutte le pagine (landing + dashboard)
+- Implementato "Il Cane da Guardia" (notifiche automatiche scadenze)
+- QR Code per commesse (generazione + dialog frontend)
+- Tab Deploy per pulizia database pre-produzione
+- Testing: 24/24 backend + 100% frontend (iteration_103)

@@ -1,6 +1,15 @@
 # Norma Facile 2.0 - Changelog
 
-## 2026-02-28 - Phase 42: One-Click Technical Dossier (Fascicolo Tecnico)
+## 2026-03-02 - Phase 44: Il Cane da Guardia + QR Code + Deploy Prep
+- "Il Cane da Guardia": scheduler background (12h) controlla scadenze saldatori e strumenti
+- Email automatiche via Resend ai ruoli admin/ufficio_tecnico
+- Dashboard /notifiche con allarmi live, storico, trigger manuale
+- QR Code commesse: generazione PNG + dialog in CommessaHubPage
+- Tab Deploy in Impostazioni: pulizia dati test con preview e opzioni mantieni clienti/fornitori
+- Sidebar: aggiunto link "Notifiche" per admin/ufficio_tecnico
+- Testing: 24/24 backend, 100% frontend (iteration_103)
+
+## 2026-02-28 - Phase 43: Roles & Permissions (RBAC)
 - Servizio `dossier_generator.py` genera fascicolo tecnico completo in un PDF
 - 6+ sezioni: Copertina, DoP, CE Label, Materiali, Certificati 3.1, Saldatore, Controlli FPC
 - Certificati PDF (base64) decodificati e allegati automaticamente
