@@ -20,7 +20,8 @@ import {
     ArrowLeft, FileText, Receipt, Truck, Shield, Award,
     Ruler, Package, Play, Pause, CheckCircle2, XCircle,
     Clock, User, ChevronRight, Download, Plus, Link2,
-    AlertTriangle, Loader2, BookOpen, CalendarDays,
+    AlertTriangle, Loader2, BookOpen, CalendarDays, TrendingUp,
+    CircleDollarSign, Tag, Wrench as WrenchIcon,
 } from 'lucide-react';
 import CommessaOpsPanel from '../components/CommessaOpsPanel';
 import { DisabledTooltip } from '../components/DisabledTooltip';
