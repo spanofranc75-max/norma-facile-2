@@ -34,7 +34,10 @@ function BatchesTab() {
 
   const load = useCallback(async () => {
     const r = await fetch(`${API}/api/fpc/batches`, fetchOpts());
-    if (r.ok) setBatches(await r.json());
+    if (r.ok) {
+      const data = await r.json();
+      setBatches(Array.isArray(data) ? data : data.batches || []);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -163,7 +166,7 @@ function WeldersTab() {
 
   const load = useCallback(async () => {
     const r = await fetch(`${API}/api/fpc/welders`, fetchOpts());
-    if (r.ok) setWelders(await r.json());
+    if (r.ok) { const d = await r.json(); setWelders(Array.isArray(d) ? d : d.welders || []); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -239,7 +242,7 @@ function ProjectsTab() {
 
   const load = useCallback(async () => {
     const r = await fetch(`${API}/api/fpc/projects`, fetchOpts());
-    if (r.ok) setProjects(await r.json());
+    if (r.ok) { const d = await r.json(); setProjects(Array.isArray(d) ? d : d.projects || []); }
   }, []);
 
   useEffect(() => { load(); }, [load]);

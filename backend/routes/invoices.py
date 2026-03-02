@@ -233,7 +233,7 @@ async def create_invoice_from_preventivo(
     }
 
 
-@router.get("/{invoice_id}", response_model=InvoiceResponse)
+@router.get("/{invoice_id}")
 async def get_invoice(
     invoice_id: str,
     user: dict = Depends(get_current_user)
@@ -252,9 +252,9 @@ async def get_invoice(
         {"client_id": invoice.get("client_id")},
         {"_id": 0, "business_name": 1}
     )
-    invoice["client_name"] = client.get("business_name") if client else "N/A"
+    invoice["client_name"] = client.get("business_name") if client else invoice.get("client_business_name", "N/A")
     
-    return InvoiceResponse(**invoice)
+    return invoice
 
 
 @router.post("/", response_model=InvoiceResponse, status_code=201)
