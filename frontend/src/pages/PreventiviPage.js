@@ -64,9 +64,13 @@ export default function PreventiviPage() {
         } catch (e) { toast.error(e.message); }
     };
 
-    const ComplianceBadge = ({ status }) => {
+    const ComplianceBadge = ({ status, normativa }) => {
         if (status === true) return <Badge data-testid="compliance-ok" className="bg-emerald-100 text-emerald-800"><CheckCircle2 className="h-3 w-3 mr-1" />Ecobonus OK</Badge>;
         if (status === false) return <Badge data-testid="compliance-fail" className="bg-red-100 text-red-800"><XCircle className="h-3 w-3 mr-1" />Non conforme</Badge>;
+        if (normativa && normativa !== 'NESSUNA') {
+            const label = normativa.replace('EN_', 'EN ');
+            return <Badge className="bg-blue-100 text-blue-700">{label}</Badge>;
+        }
         return <Badge className="bg-slate-100 text-slate-500"><Minus className="h-3 w-3 mr-1" />N/D</Badge>;
     };
 
@@ -124,7 +128,7 @@ export default function PreventiviPage() {
                                                 <TableCell className="text-sm text-slate-600 max-w-[200px] truncate">{p.subject || '-'}</TableCell>
                                                 <TableCell className="text-right font-mono font-semibold text-sm">{fmtEur(p.totals?.total)}</TableCell>
                                                 <TableCell><InvoicingProgressBar progress={p.invoicing_progress} /></TableCell>
-                                                <TableCell><ComplianceBadge status={p.compliance_status} /></TableCell>
+                                                <TableCell><ComplianceBadge status={p.compliance_status} normativa={p.normativa} /></TableCell>
                                                 <TableCell><Badge className={st.color + ' text-xs'}>{st.label}</Badge></TableCell>
                                                 <TableCell>
                                                     <button onClick={(e) => { e.stopPropagation(); handleDelete(p.preventivo_id); }} className="p-1.5 text-slate-400 hover:text-red-500">
