@@ -126,14 +126,14 @@ def _generate_mock_invoices(user_id: str):
 
 @router.get("/invoices/pending")
 async def get_pending_invoices(user: dict = Depends(get_current_user)):
-    """Get pending (unprocessed) invoices. Returns mock data + real unprocessed fatture."""
+    """Get pending (unprocessed) real invoices from fatture_ricevute."""
     uid = user["user_id"]
 
     # Real unprocessed invoices from fatture_ricevute
     real = await db.fatture_ricevute.find(
         {"user_id": uid, "imputazione": {"$exists": False}},
         {"_id": 0, "xml_raw": 0},
-    ).sort("created_at", -1).to_list(50)
+    ).sort("created_at", -1).to_list(200)
 
     real_invoices = []
     for fr in real:
@@ -156,20 +156,11 @@ async def get_pending_invoices(user: dict = Depends(get_current_user)):
             "is_mock": False,
         })
 
-    # Check if any already processed mock invoices exist
-    processed_mocks = await db[COST_ENTRIES].distinct("source_invoice_id", {"user_id": uid, "is_mock": True})
-
-    # Add mock invoices (if not already processed)
-    mock_invoices = [
-        inv for inv in _generate_mock_invoices(uid)
-        if inv["invoice_id"] not in processed_mocks
-    ]
-
     return {
-        "invoices": real_invoices + mock_invoices,
-        "total": len(real_invoices) + len(mock_invoices),
+        "invoices": real_invoices,
+        "total": len(real_invoices),
         "real_count": len(real_invoices),
-        "mock_count": len(mock_invoices),
+        "mock_count": 0,
     }
 
 
