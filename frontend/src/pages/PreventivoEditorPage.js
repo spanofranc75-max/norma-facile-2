@@ -36,7 +36,7 @@ const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', curren
 const emptyLine = () => ({
     line_id: `ln_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
     description: '', codice_articolo: '', dimensions: '', quantity: 1, unit: 'pz',
-    unit_price: 0, sconto_1: 0, sconto_2: 0, vat_rate: '22', thermal_data: null, notes: '',
+    unit_price: '', sconto_1: '', sconto_2: '', vat_rate: '22', thermal_data: null, notes: '',
 });
 
 const SIDEBAR_TABS = [
@@ -645,14 +645,14 @@ export default function PreventivoEditorPage() {
                                         <TableRow className="bg-slate-50">
                                             <TableHead className="w-8 text-[10px]">#</TableHead>
                                             <TableHead className="text-[10px]">Descrizione</TableHead>
-                                            <TableHead className="w-[60px] text-right text-[10px]">Q.tà</TableHead>
+                                            <TableHead className="w-[70px] text-right text-[10px]">Q.tà</TableHead>
                                             <TableHead className="w-[60px] text-[10px]">UdM</TableHead>
-                                            <TableHead className="w-[80px] text-right text-[10px]">Prezzo</TableHead>
-                                            <TableHead className="w-[50px] text-right text-[10px]">Sc.1%</TableHead>
-                                            <TableHead className="w-[50px] text-right text-[10px]">Sc.2%</TableHead>
-                                            <TableHead className="w-[80px] text-right text-[10px]">Netto</TableHead>
-                                            <TableHead className="w-[52px] text-[10px]">IVA</TableHead>
-                                            <TableHead className="w-[85px] text-right text-[10px]">Totale</TableHead>
+                                            <TableHead className="w-[90px] text-right text-[10px]">Prezzo</TableHead>
+                                            <TableHead className="w-[60px] text-right text-[10px]">Sc.1%</TableHead>
+                                            <TableHead className="w-[60px] text-right text-[10px]">Sc.2%</TableHead>
+                                            <TableHead className="w-[85px] text-right text-[10px]">Netto</TableHead>
+                                            <TableHead className="w-[56px] text-[10px]">IVA</TableHead>
+                                            <TableHead className="w-[90px] text-right text-[10px]">Totale</TableHead>
                                             <TableHead className="w-[40px] text-[10px]">Th.</TableHead>
                                             <TableHead className="w-8"></TableHead>
                                         </TableRow>
@@ -681,9 +681,9 @@ export default function PreventivoEditorPage() {
                                                             </SelectContent>
                                                         </Select>
                                                     </TableCell>
-                                                    <TableCell className="px-1"><Input type="number" step="0.01" value={l.unit_price} onChange={e => updateLine(i, 'unit_price', e.target.value)} className="h-7 text-xs text-right font-mono text-red-600 font-semibold w-full" /></TableCell>
-                                                    <TableCell className="px-1"><Input type="number" step="0.1" value={l.sconto_1} onChange={e => updateLine(i, 'sconto_1', e.target.value)} className="h-7 text-[10px] text-right font-mono w-full" /></TableCell>
-                                                    <TableCell className="px-1"><Input type="number" step="0.1" value={l.sconto_2} onChange={e => updateLine(i, 'sconto_2', e.target.value)} className="h-7 text-[10px] text-right font-mono w-full" /></TableCell>
+                                                    <TableCell className="px-1"><Input type="number" step="0.01" value={l.unit_price} onChange={e => updateLine(i, 'unit_price', e.target.value)} placeholder="0,00" className="h-7 text-xs text-right font-mono text-red-600 font-semibold w-full" /></TableCell>
+                                                    <TableCell className="px-1"><Input type="number" step="0.1" value={l.sconto_1} onChange={e => updateLine(i, 'sconto_1', e.target.value)} placeholder="%" className="h-7 text-[10px] text-right font-mono w-full" /></TableCell>
+                                                    <TableCell className="px-1"><Input type="number" step="0.1" value={l.sconto_2} onChange={e => updateLine(i, 'sconto_2', e.target.value)} placeholder="%" className="h-7 text-[10px] text-right font-mono w-full" /></TableCell>
                                                     <TableCell className="text-right font-mono text-xs text-slate-600 px-1 truncate">{fmtEur(net)}</TableCell>
                                                     <TableCell className="px-1">
                                                         <Select value={l.vat_rate} onValueChange={v => updateLine(i, 'vat_rate', v)}>
