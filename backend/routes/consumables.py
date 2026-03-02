@@ -30,7 +30,7 @@ class ConsumableBatchCreate(BaseModel):
     fornitore: str = ""
     data_acquisto: Optional[str] = None
     diametro_mm: Optional[float] = None
-    normativa_target: str = "entrambe"  # en_1090, en_13241, entrambe
+    normativa_target: Optional[str] = None  # en_1090, en_13241, entrambe - None means auto-detect
     quantita: Optional[float] = None
     unita_misura: str = "kg"
     prezzo_unitario: Optional[float] = None
