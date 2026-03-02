@@ -155,7 +155,7 @@ async def root():
     """Health check endpoint."""
     return {
         "message": "Benvenuto a Norma Facile 2.0",
-        "version": "2.0.1",
+        "version": "2.1.0",
         "status": "operativo"
     }
 
@@ -166,5 +166,5 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "Norma Facile 2.0",
-        "version": "2.0.1"
+        "version": "2.1.0"
     }
