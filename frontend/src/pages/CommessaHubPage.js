@@ -79,6 +79,7 @@ export default function CommessaHubPage() {
     const [loadingModules, setLoadingModules] = useState(false);
     const [eventNote, setEventNote] = useState('');
     const [confirmEvent, setConfirmEvent] = useState(null);
+    const [costAnalysis, setCostAnalysis] = useState(null);
 
     const fetchHub = useCallback(async () => {
         try {
