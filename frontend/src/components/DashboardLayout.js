@@ -256,7 +256,8 @@ export default function DashboardLayout({ children }) {
             </aside>
 
             {/* Main Content */}
-            <main className="ml-64 p-8">{children}</main>
+            <main className="ml-64 p-8 pb-16">{children}</main>
+            <div className="ml-64"><LegalFooter /></div>
         </div>
     );
 }
