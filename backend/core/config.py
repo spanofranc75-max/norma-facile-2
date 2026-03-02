@@ -46,6 +46,8 @@ class Settings(BaseModel):
     sdi_api_key: Optional[str] = os.environ.get('SDI_API_KEY')
     sdi_api_secret: Optional[str] = os.environ.get('SDI_API_SECRET')
     sdi_environment: str = os.environ.get('SDI_ENVIRONMENT', 'test')
+    fic_access_token: Optional[str] = os.environ.get('FIC_ACCESS_TOKEN')
+    fic_company_id: Optional[str] = os.environ.get('FIC_COMPANY_ID')
 
     # LLM
     emergent_llm_key: str = os.environ.get('EMERGENT_LLM_KEY', '')
