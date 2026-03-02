@@ -240,7 +240,7 @@ export default function DashboardLayout({ children }) {
                     <div className="space-y-0.5">
                         {filteredNav.map((group) => {
                             if (group.type === 'link') {
-                                return <SingleLink key={group.id} item={group} active={activeGroupId === group.id} navigate={navigate} />;
+                                return <SingleLink key={group.id} item={group} active={activeGroupId === group.id} navigate={navigate} badge={group.id === 'notifiche' ? alertCount : 0} />;
                             }
                             const isOpen = openGroups.has(group.id);
                             const hasActive = activeGroupId === group.id;
