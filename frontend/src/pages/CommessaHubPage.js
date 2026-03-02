@@ -21,7 +21,7 @@ import {
     Ruler, Package, Play, Pause, CheckCircle2, XCircle,
     Clock, User, ChevronRight, Download, Plus, Link2,
     AlertTriangle, Loader2, BookOpen, CalendarDays, TrendingUp,
-    CircleDollarSign, Tag, Wrench as WrenchIcon,
+    CircleDollarSign, Tag, Wrench as WrenchIcon, QrCode,
 } from 'lucide-react';
 import CommessaOpsPanel from '../components/CommessaOpsPanel';
 import { DisabledTooltip } from '../components/DisabledTooltip';
