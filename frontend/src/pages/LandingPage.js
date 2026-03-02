@@ -17,6 +17,7 @@ import {
 export default function LandingPage() {
     const { isAuthenticated, login, loading } = useAuth();
     const navigate = useNavigate();
+    const [tosAccepted, setTosAccepted] = useState(false);
 
     useEffect(() => {
         if (isAuthenticated) navigate('/dashboard');
