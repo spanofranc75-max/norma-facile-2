@@ -176,6 +176,10 @@ export default function SettingsPage() {
                             <Upload className="h-4 w-4" />
                             Migrazione
                         </TabsTrigger>
+                        <TabsTrigger value="backup" className="gap-2" data-testid="tab-backup">
+                            <HardDrive className="h-4 w-4" />
+                            Backup
+                        </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="company">
