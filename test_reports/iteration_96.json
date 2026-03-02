@@ -1,0 +1,76 @@
+{
+  "summary": "Iteration 96: Scadenziario & Cost Management module testing complete. All 23 backend tests pass. Frontend verified: ScadenziarioPage loads with KPI cards, filters, timeline; Scadenziario link correctly placed under Acquisti & Magazzino; Fatture Ricevute moved from Commerciale to Acquisti. Fixed missing 'settings' import in fatture_ricevute.py causing 500 error on FIC sync.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration96_scadenziario.py",
+    "/app/test_reports/pytest/iteration96_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "BUG FIXED: fatture_ricevute.py L908 was missing 'from core.config import settings' import causing NameError on sync-fic endpoint",
+    "ScadenziarioPage uses localStorage.getItem('session_token') for Bearer auth - consistent with other pages",
+    "Scadenziario dashboard correctly aggregates: fatture_ricevute payment deadlines, welder patentino expiries, instrument calibrations, commessa delivery dates",
+    "Cost imputation endpoint correctly handles both destinazione=commessa (adds costi_reali to commessa) and destinazione=magazzino (updates articoli with weighted avg pricing)"
+  ],
+  "updated_files": [
+    "/app/backend/routes/fatture_ricevute.py",
+    "/app/backend/tests/test_iteration96_scadenziario.py"
+  ],
+  "success_rate": {
+    "backend": "100% (23/23 pytest tests passed)",
+    "frontend": "100% (ScadenziarioPage loads, sidebar nav verified)"
+  },
+  "test_credentials": {
+    "user_id": "user_97c773827822",
+    "session_token": "yDZ9JAQM_3ct2TZ0UE3BFkZDQcc6YRSFWMlv888wRhQ",
+    "expires_at": "2026-03-08"
+  },
+  "seed_data_creation": "Test fatture created with past due dates (scaduto) and current month due dates (in_scadenza) for KPI testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Scadenziario module verified working. Test user has existing welder patentino deadlines (3 visible in scadenziario timeline). FattureInCloud sync returns 502 due to expired FIC license (expected behavior). Cost imputation to both commessa and magazzino tested and working.",
+  "tests_executed": [
+    {
+      "test_type": "Backend API (pytest)",
+      "file": "/app/backend/tests/test_iteration96_scadenziario.py",
+      "results": "23 passed in 4.57s",
+      "test_classes": [
+        "TestScadenziarioDashboard (7 tests) - dashboard endpoint, KPI structure, scadenze aggregation",
+        "TestCostImputaCommessa (4 tests) - imputation to commessa, validation errors",
+        "TestCostImputaMagazzino (2 tests) - create/update articoli with weighted avg price",
+        "TestFICSyncEndpoint (2 tests) - FIC sync error handling, auth",
+        "TestExistingFattureRicevuteCRUD (6 tests) - existing CRUD still works",
+        "TestScadenziarioKPICalculations (2 tests) - scaduto/in_scadenza status"
+      ]
+    },
+    {
+      "test_type": "Frontend (Playwright)",
+      "results": "PASS - All features verified",
+      "verified": [
+        "ScadenziarioPage loads at /scadenziario",
+        "4 KPI cards displayed (Da Pagare Scaduti, Da Pagare Mese, Acquisti Anno, Da Processare)",
+        "Filter dropdowns (tipo, stato) present",
+        "Timeline grouped by month with scadenze items",
+        "Sync FattureInCloud button present",
+        "Sidebar: Scadenziario link under Acquisti & Magazzino",
+        "Sidebar: Fatture Ricevute moved from Commerciale to Acquisti"
+      ]
+    }
+  ],
+  "bugs_fixed": {
+    "fic_sync_500_error": {
+      "file": "/app/backend/routes/fatture_ricevute.py",
+      "line": 908,
+      "issue": "NameError: name 'settings' is not defined",
+      "fix": "Added 'from core.config import settings' import"
+    }
+  }
+}
