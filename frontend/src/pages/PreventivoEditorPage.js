@@ -571,30 +571,34 @@ export default function PreventivoEditorPage() {
                                         <div><Label className="text-xs">Riferimento / Commessa</Label><Input value={form.riferimento} onChange={e => setForm(f => ({ ...f, riferimento: e.target.value }))} placeholder="Rif. ordine..." className="h-8 text-xs" /></div>
                                         <div>
                                             <Label className="text-xs">Normativa</Label>
-                                            <Select value={form.normativa || '__none__'} onValueChange={v => setForm(f => ({ ...f, normativa: v === '__none__' ? '' : v }))}>
-                                                <SelectTrigger className="h-8 text-xs" data-testid="select-normativa"><SelectValue placeholder="Seleziona..." /></SelectTrigger>
-                                                <SelectContent position="item-aligned">
-                                                    <SelectItem value="__none__">-- Nessuna --</SelectItem>
-                                                    <SelectItem value="EN_1090">EN 1090 (Carpenteria strutturale)</SelectItem>
-                                                    <SelectItem value="EN_13241">EN 13241 (Porte e cancelli)</SelectItem>
-                                                </SelectContent>
-                                            </Select>
+                                            <select
+                                                data-testid="select-normativa"
+                                                value={form.normativa || ''}
+                                                onChange={e => setForm(f => ({ ...f, normativa: e.target.value }))}
+                                                className="flex h-8 w-full items-center rounded-md border border-input bg-transparent px-3 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                            >
+                                                <option value="">-- Nessuna --</option>
+                                                <option value="EN_1090">EN 1090 (Carpenteria strutturale)</option>
+                                                <option value="EN_13241">EN 13241 (Porte e cancelli)</option>
+                                            </select>
                                             <p className="text-[10px] text-slate-500 mt-0.5">Determina requisiti di tracciabilità materiali</p>
                                         </div>
                                         <div><Label className="text-xs">N. Disegno</Label><Input value={form.numero_disegno} onChange={e => setForm(f => ({ ...f, numero_disegno: e.target.value }))} placeholder="es. STR-01" className="h-8 text-xs" data-testid="input-numero-disegno" /></div>
                                         <div><Label className="text-xs">Redatto dall'Ing.</Label><Input value={form.ingegnere_disegno} onChange={e => setForm(f => ({ ...f, ingegnere_disegno: e.target.value }))} placeholder="Nome Cognome" className="h-8 text-xs" data-testid="input-ingegnere-disegno" /></div>
                                         <div>
                                             <Label className="text-xs">Classe di Esecuzione</Label>
-                                            <Select value={form.classe_esecuzione || '__none__'} onValueChange={v => setForm(f => ({ ...f, classe_esecuzione: v === '__none__' ? '' : v }))}>
-                                                <SelectTrigger className="h-8 text-xs" data-testid="select-classe-esecuzione"><SelectValue placeholder="Seleziona..." /></SelectTrigger>
-                                                <SelectContent position="item-aligned">
-                                                    <SelectItem value="__none__">-- Nessuna --</SelectItem>
-                                                    <SelectItem value="EXC1">EXC1</SelectItem>
-                                                    <SelectItem value="EXC2">EXC2</SelectItem>
-                                                    <SelectItem value="EXC3">EXC3</SelectItem>
-                                                    <SelectItem value="EXC4">EXC4</SelectItem>
-                                                </SelectContent>
-                                            </Select>
+                                            <select
+                                                data-testid="select-classe-esecuzione"
+                                                value={form.classe_esecuzione || ''}
+                                                onChange={e => setForm(f => ({ ...f, classe_esecuzione: e.target.value }))}
+                                                className="flex h-8 w-full items-center rounded-md border border-input bg-transparent px-3 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                            >
+                                                <option value="">-- Nessuna --</option>
+                                                <option value="EXC1">EXC1</option>
+                                                <option value="EXC2">EXC2</option>
+                                                <option value="EXC3">EXC3</option>
+                                                <option value="EXC4">EXC4</option>
+                                            </select>
                                         </div>
                                         <div><Label className="text-xs">Tempi di Consegna (giorni)</Label><Input type="text" inputMode="numeric" pattern="[0-9]*" value={form.giorni_consegna} onChange={e => { const v = e.target.value.replace(/[^0-9]/g,''); setForm(f => ({ ...f, giorni_consegna: v })); }} placeholder="es. 30" className="h-8 text-xs font-mono" data-testid="input-giorni-consegna" /></div>
                                         <div><Label className="text-xs">Sconto Globale (%)</Label><Input type="number" step="0.1" value={form.sconto_globale} onChange={e => setForm(f => ({ ...f, sconto_globale: parseFloat(e.target.value) || 0 }))} className="h-8 text-xs font-mono" /></div>
