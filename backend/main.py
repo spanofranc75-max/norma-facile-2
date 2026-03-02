@@ -45,6 +45,7 @@ from routes.quality_hub import router as quality_hub_router
 from routes.smart_assign import router as smart_assign_router
 from routes.migrazione import router as migrazione_router
 from routes.gate_certification import router as gate_cert_router
+from routes.consumables import router as consumables_router
 
 # Configure logging
 logging.basicConfig(
