@@ -1,0 +1,77 @@
+{
+  "summary": "Iteration 97: EN 13241 (Gates) & EN 12453 (Automation) certification module - backend testing complete. All 14 pytest tests pass. Full CRUD lifecycle verified: create, read, update, PDF generation. Motorized gates correctly auto-populate 8 default risk analysis items. Commessa correctly updated with gate_cert_id and normativa_tipo=EN_13241.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration97_gate_certification.py",
+    "/app/test_reports/pytest/iteration97_gate_cert_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Gate certification module correctly implements EN 13241 and EN 12453 standards",
+    "Default risk analysis (8 items R01-R08) auto-populates for motorized gates only",
+    "PDF generation uses WeasyPrint and works for all 4 document types: DoP, CE Label, Maintenance Register, CE Declaration",
+    "Duplicate creation correctly returns 409 Conflict",
+    "GET for nonexistent cert returns {certification: null} instead of 404 - proper design for frontend handling",
+    "Force tests: auto-compliance check available (< 400N dynamic, < 150N static)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration97_gate_certification.py"
+  ],
+  "success_rate": {
+    "backend": "100% (14/14 pytest tests passed)",
+    "frontend": "Not tested (backend only request)"
+  },
+  "test_credentials": {
+    "user_id": "user_97c773827822",
+    "session_token": "yDZ9JAQM_3ct2TZ0UE3BFkZDQcc6YRSFWMlv888wRhQ",
+    "expires_at": "2026-03-08"
+  },
+  "seed_data_creation": "Created gate certification for commessa NF-2026-000002 (com_bfb82e090373) with motorized config, 8 risk analysis items, 3 force tests",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Gate certification module working. Cert ID gate_abb5ad8a3a1e exists for commessa com_bfb82e090373 with full risk analysis and force tests. Commessa has normativa_tipo=EN_13241. Frontend GateCertificationPanel.js ready for UI testing when needed.",
+  "tests_executed": [
+    {
+      "test_type": "Backend API (pytest)",
+      "file": "/app/backend/tests/test_iteration97_gate_certification.py",
+      "results": "14 passed in 3.39s",
+      "test_classes": [
+        "TestGateCertificationCreate (2 tests) - create manual gate, duplicate returns 409",
+        "TestGateCertificationRead (2 tests) - get existing cert, get nonexistent returns null",
+        "TestGateCertificationUpdate (2 tests) - update to motorizzato with risk analysis, add force tests",
+        "TestGateCertificationPDFs (5 tests) - DoP, CE Label, Maintenance, CE Declaration PDFs, 404 for nonexistent",
+        "TestCommessaNormativaUpdate (1 test) - commessa has normativa_tipo EN_13241",
+        "TestMotorizedDefaultRiskAnalysis (1 test) - 8 default risks R01-R08",
+        "TestCleanup (1 test) - verify cert persists"
+      ]
+    },
+    {
+      "test_type": "Manual API verification",
+      "results": "PASS - Motorized gate auto-populates 8 risk items confirmed",
+      "verified": [
+        "POST motorizzato without analisi_rischi → 8 default items auto-populated",
+        "Risk IDs: R01-R08 with correct descriptions",
+        "Risk items have presente=True/False based on type, conforme=False by default"
+      ]
+    }
+  ],
+  "features_verified": [
+    "POST /api/gate-cert/ - creates gate certification with default risk analysis for motorized gates",
+    "GET /api/gate-cert/{commessa_id} - returns certification data or null",
+    "PUT /api/gate-cert/{cert_id} - updates certification fields including analisi_rischi and prove_forza",
+    "GET /api/gate-cert/{commessa_id}/dop-pdf - generates DoP PDF per EN 13241",
+    "GET /api/gate-cert/{commessa_id}/ce-label-pdf - generates CE label PDF",
+    "GET /api/gate-cert/{commessa_id}/maintenance-pdf - generates maintenance register PDF",
+    "GET /api/gate-cert/{commessa_id}/dichiarazione-ce-pdf - generates CE declaration PDF with risk analysis and force tests",
+    "Commessa.normativa_tipo set to EN_13241 on certification creation",
+    "Duplicate creation returns 409 Conflict"
+  ]
+}
