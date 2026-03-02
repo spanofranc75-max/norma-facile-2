@@ -180,6 +180,12 @@ export default function SettingsPage() {
                             <HardDrive className="h-4 w-4" />
                             Backup
                         </TabsTrigger>
+                        {user?.role === 'admin' && (
+                            <TabsTrigger value="team" className="gap-2" data-testid="tab-team">
+                                <Users className="h-4 w-4" />
+                                Team
+                            </TabsTrigger>
+                        )}
                     </TabsList>
 
                     <TabsContent value="company">
