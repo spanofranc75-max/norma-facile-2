@@ -379,6 +379,59 @@ export default function CommessaHubPage() {
                             </Card>
                         )}
 
+                        {/* Cost Analysis / Margine Reale */}
+                        {costAnalysis && costAnalysis.num_voci > 0 && (
+                            <Card className="border-gray-200" data-testid="cost-analysis">
+                                <CardHeader className="py-2 px-4">
+                                    <CardTitle className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+                                        <CircleDollarSign className="h-3.5 w-3.5" /> Analisi Finanziaria
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="px-4 pb-3 space-y-3">
+                                    {/* KPIs */}
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <div className="text-center p-2 bg-blue-50 rounded-lg">
+                                            <p className="text-[10px] text-slate-500">Preventivo</p>
+                                            <p className="text-sm font-bold text-[#0055FF]">{fmtEur(costAnalysis.valore_preventivo)}</p>
+                                        </div>
+                                        <div className="text-center p-2 bg-red-50 rounded-lg">
+                                            <p className="text-[10px] text-slate-500">Costi Reali</p>
+                                            <p className="text-sm font-bold text-red-600">{fmtEur(costAnalysis.totale_costi)}</p>
+                                        </div>
+                                        <div className={`text-center p-2 rounded-lg ${costAnalysis.margine >= 0 ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                                            <p className="text-[10px] text-slate-500">Margine</p>
+                                            <p className={`text-sm font-bold ${costAnalysis.margine >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                {fmtEur(costAnalysis.margine)} <span className="text-[10px] font-normal">({costAnalysis.margine_percentuale}%)</span>
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Costs by category */}
+                                    {Object.entries(costAnalysis.costi_per_categoria).map(([cat, info]) => (
+                                        <div key={cat} className="flex items-center justify-between text-xs py-1 border-b border-dashed border-slate-200 last:border-0">
+                                            <span className="flex items-center gap-1.5 text-slate-600 capitalize">
+                                                {cat === 'materiale' || cat === 'materiali' ? <Tag className="h-3 w-3 text-blue-500" /> :
+                                                 cat === 'lavorazioni_esterne' ? <WrenchIcon className="h-3 w-3 text-amber-500" /> :
+                                                 cat === 'consumabili' ? <Tag className="h-3 w-3 text-violet-500" /> :
+                                                 <TrendingUp className="h-3 w-3 text-slate-400" />}
+                                                {cat.replace(/_/g, ' ')}
+                                                <Badge variant="outline" className="text-[8px] ml-1">{info.voci?.length || 0}</Badge>
+                                            </span>
+                                            <span className="font-mono font-semibold text-slate-700">{fmtEur(info.totale)}</span>
+                                        </div>
+                                    ))}
+
+                                    {/* Margin bar */}
+                                    <div className="w-full bg-slate-200 rounded-full h-2">
+                                        <div
+                                            className={`h-2 rounded-full transition-all ${costAnalysis.margine_percentuale > 20 ? 'bg-emerald-500' : costAnalysis.margine_percentuale > 0 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                            style={{ width: `${Math.max(0, Math.min(100, 100 - (costAnalysis.totale_costi / Math.max(costAnalysis.valore_preventivo, 1) * 100)))}%` }}
+                                        />
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
                         {/* Operational Panels: Approvvigionamento, Produzione, C/L, Repository */}
                         <CommessaOpsPanel commessaId={commessaId} commessaNumero={c?.numero} onRefresh={fetchHub} />
                     </div>
