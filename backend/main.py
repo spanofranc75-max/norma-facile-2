@@ -7,6 +7,10 @@ from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 
+from core.database import db
+
+logger = logging.getLogger(__name__)
+
 # Import core modules
 from core.config import settings
 from core.database import close_database
