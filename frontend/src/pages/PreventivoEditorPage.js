@@ -75,6 +75,10 @@ export default function PreventivoEditorPage() {
     const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
     const [creatingCommessa, setCreatingCommessa] = useState(false);
     const [workflow, setWorkflow] = useState({ status: 'bozza', number: null, created_at: null, converted_to: null, linked_invoice: null, invoicing_progress: 0, linked_invoices: [] });
+    const [showSplitDialog, setShowSplitDialog] = useState(false);
+    const [splitAnalysis, setSplitAnalysis] = useState(null);
+    const [splitGroups, setSplitGroups] = useState({ en_1090: [], en_13241: [], non_classificati: [] });
+    const [splittingCommesse, setSplittingCommesse] = useState(false);
 
     const isAccepted = workflow.status === 'accettato' || workflow.invoicing_progress > 0;
 
