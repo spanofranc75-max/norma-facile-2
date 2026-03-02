@@ -190,13 +190,8 @@ export default function DashboardLayout({ children }) {
             <aside className="fixed left-0 top-0 h-screen w-64 bg-[#1E293B] text-slate-300 border-r border-slate-700 z-50 flex flex-col">
                 {/* Logo */}
                 <div className="px-5 pt-5 pb-4">
-                    <div className="flex items-center gap-2">
-                        {companyLogo ? (
-                            <img src={companyLogo} alt="Logo" className="h-8 max-w-[120px] object-contain" data-testid="sidebar-company-logo" />
-                        ) : (
-                            <Scale className="h-7 w-7 text-[#0055FF]" strokeWidth={1.5} />
-                        )}
-                        <span className="font-sans text-lg font-bold text-white">Norma Facile</span>
+                    <div className="flex items-center gap-2.5">
+                        <img src="/logo-1090.jpeg" alt="1090 Norma Facile" className="h-9 w-auto brightness-0 invert" data-testid="sidebar-brand-logo" />
                     </div>
                 </div>
 
