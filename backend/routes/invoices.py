@@ -20,10 +20,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
 
-@router.get("/", response_model=InvoiceListResponse)
+@router.get("/")
 async def get_invoices(
-    document_type: Optional[DocumentType] = None,
-    status: Optional[InvoiceStatus] = None,
+    document_type: Optional[str] = None,
+    status: Optional[str] = None,
     client_id: Optional[str] = None,
     year: Optional[int] = None,
     skip: int = Query(0, ge=0),
@@ -34,13 +34,18 @@ async def get_invoices(
     query = {"user_id": user["user_id"]}
     
     if document_type:
-        query["document_type"] = document_type.value
+        query["document_type"] = document_type
     if status:
-        query["status"] = status.value
+        query["status"] = status
     if client_id:
         query["client_id"] = client_id
     if year:
-        query["document_number"] = {"$regex": f"-{year}[-/]"}
+        # Match both formats: "FT-2026-0001" and "1/2026"
+        query["$or"] = [
+            {"document_number": {"$regex": f"/{year}"}},
+            {"document_number": {"$regex": f"-{year}[-/]"}},
+            {"issue_date": {"$regex": f"^{year}-"}},
+        ]
     
     total = await db.invoices.count_documents(query)
     
@@ -53,12 +58,9 @@ async def get_invoices(
             {"client_id": inv.get("client_id")},
             {"_id": 0, "business_name": 1}
         )
-        inv["client_name"] = client.get("business_name") if client else "N/A"
+        inv["client_name"] = client.get("business_name") if client else inv.get("client_business_name", "N/A")
     
-    return InvoiceListResponse(
-        invoices=[InvoiceResponse(**inv) for inv in invoices],
-        total=total
-    )
+    return {"invoices": invoices, "total": total}
 
 
 @router.get("/quick-fill/sources")

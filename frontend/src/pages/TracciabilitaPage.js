@@ -15,10 +15,11 @@ import { Package, Users, FolderOpen, Plus, Trash2, Edit, AlertTriangle, Download
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
-function getHeaders() {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-  return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
-}
+const fetchOpts = (method, body) => {
+  const opts = { method: method || 'GET', credentials: 'include', headers: {} };
+  if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  return opts;
+};
 
 // ═══════════════════════════════════════════════════════
 // MATERIAL BATCHES TAB
@@ -32,7 +33,7 @@ function BatchesTab() {
   const [certFile, setCertFile] = useState(null);
 
   const load = useCallback(async () => {
-    const r = await fetch(`${API}/api/fpc/batches`, { headers: getHeaders() });
+    const r = await fetch(`${API}/api/fpc/batches`, fetchOpts());
     if (r.ok) setBatches(await r.json());
   }, []);
 
@@ -59,19 +60,19 @@ function BatchesTab() {
     }
     const url = editing ? `${API}/api/fpc/batches/${editing}` : `${API}/api/fpc/batches`;
     const method = editing ? 'PUT' : 'POST';
-    const r = await fetch(url, { method, headers: getHeaders(), body: JSON.stringify(payload) });
+    const r = await fetch(url, fetchOpts(method, payload));
     if (r.ok) { toast.success(editing ? 'Lotto aggiornato' : 'Lotto creato'); setShowForm(false); load(); }
     else { const d = await r.json().catch(() => ({})); toast.error(d.detail || 'Errore'); }
   };
 
   const deleteBatch = async (id) => {
     if (!window.confirm('Eliminare questo lotto?')) return;
-    const r = await fetch(`${API}/api/fpc/batches/${id}`, { method: 'DELETE', headers: getHeaders() });
+    const r = await fetch(`${API}/api/fpc/batches/${id}`, fetchOpts('DELETE'));
     if (r.ok) { toast.success('Lotto eliminato'); load(); }
   };
 
   const downloadCert = async (id, filename) => {
-    const r = await fetch(`${API}/api/fpc/batches/${id}/certificate`, { headers: getHeaders() });
+    const r = await fetch(`${API}/api/fpc/batches/${id}/certificate`, fetchOpts());
     if (!r.ok) { toast.error('Certificato non disponibile'); return; }
     const data = await r.json();
     const link = document.createElement('a');
@@ -161,7 +162,7 @@ function WeldersTab() {
   const [form, setForm] = useState({ name: '', qualification_level: '', license_expiry: '', notes: '' });
 
   const load = useCallback(async () => {
-    const r = await fetch(`${API}/api/fpc/welders`, { headers: getHeaders() });
+    const r = await fetch(`${API}/api/fpc/welders`, fetchOpts());
     if (r.ok) setWelders(await r.json());
   }, []);
 
@@ -173,14 +174,14 @@ function WeldersTab() {
   const save = async () => {
     const url = editing ? `${API}/api/fpc/welders/${editing}` : `${API}/api/fpc/welders`;
     const method = editing ? 'PUT' : 'POST';
-    const r = await fetch(url, { method, headers: getHeaders(), body: JSON.stringify(form) });
+    const r = await fetch(url, fetchOpts(method, form));
     if (r.ok) { toast.success(editing ? 'Saldatore aggiornato' : 'Saldatore registrato'); setShowForm(false); load(); }
     else { const d = await r.json().catch(() => ({})); toast.error(d.detail || 'Errore'); }
   };
 
   const deleteWelder = async (id) => {
     if (!window.confirm('Eliminare questo saldatore?')) return;
-    const r = await fetch(`${API}/api/fpc/welders/${id}`, { method: 'DELETE', headers: getHeaders() });
+    const r = await fetch(`${API}/api/fpc/welders/${id}`, fetchOpts('DELETE'));
     if (r.ok) { toast.success('Saldatore eliminato'); load(); }
   };
 
@@ -237,7 +238,7 @@ function ProjectsTab() {
   const navigate = useNavigate();
 
   const load = useCallback(async () => {
-    const r = await fetch(`${API}/api/fpc/projects`, { headers: getHeaders() });
+    const r = await fetch(`${API}/api/fpc/projects`, fetchOpts());
     if (r.ok) setProjects(await r.json());
   }, []);
 

@@ -9,10 +9,11 @@ import { toast } from 'sonner';
 import { ArrowLeft, Shield, AlertTriangle, CheckCircle, User, FileText, Package, ChevronDown, Printer, Loader2 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
-function getHeaders() {
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-  return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
-}
+const fetchOpts = (method, body) => {
+  const opts = { method: method || 'GET', credentials: 'include', headers: {} };
+  if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  return opts;
+};
 
 export default function FPCProjectPage() {
   const { projectId } = useParams();
@@ -25,9 +26,9 @@ export default function FPCProjectPage() {
 
   const load = useCallback(async () => {
     const [pRes, wRes, bRes] = await Promise.all([
-      fetch(`${API}/api/fpc/projects/${projectId}`, { headers: getHeaders() }),
-      fetch(`${API}/api/fpc/welders`, { headers: getHeaders() }),
-      fetch(`${API}/api/fpc/batches`, { headers: getHeaders() }),
+      fetch(`${API}/api/fpc/projects/${projectId}`, fetchOpts()),
+      fetch(`${API}/api/fpc/welders`, fetchOpts()),
+      fetch(`${API}/api/fpc/batches`, fetchOpts()),
     ]);
     if (pRes.ok) setProject(await pRes.json());
     if (wRes.ok) setWelders(await wRes.json());
@@ -37,14 +38,12 @@ export default function FPCProjectPage() {
   useEffect(() => { load(); }, [load]);
 
   const checkCE = async () => {
-    const r = await fetch(`${API}/api/fpc/projects/${projectId}/ce-check`, { headers: getHeaders() });
+    const r = await fetch(`${API}/api/fpc/projects/${projectId}/ce-check`, fetchOpts());
     if (r.ok) setCeCheck(await r.json());
   };
 
   const updateFPC = async (data) => {
-    const r = await fetch(`${API}/api/fpc/projects/${projectId}/fpc`, {
-      method: 'PUT', headers: getHeaders(), body: JSON.stringify(data)
-    });
+    const r = await fetch(`${API}/api/fpc/projects/${projectId}/fpc`, fetchOpts('PUT', data));
     if (r.ok) {
       const result = await r.json();
       if (result.warning) toast.warning(result.warning);
@@ -54,9 +53,7 @@ export default function FPCProjectPage() {
   };
 
   const assignBatch = async (lineIndex, batchId) => {
-    const r = await fetch(`${API}/api/fpc/projects/${projectId}/assign-batch`, {
-      method: 'POST', headers: getHeaders(), body: JSON.stringify({ line_index: lineIndex, batch_id: batchId })
-    });
+    const r = await fetch(`${API}/api/fpc/projects/${projectId}/assign-batch`, fetchOpts('POST', { line_index: lineIndex, batch_id: batchId }));
     if (r.ok) { toast.success('Lotto assegnato'); load(); }
     else { const d = await r.json().catch(() => ({})); toast.error(d.detail || 'Errore'); }
   };
@@ -69,9 +66,7 @@ export default function FPCProjectPage() {
   };
 
   const generateCE = async () => {
-    const r = await fetch(`${API}/api/fpc/projects/${projectId}/generate-ce`, {
-      method: 'POST', headers: getHeaders()
-    });
+    const r = await fetch(`${API}/api/fpc/projects/${projectId}/generate-ce`, fetchOpts('POST'));
     if (r.ok) { toast.success('Etichetta CE generata con successo!'); load(); setCeCheck(null); }
     else { const d = await r.json().catch(() => ({})); toast.error(d.detail || 'Errore generazione CE'); }
   };
@@ -79,7 +74,7 @@ export default function FPCProjectPage() {
   const downloadDossier = async () => {
     setGeneratingDossier(true);
     try {
-      const r = await fetch(`${API}/api/fpc/projects/${projectId}/dossier`, { headers: getHeaders() });
+      const r = await fetch(`${API}/api/fpc/projects/${projectId}/dossier`, fetchOpts());
       if (!r.ok) { const d = await r.json().catch(() => ({})); toast.error(d.detail || 'Errore generazione'); return; }
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
