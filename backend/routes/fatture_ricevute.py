@@ -1322,6 +1322,37 @@ async def get_scadenziario_dashboard(
                 "link": f"/commesse/{c.get('commessa_id')}",
             })
 
+    # 5. Incassi attesi — scadenze da fatture attive emesse
+    incassi_scaduti = 0
+    incassi_mese = 0
+    async for inv in db.invoices.find(
+        {"user_id": uid, "status": {"$in": ["emessa", "inviata_sdi", "accettata"]}, "scadenze_pagamento": {"$exists": True}},
+        {"_id": 0, "invoice_id": 1, "document_number": 1, "client_id": 1, "scadenze_pagamento": 1}
+    ):
+        client = await db.clients.find_one({"client_id": inv.get("client_id")}, {"_id": 0, "business_name": 1})
+        client_name = client.get("business_name", "") if client else ""
+        for s in inv.get("scadenze_pagamento", []):
+            if s.get("pagata"):
+                continue
+            sc_date = s.get("data_scadenza", "")
+            stato = "scaduto" if sc_date and sc_date < today else ("in_scadenza" if sc_date and sc_date <= fine_mese else "ok")
+            importo = s.get("importo", 0)
+            if stato == "scaduto":
+                incassi_scaduti += importo
+            elif stato == "in_scadenza":
+                incassi_mese += importo
+            scadenze.append({
+                "tipo": "incasso",
+                "id": inv.get("invoice_id"),
+                "titolo": f"Incasso {inv.get('document_number', '?')} (Rata {s.get('rata', '?')})",
+                "sottotitolo": client_name,
+                "data_scadenza": sc_date,
+                "importo": importo,
+                "stato": stato,
+                "link": "/fatturazione",
+                "rata": s.get("rata"),
+            })
+
     # Sort by date
     scadenze.sort(key=lambda x: x.get("data_scadenza") or "9999-12-31")
 
@@ -1350,6 +1381,8 @@ async def get_scadenziario_dashboard(
         "kpi": {
             "pagamenti_scaduti": round(pagamenti_scaduti, 2),
             "pagamenti_mese_corrente": round(pagamenti_mese, 2),
+            "incassi_scaduti": round(incassi_scaduti, 2),
+            "incassi_mese_corrente": round(incassi_mese, 2),
             "totale_acquisti_anno": round(totale_anno, 2),
             "scadenze_totali": len(scadenze),
             "scadute": len(scadute),

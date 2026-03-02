@@ -9,7 +9,7 @@ import { Button } from '../components/ui/button';
 import {
     Calendar, AlertTriangle, CheckCircle2, Clock, CreditCard, Wrench,
     Award, Truck, ArrowRight, RefreshCw, Filter, FileInput, ChevronDown,
-    ChevronUp, Package
+    ChevronUp, Package, Banknote
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -28,6 +28,7 @@ function formatDate(d) {
 
 const TIPO_CONFIG = {
     pagamento: { icon: CreditCard, label: 'Pagamento', color: '#dc2626' },
+    incasso: { icon: Banknote, label: 'Incasso', color: '#0055FF' },
     patentino: { icon: Award, label: 'Patentino', color: '#7c3aed' },
     taratura: { icon: Wrench, label: 'Taratura', color: '#2563eb' },
     consegna: { icon: Truck, label: 'Consegna', color: '#059669' },
@@ -160,7 +161,7 @@ export default function ScadenziarioPage() {
             )}
 
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                 <KPICard
                     icon={AlertTriangle}
                     label="Da Pagare (Scaduti)"
@@ -176,6 +177,20 @@ export default function ScadenziarioPage() {
                     color="#ea580c"
                     count={kpi.in_scadenza}
                     testId="kpi-mese"
+                />
+                <KPICard
+                    icon={Banknote}
+                    label="Incassi Scaduti"
+                    value={formatCurrency(kpi.incassi_scaduti)}
+                    color="#0055FF"
+                    testId="kpi-incassi-scaduti"
+                />
+                <KPICard
+                    icon={Banknote}
+                    label="Incassi Mese"
+                    value={formatCurrency(kpi.incassi_mese_corrente)}
+                    color="#0ea5e9"
+                    testId="kpi-incassi-mese"
                 />
                 <KPICard
                     icon={CreditCard}
@@ -245,6 +260,7 @@ export default function ScadenziarioPage() {
                 >
                     <option value="tutti">Tutti i tipi</option>
                     <option value="pagamento">Pagamenti</option>
+                    <option value="incasso">Incassi</option>
                     <option value="patentino">Patentini</option>
                     <option value="taratura">Tarature</option>
                     <option value="consegna">Consegne</option>

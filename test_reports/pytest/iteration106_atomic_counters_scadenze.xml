@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="9" failures="1" skipped="3" tests="13" time="0.576" timestamp="2026-03-02T19:30:25.694277+00:00" hostname="agent-env-df89dac8-d895-4bc6-9d9d-ff83f82b651f"><testcase classname="backend.tests.test_atomic_counters_scadenze.TestAtomicCounterPreventivi" name="test_create_first_preventivo_initializes_counter" time="0.334"><error message="failed on setup with &quot;AssertionError: Failed to create client: Internal Server Error&#10;assert 500 == 201&#10; +  where 500 = &lt;Response [500]&gt;.status_code&quot;">backend/tests/test_atomic_counters_scadenze.py:77: in test_client
+    assert res.status_code == 201, f"Failed to create client: {res.text}"
+E   AssertionError: Failed to create client: Internal Server Error
+E   assert 500 == 201
+E    +  where 500 = &lt;Response [500]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_atomic_counters_scadenze.TestAtomicCounterPreventivi" name="test_second_preventivo_increments_counter" time="0.000"><error message="failed on setup with &quot;AssertionError: Failed to create client: Internal Server Error&#10;assert 500 == 201&#10; +  where 500 = &lt;Response [500]&gt;.status_code&quot;">backend/tests/test_atomic_counters_scadenze.py:77: in test_client
+    assert res.status_code == 201, f"Failed to create client: {res.text}"
+E   AssertionError: Failed to create client: Internal Server Error
+E   assert 500 == 201
+E    +  where 500 = &lt;Response [500]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_atomic_counters_scadenze.TestAtomicCounterPreventivi" name="test_delete_preventivo_does_not_affect_counter" time="0.000"><error message="failed on setup with &quot;AssertionError: Failed to create client: Internal Server Error&#10;assert 500 == 201&#10; +  where 500 = &lt;Response [500]&gt;.status_code&quot;">backend/tests/test_atomic_counters_scadenze.py:77: in test_client
+    assert res.status_code == 201, f"Failed to create client: {res.text}"
+E   AssertionError: Failed to create client: Internal Server Error
+E   assert 500 == 201
+E    +  where 500 = &lt;Response [500]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_atomic_counters_scadenze.TestAtomicCounterInvoices" name="test_create_invoice_from_preventivo_uses_atomic_counter" time="0.000"><error message="failed on setup with &quot;AssertionError: Failed to create client: Internal Server Error&#10;assert 500 == 201&#10; +  where 500 = &lt;Response [500]&gt;.status_code&quot;">backend/tests/test_atomic_counters_scadenze.py:77: in test_client
+    assert res.status_code == 201, f"Failed to create client: {res.text}"
+E   AssertionError: Failed to create client: Internal Server Error
+E   assert 500 == 201
+E    +  where 500 = &lt;Response [500]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_atomic_counters_scadenze.TestAtomicCounterInvoices" name="test_second_invoice_increments_counter" time="0.000"><error message="failed on setup with &quot;AssertionError: Failed to create client: Internal Server Error&#10;assert 500 == 201&#10; +  where 500 = &lt;Response [500]&gt;.status_code&quot;">backend/tests/test_atomic_counters_scadenze.py:77: in test_client
+    assert res.status_code == 201, f"Failed to create client: {res.text}"
+E   AssertionError: Failed to create client: Internal Server Error
+E   assert 500 == 201
+E    +  where 500 = &lt;Response [500]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_atomic_counters_scadenze.TestScadenziarioAutomatico" name="test_link_payment_type_to_client" time="0.000"><error message="failed on setup with &quot;AssertionError: Failed to create client: Internal Server Error&#10;assert 500 == 201&#10; +  where 500 = &lt;Response [500]&gt;.status_code&quot;">backend/tests/test_atomic_counters_scadenze.py:77: in test_client
+    assert res.status_code == 201, f"Failed to create client: {res.text}"
+E   AssertionError: Failed to create client: Internal Server Error
+E   assert 500 == 201
+E    +  where 500 = &lt;Response [500]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_atomic_counters_scadenze.TestScadenziarioAutomatico" name="test_generate_scadenze_endpoint" time="0.000"><error message="failed on setup with &quot;AssertionError: Failed to create client: Internal Server Error&#10;assert 500 == 201&#10; +  where 500 = &lt;Response [500]&gt;.status_code&quot;">backend/tests/test_atomic_counters_scadenze.py:77: in test_client
+    assert res.status_code == 201, f"Failed to create client: {res.text}"
+E   AssertionError: Failed to create client: Internal Server Error
+E   assert 500 == 201
+E    +  where 500 = &lt;Response [500]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_atomic_counters_scadenze.TestScadenziarioAutomatico" name="test_get_scadenze_endpoint" time="0.000"><skipped type="pytest.skip" message="No invoice with scadenze to test">/app/backend/tests/test_atomic_counters_scadenze.py:312: No invoice with scadenze to test</skipped></testcase><testcase classname="backend.tests.test_atomic_counters_scadenze.TestScadenziarioAutomatico" name="test_mark_scadenza_as_paid" time="0.000"><skipped type="pytest.skip" message="No invoice with scadenze to test">/app/backend/tests/test_atomic_counters_scadenze.py:326: No invoice with scadenze to test</skipped></testcase><testcase classname="backend.tests.test_atomic_counters_scadenze.TestScadenziarioAutomatico" name="test_toggle_scadenza_unpaid" time="0.000"><skipped type="pytest.skip" message="No invoice with scadenze to test">/app/backend/tests/test_atomic_counters_scadenze.py:346: No invoice with scadenze to test</skipped></testcase><testcase classname="backend.tests.test_atomic_counters_scadenze.TestScadenziarioAutomatico" name="test_status_emessa_auto_generates_scadenze" time="0.000"><error message="failed on setup with &quot;AssertionError: Failed to create client: Internal Server Error&#10;assert 500 == 201&#10; +  where 500 = &lt;Response [500]&gt;.status_code&quot;">backend/tests/test_atomic_counters_scadenze.py:77: in test_client
+    assert res.status_code == 201, f"Failed to create client: {res.text}"
+E   AssertionError: Failed to create client: Internal Server Error
+E   assert 500 == 201
+E    +  where 500 = &lt;Response [500]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_atomic_counters_scadenze.TestScadenziarioDashboardKPI" name="test_dashboard_returns_incasso_type" time="0.000"><error message="failed on setup with &quot;AssertionError: Failed to create client: Internal Server Error&#10;assert 500 == 201&#10; +  where 500 = &lt;Response [500]&gt;.status_code&quot;">backend/tests/test_atomic_counters_scadenze.py:77: in test_client
+    assert res.status_code == 201, f"Failed to create client: {res.text}"
+E   AssertionError: Failed to create client: Internal Server Error
+E   assert 500 == 201
+E    +  where 500 = &lt;Response [500]&gt;.status_code</error></testcase><testcase classname="backend.tests.test_atomic_counters_scadenze.TestScadenziarioDashboardKPI" name="test_dashboard_kpi_includes_incassi" time="0.076"><failure message="assert 500 == 200&#10; +  where 500 = &lt;Response [500]&gt;.status_code">backend/tests/test_atomic_counters_scadenze.py:461: in test_dashboard_kpi_includes_incassi
+    assert res.status_code == 200
+E   assert 500 == 200
+E    +  where 500 = &lt;Response [500]&gt;.status_code</failure></testcase></testsuite></testsuites>

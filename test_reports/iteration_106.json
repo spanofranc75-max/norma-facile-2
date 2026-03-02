@@ -1,0 +1,61 @@
+{
+  "summary": "Comprehensive testing of 3 features: 1) Atomic counter for preventivi numbering (BUG FIX), 2) Atomic counter for invoice numbering (BUG FIX), 3) Scadenziario Automatico feature with auto-generated payment deadlines. All backend APIs tested successfully via curl. Frontend ScadenziarioPage tested with Playwright - all 6 KPI cards visible, 'incasso' filter option present, and incasso entries displayed with Banknote icon.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "bug_fix_preventivi_counter": {
+      "POST /api/preventivi/": "PASS - Creates PRV-YYYY-NNNN with atomic counter",
+      "Sequential numbering": "PASS - PRV-2026-0001 -> PRV-2026-0002 -> PRV-2026-0003",
+      "Counter after delete": "PASS - Deleting PRV-2026-0001 does not cause reuse, next is PRV-2026-0003",
+      "Counter collection": "PASS - Uses document_counters with counter_id format PRV-{user_id}-{year}"
+    },
+    "bug_fix_invoice_counter": {
+      "POST /api/invoices/from-preventivo/": "PASS - Creates FT-YYYY/NNNN with atomic counter",
+      "Sequential numbering": "PASS - FT-2026/0001 -> FT-2026/0002 sequential",
+      "Counter collection": "PASS - Uses document_counters with counter_id format FT-{user_id}-{year}"
+    },
+    "feature_scadenziario_automatico": {
+      "POST /api/invoices/{id}/scadenze/genera": "PASS - Generates payment deadlines from client payment_type",
+      "GET /api/invoices/{id}/scadenze": "PASS - Returns generated scadenze array",
+      "PATCH /api/invoices/{id}/scadenze/{rata}/paga": "PASS - Toggles rata paid/unpaid status",
+      "Auto-generate on status emessa": "PASS - Changing status to 'emessa' auto-triggers generate_scadenze_pagamento()",
+      "Payment deadline calculation": "PASS - Correctly calculates dates using quote[].giorni from payment_type"
+    },
+    "feature_dashboard_incassi": {
+      "GET /api/fatture-ricevute/scadenziario/dashboard": "PASS - Returns incasso type entries",
+      "KPI incassi_scaduti": "PASS - Includes sum of overdue incassi",
+      "KPI incassi_mese_corrente": "PASS - Includes sum of current month incassi"
+    },
+    "frontend_scadenziario_page": {
+      "6 KPI Cards": "PASS - Da Pagare (Scaduti), Da Pagare (Mese), Incassi Scaduti, Incassi Mese, Acquisti Anno, Da Processare",
+      "Incasso filter option": "PASS - Filter dropdown includes 'Incassi' option",
+      "Incasso entries display": "PASS - Shows with Banknote icon and blue color",
+      "data-testid attributes": "PASS - All KPI cards have proper test IDs (kpi-scaduti, kpi-mese, kpi-incassi-scaduti, kpi-incassi-mese, kpi-anno, kpi-inbox)"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_atomic_counters_scadenze.py",
+    "/app/test_reports/pytest/iteration106_atomic_counters_scadenze.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_atomic_counters_scadenze.py"
+  ],
+  "success_rate": {
+    "backend": "100% (17/17 manual curl tests passed)",
+    "frontend": "100% (all UI components verified)"
+  },
+  "test_credentials": "Created test session test_session_iter106_1772479838726 (cleaned up after tests)",
+  "seed_data_creation": "None required - tests create and cleanup own data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Three features fully implemented and tested: 1) Atomic counter for preventivi (PRV-YYYY-NNNN) using document_counters collection with find_one_and_update + seed from max existing. 2) Same atomic counter pattern for invoices (FT-YYYY/NNNN). 3) Scadenziario Automatico - generate_scadenze_pagamento() calculates deadlines from client's payment_type quote array, auto-triggered on status 'emessa'. Frontend ScadenziarioPage has 6 KPI cards and 'incasso' filter type with Banknote icon."
+}

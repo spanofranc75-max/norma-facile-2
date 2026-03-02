@@ -4,7 +4,8 @@ from fastapi.responses import StreamingResponse
 from typing import Optional, List
 from io import BytesIO
 import uuid
-from datetime import datetime, timezone, date
+import calendar
+from datetime import datetime, timezone, date, timedelta
 from core.security import get_current_user
 from core.database import db
 from models.invoice import (
@@ -18,6 +19,78 @@ import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/invoices", tags=["invoices"])
+
+
+async def generate_scadenze_pagamento(invoice_doc: dict, uid: str):
+    """Calculate and store payment deadlines from client's payment type."""
+    client_id = invoice_doc.get("client_id")
+    if not client_id:
+        return
+
+    client = await db.clients.find_one({"client_id": client_id}, {"_id": 0, "payment_type_id": 1})
+    pt_id = client.get("payment_type_id") if client else None
+    if not pt_id:
+        return
+
+    pt = await db.payment_types.find_one({"payment_type_id": pt_id}, {"_id": 0})
+    if not pt:
+        return
+
+    # Derive quote from legacy flags if needed
+    quote_list = pt.get("quote", [])
+    if not quote_list:
+        flag_map = {"immediato": 0, "gg_30": 30, "gg_60": 60, "gg_90": 90, "gg_120": 120, "gg_150": 150, "gg_180": 180}
+        days = sorted(d for flag, d in flag_map.items() if pt.get(flag))
+        if days:
+            share = round(100.0 / len(days), 2)
+            quote_list = [{"giorni": d, "quota": share} for d in days]
+
+    if not quote_list:
+        return
+
+    issue_str = invoice_doc.get("issue_date", "")
+    try:
+        invoice_date = date.fromisoformat(issue_str)
+    except (ValueError, TypeError):
+        invoice_date = date.today()
+
+    total_due = invoice_doc.get("totals", {}).get("total_document", 0) or 0
+    fine_mese = pt.get("fine_mese", False)
+    richiedi_gs = pt.get("richiedi_giorno_scadenza", False)
+    giorno_sc = pt.get("giorno_scadenza")
+
+    scadenze = []
+    for i, q in enumerate(quote_list):
+        giorni = q.get("giorni", 0)
+        quota_pct = q.get("quota", 100)
+        target = invoice_date + timedelta(days=giorni)
+
+        if fine_mese:
+            last_day = calendar.monthrange(target.year, target.month)[1]
+            target = target.replace(day=last_day)
+
+        if richiedi_gs and giorno_sc:
+            try:
+                last_day = calendar.monthrange(target.year, target.month)[1]
+                target = target.replace(day=min(giorno_sc, last_day))
+            except ValueError:
+                pass
+
+        importo = round(total_due * quota_pct / 100, 2)
+        scadenze.append({
+            "rata": i + 1,
+            "data_scadenza": target.isoformat(),
+            "quota_pct": quota_pct,
+            "importo": importo,
+            "pagata": False,
+            "data_pagamento": None,
+        })
+
+    await db.invoices.update_one(
+        {"invoice_id": invoice_doc["invoice_id"]},
+        {"$set": {"scadenze_pagamento": scadenze, "payment_type_id": pt_id}}
+    )
+    logger.info(f"Generated {len(scadenze)} scadenze for invoice {invoice_doc['invoice_id']}")
 
 
 @router.get("/")
@@ -160,8 +233,30 @@ async def create_invoice_from_preventivo(
     invoice_id = f"inv_{uuid.uuid4().hex[:12]}"
     year = now.year
 
-    count = await db.invoices.count_documents({"user_id": uid, "document_type": {"$in": ["fattura", "FT"]}})
-    doc_number = f"FT-{year}/{count + 1:04d}"
+    # Atomic counter for invoice numbering
+    ft_counter_id = f"FT-{uid}-{year}"
+    ft_existing = await db.document_counters.find_one({"counter_id": ft_counter_id})
+    if not ft_existing:
+        max_ft = 0
+        async for inv_doc in db.invoices.find(
+            {"user_id": uid, "document_number": {"$regex": f"^FT-{year}"}},
+            {"document_number": 1, "_id": 0}
+        ):
+            try:
+                num_str = inv_doc["document_number"].split("/")[-1]
+                num = int(num_str)
+                if num > max_ft:
+                    max_ft = num
+            except (ValueError, IndexError, KeyError):
+                pass
+        if max_ft > 0:
+            await db.document_counters.update_one(
+                {"counter_id": ft_counter_id}, {"$set": {"counter": max_ft}}, upsert=True
+            )
+    ft_counter = await db.document_counters.find_one_and_update(
+        {"counter_id": ft_counter_id}, {"$inc": {"counter": 1}}, upsert=True, return_document=True
+    )
+    doc_number = f"FT-{year}/{ft_counter.get('counter', 1):04d}"
 
     # Map lines
     invoice_lines = []
@@ -468,6 +563,10 @@ async def update_invoice_status(
             "updated_at": datetime.now(timezone.utc)
         }}
     )
+
+    # Auto-generate payment deadlines when invoice is emitted
+    if new_status == "emessa":
+        await generate_scadenze_pagamento(existing, user["user_id"])
     
     updated = await db.invoices.find_one({"invoice_id": invoice_id}, {"_id": 0})
     
@@ -480,6 +579,60 @@ async def update_invoice_status(
     
     logger.info(f"Invoice status updated: {invoice_id} -> {new_status}")
     return InvoiceResponse(**updated)
+
+
+
+@router.get("/{invoice_id}/scadenze")
+async def get_invoice_scadenze(invoice_id: str, user: dict = Depends(get_current_user)):
+    """Get payment deadlines for an invoice."""
+    doc = await db.invoices.find_one(
+        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"_id": 0, "scadenze_pagamento": 1, "invoice_id": 1}
+    )
+    if not doc:
+        raise HTTPException(404, "Fattura non trovata")
+    return {"scadenze": doc.get("scadenze_pagamento", []), "invoice_id": invoice_id}
+
+
+@router.post("/{invoice_id}/scadenze/genera")
+async def regenerate_invoice_scadenze(invoice_id: str, user: dict = Depends(get_current_user)):
+    """(Re)generate payment deadlines for an invoice based on client's payment type."""
+    doc = await db.invoices.find_one(
+        {"invoice_id": invoice_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "Fattura non trovata")
+    await generate_scadenze_pagamento(doc, user["user_id"])
+    updated = await db.invoices.find_one({"invoice_id": invoice_id}, {"_id": 0, "scadenze_pagamento": 1})
+    return {"scadenze": updated.get("scadenze_pagamento", []), "message": "Scadenze generate"}
+
+
+@router.patch("/{invoice_id}/scadenze/{rata}/paga")
+async def mark_scadenza_pagata(invoice_id: str, rata: int, user: dict = Depends(get_current_user)):
+    """Mark a specific installment as paid."""
+    doc = await db.invoices.find_one(
+        {"invoice_id": invoice_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "Fattura non trovata")
+    scadenze = doc.get("scadenze_pagamento", [])
+    updated_scadenze = []
+    found = False
+    for s in scadenze:
+        if s.get("rata") == rata:
+            s["pagata"] = not s.get("pagata", False)
+            s["data_pagamento"] = date.today().isoformat() if s["pagata"] else None
+            found = True
+        updated_scadenze.append(s)
+    if not found:
+        raise HTTPException(404, f"Rata {rata} non trovata")
+    # If all scadenze are paid, auto-update invoice status
+    all_paid = all(s.get("pagata") for s in updated_scadenze)
+    update_set = {"scadenze_pagamento": updated_scadenze, "updated_at": datetime.now(timezone.utc)}
+    if all_paid:
+        update_set["status"] = "pagata"
+    await db.invoices.update_one({"invoice_id": invoice_id}, {"$set": update_set})
+    return {"scadenze": updated_scadenze, "all_paid": all_paid}
 
 
 @router.post("/convert", response_model=InvoiceResponse)

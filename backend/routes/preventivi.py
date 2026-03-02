@@ -227,7 +227,7 @@ async def create_preventivo_from_distinta(
         return_document=True,
     )
     seq = counter.get("counter", 1) if counter else 1
-    number = f"PRV-{year}/{seq:04d}"
+    number = f"PRV-{year}-{seq:04d}"
 
     # Build lines from distinta items
     items = distinta.get("items", [])
@@ -379,10 +379,41 @@ async def get_preventivo(prev_id: str, user: dict = Depends(get_current_user)):
 async def create_preventivo(data: PreventivoCreate, user: dict = Depends(get_current_user)):
     prev_id = f"prev_{uuid.uuid4().hex[:10]}"
     now = datetime.now(timezone.utc)
+    year = now.year
+    uid = user["user_id"]
 
-    # Generate number
-    count = await db.preventivi.count_documents({"user_id": user["user_id"]})
-    number = f"PRV-{now.year}-{count + 1:04d}"
+    # Atomic counter — find max existing number to seed if needed
+    counter_id = f"PRV-{uid}-{year}"
+    existing_counter = await db.document_counters.find_one({"counter_id": counter_id})
+    if not existing_counter:
+        # Seed counter from max existing preventivo number for this year
+        max_num = 0
+        async for doc in db.preventivi.find(
+            {"user_id": uid, "number": {"$regex": f"^PRV-{year}-"}},
+            {"number": 1, "_id": 0}
+        ):
+            try:
+                num_str = doc["number"].split("-")[-1]
+                num = int(num_str)
+                if num > max_num:
+                    max_num = num
+            except (ValueError, IndexError, KeyError):
+                pass
+        if max_num > 0:
+            await db.document_counters.update_one(
+                {"counter_id": counter_id},
+                {"$set": {"counter": max_num}},
+                upsert=True,
+            )
+
+    counter = await db.document_counters.find_one_and_update(
+        {"counter_id": counter_id},
+        {"$inc": {"counter": 1}},
+        upsert=True,
+        return_document=True,
+    )
+    seq = counter.get("counter", 1)
+    number = f"PRV-{year}-{seq:04d}"
 
     lines = []
     for line in data.lines:
@@ -545,11 +576,30 @@ async def convert_to_invoice(prev_id: str, user: dict = Depends(get_current_user
     invoice_id = f"inv_{uuid.uuid4().hex[:12]}"
     year = now.year
 
-    # Get next invoice number
-    count = await db.invoices.count_documents(
-        {"user_id": user["user_id"], "document_type": "fattura"}
+    # Get next invoice number (atomic counter)
+    ft_counter_id = f"FT-{user['user_id']}-{year}"
+    ft_existing = await db.document_counters.find_one({"counter_id": ft_counter_id})
+    if not ft_existing:
+        max_ft = 0
+        async for inv_doc in db.invoices.find(
+            {"user_id": user["user_id"], "document_number": {"$regex": f"^FT-{year}"}},
+            {"document_number": 1, "_id": 0}
+        ):
+            try:
+                num_str = inv_doc["document_number"].split("/")[-1]
+                num = int(num_str)
+                if num > max_ft:
+                    max_ft = num
+            except (ValueError, IndexError, KeyError):
+                pass
+        if max_ft > 0:
+            await db.document_counters.update_one(
+                {"counter_id": ft_counter_id}, {"$set": {"counter": max_ft}}, upsert=True
+            )
+    ft_counter = await db.document_counters.find_one_and_update(
+        {"counter_id": ft_counter_id}, {"$inc": {"counter": 1}}, upsert=True, return_document=True
     )
-    doc_number = f"FT-{year}/{count + 1:04d}"
+    doc_number = f"FT-{year}/{ft_counter.get('counter', 1):04d}"
 
     # Map preventivo lines to invoice lines
     invoice_lines = []
