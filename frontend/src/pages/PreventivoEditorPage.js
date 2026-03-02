@@ -247,8 +247,7 @@ export default function PreventivoEditorPage() {
     const lineNet = (l) => {
         const p = parseFloat(l.unit_price) || 0;
         const s1 = parseFloat(l.sconto_1) || 0;
-        const s2 = parseFloat(l.sconto_2) || 0;
-        return p * (1 - s1 / 100) * (1 - s2 / 100);
+        return p * (1 - s1 / 100);
     };
     const lineTotal = (l) => (parseFloat(l.quantity) || 0) * lineNet(l);
     const subtotal = form.lines.reduce((s, l) => s + lineTotal(l), 0);
@@ -270,7 +269,7 @@ export default function PreventivoEditorPage() {
                 client_id: form.client_id || null,
                 lines: form.lines.map(l => ({
                     ...l, quantity: parseFloat(l.quantity) || 1, unit_price: parseFloat(l.unit_price) || 0,
-                    sconto_1: parseFloat(l.sconto_1) || 0, sconto_2: parseFloat(l.sconto_2) || 0,
+                    sconto_1: parseFloat(l.sconto_1) || 0,
                 })),
                 acconto: parseFloat(form.acconto) || 0,
                 sconto_globale: parseFloat(form.sconto_globale) || 0,
@@ -696,8 +695,7 @@ export default function PreventivoEditorPage() {
                                             <TableHead className="w-[80px] text-right text-[10px]">Q.tà</TableHead>
                                             <TableHead className="w-[60px] text-[10px]">UdM</TableHead>
                                             <TableHead className="w-[90px] text-right text-[10px]">Prezzo</TableHead>
-                                            <TableHead className="w-[60px] text-right text-[10px]">Sc.1%</TableHead>
-                                            <TableHead className="w-[60px] text-right text-[10px]">Sc.2%</TableHead>
+                                            <TableHead className="w-[65px] text-right text-[10px]">Sc.%</TableHead>
                                             <TableHead className="w-[85px] text-right text-[10px]">Netto</TableHead>
                                             <TableHead className="w-[56px] text-[10px]">IVA</TableHead>
                                             <TableHead className="w-[90px] text-right text-[10px]">Totale</TableHead>
@@ -715,7 +713,7 @@ export default function PreventivoEditorPage() {
                                                 <TableRow key={l.line_id} data-testid={`line-${i}`}>
                                                     <TableCell className="text-[10px] text-slate-400 font-mono">{i + 1}</TableCell>
                                                     <TableCell><AutoExpandTextarea value={l.description} onChange={e => updateLine(i, 'description', e.target.value)} placeholder="Descrizione" className="text-xs" /></TableCell>
-                                                    <TableCell className="px-1"><Input type="number" value={l.quantity} onChange={e => updateLine(i, 'quantity', e.target.value)} className="h-7 text-[11px] text-right font-mono w-full" /></TableCell>
+                                                    <TableCell className="px-1"><Input type="number" value={l.quantity} onChange={e => updateLine(i, 'quantity', e.target.value)} className="h-7 text-[10px] text-right font-mono w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" /></TableCell>
                                                     <TableCell className="px-1">
                                                         <Select value={l.unit} onValueChange={v => updateLine(i, 'unit', v)}>
                                                             <SelectTrigger className="h-7 text-[10px] w-full"><SelectValue /></SelectTrigger>
@@ -729,9 +727,8 @@ export default function PreventivoEditorPage() {
                                                             </SelectContent>
                                                         </Select>
                                                     </TableCell>
-                                                    <TableCell className="px-1"><Input type="number" step="0.01" value={l.unit_price} onChange={e => updateLine(i, 'unit_price', e.target.value)} placeholder="0,00" className="h-7 text-[11px] text-right font-mono text-red-600 font-semibold w-full" /></TableCell>
-                                                    <TableCell className="px-1"><Input type="number" step="0.1" value={l.sconto_1} onChange={e => updateLine(i, 'sconto_1', e.target.value)} placeholder="%" className="h-7 text-[10px] text-right font-mono w-full" /></TableCell>
-                                                    <TableCell className="px-1"><Input type="number" step="0.1" value={l.sconto_2} onChange={e => updateLine(i, 'sconto_2', e.target.value)} placeholder="%" className="h-7 text-[10px] text-right font-mono w-full" /></TableCell>
+                                                    <TableCell className="px-1"><Input type="number" step="0.01" value={l.unit_price} onChange={e => updateLine(i, 'unit_price', e.target.value)} placeholder="0,00" className="h-7 text-[10px] text-right font-mono text-red-600 font-semibold w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" /></TableCell>
+                                                    <TableCell className="px-1"><Input type="number" step="0.1" value={l.sconto_1} onChange={e => updateLine(i, 'sconto_1', e.target.value)} placeholder="%" className="h-7 text-[10px] text-right font-mono w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" /></TableCell>
                                                     <TableCell className="text-right font-mono text-xs text-slate-600 px-1 truncate">{fmtEur(net)}</TableCell>
                                                     <TableCell className="px-1">
                                                         <Select value={l.vat_rate} onValueChange={v => updateLine(i, 'vat_rate', v)}>
@@ -760,6 +757,9 @@ export default function PreventivoEditorPage() {
                                     </TableBody>
                                 </Table>
                             </CardContent>
+                            <div className="border-t border-slate-200 px-4 py-2">
+                                <Button data-testid="btn-add-line-bottom" size="sm" variant="ghost" onClick={addLine} className="text-[#0055FF] hover:text-blue-700 hover:bg-blue-50 h-7 text-xs w-full"><Plus className="h-3 w-3 mr-1" /> Aggiungi riga</Button>
+                            </div>
                         </Card>
 
                         {/* Totals Card — Invoicex style */}
