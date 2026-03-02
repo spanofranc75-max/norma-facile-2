@@ -773,6 +773,206 @@ function MigrazioneTab() {
     );
 }
 
+function BackupTab() {
+    const [lastBackup, setLastBackup] = useState(null);
+    const [stats, setStats] = useState(null);
+    const [loadingStats, setLoadingStats] = useState(true);
+    const [exporting, setExporting] = useState(false);
+    const [restoring, setRestoring] = useState(false);
+    const [restoreResult, setRestoreResult] = useState(null);
+
+    const API = process.env.REACT_APP_BACKEND_URL;
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const [lastRes, statsRes] = await Promise.all([
+                    apiRequest('/admin/backup/last'),
+                    apiRequest('/admin/backup/stats'),
+                ]);
+                setLastBackup(lastRes.last_backup);
+                setStats(statsRes);
+            } catch { /* silent */ }
+            finally { setLoadingStats(false); }
+        })();
+    }, []);
+
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            const res = await fetch(`${API}/api/admin/backup/export`, { credentials: 'include' });
+            if (!res.ok) throw new Error('Errore durante il backup');
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const disposition = res.headers.get('content-disposition') || '';
+            const match = disposition.match(/filename="(.+)"/);
+            a.href = url;
+            a.download = match ? match[1] : `backup_normafacile_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            toast.success('Backup scaricato con successo!');
+            // Refresh last backup info
+            const lastRes = await apiRequest('/admin/backup/last');
+            setLastBackup(lastRes.last_backup);
+        } catch (e) { toast.error(e.message); }
+        finally { setExporting(false); }
+    };
+
+    const handleRestore = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (!window.confirm('ATTENZIONE: Stai per importare dati dal file di backup. I record esistenti NON verranno sovrascritti. Vuoi procedere?')) {
+            e.target.value = '';
+            return;
+        }
+        setRestoring(true);
+        setRestoreResult(null);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await fetch(`${API}/api/admin/backup/restore`, {
+                method: 'POST',
+                credentials: 'include',
+                body: formData,
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Errore restore');
+            setRestoreResult(data);
+            toast.success(data.message);
+        } catch (err) { toast.error(err.message); }
+        finally { setRestoring(false); e.target.value = ''; }
+    };
+
+    const fmtSize = (bytes) => {
+        if (!bytes) return '—';
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / 1048576).toFixed(1)} MB`;
+    };
+
+    const fmtDate = (d) => {
+        if (!d) return '—';
+        try { return new Date(d).toLocaleString('it-IT', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+        catch { return d; }
+    };
+
+    const COLLECTION_LABELS = {
+        commesse: 'Commesse', preventivi: 'Preventivi', clients: 'Clienti',
+        invoices: 'Fatture Emesse', ddt: 'DDT', fpc_projects: 'Progetti FPC',
+        gate_certifications: 'Cert. Cancelli', welders: 'Saldatori',
+        instruments: 'Strumenti', company_docs: 'Documenti', distinte: 'Distinte',
+        rilievi: 'Rilievi', fatture_ricevute: 'Fatture Ricevute',
+        consumable_batches: 'Consumabili', project_costs: 'Costi Progetto',
+        audit_findings: 'Audit/NC', company_settings: 'Impostazioni',
+        catalogo_profili: 'Catalogo Profili', articoli: 'Articoli',
+    };
+
+    return (
+        <Card className="border-gray-200">
+            <CardHeader className="bg-slate-800 border-b border-gray-200 rounded-t-lg">
+                <CardTitle className="text-white flex items-center gap-2">
+                    <HardDrive className="h-5 w-5" /> Backup & Restore Dati
+                </CardTitle>
+                <CardDescription className="text-slate-300">
+                    Scarica una copia completa dei dati aziendali o ripristina da un backup precedente
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6 pt-6">
+                {/* Export Section */}
+                <div className="border border-emerald-200 bg-emerald-50/30 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="text-sm font-bold text-emerald-800 flex items-center gap-1.5">
+                                <Download className="h-4 w-4" /> Esporta Backup
+                            </h3>
+                            <p className="text-xs text-emerald-600 mt-0.5">
+                                Scarica un file JSON con tutti i dati: commesse, clienti, preventivi, certificazioni, fatture e altro.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Last backup info */}
+                    {lastBackup && (
+                        <div className="bg-white border border-emerald-200 rounded-lg p-3">
+                            <p className="text-xs text-slate-500">Ultimo backup: <strong className="text-slate-700">{fmtDate(lastBackup.date)}</strong></p>
+                            <p className="text-xs text-slate-400 mt-0.5">
+                                {lastBackup.total_records} record — {fmtSize(lastBackup.size_bytes)}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Current data stats */}
+                    {!loadingStats && stats && (
+                        <div>
+                            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Dati Attuali ({stats.total} record)</p>
+                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1.5">
+                                {Object.entries(stats.stats || {}).filter(([, v]) => v > 0).map(([k, v]) => (
+                                    <div key={k} className="bg-white border rounded px-2 py-1.5 text-center">
+                                        <p className="text-sm font-bold text-[#1E293B]">{v}</p>
+                                        <p className="text-[9px] text-slate-400 leading-tight">{COLLECTION_LABELS[k] || k}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {loadingStats && <p className="text-xs text-slate-400 flex items-center gap-1"><RefreshCw className="h-3 w-3 animate-spin" /> Calcolo statistiche...</p>}
+
+                    <Button
+                        onClick={handleExport}
+                        disabled={exporting}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-10"
+                        data-testid="btn-export-backup"
+                    >
+                        {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                        {exporting ? 'Generazione backup...' : 'Esegui Backup Ora'}
+                    </Button>
+                </div>
+
+                {/* Restore Section */}
+                <div className="border border-amber-200 bg-amber-50/30 rounded-lg p-4 space-y-3">
+                    <div>
+                        <h3 className="text-sm font-bold text-amber-800 flex items-center gap-1.5">
+                            <UploadCloud className="h-4 w-4" /> Ripristina da Backup
+                        </h3>
+                        <p className="text-xs text-amber-600 mt-0.5">
+                            Importa dati da un file di backup precedente. I record esistenti <strong>non verranno sovrascritti</strong> (merge sicuro).
+                        </p>
+                    </div>
+
+                    <label className={`flex items-center justify-center w-full h-10 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                        restoring ? 'border-amber-300 bg-amber-100' : 'border-amber-300 hover:border-amber-400 hover:bg-amber-50'
+                    }`}>
+                        <input type="file" accept=".json" onChange={handleRestore} disabled={restoring} className="hidden" data-testid="input-restore-file" />
+                        {restoring ? (
+                            <span className="flex items-center gap-2 text-xs text-amber-700"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Ripristino in corso...</span>
+                        ) : (
+                            <span className="flex items-center gap-2 text-xs text-amber-700"><UploadCloud className="h-3.5 w-3.5" /> Seleziona file backup (.json)</span>
+                        )}
+                    </label>
+
+                    {restoreResult && (
+                        <div className="bg-white border border-amber-200 rounded-lg p-3 text-xs">
+                            <p className="font-semibold text-emerald-700">{restoreResult.message}</p>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 mt-2">
+                                {Object.entries(restoreResult.details || {}).filter(([, v]) => v.inserted > 0 || v.skipped > 0).map(([k, v]) => (
+                                    <span key={k} className="text-slate-600">
+                                        {COLLECTION_LABELS[k] || k}: <strong className="text-emerald-600">+{v.inserted}</strong>
+                                        {v.skipped > 0 && <span className="text-slate-400"> ({v.skipped} saltati)</span>}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+
 function StatBox({ label, value }) {
     return (
         <div className="text-center bg-white rounded-md p-2 border border-emerald-100">
