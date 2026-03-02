@@ -50,7 +50,6 @@ const NAV_GROUPS = [
             { path: '/clients', label: 'Clienti', icon: Users },
             { path: '/preventivi', label: 'Preventivi', icon: ClipboardList },
             { path: '/invoices', label: 'Fatturazione', icon: Receipt },
-            { path: '/fatture-ricevute', label: 'Fatture Ricevute', icon: FileInput },
             { path: '/ddt', label: 'DDT', icon: Truck },
         ],
     },
