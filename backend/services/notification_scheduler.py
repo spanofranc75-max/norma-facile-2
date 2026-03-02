@@ -13,9 +13,11 @@ from core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Check interval: every 12 hours
-CHECK_INTERVAL_SECONDS = 12 * 60 * 60
+# Check interval: once per day (24h)
+CHECK_INTERVAL_SECONDS = 24 * 60 * 60
 ALERT_THRESHOLD_DAYS = 30
+# Minimum hours between email sends (prevents flood on hot-reload restarts)
+MIN_HOURS_BETWEEN_EMAILS = 23
 
 _scheduler_task = None
 
@@ -208,6 +210,19 @@ async def _send_alert_email(recipients: list[str], welder_alerts: list, instrume
 async def run_expiration_check(manual: bool = False) -> dict:
     """Run the full expiration check. Returns summary of findings."""
     source = "manuale" if manual else "automatico"
+
+    # Skip automatic checks if we sent an email recently (prevents flood on hot-reload)
+    if not manual:
+        last_log = await db.notification_logs.find_one(
+            {"email_sent": True},
+            sort=[("checked_at", -1)],
+        )
+        if last_log and last_log.get("checked_at"):
+            hours_ago = (datetime.now(timezone.utc) - last_log["checked_at"]).total_seconds() / 3600
+            if hours_ago < MIN_HOURS_BETWEEN_EMAILS:
+                logger.info(f"[WATCHDOG] Skip: ultima email inviata {hours_ago:.1f}h fa (min {MIN_HOURS_BETWEEN_EMAILS}h)")
+                return {"skipped": True, "hours_since_last": round(hours_ago, 1)}
+
     logger.info(f"[WATCHDOG] Avvio controllo scadenze ({source})...")
 
     welder_alerts = await check_welder_expirations()
@@ -248,9 +263,9 @@ async def run_expiration_check(manual: bool = False) -> dict:
 
 async def _scheduler_loop():
     """Background loop that periodically checks expirations."""
-    logger.info("[WATCHDOG] Scheduler avviato (intervallo: 12h)")
-    # Wait 60s after startup before first check
-    await asyncio.sleep(60)
+    logger.info("[WATCHDOG] Scheduler avviato (intervallo: 24h, 1 volta al giorno)")
+    # Wait 5 min after startup before first check (avoids flood on hot-reload)
+    await asyncio.sleep(300)
     while True:
         try:
             await run_expiration_check(manual=False)
