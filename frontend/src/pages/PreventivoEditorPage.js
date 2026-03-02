@@ -141,31 +141,29 @@ export default function PreventivoEditorPage() {
     useEffect(() => {
         if (isNew) return;
         apiRequest(`/preventivi/${prevId}`).then(data => {
-            // Only overwrite form with API data if we haven't restored a draft
-            // (draft takes priority since it has unsaved user edits)
-            if (!isRestoredRef.current) {
-                setForm({
-                    client_id: data.client_id || '',
-                    subject: data.subject || '',
-                    validity_days: data.validity_days || 30,
-                    notes: data.notes || '',
-                    lines: data.lines?.length ? data.lines : [emptyLine()],
-                    payment_type_id: data.payment_type_id || '',
-                    payment_type_label: data.payment_type_label || '',
-                    destinazione_merce: data.destinazione_merce || '',
-                    iban: data.iban || '',
-                    banca: data.banca || '',
-                    note_pagamento: data.note_pagamento || '',
-                    riferimento: data.riferimento || '',
-                    acconto: data.acconto || 0,
-                    sconto_globale: data.sconto_globale || 0,
-                    normativa: data.normativa || '',
-                    numero_disegno: data.numero_disegno || '',
-                    ingegnere_disegno: data.ingegnere_disegno || '',
-                    classe_esecuzione: data.classe_esecuzione || '',
-                    giorni_consegna: data.giorni_consegna || '',
-                });
-            }
+            // Always update form from API for existing preventivi
+            // Draft only keeps unsaved text edits, API is source of truth
+            setForm(f => ({
+                client_id: data.client_id || f.client_id || '',
+                subject: data.subject || f.subject || '',
+                validity_days: data.validity_days || f.validity_days || 30,
+                notes: data.notes || f.notes || '',
+                lines: data.lines?.length ? data.lines : f.lines?.length > 0 ? f.lines : [emptyLine()],
+                payment_type_id: data.payment_type_id || f.payment_type_id || '',
+                payment_type_label: data.payment_type_label || f.payment_type_label || '',
+                destinazione_merce: data.destinazione_merce || f.destinazione_merce || '',
+                iban: data.iban || f.iban || '',
+                banca: data.banca || f.banca || '',
+                note_pagamento: data.note_pagamento || f.note_pagamento || '',
+                riferimento: data.riferimento || f.riferimento || '',
+                acconto: data.acconto || f.acconto || 0,
+                sconto_globale: data.sconto_globale || f.sconto_globale || 0,
+                normativa: data.normativa || f.normativa || '',
+                numero_disegno: data.numero_disegno || f.numero_disegno || '',
+                ingegnere_disegno: data.ingegnere_disegno || f.ingegnere_disegno || '',
+                classe_esecuzione: data.classe_esecuzione || f.classe_esecuzione || '',
+                giorni_consegna: data.giorni_consegna || f.giorni_consegna || '',
+            }));
             if (data.compliance_detail) setCompliance(data.compliance_detail);
             setWorkflow({
                 status: data.status || 'bozza',
@@ -574,8 +572,8 @@ export default function PreventivoEditorPage() {
                                         <div>
                                             <Label className="text-xs">Normativa</Label>
                                             <Select value={form.normativa || '__none__'} onValueChange={v => setForm(f => ({ ...f, normativa: v === '__none__' ? '' : v }))}>
-                                                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Seleziona..." /></SelectTrigger>
-                                                <SelectContent>
+                                                <SelectTrigger className="h-8 text-xs" data-testid="select-normativa"><SelectValue placeholder="Seleziona..." /></SelectTrigger>
+                                                <SelectContent position="item-aligned">
                                                     <SelectItem value="__none__">-- Nessuna --</SelectItem>
                                                     <SelectItem value="EN_1090">EN 1090 (Carpenteria strutturale)</SelectItem>
                                                     <SelectItem value="EN_13241">EN 13241 (Porte e cancelli)</SelectItem>
@@ -589,7 +587,7 @@ export default function PreventivoEditorPage() {
                                             <Label className="text-xs">Classe di Esecuzione</Label>
                                             <Select value={form.classe_esecuzione || '__none__'} onValueChange={v => setForm(f => ({ ...f, classe_esecuzione: v === '__none__' ? '' : v }))}>
                                                 <SelectTrigger className="h-8 text-xs" data-testid="select-classe-esecuzione"><SelectValue placeholder="Seleziona..." /></SelectTrigger>
-                                                <SelectContent>
+                                                <SelectContent position="item-aligned">
                                                     <SelectItem value="__none__">-- Nessuna --</SelectItem>
                                                     <SelectItem value="EXC1">EXC1</SelectItem>
                                                     <SelectItem value="EXC2">EXC2</SelectItem>
