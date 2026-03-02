@@ -675,6 +675,7 @@ function RegistroEditForm({ form, update, autoFields, addSaldatura, updateSaldat
                 });
             }
         } catch { /* silent */ }
+    };
 
     const handleImportWelder = (welderId) => {
         if (!welderId) { setSelectedWelderInfo(null); return; }
