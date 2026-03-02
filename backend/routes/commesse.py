@@ -700,7 +700,9 @@ async def get_commessa_hub(commessa_id: str, user: dict = Depends(get_current_us
 
 @router.post("/from-preventivo/{preventivo_id}")
 async def create_commessa_from_preventivo(preventivo_id: str, user: dict = Depends(get_current_user)):
-    """Create a commessa from a Preventivo — auto-links the preventivo module."""
+    """Create a commessa from a Preventivo — auto-links the preventivo module.
+    Smart Quote Analysis: auto-detects normativa (EN 1090 vs EN 13241) and azionamento from content.
+    """
     uid = user["user_id"]
     prev = await db.preventivi.find_one({"preventivo_id": preventivo_id, "user_id": uid}, {"_id": 0})
     if not prev:
@@ -710,6 +712,28 @@ async def create_commessa_from_preventivo(preventivo_id: str, user: dict = Depen
     if prev.get("client_id"):
         client = await db.clients.find_one({"client_id": prev["client_id"]}, {"_id": 0, "business_name": 1})
         client_name = client.get("business_name", "") if client else ""
+
+    # ── Smart Quote Analysis: detect normativa from content ──
+    text_parts = [prev.get("subject", ""), prev.get("notes", "")]
+    for line in prev.get("lines", []):
+        text_parts.append(line.get("description", ""))
+    full_text = " ".join(text_parts).lower()
+
+    kw_13241 = ["cancell", "portone", "scorrevol", "battente", "chiusura", "serranda", "sezionale", "barriera"]
+    kw_1090 = ["tettoia", "scala", "soppalco", "trave", "struttura", "pensilina", "carpenteria", "ringhier"]
+    kw_motor = ["motore", "motorizzat", "motorizzaz", "bft", "came", "faac", "nice", "automazione", "fotocellul"]
+
+    score_13241 = sum(1 for kw in kw_13241 if kw in full_text)
+    score_1090 = sum(1 for kw in kw_1090 if kw in full_text)
+    is_motorizzato = any(kw in full_text for kw in kw_motor)
+
+    detected_normativa = None
+    detected_azionamento = None
+    if score_13241 > score_1090 and score_13241 > 0:
+        detected_normativa = "EN_13241"
+        detected_azionamento = "motorizzato" if is_motorizzato else "manuale"
+    elif score_1090 > score_13241 and score_1090 > 0:
+        detected_normativa = "EN_1090"
 
     now = datetime.now(timezone.utc)
     cid = f"com_{uuid.uuid4().hex[:12]}"
@@ -747,7 +771,60 @@ async def create_commessa_from_preventivo(preventivo_id: str, user: dict = Depen
         "created_at": now,
         "updated_at": now,
     }
+
+    # Apply smart detection results
+    if detected_normativa:
+        doc["normativa_tipo"] = detected_normativa
+        note_norm = f"EN 13241 (Cancelli)" if detected_normativa == "EN_13241" else "EN 1090 (Strutture)"
+        if detected_azionamento:
+            doc["detected_azionamento"] = detected_azionamento
+            note_norm += f" — {detected_azionamento.title()}"
+        doc["eventi"].append(
+            build_event("NORMATIVA_RILEVATA", user, f"Normativa rilevata automaticamente: {note_norm}")
+        )
+
     await db[COLLECTION].insert_one(doc)
+
+    # If EN 13241 detected, auto-create gate certification
+    if detected_normativa == "EN_13241":
+        from routes.gate_certification import DEFAULT_RISCHI
+        tipo_map = {
+            "scorrevol": "cancello_scorrevole", "battente": "cancello_battente",
+            "portone": "portone_industriale", "serranda": "serranda",
+            "sezionale": "portone_sezionale", "barriera": "barriera",
+        }
+        tipo_chiusura = "cancello_scorrevole"  # default
+        for kw, tipo in tipo_map.items():
+            if kw in full_text:
+                tipo_chiusura = tipo
+                break
+
+        azionamento = detected_azionamento or "manuale"
+        rischi = [dict(r) for r in DEFAULT_RISCHI] if azionamento == "motorizzato" else []
+
+        gate_doc = {
+            "cert_id": f"gate_{uuid.uuid4().hex[:12]}",
+            "commessa_id": cid,
+            "user_id": uid,
+            "tipo_chiusura": tipo_chiusura,
+            "azionamento": azionamento,
+            "larghezza_mm": None, "altezza_mm": None, "peso_kg": None,
+            "resistenza_vento": "Classe 2",
+            "permeabilita_aria": "NPD", "resistenza_termica": "NPD",
+            "sicurezza_apertura": "Conforme", "sostanze_pericolose": "NPD",
+            "resistenza_acqua": "NPD",
+            "analisi_rischi": rischi,
+            "prove_forza": [],
+            "motore_marca": "", "motore_modello": "", "motore_matricola": "",
+            "fotocellule": "", "costola_sicurezza": "", "centralina": "", "telecomando": "",
+            "strumento_id": None, "sistema_cascata": "", "note": "",
+            "created_at": now, "updated_at": now,
+        }
+        await db.gate_certifications.insert_one(gate_doc)
+        await db[COLLECTION].update_one(
+            {"commessa_id": cid}, {"$set": {"gate_cert_id": gate_doc["cert_id"]}}
+        )
+
     created = await db[COLLECTION].find_one({"commessa_id": cid}, {"_id": 0})
     return created
 
