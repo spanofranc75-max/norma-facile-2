@@ -613,7 +613,7 @@ export default function FattureRicevutePage() {
 
             {/* Payment Dialog */}
             <Dialog open={paymentDialog} onOpenChange={setPaymentDialog}>
-                <DialogContent className="max-w-lg">
+                <DialogContent className="max-w-lg" onPointerDownOutside={(e) => e.preventDefault()} onInteractOutside={(e) => e.preventDefault()}>
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <CircleDollarSign className="h-5 w-5 text-[#0055FF]" />
