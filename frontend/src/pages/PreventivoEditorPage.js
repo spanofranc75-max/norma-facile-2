@@ -126,6 +126,15 @@ export default function PreventivoEditorPage() {
         } catch (e) { toast.error(e.message); }
     };
 
+    const handleChangeStatus = async (newStatus) => {
+        if (isNew) return;
+        try {
+            await apiRequest(`/preventivi/${prevId}`, { method: 'PUT', body: { status: newStatus } });
+            setWorkflow(w => ({ ...w, status: newStatus }));
+            toast.success(`Stato aggiornato: ${newStatus}`);
+        } catch (e) { toast.error(e.message); }
+    };
+
     useEffect(() => {
         Promise.all([
             apiRequest('/clients/').catch(() => ({ clients: [] })),
@@ -424,7 +433,26 @@ export default function PreventivoEditorPage() {
                         <Button variant="ghost" size="sm" onClick={() => navigate('/preventivi')}><ArrowLeft className="h-4 w-4" /></Button>
                         <div>
                             <h1 className="font-sans text-xl font-bold text-[#1E293B]">{isNew ? 'Nuovo Preventivo' : 'Modifica Preventivo'}</h1>
-                            {workflow.number && <span className="text-xs font-mono text-slate-400">{workflow.number}</span>}
+                            <div className="flex items-center gap-2 mt-0.5">
+                                {workflow.number && <span className="text-xs font-mono text-slate-400">{workflow.number}</span>}
+                                {!isNew && (
+                                    <select
+                                        data-testid="select-status-prev"
+                                        value={workflow.status || 'bozza'}
+                                        onChange={e => handleChangeStatus(e.target.value)}
+                                        className="text-[10px] font-semibold rounded-full px-2 py-0.5 border-0 cursor-pointer appearance-none"
+                                        style={{
+                                            backgroundColor: workflow.status === 'accettato' ? '#dcfce7' : workflow.status === 'inviato' ? '#dbeafe' : workflow.status === 'rifiutato' ? '#fee2e2' : '#f1f5f9',
+                                            color: workflow.status === 'accettato' ? '#166534' : workflow.status === 'inviato' ? '#1e40af' : workflow.status === 'rifiutato' ? '#991b1b' : '#475569',
+                                        }}
+                                    >
+                                        <option value="bozza">Bozza</option>
+                                        <option value="inviato">Inviato</option>
+                                        <option value="accettato">Accettato</option>
+                                        <option value="rifiutato">Rifiutato</option>
+                                    </select>
+                                )}
+                            </div>
                         </div>
                     </div>
                     <div className="flex gap-2 flex-wrap">
