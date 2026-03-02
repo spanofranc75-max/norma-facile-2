@@ -53,11 +53,11 @@ export default function LandingPage() {
                 <div className="relative z-10 flex-1 flex flex-col justify-between p-8 lg:p-12 xl:p-16">
                     {/* Top: Logo */}
                     <div>
-                        <div className="inline-block bg-white/95 rounded-2xl p-4 shadow-lg shadow-black/20 backdrop-blur-sm">
+                        <div className="inline-block bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
                             <img
                                 src="/logo-1090.jpeg"
                                 alt="1090 Norma Facile"
-                                className="h-20 lg:h-24 w-auto"
+                                className="h-20 lg:h-24 w-auto rounded-lg"
                                 data-testid="brand-logo"
                             />
                         </div>
