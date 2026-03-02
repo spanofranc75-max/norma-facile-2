@@ -125,6 +125,17 @@ app.include_router(backup_router, prefix="/api")
 app.include_router(team_router, prefix="/api")
 
 
+@app.on_event("startup")
+async def startup_event():
+    """Startup tasks: migrate existing users to have admin role."""
+    logger.info("Norma Facile 2.0 starting up...")
+    # Ensure all existing users without a role get 'admin' (legacy migration)
+    await db.users.update_many(
+        {"role": {"$exists": False}},
+        {"$set": {"role": "admin"}},
+    )
+
+
 @app.get("/api/")
 async def root():
     """Health check endpoint."""
