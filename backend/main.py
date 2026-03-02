@@ -114,6 +114,7 @@ app.include_router(audits_router, prefix="/api")
 app.include_router(quality_hub_router, prefix="/api")
 app.include_router(smart_assign_router, prefix="/api")
 app.include_router(migrazione_router, prefix="/api")
+app.include_router(gate_cert_router, prefix="/api")
 
 
 @app.get("/api/")
