@@ -11,15 +11,14 @@ from datetime import datetime
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL')
 
 # Test credentials - created in MongoDB
-SESSION_TOKEN = "session_backup_test_1772448256384"
-USER_ID = "user_backup_test_1772448256384"
+SESSION_TOKEN = "session_backup_1772448361362"
+USER_ID = "user_backup_1772448361362"
 
 
 @pytest.fixture(scope="module")
 def api_client():
     """Shared requests session with auth cookie"""
     session = requests.Session()
-    session.headers.update({"Content-Type": "application/json"})
     session.cookies.set("session_token", SESSION_TOKEN)
     return session
 
@@ -158,12 +157,9 @@ class TestRestoreBackup:
     
     def test_restore_invalid_json_returns_400(self, api_client):
         """Restore with invalid JSON returns 400"""
-        # Remove content-type for multipart upload
-        headers = {"Cookie": f"session_token={SESSION_TOKEN}"}
-        response = requests.post(
+        response = api_client.post(
             f"{BASE_URL}/api/admin/backup/restore",
-            files={"file": ("backup.json", b"invalid json", "application/json")},
-            cookies={"session_token": SESSION_TOKEN}
+            files={"file": ("backup.json", b"invalid json", "application/json")}
         )
         # FastAPI returns 400 for invalid JSON in restore endpoint
         assert response.status_code == 400, f"Expected 400 for invalid JSON, got {response.status_code}: {response.text}"
@@ -171,10 +167,9 @@ class TestRestoreBackup:
     def test_restore_missing_metadata_returns_400(self, api_client):
         """Restore without metadata returns 400"""
         invalid_backup = json.dumps({"data": {}})
-        response = requests.post(
+        response = api_client.post(
             f"{BASE_URL}/api/admin/backup/restore",
-            files={"file": ("backup.json", invalid_backup.encode(), "application/json")},
-            cookies={"session_token": SESSION_TOKEN}
+            files={"file": ("backup.json", invalid_backup.encode(), "application/json")}
         )
         assert response.status_code == 400, f"Expected 400 for missing metadata, got {response.status_code}: {response.text}"
     
@@ -185,10 +180,9 @@ class TestRestoreBackup:
             "data": {},
             "stats": {}
         })
-        response = requests.post(
+        response = api_client.post(
             f"{BASE_URL}/api/admin/backup/restore",
-            files={"file": ("backup.json", valid_backup.encode(), "application/json")},
-            cookies={"session_token": SESSION_TOKEN}
+            files={"file": ("backup.json", valid_backup.encode(), "application/json")}
         )
         assert response.status_code == 200, f"Expected 200 for valid empty backup, got {response.status_code}: {response.text}"
     
@@ -199,10 +193,9 @@ class TestRestoreBackup:
             "data": {},
             "stats": {}
         })
-        response = requests.post(
+        response = api_client.post(
             f"{BASE_URL}/api/admin/backup/restore",
-            files={"file": ("backup.json", valid_backup.encode(), "application/json")},
-            cookies={"session_token": SESSION_TOKEN}
+            files={"file": ("backup.json", valid_backup.encode(), "application/json")}
         )
         data = response.json()
         assert "message" in data, "Response should contain 'message'"
@@ -229,10 +222,9 @@ class TestRestoreWithData:
             },
             "stats": {"clients": 1}
         })
-        response = requests.post(
+        response = api_client.post(
             f"{BASE_URL}/api/admin/backup/restore",
-            files={"file": ("backup.json", backup.encode(), "application/json")},
-            cookies={"session_token": SESSION_TOKEN}
+            files={"file": ("backup.json", backup.encode(), "application/json")}
         )
         assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
         data = response.json()
@@ -254,20 +246,18 @@ class TestRestoreWithData:
             "stats": {"clients": 1}
         })
         # First restore
-        response1 = requests.post(
+        response1 = api_client.post(
             f"{BASE_URL}/api/admin/backup/restore",
-            files={"file": ("backup.json", backup.encode(), "application/json")},
-            cookies={"session_token": SESSION_TOKEN}
+            files={"file": ("backup.json", backup.encode(), "application/json")}
         )
         assert response1.status_code == 200, f"Expected 200, got {response1.status_code}: {response1.text}"
         data1 = response1.json()
         first_inserted = data1.get("details", {}).get("clients", {}).get("inserted", 0)
         
         # Second restore (should skip)
-        response2 = requests.post(
+        response2 = api_client.post(
             f"{BASE_URL}/api/admin/backup/restore",
-            files={"file": ("backup.json", backup.encode(), "application/json")},
-            cookies={"session_token": SESSION_TOKEN}
+            files={"file": ("backup.json", backup.encode(), "application/json")}
         )
         assert response2.status_code == 200
         data2 = response2.json()
@@ -324,23 +314,3 @@ class TestUnauthenticated:
             files={"file": ("backup.json", b"{}", "application/json")}
         )
         assert response.status_code in [401, 403], f"Expected 401/403 without auth, got {response.status_code}"
-
-
-# ===== Cleanup =====
-class TestCleanup:
-    """Clean up test data"""
-    
-    def test_cleanup_test_data(self, api_client):
-        """Clean up test data created during tests"""
-        import subprocess
-        cleanup_script = f'''
-        use('test_database');
-        db.clients.deleteMany({{client_id: /test_client_/}});
-        db.clients.deleteMany({{client_id: /test_dup_client_/}});
-        db.backup_log.deleteMany({{user_id: '{USER_ID}'}});
-        db.users.deleteMany({{user_id: '{USER_ID}'}});
-        db.user_sessions.deleteMany({{session_token: '{SESSION_TOKEN}'}});
-        print('Cleanup complete');
-        '''
-        result = subprocess.run(["mongosh", "--quiet", "--eval", cleanup_script], capture_output=True, text=True)
-        assert "Cleanup complete" in result.stdout or result.returncode == 0
