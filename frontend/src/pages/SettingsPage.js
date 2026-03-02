@@ -655,6 +655,9 @@ export default function SettingsPage() {
                     <TabsContent value="migrazione">
                         <MigrazioneTab />
                     </TabsContent>
+                    <TabsContent value="backup">
+                        <BackupTab />
+                    </TabsContent>
                 </Tabs>
             </div>
         </DashboardLayout>
