@@ -188,6 +188,12 @@ export default function SettingsPage() {
                                 Team
                             </TabsTrigger>
                         )}
+                        {user?.role === 'admin' && (
+                            <TabsTrigger value="deploy" className="gap-2" data-testid="tab-deploy">
+                                <Trash2 className="h-4 w-4" />
+                                Deploy
+                            </TabsTrigger>
+                        )}
                     </TabsList>
 
                     <TabsContent value="company">
