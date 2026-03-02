@@ -664,6 +664,11 @@ export default function SettingsPage() {
                     <TabsContent value="backup">
                         <BackupTab />
                     </TabsContent>
+                    {user?.role === 'admin' && (
+                        <TabsContent value="team">
+                            <TeamTab />
+                        </TabsContent>
+                    )}
                 </Tabs>
             </div>
         </DashboardLayout>
