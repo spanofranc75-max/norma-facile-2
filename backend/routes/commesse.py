@@ -726,7 +726,7 @@ def analyze_preventivo_content(preventivo: dict):
     items_other = []
 
     for idx, line in enumerate(preventivo.get("lines", [])):
-        desc = line.get("description", "")
+        desc = line.get("description") or ""  # Handle None values
         classification = _classify_line(desc)
         item = {
             "index": idx,
