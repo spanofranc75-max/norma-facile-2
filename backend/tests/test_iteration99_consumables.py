@@ -115,13 +115,14 @@ class TestConsumableDetectionLogic:
                 "diametro_mm": 2.5,
                 "quantita": 5.0,
                 "unita_misura": "kg"
+                # normativa_target NOT provided - should auto-detect as en_1090
             }
             response = api_client.post(f"{BASE_URL}/api/consumables/", json=payload)
             assert response.status_code == 200, f"Failed for description: {desc}"
             data = response.json()
             assert data["tipo"] == "elettrodo"
-            # Elettrodo should have normativa_target = en_1090
-            assert data["normativa_target"] == "en_1090"
+            # Elettrodo should have normativa_target = en_1090 (auto-detected)
+            assert data["normativa_target"] == "en_1090", f"Expected en_1090, got {data['normativa_target']}"
             print(f"Created elettrodo batch: {data['batch_id']} - {desc[:40]}")
 
 
