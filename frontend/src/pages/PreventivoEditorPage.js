@@ -178,6 +178,7 @@ export default function PreventivoEditorPage() {
                 status: data.status || 'bozza',
                 number: data.number,
                 created_at: data.created_at,
+                data_preventivo: data.data_preventivo || '',
                 converted_to: data.converted_to,
                 linked_invoice: data.linked_invoice || null,
                 invoicing_progress: data.invoicing_progress || 0,
@@ -284,6 +285,9 @@ export default function PreventivoEditorPage() {
                 clearDraft();
                 navigate(`/preventivi/${res.preventivo_id}`, { replace: true });
             } else {
+                // Include number and date changes in the save
+                if (workflow.number) payload.number = workflow.number;
+                if (workflow.data_preventivo) payload.data_preventivo = workflow.data_preventivo;
                 await apiRequest(`/preventivi/${prevId}`, { method: 'PUT', body: payload });
                 toast.success('Preventivo salvato');
                 clearDraft();
@@ -434,7 +438,23 @@ export default function PreventivoEditorPage() {
                         <div>
                             <h1 className="font-sans text-xl font-bold text-[#1E293B]">{isNew ? 'Nuovo Preventivo' : 'Modifica Preventivo'}</h1>
                             <div className="flex items-center gap-2 mt-0.5">
-                                {workflow.number && <span className="text-xs font-mono text-slate-400">{workflow.number}</span>}
+                                {!isNew ? (
+                                    <input
+                                        data-testid="input-number"
+                                        value={workflow.number || ''}
+                                        onChange={e => setWorkflow(w => ({ ...w, number: e.target.value }))}
+                                        className="text-xs font-mono text-slate-500 bg-transparent border-b border-dashed border-slate-300 focus:border-[#0055FF] focus:outline-none w-32 py-0"
+                                    />
+                                ) : <span className="text-xs text-slate-400 italic">Numero auto</span>}
+                                {!isNew && (
+                                    <input
+                                        data-testid="input-data-prev"
+                                        type="date"
+                                        value={workflow.data_preventivo || (workflow.created_at ? workflow.created_at.slice(0, 10) : '')}
+                                        onChange={e => setWorkflow(w => ({ ...w, data_preventivo: e.target.value }))}
+                                        className="text-xs font-mono text-slate-500 bg-transparent border-b border-dashed border-slate-300 focus:border-[#0055FF] focus:outline-none py-0"
+                                    />
+                                )}
                                 {!isNew && (
                                     <select
                                         data-testid="select-status-prev"

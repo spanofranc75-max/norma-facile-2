@@ -87,6 +87,8 @@ class PreventivoUpdate(BaseModel):
     sconto_globale: Optional[float] = None
     lines: Optional[List[QuoteLine]] = None
     status: Optional[str] = None
+    number: Optional[str] = None
+    data_preventivo: Optional[str] = None
     normativa: Optional[str] = None  # "EN_1090", "EN_13241", "NESSUNA"
     numero_disegno: Optional[str] = None
     ingegnere_disegno: Optional[str] = None
@@ -473,6 +475,7 @@ async def update_preventivo(prev_id: str, data: PreventivoUpdate, user: dict = D
         "payment_type_id", "payment_type_label", "destinazione_merce",
         "iban", "banca", "note_pagamento", "riferimento", "normativa",
         "numero_disegno", "ingegnere_disegno", "classe_esecuzione", "giorni_consegna",
+        "number", "data_preventivo",
     ]
     for field in simple_fields:
         val = getattr(data, field, None)
