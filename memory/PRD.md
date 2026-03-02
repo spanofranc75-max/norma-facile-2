@@ -181,6 +181,16 @@ SaaS per fabbri e carpenterie italiane. CRM, compliance e gestione operativa cen
 - Collegamento automatico clienti/fornitori tramite P.IVA
 - Scadenziario ora mostra 20 scadenze pagamento + 47 fatture da processare
 
+### Modulo EN 13241 Cancelli & EN 12453 Automazioni (Mar 2026)
+- Flusso parallelo a EN 1090: certificazione cancelli con DoP, Etichetta CE, Registro Manutenzione, Dichiarazione CE
+- Dati prestazionali: classe vento, permeabilità aria, resistenza termica, sicurezza apertura
+- Automazione (motorizzati): analisi rischi (8 rischi default R01-R08), prove di forza con auto-compliance (< 400N dinamica, < 150N statica)
+- Componenti: motore, fotocellule, costa sensibile, centralina, telecomando
+- Sistema a cascata: supporto per Fac, Rolling Center, BFT etc.
+- Frontend: pannello integrato nella commessa con 3 sezioni (Prestazioni, Sicurezza, Documenti)
+- 4 PDF generati: DoP, Etichetta CE, Registro Manutenzione, Dichiarazione CE Macchine
+- Testato: 14/14 backend pytest (iteration_97.json)
+
 ## Backlog
 - P1: Fatture in Cloud SDI (necessita credenziali utente), verifica parsing AI
 - P2: Test e2e completo, seeding dati, coesione flusso
