@@ -73,6 +73,8 @@ Italiano (l'utente comunica esclusivamente in italiano).
 - Landing Page Dark & Industrial Split Screen con logo reale
 - Responsive (mobile stacking)
 - Tabella preventivi ottimizzata (table-fixed, colonna Descrizione allargata)
+- Scadenziario Automatico: incassi attesi calcolati da tipo pagamento cliente
+- Numerazione documenti: contatori atomici (no duplicati dopo cancellazioni)
 - Tipi Pagamento stile Invoicex (quote, simulazione scadenze, codice FE)
 
 ---
@@ -116,5 +118,6 @@ Italiano (l'utente comunica esclusivamente in italiano).
 ---
 
 ## Ultimo Aggiornamento: 2026-03-02
+- v2.1.3: BUG FIX numerazione preventivi/fatture (contatore atomico), Scadenziario Automatico (incassi attesi da fatture emesse)
 - v2.1.2: Tipi Pagamento stile Invoicex — quote personalizzate, simulazione scadenze, codice FE (MP01-MP23), divisione automatica, giorni custom
 - v2.1.1: Fix layout tabella preventivi (table-fixed), pulizia autenticazione frontend completa
