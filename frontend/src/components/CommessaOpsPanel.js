@@ -25,6 +25,7 @@ import {
 import EmailPreviewDialog from './EmailPreviewDialog';
 import { DisabledTooltip } from './DisabledTooltip';
 import FascicoloTecnicoSection from './FascicoloTecnicoSection';
+import GateCertificationPanel from './GateCertificationPanel';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
