@@ -16,6 +16,7 @@ import {
     DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
 import { LegalFooter } from './LegalFooter';
+import {
     Sparkles, Receipt, Users, Settings, Ruler, Package, Shield,
     HardHat, Warehouse, ClipboardList, Truck, Factory, ShieldAlert,
     BarChart3, BoxIcon, FileInput, Camera, ChevronDown,
