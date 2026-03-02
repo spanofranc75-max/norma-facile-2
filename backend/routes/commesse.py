@@ -696,63 +696,181 @@ async def get_commessa_hub(commessa_id: str, user: dict = Depends(get_current_us
     return hub
 
 
-# ── Quick Create from Preventivo ─────────────────────────────────
+# ── Keyword lists for smart normativa detection ─────────────────
 
-@router.post("/from-preventivo/{preventivo_id}")
-async def create_commessa_from_preventivo(preventivo_id: str, user: dict = Depends(get_current_user)):
-    """Create a commessa from a Preventivo — auto-links the preventivo module.
-    Smart Quote Analysis: auto-detects normativa (EN 1090 vs EN 13241) and azionamento from content.
+KW_13241 = ["cancell", "portone", "scorrevol", "battente", "chiusura", "serranda", "sezionale", "barriera"]
+KW_1090 = ["tettoia", "scala", "soppalco", "trave", "struttura", "pensilina", "carpenteria", "ringhier"]
+KW_MOTOR = ["motore", "motorizzat", "motorizzaz", "bft", "came", "faac", "nice", "automazione", "fotocellul"]
+
+
+def _classify_line(description: str):
+    """Classify a single line description as EN_1090, EN_13241, or None."""
+    text = description.lower()
+    is_1090 = any(kw in text for kw in KW_1090)
+    is_13241 = any(kw in text for kw in KW_13241)
+    if is_1090 and not is_13241:
+        return "EN_1090"
+    if is_13241 and not is_1090:
+        return "EN_13241"
+    if is_1090 and is_13241:
+        return "EN_1090"  # Default priority to EN 1090 for ambiguous single lines
+    return None
+
+
+def analyze_preventivo_content(preventivo: dict):
+    """Analyze preventivo lines and detect normativa conflict.
+    Returns a report with groups and suggested action.
     """
+    items_1090 = []
+    items_13241 = []
+    items_other = []
+
+    for idx, line in enumerate(preventivo.get("lines", [])):
+        desc = line.get("description", "")
+        classification = _classify_line(desc)
+        item = {
+            "index": idx,
+            "line_id": line.get("line_id", ""),
+            "description": desc,
+            "quantity": line.get("quantity", 1),
+            "unit": line.get("unit", "pz"),
+            "unit_price": line.get("unit_price", 0),
+        }
+        if classification == "EN_1090":
+            items_1090.append(item)
+        elif classification == "EN_13241":
+            items_13241.append(item)
+        else:
+            items_other.append(item)
+
+    has_1090 = len(items_1090) > 0
+    has_13241 = len(items_13241) > 0
+    conflict = has_1090 and has_13241
+
+    # Detect motorization from full text
+    full_text = " ".join([preventivo.get("subject", ""), preventivo.get("notes", "")] +
+                         [l.get("description", "") for l in preventivo.get("lines", [])]).lower()
+    is_motorizzato = any(kw in full_text for kw in KW_MOTOR)
+
+    if conflict:
+        suggested_action = "split"
+    elif has_1090 or has_13241:
+        suggested_action = "single"
+    else:
+        suggested_action = "single"
+
+    # Determine single normativa when no conflict
+    single_normativa = None
+    if not conflict:
+        if has_13241:
+            single_normativa = "EN_13241"
+        elif has_1090:
+            single_normativa = "EN_1090"
+
+    return {
+        "conflict": conflict,
+        "suggested_action": suggested_action,
+        "single_normativa": single_normativa,
+        "is_motorizzato": is_motorizzato,
+        "groups": {
+            "en_1090": items_1090,
+            "en_13241": items_13241,
+            "non_classificati": items_other,
+        },
+        "score_1090": len(items_1090),
+        "score_13241": len(items_13241),
+    }
+
+
+# ── Analyze Preventivo (for frontend conflict detection) ─────────
+
+@router.get("/analyze-preventivo/{preventivo_id}")
+async def analyze_preventivo_endpoint(preventivo_id: str, user: dict = Depends(get_current_user)):
+    """Analyze a preventivo's lines and detect normativa conflicts (EN 1090 vs EN 13241)."""
     uid = user["user_id"]
     prev = await db.preventivi.find_one({"preventivo_id": preventivo_id, "user_id": uid}, {"_id": 0})
     if not prev:
         raise HTTPException(404, "Preventivo non trovato")
+    return analyze_preventivo_content(prev)
+
+
+# ── Quick Create from Preventivo ─────────────────────────────────
+
+async def _create_single_commessa(preventivo, user, normativa_override=None, items_filter=None, suffix="", parent_preventivo_id=None):
+    """Internal helper: creates a single commessa from a preventivo (or a subset of its items).
+    Used both for single-commessa creation and split-commessa creation.
+    """
+    uid = user["user_id"]
+    prev = preventivo
+    preventivo_id = prev["preventivo_id"]
 
     client_name = ""
     if prev.get("client_id"):
         client = await db.clients.find_one({"client_id": prev["client_id"]}, {"_id": 0, "business_name": 1})
         client_name = client.get("business_name", "") if client else ""
 
-    # ── Smart Quote Analysis: detect normativa from content ──
-    text_parts = [prev.get("subject", ""), prev.get("notes", "")]
-    for line in prev.get("lines", []):
-        text_parts.append(line.get("description", ""))
-    full_text = " ".join(text_parts).lower()
+    # Filter items if specified
+    lines = prev.get("lines", [])
+    if items_filter is not None:
+        lines = [l for idx, l in enumerate(lines) if idx in items_filter]
 
-    kw_13241 = ["cancell", "portone", "scorrevol", "battente", "chiusura", "serranda", "sezionale", "barriera"]
-    kw_1090 = ["tettoia", "scala", "soppalco", "trave", "struttura", "pensilina", "carpenteria", "ringhier"]
-    kw_motor = ["motore", "motorizzat", "motorizzaz", "bft", "came", "faac", "nice", "automazione", "fotocellul"]
+    # Calculate value from filtered lines
+    value = 0
+    for l in lines:
+        qty = float(l.get("quantity", 1) or 1)
+        price = float(l.get("unit_price", 0) or 0)
+        s1 = float(l.get("sconto_1", 0) or 0) / 100
+        s2 = float(l.get("sconto_2", 0) or 0) / 100
+        value += qty * price * (1 - s1) * (1 - s2)
 
-    score_13241 = sum(1 for kw in kw_13241 if kw in full_text)
-    score_1090 = sum(1 for kw in kw_1090 if kw in full_text)
-    is_motorizzato = any(kw in full_text for kw in kw_motor)
+    # Detect normativa if not overridden
+    if normativa_override:
+        detected_normativa = normativa_override
+    else:
+        full_text = " ".join([prev.get("subject", ""), prev.get("notes", "")] +
+                             [l.get("description", "") for l in lines]).lower()
+        score_13241 = sum(1 for kw in KW_13241 if kw in full_text)
+        score_1090 = sum(1 for kw in KW_1090 if kw in full_text)
+        is_motorizzato = any(kw in full_text for kw in KW_MOTOR)
+        if score_13241 > score_1090 and score_13241 > 0:
+            detected_normativa = "EN_13241"
+        elif score_1090 > score_13241 and score_1090 > 0:
+            detected_normativa = "EN_1090"
+        else:
+            detected_normativa = None
 
-    detected_normativa = None
-    detected_azionamento = None
-    if score_13241 > score_1090 and score_13241 > 0:
-        detected_normativa = "EN_13241"
-        detected_azionamento = "motorizzato" if is_motorizzato else "manuale"
-    elif score_1090 > score_13241 and score_1090 > 0:
-        detected_normativa = "EN_1090"
+    full_text = " ".join([prev.get("subject", ""), prev.get("notes", "")] +
+                         [l.get("description", "") for l in lines]).lower()
+    is_motorizzato = any(kw in full_text for kw in KW_MOTOR)
+    detected_azionamento = "motorizzato" if is_motorizzato and detected_normativa == "EN_13241" else (
+        "manuale" if detected_normativa == "EN_13241" else None
+    )
 
     now = datetime.now(timezone.utc)
     cid = f"com_{uuid.uuid4().hex[:12]}"
     numero = await generate_commessa_number(uid)
+    if suffix:
+        numero = f"{numero}-{suffix}"
 
     moduli = make_empty_moduli()
     moduli["preventivo_id"] = preventivo_id
+
+    # Build title
+    norm_labels = {"EN_1090": "Strutture", "EN_13241": "Cancelli/Chiusure"}
+    title_suffix = f" ({norm_labels.get(detected_normativa, '')})" if detected_normativa and suffix else ""
+    title = (prev.get("subject") or f"Commessa da {prev.get('number', preventivo_id)}") + title_suffix
 
     doc = {
         "commessa_id": cid,
         "numero": numero,
         "user_id": uid,
-        "title": prev.get("subject") or f"Commessa da {prev.get('number', preventivo_id)}",
+        "title": title,
         "client_id": prev.get("client_id", ""),
         "client_name": client_name,
         "description": prev.get("notes", ""),
         "riferimento": prev.get("riferimento", ""),
         "cantiere": {},
-        "value": float(prev.get("totals", {}).get("total", 0)),
+        "value": round(value, 2),
         "deadline": None,
         "status": "preventivo",
         "stato": "richiesta",
@@ -767,12 +885,13 @@ async def create_commessa_from_preventivo(preventivo_id: str, user: dict = Depen
         "linked_preventivo_id": preventivo_id,
         "linked_distinta_id": None,
         "linked_rilievo_id": None,
+        "split_items": [i["line_id"] if isinstance(i, dict) else i for i in (items_filter or [])],
+        "split_suffix": suffix,
         "status_history": [{"status": "preventivo", "date": now.isoformat(), "note": f"Creata da preventivo {prev.get('number', '')}"}],
         "created_at": now,
         "updated_at": now,
     }
 
-    # Apply smart detection results
     if detected_normativa:
         doc["normativa_tipo"] = detected_normativa
         note_norm = f"EN 13241 (Cancelli)" if detected_normativa == "EN_13241" else "EN 1090 (Strutture)"
@@ -780,7 +899,11 @@ async def create_commessa_from_preventivo(preventivo_id: str, user: dict = Depen
             doc["detected_azionamento"] = detected_azionamento
             note_norm += f" — {detected_azionamento.title()}"
         doc["eventi"].append(
-            build_event("NORMATIVA_RILEVATA", user, f"Normativa rilevata automaticamente: {note_norm}")
+            build_event("NORMATIVA_RILEVATA", user, f"Normativa rilevata: {note_norm}")
+        )
+    if suffix:
+        doc["eventi"].append(
+            build_event("SPLIT_COMMESSA", user, f"Split commessa (suffisso {suffix}) da preventivo misto")
         )
 
     await db[COLLECTION].insert_one(doc)
@@ -793,7 +916,7 @@ async def create_commessa_from_preventivo(preventivo_id: str, user: dict = Depen
             "portone": "portone_industriale", "serranda": "serranda",
             "sezionale": "portone_sezionale", "barriera": "barriera",
         }
-        tipo_chiusura = "cancello_scorrevole"  # default
+        tipo_chiusura = "cancello_scorrevole"
         for kw, tipo in tipo_map.items():
             if kw in full_text:
                 tipo_chiusura = tipo
@@ -827,6 +950,73 @@ async def create_commessa_from_preventivo(preventivo_id: str, user: dict = Depen
 
     created = await db[COLLECTION].find_one({"commessa_id": cid}, {"_id": 0})
     return created
+
+
+@router.post("/from-preventivo/{preventivo_id}")
+async def create_commessa_from_preventivo(preventivo_id: str, user: dict = Depends(get_current_user)):
+    """Create a commessa from a Preventivo — auto-links the preventivo module.
+    Smart Quote Analysis: auto-detects normativa (EN 1090 vs EN 13241) and azionamento from content.
+    """
+    uid = user["user_id"]
+    prev = await db.preventivi.find_one({"preventivo_id": preventivo_id, "user_id": uid}, {"_id": 0})
+    if not prev:
+        raise HTTPException(404, "Preventivo non trovato")
+    return await _create_single_commessa(prev, user)
+
+
+# ── Split Create from Preventivo (mixed normativa) ──────────────
+
+class SplitCommessaConfig(BaseModel):
+    suffix: str  # "A" or "B"
+    normativa: str  # "EN_1090" or "EN_13241"
+    item_indices: List[int]  # Indices of lines in the original preventivo
+
+class SplitCommessaRequest(BaseModel):
+    commesse: List[SplitCommessaConfig]
+
+@router.post("/from-preventivo/{preventivo_id}/split")
+async def create_split_commesse(preventivo_id: str, body: SplitCommessaRequest, user: dict = Depends(get_current_user)):
+    """Create multiple commesse from a single Preventivo (split by normativa).
+    Each commessa gets only the items assigned to it.
+    """
+    uid = user["user_id"]
+    prev = await db.preventivi.find_one({"preventivo_id": preventivo_id, "user_id": uid}, {"_id": 0})
+    if not prev:
+        raise HTTPException(404, "Preventivo non trovato")
+
+    if len(body.commesse) < 2:
+        raise HTTPException(400, "Lo split richiede almeno 2 commesse")
+
+    # Validate no duplicate indices
+    all_indices = []
+    for cfg in body.commesse:
+        all_indices.extend(cfg.item_indices)
+    if len(all_indices) != len(set(all_indices)):
+        raise HTTPException(400, "Indici duplicati tra le commesse")
+
+    results = []
+    for cfg in body.commesse:
+        created = await _create_single_commessa(
+            prev, user,
+            normativa_override=cfg.normativa,
+            items_filter=set(cfg.item_indices),
+            suffix=cfg.suffix,
+        )
+        results.append(created)
+
+    # Mark preventivo as "Accettato (Split)"
+    await db.preventivi.update_one(
+        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"$set": {
+            "status": "accettato",
+            "split_commesse": [{"commessa_id": r["commessa_id"], "numero": r["numero"], "normativa": r.get("normativa_tipo", "")} for r in results],
+        }},
+    )
+
+    return {
+        "message": f"Create {len(results)} commesse da preventivo misto",
+        "commesse": results,
+    }
 
 
 # ── Dossier Unico di Commessa ────────────────────────────────────
