@@ -22,8 +22,9 @@ async def importa_da_vecchia_app(user: dict = Depends(get_current_user)):
 
     # 1. Fetch export data
     try:
+        headers = {"User-Agent": "NormaFacile-Migration/2.1"}
         async with httpx.AsyncClient(timeout=60.0) as client:
-            resp = await client.get(EXPORT_URL)
+            resp = await client.get(EXPORT_URL, headers=headers)
             resp.raise_for_status()
             data = resp.json()
     except Exception as e:
