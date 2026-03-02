@@ -205,6 +205,7 @@ function AppRouter() {
             {/* Fatture Ricevute */}
             <Route path="/fatture-ricevute" element={<ProtectedRoute><FattureRicevutePage /></ProtectedRoute>} />
             <Route path="/scadenziario" element={<ProtectedRoute><ScadenziarioPage /></ProtectedRoute>} />
+            <Route path="/controllo-costi" element={<ProtectedRoute><CostControlPage /></ProtectedRoute>} />
             {/* Core Engine */}
             <Route path="/core-engine" element={<ProtectedRoute><CoreEnginePage /></ProtectedRoute>} />
 
