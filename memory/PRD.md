@@ -20,6 +20,11 @@ Italiano (l'utente comunica esclusivamente in italiano).
 - **Email**: Resend
 - **Invoicing**: Fatture in Cloud (SDI) — ATTIVO, Company ID 1398737
 
+## Brand Identity
+- **Palette**: Navy #0F172A, Steel Grey #64748B, Lime Accent #84CC16
+- **Logo**: "1090" con "10" bianco e "90" grigio acciaio + "NORMA FACILE" in lime/grigio
+- **Stile**: Dark & Industrial, B2B, Split Screen login
+
 ---
 
 ## Funzionalita' Implementate
@@ -41,16 +46,19 @@ Italiano (l'utente comunica esclusivamente in italiano).
 - Scadenziario (dashboard scadenze)
 
 ### Amministrazione
-- **Backup & Restore**: Export JSON completo di 19 collezioni, restore con merge sicuro (2026-03-02)
+- Backup & Restore: Export JSON completo 19 collezioni
 - Migrazione dati da vecchia app
-- Integrazione Fatture in Cloud ATTIVA (Company ID 1398737, token aggiornato 2026-03-02)
+- Fatture in Cloud ATTIVA (Company ID 1398737)
+
+### UI/UX
+- **Landing Page redesign**: Split Screen Dark Industrial con palette Navy/Steel/Lime (2026-03-02)
 
 ---
 
 ## Backlog Prioritizzato
 
 ### P1 — Prossimi
-- Import reale fatture ricevute da FIC (endpoint sync-fic gia' implementato)
+- Import reale fatture ricevute da FIC (endpoint sync-fic implementato)
 
 ### P2 — Futuri
 - Export CSV distinta di taglio per CNC
@@ -62,7 +70,5 @@ Italiano (l'utente comunica esclusivamente in italiano).
 ---
 
 ## Ultimo Aggiornamento: 2026-03-02
-- Token Fatture in Cloud aggiornato e verificato (STEEL PROJECT DESIGN S.R.L.S.)
-- Company ID corretto: 1398737
-- Implementato modulo Backup & Restore (26/26 test)
-- Controllo Costi (19/22 test), Split Commessa (15/15), Consumabili (27/27)
+- Redesign completo Landing Page con tema Dark & Industrial Split Screen
+- Palette allineata al nuovo logo: Navy #0F172A, Steel #64748B, Lime #84CC16
