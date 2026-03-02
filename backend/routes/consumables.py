@@ -56,14 +56,17 @@ DIAM_STANDALONE = re.compile(r"\b(0[.,][68]|1[.,][0246]|2[.,][04])\b")
 
 
 def _detect_consumable_type(text: str) -> Optional[str]:
-    """Detect consumable type from description text."""
+    """Detect consumable type from description text.
+    Priority: elettrodo > filo > gas (bacchette TIG override ER70)
+    """
     t = text.lower()
+    # Check elettrodo first (bacchette TIG with ER70 are electrodes, not wire)
+    if any(kw in t for kw in KW_ELETTRODO):
+        return "elettrodo"
     if any(kw in t for kw in KW_FILO):
         return "filo"
     if any(kw in t for kw in KW_GAS):
         return "gas"
-    if any(kw in t for kw in KW_ELETTRODO):
-        return "elettrodo"
     return None
 
 
