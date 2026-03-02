@@ -32,6 +32,7 @@ import PeriziaEditorPage from './pages/PeriziaEditorPage';
 import ArchivioSinistriPage from './pages/ArchivioSinistriPage';
 import ArticoliPage from './pages/ArticoliPage';
 import FattureRicevutePage from './pages/FattureRicevutePage';
+import ScadenziarioPage from './pages/ScadenziarioPage';
 import CoreEnginePage from './pages/CoreEnginePage';
 import ValidazioneFotoPage from './pages/ValidazioneFotoPage';
 import PlanningPage from './pages/PlanningPage';
