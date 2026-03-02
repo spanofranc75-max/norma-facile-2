@@ -90,6 +90,8 @@ const NAV_GROUPS = [
         icon: ShoppingCart,
         type: 'group',
         children: [
+            { path: '/fatture-ricevute', label: 'Fatture Ricevute', icon: FileInput },
+            { path: '/scadenziario', label: 'Scadenziario', icon: Calendar },
             { path: '/fornitori', label: 'Fornitori', icon: Factory },
             { path: '/catalogo', label: 'Catalogo Profili', icon: Warehouse },
             { path: '/articoli', label: 'Catalogo Articoli', icon: BoxIcon },
