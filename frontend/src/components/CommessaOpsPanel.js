@@ -1374,6 +1374,11 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                 <FascicoloTecnicoSection commessaId={commessaId} />
             </Section>
 
+            {/* ── CERTIFICAZIONE CANCELLI EN 13241 ── */}
+            <Section title="Certificazione Cancello EN 13241" icon={Shield} count={0}>
+                <GateCertificationPanel commessaId={commessaId} commessa={commessa} />
+            </Section>
+
             {/* ── REPOSITORY DOCUMENTI ── */}
             <Section title="Repository Documenti" icon={FileUp} count={docs.length} defaultOpen>
                 <div className="space-y-2">
