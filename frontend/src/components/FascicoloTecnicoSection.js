@@ -188,7 +188,7 @@ export default function FascicoloTecnicoSection({ commessaId }) {
             case 'ce': return <CeEditForm {...props} />;
             case 'piano': return <PianoEditForm {...props} timeline={timeline} />;
             case 'vt': return <VtEditForm {...props} />;
-            case 'registro': return <RegistroEditForm {...props} addSaldatura={addSaldatura} updateSaldatura={updateSaldatura} removeSaldatura={removeSaldatura} />;
+            case 'registro': return <RegistroEditForm {...props} addSaldatura={addSaldatura} updateSaldatura={updateSaldatura} removeSaldatura={removeSaldatura} commessaId={commessaId} />;
             case 'riesame': return <RiesameEditForm {...props} updateRequisito={updateRequisito} updateItt={updateItt} />;
             default: return null;
         }
