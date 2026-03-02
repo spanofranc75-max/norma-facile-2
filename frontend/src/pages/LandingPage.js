@@ -56,7 +56,7 @@ export default function LandingPage() {
                         <img
                             src="/logo-1090.png"
                             alt="1090 Norma Facile"
-                            className="h-24 lg:h-28 w-auto drop-shadow-[0_0_25px_rgba(132,204,22,0.15)]"
+                            className="h-40 lg:h-48 w-auto drop-shadow-[0_0_30px_rgba(132,204,22,0.2)]"
                             data-testid="brand-logo"
                         />
                     </div>
