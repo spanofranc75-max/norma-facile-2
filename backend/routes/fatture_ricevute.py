@@ -1137,9 +1137,16 @@ async def sync_fatture_from_fic(
                     skipped += 1
                     continue
 
+                # Fetch detailed document to get items_list
+                try:
+                    detail_resp = await client.get_received_document_detail(fic_id)
+                    doc_detail = detail_resp.get("data", {})
+                except Exception:
+                    doc_detail = {}
+
                 # Map FIC document to our schema
                 entity = doc_fic.get("entity", {}) or {}
-                items = doc_fic.get("items_list", []) or []
+                items = doc_detail.get("items_list") or doc_fic.get("items_list") or []
 
                 linee = []
                 for i, item in enumerate(items):

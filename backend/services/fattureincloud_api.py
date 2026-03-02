@@ -119,6 +119,13 @@ class FattureInCloudClient:
             "per_page": per_page,
         })
 
+    async def get_received_document_detail(self, document_id: str) -> Dict[str, Any]:
+        """Get detailed received document including items_list."""
+        return await self._request("GET", f"/received_documents/{document_id}", params={
+            "fieldset": "detailed",
+        })
+
+
     # ── DDT ──
 
     async def list_ddts(self, page: int = 1, per_page: int = 50) -> Dict[str, Any]:
