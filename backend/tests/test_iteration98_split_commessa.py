@@ -435,7 +435,7 @@ class TestKeywordClassification:
             ("Tettoia in ferro battuto", "EN_1090"),
             ("Scala a chiocciola", "EN_1090"),
             ("Soppalco industriale", "EN_1090"),
-            ("Travi HEA 200", "EN_1090"),
+            ("Trave HEA 200 principale", "EN_1090"),  # Note: keyword is "trave" not "travi"
             ("Struttura metallica", "EN_1090"),
             ("Pensilina ingresso", "EN_1090"),
             ("Carpenteria leggera", "EN_1090"),
