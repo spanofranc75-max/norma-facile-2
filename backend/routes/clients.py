@@ -157,21 +157,31 @@ async def delete_client(
     user: dict = Depends(get_current_user)
 ):
     """Delete a client."""
-    # Check if client has invoices
-    invoice_count = await db.invoices.count_documents({
-        "client_id": client_id,
-        "user_id": user["user_id"]
-    })
+    uid = user["user_id"]
     
+    # Check associated data
+    blockers = []
+    invoice_count = await db.invoices.count_documents({"client_id": client_id, "user_id": uid})
     if invoice_count > 0:
+        blockers.append(f"{invoice_count} fatture")
+    
+    commessa_count = await db.commesse.count_documents({"client_id": client_id, "user_id": uid})
+    if commessa_count > 0:
+        blockers.append(f"{commessa_count} commesse")
+    
+    preventivo_count = await db.preventivi.count_documents({"client_id": client_id, "user_id": uid})
+    if preventivo_count > 0:
+        blockers.append(f"{preventivo_count} preventivi")
+    
+    if blockers:
         raise HTTPException(
             status_code=400,
-            detail=f"Impossibile eliminare: il cliente ha {invoice_count} fatture associate"
+            detail=f"Impossibile eliminare: il cliente ha {', '.join(blockers)} associat{'i' if len(blockers) > 1 else 'e'}"
         )
     
     result = await db.clients.delete_one({
         "client_id": client_id,
-        "user_id": user["user_id"]
+        "user_id": uid
     })
     
     if result.deleted_count == 0:

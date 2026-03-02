@@ -22,24 +22,43 @@ export async function apiRequest(endpoint, options = {}) {
     
     const config = {
         ...options,
-        credentials: 'include', // Always send cookies
+        credentials: 'include',
         headers: {
-            'Content-Type': 'application/json',
             ...options.headers,
         },
     };
-    
-    // Stringify body if it's an object
+
+    // Only add Content-Type for requests with a body
     if (options.body && typeof options.body === 'object') {
+        config.headers['Content-Type'] = 'application/json';
         config.body = JSON.stringify(options.body);
+    } else if (options.body) {
+        config.headers['Content-Type'] = 'application/json';
     }
     
-    const response = await fetch(url, config);
+    let response;
+    try {
+        response = await fetch(url, config);
+    } catch {
+        throw new Error('Errore di rete: impossibile raggiungere il server');
+    }
     
     if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: 'Errore di rete' }));
-        throw new Error(error.detail || `Errore ${response.status}`);
+        let detail = `Errore ${response.status}`;
+        try {
+            const err = await response.json();
+            detail = err.detail || detail;
+        } catch {
+            try {
+                const text = await response.text();
+                if (text) detail = text.substring(0, 200);
+            } catch { /* ignore */ }
+        }
+        throw new Error(detail);
     }
+    
+    // Handle 204 No Content
+    if (response.status === 204) return {};
     
     return response.json();
 }

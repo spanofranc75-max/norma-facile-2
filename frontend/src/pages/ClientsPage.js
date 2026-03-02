@@ -144,7 +144,10 @@ export default function ClientsPage() {
             toast.success('Cliente eliminato');
             setDeleteDialogOpen(false);
             fetchClients();
-        } catch (e) { toast.error(e.message); }
+        } catch (e) {
+            toast.error(e.message || 'Errore durante l\'eliminazione');
+            setDeleteDialogOpen(false);
+        }
     };
 
     // Contact management
