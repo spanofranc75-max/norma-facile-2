@@ -32,7 +32,7 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
             setEditMode(false);
             setExpanded(false);
             fetch(`${API}${previewUrl}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                credentials: 'include',
             })
             .then(r => {
                 if (!r.ok) throw new Error('Errore caricamento anteprima');
@@ -76,8 +76,8 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
                 : {};
             const res = await fetch(`${API}${sendUrl}`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
-                    Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(body),

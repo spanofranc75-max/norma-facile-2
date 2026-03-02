@@ -249,7 +249,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         try {
             const res = await fetch(`${API}/api/commesse/${commessaId}/approvvigionamento/richieste/${rdpId}`, {
                 method: 'PUT', body: form,
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                credentials: 'include',
             });
             if (!res.ok) throw new Error('Errore');
             toast.success(`RdP → ${stato}`);
@@ -288,7 +288,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         try {
             const res = await fetch(`${API}/api/commesse/${commessaId}/approvvigionamento/ordini/${ordineId}`, {
                 method: 'PUT', body: form,
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                credentials: 'include',
             });
             if (!res.ok) throw new Error('Errore');
             toast.success(`Ordine → ${stato}`);
@@ -422,7 +422,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     const handleDownloadPacchetto = async (consegnaId) => {
         try {
             const res = await fetch(`${API}/api/commesse/${commessaId}/consegne/${consegnaId}/pacchetto-pdf`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                credentials: 'include',
             });
             if (!res.ok) throw new Error('Errore generazione pacchetto');
             const blob = await res.blob();
@@ -464,7 +464,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     const handlePreviewClPdf = async (clId) => {
         try {
             const res = await fetch(`${API}/api/commesse/${commessaId}/conto-lavoro/${clId}/preview-pdf`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                credentials: 'include',
             });
             if (!res.ok) throw new Error('Errore generazione PDF');
             const blob = await res.blob();
@@ -511,7 +511,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
 
             const res = await fetch(`${API}/api/commesse/${commessaId}/conto-lavoro/${rientroTarget.cl_id}/rientro`, {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                credentials: 'include',
                 body: fd,
             });
             if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Errore registrazione rientro'); }
@@ -527,7 +527,8 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         try {
             const res = await fetch(`${API}/api/commesse/${commessaId}/conto-lavoro/${clId}/verifica`, {
                 method: 'PATCH',
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}`, 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
             });
             if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Errore verifica'); }
             toast.success('C/L verificato — fase produzione aggiornata');
@@ -538,7 +539,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     const handleDownloadNCR = async (clId) => {
         try {
             const res = await fetch(`${API}/api/commesse/${commessaId}/conto-lavoro/${clId}/ncr-pdf`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                credentials: 'include',
             });
             if (!res.ok) throw new Error('Errore generazione NCR');
             const blob = await res.blob();
@@ -558,7 +559,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         try {
             const res = await fetch(`${API}/api/commesse/${commessaId}/documenti`, {
                 method: 'POST', body: form,
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                credentials: 'include',
             });
             if (!res.ok) throw new Error('Errore upload');
             const data = await res.json();
@@ -601,7 +602,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     const handleDownloadDoc = async (docId, nome) => {
         try {
             const res = await fetch(`${API}/api/commesse/${commessaId}/documenti/${docId}/download`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                credentials: 'include',
             });
             if (!res.ok) throw new Error('Errore download');
             const blob = await res.blob();
@@ -673,7 +674,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
             const uploadRes = await fetch(`${API}/api/commesse/${commessaId}/documenti`, {
                 method: 'POST',
                 body: formData,
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                credentials: 'include',
             });
             
             if (!uploadRes.ok) throw new Error('Errore upload certificato');
@@ -695,7 +696,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
             await fetch(`${API}/api/commesse/${commessaId}/approvvigionamento/arrivi/${arrivoId}/materiale/${matIdx}/certificato`, {
                 method: 'PUT',
                 body: linkForm,
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                credentials: 'include',
             });
             
             toast.success(`Certificato collegato! Colata: ${parseRes.extracted?.numero_colata || 'N/D'}`);
@@ -752,7 +753,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     const handleDownloadCamPdf = async () => {
         try {
             const res = await fetch(`${API}/api/cam/dichiarazione-pdf/${commessaId}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                credentials: 'include',
             });
             if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Errore generazione PDF'); }
             const blob = await res.blob();
@@ -769,7 +770,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     const handleDownloadGreenCert = async () => {
         try {
             const res = await fetch(`${API}/api/cam/green-certificate/${commessaId}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                credentials: 'include',
             });
             if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Errore'); }
             const blob = await res.blob();
@@ -1123,7 +1124,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                             onClick={async () => {
                                 try {
                                     const res = await fetch(`${API}/api/commesse/${commessaId}/scheda-rintracciabilita-pdf`, {
-                                        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+                                        credentials: 'include',
                                     });
                                     if (!res.ok) throw new Error('Errore generazione PDF');
                                     const blob = await res.blob();
@@ -1194,7 +1195,8 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                             try {
                                                 await fetch(`${API}/api/commesse/${commessaId}/material-batches/${b.batch_id}`, {
                                                     method: 'PATCH',
-                                                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    credentials: 'include',
                                                     body: JSON.stringify({ acciaieria: val })
                                                 });
                                                 toast.success('Acciaieria salvata');
@@ -2207,7 +2209,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                     <div className="flex-1 h-full min-h-0">
                         {pdfPreviewUrl && (
                             <iframe
-                                src={pdfPreviewUrl.startsWith('blob:') ? pdfPreviewUrl : `${pdfPreviewUrl}?token=${localStorage.getItem('auth_token')}`}
+                                src={pdfPreviewUrl}
                                 className={`w-full ${pdfExpanded ? 'h-[calc(95vh-140px)]' : 'h-[calc(85vh-140px)]'} border rounded`}
                                 title="PDF Preview"
                             />

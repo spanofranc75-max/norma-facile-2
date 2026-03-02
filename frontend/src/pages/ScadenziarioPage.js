@@ -51,9 +51,8 @@ export default function ScadenziarioPage() {
 
     const fetchData = useCallback(async () => {
         try {
-            const token = localStorage.getItem('session_token');
             const res = await fetch(`${API}/api/fatture-ricevute/scadenziario/dashboard`, {
-                headers: { Authorization: `Bearer ${token}` },
+                credentials: 'include',
             });
             if (res.ok) {
                 const d = await res.json();
@@ -68,9 +67,8 @@ export default function ScadenziarioPage() {
 
     const fetchInbox = useCallback(async () => {
         try {
-            const token = localStorage.getItem('session_token');
             const res = await fetch(`${API}/api/fatture-ricevute?status=da_registrare&limit=50`, {
-                headers: { Authorization: `Bearer ${token}` },
+                credentials: 'include',
             });
             if (res.ok) {
                 const d = await res.json();
@@ -90,10 +88,9 @@ export default function ScadenziarioPage() {
         setSyncing(true);
         setSyncResult(null);
         try {
-            const token = localStorage.getItem('session_token');
             const res = await fetch(`${API}/api/fatture-ricevute/sync-fic`, {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${token}` },
+                credentials: 'include',
             });
             const d = await res.json();
             if (res.ok) {

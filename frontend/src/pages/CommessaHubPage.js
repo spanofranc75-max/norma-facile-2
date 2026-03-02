@@ -156,7 +156,7 @@ export default function CommessaHubPage() {
     const handleDownloadDossier = async () => {
         try {
             const res = await fetch(`${API}/api/commesse/${commessaId}/dossier`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                credentials: 'include',
             });
             if (!res.ok) throw new Error('Errore generazione dossier');
             const blob = await res.blob();

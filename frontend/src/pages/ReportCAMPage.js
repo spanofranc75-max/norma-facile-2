@@ -63,7 +63,7 @@ export default function ReportCAMPage() {
     const handleDownloadPdf = async () => {
         try {
             const res = await fetch(`${API}/api/cam/report-aziendale/pdf?anno=${anno}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                credentials: 'include',
             });
             if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Errore'); }
             const blob = await res.blob();

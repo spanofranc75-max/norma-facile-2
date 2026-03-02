@@ -44,7 +44,7 @@ export default function FascicoloTecnicoSection({ commessaId }) {
         if (!commessaId) return;
         try {
             const res = await fetch(`${API}/api/fascicolo-tecnico/${commessaId}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+                credentials: 'include',
             });
             if (res.ok) {
                 const data = await res.json();
@@ -75,7 +75,7 @@ export default function FascicoloTecnicoSection({ commessaId }) {
         setDownloading(doc.key);
         try {
             const res = await fetch(`${API}/api/fascicolo-tecnico/${commessaId}/${doc.endpoint}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+                credentials: 'include',
             });
             if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Errore');
             const blob = await res.blob();
@@ -94,7 +94,7 @@ export default function FascicoloTecnicoSection({ commessaId }) {
         setCompletoLoading(true);
         try {
             const res = await fetch(`${API}/api/fascicolo-tecnico/${commessaId}/fascicolo-completo-pdf?docs=${sel}`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+                credentials: 'include',
             });
             if (!res.ok) throw new Error('Errore generazione');
             const blob = await res.blob();
@@ -112,7 +112,7 @@ export default function FascicoloTecnicoSection({ commessaId }) {
         setSuperLoading(true);
         try {
             const res = await fetch(`${API}/api/commesse/${commessaId}/fascicolo-tecnico-completo`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+                credentials: 'include',
             });
             if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Errore generazione fascicolo');
             const blob = await res.blob();
@@ -136,7 +136,8 @@ export default function FascicoloTecnicoSection({ commessaId }) {
         try {
             const res = await fetch(`${API}/api/fascicolo-tecnico/${commessaId}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(editForm)
             });
             if (!res.ok) throw new Error('Errore salvataggio');

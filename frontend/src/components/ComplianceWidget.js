@@ -20,7 +20,7 @@ export default function ComplianceWidget() {
         const load = async () => {
             try {
                 const res = await fetch(`${API}/api/dashboard/compliance-en1090`, {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+                    credentials: 'include',
                 });
                 if (res.ok) setData(await res.json());
             } catch { /* silent */ }

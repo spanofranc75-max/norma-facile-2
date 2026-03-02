@@ -325,14 +325,10 @@ export default function PreventivoEditorPage() {
         setShowFpcDialog(false);
         setConverting(true);
         try {
-            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-            const r = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/fpc/projects`, {
+            const data = await apiRequest('/fpc/projects', {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ preventivo_id: prevId, execution_class: excClass }),
+                body: { preventivo_id: prevId, execution_class: excClass },
             });
-            const data = await r.json();
-            if (!r.ok) throw new Error(data.detail || 'Errore conversione');
             toast.success('Progetto FPC creato!');
             navigate(`/tracciabilita/progetto/${data.project_id}`);
         } catch (e) { toast.error(e.message); } finally { setConverting(false); }
@@ -643,20 +639,20 @@ export default function PreventivoEditorPage() {
                                 <Button data-testid="btn-add-line" size="sm" variant="ghost" onClick={addLine} className="text-white hover:text-blue-200 h-7 text-xs"><Plus className="h-3 w-3 mr-1" /> Aggiungi</Button>
                             </CardHeader>
                             <CardContent className="p-0 overflow-x-auto">
-                                <Table>
+                                <Table className="table-fixed">
                                     <TableHeader>
                                         <TableRow className="bg-slate-50">
-                                            <TableHead className="w-7 text-[10px]">#</TableHead>
-                                            <TableHead className="min-w-[160px] text-[10px]">Descrizione</TableHead>
-                                            <TableHead className="w-16 text-right text-[10px]">Q.tà</TableHead>
-                                            <TableHead className="w-14 text-[10px]">UdM</TableHead>
-                                            <TableHead className="w-24 text-right text-[10px]">Prezzo</TableHead>
-                                            <TableHead className="w-14 text-right text-[10px]">Sc.1%</TableHead>
-                                            <TableHead className="w-14 text-right text-[10px]">Sc.2%</TableHead>
-                                            <TableHead className="w-24 text-right text-[10px]">Netto</TableHead>
-                                            <TableHead className="w-14 text-[10px]">IVA</TableHead>
-                                            <TableHead className="w-24 text-right text-[10px]">Totale</TableHead>
-                                            <TableHead className="w-14 text-[10px]">Th.</TableHead>
+                                            <TableHead className="w-8 text-[10px]">#</TableHead>
+                                            <TableHead className="text-[10px]">Descrizione</TableHead>
+                                            <TableHead className="w-[60px] text-right text-[10px]">Q.tà</TableHead>
+                                            <TableHead className="w-[60px] text-[10px]">UdM</TableHead>
+                                            <TableHead className="w-[80px] text-right text-[10px]">Prezzo</TableHead>
+                                            <TableHead className="w-[50px] text-right text-[10px]">Sc.1%</TableHead>
+                                            <TableHead className="w-[50px] text-right text-[10px]">Sc.2%</TableHead>
+                                            <TableHead className="w-[80px] text-right text-[10px]">Netto</TableHead>
+                                            <TableHead className="w-[52px] text-[10px]">IVA</TableHead>
+                                            <TableHead className="w-[85px] text-right text-[10px]">Totale</TableHead>
+                                            <TableHead className="w-[40px] text-[10px]">Th.</TableHead>
                                             <TableHead className="w-8"></TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -670,10 +666,10 @@ export default function PreventivoEditorPage() {
                                                 <TableRow key={l.line_id} data-testid={`line-${i}`}>
                                                     <TableCell className="text-[10px] text-slate-400 font-mono">{i + 1}</TableCell>
                                                     <TableCell><AutoExpandTextarea value={l.description} onChange={e => updateLine(i, 'description', e.target.value)} placeholder="Descrizione" className="text-xs" /></TableCell>
-                                                    <TableCell><Input type="number" value={l.quantity} onChange={e => updateLine(i, 'quantity', e.target.value)} className="h-7 text-xs text-right font-mono" /></TableCell>
-                                                    <TableCell>
+                                                    <TableCell className="px-1"><Input type="number" value={l.quantity} onChange={e => updateLine(i, 'quantity', e.target.value)} className="h-7 text-xs text-right font-mono w-full" /></TableCell>
+                                                    <TableCell className="px-1">
                                                         <Select value={l.unit} onValueChange={v => updateLine(i, 'unit', v)}>
-                                                            <SelectTrigger className="h-7 text-[10px] w-14"><SelectValue /></SelectTrigger>
+                                                            <SelectTrigger className="h-7 text-[10px] w-full"><SelectValue /></SelectTrigger>
                                                             <SelectContent>
                                                                 <SelectItem value="pz">pz</SelectItem>
                                                                 <SelectItem value="m">m</SelectItem>
@@ -684,13 +680,13 @@ export default function PreventivoEditorPage() {
                                                             </SelectContent>
                                                         </Select>
                                                     </TableCell>
-                                                    <TableCell><Input type="number" step="0.01" value={l.unit_price} onChange={e => updateLine(i, 'unit_price', e.target.value)} className="h-7 text-xs text-right font-mono text-red-600 font-semibold" /></TableCell>
-                                                    <TableCell><Input type="number" step="0.1" value={l.sconto_1} onChange={e => updateLine(i, 'sconto_1', e.target.value)} className="h-7 text-[10px] text-right font-mono w-14" /></TableCell>
-                                                    <TableCell><Input type="number" step="0.1" value={l.sconto_2} onChange={e => updateLine(i, 'sconto_2', e.target.value)} className="h-7 text-[10px] text-right font-mono w-14" /></TableCell>
-                                                    <TableCell className="text-right font-mono text-xs text-slate-600">{fmtEur(net)}</TableCell>
-                                                    <TableCell>
+                                                    <TableCell className="px-1"><Input type="number" step="0.01" value={l.unit_price} onChange={e => updateLine(i, 'unit_price', e.target.value)} className="h-7 text-xs text-right font-mono text-red-600 font-semibold w-full" /></TableCell>
+                                                    <TableCell className="px-1"><Input type="number" step="0.1" value={l.sconto_1} onChange={e => updateLine(i, 'sconto_1', e.target.value)} className="h-7 text-[10px] text-right font-mono w-full" /></TableCell>
+                                                    <TableCell className="px-1"><Input type="number" step="0.1" value={l.sconto_2} onChange={e => updateLine(i, 'sconto_2', e.target.value)} className="h-7 text-[10px] text-right font-mono w-full" /></TableCell>
+                                                    <TableCell className="text-right font-mono text-xs text-slate-600 px-1 truncate">{fmtEur(net)}</TableCell>
+                                                    <TableCell className="px-1">
                                                         <Select value={l.vat_rate} onValueChange={v => updateLine(i, 'vat_rate', v)}>
-                                                            <SelectTrigger className="h-7 text-[10px] w-14"><SelectValue /></SelectTrigger>
+                                                            <SelectTrigger className="h-7 text-[10px] w-full"><SelectValue /></SelectTrigger>
                                                             <SelectContent>
                                                                 <SelectItem value="22">22%</SelectItem>
                                                                 <SelectItem value="10">10%</SelectItem>
@@ -699,7 +695,7 @@ export default function PreventivoEditorPage() {
                                                             </SelectContent>
                                                         </Select>
                                                     </TableCell>
-                                                    <TableCell className="text-right font-mono text-xs font-semibold text-[#0055FF]">{fmtEur(lt)}</TableCell>
+                                                    <TableCell className="text-right font-mono text-xs font-semibold text-[#0055FF] px-1 truncate">{fmtEur(lt)}</TableCell>
                                                     <TableCell>
                                                         <div className="flex items-center gap-0.5">
                                                             <button data-testid={`thermal-btn-${i}`} onClick={() => openThermalDrawer(i)} className={`p-1 rounded ${hasTherm ? 'text-[#0055FF] bg-blue-50' : 'text-slate-300 hover:text-slate-500'}`}>

@@ -28,9 +28,9 @@ const TIPO_OPTIONS = [
 const VENTO_OPTIONS = ['Classe 0', 'Classe 1', 'Classe 2', 'Classe 3', 'Classe 4', 'Classe 5'];
 
 async function apiCall(path, opts = {}) {
-    const token = localStorage.getItem('session_token');
     const res = await fetch(`${API}/api/gate-cert${path}`, {
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         ...opts,
     });
     if (!res.ok) {
@@ -103,7 +103,6 @@ export default function GateCertificationPanel({ commessaId, commessa }) {
     };
 
     const handleDownload = async (type) => {
-        const token = localStorage.getItem('session_token');
         const endpoints = {
             dop: 'dop-pdf',
             ce_label: 'ce-label-pdf',
@@ -112,7 +111,7 @@ export default function GateCertificationPanel({ commessaId, commessa }) {
         };
         try {
             const res = await fetch(`${API}/api/gate-cert/${commessaId}/${endpoints[type]}`, {
-                headers: { Authorization: `Bearer ${token}` },
+                credentials: 'include',
             });
             if (!res.ok) throw new Error('Errore generazione PDF');
             const blob = await res.blob();
