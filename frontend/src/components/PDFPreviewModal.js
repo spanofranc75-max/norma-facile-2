@@ -18,7 +18,7 @@ export function PDFPreviewModal({ open, onClose, pdfUrl, title }) {
             setLoading(true);
             setError(null);
             setBlobUrl(null);
-            fetch(`${API_BASE}/api${pdfUrl}`, { credentials: 'include' })
+            fetch(`${API_BASE}${pdfUrl}`, { credentials: 'include' })
                 .then(r => {
                     if (!r.ok) throw new Error(`Errore ${r.status}`);
                     return r.blob();
@@ -38,7 +38,7 @@ export function PDFPreviewModal({ open, onClose, pdfUrl, title }) {
 
     const handleDownload = () => {
         const a = document.createElement('a');
-        a.href = `${API_BASE}/api${pdfUrl}`;
+        a.href = `${API_BASE}${pdfUrl}`;
         a.target = '_blank';
         a.rel = 'noopener';
         a.click();
