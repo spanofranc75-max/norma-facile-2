@@ -4,8 +4,9 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from enum import Enum
 import uuid
+import calendar
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, timedelta
 from core.security import get_current_user
 from core.database import db
 from core.config import settings
@@ -14,6 +15,39 @@ import re
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/fatture-ricevute", tags=["fatture_ricevute"])
+
+
+async def _calc_scadenza_from_supplier(fornitore_id: str, user_id: str, data_documento: str) -> str:
+    """Calculate due date from supplier's payment type, if configured."""
+    if not fornitore_id or not data_documento:
+        return ""
+    supplier = await db.clients.find_one(
+        {"client_id": fornitore_id, "user_id": user_id},
+        {"_id": 0, "payment_type_id": 1}
+    )
+    if not supplier or not supplier.get("payment_type_id"):
+        return ""
+    pt = await db.payment_types.find_one(
+        {"payment_type_id": supplier["payment_type_id"]},
+        {"_id": 0, "quote": 1, "fine_mese": 1, "extra_days": 1}
+    )
+    if not pt or not pt.get("quote"):
+        return ""
+    # Use the last (longest) installment for the due date
+    max_giorni = max(q.get("giorni", 0) for q in pt["quote"])
+    if max_giorni < 0:
+        return data_documento
+    try:
+        d = date.fromisoformat(data_documento)
+    except ValueError:
+        return ""
+    d = d + timedelta(days=max_giorni)
+    if pt.get("fine_mese"):
+        last_day = calendar.monthrange(d.year, d.month)[1]
+        d = d.replace(day=last_day)
+        if pt.get("extra_days"):
+            d = d + timedelta(days=pt["extra_days"])
+    return d.isoformat()
 
 
 # ── Models ───────────────────────────────────────────────────────
@@ -441,6 +475,13 @@ async def create_fattura_ricevuta(
         "created_at": now,
         "updated_at": now,
     }
+    # Auto-calculate due date from supplier payment terms if not set
+    if not doc["data_scadenza_pagamento"] and fornitore_id:
+        calc_scad = await _calc_scadenza_from_supplier(fornitore_id, user["user_id"], data.data_documento)
+        if calc_scad:
+            doc["data_scadenza_pagamento"] = calc_scad
+            logger.info(f"Auto-calculated scadenza {calc_scad} for FR {fr_id} from supplier payment terms")
+
     await db.fatture_ricevute.insert_one(doc)
     created = await db.fatture_ricevute.find_one({"fr_id": fr_id}, {"_id": 0, "xml_raw": 0})
 
@@ -580,6 +621,13 @@ async def import_xml_fattura(
         "created_at": now,
         "updated_at": now,
     }
+    # Auto-calculate due date from supplier payment terms if not set from XML
+    if not doc["data_scadenza_pagamento"] and fornitore_id:
+        calc_scad = await _calc_scadenza_from_supplier(fornitore_id, user["user_id"], parsed.get("data_documento", ""))
+        if calc_scad:
+            doc["data_scadenza_pagamento"] = calc_scad
+            logger.info(f"Auto-calculated scadenza {calc_scad} for XML FR {fr_id} from supplier payment terms")
+
     await db.fatture_ricevute.insert_one(doc)
     created = await db.fatture_ricevute.find_one({"fr_id": fr_id}, {"_id": 0, "xml_raw": 0})
 
@@ -1216,6 +1264,12 @@ async def sync_fatture_from_fic(
                     "created_at": now,
                     "updated_at": now,
                 }
+                # Auto-calculate due date from supplier payment terms if not set
+                if not fr_doc["data_scadenza_pagamento"] and fornitore_id:
+                    calc_scad = await _calc_scadenza_from_supplier(fornitore_id, user["user_id"], str(doc_fic.get("date", "")))
+                    if calc_scad:
+                        fr_doc["data_scadenza_pagamento"] = calc_scad
+
                 try:
                     await db.fatture_ricevute.insert_one(fr_doc)
                     imported += 1
@@ -1239,6 +1293,69 @@ async def sync_fatture_from_fic(
         "skipped": skipped,
         "errors": errors,
     }
+
+
+# ── Recalculate due dates for existing invoices ─────────────────
+
+@router.post("/recalc-scadenze")
+async def recalc_scadenze(user: dict = Depends(get_current_user)):
+    """Recalculate due dates for all received invoices missing data_scadenza_pagamento, using supplier payment terms.
+    Also tries to link unlinked suppliers by name matching."""
+    uid = user["user_id"]
+    
+    # First, try to link unlinked suppliers by name
+    unlinked = db.fatture_ricevute.find(
+        {"user_id": uid, "$or": [{"fornitore_id": None}, {"fornitore_id": ""}]},
+        {"_id": 0, "fr_id": 1, "fornitore_nome": 1, "fornitore_piva": 1}
+    )
+    linked_count = 0
+    async for fr in unlinked:
+        nome = fr.get("fornitore_nome", "")
+        piva = fr.get("fornitore_piva", "")
+        match = None
+        # Try P.IVA first (if valid)
+        if piva and piva not in ("00000000000", ""):
+            match = await db.clients.find_one(
+                {"user_id": uid, "partita_iva": piva},
+                {"_id": 0, "client_id": 1}
+            )
+        # Fallback: match by name (case-insensitive, contains)
+        if not match and nome:
+            # Clean company suffixes for fuzzy matching
+            clean_name = re.sub(r'\b(S\.?R\.?L\.?S?\.?|S\.?P\.?A\.?|S\.?N\.?C\.?|S\.?A\.?S\.?|SOC\.?\s*COOP\.?|UNIPERSONALE)\b', '', nome, flags=re.IGNORECASE)
+            clean_name = re.sub(r"SOCIETA'?\s*A\s*SOCIO\s*UNICO", '', clean_name, flags=re.IGNORECASE)
+            clean_name = re.sub(r'[.\s]+$', '', clean_name).strip()
+            clean_name = re.sub(r'\s{2,}', ' ', clean_name).strip()
+            if len(clean_name) >= 3:
+                match = await db.clients.find_one(
+                    {"user_id": uid, "business_name": {"$regex": re.escape(clean_name[:25]), "$options": "i"}},
+                    {"_id": 0, "client_id": 1}
+                )
+        if match:
+            await db.fatture_ricevute.update_one(
+                {"fr_id": fr["fr_id"]},
+                {"$set": {"fornitore_id": match["client_id"], "updated_at": datetime.now(timezone.utc)}}
+            )
+            linked_count += 1
+
+    # Now recalculate scadenze for all FR with fornitore_id but no scadenza
+    cursor = db.fatture_ricevute.find(
+        {"user_id": uid, "fornitore_id": {"$nin": [None, ""]}, "$or": [{"data_scadenza_pagamento": ""}, {"data_scadenza_pagamento": None}]},
+        {"_id": 0, "fr_id": 1, "fornitore_id": 1, "data_documento": 1}
+    )
+    updated = 0
+    async for fr in cursor:
+        fid = fr.get("fornitore_id")
+        if not fid:
+            continue
+        calc = await _calc_scadenza_from_supplier(fid, uid, fr.get("data_documento", ""))
+        if calc:
+            await db.fatture_ricevute.update_one(
+                {"fr_id": fr["fr_id"]},
+                {"$set": {"data_scadenza_pagamento": calc, "updated_at": datetime.now(timezone.utc)}}
+            )
+            updated += 1
+    return {"message": f"Collegati {linked_count} fornitori, ricalcolate {updated} scadenze", "linked": linked_count, "updated": updated}
 
 
 # ── Scadenziario Dashboard ──────────────────────────────────────

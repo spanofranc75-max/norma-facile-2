@@ -1,0 +1,78 @@
+{
+  "summary": "Complete testing of auto-calculation of payment deadlines (scadenze) for received invoices. All 10 backend pytest tests passed. Frontend UI testing confirmed: (1) 'Ricalcola Scadenze' button exists with data-testid='btn-recalc-scadenze', (2) 'Scadenza' column visible in the fatture ricevute table, (3) Clicking button calls API and displays toast with linked/updated counts. Real-world test with production data successfully linked 18 suppliers and calculated 17 due dates.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "backend_recalc_endpoint": {
+      "feature": "POST /api/fatture-ricevute/recalc-scadenze",
+      "status": "PASS",
+      "details": "Returns 200 with linked/updated counts. Successfully links suppliers by name and calculates due dates."
+    },
+    "backend_calc_scadenza_helper": {
+      "feature": "_calc_scadenza_from_supplier helper function",
+      "status": "PASS",
+      "details": "Correctly handles: A VISTA (0 days), 30gg (no FM), 30gg FM (end of month), 30gg FM+10 (extra_days after EOM)"
+    },
+    "backend_name_matching": {
+      "feature": "Supplier name matching for unlinked invoices",
+      "status": "PASS",
+      "details": "Case-insensitive matching, strips legal suffixes (SRL, SPA, SNC, etc). 'VEGA CARBURANTI SPA' correctly matches 'Vega carburanti'"
+    },
+    "backend_auto_calc_on_create": {
+      "feature": "Auto-calc scadenza when creating FR with supplier",
+      "status": "PASS",
+      "details": "POST /api/fatture-ricevute with fornitore_id automatically calculates data_scadenza_pagamento"
+    },
+    "backend_multiple_installments": {
+      "feature": "Multiple installment payment types (30/60/90)",
+      "status": "PASS",
+      "details": "Uses max(giorni) from quote array for due date calculation"
+    },
+    "frontend_scadenza_column": {
+      "feature": "Scadenza column in fatture ricevute table",
+      "status": "PASS",
+      "details": "Column header 'Scadenza' visible, displays calculated dates or '-' for missing"
+    },
+    "frontend_recalc_button": {
+      "feature": "Ricalcola Scadenze button with data-testid='btn-recalc-scadenze'",
+      "status": "PASS",
+      "details": "Button visible, clickable, calls API and displays toast notification"
+    },
+    "frontend_toast_notification": {
+      "feature": "Success toast after recalc API call",
+      "status": "PASS",
+      "details": "Shows 'X fornitori collegati, Y scadenze calcolate' or info message when nothing to update"
+    },
+    "real_data_test": {
+      "feature": "Production data recalculation",
+      "status": "PASS",
+      "details": "Successfully linked 18 suppliers and calculated 17 due dates for real invoices"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration112_recalc_scadenze.py",
+    "/app/test_reports/pytest/iteration112_recalc_scadenze_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration112_recalc_scadenze.py"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 pytest tests passed)",
+    "frontend": "100% (all UI interactions verified via Playwright)"
+  },
+  "test_credentials": "Created and cleaned up test_scadenze_*, test_recalc_* users/sessions",
+  "seed_data_creation": "Test payment types, suppliers, and FR created during tests, all cleaned up",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Auto-calculation of scadenze feature fully functional. Key locations: (1) backend/routes/fatture_ricevute.py:20-50 - _calc_scadenza_from_supplier helper, (2) backend/routes/fatture_ricevute.py:1300-1358 - recalc-scadenze endpoint, (3) frontend FattureRicevutePage.js:195-210 - handleRecalcScadenze function, (4) frontend FattureRicevutePage.js:336-345 - Ricalcola Scadenze button. The feature supports: A VISTA (0 days), simple day terms, fine_mese (end of month), extra_days (FM+N), and name matching for unlinked suppliers.",
+  "rca_of_the_issue": null
+}

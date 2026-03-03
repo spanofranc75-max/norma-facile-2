@@ -192,6 +192,23 @@ export default function FattureRicevutePage() {
         }
     };
 
+    const handleRecalcScadenze = async () => {
+        try {
+            const result = await apiRequest('/fatture-ricevute/recalc-scadenze', { method: 'POST' });
+            const parts = [];
+            if (result.linked > 0) parts.push(`${result.linked} fornitori collegati`);
+            if (result.updated > 0) parts.push(`${result.updated} scadenze calcolate`);
+            if (parts.length > 0) {
+                toast.success(parts.join(', '));
+                fetchFatture();
+            } else {
+                toast.info('Nessuna scadenza da ricalcolare (tutti i fornitori senza termini di pagamento o già impostati)');
+            }
+        } catch (err) {
+            toast.error(err.message || 'Errore ricalcolo scadenze');
+        }
+    };
+
 
     // View detail
     const openDetail = async (fr) => {
@@ -316,6 +333,16 @@ export default function FattureRicevutePage() {
                             <FileUp className="h-4 w-4 mr-2" />
                             {uploading ? 'Importazione...' : 'Importa XML / P7M'}
                         </Button>
+                        <Button
+                            data-testid="btn-recalc-scadenze"
+                            variant="outline"
+                            onClick={handleRecalcScadenze}
+                            className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                            title="Ricalcola le scadenze mancanti dai termini di pagamento dei fornitori"
+                        >
+                            <Clock className="h-4 w-4 mr-2" />
+                            Ricalcola Scadenze
+                        </Button>
                     </div>
                 </div>
 
@@ -403,6 +430,7 @@ export default function FattureRicevutePage() {
                                     <TableHead className="text-white font-semibold">Tipo</TableHead>
                                     <TableHead className="text-white font-semibold">Numero</TableHead>
                                     <TableHead className="text-white font-semibold">Data</TableHead>
+                                    <TableHead className="text-white font-semibold">Scadenza</TableHead>
                                     <TableHead className="text-white font-semibold text-right">Totale</TableHead>
                                     <TableHead className="text-white font-semibold text-right">Pagato</TableHead>
                                     <TableHead className="text-white font-semibold text-right">Da Pagare</TableHead>
@@ -414,13 +442,13 @@ export default function FattureRicevutePage() {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={10} className="text-center py-8">
+                                        <TableCell colSpan={11} className="text-center py-8">
                                             <div className="w-6 h-6 loading-spinner mx-auto" />
                                         </TableCell>
                                     </TableRow>
                                 ) : fatture.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={10} className="p-0">
+                                        <TableCell colSpan={11} className="p-0">
                                             <EmptyState
                                                 type="fatture_ricevute"
                                                 title="Nessuna fattura ricevuta"
@@ -456,6 +484,9 @@ export default function FattureRicevutePage() {
                                                 </TableCell>
                                                 <TableCell className="font-mono text-sm">{fr.numero_documento}</TableCell>
                                                 <TableCell>{fr.data_documento ? formatDateIT(fr.data_documento) : '-'}</TableCell>
+                                                <TableCell className="text-sm">
+                                                    {fr.data_scadenza_pagamento ? formatDateIT(fr.data_scadenza_pagamento) : <span className="text-slate-300">-</span>}
+                                                </TableCell>
                                                 <TableCell className="text-right font-mono font-semibold text-[#0055FF]">
                                                     {formatCurrency(totalAmount)}
                                                 </TableCell>
