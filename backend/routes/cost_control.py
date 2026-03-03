@@ -2,6 +2,7 @@
 
 Processes purchase invoices: assigns costs to commesse, magazzino, or general expenses.
 Supports per-row allocation with smart article matching and PMP calculation.
+Includes company cost configuration and full hourly cost calculation.
 """
 import uuid
 import logging
@@ -14,6 +15,7 @@ from pydantic import BaseModel
 from core.database import db
 from core.security import get_current_user
 from services.invoice_line_processor import match_article, update_article_inventory, create_article_from_line
+from services.cost_calculator import calc_hourly_cost, calc_commessa_margin
 
 router = APIRouter(prefix="/costs", tags=["costs"])
 logger = logging.getLogger(__name__)
@@ -43,6 +45,119 @@ class RowAllocation(BaseModel):
 class RowAllocationRequest(BaseModel):
     rows: List[RowAllocation]
     note: Optional[str] = ""
+
+
+class CompanyCostsInput(BaseModel):
+    stipendi_lordi: float = 0
+    contributi_inps_inail: float = 0
+    affitto_utenze: float = 0
+    commercialista_software: float = 0
+    altri_costi_fissi: float = 0
+    ore_lavorabili_anno: int = 1600
+    n_dipendenti: int = 1
+
+
+class OreCommessaInput(BaseModel):
+    ore: float
+    note: Optional[str] = ""
+
+
+# ── Company Costs Configuration ──────────────────────────────────
+
+@router.get("/company-costs")
+async def get_company_costs(user: dict = Depends(get_current_user)):
+    """Get company cost configuration and calculated hourly rate."""
+    uid = user["user_id"]
+    doc = await db.company_costs.find_one({"user_id": uid}, {"_id": 0})
+    if not doc:
+        # Return defaults
+        result = calc_hourly_cost()
+        result.update({"stipendi_lordi": 0, "contributi_inps_inail": 0, "affitto_utenze": 0,
+                        "commercialista_software": 0, "altri_costi_fissi": 0, "n_dipendenti": 1,
+                        "configured": False})
+        return result
+
+    result = calc_hourly_cost(
+        stipendi_lordi=doc.get("stipendi_lordi", 0),
+        contributi_inps_inail=doc.get("contributi_inps_inail", 0),
+        affitto_utenze=doc.get("affitto_utenze", 0),
+        commercialista_software=doc.get("commercialista_software", 0),
+        altri_costi_fissi=doc.get("altri_costi_fissi", 0),
+        ore_lavorabili_anno=doc.get("ore_lavorabili_anno", 1600),
+    )
+    result.update({
+        "stipendi_lordi": doc.get("stipendi_lordi", 0),
+        "contributi_inps_inail": doc.get("contributi_inps_inail", 0),
+        "affitto_utenze": doc.get("affitto_utenze", 0),
+        "commercialista_software": doc.get("commercialista_software", 0),
+        "altri_costi_fissi": doc.get("altri_costi_fissi", 0),
+        "n_dipendenti": doc.get("n_dipendenti", 1),
+        "configured": True,
+    })
+    return result
+
+
+@router.put("/company-costs")
+async def update_company_costs(data: CompanyCostsInput, user: dict = Depends(get_current_user)):
+    """Save/update company cost configuration."""
+    uid = user["user_id"]
+    now = datetime.now(timezone.utc)
+
+    result = calc_hourly_cost(
+        stipendi_lordi=data.stipendi_lordi,
+        contributi_inps_inail=data.contributi_inps_inail,
+        affitto_utenze=data.affitto_utenze,
+        commercialista_software=data.commercialista_software,
+        altri_costi_fissi=data.altri_costi_fissi,
+        ore_lavorabili_anno=data.ore_lavorabili_anno,
+    )
+
+    doc = {
+        "user_id": uid,
+        **data.model_dump(),
+        "costo_orario_pieno": result["costo_orario_pieno"],
+        "costo_totale_annuo": result["costo_totale_annuo"],
+        "updated_at": now,
+    }
+
+    await db.company_costs.update_one(
+        {"user_id": uid}, {"$set": doc, "$setOnInsert": {"created_at": now}}, upsert=True
+    )
+    logger.info(f"Company costs updated: costo_orario_pieno={result['costo_orario_pieno']}")
+
+    result.update({**data.model_dump(), "configured": True})
+    return result
+
+
+# ── Log Hours to Commessa ────────────────────────────────────────
+
+@router.post("/commesse/{commessa_id}/ore")
+async def log_hours_to_commessa(commessa_id: str, data: OreCommessaInput, user: dict = Depends(get_current_user)):
+    """Log worked hours to a commessa."""
+    uid = user["user_id"]
+    now = datetime.now(timezone.utc)
+
+    commessa = await db.commesse.find_one(
+        {"commessa_id": commessa_id, "user_id": uid},
+        {"_id": 0, "commessa_id": 1, "ore_lavorate": 1}
+    )
+    if not commessa:
+        raise HTTPException(404, "Commessa non trovata")
+
+    current_hours = commessa.get("ore_lavorate", 0) or 0
+    new_total = round(current_hours + data.ore, 2)
+
+    await db.commesse.update_one(
+        {"commessa_id": commessa_id},
+        {"$set": {"ore_lavorate": new_total, "updated_at": now},
+         "$push": {"log_ore": {
+             "ore": data.ore,
+             "data": now.isoformat(),
+             "note": data.note or "",
+             "user": user.get("name", ""),
+         }}}
+    )
+    return {"ore_lavorate": new_total, "ore_aggiunte": data.ore}
 
 
 # ── Mock Data Generator ─────────────────────────────────────────
@@ -530,33 +645,37 @@ async def assign_invoice_rows(invoice_id: str, data: RowAllocationRequest, user:
 
 @router.get("/margin-analysis")
 async def margin_analysis(user: dict = Depends(get_current_user)):
-    """Get margin analysis for all commesse with assigned costs."""
+    """Get margin analysis for all commesse — includes labor cost at full hourly rate."""
     uid = user["user_id"]
+
+    # Get company hourly cost
+    cc = await db.company_costs.find_one({"user_id": uid}, {"_id": 0, "costo_orario_pieno": 1})
+    costo_orario = float(cc.get("costo_orario_pieno", 0)) if cc else 0
+
+    # Get all commesse (including ones without costs but with hours)
     commesse = await db.commesse.find(
-        {"user_id": uid, "costi_reali": {"$exists": True, "$ne": []}},
+        {"user_id": uid, "$or": [
+            {"costi_reali": {"$exists": True, "$ne": []}},
+            {"ore_lavorate": {"$gt": 0}},
+        ]},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "client_name": 1,
-         "value": 1, "costi_reali": 1, "status": 1}
+         "value": 1, "costi_reali": 1, "ore_lavorate": 1, "status": 1}
     ).sort("numero", -1).to_list(100)
 
     results = []
     for c in commesse:
         valore = float(c.get("value", 0) or 0)
         costi = c.get("costi_reali", [])
-        totale_costi = sum(float(x.get("importo", 0) or 0) for x in costi)
-        margine = valore - totale_costi
-        margine_pct = (margine / valore * 100) if valore > 0 else 0
+        costi_materiali = sum(float(x.get("importo", 0) or 0) for x in costi)
+        ore = float(c.get("ore_lavorate", 0) or 0)
 
-        # Group by category
+        margin = calc_commessa_margin(valore, costi_materiali, ore, costo_orario)
+
+        # Group materials by category
         by_cat = {}
         for cost in costi:
             cat = cost.get("tipo", "materiali")
             by_cat[cat] = by_cat.get(cat, 0) + float(cost.get("importo", 0) or 0)
-
-        alert = "verde"
-        if margine_pct < 10:
-            alert = "rosso"
-        elif margine_pct < 20:
-            alert = "giallo"
 
         results.append({
             "commessa_id": c["commessa_id"],
@@ -565,12 +684,16 @@ async def margin_analysis(user: dict = Depends(get_current_user)):
             "client_name": c.get("client_name", ""),
             "status": c.get("status", ""),
             "valore_preventivo": round(valore, 2),
-            "totale_costi": round(totale_costi, 2),
-            "margine": round(margine, 2),
-            "margine_pct": round(margine_pct, 1),
+            "costi_materiali": margin["costi_materiali"],
+            "costo_personale": margin["costo_personale"],
+            "ore_lavorate": margin["ore_lavorate"],
+            "costo_orario_pieno": margin["costo_orario_pieno"],
+            "costo_totale": margin["costo_totale"],
+            "margine": margin["margine"],
+            "margine_pct": margin["margine_pct"],
             "costi_per_categoria": {k: round(v, 2) for k, v in by_cat.items()},
             "num_voci": len(costi),
-            "alert": alert,
+            "alert": margin["alert"],
         })
 
-    return {"commesse": results, "total": len(results)}
+    return {"commesse": results, "total": len(results), "costo_orario_pieno": costo_orario}

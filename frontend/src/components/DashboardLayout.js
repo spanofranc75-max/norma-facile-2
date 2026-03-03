@@ -22,7 +22,7 @@ import {
     BarChart3, BoxIcon, FileInput, Camera, ChevronDown,
     Briefcase, Wrench, Award, ShoppingCart, FileText, LayoutGrid,
     CreditCard, TrendingUp, ClipboardCheck, Calendar, CircleDollarSign,
-    User, LogOut, Bell, Flame,
+    User, LogOut, Bell, Flame, Calculator,
 } from 'lucide-react';
 
 // ── Navigation Structure ────────────────────────────────────────
@@ -107,6 +107,7 @@ const NAV_GROUPS = [
         children: [
             { path: '/fatture-ricevute', label: 'Fatture Ricevute', icon: FileInput },
             { path: '/controllo-costi', label: 'Controllo Costi', icon: CircleDollarSign },
+            { path: '/configurazione-finanziaria', label: 'Costo Aziendale', icon: Calculator },
             { path: '/scadenziario', label: 'Scadenziario', icon: Calendar },
             { path: '/fornitori', label: 'Fornitori', icon: Factory },
             { path: '/catalogo', label: 'Catalogo Profili', icon: Warehouse },

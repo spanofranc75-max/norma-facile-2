@@ -366,10 +366,13 @@ function MarginsTab({ margins, onRefresh }) {
                 </Card>
             ) : (
                 <div className="space-y-3">
-                    {margins.map(m => (
-                        <Card key={m.commessa_id} className={`border-l-4 ${
-                            m.alert === 'rosso' ? 'border-l-red-500' : m.alert === 'giallo' ? 'border-l-amber-400' : 'border-l-emerald-500'
-                        }`} data-testid={`margin-${m.commessa_id}`}>
+                    {margins.map(m => {
+                        const costoTotale = m.costo_totale || (m.costi_materiali + m.costo_personale);
+                        const alertColor = m.alert === 'rosso' ? 'border-l-red-500' :
+                            m.alert === 'arancione' ? 'border-l-orange-500' :
+                            m.alert === 'giallo' ? 'border-l-amber-400' : 'border-l-emerald-500';
+                        return (
+                        <Card key={m.commessa_id} className={`border-l-4 ${alertColor}`} data-testid={`margin-${m.commessa_id}`}>
                             <CardContent className="p-4">
                                 <div className="flex items-start justify-between">
                                     <div>
@@ -378,6 +381,11 @@ function MarginsTab({ margins, onRefresh }) {
                                     </div>
                                     {m.alert === 'rosso' && (
                                         <Badge className="bg-red-100 text-red-700 text-[10px]">
+                                            <AlertTriangle className="h-3 w-3 mr-0.5" /> In Perdita
+                                        </Badge>
+                                    )}
+                                    {m.alert === 'arancione' && (
+                                        <Badge className="bg-orange-100 text-orange-700 text-[10px]">
                                             <AlertTriangle className="h-3 w-3 mr-0.5" /> Margine Eroso
                                         </Badge>
                                     )}
@@ -389,7 +397,7 @@ function MarginsTab({ margins, onRefresh }) {
                                     )}
                                 </div>
 
-                                {/* Bar comparison */}
+                                {/* Stacked bars: Materiali + Personale */}
                                 <div className="mt-3 space-y-2">
                                     <div className="flex items-center gap-3">
                                         <span className="text-[10px] text-slate-500 w-20">Preventivo</span>
@@ -399,20 +407,34 @@ function MarginsTab({ margins, onRefresh }) {
                                         <span className="text-xs font-mono font-bold text-slate-700 w-24 text-right">{fmtEur(m.valore_preventivo)}</span>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <span className="text-[10px] text-slate-500 w-20">Costi Reali</span>
+                                        <span className="text-[10px] text-slate-500 w-20">Materiali</span>
                                         <div className="flex-1 h-5 bg-slate-100 rounded-full overflow-hidden">
-                                            <div
-                                                className={`h-full rounded-full ${m.alert === 'rosso' ? 'bg-red-500' : m.alert === 'giallo' ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                                                style={{ width: m.valore_preventivo > 0 ? `${Math.min((m.totale_costi / m.valore_preventivo) * 100, 100)}%` : '0%' }}
-                                            />
+                                            <div className="h-full bg-amber-500 rounded-full"
+                                                style={{ width: m.valore_preventivo > 0 ? `${Math.min((m.costi_materiali / m.valore_preventivo) * 100, 100)}%` : '0%' }} />
                                         </div>
-                                        <span className={`text-xs font-mono font-bold w-24 text-right ${m.alert === 'rosso' ? 'text-red-600' : 'text-slate-700'}`}>{fmtEur(m.totale_costi)}</span>
+                                        <span className="text-xs font-mono font-bold text-amber-700 w-24 text-right">{fmtEur(m.costi_materiali)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-[10px] text-slate-500 w-20">Personale</span>
+                                        <div className="flex-1 h-5 bg-slate-100 rounded-full overflow-hidden">
+                                            <div className="h-full bg-violet-500 rounded-full"
+                                                style={{ width: m.valore_preventivo > 0 ? `${Math.min((m.costo_personale / m.valore_preventivo) * 100, 100)}%` : '0%' }} />
+                                        </div>
+                                        <span className="text-xs font-mono font-bold text-violet-700 w-24 text-right">
+                                            {fmtEur(m.costo_personale)}
+                                            {m.ore_lavorate > 0 && <span className="text-[10px] text-slate-400 ml-1">({m.ore_lavorate}h)</span>}
+                                        </span>
                                     </div>
                                 </div>
 
                                 {/* Margin */}
                                 <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100">
-                                    <span className="text-xs text-slate-500">Margine</span>
+                                    <div className="text-xs text-slate-500">
+                                        Margine Netto
+                                        {m.costo_orario_pieno > 0 && (
+                                            <span className="text-[10px] text-slate-400 ml-1">(@ {fmtEur(m.costo_orario_pieno)}/h)</span>
+                                        )}
+                                    </div>
                                     <div className="flex items-center gap-2">
                                         <span className={`text-sm font-bold font-mono ${m.margine >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                                             {fmtEur(m.margine)}
@@ -422,20 +444,10 @@ function MarginsTab({ margins, onRefresh }) {
                                         </Badge>
                                     </div>
                                 </div>
-
-                                {/* Category breakdown */}
-                                {Object.keys(m.costi_per_categoria || {}).length > 0 && (
-                                    <div className="flex gap-3 mt-2">
-                                        {Object.entries(m.costi_per_categoria).map(([cat, val]) => (
-                                            <span key={cat} className="text-[10px] text-slate-400">
-                                                {cat}: <strong className="text-slate-600">{fmtEur(val)}</strong>
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
                             </CardContent>
                         </Card>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

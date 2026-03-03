@@ -1,0 +1,114 @@
+{
+  "summary": "Iteration 117: Complete testing of Company Cost Configuration (Magic Number) module. All 13 backend tests passed (100%). Frontend UI fully verified via Playwright: FinancialSettingsPage renders with live-calculated hourly cost (42.81€/h with realistic test values), all input fields functional, Save button works with toast confirmation. CostControlPage Margins Tab displays separate Materiali and Personale bars with correct labor cost calculation (ore_lavorate × costo_orario_pieno).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "backend_services": {
+      "calc_hourly_cost": {
+        "test": "Full hourly cost calculation",
+        "result": "PASS - Formula: (stipendi + contributi + affitto + commercialista + altri) / ore = 137000/3200 = 42.81€/h"
+      },
+      "calc_commessa_margin": {
+        "test": "Margin calculation with labor cost and alert levels",
+        "result": "PASS - Includes costo_personale = ore_lavorate × costo_orario_pieno; alerts: rosso(<0%), arancione(<10%), giallo(<20%), verde(>=20%)"
+      }
+    },
+    "backend_endpoints": {
+      "get_company_costs": {
+        "endpoint": "GET /api/costs/company-costs",
+        "result": "PASS - Returns default config (configured=false) or saved config with calculated hourly rate"
+      },
+      "put_company_costs": {
+        "endpoint": "PUT /api/costs/company-costs",
+        "result": "PASS - Saves configuration and returns updated costo_orario_pieno calculation"
+      },
+      "log_hours": {
+        "endpoint": "POST /api/costs/commesse/{id}/ore",
+        "result": "PASS - Logs hours to commessa, updates ore_lavorate total, saves log_ore array"
+      },
+      "margin_analysis_labor": {
+        "endpoint": "GET /api/costs/margin-analysis",
+        "result": "PASS - Now includes costi_materiali, costo_personale, ore_lavorate, costo_orario_pieno for each commessa"
+      }
+    },
+    "frontend_financial_settings_page": {
+      "page_route": "/configurazione-finanziaria",
+      "magic_number_card": {
+        "status": "PASS",
+        "data_testid": "magic-number-card",
+        "shows_live_calculation": true,
+        "displays": "42,81 €/ora with test values"
+      },
+      "input_fields": {
+        "stipendi_lordi": {"status": "PASS", "data_testid": "input-stipendi"},
+        "contributi_inps_inail": {"status": "PASS", "data_testid": "input-contributi"},
+        "affitto_utenze": {"status": "PASS", "data_testid": "input-affitto"},
+        "commercialista_software": {"status": "PASS", "data_testid": "input-commercialista"},
+        "altri_costi_fissi": {"status": "PASS", "data_testid": "input-altri"},
+        "ore_lavorabili_anno": {"status": "PASS", "data_testid": "input-ore"},
+        "n_dipendenti": {"status": "PASS", "data_testid": "input-dipendenti"}
+      },
+      "save_button": {
+        "status": "PASS",
+        "data_testid": "btn-save-costs",
+        "toast_message": "Costo orario aggiornato: 42,81 €/ora"
+      },
+      "calculation_explanation_card": {
+        "status": "PASS",
+        "shows_formula": "Costo Totale Annuo / Ore Lavorabili = Costo Orario Pieno"
+      }
+    },
+    "frontend_menu": {
+      "costo_aziendale_link": {
+        "status": "PASS",
+        "data_testid": "nav-configurazione-finanziaria",
+        "label": "Costo Aziendale",
+        "path": "/configurazione-finanziaria",
+        "parent_group": "Acquisti & Magazzino"
+      }
+    },
+    "frontend_cost_control_margins_tab": {
+      "separate_bars": {
+        "status": "PASS",
+        "materiali_bar": "amber-500 color, shows material costs",
+        "personale_bar": "violet-500 color, shows labor cost with hours",
+        "preventivo_bar": "blue-500 color, shows full estimate value"
+      },
+      "labor_cost_display": {
+        "status": "PASS",
+        "shows_hours": "50h in parentheses",
+        "shows_rate": "@ 42.81 €/h in margin footer"
+      },
+      "margin_calculation": {
+        "status": "PASS",
+        "shows_amount": "36.859,50 €",
+        "shows_percentage": "+73.7%"
+      }
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration117_company_costs.py",
+    "/app/test_reports/pytest/iteration117_company_costs_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration117_company_costs.py"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 pytest tests passed)",
+    "frontend": "100% (all UI features verified via Playwright)"
+  },
+  "test_credentials": "Created test users/sessions for testing - all cleaned up after tests",
+  "seed_data_creation": "Created test commessa with material costs (5000€) and logged 8.5 hours for testing - cleaned up",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 117 added Company Cost Configuration (Magic Number) module. Key components: (1) cost_calculator.py service with calc_hourly_cost() and calc_commessa_margin() functions; (2) cost_control.py router with company-costs GET/PUT, commesse/{id}/ore POST endpoints; (3) FinancialSettingsPage.js at /configurazione-finanziaria with live calculation and save functionality; (4) CostControlPage.js MarginsTab now shows separate Materiali and Personale bars; (5) Menu entry 'Costo Aziendale' under 'Acquisti & Magazzino'. The company_costs collection stores per-user configuration. Formula: (stipendi + contributi + affitto + commercialista + altri) / ore_lavorabili = costo_orario_pieno."
+}
