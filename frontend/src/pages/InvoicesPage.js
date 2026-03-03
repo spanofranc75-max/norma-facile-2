@@ -95,7 +95,13 @@ export default function InvoicesPage() {
             if (filters.status) params.append('status', filters.status);
             if (filters.year) params.append('year', filters.year);
             const data = await apiRequest(`/invoices/?${params}`);
-            setInvoices(data.invoices);
+            // Sort by document number descending (numeric)
+            const sorted = (data.invoices || []).sort((a, b) => {
+                const numA = parseInt((a.document_number || '0').split('/')[0]) || 0;
+                const numB = parseInt((b.document_number || '0').split('/')[0]) || 0;
+                return numB - numA;
+            });
+            setInvoices(sorted);
             setTotal(data.total);
         } catch {
             toast.error('Errore nel caricamento documenti');
