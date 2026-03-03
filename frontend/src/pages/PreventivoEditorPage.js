@@ -204,10 +204,10 @@ export default function PreventivoEditorPage() {
         setForm(f => ({
             ...f,
             client_id: clientId,
-            payment_type_id: f.payment_type_id || client.payment_type_id || '',
-            payment_type_label: f.payment_type_label || client.payment_type_label || '',
-            iban: f.iban || client.iban || '',
-            banca: f.banca || client.banca || '',
+            payment_type_id: client.payment_type_id || f.payment_type_id || '',
+            payment_type_label: client.payment_type_label || f.payment_type_label || '',
+            iban: client.iban || f.iban || '',
+            banca: client.banca || f.banca || '',
             destinazione_merce: f.destinazione_merce || [client.address, client.cap, client.city, client.province].filter(Boolean).join(', ') || '',
         }));
         toast.success(`Dati di ${client.business_name} importati`);
