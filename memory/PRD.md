@@ -58,6 +58,9 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **Feature: Generazione WPS automatica EN 1090** - Knowledge base completa (7 processi, 6 gruppi materiale, filler, gas, preriscaldo EN 1011-2, interpass, CND%). Suggerisce automaticamente i parametri WPS e trova i saldatori qualificati. CRUD completo con auto-numerazione.
 - **Fix: Formato numerazione fatture** - Cambiato da `FT-2026-001` a `N/YYYY` (es. `13/2026`) per allinearsi alle fatture esistenti.
 
+## Bug Risolti (sessione 3 Marzo 2026 - Fork)
+- **Feature: Logica "Fine Mese + N Giorni"** - Aggiunto campo `extra_days` al modello `PaymentTypeBase` e alla UI. Permette termini come "30gg FM+10" (30 giorni dalla data fattura, fine mese + 10 giorni). Logica applicata in: backend simulate, frontend dialog (campo condizionale visibile solo con FM attivo), simulazione client-side e calcolo automatico scadenza in InvoiceEditorPage.
+
 ## Issue Pendenti
 - **P2**: Validazione Pydantic su dati migrati (response_model rimosso temporaneamente)
 - **P2**: Cache frontend (utente deve fare hard refresh dopo deploy)
