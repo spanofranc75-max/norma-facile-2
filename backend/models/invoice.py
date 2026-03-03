@@ -214,7 +214,8 @@ class InvoiceResponse(BaseModel):
     status: InvoiceStatus
     
     payment_method: PaymentMethod
-    payment_terms: PaymentTerms
+    payment_terms: str
+    payment_type_id: Optional[str] = None
     
     lines: List[InvoiceLine] = []
     totals: InvoiceTotals
