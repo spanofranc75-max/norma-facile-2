@@ -63,6 +63,8 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **Fix: Errore 400 Invio SDI** - L'endpoint `send-sdi` ora legge le credenziali FIC anche dalle variabili d'ambiente (fallback). Fix mapping data fattura (`issue_date` invece di `created_at`).
 - **Feature: Restyling Scadenziario stile Invoicex** - Riscrittura completa della pagina con layout tabellare tradizionale: barra KPI riassuntiva, filtri (Fornitori/Clienti, date, ricerca, solo da pagare), tabella con colonne ordinabili (Data Scad., Pagata, Importo, Da Pagare, Documento, Data Doc., Pagamento, Fornitore, Stato), footer con totali, colori amber per scaduti leggibili.
 
+- **Feature: Importazione Intelligente Righe Fattura + Magazzino + Margini** - Nuovo servizio `invoice_line_processor.py` con smart matching articoli (codice/descrizione), calcolo PMP (Prezzo Medio Ponderato), creazione/aggiornamento articoli a magazzino. Assegnazione per-riga (Magazzino/Commessa/Spese Generali) con endpoint `assign-rows`. Analisi Margini: confronto preventivo vs costi reali per commessa con alert verde/giallo/rosso.
+
 ## Issue Pendenti
 - **P2**: Validazione Pydantic su dati migrati (response_model rimosso temporaneamente)
 - **P2**: Cache frontend (utente deve fare hard refresh dopo deploy)
