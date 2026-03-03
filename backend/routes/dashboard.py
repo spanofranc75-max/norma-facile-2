@@ -401,6 +401,74 @@ async def get_quality_score(user: dict = Depends(get_current_user)):
     }
 
 
+@router.get("/semaforo")
+async def get_commesse_semaforo(user: dict = Depends(get_current_user)):
+    """Traffic light view of active commesse: green/yellow/red based on deadline proximity."""
+    uid = user["user_id"]
+    now = datetime.now(timezone.utc)
+    today = now.date()
+
+    # Fetch active commesse (not chiuso)
+    commesse = await db.commesse.find(
+        {"user_id": uid, "stato": {"$nin": ["chiuso"]}},
+        {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "stato": 1,
+         "client_name": 1, "deadline": 1, "priority": 1, "value": 1,
+         "fasi_produzione": 1, "created_at": 1}
+    ).sort("created_at", -1).to_list(100)
+
+    items = []
+    counts = {"green": 0, "yellow": 0, "red": 0}
+
+    for c in commesse:
+        # Production progress
+        fasi = c.get("fasi_produzione", [])
+        prod_done = sum(1 for f in fasi if f.get("stato") == "completato")
+        prod_total = len(fasi) if fasi else 0
+
+        # Calculate traffic light
+        deadline_str = c.get("deadline")
+        semaforo = "green"
+        days_left = None
+
+        if deadline_str:
+            try:
+                deadline_date = datetime.strptime(deadline_str, "%Y-%m-%d").date()
+                days_left = (deadline_date - today).days
+                if days_left < 0:
+                    semaforo = "red"
+                elif days_left <= 7:
+                    semaforo = "yellow"
+                else:
+                    semaforo = "green"
+            except (ValueError, TypeError):
+                pass
+
+        if c.get("stato") == "sospesa":
+            semaforo = "yellow"
+
+        counts[semaforo] += 1
+        items.append({
+            "commessa_id": c["commessa_id"],
+            "numero": c.get("numero", ""),
+            "title": c.get("title", ""),
+            "stato": c.get("stato", ""),
+            "client_name": c.get("client_name", ""),
+            "deadline": deadline_str,
+            "days_left": days_left,
+            "priority": c.get("priority", "media"),
+            "value": c.get("value", 0),
+            "semaforo": semaforo,
+            "prod_done": prod_done,
+            "prod_total": prod_total,
+        })
+
+    # Sort: red first, then yellow, then green
+    order = {"red": 0, "yellow": 1, "green": 2}
+    items.sort(key=lambda x: (order.get(x["semaforo"], 3), x.get("days_left") or 999))
+
+    return {"items": items, "counts": counts, "total": len(items)}
+
+
 @router.get("/fascicolo/{client_id}")
 async def get_fascicolo_cantiere(client_id: str, user: dict = Depends(get_current_user)):
     """Aggregate all documents for a client into a 'Fascicolo Cantiere' (Project Dossier)."""

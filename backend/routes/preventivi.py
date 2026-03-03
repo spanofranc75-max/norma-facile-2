@@ -1011,7 +1011,14 @@ async def get_preventivo_pdf(prev_id: str, user: dict = Depends(get_current_user
     if doc.get("client_id"):
         client = await db.clients.find_one({"client_id": doc["client_id"]}, {"_id": 0})
 
-    pdf_buffer = generate_preventivo_pdf(doc, company, client)
+    # Fetch payment type for schedule calculation
+    payment_type = None
+    if doc.get("payment_type_id"):
+        payment_type = await db.payment_types.find_one(
+            {"payment_type_id": doc["payment_type_id"], "user_id": user["user_id"]}, {"_id": 0}
+        )
+
+    pdf_buffer = generate_preventivo_pdf(doc, company, client, payment_type)
     filename = f"preventivo_{doc.get('number', prev_id).replace(' ', '_')}.pdf"
     return StreamingResponse(
         pdf_buffer,
@@ -1094,7 +1101,14 @@ async def send_preventivo_email(prev_id: str, payload: dict = None, user: dict =
     if not to_email:
         raise HTTPException(400, "Nessun indirizzo email trovato per il cliente.")
 
-    pdf_buffer = generate_preventivo_pdf(doc, company, client)
+    # Fetch payment type for schedule calculation
+    payment_type = None
+    if doc.get("payment_type_id"):
+        payment_type = await db.payment_types.find_one(
+            {"payment_type_id": doc["payment_type_id"], "user_id": user["user_id"]}, {"_id": 0}
+        )
+
+    pdf_buffer = generate_preventivo_pdf(doc, company, client, payment_type)
     pdf_bytes = pdf_buffer.getvalue()
     prev_number = doc.get("number", prev_id)
     filename = f"preventivo_{prev_number.replace(' ', '_').replace('/', '_')}.pdf"
@@ -1139,12 +1153,15 @@ async def send_preventivo_email(prev_id: str, payload: dict = None, user: dict =
 
 # ── PDF Builder (WeasyPrint — shared template) ──────────────────
 
-def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
+def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_type: dict = None):
     """Generate Preventivo PDF using the unified template."""
     from services.pdf_template import (
         fmt_it, safe, build_header_html, compute_iva_groups,
         build_totals_html, build_conditions_html, render_pdf, format_date,
     )
+    from routes.payment_types import enrich_response
+    import calendar
+    from datetime import timedelta, date
 
     co = company or {}
     cl = client or {}
@@ -1210,9 +1227,13 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
         tech_notes_html = f'<div class="info-box"><strong>Note:</strong> {safe(notes_text).replace(chr(10), "<br>")}</div>'
 
     # ── Bank details ──
-    bank = co.get("bank_details", {}) or {}
-    bank_name = safe(bank.get("bank_name") or prev.get("banca") or "")
-    bank_iban = safe(bank.get("iban") or prev.get("iban") or "")
+    bank_name = safe(prev.get("banca") or "")
+    bank_iban = safe(prev.get("iban") or "")
+    # Fallback to old bank_details if preventivo doesn't have specific bank
+    if not bank_name and not bank_iban:
+        bank = co.get("bank_details", {}) or {}
+        bank_name = safe(bank.get("bank_name") or "")
+        bank_iban = safe(bank.get("iban") or "")
     bank_html = ""
     if bank_name or bank_iban:
         bank_html = '<div class="bank-info">'
@@ -1221,6 +1242,63 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
         if bank_iban:
             bank_html += f"<p><strong>IBAN:</strong> {bank_iban}</p>"
         bank_html += "</div>"
+
+    # ── Payment schedule (Riepilogo Rate) ──
+    schedule_html = ""
+    if payment_type:
+        enriched_pt = enrich_response(dict(payment_type))
+        quote_list = enriched_pt.get("quote", [])
+        if quote_list and len(quote_list) > 0:
+            total_amount = iva_data["total"]
+            # Use preventivo date as reference
+            try:
+                ref_date_str = prev.get("data_preventivo") or prev.get("created_at", "")
+                if isinstance(ref_date_str, str):
+                    ref_date = date.fromisoformat(ref_date_str.split("T")[0])
+                else:
+                    ref_date = ref_date_str.date() if hasattr(ref_date_str, 'date') else date.today()
+            except Exception:
+                ref_date = date.today()
+
+            fine_mese = enriched_pt.get("fine_mese", False)
+            richiedi_gs = enriched_pt.get("richiedi_giorno_scadenza", False)
+            giorno_sc = enriched_pt.get("giorno_scadenza")
+
+            rows_html = ""
+            for i, q in enumerate(quote_list):
+                giorni = q.get("giorni", 0) if isinstance(q, dict) else q.giorni
+                quota_pct = q.get("quota", 0) if isinstance(q, dict) else q.quota
+                target = ref_date + timedelta(days=giorni)
+
+                if fine_mese:
+                    last_day = calendar.monthrange(target.year, target.month)[1]
+                    target = target.replace(day=last_day)
+
+                if richiedi_gs and giorno_sc:
+                    try:
+                        last_day = calendar.monthrange(target.year, target.month)[1]
+                        target = target.replace(day=min(giorno_sc, last_day))
+                    except ValueError:
+                        pass
+
+                importo_rata = round(total_amount * quota_pct / 100, 2)
+                rows_html += f"""<tr>
+                    <td class="tc">{i + 1}</td>
+                    <td class="tc">{target.strftime('%d/%m/%Y')}</td>
+                    <td class="tr">{fmt_it(quota_pct)}%</td>
+                    <td class="tr"><strong>{fmt_it(importo_rata)} &euro;</strong></td>
+                </tr>"""
+
+            schedule_html = f"""
+            <div class="payment-schedule">
+                <p class="schedule-title"><strong>Riepilogo Scadenze Pagamento</strong></p>
+                <table class="schedule-table">
+                    <thead><tr>
+                        <th>Rata</th><th>Scadenza</th><th>Quota</th><th>Importo</th>
+                    </tr></thead>
+                    <tbody>{rows_html}</tbody>
+                </table>
+            </div>"""
 
     # ── Conditions page ──
     condizioni_html = build_conditions_html(co, doc_number)
@@ -1257,6 +1335,7 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict):
     {tech_notes_html}
     {totals_html}
     {bank_html}
+    {schedule_html}
     {condizioni_html}
     """
 

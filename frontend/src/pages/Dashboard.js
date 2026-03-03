@@ -14,7 +14,7 @@ import {
 } from 'recharts';
 import {
     Scale, HardHat, FileText, Euro, ArrowRight,
-    Calendar, Package, Receipt, TrendingUp,
+    Calendar, Package, Receipt, TrendingUp, AlertTriangle, CheckCircle, Clock,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import QuickActionFAB from '../components/QuickActionFAB';
@@ -48,14 +48,19 @@ export default function Dashboard() {
     const location = useLocation();
     const [stats, setStats] = useState(null);
     const [loadingStats, setLoadingStats] = useState(true);
+    const [semaforo, setSemaforo] = useState(null);
     const currentUser = user || location.state?.user;
 
     useEffect(() => {
         if (!currentUser) return;
         const fetchStats = async () => {
             try {
-                const data = await apiRequest('/dashboard/stats');
+                const [data, sem] = await Promise.all([
+                    apiRequest('/dashboard/stats'),
+                    apiRequest('/dashboard/semaforo').catch(() => null),
+                ]);
                 setStats(data);
+                setSemaforo(sem);
             } catch (e) {
                 console.error('Dashboard stats error:', e);
             } finally {
@@ -148,6 +153,64 @@ export default function Dashboard() {
                         </Card>
                     ))}
                 </div>
+
+                {/* Semaforo Commesse */}
+                {semaforo && semaforo.total > 0 && (
+                    <Card className="border-gray-200" data-testid="widget-semaforo">
+                        <CardHeader className="bg-slate-50 border-b border-gray-200 py-3 px-5">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-sm font-semibold text-[#1E293B] flex items-center gap-2">
+                                    <AlertTriangle className="h-4 w-4 text-[#0055FF]" /> Stato Commesse
+                                </CardTitle>
+                                <div className="flex items-center gap-3">
+                                    {semaforo.counts.red > 0 && <span className="flex items-center gap-1 text-xs font-medium text-red-600"><span className="w-2.5 h-2.5 rounded-full bg-red-500" />{semaforo.counts.red}</span>}
+                                    {semaforo.counts.yellow > 0 && <span className="flex items-center gap-1 text-xs font-medium text-amber-600"><span className="w-2.5 h-2.5 rounded-full bg-amber-400" />{semaforo.counts.yellow}</span>}
+                                    {semaforo.counts.green > 0 && <span className="flex items-center gap-1 text-xs font-medium text-emerald-600"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />{semaforo.counts.green}</span>}
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <div className="divide-y divide-gray-100 max-h-[280px] overflow-y-auto">
+                                {semaforo.items.map((c) => {
+                                    const colors = {
+                                        red: { bg: 'bg-red-50', border: 'border-l-red-500', text: 'text-red-700', badge: 'bg-red-100 text-red-700' },
+                                        yellow: { bg: 'bg-amber-50', border: 'border-l-amber-400', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-700' },
+                                        green: { bg: 'bg-emerald-50', border: 'border-l-emerald-500', text: 'text-emerald-700', badge: 'bg-emerald-100 text-emerald-700' },
+                                    }[c.semaforo];
+                                    const StatusIcon = c.semaforo === 'red' ? AlertTriangle : c.semaforo === 'yellow' ? Clock : CheckCircle;
+                                    return (
+                                        <div
+                                            key={c.commessa_id}
+                                            data-testid={`semaforo-${c.commessa_id}`}
+                                            className={`flex items-center gap-3 px-4 py-3 border-l-4 ${colors.border} ${colors.bg} hover:brightness-95 cursor-pointer transition-all`}
+                                            onClick={() => navigate(`/commesse/${c.commessa_id}`)}
+                                        >
+                                            <StatusIcon className={`h-4 w-4 shrink-0 ${colors.text}`} />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-medium text-[#1E293B] truncate">{c.numero || ''} {c.title}</span>
+                                                </div>
+                                                <p className="text-xs text-slate-500 truncate">{c.client_name || 'Nessun cliente'}</p>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                {c.days_left !== null && c.days_left !== undefined ? (
+                                                    <Badge className={`${colors.badge} text-xs font-mono`}>
+                                                        {c.days_left < 0 ? `${Math.abs(c.days_left)}gg ritardo` : c.days_left === 0 ? 'Oggi' : `${c.days_left}gg`}
+                                                    </Badge>
+                                                ) : (
+                                                    <span className="text-xs text-slate-400">No scadenza</span>
+                                                )}
+                                                {c.prod_total > 0 && (
+                                                    <p className="text-xs text-slate-400 mt-0.5">{c.prod_done}/{c.prod_total} fasi</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Fatturato Mensile Chart + Quality Score */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

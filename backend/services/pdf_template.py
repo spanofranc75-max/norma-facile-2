@@ -236,6 +236,36 @@ body {
     background: #fafafa;
 }
 
+/* ── PAYMENT SCHEDULE ── */
+.payment-schedule {
+    margin-top: 12px;
+    padding: 8px;
+    border: 1px solid #999;
+    background: #f9f9f9;
+}
+.schedule-title {
+    font-size: 9pt;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+}
+.schedule-table th {
+    background: #e8e8e8;
+    border: 1px solid #ccc;
+    padding: 3px 6px;
+    font-weight: bold;
+    text-align: center;
+}
+.schedule-table td {
+    border: 1px solid #ccc;
+    padding: 3px 6px;
+}
+
 /* ── TRANSPORT INFO (DDT) ── */
 .transport-table {
     width: 100%;
