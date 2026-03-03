@@ -145,10 +145,16 @@ export default function PreventivoEditorPage() {
         ]).then(([cl, th, co, pt]) => {
             setClients(cl.clients || []);
             setThermalRef(th);
-            setBankAccounts(co.bank_accounts || []);
+            const accounts = co.bank_accounts || [];
+            setBankAccounts(accounts);
             setPaymentTypes(pt.items || []);
+            // Auto-select default bank account for new preventivi
+            if (isNew && accounts.length > 0) {
+                const defaultAcc = accounts.find(a => a.predefinito) || accounts[0];
+                setForm(f => (!f.iban ? { ...f, iban: defaultAcc.iban, banca: defaultAcc.bank_name } : f));
+            }
         });
-    }, []);
+    }, [isNew]);
 
     useEffect(() => {
         if (isNew) return;
@@ -272,7 +278,7 @@ export default function PreventivoEditorPage() {
                 client_id: form.client_id || null,
                 lines: form.lines.map(l => ({
                     ...l, quantity: parseFloat(l.quantity) || 1, unit_price: parseFloat(l.unit_price) || 0,
-                    sconto_1: parseFloat(l.sconto_1) || 0,
+                    sconto_1: parseFloat(l.sconto_1) || 0, sconto_2: parseFloat(l.sconto_2) || 0,
                 })),
                 acconto: parseFloat(form.acconto) || 0,
                 sconto_globale: parseFloat(form.sconto_globale) || 0,
@@ -684,7 +690,7 @@ export default function PreventivoEditorPage() {
                                                 <option value="">-- Seleziona conto --</option>
                                                 {bankAccounts.map((acc, i) => (
                                                     <option key={acc.account_id || i} value={acc.iban}>
-                                                        {acc.bank_name} — {acc.iban}
+                                                        {acc.predefinito ? '\u2605 ' : ''}{acc.bank_name} — {acc.iban}
                                                     </option>
                                                 ))}
                                             </select>

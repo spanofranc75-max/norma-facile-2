@@ -47,6 +47,8 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 
 ## Bug Risolti (sessione corrente - 3 Marzo 2026)
 - **P0 FIX: Dropdown conti bancari vuoto nell'editor preventivi** - L'endpoint API chiamato era errato (`/company/` invece di `/company/settings`). Fix applicato in `PreventivoEditorPage.js` linea 143.
+- **P0 FIX: Errore 422 al salvataggio preventivo** - `sconto_2` (stringa vuota) non veniva convertito a float prima dell'invio. Aggiunto conversione frontend + validators difensivi backend su `QuoteLine` e `PreventivoCreate`.
+- **Enhancement: Conto predefinito** - Stellina ★ nel dropdown per il conto marcato come predefinito. Auto-selezione del conto predefinito per nuovi preventivi.
 
 ## Issue Pendenti
 - **P2**: Validazione Pydantic su dati migrati (response_model rimosso temporaneamente)

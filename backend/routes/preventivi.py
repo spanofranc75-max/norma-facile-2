@@ -44,6 +44,15 @@ class QuoteLine(BaseModel):
     thermal_data: Optional[ThermalData] = None
     notes: Optional[str] = None
 
+    @validator("sconto_1", "sconto_2", "unit_price", "quantity", pre=True)
+    def parse_float_fields(cls, v):
+        if v is None or v == "":
+            return 0
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return 0
+
 
 class PreventivoCreate(BaseModel):
     client_id: Optional[str] = None
@@ -69,6 +78,15 @@ class PreventivoCreate(BaseModel):
     classe_esecuzione: Optional[str] = None  # "EXC1", "EXC2", "EXC3", "EXC4"
     # Tempi di consegna
     giorni_consegna: Optional[int] = None  # es. 30 giorni
+
+    @validator("giorni_consegna", pre=True)
+    def parse_giorni(cls, v):
+        if v is None or v == "":
+            return None
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            return None
 
 
 class PreventivoUpdate(BaseModel):
