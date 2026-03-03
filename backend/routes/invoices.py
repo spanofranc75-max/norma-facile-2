@@ -404,7 +404,7 @@ async def create_invoice(
     if not due_date and invoice_data.document_type == DocumentType.FATTURA:
         due_date = invoice_service.calculate_due_date(
             invoice_data.issue_date,
-            invoice_data.payment_terms.value
+            invoice_data.payment_terms
         )
     
     invoice_doc = {
@@ -417,7 +417,7 @@ async def create_invoice(
         "due_date": due_date.isoformat() if due_date else None,
         "status": InvoiceStatus.BOZZA.value,
         "payment_method": invoice_data.payment_method.value,
-        "payment_terms": invoice_data.payment_terms.value,
+        "payment_terms": invoice_data.payment_terms,
         "tax_settings": invoice_data.tax_settings.model_dump(),
         "lines": calculated_lines,
         "totals": totals.model_dump(),
@@ -483,7 +483,7 @@ async def update_invoice(
     if invoice_data.payment_method:
         update_dict["payment_method"] = invoice_data.payment_method.value
     if invoice_data.payment_terms:
-        update_dict["payment_terms"] = invoice_data.payment_terms.value
+        update_dict["payment_terms"] = invoice_data.payment_terms
     if invoice_data.notes is not None:
         update_dict["notes"] = invoice_data.notes
     if invoice_data.internal_notes is not None:
