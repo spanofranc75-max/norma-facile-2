@@ -1,106 +1,59 @@
 <analysis>**original_problem_statement:**
 The user's initial project was to build a Quality Hub application. This has since expanded into a full-fledged ERP for their metalworking business, Norma Facile 2.0. The application is now in a Founder Mode deployment phase, where the user is performing live testing, identifying bugs, and preparing for daily operational use.
 
-Key features implemented include:
-- A Quality Hub (Documents, Equipment, Welders, Audits).
-- Compliance modules for EN 1090 (Structures) and EN 13241 (Gates).
-- An intelligent Split Commessa feature for handling mixed-content job orders.
-- An Accounts Payable module integrated with **Fatture in Cloud** for importing supplier invoices.
-- An automated material traceability system (Smart ISO 3834).
-- A manual data backup and restore system.
-- A full UI/UX redesign and a robust Roles & Permissions system.
-
-The current focus is on stabilizing the application, fixing bugs discovered during user testing, ensuring all real-world data is correctly migrated and handled, and preparing for final deployment. The user has also requested a layout fix for the quote editor table.
+The user's ongoing requests focus on stabilizing the application, fixing bugs discovered during their hands-on testing, ensuring all real-world data is correctly handled, and adding new features to streamline their workflow. The current request is to enhance the payment terms system to support a new calculation type: 30 giorni data fattura fine mese + 10 giorni (30 days from invoice date end-of-month + 10 days).
 
 **User's preferred language**: Italian. The user communicates exclusively in Italian. The next agent **MUST** respond in Italian.
 
 **what currently exists?**
-The application is a comprehensive, full-stack solution with a React frontend, FastAPI backend, and MongoDB database. It is feature-rich but has undergone significant recent debugging and data recovery.
+The application is a comprehensive, full-stack ERP (React frontend, FastAPI backend, MongoDB) with core features for quotes, invoices, clients, traceability (commesse), and settings.
 
 Key systems recently implemented or fixed:
--   **Automatic Notifications (Cane da Guardia):** A background scheduler checks for expiring items (welder certs, etc.) and sends email alerts.
--   **QR Code Generation:** Job orders have a QR code that links to their specific page.
--   **Data Migration & Recovery:** A system to migrate data (clients, quotes, invoices) from the user's previous application has been successfully used to recover data that was accidentally deleted during a cleanup operation.
--   **Fatture in Cloud Integration (Live):** The system can now import supplier invoices directly from Fatture in Cloud (Importa da SDI) with full line-item details, which is critical for material traceability.
--   **Manual Invoice Import:** The manual import feature has been enhanced to support multiple files and the  format (digitally signed invoices from PEC).
--   **Data Cleanup:** Test data has been purged from most collections, and the database now contains the user's real migrated data.
+-   **Invoicing System Overhaul:** A series of critical bugs in the invoicing workflow were fixed, including document numbering (now ignores deleted documents), list sorting, data validation (422 and 500 errors), PDF generation (preview loop and content), and allowing negative values for credit notes.
+-   **Auto-population of Invoice Fields:** When a client is selected in an invoice, their default payment terms and the calculated due date are now automatically populated.
+-   **Real-Time Site Dashboard (Semaforo):** A traffic light widget was added to the main dashboard to show the status of all active production jobs (on time, at risk, delayed) and now also includes phase-level delay tracking.
+-   **Automatic WPS Generation:** A new module was created to suggest the correct Welding Procedure Specification (WPS) for EN 1090 jobs based on material, thickness, and welder qualifications.
+-   **Payment Schedule in Quote PDF:** Quote PDFs now include a detailed table summarizing the payment installments.
+-   **Data Migration Guidance:** The user was successfully guided on how to perform a backup and restore operation to move data from the preview environment to the deployment environment.
 
 **Last working item**:
-- **Last item agent was working:** The user requested a layout fix for the items table in the quote editor (), providing specific instructions to make the Descrizione column much wider for better readability.
-- **Status:** NOT STARTED
+- **Last item agent was working:** The user needs to create a payment term of type 30 giorni data fattura fine mese + 10 giorni (30 days from invoice date, end of month + 10 days). The current system supports end of month logic but lacks the ability to add a subsequent number of days. The agent has started analyzing the code to add this functionality.
+- **Status:** IN PROGRESS
 - **Agent Testing Done:** N
-- **Which testing method agent to use?** Frontend testing agent. The agent should verify the table layout on the , ensuring the Descrizione column is significantly wider and other columns are compacted as per the user's request. A screenshot can be used for final verification.
+- **Which testing method agent to use?** Both. Frontend for testing the UI dialog and client-side date calculations. Backend for testing the model changes and ensuring data is saved and retrieved correctly.
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Fix Quote Table Layout (P0)**
--   **Issue 2: Inconsistent Frontend Authentication (P1)**
--   **Issue 3: Pydantic Validation on Migrated Data (P2)**
--   **Issue 4: Frontend Caching Issues (P2)**
+-   **Issue 1: Implement End of Month + N Days Payment Logic (P0)**
 
 **Issues Detail:**
--   **Issue 1: Fix Quote Table Layout**
-    -   **Attempted fixes:** None. The task has just been assigned.
+-   **Issue 1: Implement End of Month + N Days Payment Logic**
+    -   **Attempted fixes:** The agent has identified the key files for this change:  (UI),  (client-side calculation), and the corresponding backend models.
     -   **Next debug checklist:**
-        1.  Locate the table component, likely within .
-        2.  Modify the Tailwind CSS classes of the table grid/flex layout.
-        3.  Assign a large width/flex-grow property to the Descrizione column ( or ).
-        4.  Assign smaller, fixed, or percentage-based widths to the numeric columns (Q.tà, Prezzo, etc.).
-        5.  Ensure the layout is responsive and scrolls horizontally on small screens.
-    -   **Why fix this issue and what will be achieved with the fix?** The current layout makes it difficult to read long, technical descriptions in quotes, which is a core part of the user's workflow. The fix will significantly improve the usability of the quote editor.
-    -   **Status:** NOT STARTED
+        1.  In , add an optional integer field like  to the  model.
+        2.  In , add a new number input field (e.g., Giorni successivi) that becomes visible only when the Fine Mese checkbox is ticked for an installment.
+        3.  Update the save logic in  to include this new  field in the payload.
+        4.  In , modify the  function. When an installment has , after calculating the end-of-month date, check for  and add them to the result.
+        5.  Apply the same logic in  for the automatic due date calculation.
+    -   **Why fix this issue and what will be achieved with the fix?** This will complete a user-requested feature, allowing them to model all their real-world payment terms accurately within the system, increasing its utility.
+    -   **Status:** IN PROGRESS
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Frontend
-
--   **Issue 2: Inconsistent Frontend Authentication**
-    -   **Attempted fixes:** The agent fixed this bug on  and  by replacing calls to a legacy JWT-based helper () with a modern approach that uses session cookies ( or  with ).
-    -   **Next debug checklist:**
-        1.  Globally search the  directory for any remaining instances of .
-        2.  For each file found, replace the API call with the  utility from .
-        3.  If  is not suitable, use a standard  call and ensure  is set in the options.
-    -   **Why fix this issue and what will be achieved with the fix?** Pages with the old auth method fail to load data, causing crashes or empty states. A full fix will ensure all parts of the application work reliably with the current session-based authentication.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Frontend
-
--   **Issue 3: Pydantic Validation on Migrated Data**
-    -   **Attempted fixes:** The agent removed the strict  from several API endpoints (, ) that were failing when trying to serialize migrated data with slightly different field formats (e.g., enums, dates).
-    -   **Next debug checklist:**
-        1.  Identify all data models affected by migration (invoices, quotes, etc.).
-        2.  Review the Pydantic models (e.g., ) and compare them to the actual structure of the migrated data in MongoDB.
-        3.  Consider making the Pydantic models more flexible, e.g., by using  fields or creating dedicated migration models.
-        4.  A more robust solution would be to create a data transformation script to run once, updating all migrated data to conform to the current schema.
-    -   **Why fix this issue and what will be achieved with the fix?** Removing the  bypasses type safety and validation, making the API more brittle. A proper fix will ensure data consistency and allow the API to leverage Pydantic's benefits without crashing.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Backend
-
--   **Issue 4: Frontend Caching Issues**
-    -   **Attempted fixes:** The agent force-restarted the frontend service and instructed the user to perform a hard refresh (Ctrl+Shift+R) or use an incognito window.
-    -   **Next debug checklist:**
-        1.  This is likely a development environment configuration issue. The agent cannot directly fix it but should be aware of it.
-        2.  The primary mitigation is to consistently remind the user to perform a hard refresh after frontend changes are deployed.
-    -   **Why fix this issue and what will be achieved with the fix?** This issue caused significant confusion, as the user was testing an outdated version of the UI and reporting bugs that had already been fixed. Acknowledging and managing this reduces friction.
-    -   **Status:** BLOCKED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Frontend
+    -   **Should Test frontend/backend/both after fix?** Both
 
 **In progress Task List**:
--   **Task 1: Complete Founder Mode Deployment**
-    -   **Where to resume:** The application is nearly ready. The main remaining action is to ensure all data is clean and real, and all user-reported bugs are squashed before the user relies on it for daily business operations. The next step is fixing the quote table layout.
-    -   **What will be achieved with this?** A stable, production-ready application that the user can confidently use to run their business.
+-   **Task 1: Implement End of Month + N Days Payment Logic**
+    -   **Where to resume:** Modify the backend Pydantic model () to add the  field.
+    -   **What will be achieved with this?** The user will be able to configure their specific payment terms.
     -   **Status:** IN PROGRESS
     -   **Should Test frontend/backend/both after fix?** Both
-    -   **Blocked on something:** Pending bug fixes.
+    -   **Blocked on something:** No
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
 *   **P0: Digital Signature on Tablet:** Enhance the QR code feature to allow signing off on production phases directly in the workshop.
-*   **P1: Real-Time Site Dashboard:** A traffic light view of all active jobs (on time, at risk, delayed).
-*   **P2: Automatic WPS Generation:** Suggest the correct Welding Procedure Specification for EN 1090 jobs based on material and welder.
+*   **P1: Read-Only Customer Portal for job tracking.**
 
 **Future Tasks:**
-*   Read-Only Customer Portal for job tracking.
 *   Predictive Margin Analysis for new quotes.
 *   Production Calendar/Gantt Chart for visual planning.
 *   OCR for automatic data entry from supplier delivery notes.
@@ -108,99 +61,94 @@ Key systems recently implemented or fixed:
 *   PWA capabilities for offline access.
 *   Migrate Base64 certificate storage to a dedicated object storage solution.
 *   Implement versioning for key documents.
-*   Implement the Restore from Backup functionality.
 
 **Completed work in this session**
-- **Feature: Automatic Notifications (Cane da Guardia):** Implemented a background scheduler and UI to notify users of upcoming document expirations.
-- **Feature: QR Code Generation:** Added a feature to generate QR codes for job orders.
-- **Data Recovery: Restored Lost Production Data:** After an accidental deletion, the agent successfully migrated and restored clients, quotes, and invoices from the user's old application instance.
-- **Bug Fix & Enhancement (Fatture in Cloud):** Re-enabled the missing Importa da SDI button and fixed the underlying sync logic to fetch full invoice line-item details, making the traceability feature functional.
-- **Bug Fix (Data Visibility):** Resolved multiple critical bugs where real data was not appearing in the UI. This included fixing an invoice date filter, removing strict Pydantic validation that crashed on migrated data, and fixing authentication on several pages.
-- **Bug Fix (Deletion Errore di rete):** Fixed a frontend error handling and backend logic issue that prevented users from deleting clients with associated records.
-- **Bug Fix (Usability):** Fixed numerous UI bugs reported by the user, including a dialog closing prematurely, clients and suppliers being mixed, and the delete button being hidden on invoices.
-- **Enhancement (Invoice Import):** Improved the manual import to support multiple files and the  format.
-- **Enhancement (Sorting):** Changed the default sort order for invoices to be descending by date.
+-   **Bug Fix: Invoicing System Overhaul:** Resolved multiple critical bugs related to saving invoices (422, 500 errors), document numbering (now ignores deleted records), list sorting, and PDF preview looping/content.
+-   **Feature: Invoice Number Manual Edit:** The invoice number is now an editable field in the UI.
+-   **Feature: Auto-populate Invoice Fields:** The invoice editor now automatically fills in the payment terms and calculates the due date when a client is selected.
+-   **Feature: Negative Values in Invoice Lines:** Enabled negative quantity/price in invoice lines to handle credit notes and advance payment deductions. Removed default numeric values to reduce user confusion.
+-   **Feature: Traffic Light Dashboard & Phase Tracking:** Implemented a dashboard widget for job status and enhanced it with planned dates () for individual production phases.
+-   **Feature: Automatic WPS Generator:** Created a full-featured module for generating Welding Procedure Specifications.
+-   **Feature: Payment Schedule in Quote PDF:** Quote PDFs now contain a summary table of payment installments.
+-   **Bug Fix: Bank Account Dropdown:** Fixed a Pydantic validation bug that prevented company settings (including bank accounts) from being saved correctly.
+
+**Earlier issues found/mentioned but not fixed**
+-   **Issue 1: Pydantic Validation on Migrated Data**
+    -   **Debug checklist:** Identify models affected by old data (invoices, quotes). Make Pydantic models more flexible using  fields or create a data migration script.
+    -   **Why to solve this issue and what will be achieved with this?** Re-enabling strict  validation will make the API more robust and prevent potential data-related bugs. It is currently a source of technical debt.
+    -   **Should Test frontend/backend/both after fix:** Backend
+    -   **Is recurring issue?** Y
 
 **Code Architecture**
-
+extra_daysextra_daysextra_days
 
 **Key Technical Concepts**
-*   **Background Scheduling:** Using  within a FastAPI lifespan event to run periodic jobs.
-*   **Data Migration & Recovery:** Performing a critical data restore by fetching a JSON dump from another application's API endpoint and mapping it to the current schema.
-*   **Debugging CORS & Credentialed Requests:** Diagnosing browser security issues where  conflicts with wildcard origins, preventing the frontend from reading API error responses.
-*   **PKCS#7 Parsing:** Using OpenSSL as a fallback to extract XML from  signed files.
-*   **API Detail vs. List Calls:** Understanding and fixing a bug where a list API endpoint (from Fatture in Cloud) did not provide the necessary detail (line items), requiring individual detail calls for each item.
-*   **Defensive Frontend State Management:** Fixing JavaScript errors by ensuring components correctly handle API response structures (e.g., unwrapping an array from an object  before calling ).
-*   **Pydantic Loosening:** Temporarily removing strict  validation on API endpoints to handle inconsistencies in migrated data, as a workaround to prevent crashes.
+-   **Pydantic Model Evolution:** The session required evolving Pydantic models from strict Enums to flexible strings () and adding validators to handle empty strings from the frontend, resolving multiple 422 errors.
+-   **Dynamic Document Numbering:** The invoice numbering logic was refactored from a simple counter to a dynamic function that scans the database for the true maximum number, making it resilient to document deletions.
+-   **Client-Side Data Hydration & Calculation:** Implemented logic in  to automatically calculate and set the  state based on the selected , improving user experience.
+-   **Authenticated Fetch for Binary Data:** Solved the PDF preview loop by fetching the PDF as a blob with  and then creating an object URL for the , a standard pattern for displaying protected binary content in SPAs.
 
 **key DB schema**
--   **invoices**: Data restored from migration.  field now allows deletion even if not 'bozza'.
--   **received_invoices**: Now populated with full  from Fatture in Cloud detail calls. All test data cleared.
--   **clients**: Now filtered by  in the UI to separate from suppliers.
--   **quotes**: Data restored from migration.
--   **notifications**: New collection to store scheduled alerts ().
+-   **invoices**:  field changed from an Enum-like string to a free-form .  is the canonical, user-facing invoice number.
+-   **commesse**: The  array objects now include an optional  (datetime) field.
+-   **wps_procedures**: New collection storing the WPS knowledge base.
+-   **payment_types**: The  array objects will need a new field, .
 
 **All files of reference**
-*   **/app/frontend/src/pages/PreventivoEditorPage.js**: The target for the immediate next fix.
-*   **/app/frontend/src/pages/FatturazionePage.js**: Heavily modified to fix data visibility, sorting, and deletion.
-*   **/app/frontend/src/pages/FattureRicevutePage.js**: Heavily modified to add Importa da SDI and enhance manual import.
-*   **/app/frontend/src/pages/TracciabilitaPage.js**: Fixed a critical crash due to auth and state management bugs.
-*   **/app/backend/routes/fatture_ricevute.py**: Contains the core logic for syncing invoices from Fatture in Cloud.
-*   **/app/backend/routes/invoices.py**: Modified to fix data visibility for migrated invoices.
-*   **/app/backend/routes/migration.py**: Contains the logic used for the successful data recovery.
-*   **/app/frontend/src/utils/api.js**: The central API utility, improved for better error handling.
+*   **/app/frontend/src/components/PaymentTypeDialog.js**: The UI for creating payment terms. Needs modification for the current task.
+*   **/app/frontend/src/utils/date.js**: The client-side date calculation logic. Needs modification.
+*   **/app/frontend/src/pages/InvoiceEditorPage.js**: The page where the automatic due date calculation is used.
+*   **/app/backend/models/payment_type.py**: The backend model defining the payment type structure. Needs modification.
+
+**Areas that need refactoring**:
+*    and  remain large and complex. Breaking them down into smaller, focused components (e.g., , ) would improve maintainability.
+*   The sorting of the invoice list is done on the frontend. A more robust long-term solution would be to store a sortable version of the invoice number in the database and sort on the backend.
 
 **Critical Info for New Agent**
 *   **You MUST respond in Italian.**
-*   **The user is testing on the PREVIEW URL.** The user was confused between the production deployment URL () and the live preview URL (). All new changes are visible ONLY on the  URL. You must remind the user of this and to perform a hard refresh (Ctrl+Shift+R) to avoid cache issues.
-*   **Data integrity is paramount.** The agent previously deleted real data by mistake, causing a major incident that required a complex data recovery. Be extremely cautious when running cleanup scripts or deleting data. Always confirm with the user.
-*   **The traceability feature is critical.** It depends entirely on the line-item details from supplier invoices. The Importa da SDI (Fatture in Cloud sync) has been fixed to fetch this data, and this functionality must be preserved.
-*   **There is known technical debt:**
-    *   Some frontend pages may still have the old, broken authentication logic ().
-    *   API endpoints handling migrated data may crash if strict Pydantic validation is re-introduced.
+*   **The immediate priority (P0) is to implement the End of Month + N Days logic for payment terms.** The user is waiting for this feature.
+*   The invoicing workflow has been a major source of bugs. Be extremely careful when making changes to any file related to invoices. Test thoroughly.
+*   Always remind the user to perform a hard refresh (**Ctrl+Shift+R**) after you deploy frontend changes to avoid them testing a cached, older version of the app.
 
 **documents and test reports created in this job**
-*   : Generated after implementing notifications and QR codes. Reported 24/24 backend tests and 100% frontend coverage passed, but the user found numerous bugs manually afterward.
-*    and  were updated.
+*   
+*   
+*   
+*   
+*    was updated.
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **(PENDING)** User provides a detailed request with a screenshot to fix the layout of the quote editor table, making the Descrizione column wider.
-9.  User reports the Tracciabilità page is still crashing. (Fixed)
-8.  User asks why invoices are not sorted with the most recent on top. (Fixed)
-7.  User reports they cannot find the delete button on the sales invoices page. (Fixed)
-6.  User reports the Tracciabilità page crashes and sales invoices are not visible. (Fixed)
-5.  User asks why suppliers are appearing in the client list. (Fixed)
-4.  User reports that clicking Contanti in the payment dialog closes it without saving. (Fixed)
-3.  User reports that the invoice import from SDI doesn't include the description of goods, making traceability useless. (Fixed)
-2.  User reports that in the Cost Control page, they can see test invoices and asks for a way to delete them. Also reports the Importa da SDI button is not working/visible. (Fixed)
-1.  User explains they import invoices manually from PEC and don't have a direct SDI connection, asking for  and multi-upload support. (Implemented)
+10. **(PENDING)** User asks for help to create a payment term of type 30 giorni data fattura fine mese + 10 giorni.
+9.  User reports two issues: invoice counter includes deleted invoices, and the invoice list is not sorted correctly by number.
+8.  User reports two issues: default numbers in cells are confusing, and they need to subtract an advance payment using a negative value.
+7.  User reports PDF preview shows the wrong payment term description ( instead of ).
+6.  User reports a 404 error in the PDF preview modal.
+5.  User reports a 422 error; the due date is not being auto-populated when payment terms are set.
+4.  User reports a persistent 500 error after the previous fix.
+3.  User reports a 422 error when saving an invoice with a custom payment term.
+2.  User reports that selecting a client in the invoice editor does not auto-populate their default payment terms.
+1.  User reports three initial issues: invoice counter started from 3, invoice number is not manually editable, and PDF preview is in a loop.
 
 **Project Health Check:**
-*   **Working:** All core features are functional after a significant round of bug fixing and data recovery. All integrations are active. Data has been restored to a clean, production-ready state.
+*   **Working:** The core ERP workflows for quotes, invoices, and production management are stable. Recently added features like the WPS generator and traffic light dashboard are complete.
 *   **Broken:**
-    *   The user experience of the quote editor table is poor due to a cramped layout.
-*   **Mocked:** All known mock data has been removed from the application, specifically from the .
+    *   The payment term creation system cannot handle the user's specific EOM + N days requirement, which is the current active task.
+*   **Mocked:** No mocked data.
 
 **3rd Party Integrations**
-*   **Fatture in Cloud:** Fully integrated and active for importing supplier invoices. Fixed to pull detailed line items.
-*   **Resend:** Used for sending email notifications (Cane da Guardia).
+*   **Fatture in Cloud:** For importing supplier invoices.
+*   **Resend:** For sending email notifications.
 *   **Google Auth:** Emergent-managed for user login.
 *   **WeasyPrint & pypdf:** For backend PDF generation.
 
 **Testing status**
-- **Testing agent used after significant changes:** YES, once at the beginning of the session. It reported a full pass, but the user subsequently found numerous critical bugs through manual testing, indicating the test suite was not comprehensive enough to cover real-world data and auth scenarios.
-- **Troubleshoot agent used after agent stuck in loop:** NO.
-- **Test files created:** .
-- **Known regressions:**
-    - An accidental data deletion occurred during a cleanup.
-    - Multiple pages were found to have outdated authentication logic, which broke them after a session management change.
+-   **Testing agent used after significant changes:** YES. The testing agent was used multiple times to validate large features and bug fixes, achieving 100% pass rates.
+-   **Troubleshoot agent used after agent stuck in loop:** NO.
+-   **Test files created:** Multiple  files were created.
+-   **Known regressions:** None currently active. Previous regressions were caught and fixed within the session.
 
 **Credentials to test flow:**
-*   Primary login is via the Google OAuth flow on the live preview URL.
-*   The  token is configured in  and is working.
+*   Login is via the Google OAuth flow on the preview URL.
 
 **What agent forgot to execute**
-- The agent initially failed to recognize that the user was testing on an outdated, deployed URL, leading to significant confusion and wasted time debugging issues that were already fixed on the preview URL.
-- The agent performed a data cleanup that accidentally deleted real, migrated user data, requiring a critical data recovery operation.
-- The agent's initial implementation of the  sync did not fetch line-item details, rendering the traceability feature useless until it was reported by the user and fixed.
-- The initial round of testing via the testing agent failed to catch numerous critical bugs related to authentication on different pages and validation errors with migrated data, which were only found later by the user.</analysis>
+*   The agent has been thorough in addressing user requests as they came in. No major tasks were forgotten. The current task is a direct continuation of the user's last message.</analysis>
