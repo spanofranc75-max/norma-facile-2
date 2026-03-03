@@ -1,5 +1,5 @@
 """Invoice models for fatturazione elettronica."""
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, validator
 from typing import Optional, List
 from datetime import datetime, date
 from enum import Enum
@@ -64,14 +64,23 @@ class InvoiceLineBase(BaseModel):
     """Base invoice line item."""
     code: Optional[str] = None
     description: str
-    quantity: float = Field(default=1.0, ge=0)
+    quantity: float = Field(default=1.0)
     unit_price: float = Field(default=0)
-    discount_percent: float = Field(default=0.0, ge=0, le=100)
+    discount_percent: float = Field(default=0.0)
     vat_rate: str = "22"  # Can be number or code like N4
     
     # Calculated fields (computed on save)
     line_total: Optional[float] = None
     vat_amount: Optional[float] = None
+
+    @validator("quantity", "unit_price", "discount_percent", pre=True)
+    def parse_numeric(cls, v):
+        if v is None or v == "":
+            return 0
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return 0
 
 
 class InvoiceLineCreate(InvoiceLineBase):

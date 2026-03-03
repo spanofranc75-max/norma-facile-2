@@ -85,9 +85,9 @@ const VAT_RATES = [
 const emptyLine = {
     code: '',
     description: '',
-    quantity: 1,
-    unit_price: 0,
-    discount_percent: 0,
+    quantity: '',
+    unit_price: '',
+    discount_percent: '',
     vat_rate: '22',
 };
 
@@ -222,8 +222,11 @@ export default function InvoiceEditorPage() {
         const vatBreakdown = {};
 
         formData.lines.forEach(line => {
-            const gross = line.quantity * line.unit_price;
-            const discount = gross * (line.discount_percent / 100);
+            const qty = parseFloat(line.quantity) || 0;
+            const price = parseFloat(line.unit_price) || 0;
+            const disc = parseFloat(line.discount_percent) || 0;
+            const gross = qty * price;
+            const discount = gross * (disc / 100);
             const net = gross - discount;
             
             let vatRate = 0;
@@ -664,8 +667,8 @@ export default function InvoiceEditorPage() {
                             </TableHeader>
                             <TableBody>
                                 {formData.lines.map((line, index) => {
-                                    const gross = line.quantity * line.unit_price;
-                                    const discount = gross * (line.discount_percent / 100);
+                                    const gross = (parseFloat(line.quantity) || 0) * (parseFloat(line.unit_price) || 0);
+                                    const discount = gross * ((parseFloat(line.discount_percent) || 0) / 100);
                                     const lineTotal = gross - discount;
                                     
                                     return (
@@ -704,9 +707,8 @@ export default function InvoiceEditorPage() {
                                                     type="number"
                                                     data-testid={`line-qty-${index}`}
                                                     value={line.quantity}
-                                                    onChange={(e) => updateLine(index, 'quantity', parseFloat(e.target.value) || 0)}
-                                                    className="h-8 text-sm text-right"
-                                                    min="0"
+                                                    onChange={(e) => updateLine(index, 'quantity', e.target.value)}
+                                                    className="h-8 text-sm text-right [&::-webkit-inner-spin-button]:appearance-none"
                                                     step="0.01"
                                                 />
                                             </TableCell>
@@ -715,9 +717,8 @@ export default function InvoiceEditorPage() {
                                                     type="number"
                                                     data-testid={`line-price-${index}`}
                                                     value={line.unit_price}
-                                                    onChange={(e) => updateLine(index, 'unit_price', parseFloat(e.target.value) || 0)}
-                                                    className="h-8 text-sm text-right"
-                                                    min="0"
+                                                    onChange={(e) => updateLine(index, 'unit_price', e.target.value)}
+                                                    className="h-8 text-sm text-right [&::-webkit-inner-spin-button]:appearance-none"
                                                     step="0.01"
                                                 />
                                             </TableCell>
@@ -726,9 +727,8 @@ export default function InvoiceEditorPage() {
                                                     type="number"
                                                     data-testid={`line-discount-${index}`}
                                                     value={line.discount_percent}
-                                                    onChange={(e) => updateLine(index, 'discount_percent', parseFloat(e.target.value) || 0)}
-                                                    className="h-8 text-sm text-right"
-                                                    min="0"
+                                                    onChange={(e) => updateLine(index, 'discount_percent', e.target.value)}
+                                                    className="h-8 text-sm text-right [&::-webkit-inner-spin-button]:appearance-none"
                                                     max="100"
                                                 />
                                             </TableCell>
