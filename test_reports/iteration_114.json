@@ -1,0 +1,106 @@
+{
+  "summary": "Complete testing of ScadenziarioPage Invoicex-style table restyling. All 9 backend pytest tests passed. Frontend UI verified: (1) Summary bar with Da Pagare/Da Incassare/Scaduti/Acquisti Anno KPIs, (2) Filter section with Fornitori/Clienti toggle, date range filters, fornitore search, solo da pagare checkbox, (3) Invoicex-style table with sortable columns (Data Scad., Pagata, Importo, Da Pagare, Documento, Data Doc., Pagamento, Fornitore, Stato), (4) Footer with Totale/Già Pagate/Da Pagare totals, (5) Amber/warm colors for overdue items, (6) Segna Pagato button triggers payment and updates UI.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "summary_bar_kpis": {
+      "feature": "Summary bar with Da Pagare, Da Incassare, Scaduti, Acquisti Anno",
+      "status": "PASS",
+      "data_testids": ["total-da-pagare", "total-da-incassare", "total-scaduti"],
+      "details": "All 4 KPIs visible in summary bar with correct formatting"
+    },
+    "filter_toggle_fornitori_clienti": {
+      "feature": "Toggle Fornitori/Clienti filter",
+      "status": "PASS",
+      "data_testids": ["vista-fornitori", "vista-clienti"],
+      "details": "Toggle switches between Fornitori and Clienti views. Label changes to Cliente in Clienti view."
+    },
+    "date_range_filters": {
+      "feature": "Date range filters (data dal/al)",
+      "status": "PASS",
+      "data_testids": ["filter-data-dal", "filter-data-al"],
+      "details": "Date inputs filter scadenze by data_scadenza range"
+    },
+    "fornitore_search_filter": {
+      "feature": "Fornitore/Cliente search filter",
+      "status": "PASS",
+      "data_testid": "filter-fornitore",
+      "details": "Text search filters by fornitore name in sottotitolo and titolo"
+    },
+    "solo_da_pagare_checkbox": {
+      "feature": "Solo da pagare checkbox filter",
+      "status": "PASS",
+      "data_testid": "filter-solo-da-pagare",
+      "details": "Checkbox excludes items with 0 amount when checked"
+    },
+    "table_sortable_columns": {
+      "feature": "Sortable table columns (Data Scad., Importo, Fornitore)",
+      "status": "PASS",
+      "details": "Clicking column headers toggles sort direction. ChevronUp/Down icons show sort state."
+    },
+    "table_columns_invoicex_style": {
+      "feature": "Table with Invoicex-style columns",
+      "status": "PASS",
+      "columns": ["#", "Data Scad.", "Pagata", "Importo", "Da Pagare", "Documento", "Data Doc.", "Pagamento", "Fornitore/Cliente", "Stato"],
+      "details": "Slate-700 bg header with white text. All expected columns present."
+    },
+    "overdue_rows_amber_bg": {
+      "feature": "Overdue rows have amber/warm background",
+      "status": "PASS",
+      "details": "Rows with stato='scaduto' use bg-red-50/60 (very light pink/amber). Text uses amber-700 for readability instead of hard red."
+    },
+    "footer_totals": {
+      "feature": "Footer with Totale/Già Pagate/Da Pagare",
+      "status": "PASS",
+      "data_testid": "footer-totals",
+      "details": "Footer shows Totale, Già Pagate (always 0 currently), Da Pagare with amber styling"
+    },
+    "segna_pagato_button": {
+      "feature": "Segna Pagato button on payment items",
+      "status": "PASS",
+      "data_testid": "pay-btn-{id}",
+      "details": "Check icon button triggers POST /api/fatture-ricevute/{id}/pagamenti. Toast shows 'Pagamento registrato'. Item removed from list after payment."
+    },
+    "backend_data_documento_field": {
+      "feature": "Backend returns data_documento in scadenze items",
+      "status": "PASS",
+      "details": "Dashboard endpoint includes data_documento from fattura for display in Data Doc. column"
+    },
+    "backend_pagamento_field": {
+      "feature": "Backend returns pagamento in scadenze items",
+      "status": "PASS",
+      "details": "Dashboard endpoint includes pagamento (from condizioni_pagamento) for display in Pagamento column"
+    },
+    "clienti_view_incasso_items": {
+      "feature": "Clienti view shows incasso items",
+      "status": "PASS",
+      "details": "Switching to Clienti view filters to tipo='incasso' from invoices scadenze_pagamento"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration114_invoicex_scadenziario.py",
+    "/app/test_reports/pytest/iteration114_invoicex_scadenziario_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration114_invoicex_scadenziario.py"
+  ],
+  "success_rate": {
+    "backend": "100% (9/9 pytest tests passed)",
+    "frontend": "100% (all UI features verified via Playwright)"
+  },
+  "test_credentials": "Created and cleaned up test_session_114_*, test_invoicex_114_* users/sessions",
+  "seed_data_creation": "Test fatture_ricevute and invoices created during tests, all cleaned up",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "ScadenziarioPage Invoicex-style table restyling complete. Key components: (1) ScadenziarioPage.js uses DashboardLayout with summary bar KPIs at top, filter section with toggles/date/search, and Invoicex-style table, (2) Backend endpoint GET /api/fatture-ricevute/scadenziario/dashboard returns scadenze array with new fields: data_documento, pagamento, (3) Table headers use slate-700 bg, overdue rows use bg-red-50/60, (4) Footer totals show Totale/Già Pagate/Da Pagare, (5) Segna Pagato button calls POST /{id}/pagamenti API, (6) Sort state managed by sortBy/sortDir, filters by vista/dataScadDal/dataScadAl/searchFornitore/soloDaPagare.",
+  "rca_of_the_issue": null
+}
