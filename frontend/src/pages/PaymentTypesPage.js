@@ -378,7 +378,11 @@ export default function PaymentTypesPage() {
                                                     <TableCell className="font-mono text-xs text-slate-500">{item.codice_fe || '—'}</TableCell>
                                                     <TableCell className="text-xs font-mono">{getScadenzeSummary(item)}</TableCell>
                                                     <TableCell className="text-center">
-                                                        {item.fine_mese ? <div className="w-4 h-4 rounded-sm bg-[#0055FF] mx-auto" /> : <div className="w-4 h-4 rounded-sm border border-slate-300 mx-auto" />}
+                                                        {item.fine_mese ? (
+                                                            <Badge className="bg-[#0055FF] text-white text-[9px] font-mono px-1.5">
+                                                                FM{item.extra_days ? `+${item.extra_days}` : ''}
+                                                            </Badge>
+                                                        ) : <div className="w-4 h-4 rounded-sm border border-slate-300 mx-auto" />}
                                                     </TableCell>
                                                     <TableCell className="text-center font-mono text-xs">{item.quote?.length || 0}</TableCell>
                                                     <TableCell>
