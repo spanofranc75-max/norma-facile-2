@@ -5,10 +5,20 @@ from datetime import datetime
 
 
 class BankDetails(BaseModel):
-    """Coordinate bancarie."""
+    """Coordinate bancarie — singolo conto (legacy, backward compat)."""
     bank_name: str = ""
     iban: str = ""
     bic_swift: Optional[str] = None
+
+
+class BankAccount(BaseModel):
+    """Conto corrente aziendale."""
+    account_id: Optional[str] = None
+    bank_name: str = ""
+    iban: str = ""
+    bic_swift: Optional[str] = None
+    intestatario: Optional[str] = None
+    predefinito: bool = False
 
 
 class CompanySettings(BaseModel):
@@ -40,8 +50,14 @@ class CompanySettings(BaseModel):
     pec: Optional[EmailStr] = None
     website: Optional[str] = None
     
-    # Bank details
+    # Bank details (legacy single)
     bank_details: BankDetails = Field(default_factory=BankDetails)
+    # Multiple bank accounts
+    bank_accounts: list = Field(default_factory=list)
+    
+    # SDI / Fatturazione Elettronica
+    codice_destinatario: Optional[str] = None  # Codice SDI 7 chars
+    natura_giuridica: Optional[str] = None  # es. "S.r.l.s.", "S.r.l.", "Ditta individuale"
     
     # Logo (base64 data URI)
     logo_url: Optional[str] = None
@@ -91,6 +107,9 @@ class CompanySettingsUpdate(BaseModel):
     pec: Optional[EmailStr] = None
     website: Optional[str] = None
     bank_details: Optional[BankDetails] = None
+    bank_accounts: Optional[list] = None
+    codice_destinatario: Optional[str] = None
+    natura_giuridica: Optional[str] = None
     logo_url: Optional[str] = None
     firma_digitale: Optional[str] = None
     responsabile_nome: Optional[str] = None

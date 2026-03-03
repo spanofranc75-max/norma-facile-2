@@ -53,6 +53,10 @@ async def update_company_settings(
         if settings_data.bank_details:
             update_dict["bank_details"] = settings_data.bank_details.model_dump()
         
+        # Handle bank_accounts list
+        if settings_data.bank_accounts is not None:
+            update_dict["bank_accounts"] = settings_data.bank_accounts
+        
         update_dict["updated_at"] = now
         
         await db.company_settings.update_one(
@@ -72,6 +76,10 @@ async def update_company_settings(
         # Handle nested bank_details
         if settings_data.bank_details:
             settings_doc["bank_details"] = settings_data.bank_details.model_dump()
+        
+        # Handle bank_accounts list
+        if settings_data.bank_accounts is not None:
+            settings_doc["bank_accounts"] = settings_data.bank_accounts
         
         await db.company_settings.insert_one(settings_doc)
     

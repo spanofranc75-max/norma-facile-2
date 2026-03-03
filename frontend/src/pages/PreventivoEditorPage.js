@@ -74,6 +74,7 @@ export default function PreventivoEditorPage() {
     const [linkedCommessa, setLinkedCommessa] = useState(null);
     const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
     const [creatingCommessa, setCreatingCommessa] = useState(false);
+    const [bankAccounts, setBankAccounts] = useState([]);
     const [workflow, setWorkflow] = useState({ status: 'bozza', number: null, created_at: null, converted_to: null, linked_invoice: null, invoicing_progress: 0, linked_invoices: [] });
     const [showSplitDialog, setShowSplitDialog] = useState(false);
     const [splitAnalysis, setSplitAnalysis] = useState(null);
@@ -139,10 +140,12 @@ export default function PreventivoEditorPage() {
         Promise.all([
             apiRequest('/clients/').catch(() => ({ clients: [] })),
             apiRequest('/certificazioni/thermal/reference-data').catch(() => ({})),
+            apiRequest('/company/').catch(() => ({})),
             apiRequest('/payment-types/').catch(() => ({ items: [] })),
-        ]).then(([cl, th, pt]) => {
+        ]).then(([cl, th, co, pt]) => {
             setClients(cl.clients || []);
             setThermalRef(th);
+            setBankAccounts(co.bank_accounts || []);
             setPaymentTypes(pt.items || []);
         });
     }, []);
@@ -663,8 +666,30 @@ export default function PreventivoEditorPage() {
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                        <div><Label className="text-xs">Banca</Label><Input value={form.banca} onChange={e => setForm(f => ({ ...f, banca: e.target.value }))} className="h-8 text-xs" /></div>
-                                        <div><Label className="text-xs">IBAN</Label><Input value={form.iban} onChange={e => setForm(f => ({ ...f, iban: e.target.value.toUpperCase() }))} placeholder="IT60..." className="h-8 text-xs font-mono" /></div>
+                                        <div>
+                                            <Label className="text-xs">Conto Corrente</Label>
+                                            <select
+                                                data-testid="select-banca"
+                                                value={form.iban || ''}
+                                                onChange={e => {
+                                                    const acc = bankAccounts.find(a => a.iban === e.target.value);
+                                                    setForm(f => ({
+                                                        ...f,
+                                                        banca: acc ? acc.bank_name : '',
+                                                        iban: e.target.value,
+                                                    }));
+                                                }}
+                                                className="flex h-8 w-full items-center rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                            >
+                                                <option value="">-- Seleziona conto --</option>
+                                                {bankAccounts.map((acc, i) => (
+                                                    <option key={acc.account_id || i} value={acc.iban}>
+                                                        {acc.bank_name} — {acc.iban}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            {form.iban && <p className="text-[10px] font-mono text-slate-500 mt-0.5">{form.banca} — {form.iban}</p>}
+                                        </div>
                                         <div><Label className="text-xs">Note Pagamento</Label><Textarea value={form.note_pagamento || ''} onChange={e => setForm(f => ({ ...f, note_pagamento: e.target.value }))} rows={3} className="text-xs" /></div>
                                     </div>
                                 )}
