@@ -145,6 +145,23 @@ export default function InvoiceEditorPage() {
     const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
     const [paymentTypes, setPaymentTypes] = useState([]);
 
+    // Calculate due date from issue_date and payment type
+    const calcDueDate = (issueDate, pt) => {
+        if (!issueDate || !pt) return '';
+        const quote = pt.quote || [];
+        if (quote.length === 0) return '';
+        // Use the last installment's giorni for the final due date
+        const maxGiorni = Math.max(...quote.map(q => q.giorni || 0));
+        if (maxGiorni < 0) return issueDate; // "a fine lavori" = same day
+        const d = new Date(issueDate);
+        d.setDate(d.getDate() + maxGiorni);
+        if (pt.fine_mese) {
+            // Move to end of month
+            d.setMonth(d.getMonth() + 1, 0);
+        }
+        return d.toISOString().split('T')[0];
+    };
+
     // Fetch clients and payment types on mount
     useEffect(() => {
         const fetchData = async () => {
@@ -512,10 +529,12 @@ export default function InvoiceEditorPage() {
                                     onChange={(e) => {
                                         const val = e.target.value;
                                         const pt = paymentTypes.find(p => p.label === val);
+                                        const dueDate = pt ? calcDueDate(formData.issue_date, pt) : '';
                                         setFormData(f => ({
                                             ...f,
                                             payment_terms: val,
                                             payment_type_id: pt?.payment_type_id || '',
+                                            due_date: dueDate || f.due_date,
                                         }));
                                     }}
                                 >
@@ -545,11 +564,14 @@ export default function InvoiceEditorPage() {
                                         if (cid) {
                                             const cl = clients.find(c => c.client_id === cid);
                                             if (cl?.payment_type_label) {
+                                                const pt = paymentTypes.find(p => p.payment_type_id === cl.payment_type_id || p.label === cl.payment_type_label);
+                                                const dueDate = pt ? calcDueDate(formData.issue_date, pt) : '';
                                                 setFormData(f => ({
                                                     ...f,
                                                     client_id: cid,
                                                     payment_terms: cl.payment_type_label,
                                                     payment_type_id: cl.payment_type_id || '',
+                                                    due_date: dueDate || f.due_date,
                                                 }));
                                             }
                                         }
