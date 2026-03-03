@@ -35,7 +35,7 @@ const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', curren
 
 const emptyLine = () => ({
     line_id: `ln_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-    description: '', codice_articolo: '', dimensions: '', quantity: 1, unit: 'pz',
+    description: '', codice_articolo: '', dimensions: '', quantity: '', unit: 'pz',
     unit_price: '', sconto_1: '', sconto_2: '', vat_rate: '22', thermal_data: null, notes: '',
 });
 
