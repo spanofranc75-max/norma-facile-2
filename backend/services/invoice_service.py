@@ -110,10 +110,39 @@ class InvoiceService:
     @staticmethod
     async def get_next_number(user_id: str, doc_type: DocumentType, year: int) -> str:
         """
-        Get next document number in format TYPE-YEAR-NUMBER.
+        Get next document number in format N/YEAR (e.g. 13/2026).
         Resets counter every year.
         """
         counter_id = f"{user_id}_{doc_type.value}_{year}"
+        
+        # Check if counter exists; if not, scan existing invoices to initialize
+        existing = await db.document_counters.find_one({"counter_id": counter_id})
+        if not existing:
+            max_num = 0
+            async for inv_doc in db.invoices.find(
+                {"user_id": user_id},
+                {"document_number": 1, "_id": 0}
+            ):
+                dn = inv_doc.get("document_number", "")
+                try:
+                    # Parse N/YYYY format
+                    if "/" in dn:
+                        parts = dn.split("/")
+                        num = int(parts[0])
+                        inv_year = int(parts[1]) if len(parts) > 1 else 0
+                        if inv_year == year and num > max_num:
+                            max_num = num
+                    # Parse FT-YYYY-NNN format (legacy)
+                    elif dn.startswith("FT-"):
+                        num = int(dn.split("-")[-1])
+                        if str(year) in dn and num > max_num:
+                            max_num = num
+                except (ValueError, IndexError):
+                    pass
+            if max_num > 0:
+                await db.document_counters.update_one(
+                    {"counter_id": counter_id}, {"$set": {"counter": max_num}}, upsert=True
+                )
         
         # Find and increment counter
         result = await db.document_counters.find_one_and_update(
@@ -126,8 +155,8 @@ class InvoiceService:
         
         counter = result["counter"] if result else 1
         
-        # Format: FT-2026-001
-        return f"{doc_type.value}-{year}-{str(counter).zfill(3)}"
+        # Format: N/YYYY (e.g. 13/2026)
+        return f"{counter}/{year}"
     
     @staticmethod
     def calculate_due_date(issue_date: date, payment_terms: str) -> Optional[date]:

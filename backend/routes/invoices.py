@@ -234,19 +234,26 @@ async def create_invoice_from_preventivo(
     year = now.year
 
     # Atomic counter for invoice numbering
-    ft_counter_id = f"FT-{uid}-{year}"
+    ft_counter_id = f"{uid}_FT_{year}"
     ft_existing = await db.document_counters.find_one({"counter_id": ft_counter_id})
     if not ft_existing:
         max_ft = 0
         async for inv_doc in db.invoices.find(
-            {"user_id": uid, "document_number": {"$regex": f"^FT-{year}"}},
+            {"user_id": uid},
             {"document_number": 1, "_id": 0}
         ):
+            dn = inv_doc.get("document_number", "")
             try:
-                num_str = inv_doc["document_number"].split("/")[-1]
-                num = int(num_str)
-                if num > max_ft:
-                    max_ft = num
+                if "/" in dn:
+                    parts = dn.split("/")
+                    num = int(parts[0])
+                    inv_year = int(parts[1]) if len(parts) > 1 else 0
+                    if inv_year == year and num > max_ft:
+                        max_ft = num
+                elif dn.startswith("FT-"):
+                    num = int(dn.split("-")[-1])
+                    if str(year) in dn and num > max_ft:
+                        max_ft = num
             except (ValueError, IndexError, KeyError):
                 pass
         if max_ft > 0:
@@ -256,7 +263,7 @@ async def create_invoice_from_preventivo(
     ft_counter = await db.document_counters.find_one_and_update(
         {"counter_id": ft_counter_id}, {"$inc": {"counter": 1}}, upsert=True, return_document=True
     )
-    doc_number = f"FT-{year}/{ft_counter.get('counter', 1):04d}"
+    doc_number = f"{ft_counter.get('counter', 1)}/{year}"
 
     # Map lines
     invoice_lines = []
