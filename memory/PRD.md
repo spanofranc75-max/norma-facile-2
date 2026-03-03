@@ -61,7 +61,7 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 ## Bug Risolti (sessione 3 Marzo 2026 - Fork)
 - **Feature: Logica "Fine Mese + N Giorni"** - Aggiunto campo `extra_days` al modello `PaymentTypeBase` e alla UI. Permette termini come "30gg FM+10" (30 giorni dalla data fattura, fine mese + 10 giorni). Logica applicata in: backend simulate, frontend dialog (campo condizionale visibile solo con FM attivo), simulazione client-side e calcolo automatico scadenza in InvoiceEditorPage.
 - **Fix: Errore 400 Invio SDI** - L'endpoint `send-sdi` ora legge le credenziali FIC anche dalle variabili d'ambiente (fallback). Fix mapping data fattura (`issue_date` invece di `created_at`).
-- **Feature: Restyling Fintech Scadenziario** - Completa riscrittura della pagina ScadenziarioPage con design stile app bancaria: 3 KPI grandi (Uscite, Entrate, Saldo), banner urgenze, transaction cards con avatar/iniziali, filtri pill, 3 sezioni (Scaduti/In Scadenza/Futuro), pulsante "Segna Pagato".
+- **Feature: Restyling Scadenziario stile Invoicex** - Riscrittura completa della pagina con layout tabellare tradizionale: barra KPI riassuntiva, filtri (Fornitori/Clienti, date, ricerca, solo da pagare), tabella con colonne ordinabili (Data Scad., Pagata, Importo, Da Pagare, Documento, Data Doc., Pagamento, Fornitore, Stato), footer con totali, colori amber per scaduti leggibili.
 
 ## Issue Pendenti
 - **P2**: Validazione Pydantic su dati migrati (response_model rimosso temporaneamente)
