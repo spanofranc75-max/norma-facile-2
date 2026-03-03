@@ -22,7 +22,7 @@ import {
     BarChart3, BoxIcon, FileInput, Camera, ChevronDown,
     Briefcase, Wrench, Award, ShoppingCart, FileText, LayoutGrid,
     CreditCard, TrendingUp, ClipboardCheck, Calendar, CircleDollarSign,
-    User, LogOut, Bell,
+    User, LogOut, Bell, Flame,
 } from 'lucide-react';
 
 // ── Navigation Structure ────────────────────────────────────────
@@ -94,6 +94,7 @@ const NAV_GROUPS = [
             { path: '/sistema-qualita', label: 'Sistema Qualita', icon: FileText },
             { path: '/strumenti', label: 'Apparecchiature', icon: Wrench },
             { path: '/saldatori', label: 'Saldatori', icon: Users },
+            { path: '/wps', label: 'WPS (Procedure)', icon: Flame },
             { path: '/audit', label: 'Audit & NC', icon: ClipboardCheck },
         ],
     },
