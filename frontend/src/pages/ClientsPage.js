@@ -110,7 +110,12 @@ export default function ClientsPage() {
 
     const handleSave = async (e) => {
         if (e) { e.preventDefault(); e.stopPropagation(); }
-        if (!formData.business_name) { toast.error('Ragione Sociale obbligatoria'); return; }
+        // Per persona fisica: genera ragione sociale da cognome + nome
+        if (formData.persona_fisica && !formData.business_name && (formData.cognome || formData.nome)) {
+            formData.business_name = [formData.titolo, formData.cognome, formData.nome].filter(Boolean).join(' ');
+            setFormData(f => ({ ...f, business_name: formData.business_name }));
+        }
+        if (!formData.business_name) { toast.error('Ragione Sociale obbligatoria (o inserisci Cognome/Nome per persona fisica)'); return; }
         setSaving(true);
         try {
             // Clean empty strings to null for Optional fields
