@@ -143,18 +143,23 @@ export default function InvoiceEditorPage() {
     });
 
     const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
+    const [paymentTypes, setPaymentTypes] = useState([]);
 
-    // Fetch clients on mount
+    // Fetch clients and payment types on mount
     useEffect(() => {
-        const fetchClients = async () => {
+        const fetchData = async () => {
             try {
-                const data = await apiRequest('/clients/?limit=100');
-                setClients(data.clients);
+                const [cl, pt] = await Promise.all([
+                    apiRequest('/clients/?limit=100'),
+                    apiRequest('/payment-types/').catch(() => ({ items: [] })),
+                ]);
+                setClients(cl.clients);
+                setPaymentTypes(pt.items || []);
             } catch (error) {
-                toast.error('Errore caricamento clienti');
+                toast.error('Errore caricamento dati');
             }
         };
-        fetchClients();
+        fetchData();
     }, []);
 
     // Fetch invoice if editing
@@ -500,21 +505,31 @@ export default function InvoiceEditorPage() {
                             </div>
                             <div>
                                 <Label>Termini Pagamento</Label>
-                                <Select
+                                <select
+                                    data-testid="select-payment-terms"
+                                    className="w-full border rounded px-2 py-1.5 text-sm bg-white"
                                     value={formData.payment_terms}
-                                    onValueChange={(v) => updateField('payment_terms', v)}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        const pt = paymentTypes.find(p => p.label === val);
+                                        setFormData(f => ({
+                                            ...f,
+                                            payment_terms: val,
+                                            payment_type_id: pt?.payment_type_id || '',
+                                        }));
+                                    }}
                                 >
-                                    <SelectTrigger data-testid="select-payment-terms">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {PAYMENT_TERMS.map(t => (
-                                            <SelectItem key={t.value} value={t.value}>
-                                                {t.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                    <option value="">-- Seleziona --</option>
+                                    {paymentTypes.map(pt => (
+                                        <option key={pt.payment_type_id} value={pt.label}>
+                                            {pt.label}
+                                        </option>
+                                    ))}
+                                    {/* Fallback: show current value if not in list */}
+                                    {formData.payment_terms && !paymentTypes.some(pt => pt.label === formData.payment_terms) && (
+                                        <option value={formData.payment_terms}>{formData.payment_terms}</option>
+                                    )}
+                                </select>
                             </div>
                         </div>
 
@@ -523,7 +538,22 @@ export default function InvoiceEditorPage() {
                                 <Label>Cliente *</Label>
                                 <Select
                                     value={formData.client_id || "__none__"}
-                                    onValueChange={(v) => updateField('client_id', v === "__none__" ? "" : v)}
+                                    onValueChange={(v) => {
+                                        const cid = v === "__none__" ? "" : v;
+                                        updateField('client_id', cid);
+                                        // Auto-fill payment terms from client profile
+                                        if (cid) {
+                                            const cl = clients.find(c => c.client_id === cid);
+                                            if (cl?.payment_type_label) {
+                                                setFormData(f => ({
+                                                    ...f,
+                                                    client_id: cid,
+                                                    payment_terms: cl.payment_type_label,
+                                                    payment_type_id: cl.payment_type_id || '',
+                                                }));
+                                            }
+                                        }
+                                    }}
                                 >
                                     <SelectTrigger data-testid="select-client">
                                         <SelectValue placeholder="Seleziona cliente..." />
