@@ -992,9 +992,35 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                             </div>
                             <span className="text-xs font-mono font-semibold text-[#0055FF]">{progPct}%</span>
                         </div>
-                        {fasi.map(f => (
-                            <div key={f.tipo} className="flex items-center gap-2 p-2 bg-slate-50 rounded text-xs" data-testid={`fase-${f.tipo}`}>
-                                <span className="font-medium flex-1">{f.label || f.tipo}</span>
+                        {fasi.map(f => {
+                            const isLate = f.data_prevista && f.stato !== 'completato' && new Date(f.data_prevista) < new Date();
+                            const daysLate = f.data_prevista && f.stato !== 'completato' ? Math.floor((new Date() - new Date(f.data_prevista)) / 86400000) : 0;
+                            return (
+                            <div key={f.tipo} className={`flex items-center gap-2 p-2 rounded text-xs ${isLate ? 'bg-red-50 border border-red-200' : 'bg-slate-50'}`} data-testid={`fase-${f.tipo}`}>
+                                <span className={`font-medium flex-1 ${isLate ? 'text-red-700' : ''}`}>{f.label || f.tipo}</span>
+                                {f.data_prevista && f.stato !== 'completato' && (
+                                    <span className={`text-[9px] ${isLate ? 'text-red-500 font-semibold' : 'text-slate-400'}`}>
+                                        {isLate ? `${daysLate}gg ritardo` : `entro ${new Date(f.data_prevista).toLocaleDateString('it-IT')}`}
+                                    </span>
+                                )}
+                                {f.data_prevista && (
+                                    <input
+                                        type="date"
+                                        className="text-[9px] border rounded px-1 py-0.5 w-24 bg-white"
+                                        value={f.data_prevista || ''}
+                                        data-testid={`fase-data-prevista-${f.tipo}`}
+                                        onChange={e => handleUpdateFase(f.tipo, f.stato, { data_prevista: e.target.value })}
+                                    />
+                                )}
+                                {!f.data_prevista && f.stato !== 'completato' && (
+                                    <input
+                                        type="date"
+                                        className="text-[9px] border rounded px-1 py-0.5 w-24 bg-white text-slate-400"
+                                        placeholder="Data prev."
+                                        data-testid={`fase-data-prevista-${f.tipo}`}
+                                        onChange={e => handleUpdateFase(f.tipo, f.stato, { data_prevista: e.target.value })}
+                                    />
+                                )}
                                 <StatoBadge stato={f.stato} />
                                 {f.stato === 'completato' && f.completed_at && (
                                     <span className="text-[9px] text-slate-400">{new Date(f.completed_at).toLocaleDateString('it-IT')}</span>
@@ -1013,7 +1039,8 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                     </Button>
                                 )}
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </Section>

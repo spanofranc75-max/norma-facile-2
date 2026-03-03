@@ -201,7 +201,10 @@ export default function Dashboard() {
                                                     <span className="text-xs text-slate-400">No scadenza</span>
                                                 )}
                                                 {c.prod_total > 0 && (
-                                                    <p className="text-xs text-slate-400 mt-0.5">{c.prod_done}/{c.prod_total} fasi</p>
+                                                    <p className="text-xs text-slate-400 mt-0.5">
+                                                        {c.prod_done}/{c.prod_total} fasi
+                                                        {c.fasi_in_ritardo > 0 && <span className="text-red-500 font-medium ml-1">({c.fasi_in_ritardo} in ritardo)</span>}
+                                                    </p>
                                                 )}
                                             </div>
                                         </div>

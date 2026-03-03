@@ -6,7 +6,7 @@ All operational workflows within a commessa. Routes are nested under
 import uuid
 import logging
 import base64
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
@@ -828,14 +828,30 @@ async def init_produzione(cid: str, user: dict = Depends(get_current_user)):
     if doc.get("fasi_produzione"):
         return {"message": "Fasi gia' inizializzate", "fasi": doc["fasi_produzione"]}
 
+    # Calculate expected dates based on deadline
+    deadline_str = doc.get("deadline")
     fasi = []
-    for f in DEFAULT_FASI:
+    total_phases = len(DEFAULT_FASI)
+    for i, f in enumerate(DEFAULT_FASI):
+        data_prevista = None
+        if deadline_str:
+            try:
+                from datetime import date as date_cls
+                deadline_date = date_cls.fromisoformat(deadline_str)
+                today = date_cls.today()
+                total_days = (deadline_date - today).days
+                if total_days > 0:
+                    phase_end_day = int(total_days * (i + 1) / total_phases)
+                    data_prevista = (today + timedelta(days=phase_end_day)).isoformat()
+            except (ValueError, TypeError):
+                pass
         fasi.append({
             **f,
             "stato": "da_fare",
             "operatore": None,
             "data_inizio": None,
             "data_fine": None,
+            "data_prevista": data_prevista,
             "note": "",
         })
     await db[COLL].update_one(
@@ -862,6 +878,7 @@ class FaseUpdate(BaseModel):
     started_at: Optional[str] = None
     completed_at: Optional[str] = None
     operator_name: Optional[str] = None
+    data_prevista: Optional[str] = None  # Expected completion date YYYY-MM-DD
 
 
 @router.put("/{cid}/produzione/{fase_tipo}")
@@ -887,6 +904,8 @@ async def update_fase(cid: str, fase_tipo: str, data: FaseUpdate, user: dict = D
         upd["fasi_produzione.$[elem].operatore"] = data.operatore
     if data.note is not None:
         upd["fasi_produzione.$[elem].note"] = data.note
+    if data.data_prevista is not None:
+        upd["fasi_produzione.$[elem].data_prevista"] = data.data_prevista
 
     await db[COLL].update_one(
         {"commessa_id": cid},

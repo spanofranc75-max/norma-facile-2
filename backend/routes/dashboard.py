@@ -425,6 +425,20 @@ async def get_commesse_semaforo(user: dict = Depends(get_current_user)):
         prod_done = sum(1 for f in fasi if f.get("stato") == "completato")
         prod_total = len(fasi) if fasi else 0
 
+        # Calculate per-phase delays
+        fasi_in_ritardo = 0
+        for f in fasi:
+            if f.get("stato") == "completato":
+                continue
+            dp = f.get("data_prevista")
+            if dp:
+                try:
+                    dp_date = datetime.strptime(dp, "%Y-%m-%d").date()
+                    if dp_date < today:
+                        fasi_in_ritardo += 1
+                except (ValueError, TypeError):
+                    pass
+
         # Calculate traffic light
         deadline_str = c.get("deadline")
         semaforo = "green"
@@ -443,6 +457,10 @@ async def get_commesse_semaforo(user: dict = Depends(get_current_user)):
             except (ValueError, TypeError):
                 pass
 
+        # Override: phase delays bump to yellow minimum
+        if fasi_in_ritardo > 0 and semaforo == "green":
+            semaforo = "yellow"
+
         if c.get("stato") == "sospesa":
             semaforo = "yellow"
 
@@ -460,6 +478,7 @@ async def get_commesse_semaforo(user: dict = Depends(get_current_user)):
             "semaforo": semaforo,
             "prod_done": prod_done,
             "prod_total": prod_total,
+            "fasi_in_ritardo": fasi_in_ritardo,
         })
 
     # Sort: red first, then yellow, then green

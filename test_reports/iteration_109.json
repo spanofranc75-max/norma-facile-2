@@ -1,0 +1,76 @@
+{
+  "summary": "Backend-only testing complete for iteration 109 data_prevista feature. All 8 pytest tests passed. Verified: (1) POST /api/commesse/{cid}/produzione/init calculates data_prevista from commessa deadline, (2) Phase init without deadline creates data_prevista=null, (3) PUT /api/commesse/{cid}/produzione/{fase_tipo} accepts data_prevista field in FaseUpdate, (4) GET /api/dashboard/semaforo includes fasi_in_ritardo count, (5) Semaforo logic correctly bumps green→yellow when phases are late. Fixed missing timedelta import in commessa_ops.py.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "commessa_ops.py", "issue": "Missing timedelta import (line 9)", "fix_applied": "Added timedelta to datetime import"}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "init_produzione_with_deadline": {
+      "endpoint": "POST /api/commesse/{cid}/produzione/init",
+      "status": "PASS",
+      "details": "Creates 6 phases with data_prevista auto-calculated from deadline, dates are sequential"
+    },
+    "init_produzione_without_deadline": {
+      "endpoint": "POST /api/commesse/{cid}/produzione/init",
+      "status": "PASS",
+      "details": "Creates phases with data_prevista=null when no deadline set"
+    },
+    "update_fase_data_prevista": {
+      "endpoint": "PUT /api/commesse/{cid}/produzione/{fase_tipo}",
+      "status": "PASS",
+      "details": "FaseUpdate model accepts data_prevista field, persists correctly"
+    },
+    "semaforo_fasi_in_ritardo": {
+      "endpoint": "GET /api/dashboard/semaforo",
+      "status": "PASS",
+      "details": "Response includes fasi_in_ritardo count per commessa"
+    },
+    "semaforo_yellow_for_late_phases": {
+      "status": "PASS",
+      "details": "Commessa with deadline 90 days away correctly bumps to yellow when phases are late"
+    },
+    "completed_phases_not_late": {
+      "status": "PASS",
+      "details": "Completed phases with past data_prevista are not counted as late"
+    },
+    "semaforo_structure": {
+      "status": "PASS",
+      "details": "Response structure: items[], counts{green,yellow,red}, total"
+    },
+    "auth_required": {
+      "status": "PASS",
+      "details": "Returns 401 for unauthenticated requests"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration109_data_prevista.py",
+    "/app/test_reports/pytest/iteration109_data_prevista_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/routes/commessa_ops.py",
+    "/app/backend/tests/test_iteration109_data_prevista.py"
+  ],
+  "success_rate": {
+    "backend": "100% (8/8 pytest tests passed)",
+    "frontend": "N/A - backend only testing requested"
+  },
+  "test_credentials": "Created and cleaned up test_session_iter109_1772548421636",
+  "seed_data_creation": "Created test commesse for each test (with/without deadlines), all cleaned up",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The data_prevista feature for production phases is working correctly. Key code locations: (1) routes/commessa_ops.py:823-864 init_produzione calculates data_prevista based on deadline, (2) routes/commessa_ops.py:874-881 FaseUpdate model has data_prevista field, (3) routes/commessa_ops.py:884-918 update_fase persists data_prevista, (4) routes/dashboard.py:429-440 semaforo calculates fasi_in_ritardo by checking data_prevista against today, (5) routes/dashboard.py:460-462 bumps green→yellow if fasi_in_ritardo > 0.",
+  "rca_of_the_issue": {
+    "root_cause": "Missing timedelta import in commessa_ops.py would have caused NameError when init_produzione is called with a commessa that has a deadline",
+    "fix_applied": "Added timedelta to the datetime import on line 9",
+    "verification": "All 8 tests passed including init_produzione with deadline calculating data_prevista correctly"
+  }
+}
