@@ -262,19 +262,42 @@ export default function PaymentTypesPage() {
         });
     };
 
-    // Simulate deadlines
-    const handleSimulate = async () => {
-        if (!editing) {
-            toast.error('Salva prima il tipo pagamento');
+    // Simulate deadlines — client-side calculation (no save needed)
+    const handleSimulate = () => {
+        if (form.quote.length === 0) {
+            toast.error('Aggiungi almeno una scadenza');
             return;
         }
-        try {
-            const res = await apiRequest(`/payment-types/${editing}/simulate`, {
-                method: 'POST',
-                body: { data_fattura: simDate, importo: parseFloat(simImporto) || 10000 },
-            });
-            setSimResult(res);
-        } catch (e) { toast.error(e.message); }
+        const invoiceDate = new Date(simDate);
+        if (isNaN(invoiceDate.getTime())) {
+            toast.error('Data fattura non valida');
+            return;
+        }
+        const importo = parseFloat(simImporto) || 10000;
+        const scadenze = form.quote.map((q, i) => {
+            const target = new Date(invoiceDate);
+            target.setDate(target.getDate() + q.giorni);
+            if (form.fine_mese) {
+                target.setMonth(target.getMonth() + 1, 0); // last day of month
+            }
+            if (form.richiedi_giorno_scadenza && form.giorno_scadenza) {
+                const gs = Math.min(form.giorno_scadenza, new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate());
+                target.setDate(gs);
+            }
+            const imp = Math.round(importo * q.quota / 100 * 100) / 100;
+            return {
+                rata: i + 1,
+                giorni: q.giorni,
+                data_scadenza: target.toISOString().slice(0, 10),
+                quota_pct: q.quota,
+                importo: imp,
+            };
+        });
+        setSimResult({
+            scadenze,
+            totale_rate: scadenze.length,
+            importo_totale: scadenze.reduce((s, r) => s + r.importo, 0),
+        });
     };
 
     const totalQuota = form.quote.reduce((s, q) => s + (q.quota || 0), 0);
@@ -567,11 +590,10 @@ export default function PaymentTypesPage() {
                                             className="h-8 text-xs font-mono w-28"
                                         />
                                     </div>
-                                    <Button type="button" size="sm" onClick={handleSimulate} disabled={!editing} className="h-8 text-xs bg-[#0055FF] text-white hover:bg-[#0044CC]" data-testid="pt-simulate-btn">
+                                    <Button type="button" size="sm" onClick={handleSimulate} className="h-8 text-xs bg-[#0055FF] text-white hover:bg-[#0044CC]" data-testid="pt-simulate-btn">
                                         <Calculator className="h-3 w-3 mr-1" /> Calcola
                                     </Button>
                                 </div>
-                                {!editing && <p className="text-[10px] text-amber-600 mt-1">Salva il tipo pagamento per abilitare la simulazione</p>}
                                 {simResult && simResult.scadenze.length > 0 && (
                                     <div className="mt-2 border border-slate-200 rounded-md overflow-hidden" data-testid="pt-sim-results">
                                         <div className="grid grid-cols-4 bg-slate-100 px-3 py-1 text-[10px] font-semibold text-slate-600 uppercase">
