@@ -55,6 +55,8 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **Feature: Riepilogo Pagamenti nel PDF** - Il PDF del preventivo ora include una tabella "Riepilogo Scadenze Pagamento" con date, quote % e importi calcolati automaticamente dal tipo di pagamento.
 - **Feature: Dashboard Semaforo Commesse** - Widget nel cruscotto che mostra lo stato delle commesse attive con semaforo (rosso=ritardo, giallo=scadenza vicina, verde=in tempo). Ordinamento per urgenza.
 - **Feature: Gestione Fasi di Produzione con Date Previste** - Ogni fase di produzione ora ha una `data_prevista` auto-calcolata dalla deadline. Indicatore di ritardo per-fase (rosso se in ritardo). Date editabili inline. Il semaforo bump a giallo se fasi in ritardo anche con deadline lontana.
+- **Feature: Generazione WPS automatica EN 1090** - Knowledge base completa (7 processi, 6 gruppi materiale, filler, gas, preriscaldo EN 1011-2, interpass, CND%). Suggerisce automaticamente i parametri WPS e trova i saldatori qualificati. CRUD completo con auto-numerazione.
+- **Fix: Formato numerazione fatture** - Cambiato da `FT-2026-001` a `N/YYYY` (es. `13/2026`) per allinearsi alle fatture esistenti.
 
 ## Issue Pendenti
 - **P2**: Validazione Pydantic su dati migrati (response_model rimosso temporaneamente)
