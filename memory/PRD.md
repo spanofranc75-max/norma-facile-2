@@ -47,8 +47,11 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 
 ## Bug Risolti (sessione corrente - 3 Marzo 2026)
 - **P0 FIX: Dropdown conti bancari vuoto nell'editor preventivi** - L'endpoint API chiamato era errato (`/company/` invece di `/company/settings`). Fix applicato in `PreventivoEditorPage.js` linea 143.
-- **P0 FIX: Errore 422 al salvataggio preventivo** - `sconto_2` (stringa vuota) non veniva convertito a float prima dell'invio. Aggiunto conversione frontend + validators difensivi backend su `QuoteLine` e `PreventivoCreate`.
+- **P0 FIX: Errore 422 al salvataggio preventivo** - `sconto_2` (stringa vuota) non veniva convertito a float prima dell'invio. Riscritto il payload di salvataggio campo per campo (no più `...form` spread). Aggiunti validators difensivi backend su `QuoteLine` e `PreventivoCreate`.
+- **P0 FIX: Salvataggio impostazioni bloccato da EmailStr** - I campi `email` e `pec` con stringa vuota facevano fallire TUTTO il salvataggio delle impostazioni (inclusi conti bancari). Rimosso `EmailStr` da `CompanySettingsUpdate` e aggiunto validator `empty_str_to_none`.
 - **Enhancement: Conto predefinito** - Stellina ★ nel dropdown per il conto marcato come predefinito. Auto-selezione del conto predefinito per nuovi preventivi.
+- **UI: Q.tà vuota** - Il campo quantità nelle nuove righe ora parte vuoto invece che con "1".
+- **Enhancement: Errori 422 dettagliati** - Aggiunto exception handler globale che mostra il campo esatto che causa l'errore di validazione.
 
 ## Issue Pendenti
 - **P2**: Validazione Pydantic su dati migrati (response_model rimosso temporaneamente)
