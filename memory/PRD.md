@@ -54,6 +54,7 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **Enhancement: Errori 422 dettagliati** - Aggiunto exception handler globale che mostra il campo esatto che causa l'errore di validazione.
 - **Feature: Riepilogo Pagamenti nel PDF** - Il PDF del preventivo ora include una tabella "Riepilogo Scadenze Pagamento" con date, quote % e importi calcolati automaticamente dal tipo di pagamento.
 - **Feature: Dashboard Semaforo Commesse** - Widget nel cruscotto che mostra lo stato delle commesse attive con semaforo (rosso=ritardo, giallo=scadenza vicina, verde=in tempo). Ordinamento per urgenza.
+- **Feature: Gestione Fasi di Produzione con Date Previste** - Ogni fase di produzione ora ha una `data_prevista` auto-calcolata dalla deadline. Indicatore di ritardo per-fase (rosso se in ritardo). Date editabili inline. Il semaforo bump a giallo se fasi in ritardo anche con deadline lontana.
 
 ## Issue Pendenti
 - **P2**: Validazione Pydantic su dati migrati (response_model rimosso temporaneamente)
