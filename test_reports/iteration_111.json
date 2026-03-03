@@ -1,0 +1,78 @@
+{
+  "summary": "Complete testing of 'End of Month + N Days' (FM+N) payment terms feature. All 12 backend pytest tests passed. Frontend UI testing confirmed: (1) 'Fine mese' checkbox exists with data-testid='pt-fine-mese', (2) '+ Giorni successivi' input (data-testid='pt-extra-days') correctly appears only when 'Fine mese' is checked, (3) Simulation calculation correctly adds extra_days after end-of-month. Example verified: Invoice 15/01/2026 with 30gg FM+10 correctly calculates due date as 10/03/2026.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "backend_model": {
+      "feature": "PaymentTypeBase extra_days field",
+      "status": "PASS",
+      "details": "extra_days: Optional[int] field added at line 38 in payment_type.py"
+    },
+    "backend_simulate": {
+      "feature": "POST /api/payment-types/{id}/simulate with extra_days",
+      "status": "PASS",
+      "details": "Lines 174-175 in payment_types.py correctly add timedelta(days=extra_days) after fine_mese calculation"
+    },
+    "backend_crud": {
+      "feature": "Create/Update payment type with extra_days",
+      "status": "PASS",
+      "details": "extra_days saved and retrieved correctly from MongoDB"
+    },
+    "frontend_extra_days_visibility": {
+      "feature": "data-testid='pt-extra-days' shows only when Fine mese checked",
+      "status": "PASS",
+      "details": "Input field '+ Giorni successivi' hidden when fine_mese=false, visible when fine_mese=true (lines 554-566 in PaymentTypesPage.js)"
+    },
+    "frontend_simulation": {
+      "feature": "Client-side simulation calculates FM+N correctly",
+      "status": "PASS",
+      "details": "handleSimulate function at lines 291-295 in PaymentTypesPage.js adds extra_days after setMonth(target.getMonth() + 1, 0)"
+    },
+    "frontend_invoice_calc": {
+      "feature": "InvoiceEditorPage calcDueDate handles extra_days",
+      "status": "PASS",
+      "details": "calcDueDate at lines 162-164 adds pt.extra_days after fine_mese calculation"
+    },
+    "exact_calculation_test": {
+      "feature": "Invoice 15/01/2026 + 30gg FM+10 = 10/03/2026",
+      "status": "PASS",
+      "details": "Both backend API and frontend UI calculate the same correct date"
+    },
+    "multiple_installments": {
+      "feature": "30/60/90gg FM+10 with multiple scadenze",
+      "status": "PASS",
+      "details": "Each installment correctly applies FM+10: 10/03, 10/04, 10/05"
+    },
+    "edge_cases": {
+      "feature": "Year rollover and leap year",
+      "status": "PASS",
+      "details": "December->January year rollover and leap year February handled correctly"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration111_extra_days.py",
+    "/app/test_reports/pytest/iteration111_extra_days_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration111_extra_days.py"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 pytest tests passed)",
+    "frontend": "100% (all UI interactions verified via Playwright)"
+  },
+  "test_credentials": "Created and cleaned up test_extradays_*, test_fm_*, test_ed_edge_*, test_ui_ed_* users/sessions",
+  "seed_data_creation": "Test payment types with TEST_ prefix created during tests, all cleaned up",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "FM+N (Fine Mese + Extra Days) feature fully functional. Key locations: (1) backend/models/payment_type.py:38 - extra_days field, (2) backend/routes/payment_types.py:174-175 - simulate endpoint adds extra_days, (3) frontend PaymentTypesPage.js:554-566 - conditional UI for extra_days input, (4) frontend PaymentTypesPage.js:291-295 - client-side simulation with extra_days, (5) frontend InvoiceEditorPage.js:162-164 - calcDueDate with extra_days. The feature allows payment terms like '30gg FM+10' where payment is due 10 days after end of month.",
+  "rca_of_the_issue": null
+}

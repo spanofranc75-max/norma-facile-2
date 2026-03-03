@@ -158,6 +158,10 @@ export default function InvoiceEditorPage() {
         if (pt.fine_mese) {
             // Move to end of month
             d.setMonth(d.getMonth() + 1, 0);
+            // Add extra days after end of month (e.g. FM+10)
+            if (pt.extra_days) {
+                d.setDate(d.getDate() + pt.extra_days);
+            }
         }
         return d.toISOString().split('T')[0];
     };

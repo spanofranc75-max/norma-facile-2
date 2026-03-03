@@ -35,6 +35,7 @@ class PaymentTypeBase(BaseModel):
     gg_360: bool = False
     # Options
     fine_mese: bool = False
+    extra_days: Optional[int] = Field(default=None, description="Giorni aggiuntivi dopo il calcolo fine mese (es: FM+10)")
     richiedi_giorno_scadenza: bool = False
     giorno_scadenza: Optional[int] = Field(default=None, description="Giorno fisso del mese per scadenza (1-31)")
     iva_30gg: bool = False
@@ -69,6 +70,7 @@ class PaymentTypeUpdate(BaseModel):
     gg_330: Optional[bool] = None
     gg_360: Optional[bool] = None
     fine_mese: Optional[bool] = None
+    extra_days: Optional[int] = None
     richiedi_giorno_scadenza: Optional[bool] = None
     giorno_scadenza: Optional[int] = None
     iva_30gg: Optional[bool] = None

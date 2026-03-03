@@ -59,7 +59,7 @@ const emptyForm = {
     gg_120: false, gg_150: false, gg_180: false, gg_210: false,
     gg_240: false, gg_270: false, gg_300: false, gg_330: false,
     gg_360: false,
-    fine_mese: false, richiedi_giorno_scadenza: false, giorno_scadenza: null,
+    fine_mese: false, extra_days: null, richiedi_giorno_scadenza: false, giorno_scadenza: null,
     iva_30gg: false,
     note_documento: '', spese_incasso: 0, banca_necessaria: false,
 };
@@ -290,6 +290,9 @@ export default function PaymentTypesPage() {
             target.setDate(target.getDate() + q.giorni);
             if (form.fine_mese) {
                 target.setMonth(target.getMonth() + 1, 0); // last day of month
+                if (form.extra_days) {
+                    target.setDate(target.getDate() + form.extra_days);
+                }
             }
             if (form.richiedi_giorno_scadenza && form.giorno_scadenza) {
                 const gs = Math.min(form.giorno_scadenza, new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate());
@@ -545,9 +548,24 @@ export default function PaymentTypesPage() {
                                         <p className="text-[10px] text-slate-500 mb-2 uppercase tracking-wide">Opzioni</p>
                                         <div className="space-y-2">
                                             <label className="flex items-center gap-2 cursor-pointer text-xs">
-                                                <Checkbox checked={form.fine_mese} onCheckedChange={v => { setField('fine_mese', v); setSimResult(null); }} data-testid="pt-fine-mese" />
+                                                <Checkbox checked={form.fine_mese} onCheckedChange={v => { setField('fine_mese', v); if (!v) setField('extra_days', null); setSimResult(null); }} data-testid="pt-fine-mese" />
                                                 <span className="text-slate-700">Fine mese</span>
                                             </label>
+                                            {form.fine_mese && (
+                                                <div className="ml-6">
+                                                    <Label className="text-[10px] text-slate-500">+ Giorni successivi</Label>
+                                                    <Input
+                                                        data-testid="pt-extra-days"
+                                                        type="number"
+                                                        min="0"
+                                                        max="60"
+                                                        value={form.extra_days || ''}
+                                                        onChange={e => { setField('extra_days', parseInt(e.target.value) || null); setSimResult(null); }}
+                                                        placeholder="es: 10"
+                                                        className="h-7 text-xs font-mono w-16"
+                                                    />
+                                                </div>
+                                            )}
                                             <label className="flex items-center gap-2 cursor-pointer text-xs">
                                                 <Checkbox checked={form.richiedi_giorno_scadenza} onCheckedChange={v => { setField('richiedi_giorno_scadenza', v); setSimResult(null); }} data-testid="pt-richiedi-gs" />
                                                 <span className="text-slate-700">Giorno scadenza</span>

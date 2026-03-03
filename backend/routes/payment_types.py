@@ -157,6 +157,7 @@ async def simulate_deadlines(
         raise HTTPException(400, "Formato data non valido (YYYY-MM-DD)")
 
     fine_mese = enriched.get("fine_mese", False)
+    extra_days = enriched.get("extra_days") or 0
     richiedi_gs = enriched.get("richiedi_giorno_scadenza", False)
     giorno_sc = enriched.get("giorno_scadenza")
 
@@ -170,6 +171,8 @@ async def simulate_deadlines(
         if fine_mese:
             last_day = calendar.monthrange(target.year, target.month)[1]
             target = target.replace(day=last_day)
+            if extra_days:
+                target = target + timedelta(days=extra_days)
 
         if richiedi_gs and giorno_sc:
             try:
