@@ -23,11 +23,12 @@ import {
 } from '../components/ui/dropdown-menu';
 import { Badge } from '../components/ui/badge';
 import { Textarea } from '../components/ui/textarea';
+import { Checkbox } from '../components/ui/checkbox';
 import { toast } from 'sonner';
 import {
     Plus, Search, Upload, MoreHorizontal, Eye, Trash2, CreditCard,
     FileCode, PackagePlus, CheckCircle2, Clock, AlertCircle,
-    CircleDollarSign, FileUp, RefreshCw, Loader2,
+    CircleDollarSign, FileUp, RefreshCw, Loader2, Pencil,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import EmptyState from '../components/EmptyState';
@@ -617,6 +618,12 @@ export default function FattureRicevutePage() {
                                 </div>
                             </div>
 
+                            {/* Payment Schedule */}
+                            <PaymentScheduleSection fr={selectedFR} onUpdate={(updated) => {
+                                setSelectedFR(prev => ({...prev, ...updated}));
+                                fetchFatture();
+                            }} />
+
                             {/* Actions */}
                             <div className="flex gap-2 pt-2 border-t">
                                 <Button
@@ -769,5 +776,157 @@ export default function FattureRicevutePage() {
                 </DialogContent>
             </Dialog>
         </DashboardLayout>
+    );
+}
+
+
+function PaymentScheduleSection({ fr, onUpdate }) {
+    const [editing, setEditing] = useState(false);
+    const [rows, setRows] = useState([]);
+    const [recalcing, setRecalcing] = useState(false);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        setRows(fr?.scadenze_pagamento || []);
+        setEditing(false);
+    }, [fr?.fr_id, fr?.scadenze_pagamento]);
+
+    const handleRecalc = async () => {
+        setRecalcing(true);
+        try {
+            const result = await apiRequest(`/fatture-ricevute/${fr.fr_id}/recalc-scadenze`, { method: 'POST' });
+            setRows(result.scadenze_pagamento);
+            onUpdate({ scadenze_pagamento: result.scadenze_pagamento, data_scadenza_pagamento: result.data_scadenza_pagamento });
+            toast.success('Scadenze ricalcolate da anagrafica');
+        } catch (e) {
+            toast.error(e.message || 'Errore ricalcolo');
+        } finally {
+            setRecalcing(false);
+        }
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            const result = await apiRequest(`/fatture-ricevute/${fr.fr_id}/scadenze-pagamento`, {
+                method: 'PUT', body: rows,
+            });
+            onUpdate({ scadenze_pagamento: result.scadenze_pagamento });
+            setEditing(false);
+            toast.success('Piano scadenze aggiornato');
+        } catch (e) {
+            toast.error(e.message || 'Errore salvataggio');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const updateRow = (idx, field, value) => {
+        setRows(prev => prev.map((r, i) => i === idx ? { ...r, [field]: value } : r));
+    };
+
+    const addRow = () => {
+        setRows(prev => [...prev, {
+            rata: prev.length + 1,
+            data_scadenza: '',
+            importo: 0,
+            pagata: false,
+        }]);
+    };
+
+    const removeRow = (idx) => {
+        setRows(prev => prev.filter((_, i) => i !== idx).map((r, i) => ({ ...r, rata: i + 1 })));
+    };
+
+    return (
+        <div className="space-y-2" data-testid="payment-schedule-section">
+            <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-slate-700">Piano Scadenze</p>
+                <div className="flex gap-1">
+                    <Button
+                        variant="ghost" size="sm"
+                        onClick={handleRecalc}
+                        disabled={recalcing}
+                        data-testid="btn-recalc-from-anagrafica"
+                        className="text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 h-7"
+                    >
+                        <RefreshCw className={`h-3 w-3 mr-1 ${recalcing ? 'animate-spin' : ''}`} />
+                        Ricalcola da Anagrafica
+                    </Button>
+                    {!editing ? (
+                        <Button variant="ghost" size="sm" onClick={() => setEditing(true)} className="text-xs text-slate-500 h-7" data-testid="btn-edit-scadenze">
+                            <Pencil className="h-3 w-3 mr-1" /> Modifica
+                        </Button>
+                    ) : (
+                        <>
+                            <Button variant="ghost" size="sm" onClick={() => { setRows(fr?.scadenze_pagamento || []); setEditing(false); }} className="text-xs text-slate-400 h-7">
+                                Annulla
+                            </Button>
+                            <Button variant="default" size="sm" onClick={handleSave} disabled={saving} className="text-xs h-7 bg-slate-700" data-testid="btn-save-scadenze">
+                                {saving ? 'Salvo...' : 'Salva'}
+                            </Button>
+                        </>
+                    )}
+                </div>
+            </div>
+
+            {rows.length > 0 ? (
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-slate-50">
+                            <TableHead className="text-[10px] font-semibold w-[40px]">Rata</TableHead>
+                            <TableHead className="text-[10px] font-semibold">Data Scadenza</TableHead>
+                            <TableHead className="text-[10px] font-semibold text-right">Importo</TableHead>
+                            <TableHead className="text-[10px] font-semibold text-center w-[60px]">Pagata</TableHead>
+                            {editing && <TableHead className="w-[30px]"></TableHead>}
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {rows.map((r, i) => (
+                            <TableRow key={i} className={r.pagata ? 'opacity-50' : ''}>
+                                <TableCell className="text-xs font-mono text-slate-500">{r.rata}</TableCell>
+                                <TableCell>
+                                    {editing ? (
+                                        <Input type="date" value={r.data_scadenza} onChange={e => updateRow(i, 'data_scadenza', e.target.value)}
+                                            className="h-7 text-xs w-36" />
+                                    ) : (
+                                        <span className="text-xs">{r.data_scadenza ? formatDateIT(r.data_scadenza) : '-'}</span>
+                                    )}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    {editing ? (
+                                        <Input type="number" step="0.01" value={r.importo} onChange={e => updateRow(i, 'importo', parseFloat(e.target.value) || 0)}
+                                            className="h-7 text-xs font-mono w-24 text-right" />
+                                    ) : (
+                                        <span className="text-xs font-mono font-semibold">{formatCurrency(r.importo)}</span>
+                                    )}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                    {editing ? (
+                                        <Checkbox checked={r.pagata} onCheckedChange={v => updateRow(i, 'pagata', v)} />
+                                    ) : (
+                                        <span className={`text-xs font-bold ${r.pagata ? 'text-emerald-600' : 'text-slate-400'}`}>{r.pagata ? 'S' : 'N'}</span>
+                                    )}
+                                </TableCell>
+                                {editing && (
+                                    <TableCell>
+                                        <button onClick={() => removeRow(i)} className="text-red-400 hover:text-red-600 text-xs">✕</button>
+                                    </TableCell>
+                                )}
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            ) : (
+                <div className="text-center py-4 text-xs text-slate-400 bg-slate-50 rounded-lg">
+                    Nessuna scadenza calcolata. Clicca "Ricalcola da Anagrafica" per generarle.
+                </div>
+            )}
+            {editing && (
+                <Button variant="ghost" size="sm" onClick={addRow} className="text-xs text-slate-500 h-7">
+                    + Aggiungi rata
+                </Button>
+            )}
+        </div>
     );
 }

@@ -1,0 +1,130 @@
+{
+  "summary": "Iteration 115: Complete testing of payment_calculator.py service and scadenze_pagamento features. All 16 backend pytest tests passed (100%). Frontend UI verified: PaymentScheduleSection component renders correctly with 'Ricalcola da Anagrafica' button (data-testid: btn-recalc-from-anagrafica), Edit mode allows adding/modifying rate, Save button (data-testid: btn-save-scadenze) saves changes with toast confirmation.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "payment_calculator_pure_functions": {
+      "a_vista": {
+        "test": "calculate_due_dates with giorni=0",
+        "result": "PASS - Returns same date as invoice_date"
+      },
+      "30gg": {
+        "test": "calculate_due_dates with giorni=30, no fine_mese",
+        "result": "PASS - Returns invoice_date + 30 days (2026-01-15 → 2026-02-14)"
+      },
+      "60gg_dffm": {
+        "test": "calculate_due_dates with giorni=60, fine_mese=True",
+        "result": "PASS - Returns end of month after 60 days (2026-01-15 → 2026-03-31)"
+      },
+      "30gg_fm_plus_10": {
+        "test": "calculate_due_dates with giorni=30, fine_mese=True, extra_days=10",
+        "result": "PASS - Returns end of month + 10 (2026-01-15 → 2026-03-10)"
+      },
+      "2_rate_split": {
+        "test": "calculate_due_dates with multiple quotes (30gg 50%, 60gg 50%)",
+        "result": "PASS - Returns 2 rate with correct dates and amounts"
+      },
+      "empty_inputs": {
+        "test": "calculate_due_dates with empty/null inputs",
+        "result": "PASS - Returns empty list gracefully"
+      }
+    },
+    "calc_scadenze_from_supplier": {
+      "with_payment_type": {
+        "test": "Supplier with payment_type_id",
+        "result": "PASS - Correctly looks up payment type and calculates scadenze"
+      },
+      "without_payment_type": {
+        "test": "Supplier without payment_type_id",
+        "result": "PASS - Returns empty scadenze"
+      }
+    },
+    "backend_endpoints": {
+      "recalc_scadenze_bulk": {
+        "endpoint": "POST /api/fatture-ricevute/recalc-scadenze",
+        "result": "PASS - Returns {linked: N, updated: M} counts"
+      },
+      "recalc_single_with_supplier": {
+        "endpoint": "POST /api/fatture-ricevute/{fr_id}/recalc-scadenze",
+        "result": "PASS - Recalculates from supplier payment terms"
+      },
+      "recalc_single_no_supplier": {
+        "endpoint": "POST /api/fatture-ricevute/{fr_id}/recalc-scadenze",
+        "result": "PASS - Returns 400 if no fornitore_id"
+      },
+      "update_scadenze_manual": {
+        "endpoint": "PUT /api/fatture-ricevute/{fr_id}/scadenze-pagamento",
+        "result": "PASS - Saves manual scadenze list"
+      },
+      "update_mark_pagata": {
+        "endpoint": "PUT /api/fatture-ricevute/{fr_id}/scadenze-pagamento",
+        "result": "PASS - Correctly saves pagata flag on individual rate"
+      }
+    },
+    "dashboard_scadenze_array": {
+      "shows_individual_rate": {
+        "test": "Dashboard shows individual rate with rata numbers",
+        "result": "PASS - 3 rate invoice shows 3 entries with 'Rata 1/2/3' in titles"
+      },
+      "excludes_paid_rate": {
+        "test": "Dashboard excludes rate marked as pagata",
+        "result": "PASS - Paid rate correctly excluded from list"
+      }
+    },
+    "frontend_payment_schedule_section": {
+      "component_renders": {
+        "status": "PASS",
+        "data_testid": "payment-schedule-section"
+      },
+      "recalc_button": {
+        "status": "PASS",
+        "data_testid": "btn-recalc-from-anagrafica",
+        "label": "Ricalcola da Anagrafica"
+      },
+      "edit_button": {
+        "status": "PASS",
+        "data_testid": "btn-edit-scadenze",
+        "label": "Modifica"
+      },
+      "save_button": {
+        "status": "PASS",
+        "data_testid": "btn-save-scadenze",
+        "label": "Salva",
+        "note": "Only visible in edit mode"
+      },
+      "edit_mode_flow": {
+        "status": "PASS",
+        "details": "Click Modifica → Add rata → Fill date/amount → Click Salva → Toast 'Piano scadenze aggiornato'"
+      },
+      "add_rata_button": {
+        "status": "PASS",
+        "label": "+ Aggiungi rata"
+      }
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration115_payment_calculator.py",
+    "/app/test_reports/pytest/iteration115_payment_calculator_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration115_payment_calculator.py"
+  ],
+  "success_rate": {
+    "backend": "100% (16/16 pytest tests passed)",
+    "frontend": "100% (all UI features verified via Playwright)"
+  },
+  "test_credentials": "Created test user/session for UI testing, cleaned up after tests",
+  "seed_data_creation": "Created test invoices, suppliers, payment_types for testing - all cleaned up",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Payment calculator service (payment_calculator.py) is fully functional. Key features: (1) calculate_due_dates handles A Vista, DF, DFFM, FM+N, multi-rate splits, (2) calc_scadenze_from_supplier looks up payment_type from clients collection and calculates, (3) scadenze_pagamento array stored on fatture_ricevute documents, (4) Dashboard endpoint iterates over scadenze_pagamento for individual installment entries, (5) PaymentScheduleSection component in FattureRicevutePage.js provides edit/recalculate UI."
+}
