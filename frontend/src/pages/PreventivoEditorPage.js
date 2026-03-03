@@ -274,19 +274,40 @@ export default function PreventivoEditorPage() {
         setSaving(true);
         try {
             const payload = {
-                ...form,
                 client_id: form.client_id || null,
-                lines: form.lines.map(l => ({
-                    ...l, quantity: parseFloat(l.quantity) || 1, unit_price: parseFloat(l.unit_price) || 0,
-                    sconto_1: parseFloat(l.sconto_1) || 0, sconto_2: parseFloat(l.sconto_2) || 0,
-                })),
+                subject: form.subject,
+                validity_days: parseInt(form.validity_days) || 30,
+                payment_type_id: form.payment_type_id || null,
+                payment_type_label: form.payment_type_label || null,
+                destinazione_merce: form.destinazione_merce || null,
+                iban: form.iban || null,
+                banca: form.banca || null,
+                notes: form.notes || null,
+                note_pagamento: form.note_pagamento || null,
+                riferimento: form.riferimento || null,
                 acconto: parseFloat(form.acconto) || 0,
                 sconto_globale: parseFloat(form.sconto_globale) || 0,
-                giorni_consegna: form.giorni_consegna ? parseInt(form.giorni_consegna) : null,
+                normativa: form.normativa || null,
                 numero_disegno: form.numero_disegno || null,
                 ingegnere_disegno: form.ingegnere_disegno || null,
                 classe_esecuzione: form.classe_esecuzione || null,
+                giorni_consegna: form.giorni_consegna ? parseInt(form.giorni_consegna) : null,
+                lines: form.lines.map(l => ({
+                    line_id: l.line_id,
+                    description: l.description || '',
+                    codice_articolo: l.codice_articolo || null,
+                    dimensions: l.dimensions || null,
+                    quantity: parseFloat(l.quantity) || 1,
+                    unit: l.unit || 'pz',
+                    unit_price: parseFloat(l.unit_price) || 0,
+                    sconto_1: parseFloat(l.sconto_1) || 0,
+                    sconto_2: parseFloat(l.sconto_2) || 0,
+                    vat_rate: l.vat_rate || '22',
+                    thermal_data: l.thermal_data || null,
+                    notes: l.notes || null,
+                })),
             };
+            console.log('[SAVE] Payload:', JSON.stringify(payload).substring(0, 500));
             if (isNew) {
                 const res = await apiRequest('/preventivi/', { method: 'POST', body: payload });
                 toast.success('Preventivo creato');
