@@ -1,123 +1,90 @@
-# Norma Facile 2.0 — Product Requirements Document
+# Norma Facile 2.0 - ERP Carpenteria Metallica
 
 ## Problema Originale
-CRM/ERP per fabbri e carpenterie metalliche. Gestione completa di commesse, fatturazione, certificazioni CE (EN 1090 per strutture, EN 13241 per cancelli), tracciabilita' materiali, quality hub.
-
-## Utente Target
-Titolari e responsabili di officine di carpenteria metallica in Italia.
-
-## Lingua
-Italiano (l'utente comunica esclusivamente in italiano).
-
----
+Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile 2.0", con gestione preventivi, fatture, commesse, tracciabilità materiali, certificazioni EN 1090/EN 13241, e fatturazione elettronica.
 
 ## Architettura
-- **Frontend**: React + Shadcn/UI + TailwindCSS
-- **Backend**: FastAPI + MongoDB (Motor async driver)
-- **Auth**: Google OAuth (Emergent-managed) — Session cookies (credentials: 'include')
-- **PDF**: WeasyPrint + pypdf
-- **AI OCR**: OpenAI GPT-4o Vision (Emergent LLM Key)
-- **Email**: Resend
-- **Invoicing**: Fatture in Cloud (SDI) — ATTIVO, Company ID 1398737
-- **Dominio Produzione**: www.1090normafacile.it
+- **Frontend**: React + Shadcn/UI + TailwindCSS (porta 3000)
+- **Backend**: FastAPI + MongoDB (porta 8001)
+- **Auth**: Google OAuth (Emergent-managed)
+- **Integrazioni**: Fatture in Cloud, Resend (email), WeasyPrint (PDF)
 
-## Brand Identity
-- **Palette**: Navy #0F172A, Steel Grey #64748B, Lime Accent #84CC16
-- **Logo**: logo-1090.jpeg (public folder)
-- **Stile**: Dark & Industrial, B2B, Split Screen login
+## Funzionalità Implementate
 
----
+### Core ERP
+- Gestione clienti (persone fisiche e giuridiche)
+- Preventivi con editor completo (righe, sconti, IVA, compliance termica)
+- Fatturazione progressiva con workflow (bozza -> accettato -> fatturato -> saldato)
+- Commesse con split per normativa mista
+- DDT (Documenti di Trasporto)
+- Scadenziario pagamenti automatico
 
-## Funzionalita' Implementate
+### Gestione Pagamenti
+- Tipi pagamento avanzati multi-rata (stile Invoicex)
+- Simulazione pagamenti client-side
+- Termine "A fine lavori"
+- Generazione automatica scadenze all'emissione fattura
 
-### Core
-- Gestione commesse con macchina a stati event-driven + Kanban
-- Preventivi con calcolo termico (Ecobonus), fatturazione progressiva
-- Clienti/Fornitori CRM, Fatturazione, DDT, Distinte, Rilievi
+### Conti Bancari e SDI
+- Gestione multi-conto corrente aziendale nelle impostazioni
+- Selezione conto nel preventivo/fattura (dropdown "Ns. Conto per Pagamento")
+- Dati fatturazione elettronica (SDI, natura giuridica, regime fiscale)
 
-### Qualita' e Compliance
-- Quality Hub, EN 1090 (Strutture), EN 13241 (Cancelli)
-- Smart Quote Analysis + Split Commessa per preventivi misti
-- Smart ISO 3834 Consumables (auto-import da fatture)
-- Quality Score adattivo, Dashboard Sostenibilita' CO2
+### Tracciabilità e Certificazioni
+- FPC (Fascicolo Produzione in Cantiere)
+- Certificazioni EN 1090 / EN 13241
+- Qualifica saldatori
+- Compliance termica (calcolo Uw)
 
-### Controllo Costi e Finanza
-- Controllo Costi con pagina dedicata
-- Analisi Finanziaria Commessa (Margine Reale)
-- Scadenziario (dashboard scadenze)
-
-### Amministrazione
-- Backup & Restore: Export/Import JSON completo
+### Altre Funzionalità
+- Numerazione atomica preventivi/fatture (no duplicati)
 - Migrazione dati da vecchia app
-- Fatture in Cloud ATTIVA
-- Ruoli & Permessi (RBAC): admin, ufficio_tecnico, officina, amministrazione, guest
-- Gestione Team con inviti email
+- Backup/Restore
+- Gestione team con ruoli
+- Notifiche email (scheduler giornaliero)
+- Generazione PDF
+- Anteprima email
 
-### Notifiche & Monitoraggio (v2.1.0)
-- "Il Cane da Guardia": scheduler background (12h) scadenze saldatori/strumenti
-- Email automatiche via Resend a admin/ufficio_tecnico
-- Dashboard /notifiche con allarmi live, storico, trigger manuale
-- Badge notifiche nella sidebar con conteggio allarmi attivi
-- QR Code Commesse: generazione PNG + dialog download
+## Bug Risolti (sessione corrente - 3 Marzo 2026)
+- **P0 FIX: Dropdown conti bancari vuoto nell'editor preventivi** - L'endpoint API chiamato era errato (`/company/` invece di `/company/settings`). Fix applicato in `PreventivoEditorPage.js` linea 143.
 
-### Deploy & Manutenzione (v2.1.0)
-- Tab Deploy in Impostazioni: pulizia dati test, preview, opzioni mantieni clienti/fornitori
-- Indici MongoDB ottimizzati per performance produzione
-- Pulizia utenti e sessioni test completata
-
-### Legal & Compliance
-- Disclaimer EN 1090, Termini di Servizio, Privacy Policy GDPR
-- LegalFooter riutilizzabile, Checkbox accettazione ToS
-
-### UI/UX
-- Landing Page Dark & Industrial Split Screen con logo reale
-- Responsive (mobile stacking)
-- Tabella preventivi ottimizzata (table-fixed, colonna Descrizione allargata)
-- Scadenziario Automatico: incassi attesi calcolati da tipo pagamento cliente
-- Numerazione documenti: contatori atomici (no duplicati dopo cancellazioni)
-- Tipi Pagamento stile Invoicex (quote, simulazione scadenze, codice FE)
-
----
-
-## Produzione — Checklist
-- [x] Dominio: www.1090normafacile.it (configurato in DOMAIN_URL e CORS)
-- [x] Email: Resend con fatture@steelprojectdesign.it (verificato funzionante)
-- [x] Credenziali: Tutte configurate (Google OAuth, FIC, Resend, LLM)
-- [x] Indici MongoDB creati per performance
-- [x] Utenti test eliminati (solo admin reale rimasto)
-- [x] Sessioni test eliminate
-- [x] Scheduler notifiche attivo
-- [x] Autenticazione frontend unificata (session cookies everywhere)
-- [ ] Pulizia dati operativi test (da fare manualmente via tab Deploy)
-- [ ] Backup "Punto Zero" dopo pulizia
-
----
+## Issue Pendenti
+- **P2**: Validazione Pydantic su dati migrati (response_model rimosso temporaneamente)
+- **P2**: Cache frontend (utente deve fare hard refresh dopo deploy)
 
 ## Backlog Prioritizzato
 
 ### P0
-- Firma digitale su tablet (QR code + fasi produzione)
-- Dashboard cantiere in tempo reale ("semaforo")
+- Firma digitale su tablet (QR code per fasi produzione)
 
 ### P1
-- Export CSV distinta di taglio per CNC
-- Stato "SOSPESA" per commesse
-- Generazione automatica WPS per EN 1090
+- Dashboard "semaforo" lavori in tempo reale
 
 ### P2
-- Portale Cliente read-only per tracking commesse
-- Analisi predittiva margini per nuovi preventivi
+- Generazione automatica WPS per EN 1090
+- Refactoring PreventivoEditorPage.js (1000+ righe -> componenti più piccoli)
+
+### Futuri
+- Portale cliente read-only
+- Analisi margini predittiva
 - Calendario produzione / Gantt
-- OCR per data entry da bolle fornitori
+- OCR per DDT fornitori
 - Report PDF mensili automatici
-- PWA per modalita' offline
-- Migrazione certificati Base64 -> object storage
-- Versionamento fatture e fascicoli tecnici
-- Implementare "Restore from Backup"
+- PWA per accesso offline
+- Migrazione storage certificati (da Base64 a object storage)
+- Versioning documenti
+- Funzionalità "Restore from Backup"
 
----
+## File Chiave
+- `/app/frontend/src/pages/PreventivoEditorPage.js` - Editor preventivi
+- `/app/frontend/src/pages/SettingsPage.js` - Impostazioni aziendali
+- `/app/backend/routes/company.py` - API impostazioni aziendali
+- `/app/backend/routes/preventivi.py` - API preventivi
+- `/app/backend/routes/invoices.py` - API fatture
+- `/app/backend/models/company.py` - Modelli impostazioni
 
-## Ultimo Aggiornamento: 2026-03-02
-- v2.1.3: BUG FIX numerazione preventivi/fatture (contatore atomico), Scadenziario Automatico (incassi attesi da fatture emesse)
-- v2.1.2: Tipi Pagamento stile Invoicex — quote personalizzate, simulazione scadenze, codice FE (MP01-MP23), divisione automatica, giorni custom
-- v2.1.1: Fix layout tabella preventivi (table-fixed), pulizia autenticazione frontend completa
+## Note Tecniche
+- Contatori atomici MongoDB per numerazione documenti (`counters` collection)
+- Autenticazione session-based (`credentials: 'include'`)
+- Dropdown nativi HTML per evitare bug z-index di Radix UI
+- L'utente comunica esclusivamente in italiano
