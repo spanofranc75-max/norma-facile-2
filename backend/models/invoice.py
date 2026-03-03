@@ -133,10 +133,12 @@ class InvoiceBase(BaseModel):
 class InvoiceCreate(InvoiceBase):
     """Model for creating an invoice."""
     lines: List[InvoiceLineCreate] = []
+    document_number: Optional[str] = None  # If provided, use instead of auto-generated
 
 
 class InvoiceUpdate(BaseModel):
     """Model for updating an invoice."""
+    document_number: Optional[str] = None
     client_id: Optional[str] = None
     issue_date: Optional[date] = None
     due_date: Optional[date] = None

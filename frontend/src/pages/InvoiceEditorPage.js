@@ -110,6 +110,7 @@ export default function InvoiceEditorPage() {
     
     const [formData, setFormData] = useState({
         document_type: 'FT',
+        document_number: '',
         client_id: '',
         issue_date: new Date().toISOString().split('T')[0],
         due_date: '',
@@ -165,6 +166,7 @@ export default function InvoiceEditorPage() {
                 const data = await apiRequest(`/invoices/${invoiceId}`);
                 setFormData({
                     document_type: data.document_type,
+                    document_number: data.document_number || '',
                     client_id: data.client_id,
                     issue_date: data.issue_date,
                     due_date: data.due_date || '',
@@ -448,7 +450,7 @@ export default function InvoiceEditorPage() {
                         <CardTitle className="text-lg font-semibold">Intestazione</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid grid-cols-4 gap-4">
+                        <div className="grid grid-cols-5 gap-4">
                             <div>
                                 <Label>Tipo Documento</Label>
                                 <Select
@@ -467,6 +469,16 @@ export default function InvoiceEditorPage() {
                                         ))}
                                     </SelectContent>
                                 </Select>
+                            </div>
+                            <div>
+                                <Label>Numero</Label>
+                                <Input
+                                    data-testid="input-doc-number"
+                                    value={formData.document_number || ''}
+                                    onChange={(e) => updateField('document_number', e.target.value)}
+                                    placeholder={isEditing ? '' : 'Auto'}
+                                    className="font-mono"
+                                />
                             </div>
                             <div>
                                 <Label>Data Emissione</Label>

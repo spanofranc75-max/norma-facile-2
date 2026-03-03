@@ -133,9 +133,6 @@ class PDFService:
         if invoice.get("notes"):
             notes_html = f'<div class="info-box"><strong>Note:</strong> {safe(invoice["notes"]).replace(chr(10), "<br>")}</div>'
 
-        # ── Conditions ──
-        conditions_html = build_conditions_html(co, invoice.get("document_number", ""))
-
         # ── Assemble ──
         body = f"""
         {header}
@@ -160,7 +157,6 @@ class PDFService:
         {notes_html}
         {totals_html}
         {bank_html}
-        {conditions_html}
         """
 
         buf = render_pdf(body)

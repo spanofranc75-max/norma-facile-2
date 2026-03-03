@@ -377,12 +377,15 @@ async def create_invoice(
     now = datetime.now(timezone.utc)
     year = invoice_data.issue_date.year
     
-    # Get next document number
-    document_number = await invoice_service.get_next_number(
-        user["user_id"],
-        invoice_data.document_type,
-        year
-    )
+    # Get next document number (or use manual one)
+    if invoice_data.document_number:
+        document_number = invoice_data.document_number
+    else:
+        document_number = await invoice_service.get_next_number(
+            user["user_id"],
+            invoice_data.document_type,
+            year
+        )
     
     # Calculate lines
     calculated_lines = [
@@ -458,6 +461,10 @@ async def update_invoice(
         )
     
     update_dict = {}
+    
+    # Update document number if provided
+    if invoice_data.document_number is not None:
+        update_dict["document_number"] = invoice_data.document_number
     
     # Update client if changed
     if invoice_data.client_id:
