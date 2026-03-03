@@ -50,7 +50,7 @@ class PDFService:
         display_num = doc_number.replace("FT-", "").replace("NC-", "")
         issue_date = format_date(invoice.get("issue_date", ""))
         due_date = invoice.get("due_date")
-        payment_method = PAYMENT_METHOD_NAMES.get(
+        payment_label = invoice.get("payment_terms") or PAYMENT_METHOD_NAMES.get(
             invoice.get("payment_method", ""), invoice.get("payment_method", "")
         )
 
@@ -59,7 +59,7 @@ class PDFService:
         # ── Meta rows ──
         meta_rows = f"""
         <tr><td class="meta-label">DATA:</td><td>{issue_date}</td></tr>
-        <tr><td class="meta-label">Pagamento:</td><td>{safe(payment_method)}</td></tr>"""
+        <tr><td class="meta-label">Pagamento:</td><td>{safe(payment_label)}</td></tr>"""
         if due_date:
             meta_rows += f'<tr><td class="meta-label">Scadenza:</td><td>{format_date(due_date)}</td></tr>'
 
@@ -122,7 +122,7 @@ class PDFService:
             bank_html = f"""
             <div class="bank-info">
                 <div class="info-box-title">COORDINATE BANCARIE</div>
-                <p><strong>Modalit&agrave; di pagamento:</strong> {safe(payment_method)}</p>
+                <p><strong>Modalit&agrave; di pagamento:</strong> {safe(payment_label)}</p>
                 {"<p><strong>Banca:</strong> " + bank_name + "</p>" if bank_name else ""}
                 {"<p><strong>IBAN:</strong> " + bank_iban + "</p>" if bank_iban else ""}
                 {"<p><strong>BIC/SWIFT:</strong> " + bank_bic + "</p>" if bank_bic else ""}
