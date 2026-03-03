@@ -1,7 +1,7 @@
-"""Cost Control — Mock Invoice Data & Cost Assignment.
+"""Cost Control — Invoice Processing, Cost Assignment & Margin Analysis.
 
-Provides mock purchase invoices for UI development and real cost assignment to commesse.
-When the Fatture in Cloud integration is live, the mock data can be replaced with real data.
+Processes purchase invoices: assigns costs to commesse, magazzino, or general expenses.
+Supports per-row allocation with smart article matching and PMP calculation.
 """
 import uuid
 import logging
@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from core.database import db
 from core.security import get_current_user
+from services.invoice_line_processor import match_article, update_article_inventory, create_article_from_line
 
 router = APIRouter(prefix="/costs", tags=["costs"])
 logger = logging.getLogger(__name__)
@@ -25,9 +26,22 @@ COST_ENTRIES = "project_costs"
 class CostAssignment(BaseModel):
     target_type: str  # "commessa" | "magazzino" | "generale"
     target_id: Optional[str] = None
-    category: str = "materiali"  # materiali, lavorazioni_esterne, consumabili, trasporti
+    category: str = "materiali"
     amount: Optional[float] = None
     righe_selezionate: Optional[List[int]] = None
+    note: Optional[str] = ""
+
+
+class RowAllocation(BaseModel):
+    idx: int
+    target_type: str  # "magazzino" | "commessa" | "generale"
+    target_id: Optional[str] = None  # commessa_id or articolo_id
+    category: str = "materiali"
+    create_article: bool = False  # If True, create new article in catalog
+
+
+class RowAllocationRequest(BaseModel):
+    rows: List[RowAllocation]
     note: Optional[str] = ""
 
 
@@ -363,3 +377,200 @@ async def search_commesse_for_costs(q: str = "", user: dict = Depends(get_curren
         ]
     items = await db.commesse.find(filt, {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "client_name": 1, "value": 1, "status": 1}).sort("created_at", -1).to_list(20)
     return {"commesse": items}
+
+
+# ── Smart Article Matching ───────────────────────────────────────
+
+@router.post("/invoices/{invoice_id}/match-articles")
+async def match_invoice_articles(invoice_id: str, user: dict = Depends(get_current_user)):
+    """Smart match invoice lines to existing articles in catalog."""
+    uid = user["user_id"]
+    fr = await db.fatture_ricevute.find_one(
+        {"fr_id": invoice_id, "user_id": uid},
+        {"_id": 0, "linee": 1, "fornitore_nome": 1}
+    )
+    if not fr:
+        raise HTTPException(404, "Fattura non trovata")
+
+    results = []
+    for i, line in enumerate(fr.get("linee", [])):
+        desc = line.get("descrizione", "")
+        code = line.get("codice_articolo", "")
+        matched = await match_article(uid, desc, code)
+        results.append({
+            "idx": i,
+            "descrizione": desc,
+            "quantita": line.get("quantita", 0),
+            "prezzo_unitario": line.get("prezzo_unitario", 0),
+            "importo": line.get("importo", 0),
+            "match": {
+                "articolo_id": matched["articolo_id"],
+                "codice": matched["codice"],
+                "descrizione": matched["descrizione"],
+                "prezzo_attuale": matched.get("prezzo_unitario", 0),
+                "giacenza": matched.get("giacenza", 0),
+            } if matched else None,
+            "suggested_action": "aggiorna" if matched else "crea_nuovo",
+        })
+    return {"lines": results}
+
+
+# ── Per-Row Allocation ───────────────────────────────────────────
+
+@router.post("/invoices/{invoice_id}/assign-rows")
+async def assign_invoice_rows(invoice_id: str, data: RowAllocationRequest, user: dict = Depends(get_current_user)):
+    """Assign individual invoice rows to different destinations (magazzino, commessa, generale)."""
+    uid = user["user_id"]
+    now = datetime.now(timezone.utc)
+
+    fr = await db.fatture_ricevute.find_one(
+        {"fr_id": invoice_id, "user_id": uid},
+        {"_id": 0, "fr_id": 1, "fornitore_nome": 1, "fornitore_id": 1, "numero_documento": 1,
+         "linee": 1, "totale_documento": 1}
+    )
+    if not fr:
+        raise HTTPException(404, "Fattura non trovata")
+
+    linee = fr.get("linee", [])
+    fornitore = fr.get("fornitore_nome", "")
+    fornitore_id = fr.get("fornitore_id", "")
+    results = []
+
+    for row_alloc in data.rows:
+        idx = row_alloc.idx
+        if idx >= len(linee):
+            continue
+        line = linee[idx]
+        qty = line.get("quantita", 0)
+        price = line.get("prezzo_unitario", 0)
+        importo = line.get("importo", 0)
+
+        result_entry = {"idx": idx, "target_type": row_alloc.target_type}
+
+        if row_alloc.target_type == "magazzino":
+            art_id = row_alloc.target_id
+            if row_alloc.create_article or not art_id:
+                # Create new article
+                new_art = await create_article_from_line(
+                    uid, line, fornitore, fornitore_id, invoice_id
+                )
+                art_id = new_art["articolo_id"]
+                result_entry["action"] = "created"
+                result_entry["articolo"] = new_art
+            else:
+                # Update existing article
+                upd = await update_article_inventory(art_id, qty, price, fornitore, invoice_id)
+                result_entry["action"] = "updated"
+                result_entry["update"] = upd
+            result_entry["articolo_id"] = art_id
+
+        elif row_alloc.target_type == "commessa" and row_alloc.target_id:
+            commessa = await db.commesse.find_one(
+                {"commessa_id": row_alloc.target_id, "user_id": uid},
+                {"_id": 0, "commessa_id": 1, "numero": 1}
+            )
+            if commessa:
+                await db.commesse.update_one(
+                    {"commessa_id": row_alloc.target_id},
+                    {"$push": {"costi_reali": {
+                        "cost_id": f"cost_{uuid.uuid4().hex[:10]}",
+                        "tipo": row_alloc.category,
+                        "descrizione": line.get("descrizione", ""),
+                        "fornitore": fornitore,
+                        "importo": round(abs(importo), 2),
+                        "quantita": qty,
+                        "prezzo_unitario": price,
+                        "data": now.isoformat(),
+                        "fr_id": invoice_id,
+                    }}, "$set": {"updated_at": now}}
+                )
+                result_entry["commessa_numero"] = commessa.get("numero", "")
+            result_entry["action"] = "assigned"
+
+        else:  # generale
+            result_entry["action"] = "generale"
+
+        # Save cost entry
+        cost_entry = {
+            "cost_id": f"cost_{uuid.uuid4().hex[:10]}",
+            "user_id": uid,
+            "source_invoice_id": invoice_id,
+            "source_invoice_numero": fr.get("numero_documento", ""),
+            "fornitore": fornitore,
+            "target_type": row_alloc.target_type,
+            "target_id": row_alloc.target_id,
+            "category": row_alloc.category,
+            "importo": round(abs(importo), 2),
+            "riga_descrizione": line.get("descrizione", ""),
+            "riga_idx": idx,
+            "is_mock": False,
+            "created_at": now,
+        }
+        await db[COST_ENTRIES].insert_one(cost_entry)
+        results.append(result_entry)
+
+    # Mark invoice as processed
+    await db.fatture_ricevute.update_one(
+        {"fr_id": invoice_id, "user_id": uid},
+        {"$set": {
+            "imputazione": {
+                "destinazione": "multi",
+                "righe": [{"idx": r.idx, "target_type": r.target_type, "target_id": r.target_id} for r in data.rows],
+                "data": now.isoformat(),
+            },
+            "status": "registrata",
+            "updated_at": now,
+        }}
+    )
+
+    return {"message": f"Processate {len(results)} righe", "results": results}
+
+
+# ── Margin Analysis ──────────────────────────────────────────────
+
+@router.get("/margin-analysis")
+async def margin_analysis(user: dict = Depends(get_current_user)):
+    """Get margin analysis for all commesse with assigned costs."""
+    uid = user["user_id"]
+    commesse = await db.commesse.find(
+        {"user_id": uid, "costi_reali": {"$exists": True, "$ne": []}},
+        {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "client_name": 1,
+         "value": 1, "costi_reali": 1, "status": 1}
+    ).sort("numero", -1).to_list(100)
+
+    results = []
+    for c in commesse:
+        valore = float(c.get("value", 0) or 0)
+        costi = c.get("costi_reali", [])
+        totale_costi = sum(float(x.get("importo", 0) or 0) for x in costi)
+        margine = valore - totale_costi
+        margine_pct = (margine / valore * 100) if valore > 0 else 0
+
+        # Group by category
+        by_cat = {}
+        for cost in costi:
+            cat = cost.get("tipo", "materiali")
+            by_cat[cat] = by_cat.get(cat, 0) + float(cost.get("importo", 0) or 0)
+
+        alert = "verde"
+        if margine_pct < 10:
+            alert = "rosso"
+        elif margine_pct < 20:
+            alert = "giallo"
+
+        results.append({
+            "commessa_id": c["commessa_id"],
+            "numero": c.get("numero", ""),
+            "title": c.get("title", ""),
+            "client_name": c.get("client_name", ""),
+            "status": c.get("status", ""),
+            "valore_preventivo": round(valore, 2),
+            "totale_costi": round(totale_costi, 2),
+            "margine": round(margine, 2),
+            "margine_pct": round(margine_pct, 1),
+            "costi_per_categoria": {k: round(v, 2) for k, v in by_cat.items()},
+            "num_voci": len(costi),
+            "alert": alert,
+        })
+
+    return {"commesse": results, "total": len(results)}

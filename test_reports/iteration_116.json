@@ -1,0 +1,154 @@
+{
+  "summary": "Iteration 116: Complete testing of Cost Control features - Smart Article Matching, PMP Calculation, Per-Row Allocation, and Margin Analysis. All 13 backend pytest tests passed (100%). Frontend UI fully verified: CostControlPage renders with two tabs (Processa/Analisi Margini), invoice list shows pending invoices with line count badge, smart matching displays results under line descriptions, per-row allocation table allows destination selection (Magazzino/Commessa/Generale), and Process button submits allocations successfully. Margins tab shows bar comparison (preventivo vs reale) with color-coded alerts.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "backend_services": {
+      "calc_pmp": {
+        "test": "Weighted average price calculation",
+        "result": "PASS - Formula (old_qty * old_pmp + new_qty * new_price) / (old_qty + new_qty) works correctly"
+      },
+      "match_article": {
+        "test": "Find articles by code and description",
+        "result": "PASS - Matches by code regex or description substring"
+      },
+      "update_article_inventory": {
+        "test": "Update article giacenza and PMP",
+        "result": "PASS - Correctly updates stock and weighted average price"
+      },
+      "create_article_from_line": {
+        "test": "Create new article from invoice line",
+        "result": "PASS - Creates article with initial stock and price"
+      }
+    },
+    "backend_endpoints": {
+      "pending_invoices": {
+        "endpoint": "GET /api/costs/invoices/pending",
+        "result": "PASS - Returns unprocessed fatture_ricevute"
+      },
+      "match_articles": {
+        "endpoint": "POST /api/costs/invoices/{id}/match-articles",
+        "result": "PASS - Returns smart matching results for each line with suggested_action"
+      },
+      "assign_rows": {
+        "endpoint": "POST /api/costs/invoices/{id}/assign-rows",
+        "result": "PASS - Processes per-row allocation correctly",
+        "details": "Magazzino: updates/creates articles with PMP; Commessa: updates costi_reali; Generale: saves as cost entry"
+      },
+      "margin_analysis": {
+        "endpoint": "GET /api/costs/margin-analysis",
+        "result": "PASS - Returns commesse with valore_preventivo, totale_costi, margine, alert levels (verde/giallo/rosso)"
+      },
+      "commesse_search": {
+        "endpoint": "GET /api/costs/commesse-search",
+        "result": "PASS - Returns commesse list for dropdown selection"
+      }
+    },
+    "frontend_cost_control_page": {
+      "page_renders": {
+        "status": "PASS",
+        "data_testid": "cost-control-page"
+      },
+      "tabs": {
+        "process_tab": {
+          "status": "PASS",
+          "data_testid": "tab-process",
+          "label": "Processa (N)"
+        },
+        "margins_tab": {
+          "status": "PASS",
+          "data_testid": "tab-margins",
+          "label": "Analisi Margini (N)"
+        }
+      },
+      "invoice_list": {
+        "status": "PASS",
+        "data_testid_pattern": "invoice-{invoice_id}",
+        "shows_line_count_badge": true
+      },
+      "line_allocation_table": {
+        "status": "PASS",
+        "headers": ["Descrizione Riga", "Q.tà", "Prezzo", "Importo", "Destinazione", "Dettaglio"],
+        "destination_select": {
+          "data_testid_pattern": "dest-{idx}",
+          "options": ["Magazzino", "Commessa", "Generale"]
+        },
+        "commessa_select": {
+          "data_testid_pattern": "commessa-{idx}",
+          "note": "Only visible when destination=commessa"
+        }
+      },
+      "smart_match_results": {
+        "status": "PASS",
+        "matched_text": "Trovato: {codice} (giacenza: N)",
+        "no_match_text": "Nuovo articolo"
+      },
+      "process_button": {
+        "status": "PASS",
+        "data_testid": "btn-process-rows",
+        "label": "Processa N righe"
+      },
+      "process_flow": {
+        "status": "PASS",
+        "toast_message": "Processate N righe",
+        "invoice_removed_after_process": true,
+        "empty_state_message": "Tutte le fatture sono state processate"
+      }
+    },
+    "frontend_margins_tab": {
+      "margin_card": {
+        "status": "PASS",
+        "data_testid_pattern": "margin-{commessa_id}"
+      },
+      "bar_comparison": {
+        "status": "PASS",
+        "preventivo_bar": "Blue full-width bar",
+        "costi_reali_bar": "Colored bar (green/amber/red) proportional to costs"
+      },
+      "margin_display": {
+        "status": "PASS",
+        "shows_amount": true,
+        "shows_percentage": true
+      },
+      "alert_badges": {
+        "status": "PASS",
+        "verde_ok": ">20% margin",
+        "giallo_attenzione": "10-20% margin",
+        "rosso_margine_eroso": "<10% margin"
+      },
+      "category_breakdown": {
+        "status": "PASS",
+        "shows_per_category_totals": true
+      },
+      "refresh_button": {
+        "status": "PASS",
+        "label": "Aggiorna"
+      }
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration116_cost_control.py",
+    "/app/test_reports/pytest/iteration116_cost_control_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration116_cost_control.py"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 pytest tests passed)",
+    "frontend": "100% (all UI features verified via Playwright)"
+  },
+  "test_credentials": "Created test users/sessions for testing - all cleaned up after tests",
+  "seed_data_creation": "Created test articoli, commesse, fatture_ricevute - all cleaned up",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Cost Control module (iteration 116) fully functional. Key features: (1) invoice_line_processor.py service handles smart matching via match_article, PMP calculation via calc_pmp, inventory updates via update_article_inventory, new article creation via create_article_from_line; (2) cost_control.py router provides endpoints for pending invoices, smart matching, per-row allocation, and margin analysis; (3) CostControlPage.js has ProcessTab (invoice list, line allocation table with destination selects) and MarginsTab (bar comparison charts with color-coded alerts); (4) Route is /controllo-costi; (5) Margin alerts: verde >20%, giallo 10-20%, rosso <10%."
+}
