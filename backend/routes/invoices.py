@@ -1,4 +1,5 @@
 """Invoice routes for fatturazione."""
+import os
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
 from typing import Optional, List
@@ -995,9 +996,9 @@ async def send_invoice_to_sdi(invoice_id: str, user: dict = Depends(get_current_
     if not company or not company.get("partita_iva"):
         raise HTTPException(400, "Configura i dati aziendali (P.IVA obbligatoria) prima di inviare al SDI")
 
-    # Get Fatture in Cloud credentials from company settings
-    fic_token = company.get("fic_access_token")
-    fic_company_id = company.get("fic_company_id")
+    # Get Fatture in Cloud credentials from company settings or env
+    fic_token = company.get("fic_access_token") or os.environ.get("FIC_ACCESS_TOKEN")
+    fic_company_id = company.get("fic_company_id") or os.environ.get("FIC_COMPANY_ID")
     if not fic_token or not fic_company_id:
         raise HTTPException(400, "Configura le credenziali Fatture in Cloud in Impostazioni → Integrazioni")
 

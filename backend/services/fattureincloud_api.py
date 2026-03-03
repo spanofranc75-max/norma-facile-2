@@ -178,7 +178,7 @@ def map_fattura_to_fic(invoice: dict, client: dict) -> Dict[str, Any]:
             "ei_code": client.get("codice_sdi", "0000000"),
             "certified_email": client.get("pec", ""),
         },
-        "date": invoice.get("created_at", "").split("T")[0] if invoice.get("created_at") else None,
+        "date": invoice.get("issue_date") or (invoice.get("created_at", "").split("T")[0] if isinstance(invoice.get("created_at"), str) else None),
         "number": invoice.get("document_number", ""),
         "items_list": items,
         "payment_method": {"id": 0},
