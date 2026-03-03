@@ -1,64 +1,79 @@
 /**
- * ScadenziarioPage — Deadline dashboard: payments, documents, commesse.
- * Aggregates all deadlines in one view with KPIs and inbox.
+ * ScadenziarioPage — Fintech-style deadline dashboard.
+ * Transaction cards, grouped by urgency, with financial KPIs.
  */
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { useState, useEffect, useCallback } from 'react';
+import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import {
-    Calendar, AlertTriangle, CheckCircle2, Clock, CreditCard, Wrench,
-    Award, Truck, ArrowRight, RefreshCw, Filter, FileInput, ChevronDown,
-    ChevronUp, Package, Banknote
+    AlertTriangle, CheckCircle2, Clock, RefreshCw, Filter,
+    TrendingDown, TrendingUp, Wallet, ChevronDown, ChevronUp,
+    Check, ExternalLink, Calendar as CalendarIcon,
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { apiRequest } from '../lib/utils';
+import DashboardLayout from '../components/DashboardLayout';
 
-const API = process.env.REACT_APP_BACKEND_URL;
-
-function formatCurrency(v) {
-    if (v == null) return '';
+function fmtCur(v) {
+    if (v == null) return '0,00 \u20ac';
     return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v);
 }
 
-function formatDate(d) {
-    if (!d) return '—';
-    const parts = d.split('-');
-    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    return d;
+function fmtDate(d) {
+    if (!d) return '';
+    try {
+        const dt = new Date(d + 'T00:00:00');
+        return dt.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch { return d; }
 }
 
-const TIPO_CONFIG = {
-    pagamento: { icon: CreditCard, label: 'Pagamento', color: '#dc2626' },
-    incasso: { icon: Banknote, label: 'Incasso', color: '#0055FF' },
-    patentino: { icon: Award, label: 'Patentino', color: '#7c3aed' },
-    taratura: { icon: Wrench, label: 'Taratura', color: '#2563eb' },
-    consegna: { icon: Truck, label: 'Consegna', color: '#059669' },
+function daysUntil(d) {
+    if (!d) return null;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const target = new Date(d + 'T00:00:00');
+    return Math.round((target - today) / 86400000);
+}
+
+function getInitials(name) {
+    if (!name) return '?';
+    const words = name.trim().split(/\s+/).filter(w => w.length > 1);
+    if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+}
+
+const AVATAR_COLORS = [
+    'bg-blue-600', 'bg-emerald-600', 'bg-violet-600', 'bg-amber-600',
+    'bg-rose-600', 'bg-cyan-600', 'bg-indigo-600', 'bg-teal-600',
+];
+
+function avatarColor(name) {
+    let hash = 0;
+    for (let i = 0; i < (name || '').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+const TIPO_LABELS = {
+    pagamento: 'Pagamento',
+    incasso: 'Incasso',
+    patentino: 'Patentino',
+    taratura: 'Taratura',
+    consegna: 'Consegna',
 };
 
-const STATO_BADGE = {
-    scaduto: { label: 'Scaduto', className: 'bg-red-100 text-red-700' },
-    in_scadenza: { label: 'In scadenza', className: 'bg-amber-100 text-amber-700' },
-    ok: { label: 'OK', className: 'bg-emerald-100 text-emerald-700' },
-};
+const MONTH_NAMES = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+    'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
 
 export default function ScadenziarioPage() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [filterTipo, setFilterTipo] = useState('tutti');
-    const [filterStato, setFilterStato] = useState('tutti');
     const [syncing, setSyncing] = useState(false);
-    const [syncResult, setSyncResult] = useState(null);
-    const [inbox, setInbox] = useState([]);
-    const [showInbox, setShowInbox] = useState(false);
 
     const fetchData = useCallback(async () => {
         try {
-            const res = await fetch(`${API}/api/fatture-ricevute/scadenziario/dashboard`, {
-                credentials: 'include',
-            });
-            if (res.ok) {
-                const d = await res.json();
-                setData(d);
-            }
+            const d = await apiRequest('/fatture-ricevute/scadenziario/dashboard');
+            setData(d);
         } catch (e) {
             console.error('Fetch scadenziario error:', e);
         } finally {
@@ -66,316 +81,339 @@ export default function ScadenziarioPage() {
         }
     }, []);
 
-    const fetchInbox = useCallback(async () => {
-        try {
-            const res = await fetch(`${API}/api/fatture-ricevute?status=da_registrare&limit=50`, {
-                credentials: 'include',
-            });
-            if (res.ok) {
-                const d = await res.json();
-                setInbox(d.fatture || []);
-            }
-        } catch (e) {
-            console.error('Fetch inbox error:', e);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchData();
-        fetchInbox();
-    }, [fetchData, fetchInbox]);
+    useEffect(() => { fetchData(); }, [fetchData]);
 
     const handleSync = async () => {
         setSyncing(true);
-        setSyncResult(null);
         try {
-            const res = await fetch(`${API}/api/fatture-ricevute/sync-fic`, {
-                method: 'POST',
-                credentials: 'include',
-            });
-            const d = await res.json();
-            if (res.ok) {
-                setSyncResult({ type: 'success', text: d.message });
-                fetchData();
-                fetchInbox();
-            } else {
-                setSyncResult({ type: 'error', text: d.detail || 'Errore sincronizzazione' });
-            }
+            const result = await apiRequest('/fatture-ricevute/sync-fic', { method: 'POST' });
+            toast.success(result.message || 'Sincronizzazione completata');
+            fetchData();
         } catch (e) {
-            setSyncResult({ type: 'error', text: 'Errore di rete' });
+            toast.error(e.message || 'Errore sincronizzazione');
         } finally {
             setSyncing(false);
         }
     };
 
+    const handleMarkPaid = async (item) => {
+        if (item.tipo !== 'pagamento') return;
+        try {
+            await apiRequest(`/fatture-ricevute/${item.id}/pagamenti`, {
+                method: 'POST',
+                body: { importo: item.importo, data_pagamento: new Date().toISOString().split('T')[0], metodo: 'bonifico', note: '' },
+            });
+            toast.success('Pagamento registrato');
+            fetchData();
+        } catch (e) {
+            toast.error(e.message || 'Errore registrazione pagamento');
+        }
+    };
+
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <RefreshCw className="h-6 w-6 animate-spin text-[#0055FF]" />
-            </div>
+            <DashboardLayout>
+                <div className="flex items-center justify-center h-64">
+                    <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
+                </div>
+            </DashboardLayout>
         );
     }
 
     const kpi = data?.kpi || {};
-    const scadenze = (data?.scadenze || []).filter(s => {
-        if (filterTipo !== 'tutti' && s.tipo !== filterTipo) return false;
-        if (filterStato !== 'tutti' && s.stato !== filterStato) return false;
-        return true;
-    });
+    const allScadenze = (data?.scadenze || []).filter(s =>
+        filterTipo === 'tutti' || s.tipo === filterTipo
+    );
 
-    // Group by month
-    const grouped = {};
-    scadenze.forEach(s => {
-        const d = s.data_scadenza || '';
-        const month = d.slice(0, 7) || 'senza_data';
-        if (!grouped[month]) grouped[month] = [];
-        grouped[month].push(s);
-    });
+    // Group into 3 sections
+    const scaduti = allScadenze.filter(s => s.stato === 'scaduto');
+    const questoMese = allScadenze.filter(s => s.stato === 'in_scadenza');
+    const futuro = allScadenze.filter(s => s.stato === 'ok');
+
+    // KPI calculations
+    const usciteMese = (kpi.pagamenti_scaduti || 0) + (kpi.pagamenti_mese_corrente || 0);
+    const entrateMese = (kpi.incassi_scaduti || 0) + (kpi.incassi_mese_corrente || 0);
+    const saldo = entrateMese - usciteMese;
+    const currentMonth = MONTH_NAMES[new Date().getMonth()];
 
     return (
-        <div className="space-y-6" data-testid="scadenziario-page">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div>
-                    <h1 className="text-2xl font-bold text-[#1E293B]">Scadenziario</h1>
-                    <p className="text-sm text-gray-500 mt-1">Pagamenti, documenti, consegne — tutto in un posto</p>
-                </div>
-                <div className="flex gap-2">
+        <DashboardLayout>
+            <div className="space-y-6" data-testid="scadenziario-page">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Scadenziario</h1>
+                        <p className="text-sm text-slate-500 mt-0.5">Panoramica finanziaria e scadenze</p>
+                    </div>
                     <Button
                         variant="outline"
                         size="sm"
                         onClick={handleSync}
                         disabled={syncing}
                         data-testid="sync-fic-btn"
+                        className="border-slate-200 text-slate-600"
                     >
                         <RefreshCw className={`h-4 w-4 mr-1.5 ${syncing ? 'animate-spin' : ''}`} />
-                        {syncing ? 'Sincronizzazione...' : 'Sync FattureInCloud'}
+                        {syncing ? 'Sync...' : 'Sync SDI'}
                     </Button>
                 </div>
-            </div>
 
-            {syncResult && (
-                <div className={`px-4 py-2.5 rounded-lg text-sm font-medium ${syncResult.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`} data-testid="sync-result">
-                    {syncResult.text}
-                </div>
-            )}
-
-            {/* KPI Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                <KPICard
-                    icon={AlertTriangle}
-                    label="Da Pagare (Scaduti)"
-                    value={formatCurrency(kpi.pagamenti_scaduti)}
-                    color="#dc2626"
-                    count={kpi.scadute}
-                    testId="kpi-scaduti"
-                />
-                <KPICard
-                    icon={Clock}
-                    label="Da Pagare (Mese)"
-                    value={formatCurrency(kpi.pagamenti_mese_corrente)}
-                    color="#ea580c"
-                    count={kpi.in_scadenza}
-                    testId="kpi-mese"
-                />
-                <KPICard
-                    icon={Banknote}
-                    label="Incassi Scaduti"
-                    value={formatCurrency(kpi.incassi_scaduti)}
-                    color="#0055FF"
-                    testId="kpi-incassi-scaduti"
-                />
-                <KPICard
-                    icon={Banknote}
-                    label="Incassi Mese"
-                    value={formatCurrency(kpi.incassi_mese_corrente)}
-                    color="#0ea5e9"
-                    testId="kpi-incassi-mese"
-                />
-                <KPICard
-                    icon={CreditCard}
-                    label="Acquisti Anno"
-                    value={formatCurrency(kpi.totale_acquisti_anno)}
-                    color="#2563eb"
-                    testId="kpi-anno"
-                />
-                <KPICard
-                    icon={FileInput}
-                    label="Da Processare"
-                    value={String(kpi.inbox_da_processare || 0)}
-                    color="#7c3aed"
-                    testId="kpi-inbox"
-                    onClick={() => setShowInbox(!showInbox)}
-                />
-            </div>
-
-            {/* Inbox (fatture da processare) */}
-            {showInbox && (
-                <Card className="border-purple-200">
-                    <CardHeader className="py-3 px-5 bg-purple-50 border-b border-purple-100 flex flex-row items-center justify-between">
-                        <CardTitle className="text-sm font-semibold text-purple-900 flex items-center gap-2">
-                            <Package className="h-4 w-4" /> Inbox — Fatture da Processare
-                        </CardTitle>
-                        <Button variant="ghost" size="sm" onClick={() => setShowInbox(false)}>
-                            <ChevronUp className="h-4 w-4" />
-                        </Button>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        {inbox.length === 0 ? (
-                            <p className="text-sm text-gray-500 p-4">Nessuna fattura in attesa.</p>
-                        ) : (
-                            <div className="divide-y divide-gray-100">
-                                {inbox.map(fr => (
-                                    <div key={fr.fr_id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50" data-testid={`inbox-item-${fr.fr_id}`}>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-[#1E293B] truncate">
-                                                Fatt. {fr.numero_documento} — {fr.fornitore_nome}
-                                            </p>
-                                            <p className="text-xs text-gray-500">
-                                                {formatDate(fr.data_documento)} · {formatCurrency(fr.totale_documento)}
-                                            </p>
-                                        </div>
-                                        <a
-                                            href="/fatture-ricevute"
-                                            className="text-xs text-[#0055FF] hover:underline flex items-center gap-1"
-                                        >
-                                            Processa <ArrowRight className="h-3 w-3" />
-                                        </a>
-                                    </div>
-                                ))}
+                {/* KPI Cards - 3 big cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card className="border-slate-200 overflow-hidden" data-testid="kpi-uscite">
+                        <CardContent className="p-5">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="p-2 rounded-lg bg-red-50">
+                                    <TrendingDown className="h-5 w-5 text-red-500" />
+                                </div>
+                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Uscite Previste ({currentMonth})</span>
                             </div>
+                            <p className="text-3xl font-bold text-red-600 font-mono tracking-tight">{fmtCur(usciteMese)}</p>
+                            <p className="text-xs text-slate-400 mt-1.5">{kpi.scadute || 0} scadute + {kpi.in_scadenza || 0} in scadenza</p>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="border-slate-200 overflow-hidden" data-testid="kpi-entrate">
+                        <CardContent className="p-5">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="p-2 rounded-lg bg-emerald-50">
+                                    <TrendingUp className="h-5 w-5 text-emerald-500" />
+                                </div>
+                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Entrate Previste ({currentMonth})</span>
+                            </div>
+                            <p className="text-3xl font-bold text-emerald-600 font-mono tracking-tight">{fmtCur(entrateMese)}</p>
+                            <p className="text-xs text-slate-400 mt-1.5">Incassi attesi da fatture emesse</p>
+                        </CardContent>
+                    </Card>
+
+                    <Card className={`border-slate-200 overflow-hidden ${saldo >= 0 ? 'bg-slate-50' : 'bg-red-50/30'}`} data-testid="kpi-saldo">
+                        <CardContent className="p-5">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className={`p-2 rounded-lg ${saldo >= 0 ? 'bg-blue-50' : 'bg-red-50'}`}>
+                                    <Wallet className={`h-5 w-5 ${saldo >= 0 ? 'text-blue-500' : 'text-red-500'}`} />
+                                </div>
+                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Saldo Stimato</span>
+                            </div>
+                            <p className={`text-3xl font-bold font-mono tracking-tight ${saldo >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                                {saldo >= 0 ? '+' : ''}{fmtCur(saldo)}
+                            </p>
+                            <p className="text-xs text-slate-400 mt-1.5">Entrate - Uscite previste</p>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Alert Banner for overdue items */}
+                {scaduti.length > 0 && (
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-50 border border-red-200" data-testid="alert-scaduti">
+                        <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />
+                        <p className="text-sm font-medium text-red-700">
+                            {scaduti.length} scadenz{scaduti.length === 1 ? 'a' : 'e'} scadut{scaduti.length === 1 ? 'a' : 'e'} per un totale di{' '}
+                            <span className="font-bold">{fmtCur(scaduti.reduce((s, i) => s + (i.importo || 0), 0))}</span>
+                        </p>
+                    </div>
+                )}
+
+                {/* Filters */}
+                <div className="flex items-center gap-3">
+                    <Filter className="h-4 w-4 text-slate-400" />
+                    <div className="flex gap-1.5">
+                        {['tutti', 'pagamento', 'incasso', 'patentino', 'taratura', 'consegna'].map(t => (
+                            <button
+                                key={t}
+                                onClick={() => setFilterTipo(t)}
+                                data-testid={`filter-${t}`}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                                    filterTipo === t
+                                        ? 'bg-slate-900 text-white'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                }`}
+                            >
+                                {t === 'tutti' ? 'Tutti' : TIPO_LABELS[t] || t}
+                            </button>
+                        ))}
+                    </div>
+                    <span className="text-xs text-slate-400 ml-auto">{allScadenze.length} scadenze</span>
+                </div>
+
+                {/* Sections */}
+                {allScadenze.length === 0 ? (
+                    <Card className="border-slate-200">
+                        <CardContent className="py-16 text-center">
+                            <CheckCircle2 className="h-12 w-12 text-emerald-300 mx-auto mb-3" />
+                            <p className="text-slate-500">Nessuna scadenza trovata</p>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <>
+                        {scaduti.length > 0 && (
+                            <ScadenzeSection
+                                title="SCADUTI"
+                                icon={AlertTriangle}
+                                iconColor="text-red-500"
+                                borderColor="border-l-red-500"
+                                bgColor="bg-red-50/40"
+                                items={scaduti}
+                                defaultOpen={true}
+                                onMarkPaid={handleMarkPaid}
+                            />
                         )}
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-2">
-                <Filter className="h-4 w-4 text-gray-400" />
-                <select
-                    className="text-sm border border-gray-200 rounded-md px-2.5 py-1.5 bg-white text-[#1E293B]"
-                    value={filterTipo}
-                    onChange={e => setFilterTipo(e.target.value)}
-                    data-testid="filter-tipo"
-                >
-                    <option value="tutti">Tutti i tipi</option>
-                    <option value="pagamento">Pagamenti</option>
-                    <option value="incasso">Incassi</option>
-                    <option value="patentino">Patentini</option>
-                    <option value="taratura">Tarature</option>
-                    <option value="consegna">Consegne</option>
-                </select>
-                <select
-                    className="text-sm border border-gray-200 rounded-md px-2.5 py-1.5 bg-white text-[#1E293B]"
-                    value={filterStato}
-                    onChange={e => setFilterStato(e.target.value)}
-                    data-testid="filter-stato"
-                >
-                    <option value="tutti">Tutti gli stati</option>
-                    <option value="scaduto">Scaduti</option>
-                    <option value="in_scadenza">In scadenza</option>
-                    <option value="ok">OK</option>
-                </select>
-                <span className="text-xs text-gray-400 ml-2">{scadenze.length} scadenze</span>
+                        {questoMese.length > 0 && (
+                            <ScadenzeSection
+                                title={`IN SCADENZA \u2014 ${currentMonth.toUpperCase()}`}
+                                icon={Clock}
+                                iconColor="text-amber-500"
+                                borderColor="border-l-amber-400"
+                                bgColor=""
+                                items={questoMese}
+                                defaultOpen={true}
+                                onMarkPaid={handleMarkPaid}
+                            />
+                        )}
+                        {futuro.length > 0 && (
+                            <ScadenzeSection
+                                title="FUTURO"
+                                icon={CalendarIcon}
+                                iconColor="text-slate-400"
+                                borderColor="border-l-slate-300"
+                                bgColor=""
+                                items={futuro}
+                                defaultOpen={false}
+                                onMarkPaid={handleMarkPaid}
+                            />
+                        )}
+                    </>
+                )}
             </div>
+        </DashboardLayout>
+    );
+}
 
-            {/* Timeline grouped by month */}
-            {Object.keys(grouped).length === 0 ? (
-                <Card>
-                    <CardContent className="py-12 text-center">
-                        <CheckCircle2 className="h-10 w-10 text-emerald-400 mx-auto mb-3" />
-                        <p className="text-sm text-gray-500">Nessuna scadenza trovata con i filtri selezionati.</p>
-                    </CardContent>
-                </Card>
-            ) : (
-                Object.entries(grouped).map(([month, items]) => (
-                    <MonthGroup key={month} month={month} items={items} />
-                ))
+function ScadenzeSection({ title, icon: Icon, iconColor, borderColor, bgColor, items, defaultOpen, onMarkPaid }) {
+    const [open, setOpen] = useState(defaultOpen);
+    const total = items.reduce((s, i) => s + (i.importo || 0), 0);
+
+    return (
+        <div>
+            <button
+                onClick={() => setOpen(!open)}
+                className="w-full flex items-center justify-between px-1 py-2 group"
+                data-testid={`section-${title.split(' ')[0].toLowerCase()}`}
+            >
+                <div className="flex items-center gap-2.5">
+                    <Icon className={`h-4 w-4 ${iconColor}`} />
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-700">{title}</span>
+                    <Badge variant="outline" className="text-[10px] font-mono px-1.5">{items.length}</Badge>
+                </div>
+                <div className="flex items-center gap-3">
+                    {total > 0 && <span className="text-xs font-mono text-slate-500">{fmtCur(total)}</span>}
+                    {open ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+                </div>
+            </button>
+            {open && (
+                <div className="space-y-2">
+                    {items.map((item, i) => (
+                        <TransactionCard
+                            key={`${item.id}-${i}`}
+                            item={item}
+                            borderColor={borderColor}
+                            bgColor={bgColor}
+                            onMarkPaid={onMarkPaid}
+                        />
+                    ))}
+                </div>
             )}
         </div>
     );
 }
 
-function KPICard({ icon: Icon, label, value, color, count, testId, onClick }) {
+function TransactionCard({ item, borderColor, bgColor, onMarkPaid }) {
+    const days = daysUntil(item.data_scadenza);
+    const isExpense = item.tipo === 'pagamento';
+    const isIncome = item.tipo === 'incasso';
+    const entityName = item.sottotitolo || item.titolo;
+
+    let daysLabel = '';
+    if (days !== null) {
+        if (days < 0) daysLabel = `${Math.abs(days)}gg fa`;
+        else if (days === 0) daysLabel = 'Oggi';
+        else if (days === 1) daysLabel = 'Domani';
+        else if (days <= 7) daysLabel = `Tra ${days}gg`;
+        else daysLabel = fmtDate(item.data_scadenza);
+    }
+
+    const statoPill = item.stato === 'scaduto'
+        ? 'bg-red-100 text-red-700'
+        : item.stato === 'in_scadenza'
+            ? 'bg-amber-100 text-amber-700'
+            : 'bg-slate-100 text-slate-600';
+
+    const statoLabel = item.stato === 'scaduto' ? 'Scaduto'
+        : item.stato === 'in_scadenza' ? 'In scadenza' : 'Programmato';
+
     return (
-        <Card
-            className={`${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
-            onClick={onClick}
-            data-testid={testId}
+        <div
+            className={`flex items-center gap-4 px-4 py-3.5 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${bgColor} border-l-4 ${borderColor}`}
+            data-testid={`scadenza-${item.id}`}
         >
-            <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                    <div className="p-1.5 rounded-md" style={{ backgroundColor: `${color}15` }}>
-                        <Icon className="h-4 w-4" style={{ color }} />
-                    </div>
-                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</span>
-                </div>
-                <p className="text-xl font-bold text-[#1E293B]">{value}</p>
-                {count != null && count > 0 && (
-                    <p className="text-xs text-gray-400 mt-0.5">{count} scadenze</p>
-                )}
-            </CardContent>
-        </Card>
-    );
-}
-
-function MonthGroup({ month, items }) {
-    const [expanded, setExpanded] = useState(true);
-    const monthLabel = month === 'senza_data'
-        ? 'Senza data'
-        : new Date(month + '-01').toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
-
-    return (
-        <Card>
-            <CardHeader
-                className="py-2.5 px-5 bg-gray-50 border-b border-gray-100 cursor-pointer flex flex-row items-center justify-between"
-                onClick={() => setExpanded(!expanded)}
-            >
-                <CardTitle className="text-sm font-semibold text-[#1E293B] flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-[#0055FF]" />
-                    {monthLabel}
-                    <Badge variant="outline" className="text-xs ml-1">{items.length}</Badge>
-                </CardTitle>
-                {expanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
-            </CardHeader>
-            {expanded && (
-                <CardContent className="p-0">
-                    <div className="divide-y divide-gray-50">
-                        {items.map((s, i) => (
-                            <ScadenzaRow key={`${s.id}-${i}`} item={s} />
-                        ))}
-                    </div>
-                </CardContent>
-            )}
-        </Card>
-    );
-}
-
-function ScadenzaRow({ item }) {
-    const config = TIPO_CONFIG[item.tipo] || TIPO_CONFIG.pagamento;
-    const stato = STATO_BADGE[item.stato] || STATO_BADGE.ok;
-    const Icon = config.icon;
-
-    return (
-        <div className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/50 transition-colors" data-testid={`scadenza-${item.id}`}>
-            <div className="p-1.5 rounded-md shrink-0" style={{ backgroundColor: `${config.color}12` }}>
-                <Icon className="h-4 w-4" style={{ color: config.color }} />
+            {/* Avatar */}
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0 ${avatarColor(entityName)}`}>
+                {getInitials(entityName)}
             </div>
+
+            {/* Info */}
             <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium text-[#1E293B] truncate">{item.titolo}</p>
-                    <Badge className={`text-[10px] px-1.5 py-0 ${stato.className}`}>{stato.label}</Badge>
-                    {item.processata === false && item.tipo === 'pagamento' && (
-                        <Badge className="text-[10px] px-1.5 py-0 bg-purple-100 text-purple-700">Da processare</Badge>
+                <p className="text-sm font-semibold text-slate-800 truncate">{entityName}</p>
+                <p className="text-xs text-slate-500 truncate mt-0.5">
+                    {item.titolo}
+                    {item.tipo !== 'pagamento' && item.tipo !== 'incasso' && (
+                        <span className="ml-1.5 text-slate-400">({TIPO_LABELS[item.tipo] || item.tipo})</span>
                     )}
-                </div>
-                <p className="text-xs text-gray-500 truncate">{item.sottotitolo}</p>
-            </div>
-            <div className="text-right shrink-0">
-                <p className="text-sm font-semibold text-[#1E293B]">
-                    {item.importo != null ? formatCurrency(item.importo) : ''}
                 </p>
-                <p className="text-xs text-gray-400">{formatDate(item.data_scadenza)}</p>
+            </div>
+
+            {/* Status pill */}
+            <Badge className={`text-[10px] px-2 py-0.5 shrink-0 ${statoPill}`}>{statoLabel}</Badge>
+
+            {/* Amount + Date */}
+            <div className="text-right shrink-0 min-w-[110px]">
+                {item.importo != null && item.importo > 0 ? (
+                    <p className={`text-base font-bold font-mono ${isExpense ? 'text-red-600' : isIncome ? 'text-emerald-600' : 'text-slate-800'}`}>
+                        {isExpense ? '- ' : isIncome ? '+ ' : ''}{fmtCur(item.importo)}
+                    </p>
+                ) : (
+                    <p className="text-sm text-slate-400 italic">N/A</p>
+                )}
+                <p className={`text-xs mt-0.5 ${item.stato === 'scaduto' ? 'text-red-500 font-medium' : 'text-slate-400'}`}>
+                    {daysLabel}
+                </p>
+            </div>
+
+            {/* Actions */}
+            <div className="shrink-0 flex gap-1">
+                {isExpense && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); onMarkPaid(item); }}
+                        className="h-8 w-8 p-0 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+                        title="Segna come pagato"
+                        data-testid={`pay-btn-${item.id}`}
+                    >
+                        <Check className="h-4 w-4" />
+                    </Button>
+                )}
+                {item.link && (
+                    <a href={item.link} onClick={(e) => e.stopPropagation()}>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                            title="Vai al dettaglio"
+                        >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                        </Button>
+                    </a>
+                )}
             </div>
         </div>
     );
