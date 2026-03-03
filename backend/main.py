@@ -2,7 +2,9 @@
 Norma Facile 2.0 - Main Application Entry Point
 CRM/ERP per Fabbri (Metalworkers).
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
@@ -97,6 +99,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Log validation errors in detail for debugging
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = exc.errors()
+    logger.error(f"Validation error on {request.method} {request.url.path}: {errors}")
+    # Return a user-friendly message with details
+    field_errors = []
+    for err in errors:
+        loc = " -> ".join(str(x) for x in err.get("loc", []))
+        msg = err.get("msg", "")
+        field_errors.append(f"{loc}: {msg}")
+    detail = "; ".join(field_errors) if field_errors else "Errore di validazione"
+    return JSONResponse(status_code=422, content={"detail": detail})
 
 # Include routers with /api prefix
 app.include_router(auth_router, prefix="/api")
