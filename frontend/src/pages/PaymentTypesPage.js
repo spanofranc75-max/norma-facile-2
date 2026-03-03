@@ -49,8 +49,8 @@ const CODICE_FE_OPTIONS = [
     { value: 'MP23', label: 'MP23 - PagoPA' },
 ];
 
-const QUICK_DAYS = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360];
-const QUICK_LABELS = { 0: 'Imm.', 30: '30', 60: '60', 90: '90', 120: '120', 150: '150', 180: '180', 210: '210', 240: '240', 270: '270', 300: '300', 330: '330', 360: '360' };
+const QUICK_DAYS = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330, 360, -1];
+const QUICK_LABELS = { 0: 'Imm.', 30: '30', 60: '60', 90: '90', 120: '120', 150: '150', 180: '180', 210: '210', 240: '240', 270: '270', 300: '300', 330: '330', 360: '360', '-1': 'Fine Lav.' };
 
 const emptyForm = {
     codice: '', tipo: 'BON', descrizione: '', codice_fe: '',
@@ -275,6 +275,17 @@ export default function PaymentTypesPage() {
         }
         const importo = parseFloat(simImporto) || 10000;
         const scadenze = form.quote.map((q, i) => {
+            if (q.giorni === -1) {
+                // "A fine lavori" — no date calculation
+                const imp = Math.round(importo * q.quota / 100 * 100) / 100;
+                return {
+                    rata: i + 1,
+                    giorni: -1,
+                    data_scadenza: 'fine_lavori',
+                    quota_pct: q.quota,
+                    importo: imp,
+                };
+            }
             const target = new Date(invoiceDate);
             target.setDate(target.getDate() + q.giorni);
             if (form.fine_mese) {
@@ -305,7 +316,7 @@ export default function PaymentTypesPage() {
     // Summary text for table
     const getScadenzeSummary = (item) => {
         if (!item.quote || item.quote.length === 0) return '—';
-        return item.quote.map(q => `${q.giorni === 0 ? 'Imm.' : q.giorni + 'gg'}`).join(' / ');
+        return item.quote.map(q => `${q.giorni === 0 ? 'Imm.' : q.giorni === -1 ? 'Fine Lav.' : q.giorni + 'gg'}`).join(' / ');
     };
 
     return (
@@ -458,7 +469,7 @@ export default function PaymentTypesPage() {
                                                         checked={form.quote.some(q => q.giorni === d)}
                                                         onCheckedChange={() => toggleDay(d)}
                                                     />
-                                                    <span className="text-slate-700">{d === 0 ? 'Imm.' : `${d}gg`}</span>
+                                                    <span className="text-slate-700">{d === 0 ? 'Imm.' : d === -1 ? 'Fine Lav.' : `${d}gg`}</span>
                                                 </label>
                                             ))}
                                         </div>
@@ -504,7 +515,7 @@ export default function PaymentTypesPage() {
                                             ) : (
                                                 form.quote.map(q => (
                                                     <div key={q.giorni} className="grid grid-cols-[1fr_60px_24px] items-center px-2 py-1 border-t border-slate-100 text-xs" data-testid={`quota-row-${q.giorni}`}>
-                                                        <span className="font-mono text-slate-700">{q.giorni === 0 ? 'Immediato' : `${q.giorni}gg`}</span>
+                                                        <span className="font-mono text-slate-700">{q.giorni === 0 ? 'Immediato' : q.giorni === -1 ? 'A fine lavori' : `${q.giorni}gg`}</span>
                                                         <Input
                                                             type="number"
                                                             step="0.01"
@@ -605,7 +616,7 @@ export default function PaymentTypesPage() {
                                         {simResult.scadenze.map(s => (
                                             <div key={s.rata} className="grid grid-cols-4 items-center px-3 py-1.5 border-t border-slate-100 text-xs">
                                                 <span className="font-mono text-slate-500">{s.rata}</span>
-                                                <span className="font-semibold text-slate-700">{formatDateIT(s.data_scadenza)}</span>
+                                                <span className="font-semibold text-slate-700">{s.data_scadenza === 'fine_lavori' ? 'A fine lavori' : formatDateIT(s.data_scadenza)}</span>
                                                 <span className="text-right font-mono text-slate-500">{s.quota_pct}%</span>
                                                 <span className="text-right font-mono font-semibold text-[#0055FF]">{fmtEur(s.importo)}</span>
                                             </div>
