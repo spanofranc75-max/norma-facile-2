@@ -140,7 +140,7 @@ export default function PreventivoEditorPage() {
         Promise.all([
             apiRequest('/clients/').catch(() => ({ clients: [] })),
             apiRequest('/certificazioni/thermal/reference-data').catch(() => ({})),
-            apiRequest('/company/').catch(() => ({})),
+            apiRequest('/company/settings').catch(() => ({})),
             apiRequest('/payment-types/').catch(() => ({ items: [] })),
         ]).then(([cl, th, co, pt]) => {
             setClients(cl.clients || []);

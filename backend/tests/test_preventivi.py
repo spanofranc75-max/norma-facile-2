@@ -15,7 +15,7 @@ from datetime import datetime
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = 'https://norma-v2-deploy.preview.emergentagent.com'
+    BASE_URL = 'https://erp-metalworking.preview.emergentagent.com'
 
 
 # ── Fixtures ───────────────────────────────────────────────────────

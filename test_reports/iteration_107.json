@@ -1,0 +1,55 @@
+{
+  "summary": "Bug fix verification complete: Bank account dropdown in PreventivoEditorPage now works correctly. The fix changed line 143 from apiRequest('/company/') to apiRequest('/company/settings'). All backend and frontend tests pass.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "PreventivoEditorPage",
+        "issues": ["Minor React hydration warning: <span> cannot be a child of <select>/<option> - caused by DevTools instrumentation, not app code"]
+      }
+    ]
+  },
+  "features_verified": {
+    "bug_fix_bank_dropdown": {
+      "GET /api/company/": "PASS - Returns 404 (confirming old broken endpoint doesn't exist)",
+      "GET /api/company/settings": "PASS - Returns 200 with bank_accounts array",
+      "PUT /api/company/settings": "PASS - Correctly saves bank_accounts",
+      "Data persistence": "PASS - GET after PUT returns saved bank_accounts",
+      "Auth requirement": "PASS - Unauthenticated requests return 401",
+      "Frontend dropdown": "PASS - Bank dropdown populated from /api/company/settings with 2 test bank accounts"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration107_bank_dropdown.py",
+    "/app/test_reports/pytest/iteration107_bank_dropdown_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration107_bank_dropdown.py"
+  ],
+  "success_rate": {
+    "backend": "100% (5/5 pytest tests passed)",
+    "frontend": "100% (bank dropdown verified populated with bank accounts)"
+  },
+  "test_credentials": "Created and cleaned up test session test_session_iter107_1772519225427",
+  "seed_data_creation": "Created 2 test bank accounts during testing, cleaned up after",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Bug fix verified: PreventivoEditorPage.js line 143 now calls apiRequest('/company/settings') instead of the broken apiRequest('/company/'). The Settings page (SettingsPage.js line 65) was already correct. Bank accounts are saved to MongoDB via PUT /api/company/settings and retrieved via GET /api/company/settings. The dropdown on the Pagamento tab (data-testid='select-banca') correctly displays bank accounts from the bankAccounts state.",
+  "rca_of_the_issue": {
+    "root_cause": "PreventivoEditorPage.js was calling a non-existent endpoint /api/company/ instead of the correct /api/company/settings",
+    "reproduction_steps": [
+      "1. Open a new or existing preventivo",
+      "2. Click the Pagamento tab",
+      "3. Observe the Conto Corrente dropdown was empty"
+    ],
+    "fix_applied": "Changed line 143 from apiRequest('/company/') to apiRequest('/company/settings')",
+    "verification": "Bank dropdown now shows bank accounts saved in company settings"
+  }
+}
