@@ -60,6 +60,8 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 
 ## Bug Risolti (sessione 3 Marzo 2026 - Fork)
 - **Feature: Logica "Fine Mese + N Giorni"** - Aggiunto campo `extra_days` al modello `PaymentTypeBase` e alla UI. Permette termini come "30gg FM+10" (30 giorni dalla data fattura, fine mese + 10 giorni). Logica applicata in: backend simulate, frontend dialog (campo condizionale visibile solo con FM attivo), simulazione client-side e calcolo automatico scadenza in InvoiceEditorPage.
+- **Fix: Errore 400 Invio SDI** - L'endpoint `send-sdi` ora legge le credenziali FIC anche dalle variabili d'ambiente (fallback). Fix mapping data fattura (`issue_date` invece di `created_at`).
+- **Feature: Auto-generazione scadenze fatture ricevute** - Le fatture ricevute ora calcolano automaticamente la scadenza dai termini di pagamento del fornitore. Aggiunto pulsante "Ricalcola Scadenze" per backfill delle FR esistenti. Matching fornitori per nome (fuzzy) per collegare FR non linkate. Aggiunta colonna "Scadenza" nella tabella FR.
 
 ## Issue Pendenti
 - **P2**: Validazione Pydantic su dati migrati (response_model rimosso temporaneamente)
