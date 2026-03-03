@@ -1,5 +1,5 @@
 """Company settings model for invoice header/supplier info."""
-from pydantic import BaseModel, Field, ConfigDict, EmailStr
+from pydantic import BaseModel, Field, ConfigDict, EmailStr, validator
 from typing import Optional
 from datetime import datetime
 
@@ -46,8 +46,8 @@ class CompanySettings(BaseModel):
     
     # Contact
     phone: Optional[str] = None
-    email: Optional[EmailStr] = None
-    pec: Optional[EmailStr] = None
+    email: Optional[str] = None
+    pec: Optional[str] = None
     website: Optional[str] = None
     
     # Bank details (legacy single)
@@ -103,8 +103,8 @@ class CompanySettingsUpdate(BaseModel):
     province: Optional[str] = None
     country: Optional[str] = None
     phone: Optional[str] = None
-    email: Optional[EmailStr] = None
-    pec: Optional[EmailStr] = None
+    email: Optional[str] = None
+    pec: Optional[str] = None
     website: Optional[str] = None
     bank_details: Optional[BankDetails] = None
     bank_accounts: Optional[list] = None
@@ -125,3 +125,9 @@ class CompanySettingsUpdate(BaseModel):
     aruba_sandbox: Optional[bool] = None
     fic_company_id: Optional[str] = None
     fic_access_token: Optional[str] = None
+
+    @validator("email", "pec", pre=True)
+    def empty_str_to_none(cls, v):
+        if v == "":
+            return None
+        return v
