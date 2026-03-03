@@ -120,7 +120,8 @@ class InvoiceBase(BaseModel):
     
     # Payment
     payment_method: PaymentMethod = PaymentMethod.BONIFICO
-    payment_terms: PaymentTerms = PaymentTerms.GG_30
+    payment_terms: str = "30gg"
+    payment_type_id: Optional[str] = None
     
     # Tax settings
     tax_settings: TaxSettings = Field(default_factory=TaxSettings)
@@ -143,7 +144,8 @@ class InvoiceUpdate(BaseModel):
     issue_date: Optional[date] = None
     due_date: Optional[date] = None
     payment_method: Optional[PaymentMethod] = None
-    payment_terms: Optional[PaymentTerms] = None
+    payment_terms: Optional[str] = None
+    payment_type_id: Optional[str] = None
     tax_settings: Optional[TaxSettings] = None
     notes: Optional[str] = None
     internal_notes: Optional[str] = None
