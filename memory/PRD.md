@@ -65,6 +65,8 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 
 - **Feature: Importazione Intelligente Righe Fattura + Magazzino + Margini** - Nuovo servizio `invoice_line_processor.py` con smart matching articoli (codice/descrizione), calcolo PMP (Prezzo Medio Ponderato), creazione/aggiornamento articoli a magazzino. Assegnazione per-riga (Magazzino/Commessa/Spese Generali) con endpoint `assign-rows`. Analisi Margini: confronto preventivo vs costi reali per commessa con alert verde/giallo/rosso.
 
+- **Feature: Controllo di Gestione Avanzato (Costo Orario Pieno)** - Nuovo servizio `cost_calculator.py` per calcolo costo orario reale aziendale: (Stipendi + Contributi + Overhead) / Ore Lavorabili. Pagina "Configurazione Finanziaria" con il "Numero Magico" (costo orario pieno) e form configurazione. Log ore per commessa. Analisi Margini aggiornata con barre separate Materiali (ambra) + Personale (viola) e alert a 4 livelli (verde >20%, giallo 10-20%, arancione <10%, rosso <0%).
+
 ## Issue Pendenti
 - **P2**: Validazione Pydantic su dati migrati (response_model rimosso temporaneamente)
 - **P2**: Cache frontend (utente deve fare hard refresh dopo deploy)
