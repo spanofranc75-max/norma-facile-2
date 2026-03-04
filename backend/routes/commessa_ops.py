@@ -1699,36 +1699,75 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
 
 # ── Helper: normalize profile name for matching ──
 def _normalize_profilo(text: str) -> str:
-    """Normalize profile description for fuzzy matching. IPE 100 = ipe100 = IPE100."""
+    """Normalize profile description for fuzzy matching.
+    Translates English/Italian equivalents: FLAT = PIATTO, ANGLE = ANGOLARE, etc.
+    """
     import re
     t = (text or "").upper().strip()
-    t = re.sub(r'[x×\*]', 'X', t)  # 60x60 → 60X60
-    t = re.sub(r'\s+', '', t)  # Remove spaces: IPE 100 → IPE100
+    # Compound descriptions → family names
+    t = re.sub(r'\bFLAT\b', 'PIATTO', t)
+    t = re.sub(r'\bCHANNEL\b', 'UPN', t)
+    t = re.sub(r'\bBEAM\b', 'IPE', t)
+    t = re.sub(r'\bTUBE\b', 'TUBO', t)
+    t = re.sub(r'\bROUND\b', 'TONDO', t)
+    t = re.sub(r'\bANGLE\b', 'ANGOLARE', t)
+    t = re.sub(r'\bBARRA\s+FERRO\s+PIATT[AO]?\b', 'PIATTO', t)
+    t = re.sub(r'\bBARRA\s+PIATT[AO]?\b', 'PIATTO', t)
+    t = re.sub(r'\bFERRO\s+PIATT[AO]?\b', 'PIATTO', t)
+    t = re.sub(r'\bPIATTA\b', 'PIATTO', t)
+    t = re.sub(r'\bPROF\.?\s*FERRO\s+A\s+ELLE\b', 'L', t)
+    t = re.sub(r'\bTUBO\s+FERRO\s+(QUADRO|RETT\.?|RETTANGOLARE)\s*(NERO)?\b', 'TUBO', t)
+    t = re.sub(r'\bTUBO\s+FERRO\b', 'TUBO', t)
+    # Remove filler words
+    t = re.sub(r'\b(L\.?C\.?|MM\.?|IN|S\d{3}\w*|JR|J2|NERO|ZINCATO|BARRA|FERRO|PROF\.?|A|DI|DA)\b', '', t)
+    t = re.sub(r'\.', '', t)
+    t = re.sub(r'[x×\*]', 'X', t)
+    t = re.sub(r'\s+', '', t)
     return t
 
 
 def _extract_profile_base(text: str) -> str:
     """
     Extract the BASE profile type from a description.
-    Examples:
-      "Trave IPE 100 in S275 JR"  → "IPE100"
-      "IPE 100X55X4.1"            → "IPE100"
-      "IPE 80X4.6X3.8"            → "IPE80"
-      "HEB 200 S355 JR"           → "HEB200"
-      "Tubo 60x60x3"              → "TUBO60"
-      "UPN 120"                   → "UPN120"
-      "L 50x50x5"                 → "L50"
+    Handles both Italian and English naming conventions.
     """
     import re
     t = (text or "").upper().strip()
-    # Match common steel profile families followed by a number
-    # Families: IPE, HEB, HEA, HEM, INP, UPN, UNP, L, T, Tubo, Piatto, Tondo, Angolare, Omega
-    pattern = r'(IPE|HEB|HEA|HEM|INP|UPN|UNP|IPN|TUBO|PIATTO|TONDO|ANGOLARE|OMEGA|L)\s*(\d+)'
-    match = re.search(pattern, t)
+
+    # Product codes first (e.g., "FEPILC-120X12" → PIATTO120)
+    prodcode = re.search(r'FEPIL[CA]-?(\d+)', t)
+    if prodcode:
+        return f"PIATTO{prodcode.group(1)}"
+
+    # Normalize compound descriptions → family names
+    t = re.sub(r'\bFLAT\b', 'PIATTO', t)
+    t = re.sub(r'\bBARRA\s+FERRO\s+PIATT[AO]?\b', 'PIATTO', t)
+    t = re.sub(r'\bBARRA\s+PIATT[AO]?\b', 'PIATTO', t)
+    t = re.sub(r'\bFERRO\s+PIATT[AO]?\b', 'PIATTO', t)
+    t = re.sub(r'\bPIATTA\b', 'PIATTO', t)
+    t = re.sub(r'\bPROF\.?\s*FERRO\s+A\s+ELLE\b', 'L', t)
+    t = re.sub(r'\bTUBO\s+FERRO\s+(QUADRO|RETT\.?|RETTANGOLARE)\s*(NERO)?\b', 'TUBO', t)
+    t = re.sub(r'\bTUBO\s+FERRO\b', 'TUBO', t)
+    t = re.sub(r'\bCHANNEL\b', 'UPN', t)
+    t = re.sub(r'\bANGLE\b', 'ANGOLARE', t)
+
+    # Remove filler words BEFORE pattern matching
+    t = re.sub(r'\b(L\.?C\.?|MM\.?|IN|NERO|ZINCATO|BARRA|FERRO|A|DI|DA)\b', '', t)
+    t = re.sub(r'\.', ' ', t)
+    t = re.sub(r'\s+', ' ', t).strip()
+
+    # Pattern 1: Family + Number (e.g., "IPE 100", "PIATTO 120")
+    families = r'(IPE|HEB|HEA|HEM|INP|UPN|UNP|IPN|TUBO|PIATTO|TONDO|ANGOLARE|OMEGA|L)\s*(\d+)'
+    match = re.search(families, t)
     if match:
-        family = match.group(1)
-        size = match.group(2)
-        return f"{family}{size}"
+        return f"{match.group(1)}{match.group(2)}"
+
+    # Pattern 2: Number + Family (e.g., "100X50X6 UPN", "120X12 PIATTO")
+    reverse = r'(\d+)[X×\s]\d+.*?\b(IPE|HEB|HEA|HEM|UPN|UNP|IPN|TUBO|PIATTO|TONDO|ANGOLARE|L)\b'
+    match2 = re.search(reverse, t)
+    if match2:
+        return f"{match2.group(2)}{match2.group(1)}"
+
     return ""
 
 
@@ -1835,9 +1874,13 @@ async def _match_profili_to_commesse(
                 matched_commessa_id = next(iter(matched_ids))
                 match_source = "match esatto normalizzato (altra commessa)"
 
-        # STEP C: Try partial substring match (last resort before archive)
+        # STEP C: Try partial substring match OR dimension match (last resort before archive)
         if not matched_commessa_id:
+            import re
+            # Extract raw dimensions like "120X12" from the certificate profile
+            dim_numbers = re.findall(r'\d+X\d+(?:X\d+)?', _normalize_profilo(dim))
             for norm_key, cids_set in norm_to_commesse.items():
+                # Substring match
                 if norm_dim and (norm_dim in norm_key or norm_key in norm_dim):
                     if current_commessa_id in cids_set:
                         matched_commessa_id = current_commessa_id
@@ -1845,6 +1888,19 @@ async def _match_profili_to_commesse(
                     else:
                         matched_commessa_id = next(iter(cids_set))
                         match_source = "match parziale (altra commessa)"
+                    break
+                # Dimension match: "120X12" appears in both
+                if dim_numbers:
+                    for dnum in dim_numbers:
+                        if dnum in norm_key:
+                            if current_commessa_id in cids_set:
+                                matched_commessa_id = current_commessa_id
+                                match_source = f"dimensioni {dnum}"
+                            else:
+                                matched_commessa_id = next(iter(cids_set))
+                                match_source = f"dimensioni {dnum} (altra commessa)"
+                            break
+                if matched_commessa_id:
                     break
 
         # NO FALLBACK: if no match found, profile goes to archive
