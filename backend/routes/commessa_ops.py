@@ -1676,6 +1676,8 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
             "risultati_match": risultati_match,
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Certificate parsing error: {e}")
         raise HTTPException(500, f"Errore analisi certificato: {str(e)}")
