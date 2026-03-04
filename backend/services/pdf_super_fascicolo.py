@@ -102,56 +102,102 @@ def _firma_img(firma_b64: str) -> str:
 
 
 # ══════════════════════════════════════════════════════════════
-# COVER + INDEX
+# COVER + INDEX (Template-based professional cover page)
 # ══════════════════════════════════════════════════════════════
 def _build_cover(ctx: dict) -> bytes:
+    """Generate professional cover page from Jinja2-style HTML template."""
+    import os
     co = ctx["company"]
-    logo = co.get("logo_url", "")
-    biz = _s(co.get("business_name", ""))
-    addr = f"{_s(co.get('address',''))} {_s(co.get('city',''))} {_s(co.get('cap',''))}".strip()
     comm = ctx["commessa"]
-    comm_num = _s(comm.get("numero", ""))
     now = datetime.now(timezone.utc)
-    logo_html = f'<img src="{logo}" style="max-width:200px;max-height:70px;display:block;margin:0 auto 12px;" />' if logo else ""
 
+    # Load template
+    template_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "templates", "pdf", "cover_page.html"
+    )
+    try:
+        with open(template_path, "r", encoding="utf-8") as f:
+            template = f.read()
+    except FileNotFoundError:
+        logger.warning("Cover template not found, using fallback")
+        return _build_cover_fallback(ctx)
+
+    # Count content for dynamic index
+    n_certificati = len(ctx.get("cert_documents", []))
+    n_welders = len(ctx.get("assigned_welders", []))
+    has_materials = bool(ctx.get("batches") or ctx.get("cam_lotti"))
+
+    # Simple template rendering (Jinja2-like variable replacement)
+    replacements = {
+        "{{ logo_url }}": co.get("logo_url", ""),
+        "{{ business_name }}": _s(co.get("business_name", "")),
+        "{{ exc_class }}": _s(comm.get("classe_esecuzione", "EXC2")),
+        "{{ numero_commessa }}": _s(comm.get("numero", "")),
+        "{{ cliente }}": _s(ctx.get("client_name", "")),
+        "{{ oggetto }}": _s(comm.get("title", "")),
+        "{{ certificato_en1090 }}": _s(co.get("certificato_en1090_numero", "")),
+        "{{ data_emissione }}": now.strftime("%d/%m/%Y"),
+        "{{ generation_datetime }}": now.strftime("%d/%m/%Y alle %H:%M"),
+        "{{ partita_iva }}": _s(co.get("partita_iva", "")),
+        "{{ responsabile_nome }}": _s(co.get("responsabile_nome", "")),
+        "{{ firma_url }}": co.get("firma_base64", ""),
+        "{{ n_certificati }}": str(n_certificati),
+        "{{ n_welders }}": str(n_welders),
+    }
+    html = template
+    for key, val in replacements.items():
+        html = html.replace(key, val)
+
+    # Handle conditional blocks {% if ... %} ... {% endif %}
+    def _toggle_block(html_str, condition_name, show):
+        """Remove or keep conditional blocks."""
+        import re
+        pattern = r'\{%\s*if\s+' + re.escape(condition_name) + r'\s*%\}(.*?)\{%\s*endif\s*%\}'
+        if show:
+            return re.sub(pattern, r'\1', html_str, flags=re.DOTALL)
+        else:
+            return re.sub(pattern, '', html_str, flags=re.DOTALL)
+
+    html = _toggle_block(html, "logo_url", bool(co.get("logo_url")))
+    html = _toggle_block(html, "certificato_en1090", bool(co.get("certificato_en1090_numero")))
+    html = _toggle_block(html, "has_materials", has_materials)
+    html = _toggle_block(html, "n_certificati > 0", n_certificati > 0)
+    html = _toggle_block(html, "n_welders > 0", n_welders > 0)
+    html = _toggle_block(html, "firma_url", bool(co.get("firma_base64")))
+
+    # Handle singular/plural in index text
+    html = html.replace(
+        "{{ 'o' if n_certificati == 1 else 'i' }}",
+        "o" if n_certificati == 1 else "i"
+    )
+    html = html.replace(
+        "{{ 'o' if n_welders == 1 else 'i' }}",
+        "o" if n_welders == 1 else "i"
+    )
+
+    buf = BytesIO()
+    HTML(string=html).write_pdf(buf)
+    return buf.getvalue()
+
+
+def _build_cover_fallback(ctx: dict) -> bytes:
+    """Fallback cover page if template is missing."""
+    co = ctx["company"]
+    comm = ctx["commessa"]
+    now = datetime.now(timezone.utc)
+    biz = _s(co.get("business_name", ""))
+    comm_num = _s(comm.get("numero", ""))
     html = f"""
     <div style="text-align:center; padding-top:100px;">
-        {logo_html}
         <div style="font-size:14pt; color:#555; margin-bottom:10px;">{biz}</div>
-        <div style="font-size:8pt; color:#777;">{addr}</div>
         <div style="border-top:3px solid #1a3a6b; width:70%; margin:20px auto;"></div>
-        <h1 style="font-size:28pt; font-weight:800; color:#1a3a6b; margin:20px 0 8px;">FASCICOLO TECNICO</h1>
-        <h2 style="font-size:16pt; color:#333; margin:0 0 6px; border:none;">Commessa {comm_num}</h2>
+        <h1 style="font-size:28pt; font-weight:800; color:#1a3a6b;">FASCICOLO TECNICO</h1>
+        <h2 style="font-size:16pt; color:#333; border:none;">Commessa {comm_num}</h2>
         <div style="font-size:11pt; color:#444; margin-top:12px;">{_s(comm.get('title',''))}</div>
-        <div style="font-size:10pt; color:#555; margin-top:6px;">
-            Cliente: <strong>{_s(ctx.get('client_name',''))}</strong>
-        </div>
-        <div style="font-size:10pt; color:#555; margin-top:3px;">
-            Classe di Esecuzione: <strong>{_s(comm.get('classe_esecuzione','EXC2'))}</strong>
-        </div>
+        <div style="font-size:10pt; color:#555; margin-top:6px;">Cliente: <strong>{_s(ctx.get('client_name',''))}</strong></div>
     </div>
     <div style="position:fixed; bottom:25px; left:0; right:0; text-align:center; font-size:8pt; color:#999;">
-        Documento generato il {now.strftime('%d/%m/%Y alle %H:%M')} — Conforme EN 1090-1:2009+A1:2011
-    </div>
-
-    <div class="page-break"></div>
-    <h1 style="text-align:center; margin-top:30px;">INDICE</h1>
-    <div style="max-width:500px; margin:20px auto; font-size:11pt; line-height: 2.2;">
-        <div style="border-bottom:1px dotted #999;"><strong>Cap. 1</strong> — Dati Generali della Commessa</div>
-        <div style="border-bottom:1px dotted #999;"><strong>Cap. 2</strong> — Riesame Tecnico & ITT</div>
-        <div style="border-bottom:1px dotted #999;"><strong>Cap. 3</strong> — Tracciabilita' Materiali & Sostenibilita'</div>
-        <div style="border-bottom:1px dotted #999;padding-left:30px;">3.1 Riepilogo Lotti Materiale</div>
-        <div style="border-bottom:1px dotted #999;padding-left:30px;">3.2 Dichiarazione CAM</div>
-        <div style="border-bottom:1px dotted #999;padding-left:30px;">3.3 Green Certificate</div>
-        <div style="border-bottom:1px dotted #999;padding-left:30px;">3.4 Appendice A — Certificati 3.1 Originali</div>
-        <div style="border-bottom:1px dotted #999;"><strong>Cap. 4</strong> — Processo di Saldatura</div>
-        <div style="border-bottom:1px dotted #999;padding-left:30px;">4.1 Piano di Controllo Qualita'</div>
-        <div style="border-bottom:1px dotted #999;padding-left:30px;">4.2 Registro di Saldatura</div>
-        <div style="border-bottom:1px dotted #999;padding-left:30px;">4.3 Rapporto VT / CND</div>
-        <div style="border-bottom:1px dotted #999;padding-left:30px;">4.4 Appendice B — Patentini Saldatori</div>
-        <div style="border-bottom:1px dotted #999;"><strong>Cap. 5</strong> — Marcatura CE</div>
-        <div style="border-bottom:1px dotted #999;padding-left:30px;">5.1 Dichiarazione di Prestazione (DoP)</div>
-        <div style="border-bottom:1px dotted #999;padding-left:30px;">5.2 Etichetta CE</div>
+        Generato il {now.strftime('%d/%m/%Y')} — Conforme EN 1090-1:2009+A1:2011
     </div>
     """
     return _render(html)
@@ -668,6 +714,15 @@ async def generate_super_fascicolo(commessa_id: str, user_id: str) -> BytesIO:
     # Conto Lavoro items (for certificates from subcontractors)
     conto_lavoro = commessa.get("conto_lavoro", [])
 
+    # ── Load certificate PDFs from commessa_documents (Repository) ──
+    cert_documents = []
+    async for doc in db.commessa_documents.find(
+        {"commessa_id": commessa_id, "user_id": user_id, "tipo": {"$in": ["certificato_31", "certificato_materiale", "certificato"]}},
+        {"_id": 0, "doc_id": 1, "filename": 1, "file_base64": 1, "tipo": 1, "note": 1}
+    ):
+        if doc.get("file_base64"):
+            cert_documents.append(doc)
+
     # Build context dict
     ctx = {
         "commessa": commessa,
@@ -679,6 +734,7 @@ async def generate_super_fascicolo(commessa_id: str, user_id: str) -> BytesIO:
         "fpc_project": fpc_project,
         "assigned_welders": assigned_welders,
         "conto_lavoro": conto_lavoro,
+        "cert_documents": cert_documents,
     }
 
     # ── 2. Generate each section ──
@@ -698,10 +754,10 @@ async def generate_super_fascicolo(commessa_id: str, user_id: str) -> BytesIO:
     _add_pdf(merger, _build_cap3_cam(ctx), "Cap 3.2 - CAM")
     _add_pdf(merger, _build_cap3_green(ctx), "Cap 3.3 - Green Certificate")
 
-    # Appendice A: Certificati 3.1 originali (merge PDF)
+    # Appendice A: Certificati 3.1 originali (merge PDF dal Repository Documenti)
     certs_added = 0
-    for b in batches:
-        cert_b64 = b.get("certificate_base64")
+    for cert_doc in ctx.get("cert_documents", []):
+        cert_b64 = cert_doc.get("file_base64", "")
         if cert_b64:
             try:
                 cert_bytes = _decode_cert(cert_b64)
@@ -710,26 +766,21 @@ async def generate_super_fascicolo(commessa_id: str, user_id: str) -> BytesIO:
                     merger.add_page(page)
                 certs_added += 1
             except Exception as e:
-                logger.warning(f"Could not merge cert 3.1 for {b.get('heat_number','?')}: {e}")
+                logger.warning(f"Could not merge cert from repo '{cert_doc.get('filename','?')}': {e}")
 
-    if certs_added == 0 and batches:
-        # Load certificates separately (they might have been excluded from the initial query)
+    # Fallback: merge certificates from material_batches if none found in repo
+    if certs_added == 0:
         for b in batches:
-            bid = b.get("batch_id")
-            if bid:
-                cert_doc = await db.material_batches.find_one(
-                    {"batch_id": bid, "user_id": user_id},
-                    {"_id": 0, "certificate_base64": 1}
-                )
-                cert_b64 = (cert_doc or {}).get("certificate_base64")
-                if cert_b64:
-                    try:
-                        cert_bytes = _decode_cert(cert_b64)
-                        reader = PdfReader(BytesIO(cert_bytes))
-                        for page in reader.pages:
-                            merger.add_page(page)
-                    except Exception:
-                        pass
+            cert_b64 = b.get("certificate_base64")
+            if cert_b64:
+                try:
+                    cert_bytes = _decode_cert(cert_b64)
+                    reader = PdfReader(BytesIO(cert_bytes))
+                    for page in reader.pages:
+                        merger.add_page(page)
+                    certs_added += 1
+                except Exception as e:
+                    logger.warning(f"Could not merge batch cert for {b.get('heat_number','?')}: {e}")
 
     # Appendice A.2: Certificati Conto Lavoro (rientro subcontractor)
     for cl_item in conto_lavoro:
