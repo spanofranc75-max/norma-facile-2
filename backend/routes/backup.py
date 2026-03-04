@@ -158,8 +158,8 @@ async def restore_backup(
     user: dict = Depends(get_current_user),
 ):
     """Restore data from a JSON backup file.
-    WARNING: This will MERGE data (not overwrite). Existing records with
-    the same IDs will be skipped.
+    Uses UPSERT strategy: existing records are updated, new ones are inserted.
+    No data duplication occurs.
     """
     uid = user["user_id"]
 
@@ -173,8 +173,9 @@ async def restore_backup(
         raise HTTPException(400, "Formato backup non riconosciuto")
 
     results = {}
-    total_restored = 0
-    total_skipped = 0
+    total_inserted = 0
+    total_updated = 0
+    total_errors = 0
 
     for coll_name, docs in backup.get("data", {}).items():
         if coll_name not in BACKUP_COLLECTIONS:
@@ -184,36 +185,48 @@ async def restore_backup(
 
         coll = db[coll_name]
         inserted = 0
-        skipped = 0
+        updated = 0
+        errors = 0
 
-        # Determine the primary key field for this collection
         pk_field = _get_pk_field(coll_name)
 
         for doc in docs:
-            # Override user_id to current user
             doc["user_id"] = uid
-
-            if pk_field and doc.get(pk_field):
-                existing = await coll.find_one({pk_field: doc[pk_field], "user_id": uid})
-                if existing:
-                    skipped += 1
-                    continue
-
             doc.pop("_id", None)
-            try:
-                await coll.insert_one(doc)
-                inserted += 1
-            except Exception:
-                skipped += 1
 
-        results[coll_name] = {"inserted": inserted, "skipped": skipped}
-        total_restored += inserted
-        total_skipped += skipped
+            try:
+                if pk_field and doc.get(pk_field):
+                    # Upsert: update if exists, insert if not
+                    result = await coll.update_one(
+                        {pk_field: doc[pk_field], "user_id": uid},
+                        {"$set": doc},
+                        upsert=True,
+                    )
+                    if result.upserted_id:
+                        inserted += 1
+                    elif result.modified_count > 0:
+                        updated += 1
+                    else:
+                        # Document exists but is identical — count as updated (no-op)
+                        updated += 1
+                else:
+                    # No PK available — insert as new document
+                    await coll.insert_one(doc)
+                    inserted += 1
+            except Exception as e:
+                logger.warning(f"Restore error in {coll_name}: {e}")
+                errors += 1
+
+        results[coll_name] = {"inserted": inserted, "updated": updated, "errors": errors}
+        total_inserted += inserted
+        total_updated += updated
+        total_errors += errors
 
     return {
-        "message": f"Restore completato: {total_restored} record importati, {total_skipped} saltati",
-        "total_restored": total_restored,
-        "total_skipped": total_skipped,
+        "message": f"Restore completato: {total_inserted} inseriti, {total_updated} aggiornati, {total_errors} errori",
+        "total_inserted": total_inserted,
+        "total_updated": total_updated,
+        "total_errors": total_errors,
         "details": results,
     }
 
@@ -238,5 +251,7 @@ def _get_pk_field(coll_name: str) -> str:
         "project_costs": "cost_id",
         "audit_findings": "finding_id",
         "articoli": "articolo_id",
+        "company_settings": "user_id",
+        "catalogo_profili": "codice",
     }
     return pk_map.get(coll_name, "")

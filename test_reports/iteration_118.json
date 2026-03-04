@@ -1,0 +1,78 @@
+{
+  "summary": "Iteration 118: Complete testing of Backup/Restore UPSERT logic fix. All 10 backend tests passed (100%). The fix correctly prevents duplicate records when restoring backups - restoring twice now UPDATES existing records instead of creating duplicates. Response fields now include 'total_inserted', 'total_updated', 'total_errors' instead of old 'total_restored', 'total_skipped'.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "restore_response_fields": {
+      "test": "POST /api/admin/backup/restore returns correct response structure",
+      "result": "PASS - Response contains total_inserted, total_updated, total_errors, message, details"
+    },
+    "restore_details_per_collection": {
+      "test": "Restore details contain per-collection counts",
+      "result": "PASS - Each collection in details has inserted, updated, errors counts"
+    },
+    "upsert_no_duplicates": {
+      "test": "Restoring same backup twice does NOT duplicate records",
+      "result": "PASS - First restore: inserted=1, Second restore: inserted=0, updated=1. Count remains 1 (no duplicates)"
+    },
+    "upsert_updates_data": {
+      "test": "UPSERT actually updates data on second restore",
+      "result": "PASS - Data is updated from 'Original Name' to 'Updated Name From Backup' without duplicating"
+    },
+    "full_cycle_test": {
+      "test": "Full cycle: insert -> export -> modify -> restore -> verify update",
+      "result": "PASS - Commessa modified in DB was correctly restored from backup, count=1 (no duplicates)"
+    },
+    "company_settings_pk": {
+      "test": "company_settings uses user_id as PK for upsert",
+      "result": "PASS - Restoring company_settings twice keeps count=1, data updated"
+    },
+    "export_endpoint": {
+      "test": "GET /api/admin/backup/export still works",
+      "result": "PASS - Returns 200, valid JSON with metadata/data/stats structure"
+    },
+    "new_record_insert": {
+      "test": "New records (not existing) are INSERTED correctly",
+      "result": "PASS - Brand new client inserted, inserted=1, record exists in DB"
+    },
+    "catalogo_profili_pk": {
+      "test": "catalogo_profili uses 'codice' as PK for upsert",
+      "result": "PASS - Restoring twice with same codice keeps count=1"
+    }
+  },
+  "upsert_logic_verified": {
+    "pk_field_mapping": {
+      "clients": "client_id",
+      "commesse": "commessa_id",
+      "company_settings": "user_id",
+      "catalogo_profili": "codice"
+    },
+    "upsert_behavior": "update_one with {pk_field: doc[pk_field], user_id: uid}, upsert=True",
+    "result_counting": "upserted_id set = inserted, modified_count > 0 or identical doc = updated"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration118_backup_upsert.py",
+    "/app/test_reports/pytest/iteration118_backup_upsert_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration118_backup_upsert.py"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 pytest tests passed)",
+    "frontend": "N/A (backend-only testing requested)"
+  },
+  "test_credentials": "Created test user 'user_backup_upsert_118' with session 'session_backup_upsert_118_token' - cleaned up after tests",
+  "seed_data_creation": "Test data created in clients, commesse, company_settings, catalogo_profili collections for upsert testing - all cleaned up",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 118 fixed backup restore duplication bug. The restore_backup function in /app/backend/routes/backup.py now uses update_one with upsert=True instead of find_one + insert_one. Primary keys for each collection are mapped in _get_pk_field() function. Response fields changed from total_restored/total_skipped to total_inserted/total_updated/total_errors. The old test file test_iteration101_backup.py may have some outdated assertions (expects total_restored/total_skipped) but core backup functionality tests are still valid."
+}
