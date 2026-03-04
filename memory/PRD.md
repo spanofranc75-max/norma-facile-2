@@ -86,7 +86,14 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **FEATURE: Colori righe preventivi** - Righe colorate in base allo stato effettivo: Accettato=ambra, In Lavorazione=blu, Chiuso=verde. Backend arricchisce la lista con `commessa_stato` dalla commessa collegata.
 - **FEATURE: Commessa Generica** - Nuovo endpoint `POST /commesse/from-preventivo/{id}/generica` crea commesse senza numero NF-XXXX (usa GEN-PRV-XXXX), con flag `generica=true`. Dropdown nel PreventivoEditor con 2 opzioni: "Commessa Normata" e "Commessa Generica". Badge "GEN" nel Planning Kanban.
 - **FEATURE: Rimozione scadenze dal preventivo PDF** - Rimossa la sezione "RIEPILOGO SCADENZE PAGAMENTO" dal PDF preventivo.
-- **FEATURE: Dossier → Fascicolo Tecnico** - Endpoint `/dossier` ora genera il Fascicolo Tecnico professionale invece del vecchio log eventi.
+- **FEATURE: Popolamento dati dinamico Fascicolo Tecnico** - Fix 4 sezioni PDF:
+  - CAM: pesi "N.D." al posto di "0.0 kg" con catena fallback (cam_lotti → material_batches → arrivi → N.D.)
+  - Green Certificate: "N.D." per CO2 quando pesi non disponibili
+  - PCQ: arricchimento fasi da commessa.produzione (date, operatori, esiti)
+  - Registro Saldatura: auto-popola da saldatori assegnati e WPS
+  - DoP/CE: dati materiale reali da `_get_material_properties(cam_lotti)` — "S275JR+AR" invece di default generico
+  - Durabilità: check anche su conto_lavoro per trattamenti superficiali
+  13/13 test passati.
 
 ## Issue Pendenti
 - **P1**: Verifica end-to-end generazione dinamica PDF (DoP/CE) con dati materiali reali

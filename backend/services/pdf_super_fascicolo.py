@@ -438,22 +438,39 @@ def _build_cap3_green(ctx: dict) -> bytes:
 
     peso_tot = sum(l.get("peso_kg", 0) for l in cam_lotti)
     peso_ric = sum(l.get("peso_kg", 0) * l.get("percentuale_riciclato", 0) / 100 for l in cam_lotti)
-    co2 = calcola_co2_risparmiata(peso_tot, peso_ric)
-    alberi = round(co2["co2_risparmiata_kg"] / 22, 1)
+
+    if peso_tot > 0:
+        co2 = calcola_co2_risparmiata(peso_tot, peso_ric)
+        alberi = round(co2["co2_risparmiata_kg"] / 22, 1)
+        co2_display = f'{co2["co2_risparmiata_kg"]:.0f} kg CO2'
+        alberi_display = f'{alberi:.0f} alberi'
+        peso_tot_str = f'{peso_tot:.1f} kg'
+        peso_ric_str = f'{peso_ric:.1f} kg'
+        co2_ric_str = f'{co2.get("co2_riciclato_kg",0):.1f} kg'
+        co2_verg_str = f'{co2.get("co2_vergine_kg",0):.1f} kg'
+        co2_risp_str = f'{co2["co2_risparmiata_kg"]:.1f} kg'
+    else:
+        co2_display = 'N.D. (pesi materiale non disponibili)'
+        alberi_display = 'N.D.'
+        peso_tot_str = 'N.D.'
+        peso_ric_str = 'N.D.'
+        co2_ric_str = 'N.D.'
+        co2_verg_str = 'N.D.'
+        co2_risp_str = 'N.D.'
 
     html = f"""{hdr}
     <h2>3.3 Certificato Verde — Risparmio CO2</h2>
     <div style="text-align:center;margin:20px 0;padding:20px;border:2px solid #059669;border-radius:8px;background:#f0fdf4;">
         <div style="font-size:14pt;font-weight:700;color:#059669;">Risparmio CO2 stimato</div>
-        <div style="font-size:28pt;font-weight:800;color:#059669;margin:8px 0;">{co2['co2_risparmiata_kg']:.0f} kg CO2</div>
-        <div style="font-size:10pt;color:#555;">Equivalente a <strong>{alberi:.0f} alberi</strong> in un anno</div>
+        <div style="font-size:28pt;font-weight:800;color:#059669;margin:8px 0;">{co2_display}</div>
+        <div style="font-size:10pt;color:#555;">Equivalente a <strong>{alberi_display}</strong> in un anno</div>
     </div>
     <table class="info">
-        <tr><td class="lbl">Peso acciaio totale:</td><td>{peso_tot:.1f} kg</td></tr>
-        <tr><td class="lbl">Peso riciclato:</td><td>{peso_ric:.1f} kg</td></tr>
-        <tr><td class="lbl">CO2 produzione da riciclo:</td><td>{co2.get('co2_riciclato_kg',0):.1f} kg</td></tr>
-        <tr><td class="lbl">CO2 produzione vergine equiv.:</td><td>{co2.get('co2_vergine_kg',0):.1f} kg</td></tr>
-        <tr><td class="lbl">CO2 risparmiata:</td><td style="font-weight:700;color:#059669;">{co2['co2_risparmiata_kg']:.1f} kg</td></tr>
+        <tr><td class="lbl">Peso acciaio totale:</td><td>{peso_tot_str}</td></tr>
+        <tr><td class="lbl">Peso riciclato:</td><td>{peso_ric_str}</td></tr>
+        <tr><td class="lbl">CO2 produzione da riciclo:</td><td>{co2_ric_str}</td></tr>
+        <tr><td class="lbl">CO2 produzione vergine equiv.:</td><td>{co2_verg_str}</td></tr>
+        <tr><td class="lbl">CO2 risparmiata:</td><td style="font-weight:700;color:#059669;">{co2_risp_str}</td></tr>
     </table>
     <div class="footer-doc">Calcolo basato su fattori di emissione World Steel Association: acciaio da forno elettrico = 0.4 t CO2/t, acciaio da ciclo integrale = 1.8 t CO2/t</div>
     """
