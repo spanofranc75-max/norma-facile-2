@@ -341,6 +341,7 @@ def _build_cap3_cam(ctx: dict) -> bytes:
     co = ctx["company"]
     comm = ctx["commessa"]
     cam_lotti = ctx.get("cam_lotti", [])
+    batches = ctx.get("batches", [])
     hdr = _header(co.get("logo_url",""), co.get("business_name",""), comm.get("numero",""), "Cap. 3 — Dichiarazione CAM")
 
     if not cam_lotti:
@@ -349,6 +350,36 @@ def _build_cap3_cam(ctx: dict) -> bytes:
         <div class="note-box">Nessun dato CAM disponibile per questa commessa. La sezione verra' completata quando i lotti materiale verranno registrati nel modulo CAM.</div>
         """
         return _render(html)
+
+    # ── Calcolo pesi con fallback ──
+    # Per ogni lotto, se peso_kg == 0, cerca in material_batches o arrivi
+    arrivi = (comm.get("approvvigionamento") or {}).get("arrivi", [])
+    batch_by_heat = {b.get("heat_number", ""): b for b in batches}
+    arrivo_by_desc = {}
+    for a in arrivi:
+        key = (a.get("materiale", "") + " " + a.get("descrizione", "")).strip().lower()
+        arrivo_by_desc[key] = a
+
+    for lotto in cam_lotti:
+        if lotto.get("peso_kg", 0) > 0:
+            continue
+        # Fallback 1: material_batches peso
+        heat = lotto.get("numero_colata", "")
+        matched_batch = batch_by_heat.get(heat)
+        if matched_batch and matched_batch.get("peso_kg", 0) > 0:
+            lotto["peso_kg"] = matched_batch["peso_kg"]
+            continue
+        # Fallback 2: arrivi (quantita * peso_metro * lunghezza)
+        desc_key = (lotto.get("descrizione", "") or "").strip().lower()
+        for ak, av in arrivo_by_desc.items():
+            if desc_key and desc_key in ak:
+                qty = float(av.get("quantita", 0) or 0)
+                peso_m = float(av.get("peso_metro", 0) or 0)
+                lungh_m = float(av.get("lunghezza", 0) or 0) / 1000 if av.get("lunghezza") else 1
+                calc = qty * peso_m * lungh_m
+                if calc > 0:
+                    lotto["peso_kg"] = round(calc, 1)
+                    break
 
     peso_tot = sum(l.get("peso_kg", 0) for l in cam_lotti)
     peso_ric = sum(l.get("peso_kg", 0) * l.get("percentuale_riciclato", 0) / 100 for l in cam_lotti)
@@ -362,10 +393,11 @@ def _build_cap3_cam(ctx: dict) -> bytes:
         if l.get("tipo_certificazione") == "nessuna" and perc > 0:
             nota_stima = ' <span style="color:#c06000;font-size:7pt;">*stimato</span>'
         conf_txt = '<span style="color:#059669;font-weight:700;">CONFORME</span>' if l.get("conforme_cam") else '<span style="color:#DC2626;font-weight:700;">NON CONFORME</span>'
+        peso_display = f"{l.get('peso_kg',0):.1f}" if l.get("peso_kg", 0) > 0 else "N.D."
         rows += f"""<tr>
             <td>{_s(l.get('descrizione',''))}</td>
             <td>{_s(l.get('numero_colata',''))}</td>
-            <td style="text-align:right;">{l.get('peso_kg',0):.1f}</td>
+            <td style="text-align:right;">{peso_display}</td>
             <td style="text-align:center;">{perc:.0f}%{nota_stima}</td>
             <td style="text-align:center;">{_s(l.get('metodo_produttivo',''))}</td>
             <td style="text-align:center;">{conf_txt}</td>
@@ -373,6 +405,7 @@ def _build_cap3_cam(ctx: dict) -> bytes:
 
     verdict_color = "#059669" if conforme else "#DC2626"
     verdict_text = "CONFORME" if conforme else "NON CONFORME"
+    peso_tot_display = f"{peso_tot:.1f} kg" if peso_tot > 0 else "N.D."
 
     html = f"""{hdr}
     <h2>3.2 Dichiarazione di Conformita' CAM</h2>
@@ -382,7 +415,7 @@ def _build_cap3_cam(ctx: dict) -> bytes:
         <tbody>{rows}</tbody>
     </table>
     <table class="info" style="margin-top:10px;">
-        <tr><td class="lbl">Peso Totale:</td><td>{peso_tot:.1f} kg</td><td class="lbl">% Riciclato Media:</td><td>{perc_media:.1f}%</td></tr>
+        <tr><td class="lbl">Peso Totale:</td><td>{peso_tot_display}</td><td class="lbl">% Riciclato Media:</td><td>{perc_media:.1f}%</td></tr>
         <tr><td class="lbl">Esito Complessivo:</td><td colspan="3" style="font-weight:700;font-size:12pt;color:{verdict_color};">{verdict_text}</td></tr>
     </table>
     <div class="note-box">* I valori contrassegnati "stimato" utilizzano dati di letteratura (es. 80% per forno elettrico non legato) in assenza di certificazione specifica del produttore.</div>
@@ -445,17 +478,45 @@ def _build_cap4_pcq(ctx: dict) -> bytes:
     if not fasi:
         fasi = [dict(f) for f in DEFAULT_PHASES]
 
+    # ── Enrich PCQ phases with data from commessa.produzione ──
+    produzione = comm.get("produzione", [])
+    prod_by_name = {}
+    for p in produzione:
+        key = (p.get("fase") or p.get("name") or "").strip().lower()
+        if key:
+            prod_by_name[key] = p
+
     rows = ""
     for i, f in enumerate(fasi, 1):
         fase = f.get("fase", "")
         doc_rif = f.get("doc_rif", "").replace("{disegno}", disegno)
         applicabile = f.get("applicabile", True)
         bg = 'style="background:#f5f5f5;"' if not applicabile else ''
-        esito_html = '<span style="color:#999;">N/A</span>' if not applicabile else f'{_chk(False)} Pos {_chk(False)} Neg'
+
+        # Look for completed data in produzione or fasi
+        completed = f.get("completed") or f.get("completed_at") or f.get("data_fine")
+        operator = f.get("operator_name") or f.get("operatore") or ""
         periodo = ""
-        if f.get("completed_at") or f.get("data_fine"):
-            periodo = _safe_date(f.get("completed_at") or f.get("data_fine", ""))
-        rows += f'<tr {bg}><td style="text-align:center;">{i}</td><td style="text-align:left;">{fase}</td><td style="font-size:7pt;">{doc_rif}</td><td style="text-align:center;font-size:7pt;">{periodo}</td><td style="text-align:center;"></td><td style="text-align:center;">{esito_html}</td><td style="text-align:center;"></td></tr>'
+        esito_html = ""
+        firma_col = ""
+
+        # Try matching from produzione (commessa.produzione)
+        fase_lower = fase.strip().lower()
+        matched_prod = prod_by_name.get(fase_lower)
+        if matched_prod:
+            completed = matched_prod.get("completed") or matched_prod.get("completed_at") or completed
+            operator = matched_prod.get("operator_name") or matched_prod.get("operatore") or operator
+
+        if not applicabile:
+            esito_html = '<span style="color:#999;">N/A</span>'
+        elif completed:
+            periodo = _safe_date(completed if isinstance(completed, str) else f.get("completed_at", "") or f.get("data_fine", ""))
+            esito_html = '<span class="chk-yes">&#9746;</span> Pos <span class="chk-no">&#9744;</span> Neg'
+            firma_col = _s(operator) if operator else ""
+        else:
+            esito_html = f'{_chk(False)} Pos {_chk(False)} Neg'
+
+        rows += f'<tr {bg}><td style="text-align:center;">{i}</td><td style="text-align:left;">{fase}</td><td style="font-size:7pt;">{doc_rif}</td><td style="text-align:center;font-size:7pt;">{periodo}</td><td style="text-align:center;font-size:7pt;">{firma_col}</td><td style="text-align:center;">{esito_html}</td><td style="text-align:center;"></td></tr>'
 
     header_html = _header_html(biz, addr, piva, phone, email, "Piano di Controllo Qualita'", 'MOD. 02', logo)
     css = BASE_CSS.replace("size: A4;", "size: A4 landscape;").replace("margin: 12mm 15mm;", "margin: 10mm 8mm;")
@@ -475,12 +536,57 @@ def _build_cap4_pcq(ctx: dict) -> bytes:
 
 
 def _build_cap4_registro(ctx: dict) -> bytes:
-    """Registro di Saldatura — use existing generator."""
+    """Registro di Saldatura — use existing generator, enriched with assigned welders."""
     from services.pdf_fascicolo_tecnico import generate_registro_saldatura_pdf
     co = ctx["company"]
     comm = ctx["commessa"]
     ft = ctx.get("ft", {})
-    buf = generate_registro_saldatura_pdf(co, comm, ctx.get("client_name",""), ft)
+
+    # ── Enrich saldature from assigned_welders if ft.saldature is empty ──
+    saldature = ft.get("saldature", [])
+    if not saldature:
+        assigned = ctx.get("assigned_welders", [])
+        fpc = ctx.get("fpc_project") or {}
+        fpc_data = fpc.get("fpc_data", {})
+        wps_list = fpc_data.get("wps_assegnate", []) or ft.get("wps_list", [])
+        wps_map = {w.get("wps_id", ""): w for w in wps_list if isinstance(w, dict)}
+
+        for w in assigned:
+            # Find the relevant WPS for this welder
+            wps_ref = ""
+            processo = ""
+            for q in w.get("qualifications", []):
+                if q.get("status") in ("attivo", "in_scadenza"):
+                    processo = q.get("process", "")
+                    break
+            # Try to find matching WPS from fpc
+            for wps in wps_list:
+                if isinstance(wps, dict):
+                    wps_ref = wps.get("numero", wps.get("wps_numero", ""))
+                    break
+
+            if w.get("name"):
+                saldature.append({
+                    "saldatore": w.get("name", ""),
+                    "punzone": w.get("stamp_id", ""),
+                    "wps_numero": wps_ref,
+                    "materiale_base": "",
+                    "diametro": "",
+                    "spessore": "",
+                    "periodo": "",
+                    "numero_disegno": "",
+                    "numero_saldatura": processo,
+                })
+
+        if saldature:
+            ft_enriched = dict(ft)
+            ft_enriched["saldature"] = saldature
+        else:
+            ft_enriched = ft
+    else:
+        ft_enriched = ft
+
+    buf = generate_registro_saldatura_pdf(co, comm, ctx.get("client_name",""), ft_enriched)
     return buf.getvalue()
 
 
@@ -549,22 +655,72 @@ def _build_cap4_welder(ctx: dict) -> bytes:
 # CAP 5: MARCATURA CE (DoP + Etichetta)
 # ══════════════════════════════════════════════════════════════
 def _build_cap5_dop(ctx: dict) -> bytes:
-    """DoP — use existing generator."""
-    from services.pdf_fascicolo_tecnico import generate_dop_pdf
+    """DoP — use existing generator, enriched with dynamic material data."""
+    from services.pdf_fascicolo_tecnico import generate_dop_pdf, _get_material_properties, _get_durabilita
     co = ctx["company"]
     comm = ctx["commessa"]
     ft = ctx.get("ft", {})
-    buf = generate_dop_pdf(co, comm, ctx.get("client_name",""), ft)
+
+    # ── Inject dynamic material properties from actual CAM/batches ──
+    cam_lotti = ctx.get("cam_lotti", [])
+    batches = ctx.get("batches", [])
+    source_data = cam_lotti or batches
+    mat_props = _get_material_properties(source_data)
+    durabilita = _get_durabilita(comm)
+
+    # Also check conto_lavoro for surface treatments
+    if durabilita == "NPD":
+        for cl in ctx.get("conto_lavoro", []):
+            tipo = (cl.get("tipo") or "").lower()
+            if "zincat" in tipo or "zincatura" in tipo:
+                durabilita = "Zincatura a caldo EN ISO 1461"
+                break
+            elif "vernic" in tipo or "verniciatura" in tipo:
+                durabilita = "Verniciatura secondo specifica cliente"
+                break
+
+    ft_enriched = dict(ft)
+    ft_enriched.setdefault("materiali_saldabilita", mat_props["materiali_saldabilita"])
+    ft_enriched.setdefault("resilienza", mat_props["resilienza"])
+    if durabilita != "NPD":
+        ft_enriched["durabilita"] = durabilita
+    else:
+        ft_enriched.setdefault("durabilita", mat_props.get("durabilita", "NPD"))
+
+    buf = generate_dop_pdf(co, comm, ctx.get("client_name",""), ft_enriched)
     return buf.getvalue()
 
 
 def _build_cap5_ce(ctx: dict) -> bytes:
-    """CE Label — use existing generator."""
-    from services.pdf_fascicolo_tecnico import generate_ce_pdf
+    """CE Label — use existing generator, enriched with dynamic material data."""
+    from services.pdf_fascicolo_tecnico import generate_ce_pdf, _get_material_properties, _get_durabilita
     co = ctx["company"]
     comm = ctx["commessa"]
     ft = ctx.get("ft", {})
-    buf = generate_ce_pdf(co, comm, ctx.get("client_name",""), ft)
+
+    # ── Same dynamic enrichment as DoP ──
+    cam_lotti = ctx.get("cam_lotti", [])
+    batches = ctx.get("batches", [])
+    source_data = cam_lotti or batches
+    mat_props = _get_material_properties(source_data)
+    durabilita = _get_durabilita(comm)
+
+    if durabilita == "NPD":
+        for cl in ctx.get("conto_lavoro", []):
+            tipo = (cl.get("tipo") or "").lower()
+            if "zincat" in tipo or "zincatura" in tipo:
+                durabilita = "Zincatura a caldo EN ISO 1461"
+                break
+
+    ft_enriched = dict(ft)
+    ft_enriched.setdefault("materiali_saldabilita", mat_props["materiali_saldabilita"])
+    ft_enriched.setdefault("resilienza", mat_props["resilienza"])
+    if durabilita != "NPD":
+        ft_enriched["durabilita"] = durabilita
+    else:
+        ft_enriched.setdefault("durabilita", mat_props.get("durabilita", "NPD"))
+
+    buf = generate_ce_pdf(co, comm, ctx.get("client_name",""), ft_enriched)
     return buf.getvalue()
 
 
