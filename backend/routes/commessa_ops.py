@@ -1703,6 +1703,13 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
             doc_id=doc_id,
             doc=doc,
             user=user,
+            dry_run=True,  # DON'T create batches — user must confirm first
+        )
+
+        # Store match results in document for later confirmation
+        await db[DOC_COLL].update_one(
+            {"doc_id": doc_id},
+            {"$set": {"risultati_match": risultati_match, "match_pending_confirm": True}},
         )
 
         # Build backward-compatible metadata with first matched profile
@@ -1713,17 +1720,19 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
             metadata["dimensioni"] = first_matched.get("dimensioni", "")
             metadata["peso_kg"] = first_matched.get("peso_kg")
 
+        matched_count = sum(1 for r in risultati_match if r['tipo'] == 'commessa_corrente')
         await db[COLL].update_one({"commessa_id": cid}, push_event(
             cid, "CERTIFICATO_ANALIZZATO", user,
-            f"{len(profili)} profili trovati — {sum(1 for r in risultati_match if r['tipo'] == 'commessa_corrente')} per questa commessa",
+            f"{len(profili)} profili trovati — {matched_count} corrispondenti all'OdA (da confermare)",
             {"doc_id": doc_id, "risultati_match": risultati_match, "metadata": metadata}
         ))
 
         return {
-            "message": "Certificato analizzato con successo",
+            "message": f"Certificato analizzato: {matched_count} profili corrispondono all'OdA. Conferma quali importare.",
             "metadata": metadata,
             "profili_trovati": len(profili),
             "risultati_match": risultati_match,
+            "pending_confirm": True,
         }
 
     except HTTPException:
@@ -1731,6 +1740,124 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
     except Exception as e:
         logger.error(f"Certificate parsing error: {e}")
         raise HTTPException(500, f"Errore analisi certificato: {str(e)}")
+
+
+class ConfirmProfiliRequest(BaseModel):
+    """Request body for confirming which profiles to import."""
+    selected_indices: List[int] = []  # Indices of profiles to import from risultati_match
+
+
+@router.post("/{cid}/documenti/{doc_id}/confirm-profili")
+async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, user: dict = Depends(get_current_user)):
+    """
+    Step 2 of certificate analysis: User confirms which profiles to import.
+    Only selected profiles create material_batches and CAM lotti.
+    """
+    comm = await get_commessa_or_404(cid, user["user_id"])
+
+    # Get stored match results from the document
+    doc = await db[DOC_COLL].find_one(
+        {"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"]},
+        {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "Documento non trovato")
+
+    risultati_match = doc.get("risultati_match", [])
+    if not risultati_match:
+        raise HTTPException(400, "Nessun risultato di matching da confermare. Rianalizza il certificato.")
+
+    # Clean up any existing batches from previous imports for this document
+    await db.material_batches.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"]})
+    await db.lotti_cam.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"]})
+    await db.archivio_certificati.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"]})
+
+    # Process only selected profiles
+    metadata = doc.get("metadata", {})
+    n_cert = metadata.get("numero_certificato", "")
+    fornitore = metadata.get("fornitore", "")
+    ente_cert = metadata.get("ente_certificatore", "")
+
+    imported_count = 0
+    archived_count = 0
+
+    for i, r in enumerate(risultati_match):
+        colata = r.get("numero_colata", "")
+        dim = r.get("dimensioni", "")
+        qualita = r.get("qualita_acciaio", "")
+        peso = r.get("peso_kg", 0)
+        target_cid = r.get("commessa_id", "")
+
+        if i in data.selected_indices and target_cid:
+            # USER SELECTED: create material_batch + CAM lotto
+            batch_id = f"bat_{uuid.uuid4().hex[:10]}"
+            await db.material_batches.insert_one({
+                "batch_id": batch_id, "user_id": user["user_id"],
+                "heat_number": colata, "material_type": qualita,
+                "supplier_name": fornitore, "dimensions": dim,
+                "normativa": metadata.get("normativa_riferimento", ""),
+                "source_doc_id": doc_id, "commessa_id": target_cid,
+                "numero_certificato": n_cert,
+                "peso_kg": float(peso or 0),
+                "notes": f"Confermato da utente - cert {n_cert}", "created_at": ts(),
+            })
+
+            # CAM lotto
+            metodo = r.get("metodo_produttivo", metadata.get("metodo_produttivo", "forno_elettrico_non_legato"))
+            perc = r.get("percentuale_riciclato")
+            if perc is None:
+                perc = {"forno_elettrico_non_legato": 80, "forno_elettrico_legato": 65, "ciclo_integrale": 10}.get(metodo, 75)
+            perc = float(perc)
+            soglie = {"forno_elettrico_non_legato": 75, "forno_elettrico_legato": 60, "ciclo_integrale": 12}
+            soglia = soglie.get(metodo, 75)
+
+            cam_id = f"cam_{uuid.uuid4().hex[:10]}"
+            await db.lotti_cam.insert_one({
+                "lotto_id": cam_id, "user_id": user["user_id"],
+                "commessa_id": target_cid,
+                "descrizione": dim or qualita or "Materiale da certificato",
+                "fornitore": fornitore, "numero_colata": colata,
+                "peso_kg": float(peso or 0), "qualita_acciaio": qualita,
+                "percentuale_riciclato": perc, "metodo_produttivo": metodo,
+                "tipo_certificazione": "dichiarazione_produttore",
+                "numero_certificazione": n_cert,
+                "ente_certificatore": ente_cert,
+                "uso_strutturale": True, "soglia_minima_cam": soglia,
+                "conforme_cam": perc >= soglia, "source_doc_id": doc_id,
+                "note": f"Confermato da utente - {r.get('match_source', '')}",
+                "created_at": ts(),
+            })
+            imported_count += 1
+            logger.info(f"[CONFIRM] Imported profile '{dim}' colata={colata} to commessa {target_cid}")
+        else:
+            # NOT SELECTED or NO MATCH: archive
+            await db.archivio_certificati.update_one(
+                {"heat_number": colata, "source_doc_id": doc_id, "user_id": user["user_id"]},
+                {"$set": {
+                    "user_id": user["user_id"],
+                    "heat_number": colata, "material_type": qualita,
+                    "supplier_name": fornitore, "dimensions": dim,
+                    "source_doc_id": doc_id, "numero_certificato": n_cert,
+                    "peso_kg": float(peso or 0),
+                    "note": "Non selezionato dall'utente" if target_cid else "Nessun match OdA",
+                    "created_at": ts(),
+                }},
+                upsert=True,
+            )
+            archived_count += 1
+
+    # Mark as confirmed
+    await db[DOC_COLL].update_one(
+        {"doc_id": doc_id},
+        {"$set": {"match_pending_confirm": False, "profili_confermati": imported_count}},
+    )
+
+    logger.info(f"[CONFIRM] doc {doc_id}: {imported_count} imported, {archived_count} archived")
+    return {
+        "message": f"{imported_count} profili importati, {archived_count} in archivio",
+        "imported": imported_count,
+        "archived": archived_count,
+    }
 
 
 # ── Helper: normalize profile name for matching ──
@@ -1841,7 +1968,7 @@ async def _match_profili_to_commesse(
     # Test: pytest tests/test_oda_matching.py -v
     # ══════════════════════════════════════════════════════════════════════════
     profili: list, metadata_cert: dict, current_commessa_id: str,
-    doc_id: str, doc: dict, user: dict,
+    doc_id: str, doc: dict, user: dict, dry_run: bool = False,
 ) -> list:
     """
     Smart matching: for each profile in the certificate, find which commessa it belongs to.
@@ -1992,10 +2119,11 @@ async def _match_profili_to_commesse(
             "commessa_numero": comm_info.get("numero", ""),
             "commessa_titolo": comm_info.get("title", ""),
             "match_source": match_source,
+            "profile_index": len(results),  # For user selection
         }
 
-        # ── Create CAM lotto and material_batch for the matched commessa ──
-        if colata and matched_commessa_id:
+        # ── Create CAM lotto and material_batch ONLY if not dry_run ──
+        if not dry_run and colata and matched_commessa_id:
             target_cid = matched_commessa_id
             existing_batch = await db.material_batches.find_one(
                 {"heat_number": colata, "commessa_id": target_cid, "user_id": user["user_id"]}

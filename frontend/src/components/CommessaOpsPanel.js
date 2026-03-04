@@ -601,34 +601,52 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         if (fileRef.current) fileRef.current.value = '';
     };
 
+    // Profile confirmation dialog state
+    const [profileConfirmOpen, setProfileConfirmOpen] = useState(false);
+    const [pendingProfiles, setPendingProfiles] = useState([]);
+    const [selectedProfileIndices, setSelectedProfileIndices] = useState([]);
+    const [pendingDocId, setPendingDocId] = useState(null);
+    const [confirmLoading, setConfirmLoading] = useState(false);
+
     const handleParseAI = async (docId) => {
         setParsing(docId);
         try {
             const res = await apiRequest(`/commesse/${commessaId}/documenti/${docId}/parse-certificato`, { method: 'POST' });
-            const m = res.metadata;
             const matches = res.risultati_match || [];
             const nProfili = res.profili_trovati || 0;
-            
-            // Show results per profile type
-            const corrente = matches.filter(r => r.tipo === 'commessa_corrente');
-            const altre = matches.filter(r => r.tipo === 'altra_commessa');
-            const archivio = matches.filter(r => r.tipo === 'archivio');
-            
-            if (corrente.length > 0) {
-                toast.success(`${corrente.map(p => p.dimensioni || p.qualita_acciaio).join(', ')} → assegnato a questa commessa (+ CAM e tracciabilità auto)`, { duration: 6000 });
-            }
-            if (altre.length > 0) {
-                toast.info(`${altre.map(p => `${p.dimensioni || p.qualita_acciaio} → ${p.commessa_numero || p.commessa_id}`).join(' | ')} — certificato copiato automaticamente`, { duration: 8000 });
-            }
-            if (archivio.length > 0) {
-                toast.warning(`${archivio.map(p => p.dimensioni || p.qualita_acciaio).join(', ')} → archiviato (nessun ordine/richiesta trovato)`, { duration: 6000 });
-            }
+
             if (nProfili === 0) {
-                toast.info(`Fornitore: ${m?.fornitore || '?'} — nessun profilo specifico trovato`, { duration: 4000 });
+                toast.info(`Nessun profilo trovato nel certificato`, { duration: 4000 });
+                return;
             }
-            
-            fetchData(); fetchCamData(); onRefresh?.();
+
+            // Show confirmation dialog with extracted profiles
+            setPendingProfiles(matches);
+            setPendingDocId(docId);
+            // Pre-select only profiles that match this commessa's OdA
+            const autoSelected = matches
+                .map((r, i) => r.tipo === 'commessa_corrente' ? i : -1)
+                .filter(i => i >= 0);
+            setSelectedProfileIndices(autoSelected);
+            setProfileConfirmOpen(true);
+            toast.info(`${nProfili} profili trovati — seleziona quali importare`, { duration: 4000 });
         } catch (e) { toast.error(e.message); } finally { setParsing(null); }
+    };
+
+    const handleConfirmProfiles = async () => {
+        if (!pendingDocId) return;
+        setConfirmLoading(true);
+        try {
+            const res = await apiRequest(`/commesse/${commessaId}/documenti/${pendingDocId}/confirm-profili`, {
+                method: 'POST',
+                body: { selected_indices: selectedProfileIndices },
+            });
+            toast.success(res.message || 'Profili importati');
+            setProfileConfirmOpen(false);
+            setPendingProfiles([]);
+            fetchData(); fetchCamData(); onRefresh?.();
+        } catch (e) { toast.error(e.message); }
+        finally { setConfirmLoading(false); }
     };
 
     const handleDownloadDoc = async (docId, nome) => {
@@ -2631,6 +2649,75 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                             {consegnaLoading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Truck className="h-3 w-3 mr-1" />}
                             Crea Consegna
                         </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Profile Confirmation Dialog */}
+            <Dialog open={profileConfirmOpen} onOpenChange={setProfileConfirmOpen}>
+                <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="text-base">Conferma Profili da Importare</DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500">
+                            L'AI ha trovato {pendingProfiles.length} profili nel certificato. Seleziona solo quelli effettivamente consegnati per questa commessa.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                        {pendingProfiles.map((p, idx) => {
+                            const isMatch = p.tipo === 'commessa_corrente';
+                            const isSelected = selectedProfileIndices.includes(idx);
+                            return (
+                                <label key={idx} className={`flex items-start gap-2 text-xs cursor-pointer p-2 rounded border transition-colors ${isSelected ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200 opacity-60'}`}
+                                    data-testid={`confirm-profile-${idx}`}>
+                                    <Checkbox
+                                        checked={isSelected}
+                                        onCheckedChange={(checked) => {
+                                            setSelectedProfileIndices(prev =>
+                                                checked ? [...prev, idx] : prev.filter(i => i !== idx)
+                                            );
+                                        }}
+                                        className="mt-0.5"
+                                    />
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-semibold">{p.dimensioni || 'Profilo sconosciuto'}</span>
+                                            <span className="text-slate-400">| Colata: {p.numero_colata || '-'}</span>
+                                            {p.peso_kg > 0 && <span className="text-slate-400">| {p.peso_kg} kg</span>}
+                                        </div>
+                                        <div className="text-[10px] mt-0.5">
+                                            <span className="text-slate-500">{p.qualita_acciaio || ''}</span>
+                                            {isMatch && <span className="ml-2 text-emerald-600 font-medium">Corrisponde all'OdA</span>}
+                                            {p.tipo === 'archivio' && <span className="ml-2 text-amber-600">Non in OdA</span>}
+                                            {p.tipo === 'altra_commessa' && <span className="ml-2 text-blue-600">Altra commessa: {p.commessa_numero}</span>}
+                                        </div>
+                                    </div>
+                                </label>
+                            );
+                        })}
+                    </div>
+                    <div className="flex gap-2 mt-1">
+                        <button className="text-[10px] text-blue-600 hover:underline" onClick={() => setSelectedProfileIndices(pendingProfiles.map((_, i) => i))}>Seleziona tutti</button>
+                        <button className="text-[10px] text-blue-600 hover:underline" onClick={() => setSelectedProfileIndices(pendingProfiles.filter(p => p.tipo === 'commessa_corrente').map((_, i) => {
+                            // Find the original indices of commessa_corrente profiles
+                            let idx = 0; let count = 0;
+                            const indices = [];
+                            pendingProfiles.forEach((pp, ii) => { if (pp.tipo === 'commessa_corrente') indices.push(ii); });
+                            return indices;
+                        }).flat())}>Solo corrispondenti OdA</button>
+                        <button className="text-[10px] text-blue-600 hover:underline" onClick={() => setSelectedProfileIndices([])}>Deseleziona tutti</button>
+                    </div>
+                    <DialogFooter className="mt-3">
+                        <div className="flex items-center justify-between w-full">
+                            <span className="text-xs text-slate-500">{selectedProfileIndices.length} di {pendingProfiles.length} selezionati</span>
+                            <div className="flex gap-2">
+                                <Button variant="outline" size="sm" onClick={() => setProfileConfirmOpen(false)} className="text-xs">Annulla</Button>
+                                <Button size="sm" onClick={handleConfirmProfiles} disabled={confirmLoading || selectedProfileIndices.length === 0}
+                                    className="text-xs bg-[#1a3a6b]" data-testid="btn-conferma-profili">
+                                    {confirmLoading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
+                                    Conferma Importazione ({selectedProfileIndices.length})
+                                </Button>
+                            </div>
+                        </div>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
