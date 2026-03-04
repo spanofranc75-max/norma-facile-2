@@ -83,6 +83,10 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 
 ## Feature Completate (sessione 5 Marzo 2026 - Fork 3)
 - **P0 FEATURE: Super Fascicolo Tecnico con copertina professionale** - Creato template HTML professionale in `/app/backend/templates/pdf/cover_page.html`. Cover page include: logo azienda, badge EN 1090, titolo "FASCICOLO TECNICO / Dossier di Fabbricazione e Controllo", box dati commessa dinamico, indice contenuti dinamico (mostra N certificati e N patentini), area firma RWC, footer con P.IVA. Generatore aggiornato per merge certificati dal Repository Documenti + fallback material_batches. 14/14 test passati + 5/5 regressione cascade delete.
+- **FEATURE: Colori righe preventivi** - Righe colorate in base allo stato effettivo: Accettato=ambra, In Lavorazione=blu, Chiuso=verde. Backend arricchisce la lista con `commessa_stato` dalla commessa collegata.
+- **FEATURE: Commessa Generica** - Nuovo endpoint `POST /commesse/from-preventivo/{id}/generica` crea commesse senza numero NF-XXXX (usa GEN-PRV-XXXX), con flag `generica=true`. Dropdown nel PreventivoEditor con 2 opzioni: "Commessa Normata" e "Commessa Generica". Badge "GEN" nel Planning Kanban.
+- **FEATURE: Rimozione scadenze dal preventivo PDF** - Rimossa la sezione "RIEPILOGO SCADENZE PAGAMENTO" dal PDF preventivo.
+- **FEATURE: Dossier → Fascicolo Tecnico** - Endpoint `/dossier` ora genera il Fascicolo Tecnico professionale invece del vecchio log eventi.
 
 ## Issue Pendenti
 - **P1**: Verifica end-to-end generazione dinamica PDF (DoP/CE) con dati materiali reali
