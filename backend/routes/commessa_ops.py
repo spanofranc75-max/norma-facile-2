@@ -1534,7 +1534,7 @@ async def parse_certificato_31(cid: str, doc_id: str, user: dict = Depends(get_c
         file_b64 = doc["file_base64"]
         content_type = doc.get("content_type", "")
         
-        # Check if it's a PDF and convert to image
+        # Check if it's a PDF and convert to images
         if content_type == "application/pdf" or doc.get("nome_file", "").lower().endswith(".pdf"):
             try:
                 from pdf2image import convert_from_bytes
@@ -1542,26 +1542,36 @@ async def parse_certificato_31(cid: str, doc_id: str, user: dict = Depends(get_c
                 # Decode PDF bytes
                 pdf_bytes = base64.b64decode(file_b64)
                 
-                # Convert first page to image
-                images = convert_from_bytes(pdf_bytes, first_page=1, last_page=1, dpi=250)
-                if images:
-                    # Convert PIL image to base64 PNG
-                    img_buffer = BytesIO()
-                    images[0].save(img_buffer, format='PNG')
-                    img_buffer.seek(0)
-                    file_b64 = base64.b64encode(img_buffer.read()).decode('utf-8')
-                    logger.info(f"Converted PDF to PNG for AI analysis: {doc_id}")
-                else:
+                # Convert ALL pages (up to 3) at high DPI for accurate reading
+                images = convert_from_bytes(pdf_bytes, first_page=1, last_page=3, dpi=300)
+                if not images:
                     raise HTTPException(400, "Impossibile convertire il PDF in immagine")
+                
+                # Build image list for multi-page analysis
+                file_contents = []
+                for i, img in enumerate(images):
+                    img_buffer = BytesIO()
+                    img.save(img_buffer, format='PNG', optimize=True)
+                    img_buffer.seek(0)
+                    page_b64 = base64.b64encode(img_buffer.read()).decode('utf-8')
+                    file_contents.append(ImageContent(image_base64=page_b64))
+                    logger.info(f"Converted PDF page {i+1} to PNG for AI analysis: {doc_id}")
+                
             except ImportError:
                 raise HTTPException(500, "pdf2image non installato per la conversione PDF")
+            except HTTPException:
+                raise
             except Exception as pdf_err:
                 logger.error(f"PDF conversion error: {pdf_err}")
                 raise HTTPException(400, f"Errore conversione PDF: {str(pdf_err)}")
-        
-        file_contents = [ImageContent(image_base64=file_b64)]
+        else:
+            file_contents = [ImageContent(image_base64=file_b64)]
 
-        prompt = """Analizza questo certificato di materiale 3.1 (EN 10204) per acciaio strutturale.
+        # Add filename context to help AI understand the document
+        filename = doc.get("nome_file", "")
+        filename_hint = f"\n\nCONTESTO: Il file si chiama '{filename}'. Questo può indicare il tipo di profilo principale nel certificato." if filename else ""
+
+        prompt = f"""Analizza questo certificato di materiale 3.1 (EN 10204) per acciaio strutturale.{filename_hint}
 
 COMPITO CRITICO: Devi estrarre OGNI SINGOLA RIGA della tabella del certificato come un profilo separato.
 
