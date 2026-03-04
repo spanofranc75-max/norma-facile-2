@@ -87,11 +87,11 @@ export default function PlanningPage() {
 
     // ── Native DnD handlers ──────────────────────────────────────
 
-    const handleDragStart = (e, commessaId) => {
-        setDraggingId(commessaId);
+    const handleDragStart = (e, itemId, isPreventivo = false) => {
+        setDraggingId(itemId);
         e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', commessaId);
-        // Make the ghost semi-transparent
+        e.dataTransfer.setData('text/plain', itemId);
+        e.dataTransfer.setData('application/x-type', isPreventivo ? 'preventivo' : 'commessa');
         if (e.target) {
             requestAnimationFrame(() => {
                 e.target.style.opacity = '0.4';
@@ -112,7 +112,6 @@ export default function PlanningPage() {
     };
 
     const handleDragLeave = (e, colId) => {
-        // Only clear if leaving the column (not entering a child)
         if (!e.currentTarget.contains(e.relatedTarget)) {
             if (dragOverCol === colId) setDragOverCol(null);
         }
@@ -121,11 +120,38 @@ export default function PlanningPage() {
     const handleDrop = async (e, targetColId) => {
         e.preventDefault();
         setDragOverCol(null);
-        const commessaId = e.dataTransfer.getData('text/plain');
-        if (!commessaId) return;
+        const itemId = e.dataTransfer.getData('text/plain');
+        const itemType = e.dataTransfer.getData('application/x-type');
+        if (!itemId) return;
 
-        // Find source column
-        const srcCol = columns.find(c => c.items.some(i => i.commessa_id === commessaId));
+        if (itemType === 'preventivo') {
+            // Dragging a preventivo → create commessa + set status
+            const prev = acceptedPrevs.find(p => p.preventivo_id === itemId);
+            if (!prev) return;
+
+            // Optimistic: remove from preventivi
+            setAcceptedPrevs(old => old.filter(p => p.preventivo_id !== itemId));
+
+            try {
+                const result = await apiRequest(`/commesse/from-preventivo/${itemId}`, { method: 'POST' });
+                // Now move to target column if not "preventivo"
+                if (targetColId !== 'preventivo') {
+                    await apiRequest(`/commesse/${result.commessa_id}/status`, {
+                        method: 'PATCH',
+                        body: { new_status: targetColId },
+                    });
+                }
+                toast.success('Commessa creata e spostata');
+                fetchBoard(); // refresh to get real data
+            } catch (err) {
+                toast.error(err.message || 'Errore creazione commessa');
+                fetchBoard(); // rollback
+            }
+            return;
+        }
+
+        // Regular commessa drag
+        const srcCol = columns.find(c => c.items.some(i => i.commessa_id === itemId));
         if (!srcCol || srcCol.id === targetColId) return;
 
         // Optimistic update
@@ -134,7 +160,7 @@ export default function PlanningPage() {
             const src = next.find(c => c.id === srcCol.id);
             const dst = next.find(c => c.id === targetColId);
             if (!src || !dst) return prev;
-            const idx = src.items.findIndex(i => i.commessa_id === commessaId);
+            const idx = src.items.findIndex(i => i.commessa_id === itemId);
             if (idx === -1) return prev;
             const [moved] = src.items.splice(idx, 1);
             moved.status = targetColId;
@@ -142,16 +168,15 @@ export default function PlanningPage() {
             return next;
         });
 
-        // Persist to backend
         try {
-            await apiRequest(`/commesse/${commessaId}/status`, {
+            await apiRequest(`/commesse/${itemId}/status`, {
                 method: 'PATCH',
                 body: { new_status: targetColId },
             });
             toast.success('Stato aggiornato');
-        } catch (e) {
+        } catch (err) {
             toast.error('Errore aggiornamento stato');
-            fetchBoard(); // rollback
+            fetchBoard();
         }
     };
 
@@ -345,21 +370,7 @@ function KanbanColumn({ column, colors, prevItems, draggingId, isDragOver,
                 <Badge className="bg-white/20 text-white text-[10px] font-bold">{totalCount}</Badge>
             </div>
 
-            {/* Preventivi accettati (non-draggable, above drop zone) */}
-            {prevItems && prevItems.length > 0 && (
-                <div className="border-x border-slate-200 bg-emerald-50/30 p-2 space-y-2">
-                    {prevItems.map(item => (
-                        <PreventivoCard
-                            key={item.commessa_id}
-                            item={item}
-                            onCardClick={onCardClick}
-                            onCreateCommessa={onCreateCommessa}
-                        />
-                    ))}
-                </div>
-            )}
-
-            {/* Drop zone */}
+            {/* Drop zone (covers both preventivi and commesse) */}
             <div
                 onDragOver={(e) => onDragOver(e, column.id)}
                 onDragLeave={(e) => onDragLeave(e, column.id)}
@@ -371,6 +382,20 @@ function KanbanColumn({ column, colors, prevItems, draggingId, isDragOver,
                 }`}
                 data-testid={`kanban-drop-${column.id}`}
             >
+                {/* Preventivi accettati (draggable) */}
+                {prevItems && prevItems.map(item => (
+                    <PreventivoCard
+                        key={item.commessa_id}
+                        item={item}
+                        onCardClick={onCardClick}
+                        onCreateCommessa={onCreateCommessa}
+                        onDragStart={onDragStart}
+                        onDragEnd={onDragEnd}
+                        isDragging={draggingId === item.preventivo_id}
+                    />
+                ))}
+
+                {/* Regular commesse (draggable) */}
                 {column.items.map(item => (
                     <CommessaCard
                         key={item.commessa_id}
@@ -383,6 +408,7 @@ function KanbanColumn({ column, colors, prevItems, draggingId, isDragOver,
                         onDelete={onDelete}
                     />
                 ))}
+
                 {totalCount === 0 && (
                     <div className="flex items-center justify-center py-8 text-xs text-slate-400">
                         <Clock className="h-4 w-4 mr-1.5 opacity-50" /> Nessuna commessa
@@ -396,7 +422,7 @@ function KanbanColumn({ column, colors, prevItems, draggingId, isDragOver,
 
 // ── Preventivo Accettato Card (non-draggable) ────────────────────
 
-function PreventivoCard({ item, onCardClick, onCreateCommessa }) {
+function PreventivoCard({ item, onCardClick, onCreateCommessa, onDragStart, onDragEnd, isDragging }) {
     const [creating, setCreating] = useState(false);
 
     const handleCreate = async (e) => {
@@ -411,7 +437,12 @@ function PreventivoCard({ item, onCardClick, onCreateCommessa }) {
 
     return (
         <div
-            className="rounded-lg border-2 border-dashed border-emerald-300 bg-emerald-50/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+            draggable="true"
+            onDragStart={(e) => onDragStart(e, item.preventivo_id, true)}
+            onDragEnd={onDragEnd}
+            className={`rounded-lg border-2 border-dashed border-emerald-300 bg-emerald-50/60 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing select-none ${
+                isDragging ? 'opacity-40 scale-95' : ''
+            }`}
             data-testid={`kanban-card-prev-${item.preventivo_id}`}
             onClick={() => onCardClick(item)}
         >
