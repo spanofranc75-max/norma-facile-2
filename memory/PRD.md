@@ -96,6 +96,7 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
   13/13 test passati.
 - **FEATURE: Restyling totale fattura PDF** - Nuovo generatore `pdf_invoice_modern.py`: header con logo grande + company a destra, sezione "DESTINATARIO" senza bordi, tabella padding generoso, coordinate bancarie SX / totali DX, scadenza prominente in box blu, font Helvetica. 9/9 test passati.
 - **FEATURE: Colori preventivi accentuati** - Righe con colori più forti e border-l-4: Accettato=ambra, In Lavorazione=sky blue, Chiuso=emerald.
+- **FEATURE: Modulo RdP (Richiesta Preventivo Fornitore)** - Flusso completo: selezione articoli → scelta fornitore → genera RdP PDF → registra risposta fornitore → applica prezzi con ricarico configurabile (default 30%) → aggiorna preventivo automaticamente → converte in OdA nella commessa collegata. Backend: 7 endpoint in `/app/backend/routes/rdp.py`. Frontend: pannello `RdpPanel.js` integrato nel PreventivoEditorPage. PDF: "RICHIESTA DI OFFERTA" professionale con spazio risposta fornitore. 14/14 test passati.
   13/13 test passati.
 
 ## Issue Pendenti
