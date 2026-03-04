@@ -1,0 +1,93 @@
+{
+  "summary": "Iteration 126: Backend-only testing of RdP (Richiesta di Preventivo Fornitore) Module. All 14 tests passed (100%). Complete RdP workflow verified: create RdP from preventivo items, record supplier prices, apply markup to update preventivo, convert to OdA in linked commessa, generate PDF, delete RdP. Cascade delete regression passes (5/5 tests).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "create_rdp": {
+      "endpoint": "POST /api/preventivi/{prev_id}/rdp",
+      "status_code": 200,
+      "result": "PASS - Creates RdP with supplier_name, items, status=inviata"
+    },
+    "list_rdp": {
+      "endpoint": "GET /api/preventivi/{prev_id}/rdp",
+      "status_code": 200,
+      "result": "PASS - Returns rdp_list array with all RdPs for preventivo"
+    },
+    "record_supplier_response": {
+      "endpoint": "PUT /api/preventivi/{prev_id}/rdp/{rdp_id}/response",
+      "status_code": 200,
+      "result": "PASS - Records prices, calculates total_offered, updates status to risposta_ricevuta"
+    },
+    "apply_prices_with_markup": {
+      "endpoint": "POST /api/preventivi/{prev_id}/rdp/{rdp_id}/apply-prices",
+      "status_code": 200,
+      "result": "PASS - Applies supplier_price * (1 + markup_pct/100) to preventivo lines, recalculates totals"
+    },
+    "generate_pdf": {
+      "endpoint": "GET /api/preventivi/{prev_id}/rdp/{rdp_id}/pdf",
+      "status_code": 200,
+      "content_type": "application/pdf",
+      "result": "PASS - Returns valid PDF with RICHIESTA DI OFFERTA title, proper filename"
+    },
+    "convert_to_oda": {
+      "endpoint": "POST /api/preventivi/{prev_id}/rdp/{rdp_id}/convert-oda",
+      "conditions": {
+        "with_linked_commessa": "200 - Creates OdA in commessa.approvvigionamento.ordini",
+        "without_commessa": "400 - Returns 'Nessuna commessa collegata'",
+        "already_converted": "400 - Returns 'RdP gia convertita'"
+      },
+      "result": "PASS - All conditions verified"
+    },
+    "delete_rdp": {
+      "endpoint": "DELETE /api/preventivi/{prev_id}/rdp/{rdp_id}",
+      "status_code": 200,
+      "result": "PASS - Deletes RdP, verified via subsequent GET"
+    },
+    "error_handling": {
+      "nonexistent_rdp": "404",
+      "nonexistent_preventivo": "404",
+      "result": "PASS - Proper 404 errors returned"
+    },
+    "cascade_delete_regression": {
+      "test_file": "/app/backend/tests/test_cascade_delete.py",
+      "tests_passed": "5/5",
+      "result": "PASS - Cascade delete still works"
+    }
+  },
+  "test_data_used": {
+    "preventivo_without_commessa": "prev_20a30dfe55 (has 4 lines, no linked commessa)",
+    "preventivo_with_commessa": "prev_35c6b96a9e75 (linked to commessa com_e8c4810ad476)",
+    "auth_token": "cy0IDr6-Jx0MAbNueH7kJXIblPsw0xN5ihIs7OdjXos"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration126_rdp_preventivo.py",
+    "/app/test_reports/pytest/iteration126_rdp_preventivo_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "rdp.py: Clean implementation with proper status flow (inviata → risposta_ricevuta → applicata → convertita_oda)",
+    "apply-prices correctly recalculates line_total with sconto_1/sconto_2 discounts (lines 194-198)",
+    "Preventivo totals (imponibile, total_vat, total) properly recalculated on apply-prices (lines 208-226)",
+    "PDF uses WeasyPrint with professional RICHIESTA DI OFFERTA template (lines 364-513)",
+    "convert-oda properly pushes OdA to commessa.approvvigionamento.ordini array (lines 297-307)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration126_rdp_preventivo.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "N/A (backend-only testing)"
+  },
+  "test_credentials": "Real user session: token=cy0IDr6-Jx0MAbNueH7kJXIblPsw0xN5ihIs7OdjXos",
+  "seed_data_creation": "Test RdPs created and cleaned up during tests. Used existing preventivi: prev_20a30dfe55, prev_35c6b96a9e75",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 14 RdP module backend tests pass. The RdP workflow: 1) Create RdP from preventivo items → 2) Record supplier prices → 3) Apply markup to update preventivo line prices and totals → 4) Convert to OdA in linked commessa → 5) Generate PDF. The rdp_requests collection stores RdPs. OdA is pushed to commessa.approvvigionamento.ordini[]. Cascade delete regression confirmed working."
+}

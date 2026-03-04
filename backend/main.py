@@ -59,6 +59,7 @@ from routes.notifications import router as notifications_router
 from routes.qrcode_gen import router as qrcode_router
 from routes.db_cleanup import router as cleanup_router
 from routes.wps import router as wps_router
+from routes.rdp import router as rdp_router
 
 # Configure logging
 logging.basicConfig(
@@ -156,6 +157,7 @@ app.include_router(notifications_router, prefix="/api")
 app.include_router(qrcode_router, prefix="/api")
 app.include_router(cleanup_router, prefix="/api")
 app.include_router(wps_router, prefix="/api")
+app.include_router(rdp_router, prefix="/api")
 
 
 @app.on_event("startup")

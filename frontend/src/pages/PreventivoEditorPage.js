@@ -32,6 +32,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 const ZONES = ['A', 'B', 'C', 'D', 'E', 'F'];
 import { DisabledTooltip } from '../components/DisabledTooltip';
+import RdpPanel from '../components/RdpPanel';
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
 
 const emptyLine = () => ({
@@ -81,6 +82,7 @@ export default function PreventivoEditorPage() {
     const [splitAnalysis, setSplitAnalysis] = useState(null);
     const [splitGroups, setSplitGroups] = useState({ en_1090: [], en_13241: [], non_classificati: [] });
     const [splittingCommesse, setSplittingCommesse] = useState(false);
+    const [suppliers, setSuppliers] = useState([]);
 
     const isAccepted = workflow.status === 'accettato' || workflow.invoicing_progress > 0;
 
@@ -202,6 +204,11 @@ export default function PreventivoEditorPage() {
                 c.moduli?.preventivo_id === prevId || c.linked_preventivo_id === prevId
             );
             if (linked) setLinkedCommessa(linked);
+        }).catch(() => {});
+
+        // Load suppliers for RdP
+        apiRequest('/clients/?type=fornitore').then(data => {
+            setSuppliers((data.clients || data.items || []).filter(c => c.type === 'fornitore' || c.ruolo === 'fornitore'));
         }).catch(() => {});
     }, [prevId, isNew]);
 
@@ -848,6 +855,27 @@ export default function PreventivoEditorPage() {
                         </Card>
 
                         {/* Totals Card — Invoicex style */}
+
+                        {/* ── RdP Panel (Richieste Preventivo Fornitore) ── */}
+                        {!isNew && (
+                            <Card className="border-gray-200">
+                                <CardContent className="p-4">
+                                    <RdpPanel
+                                        prevId={prevId}
+                                        lines={form.lines}
+                                        suppliers={suppliers}
+                                        onPricesUpdated={() => {
+                                            // Reload preventivo data after prices are updated
+                                            apiRequest(`/preventivi/${prevId}`).then(data => {
+                                                setForm(f => ({ ...f, lines: data.lines || f.lines }));
+                                            }).catch(() => {});
+                                        }}
+                                        apiRequest={apiRequest}
+                                    />
+                                </CardContent>
+                            </Card>
+                        )}
+
                         <Card className="border-gray-200" data-testid="totals-card">
                             <CardContent className="p-0">
                                 <div className="grid grid-cols-2">
