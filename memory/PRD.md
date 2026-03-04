@@ -94,6 +94,9 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
   - DoP/CE: dati materiale reali da `_get_material_properties(cam_lotti)` — "S275JR+AR" invece di default generico
   - Durabilità: check anche su conto_lavoro per trattamenti superficiali
   13/13 test passati.
+- **FEATURE: Restyling totale fattura PDF** - Nuovo generatore `pdf_invoice_modern.py`: header con logo grande + company a destra, sezione "DESTINATARIO" senza bordi, tabella padding generoso, coordinate bancarie SX / totali DX, scadenza prominente in box blu, font Helvetica. 9/9 test passati.
+- **FEATURE: Colori preventivi accentuati** - Righe con colori più forti e border-l-4: Accettato=ambra, In Lavorazione=sky blue, Chiuso=emerald.
+  13/13 test passati.
 
 ## Issue Pendenti
 - **P1**: Verifica end-to-end generazione dinamica PDF (DoP/CE) con dati materiali reali
