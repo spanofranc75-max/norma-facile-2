@@ -111,16 +111,29 @@ export default function FornitoriPage() {
         if (!formData.business_name) { toast.error('Ragione Sociale obbligatoria'); return; }
         setSaving(true);
         try {
+            // Clean empty strings to null for Optional fields
+            const payload = { ...formData };
+            ['codice_fiscale', 'partita_iva', 'pec', 'phone', 'cellulare', 'fax', 'email', 'sito_web', 'payment_type_id', 'payment_type_label', 'iban', 'banca', 'notes'].forEach(k => {
+                if (payload[k] === '') payload[k] = null;
+            });
+
             if (editingSupplier) {
-                await apiRequest(`/clients/${editingSupplier.client_id}`, { method: 'PUT', body: formData });
+                await apiRequest(`/clients/${editingSupplier.client_id}`, { method: 'PUT', body: payload });
                 toast.success('Fornitore aggiornato');
             } else {
-                await apiRequest('/clients/', { method: 'POST', body: formData });
+                await apiRequest('/clients/', { method: 'POST', body: payload });
                 toast.success('Fornitore creato');
             }
             setDialogOpen(false);
             fetchSuppliers();
-        } catch (e) { toast.error(e.message); }
+        } catch (e) {
+            const msg = e.message || '';
+            if (msg.includes('Puoi convertirlo in Cliente/Fornitore')) {
+                toast.error(msg, { duration: 8000 });
+            } else {
+                toast.error(msg || 'Errore salvataggio');
+            }
+        }
         finally { setSaving(false); }
     };
 

@@ -73,6 +73,7 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 
 ## Bug Risolti (sessione 4 Marzo 2026 - Fork)
 - **P0 FIX: Duplicazione dati nel Restore Backup** - La funzione `restore_backup` in `backup.py` usava logica "trova → salta se esiste", causando duplicati quando il PK mancava e non aggiornando mai i record modificati. Riscritta con `update_one(..., upsert=True)` per ogni documento. Aggiunta chiave PK per `company_settings` (user_id) e `catalogo_profili` (codice). La response ora restituisce `total_inserted`, `total_updated`, `total_errors`. Frontend aggiornato per riflettere la nuova logica. Test backend 100% (10/10 pytest).
+- **BUG FIX: Errore 400 creazione Fornitore** - Il check duplicati P.IVA non distingueva tra tipi (cliente/fornitore), bloccando la creazione anche per tipi diversi. Ora: stesso tipo → 400 con nome record esistente; tipo diverso → 409 con suggerimento di conversione a "Cliente/Fornitore". Aggiunta pulizia stringhe vuote → null per campi opzionali in FornitoriPage.js (allineamento con ClientsPage.js). Aggiunto endpoint POST `/clients/{id}/promote` per conversione tipo.
 
 ## Backlog Prioritizzato
 

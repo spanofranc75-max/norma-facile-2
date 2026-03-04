@@ -74,16 +74,26 @@ async def create_client(
     user: dict = Depends(get_current_user)
 ):
     """Create a new client."""
-    # Check for duplicate P.IVA
-    if client_data.partita_iva:
+    # Check for duplicate P.IVA (skip empty/whitespace)
+    piva = (client_data.partita_iva or "").strip()
+    if piva:
         existing = await db.clients.find_one({
             "user_id": user["user_id"],
-            "partita_iva": client_data.partita_iva
-        })
+            "partita_iva": piva
+        }, {"_id": 0, "client_id": 1, "business_name": 1, "client_type": 1})
         if existing:
+            ex_type = existing.get("client_type", "")
+            new_type = client_data.client_type or "cliente"
+            # If same P.IVA exists as a different type, suggest merge
+            if ex_type != new_type and ex_type != "cliente_fornitore":
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"La P.IVA {piva} è già registrata come '{existing.get('business_name', '')}' "
+                           f"(tipo: {ex_type}). Puoi convertirlo in Cliente/Fornitore dalla sua scheda.",
+                )
             raise HTTPException(
                 status_code=400,
-                detail="Esiste già un cliente con questa Partita IVA"
+                detail=f"Esiste già un record con questa Partita IVA: {existing.get('business_name', '')}"
             )
     
     client_id = f"cli_{uuid.uuid4().hex[:12]}"
@@ -121,16 +131,17 @@ async def update_client(
         raise HTTPException(status_code=404, detail="Cliente non trovato")
     
     # Check for duplicate P.IVA if changing
-    if client_data.partita_iva and client_data.partita_iva != existing.get("partita_iva"):
+    new_piva = (client_data.partita_iva or "").strip()
+    if new_piva and new_piva != (existing.get("partita_iva") or "").strip():
         duplicate = await db.clients.find_one({
             "user_id": user["user_id"],
-            "partita_iva": client_data.partita_iva,
+            "partita_iva": new_piva,
             "client_id": {"$ne": client_id}
-        })
+        }, {"_id": 0, "business_name": 1})
         if duplicate:
             raise HTTPException(
                 status_code=400,
-                detail="Esiste già un cliente con questa Partita IVA"
+                detail=f"Esiste già un record con questa Partita IVA: {duplicate.get('business_name', '')}"
             )
     
     # Build update dict (only non-None values)
@@ -189,6 +200,30 @@ async def delete_client(
     
     logger.info(f"Client deleted: {client_id}")
     return {"message": "Cliente eliminato con successo"}
+
+
+
+@router.post("/{client_id}/promote")
+async def promote_to_cliente_fornitore(
+    client_id: str,
+    user: dict = Depends(get_current_user),
+):
+    """Promote a cliente or fornitore to cliente_fornitore."""
+    existing = await db.clients.find_one(
+        {"client_id": client_id, "user_id": user["user_id"]}
+    )
+    if not existing:
+        raise HTTPException(status_code=404, detail="Record non trovato")
+
+    if existing.get("client_type") == "cliente_fornitore":
+        return {"message": "Già di tipo Cliente/Fornitore", "client_id": client_id}
+
+    await db.clients.update_one(
+        {"client_id": client_id},
+        {"$set": {"client_type": "cliente_fornitore", "updated_at": datetime.now(timezone.utc)}}
+    )
+    logger.info(f"Client {client_id} promoted to cliente_fornitore")
+    return {"message": "Convertito in Cliente/Fornitore", "client_id": client_id}
 
 
 
