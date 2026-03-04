@@ -102,6 +102,8 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 ## Feature Completate (sessione 4 Marzo 2026 - Fork 4)
 - **P0 FEATURE: Preventivi Accettati nella Planning Board** - Modificato endpoint `GET /api/commesse/board/view` per includere i preventivi con status "accettato" che non hanno una commessa collegata. Appaiono nella colonna "Nuove Commesse" con stile visivo distinto: bordo tratteggiato verde, badge "Preventivo Accettato", icona FileText. NON sono trascinabili. Click naviga a `/preventivi/edit/{id}`. Header mostra conteggio separato commesse + preventivi accettati. Pulsante "Crea Commessa" direttamente sulla card per creare la commessa con un click e navigare al suo hub. 10/10 test passati.
 
+- **P0 FEATURE: Cruscotto Finanziario Artigiano** - Nuovo endpoint `GET /api/dashboard/cruscotto-finanziario` con: IVA trimestrale (debito/credito/versare + scadenze F24), Semaforo Liquidità (verde/giallo/rosso con calcolo entrate vs uscite), Scadenzario Clienti (aging 0-30/30-60/60-90/90+), Scadenzario Fornitori, Cash Flow Previsionale 30/60/90 giorni, Marginalità per Commessa (top/bottom 5). Frontend con 4 tab (Panoramica, IVA, Scadenzario, Margini). 22/22 test passati.
+
 ## Issue Pendenti
 - **P1**: Verifica end-to-end generazione dinamica PDF (DoP/CE) con dati materiali reali
 - **P1**: Verifica flusso creazione DDT (nuovo dialog con numero editabile)
