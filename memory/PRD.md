@@ -99,6 +99,9 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **FEATURE: Modulo RdP (Richiesta Preventivo Fornitore)** - Flusso completo: selezione articoli → scelta fornitore → genera RdP PDF → registra risposta fornitore → applica prezzi con ricarico configurabile (default 30%) → aggiorna preventivo automaticamente → converte in OdA nella commessa collegata. Backend: 7 endpoint in `/app/backend/routes/rdp.py`. Frontend: pannello `RdpPanel.js` integrato nel PreventivoEditorPage. PDF: "RICHIESTA DI OFFERTA" professionale con spazio risposta fornitore. 14/14 test passati.
   13/13 test passati.
 
+## Feature Completate (sessione 4 Marzo 2026 - Fork 4)
+- **P0 FEATURE: Preventivi Accettati nella Planning Board** - Modificato endpoint `GET /api/commesse/board/view` per includere i preventivi con status "accettato" che non hanno una commessa collegata. Appaiono nella colonna "Nuove Commesse" con stile visivo distinto: bordo tratteggiato verde, badge "Preventivo Accettato", icona FileText. NON sono trascinabili. Click naviga a `/preventivi/edit/{id}`. Header mostra conteggio separato commesse + preventivi accettati. 10/10 test passati.
+
 ## Issue Pendenti
 - **P1**: Verifica end-to-end generazione dinamica PDF (DoP/CE) con dati materiali reali
 - **P1**: Verifica flusso creazione DDT (nuovo dialog con numero editabile)
@@ -108,6 +111,8 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 ## Backlog Prioritizzato
 
 ### P0
+- ~~Preventivi accettati nella Planning Board~~ COMPLETATO
+- Conversione RdP in Ordine di Acquisto (OdA)
 - Firma digitale su tablet (QR code per fasi produzione)
 
 ### P1
