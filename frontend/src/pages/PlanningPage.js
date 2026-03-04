@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from 'sonner';
 import {
     Plus, GripVertical, Calendar, Euro, User, Trash2,
-    LayoutGrid, Clock, AlertTriangle, ChevronRight, FileText,
+    LayoutGrid, Clock, AlertTriangle, ChevronRight, FileText, Hammer,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
@@ -116,6 +116,14 @@ export default function PlanningPage() {
         } catch (e) { toast.error(e.message); }
     };
 
+    const handleCreateFromPreventivo = async (preventivoId) => {
+        try {
+            const result = await apiRequest(`/commesse/from-preventivo/${preventivoId}`, { method: 'POST' });
+            toast.success('Commessa creata con successo');
+            navigate(`/commesse/${result.commessa_id}`);
+        } catch (e) { toast.error(e.message || 'Errore creazione commessa'); }
+    };
+
     const totalCommesse = columns.reduce((acc, col) => acc + col.items.filter(i => !i.is_preventivo).length, 0);
     const totalPreventivi = columns.reduce((acc, col) => acc + col.items.filter(i => i.is_preventivo).length, 0);
     const totalValue = columns.reduce((acc, col) => acc + col.items.reduce((a, i) => a + (i.value || 0), 0), 0);
@@ -163,6 +171,7 @@ export default function PlanningPage() {
                                         }
                                     }}
                                     onDelete={handleDelete}
+                                    onCreateCommessa={handleCreateFromPreventivo}
                                 />
                             ))}
                         </div>
@@ -184,7 +193,7 @@ export default function PlanningPage() {
 
 // ── Kanban Column ───────────────────────────────────────────────
 
-function KanbanColumn({ column, colors, onCardClick, onDelete }) {
+function KanbanColumn({ column, colors, onCardClick, onDelete, onCreateCommessa }) {
     return (
         <div className="flex-shrink-0 w-[260px]" data-testid={`kanban-col-${column.id}`}>
             {/* Column Header */}
@@ -209,6 +218,7 @@ function KanbanColumn({ column, colors, onCardClick, onDelete }) {
                                     key={item.commessa_id}
                                     item={item}
                                     onCardClick={onCardClick}
+                                    onCreateCommessa={onCreateCommessa}
                                 />
                             ) : (
                                 <Draggable key={item.commessa_id} draggableId={item.commessa_id} index={index}>
@@ -241,7 +251,19 @@ function KanbanColumn({ column, colors, onCardClick, onDelete }) {
 
 // ── Preventivo Accettato Card (non-draggable) ───────────────────
 
-function PreventivoCard({ item, onCardClick }) {
+function PreventivoCard({ item, onCardClick, onCreateCommessa }) {
+    const [creating, setCreating] = useState(false);
+
+    const handleCreate = async (e) => {
+        e.stopPropagation();
+        setCreating(true);
+        try {
+            await onCreateCommessa(item.preventivo_id);
+        } finally {
+            setCreating(false);
+        }
+    };
+
     return (
         <div
             className="rounded-lg border-2 border-dashed border-emerald-300 bg-emerald-50/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
@@ -284,6 +306,17 @@ function PreventivoCard({ item, onCardClick }) {
                         {fmtEur(item.value)}
                     </div>
                 )}
+
+                {/* Crea Commessa button */}
+                <button
+                    data-testid={`btn-create-commessa-${item.preventivo_id}`}
+                    onClick={handleCreate}
+                    disabled={creating}
+                    className="mt-2 w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] font-semibold bg-[#0055FF] hover:bg-[#0044CC] text-white transition-colors disabled:opacity-50"
+                >
+                    <Hammer className="h-3 w-3" />
+                    {creating ? 'Creazione...' : 'Crea Commessa'}
+                </button>
             </div>
         </div>
     );
