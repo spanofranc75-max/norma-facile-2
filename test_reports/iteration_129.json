@@ -1,0 +1,95 @@
+{
+  "summary": "Iteration 129: DnD Status PATCH endpoint and frontend fix verification complete. All 8 backend tests pass (100%). Frontend verification confirms: 1) StrictMode REMOVED from index.js, 2) Full card is drag handle with cursor-grab class, 3) stopPropagation on click handlers, 4) handleDragEnd implements optimistic update + PATCH + rollback, 5) Preventivi stored in separate acceptedPrevs state.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "patch_status_endpoint": {
+      "endpoint": "PATCH /api/commesse/{id}/status",
+      "tests": [
+        "test_patch_status_preventivo_to_lavorazione - PASS",
+        "test_patch_all_valid_kanban_statuses - PASS (all 7 statuses)",
+        "test_patch_invalid_status_returns_422 - PASS",
+        "test_patch_status_not_found - PASS (404)"
+      ],
+      "result": "PASS - All status transitions work correctly"
+    },
+    "board_view_after_status_change": {
+      "endpoint": "GET /api/commesse/board/view",
+      "tests": [
+        "test_board_view_shows_commessa_in_correct_column - PASS",
+        "test_board_view_column_structure - PASS (7 columns verified)"
+      ],
+      "result": "PASS - Board view correctly reflects status changes"
+    },
+    "status_update_chain": {
+      "test": "test_rapid_status_changes",
+      "result": "PASS - Rapid DnD status chain works correctly"
+    },
+    "status_history": {
+      "test": "test_status_update_records_history",
+      "result": "PASS - status_history array updated after each PATCH"
+    },
+    "strictmode_removed": {
+      "file": "/app/frontend/src/index.js",
+      "verification": "Lines 7-9 show <App /> without React.StrictMode wrapper",
+      "result": "PASS - StrictMode is REMOVED"
+    },
+    "full_card_drag_handle": {
+      "file": "/app/frontend/src/pages/PlanningPage.js",
+      "verification": "Line 350: {...prov.dragHandleProps} on entire card div, Line 351: cursor-grab class",
+      "result": "PASS - Entire card is draggable"
+    },
+    "stop_propagation": {
+      "file": "/app/frontend/src/pages/PlanningPage.js",
+      "verification": "Lines 363, 413, 420 all have e.stopPropagation()",
+      "result": "PASS - Click handlers don't trigger drag"
+    },
+    "handleDragEnd_implementation": {
+      "file": "/app/frontend/src/pages/PlanningPage.js",
+      "verification": "Lines 86-115: optimistic setColumns → PATCH call → rollback via fetchBoard() on error",
+      "result": "PASS - Full optimistic update pattern implemented"
+    },
+    "preventivi_separation": {
+      "file": "/app/frontend/src/pages/PlanningPage.js",
+      "verification": "Lines 66-73: acceptedPrevs state separate from columns, ensuring clean DnD indices",
+      "result": "PASS - Preventivi stored separately from commesse"
+    }
+  },
+  "kanban_statuses_tested": [
+    "preventivo",
+    "approvvigionamento",
+    "lavorazione",
+    "conto_lavoro",
+    "pronto_consegna",
+    "montaggio",
+    "completato"
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_iteration129_dnd_status_patch.py",
+    "/app/test_reports/pytest/iteration129_dnd_status_patch_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "DnD fix is complete and correct - StrictMode removed, full-card drag handle, stopPropagation on clicks",
+    "PATCH endpoint validates against KANBAN_META keys and correctly returns 422 for invalid statuses",
+    "Board view properly segregates preventivi (is_preventivo flag) from commesse for clean DnD indices"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration129_dnd_status_patch.py"
+  ],
+  "success_rate": {
+    "backend": "100% (8/8 tests)",
+    "frontend": "100% (all DnD fix requirements verified)"
+  },
+  "seed_data_creation": "Test commesse created and cleaned up automatically during pytest run",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "DnD fix chain verified: 1) StrictMode removed from index.js, 2) dragHandleProps applied to entire CommessaCard div (not just grip icon), 3) stopPropagation on title click, ChevronRight click, Trash click, 4) handleDragEnd does optimistic update → PATCH /commesse/{id}/status → rollback via fetchBoard() on error. All 7 Kanban statuses work: preventivo, approvvigionamento, lavorazione, conto_lavoro, pronto_consegna, montaggio, completato."
+}

@@ -347,21 +347,20 @@ function CommessaCard({ item, colors, prov, snap, onCardClick, onDelete }) {
         <div
             ref={prov.innerRef}
             {...prov.draggableProps}
-            className={`rounded-lg border bg-white shadow-sm transition-shadow ${
+            {...prov.dragHandleProps}
+            className={`rounded-lg border bg-white shadow-sm transition-shadow cursor-grab active:cursor-grabbing ${
                 snap.isDragging ? 'shadow-lg ring-2 ' + colors.ring : 'hover:shadow-md'
             }`}
             data-testid={`kanban-card-${item.commessa_id}`}
         >
             <div className="p-3">
-                {/* Drag handle + title */}
+                {/* Title */}
                 <div className="flex items-start gap-2">
-                    <div {...prov.dragHandleProps} className="mt-0.5 cursor-grab active:cursor-grabbing">
-                        <GripVertical className="h-3.5 w-3.5 text-slate-300" />
-                    </div>
+                    <GripVertical className="h-4 w-4 text-slate-300 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                         <p
                             className="text-sm font-semibold text-[#1E293B] truncate cursor-pointer hover:text-[#0055FF] transition-colors"
-                            onClick={() => onCardClick(item)}
+                            onClick={(e) => { e.stopPropagation(); onCardClick(item); }}
                         >
                             {item.title}
                         </p>
@@ -411,14 +410,14 @@ function CommessaCard({ item, colors, prov, snap, onCardClick, onDelete }) {
                     </div>
                     <div className="flex gap-1">
                         <button
-                            onClick={() => onCardClick(item)}
+                            onClick={(e) => { e.stopPropagation(); onCardClick(item); }}
                             className="text-slate-400 hover:text-[#0055FF] transition-colors"
                             title="Apri Hub Commessa"
                         >
                             <ChevronRight className="h-3.5 w-3.5" />
                         </button>
                         <button
-                            onClick={() => onDelete(item.commessa_id)}
+                            onClick={(e) => { e.stopPropagation(); onDelete(item.commessa_id); }}
                             className="text-slate-300 hover:text-red-500 transition-colors"
                             title="Elimina"
                         >
