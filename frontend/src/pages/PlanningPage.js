@@ -2,7 +2,7 @@
  * Planning Cantieri — Kanban Board for workshop project tracking.
  * Uses @hello-pangea/dnd for drag-and-drop.
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { apiRequest } from '../lib/utils';
@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import {
     Plus, GripVertical, Calendar, Euro, User, Trash2,
     LayoutGrid, Clock, AlertTriangle, ChevronRight, FileText, Hammer,
+    ChevronLeft,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
@@ -165,27 +166,20 @@ export default function PlanningPage() {
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0055FF]" />
                     </div>
                 ) : (
-                    <DragDropContext onDragEnd={handleDragEnd}>
-                        <div className="flex gap-3 overflow-x-auto pb-4 -mx-2 px-2" data-testid="kanban-board">
-                            {columns.map(col => (
-                                <KanbanColumn
-                                    key={col.id}
-                                    column={col}
-                                    colors={COL_COLORS[col.id] || COL_COLORS.preventivo}
-                                    prevItems={col.id === 'preventivo' ? acceptedPrevs : []}
-                                    onCardClick={(c) => {
-                                        if (c.is_preventivo) {
-                                            navigate(`/preventivi/edit/${c.preventivo_id}`);
-                                        } else {
-                                            navigate(`/commesse/${c.commessa_id}`);
-                                        }
-                                    }}
-                                    onDelete={handleDelete}
-                                    onCreateCommessa={handleCreateFromPreventivo}
-                                />
-                            ))}
-                        </div>
-                    </DragDropContext>
+                    <KanbanBoard
+                        columns={columns}
+                        acceptedPrevs={acceptedPrevs}
+                        onDragEnd={handleDragEnd}
+                        onCardClick={(c) => {
+                            if (c.is_preventivo) {
+                                navigate(`/preventivi/edit/${c.preventivo_id}`);
+                            } else {
+                                navigate(`/commesse/${c.commessa_id}`);
+                            }
+                        }}
+                        onDelete={handleDelete}
+                        onCreateCommessa={handleCreateFromPreventivo}
+                    />
                 )}
 
                 {/* Create Modal */}
@@ -197,6 +191,87 @@ export default function PlanningPage() {
                 />
             </div>
         </DashboardLayout>
+    );
+}
+
+
+// ── Kanban Board with scroll navigation ─────────────────────────
+
+function KanbanBoard({ columns, acceptedPrevs, onDragEnd, onCardClick, onDelete, onCreateCommessa }) {
+    const scrollRef = useRef(null);
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(false);
+
+    const checkScroll = useCallback(() => {
+        const el = scrollRef.current;
+        if (!el) return;
+        setCanScrollLeft(el.scrollLeft > 10);
+        setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
+    }, []);
+
+    useEffect(() => {
+        const el = scrollRef.current;
+        if (!el) return;
+        checkScroll();
+        el.addEventListener('scroll', checkScroll, { passive: true });
+        window.addEventListener('resize', checkScroll);
+        return () => {
+            el.removeEventListener('scroll', checkScroll);
+            window.removeEventListener('resize', checkScroll);
+        };
+    }, [checkScroll, columns]);
+
+    const scroll = (dir) => {
+        const el = scrollRef.current;
+        if (!el) return;
+        el.scrollBy({ left: dir * 280, behavior: 'smooth' });
+    };
+
+    return (
+        <div className="relative" data-testid="kanban-board-wrapper">
+            {/* Left arrow */}
+            {canScrollLeft && (
+                <button
+                    data-testid="scroll-left-btn"
+                    onClick={() => scroll(-1)}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-white/90 shadow-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                >
+                    <ChevronLeft className="h-5 w-5 text-slate-600" />
+                </button>
+            )}
+
+            {/* Right arrow */}
+            {canScrollRight && (
+                <button
+                    data-testid="scroll-right-btn"
+                    onClick={() => scroll(1)}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-white/90 shadow-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors"
+                >
+                    <ChevronRight className="h-5 w-5 text-slate-600" />
+                </button>
+            )}
+
+            <DragDropContext onDragEnd={onDragEnd}>
+                <div
+                    ref={scrollRef}
+                    className="flex gap-3 overflow-x-auto pb-4 px-6 scroll-smooth"
+                    style={{ scrollbarWidth: 'thin' }}
+                    data-testid="kanban-board"
+                >
+                    {columns.map(col => (
+                        <KanbanColumn
+                            key={col.id}
+                            column={col}
+                            colors={COL_COLORS[col.id] || COL_COLORS.preventivo}
+                            prevItems={col.id === 'preventivo' ? acceptedPrevs : []}
+                            onCardClick={onCardClick}
+                            onDelete={onDelete}
+                            onCreateCommessa={onCreateCommessa}
+                        />
+                    ))}
+                </div>
+            </DragDropContext>
+        </div>
     );
 }
 
