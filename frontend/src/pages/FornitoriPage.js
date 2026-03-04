@@ -128,12 +128,9 @@ export default function FornitoriPage() {
             setDialogOpen(false);
             fetchSuppliers();
         } catch (e) {
-            const msg = e.message || '';
-            if (msg.includes('Puoi convertirlo in Cliente/Fornitore')) {
-                toast.error(msg, { duration: 8000 });
-            } else {
-                toast.error(msg || 'Errore salvataggio');
-            }
+            console.error('[FornitoriPage] Save error:', e, 'Message:', e?.message);
+            const msg = e?.message || 'Errore salvataggio';
+            toast.error(msg, { duration: 6000 });
         }
         finally { setSaving(false); }
     };

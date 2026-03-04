@@ -46,13 +46,16 @@ export async function apiRequest(endpoint, options = {}) {
     if (!response.ok) {
         let detail = `Errore ${response.status}`;
         try {
-            const err = await response.json();
-            detail = err.detail || detail;
-        } catch {
+            const text = await response.text();
+            console.error(`[apiRequest] ${response.status} response body:`, text);
             try {
-                const text = await response.text();
-                if (text) detail = text.substring(0, 200);
-            } catch { /* ignore */ }
+                const err = JSON.parse(text);
+                if (err.detail) detail = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+            } catch {
+                if (text) detail = text.substring(0, 300);
+            }
+        } catch (readErr) {
+            console.error('[apiRequest] Failed to read response body:', readErr);
         }
         throw new Error(detail);
     }
