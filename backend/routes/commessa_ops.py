@@ -1625,8 +1625,8 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
         chat = LlmChat(
             api_key=LLM_KEY,
             session_id=f"cert31-{doc_id}",
-            system_message="Sei un tecnico esperto di certificati materiale 3.1 per acciaio strutturale EN 10204. Estrai dati tecnici con precisione. I certificati spesso contengono più profili/prodotti."
-        ).with_model("openai", "gpt-4o")
+            system_message="Sei un tecnico esperto di certificati materiale 3.1 per acciaio strutturale EN 10204. Estrai dati tecnici con precisione assoluta. Leggi OGNI riga della tabella, incluse le righe con simboli o pallini. I certificati spesso contengono profili di TIPO DIVERSO (FLAT/PIATTO, UPN, IPE, HEB) nella stessa tabella."
+        ).with_model("anthropic", "claude-sonnet-4-20250514")
 
         response = await chat.send_message(UserMessage(
             text=prompt,
