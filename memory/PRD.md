@@ -81,6 +81,9 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **FIX: Pulizia orfani database** - Rimossi 4 record orfani (2 lotti_cam + 2 material_batches) da documenti eliminati in sessioni precedenti.
 - **FIX: poppler-utils** - Installato permanentemente (presente in apt-packages.txt).
 
+## Feature Completate (sessione 5 Marzo 2026 - Fork 3)
+- **P0 FEATURE: Super Fascicolo Tecnico con copertina professionale** - Creato template HTML professionale in `/app/backend/templates/pdf/cover_page.html`. Cover page include: logo azienda, badge EN 1090, titolo "FASCICOLO TECNICO / Dossier di Fabbricazione e Controllo", box dati commessa dinamico, indice contenuti dinamico (mostra N certificati e N patentini), area firma RWC, footer con P.IVA. Generatore aggiornato per merge certificati dal Repository Documenti + fallback material_batches. 14/14 test passati + 5/5 regressione cascade delete.
+
 ## Issue Pendenti
 - **P1**: Verifica end-to-end generazione dinamica PDF (DoP/CE) con dati materiali reali
 - **P1**: Verifica flusso creazione DDT (nuovo dialog con numero editabile)
@@ -90,7 +93,6 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 ## Backlog Prioritizzato
 
 ### P0
-- Super Fascicolo Tecnico con copertina professionale (richiesta utente msg 415)
 - Firma digitale su tablet (QR code per fasi produzione)
 
 ### P1
