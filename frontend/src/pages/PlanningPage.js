@@ -256,7 +256,9 @@ function KanbanColumn({ column, colors, onCardClick, onDelete }) {
                                                         <Badge className="text-[8px] bg-blue-50 text-blue-700 font-normal">{item.stato?.replace(/_/g, ' ')}</Badge>
                                                     )}
                                                     {item.numero && (
-                                                        <span className="text-[9px] font-mono text-slate-400">{item.numero}</span>
+                                                        <span className={`text-[9px] font-mono ${item.generica ? 'text-amber-600 font-semibold' : 'text-slate-400'}`}>
+                                                            {item.generica ? 'GEN' : item.numero}
+                                                        </span>
                                                     )}
                                                 </div>
                                                 <div className="flex gap-1">

@@ -967,6 +967,79 @@ async def create_commessa_from_preventivo(preventivo_id: str, user: dict = Depen
     return await _create_single_commessa(prev, user)
 
 
+@router.post("/from-preventivo/{preventivo_id}/generica")
+async def create_commessa_generica(preventivo_id: str, user: dict = Depends(get_current_user)):
+    """Create a generic commessa (no NF number, no normativa) for tracking OdA etc.
+    Used for non-structural work that still needs order tracking and planning.
+    """
+    uid = user["user_id"]
+    prev = await db.preventivi.find_one({"preventivo_id": preventivo_id, "user_id": uid}, {"_id": 0})
+    if not prev:
+        raise HTTPException(404, "Preventivo non trovato")
+
+    client_name = ""
+    if prev.get("client_id"):
+        client = await db.clients.find_one({"client_id": prev["client_id"]}, {"_id": 0, "business_name": 1})
+        client_name = client.get("business_name", "") if client else ""
+
+    lines = prev.get("lines", [])
+    value = sum(
+        float(l.get("quantity", 1) or 1) * float(l.get("unit_price", 0) or 0)
+        * (1 - float(l.get("sconto_1", 0) or 0) / 100)
+        * (1 - float(l.get("sconto_2", 0) or 0) / 100)
+        for l in lines
+    )
+
+    now = datetime.now(timezone.utc)
+    cid = f"com_{uuid.uuid4().hex[:12]}"
+
+    title = prev.get("subject") or f"Commessa da {prev.get('number', preventivo_id)}"
+    moduli = make_empty_moduli()
+    moduli["preventivo_id"] = preventivo_id
+
+    doc = {
+        "commessa_id": cid,
+        "numero": f"GEN-{prev.get('number', '')}",
+        "user_id": uid,
+        "title": title,
+        "client_id": prev.get("client_id", ""),
+        "client_name": client_name,
+        "description": prev.get("notes", ""),
+        "riferimento": prev.get("riferimento", ""),
+        "cantiere": {},
+        "value": round(value, 2),
+        "deadline": None,
+        "status": "preventivo",
+        "stato": "richiesta",
+        "stato_precedente": None,
+        "priority": "media",
+        "generica": True,
+        "moduli": moduli,
+        "eventi": [
+            build_event("RICHIESTA_PREVENTIVO", user, f"Commessa generica da preventivo {prev.get('number', '')}"),
+            build_event("MODULO_COLLEGATO", user, "Preventivo collegato", {"tipo": "preventivo", "module_id": preventivo_id}),
+        ],
+        "notes": f"Commessa generica da Preventivo {prev.get('number', '')}",
+        "linked_preventivo_id": preventivo_id,
+        "linked_distinta_id": None,
+        "linked_rilievo_id": None,
+        "status_history": [{"status": "preventivo", "date": now.isoformat(), "note": f"Commessa generica da preventivo {prev.get('number', '')}"}],
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    await db[COLLECTION].insert_one(doc)
+
+    # Update preventivo status
+    await db.preventivi.update_one(
+        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"$set": {"status": "accettato", "updated_at": now}}
+    )
+
+    created = await db[COLLECTION].find_one({"commessa_id": cid}, {"_id": 0})
+    return created
+
+
 # ── Split Create from Preventivo (mixed normativa) ──────────────
 
 class SplitCommessaConfig(BaseModel):

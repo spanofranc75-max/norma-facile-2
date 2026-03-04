@@ -16,10 +16,12 @@ import DashboardLayout from '../components/DashboardLayout';
 import EmptyState from '../components/EmptyState';
 
 const STATUS_MAP = {
-    bozza: { label: 'Bozza', color: 'bg-yellow-100 text-yellow-800' },
-    inviato: { label: 'Inviato', color: 'bg-blue-100 text-blue-800' },
-    accettato: { label: 'Accettato', color: 'bg-emerald-100 text-emerald-800' },
-    rifiutato: { label: 'Rifiutato', color: 'bg-red-100 text-red-800' },
+    bozza: { label: 'Bozza', color: 'bg-yellow-100 text-yellow-800', rowBg: '' },
+    inviato: { label: 'Inviato', color: 'bg-blue-100 text-blue-800', rowBg: '' },
+    accettato: { label: 'Accettato', color: 'bg-amber-100 text-amber-800', rowBg: 'bg-amber-50/60' },
+    in_lavorazione: { label: 'In Lavorazione', color: 'bg-blue-100 text-blue-800', rowBg: 'bg-blue-50/60' },
+    chiuso: { label: 'Chiuso', color: 'bg-emerald-100 text-emerald-800', rowBg: 'bg-emerald-50/60' },
+    rifiutato: { label: 'Rifiutato', color: 'bg-red-100 text-red-800', rowBg: '' },
 };
 
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
@@ -120,9 +122,18 @@ export default function PreventiviPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {preventivi.map(p => {
-                                        const st = STATUS_MAP[p.status] || STATUS_MAP.bozza;
+                                        // Determine effective status: use commessa_stato if available
+                                        let effectiveStatus = p.status;
+                                        if (p.status === 'accettato' && p.commessa_stato) {
+                                            if (p.commessa_stato === 'chiuso' || p.commessa_stato === 'fatturato') {
+                                                effectiveStatus = 'chiuso';
+                                            } else if (p.commessa_stato !== 'bozza') {
+                                                effectiveStatus = 'in_lavorazione';
+                                            }
+                                        }
+                                        const st = STATUS_MAP[effectiveStatus] || STATUS_MAP.bozza;
                                         return (
-                                            <TableRow key={p.preventivo_id} data-testid={`prev-row-${p.preventivo_id}`} className="cursor-pointer hover:bg-slate-50" onClick={() => navigate(`/preventivi/${p.preventivo_id}`)}>
+                                            <TableRow key={p.preventivo_id} data-testid={`prev-row-${p.preventivo_id}`} className={`cursor-pointer transition-colors ${st.rowBg || ''} hover:brightness-95`} onClick={() => navigate(`/preventivi/${p.preventivo_id}`)}>
                                                 <TableCell className="font-mono text-sm text-[#0055FF] font-medium">{p.number}</TableCell>
                                                 <TableCell className="text-sm">{p.client_name || '-'}</TableCell>
                                                 <TableCell className="text-sm text-slate-600 max-w-[200px] truncate">{p.subject || '-'}</TableCell>

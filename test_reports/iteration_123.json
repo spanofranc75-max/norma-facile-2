@@ -1,0 +1,76 @@
+{
+  "summary": "Iteration 123: Backend-only testing of 3 new features: (1) Preventivi row color coding via commessa_stato enrichment, (2) Generic commessa creation endpoint, (3) Planning drag-drop Kanban. All 11 tests passed (100%).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "preventivi_commessa_enrichment": {
+      "endpoint": "GET /api/preventivi/",
+      "test": "Returns commessa_stato, commessa_id, commessa_numero for linked preventivi",
+      "result": "PASS - prev_35c6b96a9e75 correctly returns commessa_stato=chiuso, commessa_id=com_e8c4810ad476, commessa_numero=NF-2026-000001"
+    },
+    "preventivi_status_filter_enrichment": {
+      "endpoint": "GET /api/preventivi/?status=accettato",
+      "test": "Filter works and enrichment preserved",
+      "result": "PASS - Returns 11 preventivi with correct enrichment"
+    },
+    "generic_commessa_creation": {
+      "endpoint": "POST /api/commesse/from-preventivo/{prev_id}/generica",
+      "test": "Creates commessa with generica=true and numero starting with GEN-",
+      "result": "PASS - Created commessa with numero=GEN-PRV-2026-0039, generica=true"
+    },
+    "generic_commessa_in_board_view": {
+      "endpoint": "GET /api/commesse/board/view",
+      "test": "Generic commessa appears in board with generica field",
+      "result": "PASS - Found generic commessa in preventivo column with generica=true"
+    },
+    "kanban_drag_drop_status": {
+      "endpoint": "PATCH /api/commesse/{id}/status",
+      "test": "Kanban status update via drag-drop",
+      "result": "PASS - Status changed to lavorazione, generica field preserved"
+    },
+    "kanban_invalid_status_validation": {
+      "endpoint": "PATCH /api/commesse/{id}/status",
+      "test": "Invalid status returns 422",
+      "result": "PASS - Returns 422 for invalid_status_xyz"
+    },
+    "cascade_delete_regression": {
+      "endpoint": "DELETE /api/commesse/{cid}/documenti/{doc_id}",
+      "test": "Cascade delete endpoint still works",
+      "result": "PASS - Returns 404 for non-existent doc (not 500)"
+    },
+    "performance": {
+      "test": "GET /api/preventivi/ with enrichment under 10s",
+      "result": "PASS - Response time ~0.2s"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration123_preventivi_commesse_features.py",
+    "/app/test_reports/pytest/iteration123_preventivi_commesse_features_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Backend preventivi list enrichment at line 369-380 correctly looks up linked commessa via moduli.preventivo_id OR linked_preventivo_id",
+    "Generic commessa endpoint at line 970-1040 correctly sets generica=true and numero=GEN-PRV-XXXX",
+    "Board view at line 299-316 returns all commessa fields including generica for Kanban UI",
+    "Frontend should use commessa_stato for row coloring: Accettato=amber (status but no commessa), In Lavorazione=blue, Chiuso=green"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration123_preventivi_commesse_features.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "N/A (backend-only testing)"
+  },
+  "seed_data_creation": "Test created 2 generic commesse during testing: (1) com_a418e85eb68a from prev_6534e128c9 during manual testing, (2) another from prev_867f3cda72 during pytest. Both have generica=true and GEN- prefix",
+  "test_credentials": "Real user session: token=cy0IDr6-Jx0MAbNueH7kJXIblPsw0xN5ihIs7OdjXos",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 11 backend tests pass for iteration 123 features. Key data points: (1) prev_35c6b96a9e75 (PRV-2026-0033) is linked to com_e8c4810ad476 (stato=chiuso), (2) prev_6534e128c9 (PRV-2026-0045) now has a generic commessa com_a418e85eb68a with numero=GEN-PRV-2026-0045. The frontend color coding should use commessa_stato field from preventivi list API."
+}

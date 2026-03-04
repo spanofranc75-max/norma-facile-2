@@ -366,6 +366,18 @@ async def list_preventivi(
         tot = float(d.get("totals", {}).get("total", 0))
         invoiced = float(d.get("total_invoiced", 0))
         d["invoicing_progress"] = round((invoiced / tot * 100), 1) if tot > 0 else 0
+        # Lookup linked commessa stato for row coloring
+        linked_comm = await db.commesse.find_one(
+            {"user_id": user["user_id"], "$or": [
+                {"moduli.preventivo_id": d["preventivo_id"]},
+                {"linked_preventivo_id": d["preventivo_id"]},
+            ]},
+            {"_id": 0, "commessa_id": 1, "stato": 1, "numero": 1, "status": 1}
+        )
+        if linked_comm:
+            d["commessa_id"] = linked_comm.get("commessa_id")
+            d["commessa_stato"] = linked_comm.get("stato", linked_comm.get("status", ""))
+            d["commessa_numero"] = linked_comm.get("numero", "")
     return {"preventivi": docs, "total": total}
 
 

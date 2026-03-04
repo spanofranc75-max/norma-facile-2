@@ -21,16 +21,17 @@ import {
     Plus, Trash2, Save, ArrowLeft, FileDown, CheckCircle2, XCircle,
     Thermometer, ShieldCheck, Settings2, ArrowRightLeft, Euro,
     CreditCard, MapPin, FileText, StickyNote, Mail, Shield, Receipt,
-    Briefcase, Loader2, AlertTriangle, ArrowRight, Wrench, DoorOpen,
+    Briefcase, Loader2, AlertTriangle, ArrowRight, Wrench, DoorOpen, ChevronDown, Package,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import { PDFPreviewButton } from '../components/PDFPreviewModal';
 import { AutoExpandTextarea } from '../components/AutoExpandTextarea';
 import InvoiceGenerationModal from '../components/InvoiceGenerationModal';
 import EmailPreviewDialog from '../components/EmailPreviewDialog';
-import { DisabledTooltip } from '../components/DisabledTooltip';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 
 const ZONES = ['A', 'B', 'C', 'D', 'E', 'F'];
+import { DisabledTooltip } from '../components/DisabledTooltip';
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
 
 const emptyLine = () => ({
@@ -403,6 +404,17 @@ export default function PreventivoEditorPage() {
         } catch (e) { toast.error(e.message); } finally { setCreatingCommessa(false); }
     };
 
+    const handleCreateGenericCommessa = async () => {
+        if (!prevId) return;
+        setCreatingCommessa(true);
+        try {
+            const res = await apiRequest(`/commesse/from-preventivo/${prevId}/generica`, { method: 'POST' });
+            toast.success(`Commessa generica ${res.numero || ''} creata!`);
+            setLinkedCommessa(res);
+            navigate(`/commesse/${res.commessa_id}`);
+        } catch (e) { toast.error(e.message); } finally { setCreatingCommessa(false); }
+    };
+
     const handleSplitConfirm = async () => {
         setSplittingCommesse(true);
         try {
@@ -534,12 +546,33 @@ export default function PreventivoEditorPage() {
                         )}
 
                         {/* Create/Go to Commessa */}
-                        {!isNew && (
-                            <Button data-testid="btn-go-commessa" variant="outline" onClick={handleGoToCommessa} disabled={creatingCommessa}
-                                className={`h-9 text-xs ${linkedCommessa ? 'border-[#0055FF] text-[#0055FF] hover:bg-blue-50' : 'border-slate-400 text-slate-600 hover:bg-slate-50'}`}>
-                                {creatingCommessa ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Briefcase className="h-3.5 w-3.5 mr-1.5" />}
-                                {linkedCommessa ? `Commessa ${linkedCommessa.numero || ''}` : 'Commessa'}
+                        {!isNew && linkedCommessa && (
+                            <Button data-testid="btn-go-commessa" variant="outline" onClick={() => navigate(`/commesse/${linkedCommessa.commessa_id}`)}
+                                className="h-9 text-xs border-[#0055FF] text-[#0055FF] hover:bg-blue-50">
+                                <Briefcase className="h-3.5 w-3.5 mr-1.5" />
+                                Commessa {linkedCommessa.numero || ''}
                             </Button>
+                        )}
+                        {!isNew && !linkedCommessa && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button data-testid="btn-create-commessa" variant="outline" disabled={creatingCommessa}
+                                        className="h-9 text-xs border-slate-400 text-slate-600 hover:bg-slate-50">
+                                        {creatingCommessa ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Briefcase className="h-3.5 w-3.5 mr-1.5" />}
+                                        Commessa <ChevronDown className="h-3 w-3 ml-1" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem data-testid="btn-commessa-normata" onClick={handleGoToCommessa}>
+                                        <Shield className="h-3.5 w-3.5 mr-2" />
+                                        Commessa Normata (EN 1090 / 13241)
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem data-testid="btn-commessa-generica" onClick={handleCreateGenericCommessa}>
+                                        <Package className="h-3.5 w-3.5 mr-2" />
+                                        Commessa Generica (senza numero)
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         )}
 
                         {/* FPC Project */}
