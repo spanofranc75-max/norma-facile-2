@@ -298,7 +298,9 @@ async def get_stati_meta():
 
 @router.get("/board/view")
 async def get_board_view(user: dict = Depends(get_current_user)):
-    """Return all commesse grouped by Kanban status for the board."""
+    """Return all commesse grouped by Kanban status for the board.
+    Also includes accepted quotes (preventivi accettati) without a linked commessa.
+    """
     uid = user["user_id"]
     items = await db[COLLECTION].find({"user_id": uid}, {"_id": 0, "eventi": 0}).sort("updated_at", -1).to_list(500)
 
@@ -306,14 +308,56 @@ async def get_board_view(user: dict = Depends(get_current_user)):
     for key, meta in KANBAN_META.items():
         columns[key] = {"id": key, "label": meta["label"], "order": meta["order"], "items": []}
 
+    # Collect all preventivo IDs already linked to a commessa
+    linked_prev_ids = set()
     for item in items:
         ensure_moduli(item)
         st = item.get("status", "preventivo")
         if st in columns:
             columns[st]["items"].append(item)
+        # Track linked preventivo IDs
+        prev_id = item.get("moduli", {}).get("preventivo_id") or item.get("linked_preventivo_id")
+        if prev_id:
+            linked_prev_ids.add(prev_id)
+
+    # Fetch accepted preventivi without a linked commessa
+    accepted_prevs = await db.preventivi.find(
+        {"user_id": uid, "status": "accettato"},
+        {"_id": 0, "preventivo_id": 1, "number": 1, "subject": 1,
+         "client_id": 1, "client_name": 1, "_migrated_client_name": 1,
+         "totals": 1, "created_at": 1, "updated_at": 1}
+    ).sort("updated_at", -1).to_list(200)
+
+    for prev in accepted_prevs:
+        if prev["preventivo_id"] in linked_prev_ids:
+            continue  # Already has a commessa, skip
+        # Resolve client name
+        client_name = prev.get("client_name", "")
+        if not client_name and prev.get("client_id"):
+            c = await db.clients.find_one({"client_id": prev["client_id"]}, {"_id": 0, "business_name": 1})
+            client_name = c.get("business_name", "") if c else prev.get("_migrated_client_name", "")
+        elif not client_name:
+            client_name = prev.get("_migrated_client_name", "")
+        # Build a board-compatible card item
+        # Note: preventivo_id already has 'prev_' prefix, so just use it directly for uniqueness
+        card = {
+            "commessa_id": prev['preventivo_id'],  # Already has 'prev_' prefix
+            "preventivo_id": prev["preventivo_id"],
+            "is_preventivo": True,
+            "title": prev.get("subject") or prev.get("number", "Preventivo"),
+            "numero": prev.get("number", ""),
+            "client_name": client_name,
+            "value": float(prev.get("totals", {}).get("total", 0)),
+            "priority": "media",
+            "status": "preventivo",
+            "created_at": prev.get("created_at"),
+            "updated_at": prev.get("updated_at"),
+        }
+        columns["preventivo"]["items"].append(card)
 
     sorted_cols = sorted(columns.values(), key=lambda c: c["order"])
-    return {"columns": sorted_cols, "total": len(items)}
+    total = sum(len(col["items"]) for col in sorted_cols)
+    return {"columns": sorted_cols, "total": total}
 
 
 @router.get("/{commessa_id}")

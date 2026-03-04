@@ -1,0 +1,89 @@
+{
+  "summary": "Iteration 127: Testing Accepted Preventivi on Planning Board. All 10 backend tests pass (100%). Frontend verified: preventivo cards with dashed green border, 'Preventivo Accettato' badge, correct header counts, navigation to preventivo editor on click, non-draggable behavior. Found and fixed BUG: double 'prev_' prefix in commessa_id.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "board_view_returns_accepted_preventivi": {
+      "endpoint": "GET /api/commesse/board/view",
+      "status_code": 200,
+      "result": "PASS - Returns accepted preventivi in 'preventivo' column with is_preventivo: true"
+    },
+    "preventivo_item_structure": {
+      "fields": ["commessa_id", "preventivo_id", "is_preventivo", "title", "numero", "client_name", "value", "priority", "status"],
+      "result": "PASS - All required fields present, commessa_id equals preventivo_id (both have prev_ prefix)"
+    },
+    "linked_preventivi_not_duplicated": {
+      "test": "Preventivi with linked commessa don't appear as separate board items",
+      "result": "PASS - No overlap between board preventivi and linked preventivi"
+    },
+    "create_and_verify_preventivo": {
+      "flow": "Create preventivo → Update status to 'accettato' → Verify appears on board",
+      "result": "PASS - New accepted preventivi correctly appear on the board"
+    },
+    "only_accettato_status_shown": {
+      "test": "Only preventivi with status='accettato' appear on board",
+      "result": "PASS - All board preventivi have 'accettato' status"
+    },
+    "preventivo_cards_not_draggable": {
+      "frontend_test": "Preventivo cards have no drag handle, commessa cards do",
+      "result": "PASS - Preventivo cards don't have cursor-grab class"
+    },
+    "preventivo_card_styling": {
+      "classes": "border-2 border-dashed border-emerald-300 bg-emerald-50/60",
+      "badge": "Preventivo Accettato",
+      "result": "PASS - Dashed green border and badge displayed"
+    },
+    "header_shows_counts": {
+      "example": "3 commesse + 8 preventivi accettati · Valore totale: 58.008,30 €",
+      "result": "PASS - Header shows both commesse and preventivi counts"
+    },
+    "click_navigation": {
+      "test": "Clicking preventivo card navigates to /preventivi/edit/{preventivo_id}",
+      "result": "PASS - Navigation works correctly"
+    },
+    "drag_ignored_for_prev_ids": {
+      "code_location": "PlanningPage.js line 82",
+      "logic": "if (draggableId.startsWith('prev_')) return;",
+      "result": "PASS - Drag operations silently ignored for prev_ prefixed IDs"
+    }
+  },
+  "bugs_fixed": {
+    "double_prev_prefix": {
+      "location": "/app/backend/routes/commesse.py line 343",
+      "issue": "commessa_id was being set to f\"prev_{prev['preventivo_id']}\" but preventivo_id already has 'prev_' prefix",
+      "fix": "Changed to commessa_id = prev['preventivo_id'] directly",
+      "impact": "commessa_id was 'prev_prev_...' instead of 'prev_...'"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration127_preventivi_board.py",
+    "/app/test_reports/pytest/iteration127_preventivi_board_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Backend commesse.py: Clean implementation of board view with accepted preventivi filtering (lines 299-359)",
+    "Frontend PlanningPage.js: PreventivoCard component correctly styled with no Draggable wrapper",
+    "handleDragEnd correctly ignores 'prev_' prefixed IDs (line 82)",
+    "Header counts correctly separate commesse from preventivi (lines 119-120)"
+  ],
+  "updated_files": [
+    "/app/backend/routes/commesse.py",
+    "/app/backend/tests/test_iteration127_preventivi_board.py"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 tests)",
+    "frontend": "100% (all features verified)"
+  },
+  "test_credentials": "Session token: a93tNVox2FkeFH8NRffvMIy09_aExaDt2X6zYAPFwPU",
+  "seed_data_creation": "Created and cleaned up test preventivo during integration test",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "The Planning Board now shows accepted preventivi (status='accettato') without linked commesse in the 'Nuove Commesse' column. These have: dashed green border styling, 'Preventivo Accettato' badge, non-draggable behavior, click navigation to /preventivi/edit/{id}. The commessa_id for these items equals their preventivo_id (both have 'prev_' prefix). 8 accepted preventivi currently on board, 3 regular commesse in other columns."
+}

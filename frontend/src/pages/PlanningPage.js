@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from 'sonner';
 import {
     Plus, GripVertical, Calendar, Euro, User, Trash2,
-    LayoutGrid, Clock, AlertTriangle, ChevronRight,
+    LayoutGrid, Clock, AlertTriangle, ChevronRight, FileText,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
@@ -78,6 +78,9 @@ export default function PlanningPage() {
         if (!destination) return;
         if (destination.droppableId === source.droppableId && destination.index === source.index) return;
 
+        // Prevent dragging preventivo cards (they start with "prev_")
+        if (draggableId.startsWith('prev_')) return;
+
         const newStatus = destination.droppableId;
         const commessaId = draggableId;
 
@@ -113,7 +116,8 @@ export default function PlanningPage() {
         } catch (e) { toast.error(e.message); }
     };
 
-    const totalCommesse = columns.reduce((acc, col) => acc + col.items.length, 0);
+    const totalCommesse = columns.reduce((acc, col) => acc + col.items.filter(i => !i.is_preventivo).length, 0);
+    const totalPreventivi = columns.reduce((acc, col) => acc + col.items.filter(i => i.is_preventivo).length, 0);
     const totalValue = columns.reduce((acc, col) => acc + col.items.reduce((a, i) => a + (i.value || 0), 0), 0);
 
     return (
@@ -126,7 +130,7 @@ export default function PlanningPage() {
                             <LayoutGrid className="h-6 w-6 text-[#0055FF]" /> Planning Cantieri
                         </h1>
                         <p className="text-sm text-slate-500 mt-1">
-                            {totalCommesse} commesse in corso &middot; Valore totale: {fmtEur(totalValue)}
+                            {totalCommesse} commesse{totalPreventivi > 0 ? ` + ${totalPreventivi} preventivi accettati` : ''} &middot; Valore totale: {fmtEur(totalValue)}
                         </p>
                     </div>
                     <Button
@@ -151,7 +155,13 @@ export default function PlanningPage() {
                                     key={col.id}
                                     column={col}
                                     colors={COL_COLORS[col.id] || COL_COLORS.preventivo}
-                                    onCardClick={(c) => navigate(`/commesse/${c.commessa_id}`)}
+                                    onCardClick={(c) => {
+                                        if (c.is_preventivo) {
+                                            navigate(`/preventivi/edit/${c.preventivo_id}`);
+                                        } else {
+                                            navigate(`/commesse/${c.commessa_id}`);
+                                        }
+                                    }}
                                     onDelete={handleDelete}
                                 />
                             ))}
@@ -194,94 +204,26 @@ function KanbanColumn({ column, colors, onCardClick, onDelete }) {
                         }`}
                     >
                         {column.items.map((item, index) => (
-                            <Draggable key={item.commessa_id} draggableId={item.commessa_id} index={index}>
-                                {(prov, snap) => (
-                                    <div
-                                        ref={prov.innerRef}
-                                        {...prov.draggableProps}
-                                        className={`rounded-lg border bg-white shadow-sm transition-shadow ${
-                                            snap.isDragging ? 'shadow-lg ring-2 ' + colors.ring : 'hover:shadow-md'
-                                        }`}
-                                        data-testid={`kanban-card-${item.commessa_id}`}
-                                    >
-                                        <div className="p-3">
-                                            {/* Drag handle + title */}
-                                            <div className="flex items-start gap-2">
-                                                <div {...prov.dragHandleProps} className="mt-0.5 cursor-grab active:cursor-grabbing">
-                                                    <GripVertical className="h-3.5 w-3.5 text-slate-300" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p
-                                                        className="text-sm font-semibold text-[#1E293B] truncate cursor-pointer hover:text-[#0055FF] transition-colors"
-                                                        onClick={() => onCardClick(item)}
-                                                    >
-                                                        {item.title}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            {/* Client */}
-                                            {item.client_name && (
-                                                <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-500">
-                                                    <User className="h-3 w-3" />
-                                                    <span className="truncate">{item.client_name}</span>
-                                                </div>
-                                            )}
-
-                                            {/* Value + Deadline */}
-                                            <div className="flex items-center justify-between mt-2">
-                                                {item.value > 0 && (
-                                                    <div className="flex items-center gap-1 text-xs font-mono font-semibold text-[#1E293B]">
-                                                        <Euro className="h-3 w-3 text-slate-400" />
-                                                        {fmtEur(item.value)}
-                                                    </div>
-                                                )}
-                                                {item.deadline && (
-                                                    <div className={`flex items-center gap-1 text-[10px] font-medium ${
-                                                        isOverdue(item.deadline) ? 'text-red-600' : 'text-slate-400'
-                                                    }`}>
-                                                        {isOverdue(item.deadline) ? <AlertTriangle className="h-3 w-3" /> : <Calendar className="h-3 w-3" />}
-                                                        {formatDeadline(item.deadline)}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Priority + Stato + Actions */}
-                                            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
-                                                <div className="flex items-center gap-1.5">
-                                                    <Badge className={`text-[9px] ${PRIORITY_BADGE[item.priority] || PRIORITY_BADGE.media}`}>
-                                                        {item.priority || 'media'}
-                                                    </Badge>
-                                                    {item.stato && item.stato !== 'bozza' && (
-                                                        <Badge className="text-[8px] bg-blue-50 text-blue-700 font-normal">{item.stato?.replace(/_/g, ' ')}</Badge>
-                                                    )}
-                                                    {item.numero && (
-                                                        <span className={`text-[9px] font-mono ${item.generica ? 'text-amber-600 font-semibold' : 'text-slate-400'}`}>
-                                                            {item.generica ? 'GEN' : item.numero}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="flex gap-1">
-                                                    <button
-                                                        onClick={() => onCardClick(item)}
-                                                        className="text-slate-400 hover:text-[#0055FF] transition-colors"
-                                                        title="Apri Hub Commessa"
-                                                    >
-                                                        <ChevronRight className="h-3.5 w-3.5" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => onDelete(item.commessa_id)}
-                                                        className="text-slate-300 hover:text-red-500 transition-colors"
-                                                        title="Elimina"
-                                                    >
-                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </Draggable>
+                            item.is_preventivo ? (
+                                <PreventivoCard
+                                    key={item.commessa_id}
+                                    item={item}
+                                    onCardClick={onCardClick}
+                                />
+                            ) : (
+                                <Draggable key={item.commessa_id} draggableId={item.commessa_id} index={index}>
+                                    {(prov, snap) => (
+                                        <CommessaCard
+                                            item={item}
+                                            colors={colors}
+                                            prov={prov}
+                                            snap={snap}
+                                            onCardClick={onCardClick}
+                                            onDelete={onDelete}
+                                        />
+                                    )}
+                                </Draggable>
+                            )
                         ))}
                         {provided.placeholder}
                         {column.items.length === 0 && (
@@ -292,6 +234,149 @@ function KanbanColumn({ column, colors, onCardClick, onDelete }) {
                     </div>
                 )}
             </Droppable>
+        </div>
+    );
+}
+
+
+// ── Preventivo Accettato Card (non-draggable) ───────────────────
+
+function PreventivoCard({ item, onCardClick }) {
+    return (
+        <div
+            className="rounded-lg border-2 border-dashed border-emerald-300 bg-emerald-50/60 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+            data-testid={`kanban-card-prev-${item.preventivo_id}`}
+            onClick={() => onCardClick(item)}
+        >
+            <div className="p-3">
+                {/* Badge + title */}
+                <div className="flex items-start gap-2">
+                    <FileText className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[#1E293B] truncate">
+                            {item.title}
+                        </p>
+                    </div>
+                </div>
+
+                {/* Accettato badge */}
+                <div className="mt-2">
+                    <Badge className="text-[9px] bg-emerald-100 text-emerald-800 font-semibold">
+                        Preventivo Accettato
+                    </Badge>
+                    {item.numero && (
+                        <span className="ml-1.5 text-[9px] font-mono text-slate-400">{item.numero}</span>
+                    )}
+                </div>
+
+                {/* Client */}
+                {item.client_name && (
+                    <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-500">
+                        <User className="h-3 w-3" />
+                        <span className="truncate">{item.client_name}</span>
+                    </div>
+                )}
+
+                {/* Value */}
+                {item.value > 0 && (
+                    <div className="flex items-center gap-1 mt-2 text-xs font-mono font-semibold text-[#1E293B]">
+                        <Euro className="h-3 w-3 text-slate-400" />
+                        {fmtEur(item.value)}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+
+// ── Commessa Card (draggable) ───────────────────────────────────
+
+function CommessaCard({ item, colors, prov, snap, onCardClick, onDelete }) {
+    return (
+        <div
+            ref={prov.innerRef}
+            {...prov.draggableProps}
+            className={`rounded-lg border bg-white shadow-sm transition-shadow ${
+                snap.isDragging ? 'shadow-lg ring-2 ' + colors.ring : 'hover:shadow-md'
+            }`}
+            data-testid={`kanban-card-${item.commessa_id}`}
+        >
+            <div className="p-3">
+                {/* Drag handle + title */}
+                <div className="flex items-start gap-2">
+                    <div {...prov.dragHandleProps} className="mt-0.5 cursor-grab active:cursor-grabbing">
+                        <GripVertical className="h-3.5 w-3.5 text-slate-300" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p
+                            className="text-sm font-semibold text-[#1E293B] truncate cursor-pointer hover:text-[#0055FF] transition-colors"
+                            onClick={() => onCardClick(item)}
+                        >
+                            {item.title}
+                        </p>
+                    </div>
+                </div>
+
+                {/* Client */}
+                {item.client_name && (
+                    <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-500">
+                        <User className="h-3 w-3" />
+                        <span className="truncate">{item.client_name}</span>
+                    </div>
+                )}
+
+                {/* Value + Deadline */}
+                <div className="flex items-center justify-between mt-2">
+                    {item.value > 0 && (
+                        <div className="flex items-center gap-1 text-xs font-mono font-semibold text-[#1E293B]">
+                            <Euro className="h-3 w-3 text-slate-400" />
+                            {fmtEur(item.value)}
+                        </div>
+                    )}
+                    {item.deadline && (
+                        <div className={`flex items-center gap-1 text-[10px] font-medium ${
+                            isOverdue(item.deadline) ? 'text-red-600' : 'text-slate-400'
+                        }`}>
+                            {isOverdue(item.deadline) ? <AlertTriangle className="h-3 w-3" /> : <Calendar className="h-3 w-3" />}
+                            {formatDeadline(item.deadline)}
+                        </div>
+                    )}
+                </div>
+
+                {/* Priority + Stato + Actions */}
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+                    <div className="flex items-center gap-1.5">
+                        <Badge className={`text-[9px] ${PRIORITY_BADGE[item.priority] || PRIORITY_BADGE.media}`}>
+                            {item.priority || 'media'}
+                        </Badge>
+                        {item.stato && item.stato !== 'bozza' && (
+                            <Badge className="text-[8px] bg-blue-50 text-blue-700 font-normal">{item.stato?.replace(/_/g, ' ')}</Badge>
+                        )}
+                        {item.numero && (
+                            <span className={`text-[9px] font-mono ${item.generica ? 'text-amber-600 font-semibold' : 'text-slate-400'}`}>
+                                {item.generica ? 'GEN' : item.numero}
+                            </span>
+                        )}
+                    </div>
+                    <div className="flex gap-1">
+                        <button
+                            onClick={() => onCardClick(item)}
+                            className="text-slate-400 hover:text-[#0055FF] transition-colors"
+                            title="Apri Hub Commessa"
+                        >
+                            <ChevronRight className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                            onClick={() => onDelete(item.commessa_id)}
+                            className="text-slate-300 hover:text-red-500 transition-colors"
+                            title="Elimina"
+                        >
+                            <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
