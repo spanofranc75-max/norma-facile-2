@@ -166,20 +166,21 @@ export default function PlanningPage() {
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0055FF]" />
                     </div>
                 ) : (
-                    <KanbanBoard
-                        columns={columns}
-                        acceptedPrevs={acceptedPrevs}
-                        onDragEnd={handleDragEnd}
-                        onCardClick={(c) => {
-                            if (c.is_preventivo) {
-                                navigate(`/preventivi/edit/${c.preventivo_id}`);
-                            } else {
-                                navigate(`/commesse/${c.commessa_id}`);
-                            }
-                        }}
-                        onDelete={handleDelete}
-                        onCreateCommessa={handleCreateFromPreventivo}
-                    />
+                    <DragDropContext onDragEnd={handleDragEnd}>
+                        <ScrollableBoard
+                            columns={columns}
+                            acceptedPrevs={acceptedPrevs}
+                            onCardClick={(c) => {
+                                if (c.is_preventivo) {
+                                    navigate(`/preventivi/edit/${c.preventivo_id}`);
+                                } else {
+                                    navigate(`/commesse/${c.commessa_id}`);
+                                }
+                            }}
+                            onDelete={handleDelete}
+                            onCreateCommessa={handleCreateFromPreventivo}
+                        />
+                    </DragDropContext>
                 )}
 
                 {/* Create Modal */}
@@ -195,27 +196,32 @@ export default function PlanningPage() {
 }
 
 
-// ── Kanban Board with scroll navigation ─────────────────────────
+// ── Scrollable Board wrapper (NO DragDropContext here — it lives in parent) ──
 
-function KanbanBoard({ columns, acceptedPrevs, onDragEnd, onCardClick, onDelete, onCreateCommessa }) {
+function ScrollableBoard({ columns, acceptedPrevs, onCardClick, onDelete, onCreateCommessa }) {
     const scrollRef = useRef(null);
-    const [canScrollLeft, setCanScrollLeft] = useState(false);
-    const [canScrollRight, setCanScrollRight] = useState(false);
+    const leftRef = useRef(null);
+    const rightRef = useRef(null);
 
     const checkScroll = useCallback(() => {
         const el = scrollRef.current;
         if (!el) return;
-        setCanScrollLeft(el.scrollLeft > 10);
-        setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
+        const showLeft = el.scrollLeft > 10;
+        const showRight = el.scrollLeft < el.scrollWidth - el.clientWidth - 10;
+        if (leftRef.current) leftRef.current.style.display = showLeft ? 'flex' : 'none';
+        if (rightRef.current) rightRef.current.style.display = showRight ? 'flex' : 'none';
     }, []);
 
     useEffect(() => {
         const el = scrollRef.current;
         if (!el) return;
+        // Initial check + small delay for layout
         checkScroll();
+        const t = setTimeout(checkScroll, 100);
         el.addEventListener('scroll', checkScroll, { passive: true });
         window.addEventListener('resize', checkScroll);
         return () => {
+            clearTimeout(t);
             el.removeEventListener('scroll', checkScroll);
             window.removeEventListener('resize', checkScroll);
         };
@@ -229,48 +235,46 @@ function KanbanBoard({ columns, acceptedPrevs, onDragEnd, onCardClick, onDelete,
 
     return (
         <div className="relative" data-testid="kanban-board-wrapper">
-            {/* Left arrow */}
-            {canScrollLeft && (
-                <button
-                    data-testid="scroll-left-btn"
-                    onClick={() => scroll(-1)}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-white/90 shadow-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors"
-                >
-                    <ChevronLeft className="h-5 w-5 text-slate-600" />
-                </button>
-            )}
+            {/* Left arrow — visibility controlled via ref, no state re-render */}
+            <button
+                ref={leftRef}
+                data-testid="scroll-left-btn"
+                onClick={() => scroll(-1)}
+                style={{ display: 'none' }}
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-white/90 shadow-lg border border-slate-200 items-center justify-center hover:bg-slate-50 transition-colors"
+            >
+                <ChevronLeft className="h-5 w-5 text-slate-600" />
+            </button>
 
             {/* Right arrow */}
-            {canScrollRight && (
-                <button
-                    data-testid="scroll-right-btn"
-                    onClick={() => scroll(1)}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-white/90 shadow-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition-colors"
-                >
-                    <ChevronRight className="h-5 w-5 text-slate-600" />
-                </button>
-            )}
+            <button
+                ref={rightRef}
+                data-testid="scroll-right-btn"
+                onClick={() => scroll(1)}
+                style={{ display: 'none' }}
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full bg-white/90 shadow-lg border border-slate-200 items-center justify-center hover:bg-slate-50 transition-colors"
+            >
+                <ChevronRight className="h-5 w-5 text-slate-600" />
+            </button>
 
-            <DragDropContext onDragEnd={onDragEnd}>
-                <div
-                    ref={scrollRef}
-                    className="flex gap-3 overflow-x-auto pb-4 px-6 scroll-smooth"
-                    style={{ scrollbarWidth: 'thin' }}
-                    data-testid="kanban-board"
-                >
-                    {columns.map(col => (
-                        <KanbanColumn
-                            key={col.id}
-                            column={col}
-                            colors={COL_COLORS[col.id] || COL_COLORS.preventivo}
-                            prevItems={col.id === 'preventivo' ? acceptedPrevs : []}
-                            onCardClick={onCardClick}
-                            onDelete={onDelete}
-                            onCreateCommessa={onCreateCommessa}
-                        />
-                    ))}
-                </div>
-            </DragDropContext>
+            <div
+                ref={scrollRef}
+                className="flex gap-3 overflow-x-auto pb-4 px-6 scroll-smooth"
+                style={{ scrollbarWidth: 'thin' }}
+                data-testid="kanban-board"
+            >
+                {columns.map(col => (
+                    <KanbanColumn
+                        key={col.id}
+                        column={col}
+                        colors={COL_COLORS[col.id] || COL_COLORS.preventivo}
+                        prevItems={col.id === 'preventivo' ? acceptedPrevs : []}
+                        onCardClick={onCardClick}
+                        onDelete={onDelete}
+                        onCreateCommessa={onCreateCommessa}
+                    />
+                ))}
+            </div>
         </div>
     );
 }
