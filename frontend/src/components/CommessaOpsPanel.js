@@ -124,6 +124,13 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     });
     const [preventivoLines, setPreventivoLines] = useState([]);
     const [selectedLineIndices, setSelectedLineIndices] = useState([]);
+
+    // Profile confirmation dialog state
+    const [profileConfirmOpen, setProfileConfirmOpen] = useState(false);
+    const [pendingProfiles, setPendingProfiles] = useState([]);
+    const [selectedProfileIndices, setSelectedProfileIndices] = useState([]);
+    const [pendingDocId, setPendingDocId] = useState(null);
+    const [confirmLoading, setConfirmLoading] = useState(false);
     const [rientroForm, setRientroForm] = useState({
         data_rientro: new Date().toISOString().slice(0, 10),
         ddt_fornitore_numero: '', ddt_fornitore_data: '',
@@ -600,13 +607,6 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         } catch (err) { toast.error(err.message); }
         if (fileRef.current) fileRef.current.value = '';
     };
-
-    // Profile confirmation dialog state
-    const [profileConfirmOpen, setProfileConfirmOpen] = useState(false);
-    const [pendingProfiles, setPendingProfiles] = useState([]);
-    const [selectedProfileIndices, setSelectedProfileIndices] = useState([]);
-    const [pendingDocId, setPendingDocId] = useState(null);
-    const [confirmLoading, setConfirmLoading] = useState(false);
 
     const handleParseAI = async (docId) => {
         setParsing(docId);
