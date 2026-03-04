@@ -77,6 +77,68 @@ def _chk(val):
     return '<span class="chk chk-yes">&#9746;</span>' if val else '<span class="chk chk-no">&#9744;</span>'
 
 # ══════════════════════════════════════════════════════════════
+# HELPER: Proprietà materiali DINAMICHE dai lotti reali
+# ══════════════════════════════════════════════════════════════
+def _get_material_properties(lotti_cam: list) -> dict:
+    """
+    Analizza i lotti materiali per determinare Saldabilità, Resilienza e Durabilità.
+    Legge i gradi acciaio dai lotti CAM/material_batches effettivi della commessa.
+    """
+    if not lotti_cam:
+        return {
+            "materiali_saldabilita": "Acciaio S275JR in accordo alla EN 10025-2",
+            "resilienza": "27J a 20°C (JR)",
+            "durabilita": "NPD",
+        }
+
+    gradi = set()
+    sigle_resilienza = {}
+
+    for lotto in lotti_cam:
+        grado = (lotto.get("qualita_acciaio") or "").upper().replace(" ", "")
+        if not grado:
+            continue
+        gradi.add(grado)
+        if "K2" in grado:
+            sigle_resilienza[-20] = "40J a -20°C (K2)"
+        elif "J2" in grado:
+            sigle_resilienza[-20] = "27J a -20°C (J2)"
+        elif "J0" in grado:
+            sigle_resilienza[0] = "27J a 0°C (J0)"
+        elif "JR" in grado:
+            sigle_resilienza[20] = "27J a 20°C (JR)"
+
+    if gradi:
+        materiali_str = f"Acciaio {' / '.join(sorted(gradi))} in accordo alla EN 10025-2"
+    else:
+        materiali_str = "Acciaio S275JR in accordo alla EN 10025-2"
+
+    if sigle_resilienza:
+        min_temp = min(sigle_resilienza.keys())
+        resilienza_str = sigle_resilienza[min_temp]
+    else:
+        resilienza_str = "27J a 20°C (JR)"
+
+    return {
+        "materiali_saldabilita": materiali_str,
+        "resilienza": resilienza_str,
+        "durabilita": "NPD",
+    }
+
+
+def _get_durabilita(commessa: dict) -> str:
+    """Determina la durabilità in base ai trattamenti superficiali."""
+    trattamento = (commessa.get("trattamento_superficiale") or "").lower()
+    if "zincatura" in trattamento or "zincat" in trattamento:
+        return "Zincatura a caldo EN ISO 1461"
+    elif "verniciatura" in trattamento or "vernic" in trattamento:
+        return "Verniciatura secondo specifica cliente"
+    elif "metalizzazione" in trattamento or "metalliz" in trattamento:
+        return "Metallizzazione EN ISO 2063"
+    return "NPD"
+
+
+# ══════════════════════════════════════════════════════════════
 # 1. DOP — Dichiarazione di Prestazione
 # ══════════════════════════════════════════════════════════════
 def generate_dop_pdf(company: dict, commessa: dict, client_name: str, dop_data: dict) -> BytesIO:
@@ -94,7 +156,8 @@ def generate_dop_pdf(company: dict, commessa: dict, client_name: str, dop_data: 
     cert_num = dop_data.get("certificato_numero", "") or company.get("certificato_en1090_numero", "")
     ente = dop_data.get("ente_notificato", "") or company.get("ente_certificatore", "")
     materiali_str = dop_data.get("materiali_saldabilita", "S355JR - S275JR in accordo alla EN 10025-2")
-    resilienza = dop_data.get("resilienza", "27 Joule a +/- 20 C")
+    resilienza = dop_data.get("resilienza", "27J a 20°C (JR)")
+    durabilita = dop_data.get("durabilita", "NPD")
 
     chars = [
         ("4.2 / 5.3", "Tolleranza delle dimensioni e della forma", "EN 1090-2:2024"),
@@ -107,7 +170,7 @@ def generate_dop_pdf(company: dict, commessa: dict, client_name: str, dop_data: 
         ("4.6 / 5.8", "Reazione al fuoco", "Classe A1"),
         ("4.7 / 5.9", "Rilascio di cadmio e suoi composti", "NPD"),
         ("4.7 / 5.9", "Emissione di radioattivita'", "NPD"),
-        ("4.9 / 5.11", "Durabilita'", "NPD"),
+        ("4.9 / 5.11", "Durabilita'", durabilita),
     ]
     rows = "".join(f'<tr><td style="text-align:center;width:18%;">{r}</td><td style="width:45%;">{c}</td><td style="text-align:center;width:37%;">{p}</td></tr>' for r, c, p in chars)
 
@@ -155,7 +218,8 @@ def generate_ce_pdf(company: dict, commessa: dict, client_name: str, ce_data: di
     disegno = ce_data.get("disegno_riferimento", "") or ce_data.get("disegno_numero", "")
     ingegnere = ce_data.get("ingegnere_disegno", "")
     materiali = ce_data.get("materiali_saldabilita", ce_data.get("materiali", "S355JR - S275JR in accordo alla EN 10025-2"))
-    resilienza = ce_data.get("resilienza", "27 Joule a +/- 20 C")
+    resilienza = ce_data.get("resilienza", "27J a 20°C (JR)")
+    durabilita = ce_data.get("durabilita", "NPD")
 
     # Build structural characteristics with engineer name
     carat_strutturali = "Disegni Forniti dal committente"
@@ -202,7 +266,7 @@ def generate_ce_pdf(company: dict, commessa: dict, client_name: str, ce_data: di
             <div class="ce-char"><b>Resistenza al fuoco:</b> NPD</div>
             <div class="ce-char"><b>Reazione al fuoco:</b> (materiale classificato A1)</div>
             <div class="ce-char"><b>Sostanze pericolose:</b> NPD</div>
-            <div class="ce-char"><b>Durabilita':</b> NPD</div>
+            <div class="ce-char"><b>Durabilita':</b> {durabilita}</div>
             <div class="ce-char"><b>Caratteristiche strutturali:</b> {carat_strutturali}</div>
             <div class="ce-char"><b>Costruzione:</b> {costruzione}</div>
             <div class="ce-char"><b>Classe di esecuzione:</b> {classe_exec}</div>

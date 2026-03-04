@@ -2636,6 +2636,30 @@ async def download_pacchetto_consegna(cid: str, consegna_id: str, user: dict = D
         if not ft.get("disegno_numero"):
             ft["disegno_numero"] = preventivo.get("numero_disegno", "")
 
+    # ── DYNAMIC MATERIAL PROPERTIES from real lotti_cam ──
+    from services.pdf_fascicolo_tecnico import _get_material_properties, _get_durabilita
+    lotti = await db.lotti_cam.find(
+        {"commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0}
+    ).to_list(200)
+
+    mat_props = _get_material_properties(lotti)
+    ft["materiali_saldabilita"] = mat_props["materiali_saldabilita"]
+    ft["resilienza"] = mat_props["resilienza"]
+    ft["durabilita"] = _get_durabilita(comm)
+
+    # ── PESO DDT: sum from material_batches ──
+    ddt_doc_for_weight = await db.ddt_documents.find_one({"ddt_id": cons["ddt_id"], "user_id": user["user_id"]}, {"_id": 0})
+    if ddt_doc_for_weight and (ddt_doc_for_weight.get("peso_lordo_kg") or 0) == 0:
+        batches_for_weight = await db.material_batches.find(
+            {"commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0, "peso_kg": 1}
+        ).to_list(200)
+        total_weight = sum(float(b.get("peso_kg", 0) or 0) for b in batches_for_weight)
+        if total_weight > 0:
+            await db.ddt_documents.update_one(
+                {"ddt_id": cons["ddt_id"]},
+                {"$set": {"peso_lordo_kg": total_weight, "peso_netto_kg": total_weight}},
+            )
+
     merger = PdfWriter()
 
     # 1. DDT PDF
