@@ -183,10 +183,10 @@ export default function PlanningPage() {
     // ── Other handlers ───────────────────────────────────────────
 
     const handleDelete = async (commessaId) => {
-        if (!window.confirm('Eliminare questa commessa?')) return;
+        if (!window.confirm('Eliminare questa commessa?\n\nLe fatture collegate NON verranno eliminate e resteranno valide nel sistema SDI.')) return;
         try {
             await apiRequest(`/commesse/${commessaId}`, { method: 'DELETE' });
-            toast.success('Commessa eliminata');
+            toast.success('Commessa eliminata (fatture intatte)');
             fetchBoard();
         } catch (e) { toast.error(e.message); }
     };
@@ -548,20 +548,22 @@ function CommessaCard({ item, colors, isDragging, onDragStart, onDragEnd, onCard
                             </span>
                         )}
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1.5">
                         <button
                             onClick={(e) => { e.stopPropagation(); onCardClick(item); }}
-                            className="text-slate-400 hover:text-[#0055FF] transition-colors"
+                            className="p-1 rounded text-slate-400 hover:text-[#0055FF] hover:bg-blue-50 transition-colors"
                             title="Apri Hub Commessa"
+                            data-testid={`btn-open-${item.commessa_id}`}
                         >
-                            <ChevronRight className="h-3.5 w-3.5" />
+                            <ChevronRight className="h-4 w-4" />
                         </button>
                         <button
                             onClick={(e) => { e.stopPropagation(); onDelete(item.commessa_id); }}
-                            className="text-slate-300 hover:text-red-500 transition-colors"
-                            title="Elimina"
+                            className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Elimina commessa (le fatture NON vengono toccate)"
+                            data-testid={`btn-delete-${item.commessa_id}`}
                         >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="h-4 w-4" />
                         </button>
                     </div>
                 </div>
