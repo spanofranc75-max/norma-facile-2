@@ -76,35 +76,41 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
   - **DoP**: Auto-popola certificato EN 1090 n., nome/cognome (firmatario), luogo e data, firma dalle impostazioni azienda.
   - **CE**: Certificato n. dalle impostazioni, "Caratteristiche strutturali: Disegni forniti dal committente redatti dall'Ing. {nome} TAV. n. {numero}", "Costruzione: in accordo alla specifica del cliente disegno TAV. n. {numero}, EN 1090-2".
 
+## Bug Risolti (sessione 5 Marzo 2026 - Fork 3)
+- **P0 FIX DEFINITIVO: Cascade Delete CAM/Tracciabilità** - Il bug ricorrente dove eliminando un certificato la sezione CAM non si aggiornava era causato dal FRONTEND: `handleDeleteDoc` in `CommessaOpsPanel.js` chiamava solo `fetchData()` ma NON `fetchCamData()`. Il backend cascade delete (3 strategie: source_doc_id, colata numbers, nuke orphans) funzionava correttamente. Fix: aggiunto `fetchCamData(); onRefresh?.()` al handler. Toast ora mostra dettagli cascade. 10 test di regressione passati (5 pytest + 5 API contracts).
+- **FIX: Pulizia orfani database** - Rimossi 4 record orfani (2 lotti_cam + 2 material_batches) da documenti eliminati in sessioni precedenti.
+- **FIX: poppler-utils** - Installato permanentemente (presente in apt-packages.txt).
+
 ## Issue Pendenti
-- **P1**: Robustezza estrazione AI da PDF (strategia fallback, validazione utente)
+- **P1**: Verifica end-to-end generazione dinamica PDF (DoP/CE) con dati materiali reali
+- **P1**: Verifica flusso creazione DDT (nuovo dialog con numero editabile)
 - **P2**: Gestione eccezioni generiche (`except Exception`) in tutto il backend
 - **P2**: Cache frontend (utente deve fare hard refresh dopo deploy)
 
 ## Backlog Prioritizzato
 
 ### P0
+- Super Fascicolo Tecnico con copertina professionale (richiesta utente msg 415)
 - Firma digitale su tablet (QR code per fasi produzione)
 
 ### P1
-- Robustezza estrazione AI da PDF (strategia fallback multi-modello, validazione utente dati estratti)
+- Verifica end-to-end flusso DDT creazione (utente deve testare)
+- Robustezza estrazione AI da PDF (strategia fallback multi-modello)
 - Portale cliente read-only per tracking commesse
+- Aggiungere firma immagine al DoP
 
 ### P2
-- Gestione eccezioni generiche (`except Exception`) in tutto il backend → sostituire con eccezioni specifiche
+- Gestione eccezioni generiche in tutto il backend
 - Configurazione NAS come repository documenti
-- Refactoring PreventivoEditorPage.js (1000+ righe -> componenti più piccoli)
+- Refactoring PreventivoEditorPage.js (1000+ righe)
 
 ### Futuri
-- Portale cliente read-only
 - Analisi margini predittiva
 - Calendario produzione / Gantt
 - OCR per DDT fornitori
 - Report PDF mensili automatici
 - PWA per accesso offline
 - Migrazione storage certificati (da Base64 a object storage)
-- Versioning documenti
-- Funzionalità "Restore from Backup"
 
 ## File Chiave
 - `/app/frontend/src/pages/PreventivoEditorPage.js` - Editor preventivi
