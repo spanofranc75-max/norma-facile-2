@@ -244,7 +244,7 @@ export default function PlanningPage() {
                         onDragLeave={handleDragLeave}
                         onDrop={handleDrop}
                         onCardClick={(c) => {
-                            if (c.is_preventivo) navigate(`/preventivi/edit/${c.preventivo_id}`);
+                            if (c.is_preventivo) navigate(`/preventivi/${c.preventivo_id}`);
                             else navigate(`/commesse/${c.commessa_id}`);
                         }}
                         onDelete={handleDelete}
