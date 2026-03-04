@@ -83,16 +83,16 @@ def generate_dop_pdf(company: dict, commessa: dict, client_name: str, dop_data: 
     biz, addr, piva, phone, email, logo, firma = _co(company)
     comm_num = commessa.get("numero", "")
     comm_title = commessa.get("title", "")
-    redatto_da = dop_data.get("redatto_da", "")
+    redatto_da = dop_data.get("redatto_da", "") or company.get("responsabile_nome", "")
     classe_exec = commessa.get("classe_esecuzione", "EXC2")
     ddt_ref = dop_data.get("ddt_riferimento", "")
     ddt_data = dop_data.get("ddt_data", "")
     mandatario = dop_data.get("mandatario", client_name)
-    firmatario = dop_data.get("firmatario", "")
-    ruolo = dop_data.get("ruolo_firmatario", "Legale Rappresentante")
+    firmatario = dop_data.get("firmatario", "") or company.get("responsabile_nome", "")
+    ruolo = dop_data.get("ruolo_firmatario", "") or company.get("ruolo_firmatario", "Legale Rappresentante")
     luogo_data = dop_data.get("luogo_data_firma", "")
-    cert_num = dop_data.get("certificato_numero", "")
-    ente = dop_data.get("ente_notificato", "")
+    cert_num = dop_data.get("certificato_numero", "") or company.get("certificato_en1090_numero", "")
+    ente = dop_data.get("ente_notificato", "") or company.get("ente_certificatore", "")
     materiali_str = dop_data.get("materiali_saldabilita", "S355JR - S275JR in accordo alla EN 10025-2")
     resilienza = dop_data.get("resilienza", "27 Joule a +/- 20 C")
 
@@ -148,13 +148,27 @@ def generate_ce_pdf(company: dict, commessa: dict, client_name: str, ce_data: di
     comm_num = commessa.get("numero", "")
     comm_title = commessa.get("title", "")
     classe_exec = commessa.get("classe_esecuzione", "EXC2")
-    cert_num = ce_data.get("certificato_numero", "")
-    ente = ce_data.get("ente_notificato", "")
-    ente_num = ce_data.get("ente_numero", "")
+    cert_num = ce_data.get("certificato_numero", "") or company.get("certificato_en1090_numero", "")
+    ente = ce_data.get("ente_notificato", "") or company.get("ente_certificatore", "")
+    ente_num = ce_data.get("ente_numero", "") or company.get("ente_certificatore_numero", "")
     dop_num = ce_data.get("dop_numero", comm_num)
-    disegno = ce_data.get("disegno_riferimento", "")
+    disegno = ce_data.get("disegno_riferimento", "") or ce_data.get("disegno_numero", "")
+    ingegnere = ce_data.get("ingegnere_disegno", "")
     materiali = ce_data.get("materiali_saldabilita", ce_data.get("materiali", "S355JR - S275JR in accordo alla EN 10025-2"))
     resilienza = ce_data.get("resilienza", "27 Joule a +/- 20 C")
+
+    # Build structural characteristics with engineer name
+    carat_strutturali = "Disegni Forniti dal committente"
+    if ingegnere:
+        carat_strutturali += f" redatti dall'Ing. {ingegnere}"
+    if disegno:
+        carat_strutturali += f" TAV. n. {disegno}"
+
+    # Build construction line
+    costruzione = "in accordo alla specifica del cliente"
+    if disegno:
+        costruzione += f" disegno TAV. n. {disegno}"
+    costruzione += ", EN 1090-2"
 
     html = f"""<!DOCTYPE html><html><head><style>
     @page {{ size: A4; margin: 20mm; }}
@@ -189,8 +203,8 @@ def generate_ce_pdf(company: dict, commessa: dict, client_name: str, ce_data: di
             <div class="ce-char"><b>Reazione al fuoco:</b> (materiale classificato A1)</div>
             <div class="ce-char"><b>Sostanze pericolose:</b> NPD</div>
             <div class="ce-char"><b>Durabilita':</b> NPD</div>
-            <div class="ce-char"><b>Caratteristiche strutturali:</b> Disegni Forniti dal committente TAV. {disegno}</div>
-            <div class="ce-char"><b>Costruzione:</b> in accordo alla specifica del cliente disegno {disegno}, EN 1090-2</div>
+            <div class="ce-char"><b>Caratteristiche strutturali:</b> {carat_strutturali}</div>
+            <div class="ce-char"><b>Costruzione:</b> {costruzione}</div>
             <div class="ce-char"><b>Classe di esecuzione:</b> {classe_exec}</div>
         </div>
     </div>

@@ -346,8 +346,8 @@ body {
 
 # ── Header builder ──────────────────────────────────────────────
 
-def build_header_html(company: dict, client: dict) -> str:
-    """Build the two-column header (company left, client right in box)."""
+def build_header_html(company: dict, client: dict, no_client_border: bool = False) -> str:
+    """Build the two-column header (company left, client right)."""
     co = company or {}
     cl = client or {}
 
@@ -387,6 +387,7 @@ def build_header_html(company: dict, client: dict) -> str:
     cl_pec = safe(cl.get("pec"))
     cl_email = safe(cl.get("email"))
 
+    cl_border = "" if no_client_border else "border: 1px solid #999 !important; padding: 8px 10px !important;"
     return f"""
     <table class="header-table">
         <tr>
@@ -401,7 +402,7 @@ def build_header_html(company: dict, client: dict) -> str:
                     {"<br>Email: " + email if email else ""}
                 </div>
             </td>
-            <td class="client-cell">
+            <td class="client-cell" style="{cl_border}">
                 <div class="cl-label">Spett.le</div>
                 <div class="cl-name">{cl_name}</div>
                 <div class="cl-details">

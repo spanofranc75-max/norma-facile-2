@@ -118,6 +118,12 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
 
     // Consegne (Deliveries)
     const [consegnaLoading, setConsegnaLoading] = useState(false);
+    const [consegnaDialogOpen, setConsegnaDialogOpen] = useState(false);
+    const [consegnaForm, setConsegnaForm] = useState({
+        ddt_number: '', peso_kg: 0, num_colli: 1, note: '',
+    });
+    const [preventivoLines, setPreventivoLines] = useState([]);
+    const [selectedLineIndices, setSelectedLineIndices] = useState([]);
     const [rientroForm, setRientroForm] = useState({
         data_rientro: new Date().toISOString().slice(0, 10),
         ddt_fornitore_numero: '', ddt_fornitore_data: '',
@@ -409,11 +415,37 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         setFaseComplOpen(false);
     };
 
+    const openConsegnaDialog = async () => {
+        // Fetch preventivo lines if commessa has a linked preventivo
+        try {
+            const commData = await apiRequest(`/commesse/${commessaId}`);
+            if (commData?.preventivo_id) {
+                const prev = await apiRequest(`/preventivi/${commData.preventivo_id}`);
+                const lines = prev?.lines || [];
+                setPreventivoLines(lines);
+                setSelectedLineIndices(lines.map((_, i) => i)); // Select all by default
+            } else {
+                setPreventivoLines([]);
+                setSelectedLineIndices([]);
+            }
+        } catch { setPreventivoLines([]); setSelectedLineIndices([]); }
+        setConsegnaForm({ ddt_number: '', peso_kg: 0, num_colli: 1, note: '' });
+        setConsegnaDialogOpen(true);
+    };
+
     const handleCreaConsegna = async () => {
         setConsegnaLoading(true);
         try {
-            const result = await apiRequest(`/commesse/${commessaId}/consegne`, { method: 'POST', body: { note: '', peso_kg: 0, num_colli: 1 } });
+            const body = {
+                ddt_number: consegnaForm.ddt_number || null,
+                peso_kg: consegnaForm.peso_kg || 0,
+                num_colli: consegnaForm.num_colli || 1,
+                note: consegnaForm.note || '',
+                selected_line_indices: preventivoLines.length > 0 ? selectedLineIndices : null,
+            };
+            const result = await apiRequest(`/commesse/${commessaId}/consegne`, { method: 'POST', body });
             toast.success(result.message || 'Consegna creata');
+            setConsegnaDialogOpen(false);
             fetchData(); onRefresh?.();
         } catch (e) { toast.error(e.message); }
         finally { setConsegnaLoading(false); }
@@ -1049,7 +1081,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
             {/* ── CONSEGNE (DDT + DoP + CE) ── */}
             <Section title="Consegne al Cliente" icon={Truck} count={consegne.length}>
                 <div className="space-y-2">
-                    <Button size="sm" variant="outline" onClick={handleCreaConsegna} disabled={consegnaLoading} className="text-xs" data-testid="btn-nuova-consegna">
+                    <Button size="sm" variant="outline" onClick={openConsegnaDialog} disabled={consegnaLoading} className="text-xs" data-testid="btn-nuova-consegna">
                         {consegnaLoading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Plus className="h-3 w-3 mr-1" />} Nuova Consegna (DDT + DoP + CE)
                     </Button>
                     {consegne.length === 0 && <p className="text-[10px] text-slate-400 italic">Nessuna consegna registrata</p>}
@@ -2510,6 +2542,98 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                 sendUrl={emailPreview.sendUrl}
                 onSent={() => { fetchData(); onRefresh?.(); }}
             />
+
+            {/* Consegna Creation Dialog */}
+            <Dialog open={consegnaDialogOpen} onOpenChange={setConsegnaDialogOpen}>
+                <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="text-base">Nuova Consegna</DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500">Crea DDT + DoP + Etichetta CE</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                        <div>
+                            <Label className="text-xs font-semibold">Numero DDT</Label>
+                            <Input
+                                data-testid="consegna-ddt-number"
+                                value={consegnaForm.ddt_number}
+                                onChange={(e) => setConsegnaForm(f => ({ ...f, ddt_number: e.target.value }))}
+                                placeholder="Lascia vuoto per auto-numerazione"
+                                className="text-xs h-8 mt-1"
+                            />
+                            <p className="text-[10px] text-slate-400 mt-0.5">Es: DDT-2026-0005 o CL-2026-0003</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div>
+                                <Label className="text-xs font-semibold">Peso (kg)</Label>
+                                <Input
+                                    data-testid="consegna-peso"
+                                    type="number"
+                                    value={consegnaForm.peso_kg}
+                                    onChange={(e) => setConsegnaForm(f => ({ ...f, peso_kg: parseFloat(e.target.value) || 0 }))}
+                                    className="text-xs h-8 mt-1"
+                                />
+                            </div>
+                            <div>
+                                <Label className="text-xs font-semibold">N. Colli</Label>
+                                <Input
+                                    data-testid="consegna-colli"
+                                    type="number"
+                                    value={consegnaForm.num_colli}
+                                    onChange={(e) => setConsegnaForm(f => ({ ...f, num_colli: parseInt(e.target.value) || 1 }))}
+                                    className="text-xs h-8 mt-1"
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <Label className="text-xs font-semibold">Note</Label>
+                            <Textarea
+                                data-testid="consegna-note"
+                                value={consegnaForm.note}
+                                onChange={(e) => setConsegnaForm(f => ({ ...f, note: e.target.value }))}
+                                placeholder="Note consegna..."
+                                rows={2}
+                                className="text-xs mt-1"
+                            />
+                        </div>
+                        {preventivoLines.length > 0 && (
+                            <div>
+                                <Label className="text-xs font-semibold mb-1 block">Voci da includere nel DDT</Label>
+                                <p className="text-[10px] text-slate-400 mb-2">Seleziona le voci del preventivo da spedire con questa consegna</p>
+                                <div className="space-y-1.5 max-h-40 overflow-y-auto border rounded p-2">
+                                    {preventivoLines.map((line, idx) => (
+                                        <label key={idx} className="flex items-start gap-2 text-xs cursor-pointer hover:bg-slate-50 p-1 rounded" data-testid={`consegna-line-${idx}`}>
+                                            <Checkbox
+                                                checked={selectedLineIndices.includes(idx)}
+                                                onCheckedChange={(checked) => {
+                                                    setSelectedLineIndices(prev =>
+                                                        checked ? [...prev, idx] : prev.filter(i => i !== idx)
+                                                    );
+                                                }}
+                                                className="mt-0.5"
+                                            />
+                                            <div className="flex-1">
+                                                <span className="font-medium">{line.description || 'Voce senza descrizione'}</span>
+                                                <span className="text-slate-400 ml-2">({line.quantity || 1} {line.unit || 'pz'})</span>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+                                <div className="flex gap-2 mt-1">
+                                    <button className="text-[10px] text-blue-600 hover:underline" onClick={() => setSelectedLineIndices(preventivoLines.map((_, i) => i))}>Seleziona tutte</button>
+                                    <button className="text-[10px] text-blue-600 hover:underline" onClick={() => setSelectedLineIndices([])}>Deseleziona tutte</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <DialogFooter className="mt-3">
+                        <Button variant="outline" size="sm" onClick={() => setConsegnaDialogOpen(false)} className="text-xs">Annulla</Button>
+                        <Button size="sm" onClick={handleCreaConsegna} disabled={consegnaLoading} className="text-xs bg-[#1a3a6b]" data-testid="btn-conferma-consegna">
+                            {consegnaLoading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Truck className="h-3 w-3 mr-1" />}
+                            Crea Consegna
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

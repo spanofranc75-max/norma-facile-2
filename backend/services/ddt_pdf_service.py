@@ -20,13 +20,20 @@ def generate_ddt_pdf(doc: dict, company: dict = None) -> BytesIO:
     """Generate DDT PDF with unified template."""
     co = company or {}
 
-    # ── Client from embedded fields ──
+    # ── Client from embedded fields (full data) ──
     cl = {
         "business_name": doc.get("client_name", ""),
         "address": doc.get("client_address", ""),
+        "cap": doc.get("client_cap", ""),
+        "city": doc.get("client_city", ""),
+        "province": doc.get("client_province", ""),
+        "partita_iva": doc.get("client_piva", ""),
+        "codice_fiscale": doc.get("client_cf", ""),
+        "pec": doc.get("client_pec", ""),
+        "codice_sdi": doc.get("client_sdi", ""),
     }
 
-    header = build_header_html(co, cl)
+    header = build_header_html(co, cl, no_client_border=True)
 
     # ── Title ──
     ddt_type = doc.get("ddt_type", "vendita")

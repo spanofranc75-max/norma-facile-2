@@ -1,0 +1,91 @@
+{
+  "summary": "Iteration 120: Backend-only testing of Consegna (Delivery) features - DDT + DoP + CE modifications. All 15 tests passed (100%). Verified: (1) DDT number auto-generation with separate numbering for conto_lavoro (CL-YYYY-NNNN) vs vendita (DDT-YYYY-NNNN), (2) User-editable DDT numbers accepted, (3) DDT lines populated from preventivo descriptions via selected_line_indices, (4) Full client data stored in DDT documents, (5) DoP/CE PDF generation with company settings fallback, (6) CE PDF uses ingegnere_disegno field, (7) build_header_html no_client_border parameter removes DDT client border.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "issue": "CommessaCreate model does NOT support tipo_commessa field - commesse must be created via from-preventivo endpoints or MongoDB direct insert to set tipo_commessa",
+        "impact": "Workaround exists - use /api/commesse/from-preventivo/{preventivo_id} for proper commessa creation",
+        "endpoint": "POST /api/commesse/"
+      },
+      {
+        "issue": "crea_consegna looks for comm.get('preventivo_id') at root level, but commessa stores it in moduli.preventivo_id or linked_preventivo_id when created via POST /api/commesse/",
+        "impact": "preventivo_id must be at root level of commessa document (happens when created via from-preventivo endpoint)",
+        "endpoint": "POST /api/commesse/{cid}/consegne"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "ddt_number_auto_generation_vendita": {
+      "test": "POST /api/commesse/{cid}/consegne without ddt_number on vendita commessa",
+      "result": "PASS - Auto-generates DDT-YYYY-NNNN format"
+    },
+    "ddt_number_auto_generation_conto_lavoro": {
+      "test": "POST /api/commesse/{cid}/consegne without ddt_number on conto_lavoro commessa",
+      "result": "PASS - Auto-generates CL-YYYY-NNNN format"
+    },
+    "ddt_number_user_editable": {
+      "test": "POST /api/commesse/{cid}/consegne with custom ddt_number",
+      "result": "PASS - Custom number accepted and stored"
+    },
+    "ddt_lines_from_preventivo": {
+      "test": "POST /api/commesse/{cid}/consegne on commessa with preventivo_id",
+      "result": "PASS - DDT lines populated from preventivo descriptions (4 lines)"
+    },
+    "selected_line_indices": {
+      "test": "POST /api/commesse/{cid}/consegne with selected_line_indices=[0,1]",
+      "result": "PASS - Only selected lines included in DDT (2 lines)"
+    },
+    "full_client_data_in_ddt": {
+      "test": "DDT stores address, piva, cf, pec, sdi from client",
+      "result": "PASS - All client fields stored in DDT document"
+    },
+    "ddt_type_assignment": {
+      "test": "DDT ddt_type field reflects commessa tipo_commessa",
+      "result": "PASS - vendita → ddt_type='vendita', conto_lavoro → ddt_type='conto_lavoro'"
+    },
+    "build_header_html_no_client_border": {
+      "test": "PDF template build_header_html with no_client_border=True",
+      "result": "PASS - Removes border from client section (style=\"\")"
+    },
+    "generate_dop_pdf_company_fallback": {
+      "test": "generate_dop_pdf with empty dop_data",
+      "result": "PASS - Falls back to company settings (certificato_en1090_numero, responsabile_nome, ente_certificatore)"
+    },
+    "generate_ce_pdf_ingegnere_disegno": {
+      "test": "generate_ce_pdf with ingegnere_disegno and disegno_riferimento",
+      "result": "PASS - CE PDF generated with Caratteristiche strutturali section"
+    },
+    "pacchetto_pdf_endpoint": {
+      "test": "GET /api/commesse/{cid}/consegne/{id}/pacchetto-pdf",
+      "result": "PASS - PDF package generation accessible"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration120_consegne_ddt_dop_ce.py",
+    "/app/test_reports/pytest/iteration120_consegne_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "The code correctly implements separate DDT numbering (CL- vs DDT-) but relies on tipo_commessa field which is not set via standard commessa creation endpoint",
+    "DDT lines correctly sourced from preventivo.lines descriptions instead of material_batches as per requirements",
+    "DoP/CE fallback to company settings works as expected - cert_num, firmatario, ente all populated from company when not in fascicolo_tecnico"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration120_consegne_ddt_dop_ce.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "N/A (backend-only testing)"
+  },
+  "seed_data_creation": "Test fixtures create: (1) test user/session via MongoDB, (2) test client with full fields, (3) test commesse via API and direct MongoDB insert for conto_lavoro type, (4) test preventivo with 4 lines",
+  "test_credentials": "Auto-generated test user sessions cleaned up after tests",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 15 backend tests pass. DDT/DoP/CE consegna features verified. Note: tipo_commessa field for conto_lavoro requires creating commessa via from-preventivo endpoint or direct MongoDB insert - standard POST /api/commesse/ does not support this field in CommessaCreate model."
+}

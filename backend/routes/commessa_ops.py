@@ -4,6 +4,7 @@ All operational workflows within a commessa. Routes are nested under
 /commesse/{commessa_id}/... to keep the commessa as the single source of truth.
 """
 import uuid
+import re
 import logging
 import base64
 from datetime import datetime, timezone, timedelta
@@ -1714,7 +1715,6 @@ def _normalize_profilo(text: str) -> str:
     """Normalize profile description for fuzzy matching.
     Translates English/Italian equivalents: FLAT = PIATTO, ANGLE = ANGOLARE, etc.
     """
-    import re
     t = (text or "").upper().strip()
     # Compound descriptions → family names
     t = re.sub(r'\bFLAT\b', 'PIATTO', t)
@@ -1744,7 +1744,6 @@ def _extract_profile_base(text: str) -> str:
     For standard profiles (IPE, HEB, UPN): family + main size (e.g. IPE100, HEB200)
     For flat/tube/angle: family + FULL dimensions (e.g. PIATTO120X12, TUBO60X60X3)
     """
-    import re
     t = (text or "").upper().strip()
     if not t:
         return ""
@@ -2219,6 +2218,8 @@ class ConsegnaCreate(BaseModel):
     note: Optional[str] = ""
     peso_kg: Optional[float] = 0
     num_colli: Optional[int] = 1
+    ddt_number: Optional[str] = None  # User-editable DDT number
+    selected_line_indices: Optional[List[int]] = None  # Which preventivo lines to include
 
 
 @router.post("/{cid}/consegne")
@@ -2228,7 +2229,7 @@ async def crea_consegna(cid: str, data: ConsegnaCreate, user: dict = Depends(get
     comm = await get_commessa_or_404(cid, user["user_id"])
     company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
 
-    # Resolve client
+    # Resolve client (full data for DDT)
     client_name = ""
     client_doc = None
     if comm.get("client_id"):
@@ -2241,32 +2242,56 @@ async def crea_consegna(cid: str, data: ConsegnaCreate, user: dict = Depends(get
     suffix = len(existing) + 1
     comm_num = comm.get("numero", cid)
 
-    # Create DDT in ddt_documents collection
+    # Determine DDT type based on commessa type
+    is_conto_lavoro = comm.get("tipo_commessa") == "conto_lavoro" or comm.get("is_conto_lavoro", False)
+    ddt_type = "conto_lavoro" if is_conto_lavoro else "vendita"
+
+    # Create DDT number: user-provided or auto-generated with separate numbering
     ddt_id = f"ddt_{uuid.uuid4().hex[:12]}"
     year = ts().strftime("%Y")
-    ddt_count = await db.ddt_documents.count_documents({"user_id": user["user_id"], "ddt_type": "vendita"})
-    ddt_number = f"DDT-{year}-{ddt_count + 1:04d}"
 
-    # Build DDT lines from material batches
-    batches = await db.material_batches.find(
-        {"commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0}
-    ).to_list(100)
+    if data.ddt_number and data.ddt_number.strip():
+        ddt_number = data.ddt_number.strip()
+    else:
+        if is_conto_lavoro:
+            ddt_count = await db.ddt_documents.count_documents({"user_id": user["user_id"], "ddt_type": "conto_lavoro"})
+            ddt_number = f"CL-{year}-{ddt_count + 1:04d}"
+        else:
+            ddt_count = await db.ddt_documents.count_documents({"user_id": user["user_id"], "ddt_type": "vendita"})
+            ddt_number = f"DDT-{year}-{ddt_count + 1:04d}"
 
+    # Build DDT lines from PREVENTIVO descriptions (not material batches)
     lines = []
-    for i, b in enumerate(batches):
-        lines.append({
-            "line_id": f"ln_{uuid.uuid4().hex[:8]}",
-            "codice_articolo": b.get("heat_number", ""),
-            "description": f"{b.get('material_type','')} {b.get('dimensions','')}".strip(),
-            "unit": "kg",
-            "quantity": float(b.get("peso_kg", 0) or 0),
-            "qta_fatturata": 0,
-            "unit_price": 0,
-            "sconto_1": 0, "sconto_2": 0,
-            "vat_rate": "22",
-            "notes": f"Colata: {b.get('heat_number','')}",
-        })
+    preventivo = None
+    if comm.get("preventivo_id"):
+        preventivo = await db.preventivi.find_one(
+            {"preventivo_id": comm["preventivo_id"]}, {"_id": 0}
+        )
+
+    if preventivo and preventivo.get("lines"):
+        prev_lines = preventivo["lines"]
+        # If user selected specific lines, filter them
+        if data.selected_line_indices is not None:
+            selected = [prev_lines[i] for i in data.selected_line_indices if i < len(prev_lines)]
+        else:
+            selected = prev_lines
+
+        for i, pl in enumerate(selected):
+            lines.append({
+                "line_id": f"ln_{uuid.uuid4().hex[:8]}",
+                "codice_articolo": pl.get("codice_articolo", ""),
+                "description": pl.get("description", ""),
+                "unit": pl.get("unit", "pz"),
+                "quantity": float(pl.get("quantity", 1) or 1),
+                "qta_fatturata": 0,
+                "unit_price": 0,
+                "sconto_1": 0, "sconto_2": 0,
+                "vat_rate": pl.get("vat_rate", "22"),
+                "notes": "",
+            })
+
     if not lines:
+        # Fallback: use commessa title
         lines.append({
             "line_id": f"ln_{uuid.uuid4().hex[:8]}",
             "codice_articolo": comm_num,
@@ -2285,15 +2310,23 @@ async def crea_consegna(cid: str, data: ConsegnaCreate, user: dict = Depends(get
         "ddt_id": ddt_id,
         "user_id": user["user_id"],
         "number": ddt_number,
-        "ddt_type": "vendita",
-        "ddt_type_label": "DDT di Vendita",
+        "ddt_type": ddt_type,
+        "ddt_type_label": "DDT Conto Lavoro" if is_conto_lavoro else "DDT di Vendita",
         "client_id": comm.get("client_id", ""),
         "client_name": client_name,
+        "client_address": client_doc.get("address", "") if client_doc else "",
+        "client_cap": client_doc.get("cap", "") if client_doc else "",
+        "client_city": client_doc.get("city", "") if client_doc else "",
+        "client_province": client_doc.get("province", "") if client_doc else "",
+        "client_piva": client_doc.get("partita_iva", "") if client_doc else "",
+        "client_cf": client_doc.get("codice_fiscale", "") if client_doc else "",
+        "client_pec": client_doc.get("pec", "") if client_doc else "",
+        "client_sdi": client_doc.get("codice_sdi", "") if client_doc else "",
         "subject": f"Consegna {suffix} — Commessa {comm_num}",
         "destinazione": {},
-        "causale_trasporto": "Vendita",
+        "causale_trasporto": "Conto Lavoro" if is_conto_lavoro else "Vendita",
         "aspetto_beni": "Strutture metalliche",
-        "vettore": "",
+        "vettore": "Franco Mittente",
         "mezzo_trasporto": "Mittente",
         "porto": "Franco",
         "data_ora_trasporto": now.strftime("%d/%m/%Y %H:%M"),
@@ -2367,6 +2400,51 @@ async def download_pacchetto_consegna(cid: str, consegna_id: str, user: dict = D
         ft["mandatario"] = client_name
     if not ft.get("redatto_da"):
         ft["redatto_da"] = company.get("responsabile_nome", "")
+
+    # Auto-populate from company settings if not set in fascicolo_tecnico
+    if not ft.get("certificato_numero"):
+        ft["certificato_numero"] = company.get("certificato_en1090_numero", "")
+    if not ft.get("ente_notificato"):
+        ft["ente_notificato"] = company.get("ente_certificatore", "")
+    if not ft.get("ente_numero"):
+        ft["ente_numero"] = company.get("ente_certificatore_numero", "")
+    if not ft.get("firmatario"):
+        ft["firmatario"] = company.get("responsabile_nome", "")
+    if not ft.get("ruolo_firmatario"):
+        ft["ruolo_firmatario"] = company.get("ruolo_firmatario", "Legale Rappresentante")
+
+    # Auto-populate luogo e data from company city + DDT date
+    if not ft.get("luogo_data_firma"):
+        ddt_doc_check = await db.ddt_documents.find_one({"ddt_id": cons["ddt_id"]}, {"_id": 0, "data_ora_trasporto": 1})
+        ddt_date = ""
+        if ddt_doc_check:
+            raw_date = ddt_doc_check.get("data_ora_trasporto", "")
+            ddt_date = raw_date.split(" ")[0] if raw_date else ""
+        company_city = company.get("city", "")
+        ft["luogo_data_firma"] = f"{company_city}, {ddt_date}".strip(", ")
+
+    # Auto-populate DDT reference
+    if not ft.get("ddt_riferimento"):
+        ft["ddt_riferimento"] = cons.get("ddt_number", "")
+    if not ft.get("ddt_data"):
+        ddt_doc_check2 = await db.ddt_documents.find_one({"ddt_id": cons["ddt_id"]}, {"_id": 0, "data_ora_trasporto": 1})
+        if ddt_doc_check2:
+            raw = ddt_doc_check2.get("data_ora_trasporto", "")
+            ft["ddt_data"] = raw.split(" ")[0] if raw else ""
+
+    # Auto-populate disegno and ingegnere from preventivo
+    preventivo = None
+    if comm.get("preventivo_id"):
+        preventivo = await db.preventivi.find_one(
+            {"preventivo_id": comm["preventivo_id"]}, {"_id": 0}
+        )
+    if preventivo:
+        if not ft.get("disegno_riferimento"):
+            ft["disegno_riferimento"] = preventivo.get("numero_disegno", "")
+        if not ft.get("ingegnere_disegno"):
+            ft["ingegnere_disegno"] = preventivo.get("ingegnere_disegno", "")
+        if not ft.get("disegno_numero"):
+            ft["disegno_numero"] = preventivo.get("numero_disegno", "")
 
     merger = PdfWriter()
 
