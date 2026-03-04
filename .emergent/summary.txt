@@ -1,51 +1,58 @@
 <analysis>**original_problem_statement:**
-The user's initial project was to build a Quality Hub application. This has since expanded into a full-fledged ERP for their metalworking business, Norma Facile 2.0. The application is now in a Founder Mode deployment phase, where the user is performing live testing, identifying bugs, and preparing for daily operational use.
+The user's project is an ERP for their metalworking business, Norma Facile 2.0. The application is in a Founder Mode deployment, where the user performs live testing and requests features and bug fixes for daily operational use.
 
-The user's ongoing requests focus on stabilizing the application, fixing bugs discovered during their hands-on testing, ensuring all real-world data is correctly handled, and adding new features to streamline their workflow. The current request is to enhance the payment terms system to support a new calculation type: 30 giorni data fattura fine mese + 10 giorni (30 days from invoice date end-of-month + 10 days).
+The most recent requests have focused on making the financial and cost management modules more robust and accurate. This included:
+1.  Implementing complex payment term calculations (End of Month + N Days).
+2.  Fixing integrations with Fatture in Cloud.
+3.  Automating the generation of payment due dates from supplier invoices.
+4.  Implementing smart parsing of invoice lines to update inventory (stock and price) and analyze project margins.
+5.  Creating a module to calculate the real total hourly cost of the company, including salaries, taxes, and overhead.
+
+The current problem is a critical data integrity issue: when the user restores a backup from the preview environment to the live deployment environment, existing data is being duplicated instead of being updated.
 
 **User's preferred language**: Italian. The user communicates exclusively in Italian. The next agent **MUST** respond in Italian.
 
 **what currently exists?**
-The application is a comprehensive, full-stack ERP (React frontend, FastAPI backend, MongoDB) with core features for quotes, invoices, clients, traceability (commesse), and settings.
+The application is a comprehensive, full-stack ERP (React frontend, FastAPI backend, MongoDB) with modules for quotes, invoices, clients, traceability (commesse), inventory, and advanced financial controls.
 
-Key systems recently implemented or fixed:
--   **Invoicing System Overhaul:** A series of critical bugs in the invoicing workflow were fixed, including document numbering (now ignores deleted documents), list sorting, data validation (422 and 500 errors), PDF generation (preview loop and content), and allowing negative values for credit notes.
--   **Auto-population of Invoice Fields:** When a client is selected in an invoice, their default payment terms and the calculated due date are now automatically populated.
--   **Real-Time Site Dashboard (Semaforo):** A traffic light widget was added to the main dashboard to show the status of all active production jobs (on time, at risk, delayed) and now also includes phase-level delay tracking.
--   **Automatic WPS Generation:** A new module was created to suggest the correct Welding Procedure Specification (WPS) for EN 1090 jobs based on material, thickness, and welder qualifications.
--   **Payment Schedule in Quote PDF:** Quote PDFs now include a detailed table summarizing the payment installments.
--   **Data Migration Guidance:** The user was successfully guided on how to perform a backup and restore operation to move data from the preview environment to the deployment environment.
+Recently completed features:
+-   **Advanced Payment Term Logic:** Implemented End of Month + N Days calculation in both backend and frontend.
+-   **Supplier Invoice Automation:** The system now automatically calculates and generates payment schedules for incoming invoices by first checking the invoice XML data, and if not present, falling back to the supplier's default payment terms. A recalculate function for existing invoices has also been added.
+-   **Fatture in Cloud Integration Fix:** Resolved an issue where credentials were not being read correctly from environment variables.
+-   **Dynamic Inventory & Costing:** Invoice line items can now be processed to update inventory levels and calculate the Weighted Average Price (PMP) for materials.
+-   **Advanced Margin Analysis:** A new Financial Settings page allows the user to input total company costs (salaries, overheads, taxes) to calculate a Real Hourly Cost. This cost is now used in the commessa (job) margin analysis, providing a much more accurate view of profitability.
+-   **UI/UX Overhauls:** The Scadenziario (due dates) page was completely redesigned into a detailed, filterable table view, as requested by the user. The cost control page was also rewritten to support line-by-line cost allocation.
 
 **Last working item**:
-- **Last item agent was working:** The user needs to create a payment term of type 30 giorni data fattura fine mese + 10 giorni (30 days from invoice date, end of month + 10 days). The current system supports end of month logic but lacks the ability to add a subsequent number of days. The agent has started analyzing the code to add this functionality.
+- **Last item agent was working:** The user reported that restoring a backup duplicates existing records in the deployment environment. The agent has started investigating the backup/restore logic to fix this.
 - **Status:** IN PROGRESS
 - **Agent Testing Done:** N
-- **Which testing method agent to use?** Both. Frontend for testing the UI dialog and client-side date calculations. Backend for testing the model changes and ensuring data is saved and retrieved correctly.
+- **Which testing method agent to use?** backend testing agent. The agent should write a test script that: 1. Creates initial data. 2. Takes a backup. 3. Adds new data and modifies existing data in the live DB. 4. Restores the backup. 5. Verifies that no duplicates were created and data was correctly updated/inserted (upserted).
 - **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Implement End of Month + N Days Payment Logic (P0)**
+-   **Issue 1: Data Duplication on Backup Restore (P0)**
 
 **Issues Detail:**
--   **Issue 1: Implement End of Month + N Days Payment Logic**
-    -   **Attempted fixes:** The agent has identified the key files for this change:  (UI),  (client-side calculation), and the corresponding backend models.
+-   **Issue 1: Data Duplication on Backup Restore**
+    -   **Attempted fixes:** The agent located the relevant file for the logic: . The investigation has just begun.
     -   **Next debug checklist:**
-        1.  In , add an optional integer field like  to the  model.
-        2.  In , add a new number input field (e.g., Giorni successivi) that becomes visible only when the Fine Mese checkbox is ticked for an installment.
-        3.  Update the save logic in  to include this new  field in the payload.
-        4.  In , modify the  function. When an installment has , after calculating the end-of-month date, check for  and add them to the result.
-        5.  Apply the same logic in  for the automatic due date calculation.
-    -   **Why fix this issue and what will be achieved with the fix?** This will complete a user-requested feature, allowing them to model all their real-world payment terms accurately within the system, increasing its utility.
+        1.  Analyze the  function in .
+        2.  The current logic likely uses a simple  for each document in the backup file, which causes duplicates.
+        3.  The solution is to replace  with .
+        4.  A robust, unique key must be chosen for the  for each collection (e.g.,  for invoices, VAT number for clients/suppliers). The default MongoDB  cannot be used as it differs between environments.
+        5.  Implement this upsert logic for all collections handled in the backup/restore process.
+    -   **Why fix this issue and what will be achieved with the fix?** This is critical for data integrity. Fixing it will allow the user to safely synchronize data from the preview to the deployment environment without corrupting the production database.
     -   **Status:** IN PROGRESS
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Both
+    -   **Should Test frontend/backend/both after fix?** Backend
 
 **In progress Task List**:
--   **Task 1: Implement End of Month + N Days Payment Logic**
-    -   **Where to resume:** Modify the backend Pydantic model () to add the  field.
-    -   **What will be achieved with this?** The user will be able to configure their specific payment terms.
+-   **Task 1: Implement Upsert Logic in Backup Restore**
+    -   **Where to resume:** Modify the  function in  to use an  with  strategy.
+    -   **What will be achieved with this?** A safe, non-destructive data migration process that prevents data duplication.
     -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Both
+    -   **Should Test frontend/backend/both after fix?** Backend
     -   **Blocked on something:** No
 
 **Upcoming and Future Tasks**
@@ -63,14 +70,13 @@ Key systems recently implemented or fixed:
 *   Implement versioning for key documents.
 
 **Completed work in this session**
--   **Bug Fix: Invoicing System Overhaul:** Resolved multiple critical bugs related to saving invoices (422, 500 errors), document numbering (now ignores deleted records), list sorting, and PDF preview looping/content.
--   **Feature: Invoice Number Manual Edit:** The invoice number is now an editable field in the UI.
--   **Feature: Auto-populate Invoice Fields:** The invoice editor now automatically fills in the payment terms and calculates the due date when a client is selected.
--   **Feature: Negative Values in Invoice Lines:** Enabled negative quantity/price in invoice lines to handle credit notes and advance payment deductions. Removed default numeric values to reduce user confusion.
--   **Feature: Traffic Light Dashboard & Phase Tracking:** Implemented a dashboard widget for job status and enhanced it with planned dates () for individual production phases.
--   **Feature: Automatic WPS Generator:** Created a full-featured module for generating Welding Procedure Specifications.
--   **Feature: Payment Schedule in Quote PDF:** Quote PDFs now contain a summary table of payment installments.
--   **Bug Fix: Bank Account Dropdown:** Fixed a Pydantic validation bug that prevented company settings (including bank accounts) from being saved correctly.
+-   **Feature: End of Month + N Days Payment Logic:** Implemented the full backend and frontend logic for a new payment term calculation.
+-   **Feature: Automatic Due Date Calculation for Invoices:** The system now automatically generates payment schedules for supplier invoices based on XML data or supplier defaults. Includes a manual recalculation feature.
+-   **Bug Fix: Fatture in Cloud Integration:** Fixed credential loading and date mapping issues when sending invoices to the SDI.
+-   **Feature: Advanced Invoice Line Processing (Inventory & Cost Control):** Implemented smart parsing of invoice lines to update inventory (stock quantity, Weighted Average Price) and assign costs directly to jobs or general expenses.
+-   **Feature: Real Company Cost Module:** Created a new Financial Settings page for the user to define overheads and labor costs, which automatically calculates a Real Hourly Cost for the business. This cost is now used for accurate margin analysis on jobs.
+-   **UI/UX: Scadenziario (Due Dates) Redesign:** Completely rewrote the due dates page into a detailed, sortable, and filterable table view based on user feedback.
+-   **UI/UX: Cost Control Page Redesign:** Rebuilt the UI to support line-by-line cost allocation from supplier invoices to inventory, jobs, or overhead.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1: Pydantic Validation on Migrated Data**
@@ -80,75 +86,72 @@ Key systems recently implemented or fixed:
     -   **Is recurring issue?** Y
 
 **Code Architecture**
-extra_daysextra_daysextra_days
+scadenze_pagamentoextra_days
 
 **Key Technical Concepts**
--   **Pydantic Model Evolution:** The session required evolving Pydantic models from strict Enums to flexible strings () and adding validators to handle empty strings from the frontend, resolving multiple 422 errors.
--   **Dynamic Document Numbering:** The invoice numbering logic was refactored from a simple counter to a dynamic function that scans the database for the true maximum number, making it resilient to document deletions.
--   **Client-Side Data Hydration & Calculation:** Implemented logic in  to automatically calculate and set the  state based on the selected , improving user experience.
--   **Authenticated Fetch for Binary Data:** Solved the PDF preview loop by fetching the PDF as a blob with  and then creating an object URL for the , a standard pattern for displaying protected binary content in SPAs.
+-   **Upsert Logic for Data Synchronization:** The core concept for the current task, using  with  to prevent data duplication during import/restore operations.
+-   **Weighted Average Price (PMP) Calculation:** The financial logic implemented to dynamically update inventory costs as new materials are purchased at different prices.
+-   **Full Company Costing Model:** Moving beyond simple material costs to a comprehensive model that includes labor (salaries, taxes) and overheads to calculate a Real Hourly Cost, which provides accurate job profitability.
+-   **Multi-Layered Data Fallback System:** A robust import strategy where the system first tries to get data from a primary source (e.g., invoice XML) and falls back to a secondary source (e.g., supplier's default settings) if the primary is unavailable.
+-   **Reactive UI for Complex Data Structures:** Building frontend components (like the ) to display and manage array-based data within a document (e.g., multiple payment installments for a single invoice).
 
 **key DB schema**
--   **invoices**:  field changed from an Enum-like string to a free-form .  is the canonical, user-facing invoice number.
--   **commesse**: The  array objects now include an optional  (datetime) field.
--   **wps_procedures**: New collection storing the WPS knowledge base.
--   **payment_types**: The  array objects will need a new field, .
+-   **articles**: New fields added: , , .
+-   **fatture_ricevute**:  (single date) has been deprecated in favor of a new  array of objects  to support multiple installments.
+-   **company_settings**: Contains a new embedded document, , to store the data for the real hourly cost calculation.
+-   **clients**: Used for both clients and suppliers. The  is used as a fallback for calculating invoice due dates.
 
 **All files of reference**
-*   **/app/frontend/src/components/PaymentTypeDialog.js**: The UI for creating payment terms. Needs modification for the current task.
-*   **/app/frontend/src/utils/date.js**: The client-side date calculation logic. Needs modification.
-*   **/app/frontend/src/pages/InvoiceEditorPage.js**: The page where the automatic due date calculation is used.
-*   **/app/backend/models/payment_type.py**: The backend model defining the payment type structure. Needs modification.
+*   **/app/backend/routes/backup.py**: The primary file to be modified for the current task. It contains the backup and restore logic.
+*   **/app/backend/routes/fatture_ricevute.py**: Example of where unique business keys (like P.IVA) are used to match documents.
+*   **/app/backend/routes/invoices.py**: Example of where  is used as a unique key.
 
 **Areas that need refactoring**:
-*    and  remain large and complex. Breaking them down into smaller, focused components (e.g., , ) would improve maintainability.
-*   The sorting of the invoice list is done on the frontend. A more robust long-term solution would be to store a sortable version of the invoice number in the database and sort on the backend.
+*   The backup/restore logic in  should be refactored to be more generic, iterating over a configuration of collections and their unique keys rather than being hardcoded.
+*    and  remain large and complex. Breaking them down into smaller, focused components would improve maintainability.
 
 **Critical Info for New Agent**
 *   **You MUST respond in Italian.**
-*   **The immediate priority (P0) is to implement the End of Month + N Days logic for payment terms.** The user is waiting for this feature.
-*   The invoicing workflow has been a major source of bugs. Be extremely careful when making changes to any file related to invoices. Test thoroughly.
-*   Always remind the user to perform a hard refresh (**Ctrl+Shift+R**) after you deploy frontend changes to avoid them testing a cached, older version of the app.
+*   The immediate priority (P0) is to fix the **data duplication on backup restore**. The user cannot safely move data from testing to production until this is resolved.
+*   The fix requires implementing an upsert strategy (update or insert) instead of the current insert-only logic. This involves identifying a unique business key for each collection.
+*   The user is actively using the application for their business, so data integrity is paramount.
 
 **documents and test reports created in this job**
-*   
-*   
-*   
-*   
-*    was updated.
+*   Numerous test reports were generated by the testing agent, with the final ones showing 100% pass rates for the features developed. Examples: , , etc.
+*    was consistently updated.
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **(PENDING)** User asks for help to create a payment term of type 30 giorni data fattura fine mese + 10 giorni.
-9.  User reports two issues: invoice counter includes deleted invoices, and the invoice list is not sorted correctly by number.
-8.  User reports two issues: default numbers in cells are confusing, and they need to subtract an advance payment using a negative value.
-7.  User reports PDF preview shows the wrong payment term description ( instead of ).
-6.  User reports a 404 error in the PDF preview modal.
-5.  User reports a 422 error; the due date is not being auto-populated when payment terms are set.
-4.  User reports a persistent 500 error after the previous fix.
-3.  User reports a 422 error when saving an invoice with a custom payment term.
-2.  User reports that selecting a client in the invoice editor does not auto-populate their default payment terms.
-1.  User reports three initial issues: invoice counter started from 3, invoice number is not manually editable, and PDF preview is in a loop.
+10. **(PENDING)** User reports that when they restore a backup from the preview environment to the deployment environment, it duplicates data that already exists.
+9.  User provides a detailed prompt for a major new feature: Intelligent Invoice Line Importing to connect purchasing with inventory management and margin analysis.
+8.  User provides a detailed prompt for a major new feature: a Real Company Cost module to calculate the true hourly cost of labor including taxes and overhead.
+7.  User provides a detailed prompt for a second redesign of the Scadenziario page, requesting a table-based layout similar to an example image, after finding the fintech card design illegible.
+6.  User reports the red text in the fintech redesign of the Scadenziario page is unreadable and requests a different layout.
+5.  User provides a detailed prompt for a fintech style redesign of the Scadenziario (due dates) page.
+4.  User explains the core business problem: the system isn't performing the financial math of calculating due dates if the invoice XML doesn't explicitly contain them, leading to an empty due date list.
+3.  User reports that supplier invoices are not automatically generating payment due dates in the scadenziario (due date planner).
+2.  User reports a 400 error when trying to send an invoice to the SDI (Italian tax authority system).
+1.  User confirms they have the necessary credentials for the Fatture in Cloud integration.
 
 **Project Health Check:**
-*   **Working:** The core ERP workflows for quotes, invoices, and production management are stable. Recently added features like the WPS generator and traffic light dashboard are complete.
+*   **Working:** Core ERP workflows are operational. Advanced financial analysis, inventory, and cost control modules are now implemented and tested.
 *   **Broken:**
-    *   The payment term creation system cannot handle the user's specific EOM + N days requirement, which is the current active task.
+    *   The backup/restore functionality is critically broken, causing data duplication. This prevents safe data migration from preview to production.
 *   **Mocked:** No mocked data.
 
 **3rd Party Integrations**
-*   **Fatture in Cloud:** For importing supplier invoices.
+*   **Fatture in Cloud:** For importing/exporting invoices with the Italian SDI system.
 *   **Resend:** For sending email notifications.
 *   **Google Auth:** Emergent-managed for user login.
 *   **WeasyPrint & pypdf:** For backend PDF generation.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES. The testing agent was used multiple times to validate large features and bug fixes, achieving 100% pass rates.
+-   **Testing agent used after significant changes:** YES. The agent extensively and successfully used  after every major feature implementation in this session, achieving 100% pass rates.
 -   **Troubleshoot agent used after agent stuck in loop:** NO.
 -   **Test files created:** Multiple  files were created.
--   **Known regressions:** None currently active. Previous regressions were caught and fixed within the session.
+-   **Known regressions:** None currently active.
 
 **Credentials to test flow:**
 *   Login is via the Google OAuth flow on the preview URL.
 
 **What agent forgot to execute**
-*   The agent has been thorough in addressing user requests as they came in. No major tasks were forgotten. The current task is a direct continuation of the user's last message.</analysis>
+*   The agent has been thorough and addressed all user requests sequentially. No tasks appear to have been overlooked. The current task is a direct response to the user's latest bug report.</analysis>
