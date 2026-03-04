@@ -2143,7 +2143,7 @@ async def _match_profili_to_commesse(
             "commessa_numero": comm_info.get("numero", ""),
             "commessa_titolo": comm_info.get("title", ""),
             "match_source": match_source,
-            "profile_index": len(results),  # For user selection
+            "profile_index": len(risultati),  # For user selection
         }
 
         # ── Create CAM lotto and material_batch ONLY if not dry_run ──
