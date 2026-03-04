@@ -67,14 +67,14 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 
 - **Feature: Controllo di Gestione Avanzato (Costo Orario Pieno)** - Nuovo servizio `cost_calculator.py` per calcolo costo orario reale aziendale: (Stipendi + Contributi + Overhead) / Ore Lavorabili. Pagina "Configurazione Finanziaria" con il "Numero Magico" (costo orario pieno) e form configurazione. Log ore per commessa. Analisi Margini aggiornata con barre separate Materiali (ambra) + Personale (viola) e alert a 4 livelli (verde >20%, giallo 10-20%, arancione <10%, rosso <0%).
 
-## Issue Pendenti
-- **P2**: Validazione Pydantic su dati migrati (response_model rimosso temporaneamente)
-- **P2**: Cache frontend (utente deve fare hard refresh dopo deploy)
+## Bug Risolti (sessione 4 Marzo 2026 - Fork 2)
+- **P0 FIX: Logica Matching Tracciabilità Materiali** - La funzione `_extract_profile_base` in `commessa_ops.py` generava chiavi troppo generiche per profili piatti/tubo/angolari (es. FLAT 120X12 e FLAT 120X7 entrambi mappati a "PIATTO120"). Fix: aggiunto collasso spazi intorno a X (`120 X 12` → `120X12`), migliorato parsing codici prodotto. Step C del matching reso più restrittivo: rimosso matching generico per sottostringhe/dimensioni, sostituito con match famiglia+dimensioni identiche. 26 unit test in `test_profile_matching.py`, tutti passano.
+- **P0 FIX DEFINITIVO: Bug Creazione Cliente/Fornitore** - Ripristinata validazione Pydantic sugli endpoint POST/PUT di `clients.py`. I modelli `ClientCreate`/`ClientUpdate` ora usano `model_validator(mode='before')` per gestire automaticamente valori `null` dal frontend (li rimuove e usa i default Pydantic). `ConfigDict(extra="ignore")` per ignorare campi sconosciuti. Migliorata gestione errori 422 in `apiRequest.js` per mostrare messaggi specifici (campo + messaggio) invece di JSON raw. 18 test CRUD in `test_iteration119_client_crud.py`, tutti passano.
 
-## Bug Risolti (sessione 4 Marzo 2026 - Fork)
-- **P0 FIX: Duplicazione dati nel Restore Backup** - La funzione `restore_backup` in `backup.py` usava logica "trova → salta se esiste", causando duplicati quando il PK mancava e non aggiornando mai i record modificati. Riscritta con `update_one(..., upsert=True)` per ogni documento. Aggiunta chiave PK per `company_settings` (user_id) e `catalogo_profili` (codice). La response ora restituisce `total_inserted`, `total_updated`, `total_errors`. Frontend aggiornato per riflettere la nuova logica. Test backend 100% (10/10 pytest).
-- **BUG FIX CRITICO: Errore 400/crash creazione Cliente/Fornitore** - Causa: `<html lang="en">` attivava la traduzione automatica di Chrome che manipolava il DOM, causando crash di React (`removeChild` error nel componente `<Text>`). Fix: cambiato `lang="it"`, aggiunto `translate="no"` e meta `google=notranslate`. Inoltre rimosso Pydantic rigido dagli endpoint clients per tollerare null/stringhe vuote.
-- **Feature: Condizioni Pagamento Separate Cliente/Fornitore** - Aggiunti campi `supplier_payment_type_id`, `supplier_payment_type_label`, `supplier_iban`, `supplier_banca` al modello Client. FornitoriPage ora usa i campi supplier dedicati. ClientsPage e FornitoriPage mostrano entrambe le sezioni pagamento quando il tipo è `cliente_fornitore`. Il calcolo scadenze fatture ricevute (`payment_calculator.py`) ora usa prioritariamente `supplier_payment_type_id`.
+## Issue Pendenti
+- **P1**: Robustezza estrazione AI da PDF (strategia fallback, validazione utente)
+- **P2**: Gestione eccezioni generiche (`except Exception`) in tutto il backend
+- **P2**: Cache frontend (utente deve fare hard refresh dopo deploy)
 
 ## Backlog Prioritizzato
 
@@ -82,10 +82,12 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - Firma digitale su tablet (QR code per fasi produzione)
 
 ### P1
-- Dashboard "semaforo" lavori in tempo reale
+- Robustezza estrazione AI da PDF (strategia fallback multi-modello, validazione utente dati estratti)
+- Portale cliente read-only per tracking commesse
 
 ### P2
-- Generazione automatica WPS per EN 1090
+- Gestione eccezioni generiche (`except Exception`) in tutto il backend → sostituire con eccezioni specifiche
+- Configurazione NAS come repository documenti
 - Refactoring PreventivoEditorPage.js (1000+ righe -> componenti più piccoli)
 
 ### Futuri
