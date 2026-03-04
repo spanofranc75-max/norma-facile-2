@@ -1,0 +1,72 @@
+{
+  "summary": "Iteration 121: Backend-only testing of Cascade Delete fix for CAM/Batch cleanup when deleting certificates. All 10 tests passed (100%). Verified: (1) DELETE /api/commesse/{cid}/documenti/{doc_id} correctly deletes document AND returns cascade info with CAM/Batch counts, (2) GET /api/cam/lotti?commessa_id={cid} correctly returns lotti_cam filtered by commessa, (3) POST /api/commesse/{cid}/documenti (cert upload) works correctly, (4) Cascade response JSON includes 'cascade' field with format 'CAM:N Batch:N Copie:N Archivio:N'.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "cascade_delete_response": {
+      "endpoint": "DELETE /api/commesse/{cid}/documenti/{doc_id}",
+      "test": "Delete cert with linked CAM/batches",
+      "result": "PASS - Returns {'message': '...', 'cascade': 'CAM:1 Batch:1 Copie:0 Archivio:0'}"
+    },
+    "cascade_deletes_cam_lotti": {
+      "endpoint": "DELETE /api/commesse/{cid}/documenti/{doc_id}",
+      "test": "Verify CAM lotti deleted via source_doc_id strategy",
+      "result": "PASS - All linked lotti_cam records deleted"
+    },
+    "cascade_deletes_material_batches": {
+      "endpoint": "DELETE /api/commesse/{cid}/documenti/{doc_id}",
+      "test": "Verify material_batches deleted via source_doc_id strategy",
+      "result": "PASS - All linked material_batches records deleted"
+    },
+    "cascade_nuke_orphans": {
+      "endpoint": "DELETE /api/commesse/{cid}/documenti/{doc_id}",
+      "test": "When last cert deleted, all orphan CAM/batches cleaned",
+      "result": "PASS - Strategy 3 NUKE works correctly"
+    },
+    "cam_lotti_filter": {
+      "endpoint": "GET /api/cam/lotti?commessa_id={cid}",
+      "test": "Filter lotti_cam by commessa_id",
+      "result": "PASS - Returns {lotti: [...], total: N} filtered by commessa"
+    },
+    "document_upload": {
+      "endpoint": "POST /api/commesse/{cid}/documenti",
+      "test": "Upload certificate with tipo=certificato_31",
+      "result": "PASS - Returns {doc_id, nome_file, tipo}"
+    },
+    "preserve_other_cert_data": {
+      "test": "Delete cert A, verify cert B data preserved",
+      "result": "PASS - Deleting one cert does not affect other cert's CAM/batches"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_cascade_delete.py",
+    "/app/backend/tests/test_cascade_delete_api_contracts.py",
+    "/app/test_reports/pytest/cascade_delete_results.xml",
+    "/app/test_reports/pytest/cascade_api_contracts_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Backend delete_document endpoint at line 1450-1530 implements 3-strategy cascade delete: (1) by source_doc_id, (2) by colata numbers, (3) NUKE orphans when last cert deleted",
+    "Cascade info format 'CAM:N Batch:N Copie:N Archivio:N' allows frontend to display what was cleaned up",
+    "The fix in frontend (adding fetchCamData() call in handleDeleteDoc at line 666-672) cannot be verified via API, but backend correctly provides cascade info for frontend to refresh CAM section"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_cascade_delete_api_contracts.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "N/A (backend-only testing)"
+  },
+  "seed_data_creation": "Test fixtures create: (1) test user/session via MongoDB, (2) test commessa via API, (3) test certificates uploaded via API, (4) CAM lotti and material_batches inserted via MongoDB for cascade testing",
+  "test_credentials": "Auto-generated test user sessions cleaned up after tests",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All 10 backend tests pass for cascade delete functionality. The backend correctly: (1) deletes certificates, (2) cascade-deletes linked CAM lotti and material_batches, (3) returns cascade info in response for frontend feedback. The frontend fix (adding fetchCamData() in handleDeleteDoc) cannot be tested via API but is confirmed by code review."
+}

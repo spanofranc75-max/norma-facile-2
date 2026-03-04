@@ -665,9 +665,9 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
 
     const handleDeleteDoc = async (docId) => {
         try {
-            await apiRequest(`/commesse/${commessaId}/documenti/${docId}`, { method: 'DELETE' });
-            toast.success('Documento eliminato');
-            fetchData();
+            const res = await apiRequest(`/commesse/${commessaId}/documenti/${docId}`, { method: 'DELETE' });
+            toast.success(res.cascade ? `Documento eliminato (${res.cascade})` : 'Documento eliminato');
+            fetchData(); fetchCamData(); onRefresh?.();
         } catch (e) { toast.error(e.message); }
     };
 
