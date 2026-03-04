@@ -33,9 +33,9 @@ class ClientBase(BaseModel):
     business_name: str = Field(..., description="Ragione sociale / Nome")
     client_type: str = Field(default="cliente", description="cliente, fornitore, cliente_fornitore")
     persona_fisica: bool = False
-    titolo: str = ""
-    cognome: str = ""
-    nome: str = ""
+    titolo: Optional[str] = ""
+    cognome: Optional[str] = ""
+    nome: Optional[str] = ""
 
     # Dati fiscali
     codice_fiscale: Optional[str] = None
@@ -44,11 +44,11 @@ class ClientBase(BaseModel):
     pec: Optional[str] = None
 
     # Indirizzo
-    address: str = ""
-    cap: str = ""
-    city: str = ""
-    province: str = ""
-    country: str = "IT"
+    address: Optional[str] = ""
+    cap: Optional[str] = ""
+    city: Optional[str] = ""
+    province: Optional[str] = ""
+    country: Optional[str] = "IT"
 
     # Contatti principali
     phone: Optional[str] = None
@@ -131,20 +131,20 @@ class ClientResponse(BaseModel):
 
     client_id: str
     business_name: str
-    client_type: str = "cliente"  # String for backward compat
+    client_type: str = "cliente"
     persona_fisica: bool = False
-    titolo: str = ""
-    cognome: str = ""
-    nome: str = ""
+    titolo: Optional[str] = ""
+    cognome: Optional[str] = ""
+    nome: Optional[str] = ""
     codice_fiscale: Optional[str] = None
     partita_iva: Optional[str] = None
     codice_sdi: Optional[str] = None
     pec: Optional[str] = None
-    address: str = ""
-    cap: str = ""
-    city: str = ""
-    province: str = ""
-    country: str = "IT"
+    address: Optional[str] = ""
+    cap: Optional[str] = ""
+    city: Optional[str] = ""
+    province: Optional[str] = ""
+    country: Optional[str] = "IT"
     phone: Optional[str] = None
     cellulare: Optional[str] = None
     fax: Optional[str] = None
