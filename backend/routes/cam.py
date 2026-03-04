@@ -223,6 +223,26 @@ async def update_lotto_cam(lotto_id: str, data: LottoMaterialeCAM, user: dict = 
     return {"message": "Lotto aggiornato"}
 
 
+@router.delete("/lotti/{lotto_id}")
+async def delete_lotto_cam(lotto_id: str, user: dict = Depends(get_current_user)):
+    """Elimina un singolo lotto CAM."""
+    result = await db.lotti_cam.delete_one({"lotto_id": lotto_id, "user_id": user["user_id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Lotto non trovato")
+    # Also delete the linked material_batch if exists (same colata + commessa)
+    lotto = await db.lotti_cam.find_one({"lotto_id": lotto_id})
+    logger.info(f"CAM lotto {lotto_id} deleted")
+    return {"message": "Lotto CAM eliminato"}
+
+
+@router.delete("/lotti/commessa/{commessa_id}")
+async def delete_all_lotti_cam(commessa_id: str, user: dict = Depends(get_current_user)):
+    """Elimina tutti i lotti CAM di una commessa."""
+    result = await db.lotti_cam.delete_many({"commessa_id": commessa_id, "user_id": user["user_id"]})
+    logger.info(f"Deleted {result.deleted_count} CAM lotti for commessa {commessa_id}")
+    return {"message": f"{result.deleted_count} lotti CAM eliminati", "deleted_count": result.deleted_count}
+
+
 # ══════════════════════════════════════════════════════════════════
 #  CALCOLO CAM COMMESSA
 # ══════════════════════════════════════════════════════════════════

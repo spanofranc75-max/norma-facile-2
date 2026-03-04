@@ -4,6 +4,7 @@ from fastapi.responses import StreamingResponse
 from datetime import datetime, timezone
 from typing import Optional
 import uuid
+import logging
 
 from core.database import db
 from routes.auth import get_current_user
@@ -12,6 +13,7 @@ from models.fpc import (
     DEFAULT_FPC_CONTROLS,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/fpc", tags=["FPC - EN 1090"])
 
 
@@ -180,9 +182,25 @@ async def update_batch(batch_id: str, body: MaterialBatchCreate, user: dict = De
 
 @router.delete("/batches/{batch_id}")
 async def delete_batch(batch_id: str, user: dict = Depends(get_current_user)):
+    # Find the batch first to get colata/commessa for cascade delete
+    batch = await db.material_batches.find_one(
+        {"batch_id": batch_id, "user_id": user["user_id"]},
+        {"_id": 0, "heat_number": 1, "commessa_id": 1}
+    )
     result = await db.material_batches.delete_one({"batch_id": batch_id, "user_id": user["user_id"]})
     if result.deleted_count == 0:
         raise HTTPException(404, "Lotto non trovato")
+    
+    # Cascade: delete linked CAM lotto (same colata + commessa)
+    if batch and batch.get("heat_number") and batch.get("commessa_id"):
+        cam_del = await db.lotti_cam.delete_many({
+            "numero_colata": batch["heat_number"],
+            "commessa_id": batch["commessa_id"],
+            "user_id": user["user_id"],
+        })
+        if cam_del.deleted_count > 0:
+            logger.info(f"Cascade: deleted {cam_del.deleted_count} CAM lotti for batch {batch_id}")
+    
     return {"status": "deleted"}
 
 

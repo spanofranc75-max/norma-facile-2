@@ -1337,6 +1337,20 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                 <Leaf className="h-3 w-3 mr-1" /> Green Certificate
                             </Button>
                         )}
+                        {camLotti.length > 0 && (
+                            <Button size="sm" variant="outline" className="text-xs border-red-300 text-red-600 hover:bg-red-50 ml-auto"
+                                data-testid="btn-delete-all-cam"
+                                onClick={async () => {
+                                    if (!window.confirm(`Eliminare tutti i ${camLotti.length} lotti CAM di questa commessa?`)) return;
+                                    try {
+                                        await apiRequest(`/cam/lotti/commessa/${commessaId}`, { method: 'DELETE' });
+                                        toast.success('Tutti i lotti CAM eliminati');
+                                        fetchData();
+                                    } catch (err) { toast.error(err.message || 'Errore eliminazione'); }
+                                }}>
+                                <Trash2 className="h-3 w-3 mr-1" /> Elimina Tutti
+                            </Button>
+                        )}
                     </div>
 
                     {/* Import from AI-analyzed certificates */}
@@ -1365,10 +1379,10 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
 
                     {/* Material list */}
                     {camLotti.map(lotto => (
-                        <div key={lotto.lotto_id} className={`p-2 rounded border text-xs cursor-pointer hover:shadow-sm transition-shadow ${lotto.conforme_cam ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}
-                             onClick={() => openEditCamLotto(lotto)} data-testid={`cam-lotto-${lotto.lotto_id}`}>
+                        <div key={lotto.lotto_id} className={`p-2 rounded border text-xs ${lotto.conforme_cam ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}
+                             data-testid={`cam-lotto-${lotto.lotto_id}`}>
                             <div className="flex items-center justify-between mb-1">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 cursor-pointer flex-1" onClick={() => openEditCamLotto(lotto)}>
                                     {lotto.conforme_cam ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <AlertTriangle className="h-3.5 w-3.5 text-red-500" />}
                                     <span className="font-semibold text-slate-800">{lotto.descrizione}</span>
                                 </div>
@@ -1376,9 +1390,22 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                     <Badge className={`text-[9px] ${lotto.conforme_cam ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
                                         {lotto.percentuale_riciclato}% ric. (soglia {lotto.soglia_minima_cam}%)
                                     </Badge>
+                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-red-400 hover:text-red-600 hover:bg-red-50"
+                                        data-testid={`delete-cam-lotto-${lotto.lotto_id}`}
+                                        onClick={async (e) => {
+                                            e.stopPropagation();
+                                            if (!window.confirm(`Eliminare il lotto CAM "${lotto.descrizione}"?`)) return;
+                                            try {
+                                                await apiRequest(`/cam/lotti/${lotto.lotto_id}`, { method: 'DELETE' });
+                                                toast.success('Lotto CAM eliminato');
+                                                fetchData();
+                                            } catch (err) { toast.error(err.message || 'Errore eliminazione'); }
+                                        }}>
+                                        <Trash2 className="h-3 w-3" />
+                                    </Button>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-[10px]">
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-[10px] cursor-pointer" onClick={() => openEditCamLotto(lotto)}>
                                 <div><span className="text-slate-500 block">Fornitore</span><span className="font-mono">{lotto.fornitore || '-'}</span></div>
                                 <div><span className="text-slate-500 block">Colata</span><span className="font-mono">{lotto.numero_colata || '-'}</span></div>
                                 <div><span className="text-slate-500 block">Peso</span><span className="font-mono">{lotto.peso_kg} kg</span></div>
