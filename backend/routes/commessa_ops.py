@@ -1569,9 +1569,11 @@ async def parse_certificato_31(cid: str, doc_id: str, user: dict = Depends(get_c
 
         # Add filename context to help AI understand the document
         filename = doc.get("nome_file", "")
-        filename_hint = f"\n\nCONTESTO: Il file si chiama '{filename}'. Questo può indicare il tipo di profilo principale nel certificato." if filename else ""
+        filename_hint = ""
+        if filename:
+            filename_hint = "\n\nCONTESTO: Il file si chiama '" + filename + "'. Questo può indicare il tipo di profilo principale nel certificato."
 
-        prompt = f"""Analizza questo certificato di materiale 3.1 (EN 10204) per acciaio strutturale.{filename_hint}
+        prompt = """Analizza questo certificato di materiale 3.1 (EN 10204) per acciaio strutturale.""" + filename_hint + """
 
 COMPITO CRITICO: Devi estrarre OGNI SINGOLA RIGA della tabella del certificato come un profilo separato.
 
