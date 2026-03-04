@@ -1673,6 +1673,29 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
         )
 
         # ── SMART MATCHING: Match profiles to commesse via OdA, RdP, DDT ──
+        # ══════════════════════════════════════════════════════════════════════
+        # ⚠️ DO NOT TOUCH: CLEANUP VECCHI DATI PRIMA DEL RE-MATCHING ⚠️
+        # Se il certificato è stato già analizzato in precedenza, i vecchi
+        # material_batches e lotti_cam devono essere ELIMINATI prima di creare
+        # i nuovi match corretti. Altrimenti i profili non più corrispondenti
+        # rimangono nella tracciabilità.
+        # ══════════════════════════════════════════════════════════════════════
+        old_batches = await db.material_batches.delete_many({
+            "source_doc_id": doc_id, "user_id": user["user_id"]
+        })
+        old_cam = await db.lotti_cam.delete_many({
+            "source_doc_id": doc_id, "user_id": user["user_id"]
+        })
+        old_archive = await db.archivio_certificati.delete_many({
+            "source_doc_id": doc_id, "user_id": user["user_id"]
+        })
+        if old_batches.deleted_count or old_cam.deleted_count:
+            logger.info(
+                f"[RE-ANALYZE] Cleaned up old data for doc {doc_id}: "
+                f"{old_batches.deleted_count} batches, {old_cam.deleted_count} CAM lotti, "
+                f"{old_archive.deleted_count} archivio entries"
+            )
+
         risultati_match = await _match_profili_to_commesse(
             profili=profili,
             metadata_cert=metadata,
@@ -1739,6 +1762,13 @@ def _normalize_profilo(text: str) -> str:
 
 
 def _extract_profile_base(text: str) -> str:
+    # ══════════════════════════════════════════════════════════════════════════
+    # ⚠️⚠️⚠️  DO NOT TOUCH — BLINDATA CON 26 TEST UNITARI  ⚠️⚠️⚠️
+    # Questa funzione genera chiavi SPECIFICHE per dimensione:
+    #   "FLAT 120X12" → "PIATTO120X12"
+    #   "FLAT 120X7"  → "PIATTO120X7"   ← DEVE essere DIVERSA!
+    # Se la tocchi, corri i test: pytest tests/test_profile_matching.py -v
+    # ══════════════════════════════════════════════════════════════════════════
     """
     Extract the profile identifier from a description.
     For standard profiles (IPE, HEB, UPN): family + main size (e.g. IPE100, HEB200)
@@ -1802,6 +1832,14 @@ def _extract_profile_base(text: str) -> str:
 
 
 async def _match_profili_to_commesse(
+    # ══════════════════════════════════════════════════════════════════════════
+    # ⚠️⚠️⚠️  DO NOT TOUCH — LOGICA DI MATCHING BLINDATA  ⚠️⚠️⚠️
+    # Solo i profili del certificato che corrispondono ESATTAMENTE
+    # a una riga OdA/RdP vengono associati alla commessa.
+    # Profili senza match vanno in ARCHIVIO, non alla commessa!
+    # Se OdA ha 2 profili e certificato ne ha 5, SOLO 2 vengono associati.
+    # Test: pytest tests/test_oda_matching.py -v
+    # ══════════════════════════════════════════════════════════════════════════
     profili: list, metadata_cert: dict, current_commessa_id: str,
     doc_id: str, doc: dict, user: dict,
 ) -> list:
