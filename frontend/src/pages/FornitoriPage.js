@@ -49,6 +49,7 @@ const emptySupplier = {
     phone: '', cellulare: '', fax: '', email: '', sito_web: '',
     contacts: [],
     payment_type_id: '', payment_type_label: '', iban: '', banca: '',
+    supplier_payment_type_id: '', supplier_payment_type_label: '', supplier_iban: '', supplier_banca: '',
     notes: '',
 };
 
@@ -113,7 +114,7 @@ export default function FornitoriPage() {
         try {
             // Clean empty strings to null for Optional fields
             const payload = { ...formData };
-            ['codice_fiscale', 'partita_iva', 'pec', 'phone', 'cellulare', 'fax', 'email', 'sito_web', 'payment_type_id', 'payment_type_label', 'iban', 'banca', 'notes'].forEach(k => {
+            ['codice_fiscale', 'partita_iva', 'pec', 'phone', 'cellulare', 'fax', 'email', 'sito_web', 'payment_type_id', 'payment_type_label', 'iban', 'banca', 'supplier_payment_type_id', 'supplier_payment_type_label', 'supplier_iban', 'supplier_banca', 'notes'].forEach(k => {
                 if (payload[k] === '') payload[k] = null;
             });
 
@@ -174,12 +175,13 @@ export default function FornitoriPage() {
         updateField('contacts', formData.contacts.filter((_, i) => i !== idx));
     };
 
-    const handlePaymentTypeChange = (ptId) => {
+    const handlePaymentTypeChange = (ptId, isSupplier = false) => {
         const pt = paymentTypes.find(p => p.payment_type_id === ptId);
+        const prefix = isSupplier ? 'supplier_' : '';
         setFormData(f => ({
             ...f,
-            payment_type_id: ptId === '__none__' ? '' : ptId,
-            payment_type_label: pt ? `${pt.codice} - ${pt.descrizione}` : '',
+            [`${prefix}payment_type_id`]: ptId === '__none__' ? '' : ptId,
+            [`${prefix}payment_type_label`]: pt ? `${pt.codice} - ${pt.descrizione}` : '',
         }));
     };
 
@@ -241,7 +243,7 @@ export default function FornitoriPage() {
                                                 <TableCell className="font-mono text-sm">{s.partita_iva || '-'}</TableCell>
                                                 <TableCell className="text-sm">{s.city ? `${s.city} (${s.province})` : '-'}</TableCell>
                                                 <TableCell className="text-sm">{s.phone || s.cellulare || '-'}</TableCell>
-                                                <TableCell className="text-xs text-slate-500 max-w-[150px] truncate">{s.payment_type_label || '-'}</TableCell>
+                                                <TableCell className="text-xs text-slate-500 max-w-[150px] truncate">{s.supplier_payment_type_label || s.payment_type_label || '-'}</TableCell>
                                                 <TableCell>
                                                     <div className="flex gap-1" onClick={e => e.stopPropagation()}>
                                                         <Button variant="ghost" size="sm" onClick={() => navigate(`/fascicolo/${s.client_id}`)} title="Fascicolo" className="text-[#0055FF] hover:bg-blue-50">
@@ -418,29 +420,65 @@ export default function FornitoriPage() {
 
                         {/* TAB: Pagamento */}
                         {activeTab === 'pagamento' && (
-                            <div className="space-y-4">
-                                <div>
-                                    <Label className="flex items-center gap-1"><CreditCard className="h-3.5 w-3.5" /> Condizioni Pagamento</Label>
-                                    <Select value={formData.payment_type_id || '__none__'} onValueChange={handlePaymentTypeChange}>
-                                        <SelectTrigger data-testid="select-payment-type"><SelectValue placeholder="Seleziona tipo pagamento..." /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="__none__">-- Nessuno --</SelectItem>
-                                            {paymentTypes.map(pt => (
-                                                <SelectItem key={pt.payment_type_id} value={pt.payment_type_id}>
-                                                    <span className="font-mono text-xs mr-2">{pt.codice}</span> {pt.descrizione}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {paymentTypes.length === 0 && (
-                                        <p className="text-xs text-amber-500 mt-1">Nessun tipo pagamento configurato. <button onClick={() => navigate('/impostazioni/pagamenti')} className="underline text-[#0055FF]">Crea tipi pagamento</button></p>
-                                    )}
+                            <div className="space-y-5">
+                                {/* Condizioni Pagamento FORNITORE */}
+                                <div className="space-y-3">
+                                    <h4 className="text-xs font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1.5">
+                                        <Factory className="h-3.5 w-3.5" /> Condizioni Pagamento Fornitore
+                                    </h4>
+                                    <div>
+                                        <Label className="flex items-center gap-1"><CreditCard className="h-3.5 w-3.5" /> Tipo Pagamento</Label>
+                                        <Select value={formData.supplier_payment_type_id || '__none__'} onValueChange={v => handlePaymentTypeChange(v, true)}>
+                                            <SelectTrigger data-testid="select-supplier-payment-type"><SelectValue placeholder="Seleziona tipo pagamento..." /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="__none__">-- Nessuno --</SelectItem>
+                                                {paymentTypes.map(pt => (
+                                                    <SelectItem key={pt.payment_type_id} value={pt.payment_type_id}>
+                                                        <span className="font-mono text-xs mr-2">{pt.codice}</span> {pt.descrizione}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div><Label>Banca Fornitore</Label><Input value={formData.supplier_banca || ''} onChange={e => updateField('supplier_banca', e.target.value)} placeholder="Nome banca" /></div>
+                                        <div><Label>IBAN Fornitore</Label><Input data-testid="input-supplier-iban" value={formData.supplier_iban || ''} onChange={e => updateField('supplier_iban', e.target.value.toUpperCase())} placeholder="IT60X0542811101000000123456" className="font-mono text-sm" /></div>
+                                    </div>
                                 </div>
-                                <Separator />
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div><Label>Banca</Label><Input value={formData.banca} onChange={e => updateField('banca', e.target.value)} placeholder="Nome banca" /></div>
-                                    <div><Label>IBAN</Label><Input data-testid="input-iban" value={formData.iban} onChange={e => updateField('iban', e.target.value.toUpperCase())} placeholder="IT60X0542811101000000123456" className="font-mono text-sm" /></div>
-                                </div>
+
+                                {/* Condizioni Pagamento CLIENTE — solo se cliente_fornitore */}
+                                {formData.client_type === 'cliente_fornitore' && (
+                                    <>
+                                        <Separator />
+                                        <div className="space-y-3">
+                                            <h4 className="text-xs font-bold text-blue-700 uppercase tracking-wider flex items-center gap-1.5">
+                                                <CreditCard className="h-3.5 w-3.5" /> Condizioni Pagamento Cliente
+                                            </h4>
+                                            <div>
+                                                <Label>Tipo Pagamento Cliente</Label>
+                                                <Select value={formData.payment_type_id || '__none__'} onValueChange={v => handlePaymentTypeChange(v, false)}>
+                                                    <SelectTrigger data-testid="select-client-payment-type"><SelectValue placeholder="Seleziona..." /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="__none__">-- Nessuno --</SelectItem>
+                                                        {paymentTypes.map(pt => (
+                                                            <SelectItem key={pt.payment_type_id} value={pt.payment_type_id}>
+                                                                <span className="font-mono text-xs mr-2">{pt.codice}</span> {pt.descrizione}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div><Label>Banca Cliente</Label><Input value={formData.banca || ''} onChange={e => updateField('banca', e.target.value)} placeholder="Nome banca" /></div>
+                                                <div><Label>IBAN Cliente</Label><Input value={formData.iban || ''} onChange={e => updateField('iban', e.target.value.toUpperCase())} placeholder="IT60X0542811101000000123456" className="font-mono text-sm" /></div>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {paymentTypes.length === 0 && (
+                                    <p className="text-xs text-amber-500 mt-1">Nessun tipo pagamento configurato. <button onClick={() => navigate('/impostazioni/pagamenti')} className="underline text-[#0055FF]">Crea tipi pagamento</button></p>
+                                )}
                             </div>
                         )}
 

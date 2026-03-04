@@ -60,11 +60,17 @@ class ClientBase(BaseModel):
     # Persone di riferimento
     contacts: List[ContactPerson] = []
 
-    # Condizioni pagamento (link a PaymentType)
+    # Condizioni pagamento CLIENTE
     payment_type_id: Optional[str] = None
     payment_type_label: Optional[str] = None  # Cached label for display
     iban: Optional[str] = None
     banca: Optional[str] = None
+
+    # Condizioni pagamento FORNITORE (usate quando il soggetto è fornitore o cliente_fornitore)
+    supplier_payment_type_id: Optional[str] = None
+    supplier_payment_type_label: Optional[str] = None
+    supplier_iban: Optional[str] = None
+    supplier_banca: Optional[str] = None
 
     # Note
     notes: Optional[str] = None
@@ -102,6 +108,10 @@ class ClientUpdate(BaseModel):
     payment_type_label: Optional[str] = None
     iban: Optional[str] = None
     banca: Optional[str] = None
+    supplier_payment_type_id: Optional[str] = None
+    supplier_payment_type_label: Optional[str] = None
+    supplier_iban: Optional[str] = None
+    supplier_banca: Optional[str] = None
     notes: Optional[str] = None
 
 
@@ -145,6 +155,10 @@ class ClientResponse(BaseModel):
     payment_type_label: Optional[str] = None
     iban: Optional[str] = None
     banca: Optional[str] = None
+    supplier_payment_type_id: Optional[str] = None
+    supplier_payment_type_label: Optional[str] = None
+    supplier_iban: Optional[str] = None
+    supplier_banca: Optional[str] = None
     notes: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None

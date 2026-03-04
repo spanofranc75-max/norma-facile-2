@@ -66,13 +66,17 @@ async def calc_scadenze_from_supplier(db, fornitore_id: str, user_id: str, data_
 
     supplier = await db.clients.find_one(
         {"client_id": fornitore_id, "user_id": user_id},
-        {"_id": 0, "payment_type_id": 1}
+        {"_id": 0, "supplier_payment_type_id": 1, "payment_type_id": 1}
     )
-    if not supplier or not supplier.get("payment_type_id"):
+    # Prefer supplier-specific payment terms, fall back to generic
+    pt_id = None
+    if supplier:
+        pt_id = supplier.get("supplier_payment_type_id") or supplier.get("payment_type_id")
+    if not pt_id:
         return []
 
     pt = await db.payment_types.find_one(
-        {"payment_type_id": supplier["payment_type_id"]},
+        {"payment_type_id": pt_id},
         {"_id": 0, "quote": 1, "fine_mese": 1, "extra_days": 1, "descrizione": 1}
     )
     if not pt or not pt.get("quote"):
