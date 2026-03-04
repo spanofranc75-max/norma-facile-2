@@ -194,6 +194,9 @@ export default function PlanningPage() {
 // ── Kanban Column ───────────────────────────────────────────────
 
 function KanbanColumn({ column, colors, onCardClick, onDelete, onCreateCommessa }) {
+    const prevItems = column.items.filter(i => i.is_preventivo);
+    const commessaItems = column.items.filter(i => !i.is_preventivo);
+
     return (
         <div className="flex-shrink-0 w-[260px]" data-testid={`kanban-col-${column.id}`}>
             {/* Column Header */}
@@ -202,38 +205,43 @@ function KanbanColumn({ column, colors, onCardClick, onDelete, onCreateCommessa 
                 <Badge className="bg-white/20 text-white text-[10px] font-bold">{column.items.length}</Badge>
             </div>
 
-            {/* Droppable area */}
+            {/* Preventivi accettati (outside droppable) */}
+            {prevItems.length > 0 && (
+                <div className="border border-t-0 border-b-0 border-slate-200 bg-emerald-50/30 p-2 space-y-2">
+                    {prevItems.map(item => (
+                        <PreventivoCard
+                            key={item.commessa_id}
+                            item={item}
+                            onCardClick={onCardClick}
+                            onCreateCommessa={onCreateCommessa}
+                        />
+                    ))}
+                </div>
+            )}
+
+            {/* Droppable area (only commesse) */}
             <Droppable droppableId={column.id}>
                 {(provided, snapshot) => (
                     <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className={`min-h-[200px] rounded-b-lg border border-t-0 p-2 space-y-2 transition-colors ${
+                        className={`min-h-[120px] ${prevItems.length > 0 ? '' : 'border-t-0'} rounded-b-lg border p-2 space-y-2 transition-colors ${
                             snapshot.isDraggingOver ? colors.light + ' border-blue-300' : 'bg-slate-50/80 border-slate-200'
                         }`}
                     >
-                        {column.items.map((item, index) => (
-                            item.is_preventivo ? (
-                                <PreventivoCard
-                                    key={item.commessa_id}
-                                    item={item}
-                                    onCardClick={onCardClick}
-                                    onCreateCommessa={onCreateCommessa}
-                                />
-                            ) : (
-                                <Draggable key={item.commessa_id} draggableId={item.commessa_id} index={index}>
-                                    {(prov, snap) => (
-                                        <CommessaCard
-                                            item={item}
-                                            colors={colors}
-                                            prov={prov}
-                                            snap={snap}
-                                            onCardClick={onCardClick}
-                                            onDelete={onDelete}
-                                        />
-                                    )}
-                                </Draggable>
-                            )
+                        {commessaItems.map((item, index) => (
+                            <Draggable key={item.commessa_id} draggableId={item.commessa_id} index={index}>
+                                {(prov, snap) => (
+                                    <CommessaCard
+                                        item={item}
+                                        colors={colors}
+                                        prov={prov}
+                                        snap={snap}
+                                        onCardClick={onCardClick}
+                                        onDelete={onDelete}
+                                    />
+                                )}
+                            </Draggable>
                         ))}
                         {provided.placeholder}
                         {column.items.length === 0 && (
