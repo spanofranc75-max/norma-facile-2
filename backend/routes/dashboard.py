@@ -747,3 +747,326 @@ async def get_ebitda(
         "da_incassare": round(da_incassare, 2),
         "top_suppliers": top_suppliers,
     }
+
+
+
+# ── CRUSCOTTO FINANZIARIO ARTIGIANO ──────────────────────────────
+
+IVA_QUARTERS = [
+    {"q": 1, "label": "Q1 (Gen-Mar)", "months": [1, 2, 3], "f24_scadenza": "16 Maggio"},
+    {"q": 2, "label": "Q2 (Apr-Giu)", "months": [4, 5, 6], "f24_scadenza": "20 Agosto"},
+    {"q": 3, "label": "Q3 (Lug-Set)", "months": [7, 8, 9], "f24_scadenza": "16 Novembre"},
+    {"q": 4, "label": "Q4 (Ott-Dic)", "months": [10, 11, 12], "f24_scadenza": "16 Marzo anno succ."},
+]
+
+
+@router.get("/cruscotto-finanziario")
+async def get_cruscotto_finanziario(
+    year: int = None,
+    user: dict = Depends(get_current_user)
+):
+    """Complete financial dashboard for an artisan workshop."""
+    uid = user["user_id"]
+    now = datetime.now(timezone.utc)
+    year = year or now.year
+    today = now.date()
+
+    # ─── 1. IVA TRIMESTRALE ──────────────────────────────────────
+
+    iva_trimestri = []
+    for qt in IVA_QUARTERS:
+        m_start = datetime(year, qt["months"][0], 1, tzinfo=timezone.utc)
+        last_m = qt["months"][-1]
+        m_end = datetime(year, last_m + 1, 1, tzinfo=timezone.utc) if last_m < 12 else datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+
+        # IVA a debito (fatture emesse)
+        deb_pipeline = [
+            {"$match": {
+                "user_id": uid,
+                "status": {"$in": ["emessa", "pagata", "inviata_sdi", "accettata"]},
+                "created_at": {"$gte": m_start, "$lt": m_end},
+            }},
+            {"$group": {
+                "_id": None,
+                "imponibile": {"$sum": "$totals.subtotal"},
+                "iva": {"$sum": {"$subtract": ["$totals.total_document", "$totals.subtotal"]}},
+                "totale": {"$sum": "$totals.total_document"},
+                "count": {"$sum": 1},
+            }},
+        ]
+        deb_res = await db.invoices.aggregate(deb_pipeline).to_list(1)
+        iva_debito = round(deb_res[0]["iva"], 2) if deb_res else 0
+        fatturato = round(deb_res[0]["totale"], 2) if deb_res else 0
+        n_fatture = deb_res[0]["count"] if deb_res else 0
+
+        # IVA a credito (fatture ricevute / acquisti)
+        cred_pipeline = [
+            {"$match": {
+                "user_id": uid,
+                "created_at": {"$gte": m_start, "$lt": m_end},
+            }},
+            {"$group": {
+                "_id": None,
+                "iva": {"$sum": "$totale_iva"},
+                "imponibile": {"$sum": "$imponibile"},
+                "totale": {"$sum": "$totale_documento"},
+                "count": {"$sum": 1},
+            }},
+        ]
+        cred_res = await db.fatture_ricevute.aggregate(cred_pipeline).to_list(1)
+        iva_credito = round(cred_res[0]["iva"], 2) if cred_res else 0
+
+        iva_da_versare = round(iva_debito - iva_credito, 2)
+
+        iva_trimestri.append({
+            "trimestre": qt["q"],
+            "label": qt["label"],
+            "f24_scadenza": qt["f24_scadenza"],
+            "iva_debito": iva_debito,
+            "iva_credito": iva_credito,
+            "iva_da_versare": iva_da_versare,
+            "fatturato": fatturato,
+            "n_fatture": n_fatture,
+        })
+
+    # ─── 2. SEMAFORO LIQUIDITÀ (mese corrente) ───────────────────
+
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    if now.month == 12:
+        month_end = datetime(now.year + 1, 1, 1, tzinfo=timezone.utc)
+    else:
+        month_end = datetime(now.year, now.month + 1, 1, tzinfo=timezone.utc)
+
+    # Incassi ricevuti nel mese (fatture pagate)
+    incassi_mese_pipeline = [
+        {"$match": {
+            "user_id": uid,
+            "payment_status": "pagata",
+            "created_at": {"$gte": month_start, "$lt": month_end},
+        }},
+        {"$group": {"_id": None, "total": {"$sum": "$totals.total_document"}, "count": {"$sum": 1}}},
+    ]
+    inc_res = await db.invoices.aggregate(incassi_mese_pipeline).to_list(1)
+    incassi_mese = round(inc_res[0]["total"], 2) if inc_res else 0
+
+    # Fatture in scadenza questo mese (da incassare)
+    in_scadenza_pipeline = [
+        {"$match": {
+            "user_id": uid,
+            "payment_status": {"$in": ["non_pagata", "parzialmente_pagata", None]},
+            "due_date": {"$gte": month_start.isoformat()[:10], "$lte": month_end.isoformat()[:10]},
+        }},
+        {"$group": {"_id": None, "total": {"$sum": "$totals.total_document"}, "count": {"$sum": 1}}},
+    ]
+    scad_res = await db.invoices.aggregate(in_scadenza_pipeline).to_list(1)
+    da_incassare_mese = round(scad_res[0]["total"], 2) if scad_res else 0
+
+    # Pagamenti da fare (fatture fornitori in scadenza)
+    pag_pipeline = [
+        {"$match": {
+            "user_id": uid,
+            "status": {"$ne": "pagata"},
+            "data_scadenza": {"$gte": month_start.isoformat()[:10], "$lte": month_end.isoformat()[:10]},
+        }},
+        {"$group": {"_id": None, "total": {"$sum": "$totale_documento"}, "count": {"$sum": 1}}},
+    ]
+    pag_res = await db.fatture_ricevute.aggregate(pag_pipeline).to_list(1)
+    pagamenti_mese = round(pag_res[0]["total"], 2) if pag_res else 0
+
+    # IVA trimestre corrente
+    current_q = (now.month - 1) // 3
+    iva_prossima = iva_trimestri[current_q]["iva_da_versare"] if current_q < len(iva_trimestri) else 0
+
+    entrate_previste = incassi_mese + da_incassare_mese
+    uscite_previste = pagamenti_mese + max(iva_prossima, 0)
+    saldo_operativo = round(entrate_previste - uscite_previste, 2)
+
+    # Semaforo
+    if saldo_operativo > 0 and entrate_previste > uscite_previste * 1.2:
+        semaforo = "verde"
+        semaforo_msg = "Liquidità sufficiente per coprire le spese del mese"
+    elif saldo_operativo >= 0:
+        semaforo = "giallo"
+        semaforo_msg = "Margine risicato — monitora gli incassi attentamente"
+    else:
+        semaforo = "rosso"
+        semaforo_msg = f"Deficit previsto di {abs(saldo_operativo):.2f}€ — intervieni subito"
+
+    liquidita = {
+        "incassi_mese": incassi_mese,
+        "da_incassare_mese": da_incassare_mese,
+        "pagamenti_mese": pagamenti_mese,
+        "iva_prossima": max(iva_prossima, 0),
+        "entrate_previste": round(entrate_previste, 2),
+        "uscite_previste": round(uscite_previste, 2),
+        "saldo_operativo": saldo_operativo,
+        "semaforo": semaforo,
+        "semaforo_msg": semaforo_msg,
+    }
+
+    # ─── 3. SCADENZARIO CLIENTI (aging) ──────────────────────────
+
+    unpaid_invoices = await db.invoices.find(
+        {"user_id": uid, "payment_status": {"$in": ["non_pagata", "parzialmente_pagata", None]},
+         "status": {"$in": ["emessa", "inviata_sdi", "accettata"]}},
+        {"_id": 0, "invoice_id": 1, "number": 1, "client_name": 1,
+         "totals.total_document": 1, "due_date": 1, "issue_date": 1}
+    ).sort("due_date", 1).to_list(200)
+
+    aging = {"0_30": 0, "30_60": 0, "60_90": 0, "over_90": 0}
+    scadenzario_clienti = []
+    for inv in unpaid_invoices:
+        dd = inv.get("due_date") or inv.get("issue_date")
+        if dd:
+            try:
+                due = datetime.fromisoformat(str(dd).replace("Z", "+00:00")).date() if isinstance(dd, str) else dd.date() if hasattr(dd, 'date') else dd
+                days_overdue = (today - due).days
+            except Exception:
+                days_overdue = 0
+        else:
+            days_overdue = 0
+
+        amount = inv.get("totals", {}).get("total_document", 0)
+        if days_overdue <= 30:
+            aging["0_30"] += amount
+        elif days_overdue <= 60:
+            aging["30_60"] += amount
+        elif days_overdue <= 90:
+            aging["60_90"] += amount
+        else:
+            aging["over_90"] += amount
+
+        scadenzario_clienti.append({
+            "invoice_id": inv.get("invoice_id"),
+            "number": inv.get("number", ""),
+            "client_name": inv.get("client_name", ""),
+            "amount": round(amount, 2),
+            "due_date": str(dd) if dd else None,
+            "days_overdue": days_overdue,
+            "urgency": "scaduta" if days_overdue > 0 else "in_scadenza",
+        })
+
+    aging = {k: round(v, 2) for k, v in aging.items()}
+
+    # ─── 4. SCADENZARIO FORNITORI ────────────────────────────────
+
+    unpaid_fornitori = await db.fatture_ricevute.find(
+        {"user_id": uid, "status": {"$ne": "pagata"}},
+        {"_id": 0, "fattura_id": 1, "numero_documento": 1, "fornitore_nome": 1,
+         "totale_documento": 1, "data_scadenza": 1, "data_emissione": 1}
+    ).sort("data_scadenza", 1).to_list(200)
+
+    scadenzario_fornitori = []
+    for fr in unpaid_fornitori:
+        dd = fr.get("data_scadenza") or fr.get("data_emissione")
+        try:
+            due = datetime.fromisoformat(str(dd).replace("Z", "+00:00")).date() if isinstance(dd, str) and dd else today
+            days = (today - due).days
+        except Exception:
+            days = 0
+
+        scadenzario_fornitori.append({
+            "fattura_id": fr.get("fattura_id"),
+            "numero": fr.get("numero_documento", ""),
+            "fornitore": fr.get("fornitore_nome", ""),
+            "amount": round(fr.get("totale_documento", 0), 2),
+            "due_date": str(dd) if dd else None,
+            "days_overdue": days,
+            "urgency": "scaduta" if days > 0 else "in_scadenza",
+        })
+
+    # ─── 5. CASH FLOW PREVISIONALE (30/60/90 gg) ────────────────
+
+    cashflow_preview = []
+    for horizon_days, horizon_label in [(30, "30 giorni"), (60, "60 giorni"), (90, "90 giorni")]:
+        horizon_end = (now + timedelta(days=horizon_days)).isoformat()[:10]
+
+        # Entrate attese
+        ent_pipeline = [
+            {"$match": {
+                "user_id": uid,
+                "payment_status": {"$in": ["non_pagata", "parzialmente_pagata", None]},
+                "due_date": {"$gte": today.isoformat(), "$lte": horizon_end},
+            }},
+            {"$group": {"_id": None, "total": {"$sum": "$totals.total_document"}, "count": {"$sum": 1}}},
+        ]
+        ent_res = await db.invoices.aggregate(ent_pipeline).to_list(1)
+        entrate = round(ent_res[0]["total"], 2) if ent_res else 0
+
+        # Uscite previste
+        usc_pipeline = [
+            {"$match": {
+                "user_id": uid,
+                "status": {"$ne": "pagata"},
+                "data_scadenza": {"$gte": today.isoformat(), "$lte": horizon_end},
+            }},
+            {"$group": {"_id": None, "total": {"$sum": "$totale_documento"}, "count": {"$sum": 1}}},
+        ]
+        usc_res = await db.fatture_ricevute.aggregate(usc_pipeline).to_list(1)
+        uscite = round(usc_res[0]["total"], 2) if usc_res else 0
+
+        cashflow_preview.append({
+            "label": horizon_label,
+            "entrate": entrate,
+            "uscite": uscite,
+            "saldo": round(entrate - uscite, 2),
+        })
+
+    # ─── 6. MARGINALITÀ PER COMMESSA ────────────────────────────
+
+    commesse_margin = []
+    commesse_list = await db.commesse.find(
+        {"user_id": uid},
+        {"_id": 0, "commessa_id": 1, "title": 1, "value": 1,
+         "moduli.preventivo_id": 1, "client_name": 1}
+    ).to_list(100)
+
+    for comm in commesse_list:
+        ricavo = comm.get("value", 0) or 0
+        # Stima costi da RdP se presente
+        prev_id = comm.get("moduli", {}).get("preventivo_id")
+        costi = 0
+        if prev_id:
+            rdp = await db.rdp.find_one(
+                {"preventivo_id": prev_id, "user_id": uid},
+                {"_id": 0, "risposte": 1}
+            )
+            if rdp and rdp.get("risposte"):
+                for risp in rdp["risposte"]:
+                    if risp.get("selezionato"):
+                        costi += risp.get("prezzo_totale", 0)
+
+        margine = round(ricavo - costi, 2)
+        margine_pct = round((margine / ricavo * 100), 1) if ricavo > 0 else 0
+
+        if ricavo > 0 or costi > 0:
+            commesse_margin.append({
+                "commessa_id": comm["commessa_id"],
+                "title": comm.get("title", ""),
+                "client_name": comm.get("client_name", ""),
+                "ricavo": round(ricavo, 2),
+                "costi": round(costi, 2),
+                "margine": margine,
+                "margine_pct": margine_pct,
+            })
+
+    commesse_margin.sort(key=lambda x: x["margine"], reverse=True)
+    top_margin = commesse_margin[:5]
+    bottom_margin = sorted(commesse_margin, key=lambda x: x["margine"])[:5] if len(commesse_margin) > 5 else []
+
+    return {
+        "year": year,
+        "iva_trimestri": iva_trimestri,
+        "liquidita": liquidita,
+        "aging_clienti": aging,
+        "scadenzario_clienti": scadenzario_clienti[:20],
+        "scadenzario_fornitori": scadenzario_fornitori[:20],
+        "cashflow_preview": cashflow_preview,
+        "top_margin": top_margin,
+        "bottom_margin": bottom_margin,
+        "iva_annuale": {
+            "totale_debito": round(sum(q["iva_debito"] for q in iva_trimestri), 2),
+            "totale_credito": round(sum(q["iva_credito"] for q in iva_trimestri), 2),
+            "totale_versare": round(sum(q["iva_da_versare"] for q in iva_trimestri), 2),
+        },
+    }
