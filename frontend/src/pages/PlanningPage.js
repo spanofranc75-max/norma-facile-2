@@ -1,16 +1,14 @@
 /**
  * Planning Cantieri — Kanban Board for workshop project tracking.
- * Uses @hello-pangea/dnd for drag-and-drop.
+ * Uses native HTML5 Drag & Drop (no library — works with React 19).
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { apiRequest } from '../lib/utils';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
-import { Card, CardContent } from '../components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
@@ -51,6 +49,8 @@ function formatDeadline(d) {
     catch { return d; }
 }
 
+// ── Main Page ────────────────────────────────────────────────────
+
 export default function PlanningPage() {
     const navigate = useNavigate();
     const [columns, setColumns] = useState([]);
@@ -58,12 +58,13 @@ export default function PlanningPage() {
     const [loading, setLoading] = useState(true);
     const [createOpen, setCreateOpen] = useState(false);
     const [clients, setClients] = useState([]);
+    const [draggingId, setDraggingId] = useState(null);
+    const [dragOverCol, setDragOverCol] = useState(null);
 
     const fetchBoard = useCallback(async () => {
         try {
             const data = await apiRequest('/commesse/board/view');
             const cols = data.columns || [];
-            // Separate preventivi from commesse — keeps DnD indices clean
             const prevs = [];
             const cleanCols = cols.map(col => {
                 const colPrevs = col.items.filter(i => i.is_preventivo);
@@ -84,36 +85,77 @@ export default function PlanningPage() {
         apiRequest('/clients/').then(d => setClients(d.clients || [])).catch(() => {});
     }, []);
 
-    const handleDragEnd = async (result) => {
-        const { draggableId, destination, source } = result;
-        if (!destination) return;
-        if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+    // ── Native DnD handlers ──────────────────────────────────────
 
-        const newStatus = destination.droppableId;
-        const commessaId = draggableId;
+    const handleDragStart = (e, commessaId) => {
+        setDraggingId(commessaId);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', commessaId);
+        // Make the ghost semi-transparent
+        if (e.target) {
+            requestAnimationFrame(() => {
+                e.target.style.opacity = '0.4';
+            });
+        }
+    };
+
+    const handleDragEnd = (e) => {
+        e.target.style.opacity = '1';
+        setDraggingId(null);
+        setDragOverCol(null);
+    };
+
+    const handleDragOver = (e, colId) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (dragOverCol !== colId) setDragOverCol(colId);
+    };
+
+    const handleDragLeave = (e, colId) => {
+        // Only clear if leaving the column (not entering a child)
+        if (!e.currentTarget.contains(e.relatedTarget)) {
+            if (dragOverCol === colId) setDragOverCol(null);
+        }
+    };
+
+    const handleDrop = async (e, targetColId) => {
+        e.preventDefault();
+        setDragOverCol(null);
+        const commessaId = e.dataTransfer.getData('text/plain');
+        if (!commessaId) return;
+
+        // Find source column
+        const srcCol = columns.find(c => c.items.some(i => i.commessa_id === commessaId));
+        if (!srcCol || srcCol.id === targetColId) return;
 
         // Optimistic update
         setColumns(prev => {
             const next = prev.map(col => ({ ...col, items: [...col.items] }));
-            const srcCol = next.find(c => c.id === source.droppableId);
-            const dstCol = next.find(c => c.id === newStatus);
-            if (!srcCol || !dstCol) return prev;
-            const [moved] = srcCol.items.splice(source.index, 1);
-            moved.status = newStatus;
-            dstCol.items.splice(destination.index, 0, moved);
+            const src = next.find(c => c.id === srcCol.id);
+            const dst = next.find(c => c.id === targetColId);
+            if (!src || !dst) return prev;
+            const idx = src.items.findIndex(i => i.commessa_id === commessaId);
+            if (idx === -1) return prev;
+            const [moved] = src.items.splice(idx, 1);
+            moved.status = targetColId;
+            dst.items.push(moved);
             return next;
         });
 
+        // Persist to backend
         try {
             await apiRequest(`/commesse/${commessaId}/status`, {
                 method: 'PATCH',
-                body: { new_status: newStatus },
+                body: { new_status: targetColId },
             });
+            toast.success('Stato aggiornato');
         } catch (e) {
             toast.error('Errore aggiornamento stato');
             fetchBoard(); // rollback
         }
     };
+
+    // ── Other handlers ───────────────────────────────────────────
 
     const handleDelete = async (commessaId) => {
         if (!window.confirm('Eliminare questa commessa?')) return;
@@ -166,21 +208,23 @@ export default function PlanningPage() {
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0055FF]" />
                     </div>
                 ) : (
-                    <DragDropContext onDragEnd={handleDragEnd}>
-                        <ScrollableBoard
-                            columns={columns}
-                            acceptedPrevs={acceptedPrevs}
-                            onCardClick={(c) => {
-                                if (c.is_preventivo) {
-                                    navigate(`/preventivi/edit/${c.preventivo_id}`);
-                                } else {
-                                    navigate(`/commesse/${c.commessa_id}`);
-                                }
-                            }}
-                            onDelete={handleDelete}
-                            onCreateCommessa={handleCreateFromPreventivo}
-                        />
-                    </DragDropContext>
+                    <ScrollableBoard
+                        columns={columns}
+                        acceptedPrevs={acceptedPrevs}
+                        draggingId={draggingId}
+                        dragOverCol={dragOverCol}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        onCardClick={(c) => {
+                            if (c.is_preventivo) navigate(`/preventivi/edit/${c.preventivo_id}`);
+                            else navigate(`/commesse/${c.commessa_id}`);
+                        }}
+                        onDelete={handleDelete}
+                        onCreateCommessa={handleCreateFromPreventivo}
+                    />
                 )}
 
                 {/* Create Modal */}
@@ -196,9 +240,11 @@ export default function PlanningPage() {
 }
 
 
-// ── Scrollable Board wrapper (NO DragDropContext here — it lives in parent) ──
+// ── Scrollable Board wrapper ─────────────────────────────────────
 
-function ScrollableBoard({ columns, acceptedPrevs, onCardClick, onDelete, onCreateCommessa }) {
+function ScrollableBoard({ columns, acceptedPrevs, draggingId, dragOverCol,
+    onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop,
+    onCardClick, onDelete, onCreateCommessa }) {
     const scrollRef = useRef(null);
     const leftRef = useRef(null);
     const rightRef = useRef(null);
@@ -215,9 +261,8 @@ function ScrollableBoard({ columns, acceptedPrevs, onCardClick, onDelete, onCrea
     useEffect(() => {
         const el = scrollRef.current;
         if (!el) return;
-        // Initial check + small delay for layout
         checkScroll();
-        const t = setTimeout(checkScroll, 100);
+        const t = setTimeout(checkScroll, 200);
         el.addEventListener('scroll', checkScroll, { passive: true });
         window.addEventListener('resize', checkScroll);
         return () => {
@@ -235,7 +280,6 @@ function ScrollableBoard({ columns, acceptedPrevs, onCardClick, onDelete, onCrea
 
     return (
         <div className="relative" data-testid="kanban-board-wrapper">
-            {/* Left arrow — visibility controlled via ref, no state re-render */}
             <button
                 ref={leftRef}
                 data-testid="scroll-left-btn"
@@ -246,7 +290,6 @@ function ScrollableBoard({ columns, acceptedPrevs, onCardClick, onDelete, onCrea
                 <ChevronLeft className="h-5 w-5 text-slate-600" />
             </button>
 
-            {/* Right arrow */}
             <button
                 ref={rightRef}
                 data-testid="scroll-right-btn"
@@ -269,6 +312,13 @@ function ScrollableBoard({ columns, acceptedPrevs, onCardClick, onDelete, onCrea
                         column={col}
                         colors={COL_COLORS[col.id] || COL_COLORS.preventivo}
                         prevItems={col.id === 'preventivo' ? acceptedPrevs : []}
+                        draggingId={draggingId}
+                        isDragOver={dragOverCol === col.id}
+                        onDragStart={onDragStart}
+                        onDragEnd={onDragEnd}
+                        onDragOver={onDragOver}
+                        onDragLeave={onDragLeave}
+                        onDrop={onDrop}
                         onCardClick={onCardClick}
                         onDelete={onDelete}
                         onCreateCommessa={onCreateCommessa}
@@ -280,9 +330,11 @@ function ScrollableBoard({ columns, acceptedPrevs, onCardClick, onDelete, onCrea
 }
 
 
-// ── Kanban Column ───────────────────────────────────────────────
+// ── Kanban Column ────────────────────────────────────────────────
 
-function KanbanColumn({ column, colors, prevItems, onCardClick, onDelete, onCreateCommessa }) {
+function KanbanColumn({ column, colors, prevItems, draggingId, isDragOver,
+    onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop,
+    onCardClick, onDelete, onCreateCommessa }) {
     const totalCount = column.items.length + (prevItems?.length || 0);
 
     return (
@@ -293,7 +345,7 @@ function KanbanColumn({ column, colors, prevItems, onCardClick, onDelete, onCrea
                 <Badge className="bg-white/20 text-white text-[10px] font-bold">{totalCount}</Badge>
             </div>
 
-            {/* Preventivi accettati (above droppable, only in "preventivo" column) */}
+            {/* Preventivi accettati (non-draggable, above drop zone) */}
             {prevItems && prevItems.length > 0 && (
                 <div className="border-x border-slate-200 bg-emerald-50/30 p-2 space-y-2">
                     {prevItems.map(item => (
@@ -307,45 +359,42 @@ function KanbanColumn({ column, colors, prevItems, onCardClick, onDelete, onCrea
                 </div>
             )}
 
-            {/* Droppable area (only commesse — indices are clean) */}
-            <Droppable droppableId={column.id}>
-                {(provided, snapshot) => (
-                    <div
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
-                        className={`min-h-[120px] rounded-b-lg border border-t-0 p-2 space-y-2 transition-colors ${
-                            snapshot.isDraggingOver ? colors.light + ' border-blue-300' : 'bg-slate-50/80 border-slate-200'
-                        }`}
-                    >
-                        {column.items.map((item, index) => (
-                            <Draggable key={item.commessa_id} draggableId={item.commessa_id} index={index}>
-                                {(prov, snap) => (
-                                    <CommessaCard
-                                        item={item}
-                                        colors={colors}
-                                        prov={prov}
-                                        snap={snap}
-                                        onCardClick={onCardClick}
-                                        onDelete={onDelete}
-                                    />
-                                )}
-                            </Draggable>
-                        ))}
-                        {provided.placeholder}
-                        {totalCount === 0 && (
-                            <div className="flex items-center justify-center py-8 text-xs text-slate-400">
-                                <Clock className="h-4 w-4 mr-1.5 opacity-50" /> Nessuna commessa
-                            </div>
-                        )}
+            {/* Drop zone */}
+            <div
+                onDragOver={(e) => onDragOver(e, column.id)}
+                onDragLeave={(e) => onDragLeave(e, column.id)}
+                onDrop={(e) => onDrop(e, column.id)}
+                className={`min-h-[120px] rounded-b-lg border border-t-0 p-2 space-y-2 transition-all duration-200 ${
+                    isDragOver
+                        ? `${colors.light} border-2 border-dashed border-blue-400 scale-[1.01]`
+                        : 'bg-slate-50/80 border-slate-200'
+                }`}
+                data-testid={`kanban-drop-${column.id}`}
+            >
+                {column.items.map(item => (
+                    <CommessaCard
+                        key={item.commessa_id}
+                        item={item}
+                        colors={colors}
+                        isDragging={draggingId === item.commessa_id}
+                        onDragStart={onDragStart}
+                        onDragEnd={onDragEnd}
+                        onCardClick={onCardClick}
+                        onDelete={onDelete}
+                    />
+                ))}
+                {totalCount === 0 && (
+                    <div className="flex items-center justify-center py-8 text-xs text-slate-400">
+                        <Clock className="h-4 w-4 mr-1.5 opacity-50" /> Nessuna commessa
                     </div>
                 )}
-            </Droppable>
+            </div>
         </div>
     );
 }
 
 
-// ── Preventivo Accettato Card (non-draggable) ───────────────────
+// ── Preventivo Accettato Card (non-draggable) ────────────────────
 
 function PreventivoCard({ item, onCardClick, onCreateCommessa }) {
     const [creating, setCreating] = useState(false);
@@ -367,43 +416,26 @@ function PreventivoCard({ item, onCardClick, onCreateCommessa }) {
             onClick={() => onCardClick(item)}
         >
             <div className="p-3">
-                {/* Badge + title */}
                 <div className="flex items-start gap-2">
                     <FileText className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[#1E293B] truncate">
-                            {item.title}
-                        </p>
+                        <p className="text-sm font-semibold text-[#1E293B] truncate">{item.title}</p>
                     </div>
                 </div>
-
-                {/* Accettato badge */}
                 <div className="mt-2">
-                    <Badge className="text-[9px] bg-emerald-100 text-emerald-800 font-semibold">
-                        Preventivo Accettato
-                    </Badge>
-                    {item.numero && (
-                        <span className="ml-1.5 text-[9px] font-mono text-slate-400">{item.numero}</span>
-                    )}
+                    <Badge className="text-[9px] bg-emerald-100 text-emerald-800 font-semibold">Preventivo Accettato</Badge>
+                    {item.numero && <span className="ml-1.5 text-[9px] font-mono text-slate-400">{item.numero}</span>}
                 </div>
-
-                {/* Client */}
                 {item.client_name && (
                     <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-500">
-                        <User className="h-3 w-3" />
-                        <span className="truncate">{item.client_name}</span>
+                        <User className="h-3 w-3" /><span className="truncate">{item.client_name}</span>
                     </div>
                 )}
-
-                {/* Value */}
                 {item.value > 0 && (
                     <div className="flex items-center gap-1 mt-2 text-xs font-mono font-semibold text-[#1E293B]">
-                        <Euro className="h-3 w-3 text-slate-400" />
-                        {fmtEur(item.value)}
+                        <Euro className="h-3 w-3 text-slate-400" />{fmtEur(item.value)}
                     </div>
                 )}
-
-                {/* Crea Commessa button */}
                 <button
                     data-testid={`btn-create-commessa-${item.preventivo_id}`}
                     onClick={handleCreate}
@@ -419,21 +451,21 @@ function PreventivoCard({ item, onCardClick, onCreateCommessa }) {
 }
 
 
-// ── Commessa Card (draggable) ───────────────────────────────────
+// ── Commessa Card (draggable via native HTML5 DnD) ───────────────
 
-function CommessaCard({ item, colors, prov, snap, onCardClick, onDelete }) {
+function CommessaCard({ item, colors, isDragging, onDragStart, onDragEnd, onCardClick, onDelete }) {
     return (
         <div
-            ref={prov.innerRef}
-            {...prov.draggableProps}
-            {...prov.dragHandleProps}
-            className={`rounded-lg border bg-white shadow-sm transition-shadow cursor-grab active:cursor-grabbing ${
-                snap.isDragging ? 'shadow-lg ring-2 ' + colors.ring : 'hover:shadow-md'
+            draggable="true"
+            onDragStart={(e) => onDragStart(e, item.commessa_id)}
+            onDragEnd={onDragEnd}
+            className={`rounded-lg border bg-white shadow-sm transition-all cursor-grab active:cursor-grabbing select-none ${
+                isDragging ? 'opacity-40 ring-2 ' + colors.ring + ' scale-95' : 'hover:shadow-md'
             }`}
             data-testid={`kanban-card-${item.commessa_id}`}
         >
             <div className="p-3">
-                {/* Title */}
+                {/* Title row */}
                 <div className="flex items-start gap-2">
                     <GripVertical className="h-4 w-4 text-slate-300 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
@@ -449,8 +481,7 @@ function CommessaCard({ item, colors, prov, snap, onCardClick, onDelete }) {
                 {/* Client */}
                 {item.client_name && (
                     <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-500">
-                        <User className="h-3 w-3" />
-                        <span className="truncate">{item.client_name}</span>
+                        <User className="h-3 w-3" /><span className="truncate">{item.client_name}</span>
                     </div>
                 )}
 
@@ -458,8 +489,7 @@ function CommessaCard({ item, colors, prov, snap, onCardClick, onDelete }) {
                 <div className="flex items-center justify-between mt-2">
                     {item.value > 0 && (
                         <div className="flex items-center gap-1 text-xs font-mono font-semibold text-[#1E293B]">
-                            <Euro className="h-3 w-3 text-slate-400" />
-                            {fmtEur(item.value)}
+                            <Euro className="h-3 w-3 text-slate-400" />{fmtEur(item.value)}
                         </div>
                     )}
                     {item.deadline && (
@@ -472,7 +502,7 @@ function CommessaCard({ item, colors, prov, snap, onCardClick, onDelete }) {
                     )}
                 </div>
 
-                {/* Priority + Stato + Actions */}
+                {/* Priority + Actions */}
                 <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
                     <div className="flex items-center gap-1.5">
                         <Badge className={`text-[9px] ${PRIORITY_BADGE[item.priority] || PRIORITY_BADGE.media}`}>
@@ -510,7 +540,7 @@ function CommessaCard({ item, colors, prov, snap, onCardClick, onDelete }) {
 }
 
 
-// ── Create Commessa Modal ───────────────────────────────────────
+// ── Create Commessa Modal ────────────────────────────────────────
 
 function CreateCommessaModal({ open, onOpenChange, clients, onCreated }) {
     const [form, setForm] = useState({
