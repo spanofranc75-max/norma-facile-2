@@ -18,9 +18,9 @@ import EmptyState from '../components/EmptyState';
 const STATUS_MAP = {
     bozza: { label: 'Bozza', color: 'bg-yellow-100 text-yellow-800', rowBg: '' },
     inviato: { label: 'Inviato', color: 'bg-blue-100 text-blue-800', rowBg: '' },
-    accettato: { label: 'Accettato', color: 'bg-amber-100 text-amber-800', rowBg: 'bg-amber-50/60' },
-    in_lavorazione: { label: 'In Lavorazione', color: 'bg-blue-100 text-blue-800', rowBg: 'bg-blue-50/60' },
-    chiuso: { label: 'Chiuso', color: 'bg-emerald-100 text-emerald-800', rowBg: 'bg-emerald-50/60' },
+    accettato: { label: 'Accettato', color: 'bg-amber-200 text-amber-900 border-amber-300', rowBg: 'bg-amber-100/80 border-l-4 border-l-amber-400' },
+    in_lavorazione: { label: 'In Lavorazione', color: 'bg-sky-200 text-sky-900 border-sky-300', rowBg: 'bg-sky-100/80 border-l-4 border-l-sky-500' },
+    chiuso: { label: 'Chiuso', color: 'bg-emerald-200 text-emerald-900 border-emerald-300', rowBg: 'bg-emerald-100/80 border-l-4 border-l-emerald-500' },
     rifiutato: { label: 'Rifiutato', color: 'bg-red-100 text-red-800', rowBg: '' },
 };
 
