@@ -53,6 +53,7 @@ function formatDeadline(d) {
 export default function PlanningPage() {
     const navigate = useNavigate();
     const [columns, setColumns] = useState([]);
+    const [acceptedPrevs, setAcceptedPrevs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [createOpen, setCreateOpen] = useState(false);
     const [clients, setClients] = useState([]);
@@ -60,7 +61,16 @@ export default function PlanningPage() {
     const fetchBoard = useCallback(async () => {
         try {
             const data = await apiRequest('/commesse/board/view');
-            setColumns(data.columns || []);
+            const cols = data.columns || [];
+            // Separate preventivi from commesse — keeps DnD indices clean
+            const prevs = [];
+            const cleanCols = cols.map(col => {
+                const colPrevs = col.items.filter(i => i.is_preventivo);
+                prevs.push(...colPrevs);
+                return { ...col, items: col.items.filter(i => !i.is_preventivo) };
+            });
+            setColumns(cleanCols);
+            setAcceptedPrevs(prevs);
         } catch (e) {
             toast.error('Errore caricamento planning');
         } finally {
@@ -77,9 +87,6 @@ export default function PlanningPage() {
         const { draggableId, destination, source } = result;
         if (!destination) return;
         if (destination.droppableId === source.droppableId && destination.index === source.index) return;
-
-        // Prevent dragging preventivo cards (they start with "prev_")
-        if (draggableId.startsWith('prev_')) return;
 
         const newStatus = destination.droppableId;
         const commessaId = draggableId;
@@ -120,13 +127,15 @@ export default function PlanningPage() {
         try {
             const result = await apiRequest(`/commesse/from-preventivo/${preventivoId}`, { method: 'POST' });
             toast.success('Commessa creata con successo');
+            fetchBoard();
             navigate(`/commesse/${result.commessa_id}`);
         } catch (e) { toast.error(e.message || 'Errore creazione commessa'); }
     };
 
-    const totalCommesse = columns.reduce((acc, col) => acc + col.items.filter(i => !i.is_preventivo).length, 0);
-    const totalPreventivi = columns.reduce((acc, col) => acc + col.items.filter(i => i.is_preventivo).length, 0);
-    const totalValue = columns.reduce((acc, col) => acc + col.items.reduce((a, i) => a + (i.value || 0), 0), 0);
+    const totalCommesse = columns.reduce((acc, col) => acc + col.items.length, 0);
+    const totalPreventivi = acceptedPrevs.length;
+    const totalValue = columns.reduce((acc, col) => acc + col.items.reduce((a, i) => a + (i.value || 0), 0), 0)
+        + acceptedPrevs.reduce((a, i) => a + (i.value || 0), 0);
 
     return (
         <DashboardLayout>
@@ -163,6 +172,7 @@ export default function PlanningPage() {
                                     key={col.id}
                                     column={col}
                                     colors={COL_COLORS[col.id] || COL_COLORS.preventivo}
+                                    prevItems={col.id === 'preventivo' ? acceptedPrevs : []}
                                     onCardClick={(c) => {
                                         if (c.is_preventivo) {
                                             navigate(`/preventivi/edit/${c.preventivo_id}`);
@@ -193,21 +203,20 @@ export default function PlanningPage() {
 
 // ── Kanban Column ───────────────────────────────────────────────
 
-function KanbanColumn({ column, colors, onCardClick, onDelete, onCreateCommessa }) {
-    const prevItems = column.items.filter(i => i.is_preventivo);
-    const commessaItems = column.items.filter(i => !i.is_preventivo);
+function KanbanColumn({ column, colors, prevItems, onCardClick, onDelete, onCreateCommessa }) {
+    const totalCount = column.items.length + (prevItems?.length || 0);
 
     return (
         <div className="flex-shrink-0 w-[260px]" data-testid={`kanban-col-${column.id}`}>
             {/* Column Header */}
             <div className={`${colors.header} text-white rounded-t-lg px-3 py-2 flex items-center justify-between`}>
                 <span className="text-xs font-semibold tracking-wide">{column.label}</span>
-                <Badge className="bg-white/20 text-white text-[10px] font-bold">{column.items.length}</Badge>
+                <Badge className="bg-white/20 text-white text-[10px] font-bold">{totalCount}</Badge>
             </div>
 
-            {/* Preventivi accettati (outside droppable) */}
-            {prevItems.length > 0 && (
-                <div className="border border-t-0 border-b-0 border-slate-200 bg-emerald-50/30 p-2 space-y-2">
+            {/* Preventivi accettati (above droppable, only in "preventivo" column) */}
+            {prevItems && prevItems.length > 0 && (
+                <div className="border-x border-slate-200 bg-emerald-50/30 p-2 space-y-2">
                     {prevItems.map(item => (
                         <PreventivoCard
                             key={item.commessa_id}
@@ -219,17 +228,17 @@ function KanbanColumn({ column, colors, onCardClick, onDelete, onCreateCommessa 
                 </div>
             )}
 
-            {/* Droppable area (only commesse) */}
+            {/* Droppable area (only commesse — indices are clean) */}
             <Droppable droppableId={column.id}>
                 {(provided, snapshot) => (
                     <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className={`min-h-[120px] ${prevItems.length > 0 ? '' : 'border-t-0'} rounded-b-lg border p-2 space-y-2 transition-colors ${
+                        className={`min-h-[120px] rounded-b-lg border border-t-0 p-2 space-y-2 transition-colors ${
                             snapshot.isDraggingOver ? colors.light + ' border-blue-300' : 'bg-slate-50/80 border-slate-200'
                         }`}
                     >
-                        {commessaItems.map((item, index) => (
+                        {column.items.map((item, index) => (
                             <Draggable key={item.commessa_id} draggableId={item.commessa_id} index={index}>
                                 {(prov, snap) => (
                                     <CommessaCard
@@ -244,7 +253,7 @@ function KanbanColumn({ column, colors, onCardClick, onDelete, onCreateCommessa 
                             </Draggable>
                         ))}
                         {provided.placeholder}
-                        {column.items.length === 0 && (
+                        {totalCount === 0 && (
                             <div className="flex items-center justify-center py-8 text-xs text-slate-400">
                                 <Clock className="h-4 w-4 mr-1.5 opacity-50" /> Nessuna commessa
                             </div>

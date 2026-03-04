@@ -874,8 +874,8 @@ async def _create_single_commessa(preventivo, user, normativa_override=None, ite
     if normativa_override:
         detected_normativa = normativa_override
     else:
-        full_text = " ".join([prev.get("subject", ""), prev.get("notes", "")] +
-                             [l.get("description", "") for l in lines]).lower()
+        full_text = " ".join([(prev.get("subject") or ""), (prev.get("notes") or "")] +
+                             [(l.get("description") or "") for l in lines]).lower()
         score_13241 = sum(1 for kw in KW_13241 if kw in full_text)
         score_1090 = sum(1 for kw in KW_1090 if kw in full_text)
         is_motorizzato = any(kw in full_text for kw in KW_MOTOR)
@@ -886,8 +886,8 @@ async def _create_single_commessa(preventivo, user, normativa_override=None, ite
         else:
             detected_normativa = None
 
-    full_text = " ".join([prev.get("subject", ""), prev.get("notes", "")] +
-                         [l.get("description", "") for l in lines]).lower()
+    full_text = " ".join([(prev.get("subject") or ""), (prev.get("notes") or "")] +
+                         [(l.get("description") or "") for l in lines]).lower()
     is_motorizzato = any(kw in full_text for kw in KW_MOTOR)
     detected_azionamento = "motorizzato" if is_motorizzato and detected_normativa == "EN_13241" else (
         "manuale" if detected_normativa == "EN_13241" else None

@@ -1,0 +1,83 @@
+{
+  "summary": "Iteration 128: Testing DnD Fix for Planning Board Kanban. The fix correctly separates preventivi into a dedicated state variable (`acceptedPrevs`) and passes them as `prevItems` prop to KanbanColumn. All 12 backend tests pass (100%). Frontend DnD works correctly with commessa cards draggable and preventivo cards non-draggable. Found and fixed a bug in POST /api/commesse/from-preventivo endpoint where None values caused TypeError.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "bugs_found_and_fixed": {
+    "from_preventivo_none_values": {
+      "location": "/app/backend/routes/commesse.py lines 877, 889",
+      "issue": "TypeError when creating commessa from preventivo: `prev.get('notes', '')` returns None when key exists with None value, causing `str.join()` to fail",
+      "fix": "Changed `prev.get('notes', '')` to `(prev.get('notes') or '')` for proper None handling",
+      "status": "FIXED"
+    }
+  },
+  "features_verified": {
+    "dnd_fix_separates_preventivi_from_commesse": {
+      "code_location": "PlanningPage.js lines 66-73",
+      "logic": "fetchBoard() separates preventivi (is_preventivo=true) into acceptedPrevs state, columns only contain commesse",
+      "result": "PASS - DnD indices are now clean and sequential"
+    },
+    "board_view_structure": {
+      "endpoint": "GET /api/commesse/board/view",
+      "result": "PASS - Returns columns with correct structure, preventivi have is_preventivo flag"
+    },
+    "status_update_patch": {
+      "endpoint": "PATCH /api/commesse/{id}/status",
+      "result": "PASS - Successfully updates status when card is dropped in new column"
+    },
+    "commessa_cards_draggable": {
+      "frontend_test": "CommessaCard has drag handle (.cursor-grab)",
+      "result": "PASS - Commessa cards are draggable with GripVertical icon"
+    },
+    "preventivo_cards_not_draggable": {
+      "frontend_test": "PreventivoCard has no Draggable wrapper",
+      "result": "PASS - Preventivo cards do NOT have drag handles"
+    },
+    "preventivo_card_styling": {
+      "classes": "border-2 border-dashed border-emerald-300 bg-emerald-50/60",
+      "badge": "Preventivo Accettato",
+      "result": "PASS - Dashed green border and badge displayed"
+    },
+    "crea_commessa_button": {
+      "endpoint": "POST /api/commesse/from-preventivo/{preventivo_id}",
+      "result": "PASS - Button creates commessa and navigates to new commessa page"
+    },
+    "header_shows_counts": {
+      "example": "3 commesse · Valore totale: 10.500,00 €",
+      "result": "PASS - Header correctly shows commesse count and total value"
+    },
+    "dnd_multiple_status_updates": {
+      "test": "Rapid status changes via DnD",
+      "result": "PASS - All status transitions work correctly"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration128_dnd_fix.py",
+    "/app/test_reports/pytest/iteration128_dnd_fix_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Frontend PlanningPage.js: Clean separation of preventivi into acceptedPrevs state ensures Draggable indices are sequential",
+    "Backend commesse.py: board/view correctly returns preventivi with is_preventivo flag",
+    "Fixed None value handling in _create_single_commessa function for robust preventivo-to-commessa conversion"
+  ],
+  "updated_files": [
+    "/app/backend/routes/commesse.py",
+    "/app/backend/tests/test_iteration128_dnd_fix.py"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 tests)",
+    "frontend": "100% (DnD, preventivo styling, Crea Commessa button all work)"
+  },
+  "test_credentials": "Session token: test_session_1772639904477",
+  "seed_data_creation": "Created and cleaned up test commesse and preventivi during testing",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "The DnD fix has been verified. Preventivi are now stored in separate `acceptedPrevs` state and passed as `prevItems` prop only to the 'preventivo' column. The `columns` state ONLY contains commesse, ensuring Draggable indices are sequential (0, 1, 2...). Commessa cards have drag handles (GripVertical with cursor-grab), preventivo cards do NOT have drag handles. The POST /api/commesse/from-preventivo endpoint had a bug with None values that was fixed."
+}
