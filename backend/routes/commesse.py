@@ -1026,34 +1026,33 @@ async def create_split_commesse(preventivo_id: str, body: SplitCommessaRequest, 
 
 @router.get("/{commessa_id}/dossier")
 async def generate_commessa_dossier(commessa_id: str, user: dict = Depends(get_current_user)):
-    """Generate a complete PDF dossier aggregating all commessa modules."""
-    from services.commessa_dossier import generate_commessa_dossier_pdf
+    """Generate the professional Technical Dossier (Fascicolo Tecnico).
+    Replaces the old event-log dossier with the full EN 1090 document."""
+    from services.pdf_super_fascicolo import generate_super_fascicolo
 
     uid = user["user_id"]
     doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Commessa non trovata")
 
-    ensure_moduli(doc)
-
-    # Fetch hub data for dossier generation
-    hub_data = await get_commessa_hub(commessa_id, user)
-
-    # Company settings for branding
-    company = await db.company_settings.find_one({"user_id": uid}, {"_id": 0}) or {}
-
-    pdf_bytes = await generate_commessa_dossier_pdf(hub_data, company)
+    try:
+        pdf_buf = await generate_super_fascicolo(commessa_id, uid)
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        logger.error(f"Dossier generation error: {e}")
+        raise HTTPException(500, f"Errore generazione dossier: {str(e)}")
 
     from fastapi.responses import StreamingResponse
-    numero = doc.get("numero", commessa_id)
+    numero = doc.get("numero", commessa_id).replace("/", "-")
     filename = f"Dossier_{numero}.pdf"
 
     # Record event
-    event = build_event("DOSSIER_GENERATO", user, f"Dossier generato per {numero}")
+    event = build_event("DOSSIER_GENERATO", user, f"Fascicolo Tecnico generato per {numero}")
     await db[COLLECTION].update_one({"commessa_id": commessa_id}, {"$push": {"eventi": event}})
 
     return StreamingResponse(
-        pdf_bytes,
+        pdf_buf,
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
