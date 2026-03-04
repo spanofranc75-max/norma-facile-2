@@ -106,7 +106,6 @@ app.add_middleware(
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     errors = exc.errors()
     logger.error(f"Validation error on {request.method} {request.url.path}: {errors}")
-    # Return a user-friendly message with details
     field_errors = []
     for err in errors:
         loc = " -> ".join(str(x) for x in err.get("loc", []))

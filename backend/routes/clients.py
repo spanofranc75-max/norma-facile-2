@@ -1,7 +1,8 @@
 """Client routes for anagrafica management."""
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from typing import Optional
 import uuid
+import json as _json
 from datetime import datetime, timezone
 from core.security import get_current_user
 from core.database import db
@@ -14,7 +15,24 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/clients", tags=["clients"])
 
 
-@router.get("/", response_model=ClientListResponse)
+def _build_client_response(doc: dict) -> dict:
+    """Build a safe response dict from a MongoDB document, tolerating nulls."""
+    if not doc:
+        return {}
+    resp = {}
+    for k, v in doc.items():
+        if k == "_id":
+            continue
+        resp[k] = v
+    # Ensure created_at is present
+    if "created_at" in resp and hasattr(resp["created_at"], "isoformat"):
+        resp["created_at"] = resp["created_at"].isoformat()
+    if "updated_at" in resp and resp["updated_at"] and hasattr(resp["updated_at"], "isoformat"):
+        resp["updated_at"] = resp["updated_at"].isoformat()
+    return resp
+
+
+@router.get("/")
 async def get_clients(
     search: Optional[str] = Query(None, description="Search by name or P.IVA"),
     client_type: Optional[str] = Query(None, description="Filter by client_type: cliente, fornitore, cliente_fornitore"),
@@ -45,13 +63,10 @@ async def get_clients(
     clients_cursor = db.clients.find(query, {"_id": 0}).skip(skip).limit(limit).sort("business_name", 1)
     clients = await clients_cursor.to_list(length=limit)
     
-    return ClientListResponse(
-        clients=[ClientResponse(**c) for c in clients],
-        total=total
-    )
+    return {"clients": [_build_client_response(c) for c in clients], "total": total}
 
 
-@router.get("/{client_id}", response_model=ClientResponse)
+@router.get("/{client_id}")
 async def get_client(
     client_id: str,
     user: dict = Depends(get_current_user)
@@ -65,17 +80,55 @@ async def get_client(
     if not client:
         raise HTTPException(status_code=404, detail="Cliente non trovato")
     
-    return ClientResponse(**client)
+    return _build_client_response(client)
 
 
-@router.post("/", response_model=ClientResponse, status_code=201)
+@router.post("/", status_code=201)
 async def create_client(
-    client_data: ClientCreate,
+    request: Request,
     user: dict = Depends(get_current_user)
 ):
     """Create a new client."""
+    from fastapi import Request as _Req
+    import json as _json
+
+    # Parse raw body to avoid Pydantic rejection
+    raw_body = await request.body()
+    try:
+        raw = _json.loads(raw_body)
+    except Exception:
+        raise HTTPException(400, "JSON non valido nel body della richiesta")
+
+    logger.info(f"[CREATE CLIENT] raw keys: {list(raw.keys())}")
+
+    # Require only business_name
+    if not raw.get("business_name"):
+        raise HTTPException(400, "Ragione Sociale obbligatoria")
+
+    # Sanitize: convert empty strings and None for all fields
+    str_fields = [
+        "business_name", "client_type", "titolo", "cognome", "nome",
+        "codice_fiscale", "partita_iva", "codice_sdi", "pec",
+        "address", "cap", "city", "province", "country",
+        "phone", "cellulare", "fax", "email", "sito_web",
+        "payment_type_id", "payment_type_label", "iban", "banca",
+        "supplier_payment_type_id", "supplier_payment_type_label",
+        "supplier_iban", "supplier_banca", "notes",
+    ]
+    for f in str_fields:
+        val = raw.get(f)
+        if val is None or val == "":
+            raw[f] = None if f != "business_name" else raw.get(f, "")
+
+    # Defaults
+    raw.setdefault("client_type", "cliente")
+    raw.setdefault("persona_fisica", False)
+    raw.setdefault("codice_sdi", "0000000")
+    raw.setdefault("country", "IT")
+    raw.setdefault("contacts", [])
+
     # Check for duplicate P.IVA (skip empty/whitespace)
-    piva = (client_data.partita_iva or "").strip()
+    piva = (raw.get("partita_iva") or "").strip()
     if piva:
         existing = await db.clients.find_one({
             "user_id": user["user_id"],
@@ -83,8 +136,7 @@ async def create_client(
         }, {"_id": 0, "client_id": 1, "business_name": 1, "client_type": 1})
         if existing:
             ex_type = existing.get("client_type", "")
-            new_type = client_data.client_type or "cliente"
-            # If same P.IVA exists as a different type, suggest merge
+            new_type = raw.get("client_type", "cliente")
             if ex_type != new_type and ex_type != "cliente_fornitore":
                 raise HTTPException(
                     status_code=409,
@@ -95,34 +147,42 @@ async def create_client(
                 status_code=400,
                 detail=f"Esiste già un record con questa Partita IVA: {existing.get('business_name', '')}"
             )
-    
+
     client_id = f"cli_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
-    
-    client_doc = {
-        "client_id": client_id,
-        "user_id": user["user_id"],
-        **client_data.model_dump(),
-        "created_at": now,
-        "updated_at": now
-    }
-    
+
+    # Build document — only include known fields
+    allowed_fields = set(str_fields + ["persona_fisica", "contacts"])
+    client_doc = {k: v for k, v in raw.items() if k in allowed_fields}
+    client_doc["client_id"] = client_id
+    client_doc["user_id"] = user["user_id"]
+    client_doc["created_at"] = now
+    client_doc["updated_at"] = now
+
     await db.clients.insert_one(client_doc)
-    
+
     # Retrieve without _id
     created = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
-    
+
     logger.info(f"Client created: {client_id} by user {user['user_id']}")
-    return ClientResponse(**created)
+
+    # Return safe response
+    return _build_client_response(created)
 
 
-@router.put("/{client_id}", response_model=ClientResponse)
+@router.put("/{client_id}")
 async def update_client(
     client_id: str,
-    client_data: ClientUpdate,
+    request: Request,
     user: dict = Depends(get_current_user)
 ):
     """Update an existing client."""
+    raw_body = await request.body()
+    try:
+        raw = _json.loads(raw_body)
+    except Exception:
+        raise HTTPException(400, "JSON non valido")
+
     # Check client exists
     existing = await db.clients.find_one(
         {"client_id": client_id, "user_id": user["user_id"]}
@@ -131,7 +191,7 @@ async def update_client(
         raise HTTPException(status_code=404, detail="Cliente non trovato")
     
     # Check for duplicate P.IVA if changing
-    new_piva = (client_data.partita_iva or "").strip()
+    new_piva = (raw.get("partita_iva") or "").strip()
     if new_piva and new_piva != (existing.get("partita_iva") or "").strip():
         duplicate = await db.clients.find_one({
             "user_id": user["user_id"],
@@ -144,11 +204,17 @@ async def update_client(
                 detail=f"Esiste già un record con questa Partita IVA: {duplicate.get('business_name', '')}"
             )
     
-    # Build update dict (only non-None values)
-    update_dict = {
-        k: v for k, v in client_data.model_dump().items()
-        if v is not None
+    # Build update dict — include all provided fields (even if None)
+    allowed_fields = {
+        "business_name", "client_type", "persona_fisica", "titolo", "cognome", "nome",
+        "codice_fiscale", "partita_iva", "codice_sdi", "pec",
+        "address", "cap", "city", "province", "country",
+        "phone", "cellulare", "fax", "email", "sito_web",
+        "contacts", "payment_type_id", "payment_type_label", "iban", "banca",
+        "supplier_payment_type_id", "supplier_payment_type_label",
+        "supplier_iban", "supplier_banca", "notes",
     }
+    update_dict = {k: v for k, v in raw.items() if k in allowed_fields}
     update_dict["updated_at"] = datetime.now(timezone.utc)
     
     await db.clients.update_one(
@@ -159,7 +225,7 @@ async def update_client(
     updated = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
     
     logger.info(f"Client updated: {client_id}")
-    return ClientResponse(**updated)
+    return _build_client_response(updated)
 
 
 @router.delete("/{client_id}")
