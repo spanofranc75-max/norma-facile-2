@@ -50,7 +50,20 @@ export async function apiRequest(endpoint, options = {}) {
             console.error(`[apiRequest] ${response.status} response body:`, text);
             try {
                 const err = JSON.parse(text);
-                if (err.detail) detail = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+                if (err.detail) {
+                    if (typeof err.detail === 'string') {
+                        detail = err.detail;
+                    } else if (Array.isArray(err.detail)) {
+                        // FastAPI 422 validation errors: extract human-readable messages
+                        const messages = err.detail.map(e => {
+                            const field = (e.loc || []).filter(l => l !== 'body').join('.');
+                            return field ? `${field}: ${e.msg}` : e.msg;
+                        });
+                        detail = messages.join('; ');
+                    } else {
+                        detail = JSON.stringify(err.detail);
+                    }
+                }
             } catch {
                 if (text) detail = text.substring(0, 300);
             }

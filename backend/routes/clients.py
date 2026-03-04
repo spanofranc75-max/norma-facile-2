@@ -1,8 +1,7 @@
 """Client routes for anagrafica management."""
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional
 import uuid
-import json as _json
 from datetime import datetime, timezone
 from core.security import get_current_user
 from core.database import db
@@ -85,47 +84,17 @@ async def get_client(
 
 @router.post("/", status_code=201)
 async def create_client(
-    request: Request,
+    client_data: ClientCreate,
     user: dict = Depends(get_current_user)
 ):
-    """Create a new client."""
-    from fastapi import Request as _Req
-    import json as _json
+    """Create a new client. Pydantic validates and strips null values automatically."""
+    raw = client_data.model_dump()
 
-    # Parse raw body to avoid Pydantic rejection
-    raw_body = await request.body()
-    try:
-        raw = _json.loads(raw_body)
-    except Exception:
-        raise HTTPException(400, "JSON non valido nel body della richiesta")
+    logger.info(f"[CREATE CLIENT] validated keys: {list(raw.keys())}")
 
-    logger.info(f"[CREATE CLIENT] raw keys: {list(raw.keys())}")
-
-    # Require only business_name
-    if not raw.get("business_name"):
-        raise HTTPException(400, "Ragione Sociale obbligatoria")
-
-    # Sanitize: convert empty strings and None for all fields
-    str_fields = [
-        "business_name", "client_type", "titolo", "cognome", "nome",
-        "codice_fiscale", "partita_iva", "codice_sdi", "pec",
-        "address", "cap", "city", "province", "country",
-        "phone", "cellulare", "fax", "email", "sito_web",
-        "payment_type_id", "payment_type_label", "iban", "banca",
-        "supplier_payment_type_id", "supplier_payment_type_label",
-        "supplier_iban", "supplier_banca", "notes",
-    ]
-    for f in str_fields:
-        val = raw.get(f)
-        if val is None or val == "":
-            raw[f] = None if f != "business_name" else raw.get(f, "")
-
-    # Defaults
-    raw.setdefault("client_type", "cliente")
-    raw.setdefault("persona_fisica", False)
+    # Defaults for optional fields that need them
     raw.setdefault("codice_sdi", "0000000")
     raw.setdefault("country", "IT")
-    raw.setdefault("contacts", [])
 
     # Check for duplicate P.IVA (skip empty/whitespace)
     piva = (raw.get("partita_iva") or "").strip()
@@ -151,9 +120,14 @@ async def create_client(
     client_id = f"cli_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
 
-    # Build document — only include known fields
-    allowed_fields = set(str_fields + ["persona_fisica", "contacts"])
-    client_doc = {k: v for k, v in raw.items() if k in allowed_fields}
+    # Build document from validated data
+    client_doc = {k: v for k, v in raw.items()}
+    # Serialize contacts to dicts for MongoDB
+    if "contacts" in client_doc:
+        client_doc["contacts"] = [
+            c if isinstance(c, dict) else c.model_dump() if hasattr(c, 'model_dump') else dict(c)
+            for c in (client_doc["contacts"] or [])
+        ]
     client_doc["client_id"] = client_id
     client_doc["user_id"] = user["user_id"]
     client_doc["created_at"] = now
@@ -166,29 +140,24 @@ async def create_client(
 
     logger.info(f"Client created: {client_id} by user {user['user_id']}")
 
-    # Return safe response
     return _build_client_response(created)
 
 
 @router.put("/{client_id}")
 async def update_client(
     client_id: str,
-    request: Request,
+    update_data: ClientUpdate,
     user: dict = Depends(get_current_user)
 ):
     """Update an existing client."""
-    raw_body = await request.body()
-    try:
-        raw = _json.loads(raw_body)
-    except Exception:
-        raise HTTPException(400, "JSON non valido")
-
     # Check client exists
     existing = await db.clients.find_one(
         {"client_id": client_id, "user_id": user["user_id"]}
     )
     if not existing:
         raise HTTPException(status_code=404, detail="Cliente non trovato")
+    
+    raw = update_data.model_dump(exclude_unset=True)
     
     # Check for duplicate P.IVA if changing
     new_piva = (raw.get("partita_iva") or "").strip()
@@ -204,22 +173,18 @@ async def update_client(
                 detail=f"Esiste già un record con questa Partita IVA: {duplicate.get('business_name', '')}"
             )
     
-    # Build update dict — include all provided fields (even if None)
-    allowed_fields = {
-        "business_name", "client_type", "persona_fisica", "titolo", "cognome", "nome",
-        "codice_fiscale", "partita_iva", "codice_sdi", "pec",
-        "address", "cap", "city", "province", "country",
-        "phone", "cellulare", "fax", "email", "sito_web",
-        "contacts", "payment_type_id", "payment_type_label", "iban", "banca",
-        "supplier_payment_type_id", "supplier_payment_type_label",
-        "supplier_iban", "supplier_banca", "notes",
-    }
-    update_dict = {k: v for k, v in raw.items() if k in allowed_fields}
-    update_dict["updated_at"] = datetime.now(timezone.utc)
+    # Serialize contacts to dicts for MongoDB
+    if "contacts" in raw and raw["contacts"] is not None:
+        raw["contacts"] = [
+            c if isinstance(c, dict) else c.model_dump() if hasattr(c, 'model_dump') else dict(c)
+            for c in raw["contacts"]
+        ]
+
+    raw["updated_at"] = datetime.now(timezone.utc)
     
     await db.clients.update_one(
         {"client_id": client_id},
-        {"$set": update_dict}
+        {"$set": raw}
     )
     
     updated = await db.clients.find_one({"client_id": client_id}, {"_id": 0})

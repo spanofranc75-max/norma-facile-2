@@ -1740,16 +1740,19 @@ def _normalize_profilo(text: str) -> str:
 
 def _extract_profile_base(text: str) -> str:
     """
-    Extract the BASE profile type from a description.
-    Handles both Italian and English naming conventions.
+    Extract the profile identifier from a description.
+    For standard profiles (IPE, HEB, UPN): family + main size (e.g. IPE100, HEB200)
+    For flat/tube/angle: family + FULL dimensions (e.g. PIATTO120X12, TUBO60X60X3)
     """
     import re
     t = (text or "").upper().strip()
+    if not t:
+        return ""
 
-    # Product codes first (e.g., "FEPILC-120X12" → PIATTO120)
-    prodcode = re.search(r'FEPIL[CA]-?(\d+)', t)
+    # Product codes first (e.g., "FEPILC-120X12" → PIATTO120X12)
+    prodcode = re.search(r'FEPIL[CA]-?(\d+)\s*[Xx×\*]\s*(\d+)', t)
     if prodcode:
-        return f"PIATTO{prodcode.group(1)}"
+        return f"PIATTO{prodcode.group(1)}X{prodcode.group(2)}"
 
     # Normalize compound descriptions → family names
     t = re.sub(r'\bFLAT\b', 'PIATTO', t)
@@ -1766,19 +1769,35 @@ def _extract_profile_base(text: str) -> str:
     # Remove filler words BEFORE pattern matching
     t = re.sub(r'\b(L\.?C\.?|MM\.?|IN|NERO|ZINCATO|BARRA|FERRO|A|DI|DA)\b', '', t)
     t = re.sub(r'\.', ' ', t)
+    t = re.sub(r'[x×\*]', 'X', t)
+    # Collapse spaces around X in dimension patterns (e.g. "120 X 12" → "120X12")
+    t = re.sub(r'(\d)\s*X\s*(\d)', r'\1X\2', t)
     t = re.sub(r'\s+', ' ', t).strip()
 
-    # Pattern 1: Family + Number (e.g., "IPE 100", "PIATTO 120")
-    families = r'(IPE|HEB|HEA|HEM|INP|UPN|UNP|IPN|TUBO|PIATTO|TONDO|ANGOLARE|OMEGA|L)\s*(\d+)'
-    match = re.search(families, t)
-    if match:
-        return f"{match.group(1)}{match.group(2)}"
+    # Profiles that need FULL dimensions (width x thickness or width x height x thickness)
+    full_dim_families = r'(PIATTO|TUBO|ANGOLARE|L)'
+    match_full = re.search(full_dim_families + r'\s*(\d+X\d+(?:X\d+)?)', t)
+    if match_full:
+        return f"{match_full.group(1)}{match_full.group(2)}"
 
-    # Pattern 2: Number + Family (e.g., "100X50X6 UPN", "120X12 PIATTO")
-    reverse = r'(\d+)[X×\s]\d+.*?\b(IPE|HEB|HEA|HEM|UPN|UNP|IPN|TUBO|PIATTO|TONDO|ANGOLARE|L)\b'
-    match2 = re.search(reverse, t)
-    if match2:
-        return f"{match2.group(2)}{match2.group(1)}"
+    # Standard profiles: family + main size only (IPE 100, HEB 200, UPN 120)
+    std_families = r'(IPE|HEB|HEA|HEM|INP|UPN|UNP|IPN|TONDO|OMEGA)'
+    match_std = re.search(std_families + r'\s*(\d+)', t)
+    if match_std:
+        return f"{match_std.group(1)}{match_std.group(2)}"
+
+    # Reverse: Number + Family (e.g., "120X55X7 UPN")
+    reverse = r'(\d+X\d+(?:X\d+)?)\s*(?:' + std_families[1:-1] + r'|' + full_dim_families[1:-1] + r')'
+    match_rev = re.search(reverse, t)
+    if match_rev:
+        family = re.search(std_families + r'|' + full_dim_families, t[match_rev.start():])
+        if family:
+            fam = family.group(0)
+            dims = match_rev.group(1)
+            if fam in ('PIATTO', 'TUBO', 'ANGOLARE', 'L'):
+                return f"{fam}{dims}"
+            else:
+                return f"{fam}{dims.split('X')[0]}"
 
     return ""
 
@@ -1886,34 +1905,29 @@ async def _match_profili_to_commesse(
                 matched_commessa_id = next(iter(matched_ids))
                 match_source = "match esatto normalizzato (altra commessa)"
 
-        # STEP C: Try partial substring match OR dimension match (last resort before archive)
-        if not matched_commessa_id:
-            import re
-            # Extract raw dimensions like "120X12" from the certificate profile
-            dim_numbers = re.findall(r'\d+X\d+(?:X\d+)?', _normalize_profilo(dim))
-            for norm_key, cids_set in norm_to_commesse.items():
-                # Substring match
-                if norm_dim and (norm_dim in norm_key or norm_key in norm_dim):
-                    if current_commessa_id in cids_set:
-                        matched_commessa_id = current_commessa_id
-                        match_source = "match parziale"
-                    else:
-                        matched_commessa_id = next(iter(cids_set))
-                        match_source = "match parziale (altra commessa)"
-                    break
-                # Dimension match: "120X12" appears in both
-                if dim_numbers:
-                    for dnum in dim_numbers:
-                        if dnum in norm_key:
+        # STEP C: Try match by profile base with same family only (strict partial)
+        # We do NOT do generic substring/dimension matching to avoid false positives
+        # (e.g. "120X12" appearing in unrelated profiles like "ANGOLARE120X12X3")
+        if not matched_commessa_id and cert_base:
+            # Try to find commesse where the cert profile base is a PREFIX of an OdA base
+            # e.g. cert "PIATTO120X12" matches OdA "PIATTO120X12" (already handled in Step A)
+            # This step only handles edge cases where normalization differs slightly
+            cert_family = re.match(r'([A-Z]+)', cert_base)
+            if cert_family:
+                fam = cert_family.group(1)
+                for base_key, cids_set in base_to_commesse.items():
+                    if base_key.startswith(fam) and base_key != cert_base:
+                        # Only match if dimensions are identical (not just substring)
+                        cert_dims = re.findall(r'\d+', cert_base)
+                        oda_dims = re.findall(r'\d+', base_key)
+                        if cert_dims and cert_dims == oda_dims:
                             if current_commessa_id in cids_set:
                                 matched_commessa_id = current_commessa_id
-                                match_source = f"dimensioni {dnum}"
+                                match_source = f"famiglia+dimensioni {base_key}"
                             else:
                                 matched_commessa_id = next(iter(cids_set))
-                                match_source = f"dimensioni {dnum} (altra commessa)"
+                                match_source = f"famiglia+dimensioni {base_key} (altra commessa)"
                             break
-                if matched_commessa_id:
-                    break
 
         # NO FALLBACK: if no match found, profile goes to archive
         # This is by design — only profiles that match OdA/RdP/DDT belong to a commessa

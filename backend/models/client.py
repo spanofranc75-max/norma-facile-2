@@ -1,5 +1,5 @@
 """Client models for anagrafica clienti / fornitori."""
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
@@ -14,11 +14,12 @@ class ClientType(str, Enum):
 
 class ContactPerson(BaseModel):
     """Persona di riferimento con preferenze invio documenti."""
-    tipo: str = ""  # es: Commerciale, Amministrativo, Titolare
+    model_config = ConfigDict(extra="ignore")
+
+    tipo: str = ""
     nome: str = ""
     telefono: str = ""
     email: str = ""
-    # Document email preferences
     include_preventivi: bool = False
     include_fatture: bool = False
     include_solleciti: bool = False
@@ -26,10 +27,18 @@ class ContactPerson(BaseModel):
     include_ddt: bool = False
     note: str = ""
 
+    @model_validator(mode="before")
+    @classmethod
+    def _nulls_to_defaults(cls, data):
+        if isinstance(data, dict):
+            return {k: v for k, v in data.items() if v is not None}
+        return data
+
 
 class ClientBase(BaseModel):
     """Base client model — scheda completa."""
-    # Anagrafica
+    model_config = ConfigDict(extra="ignore")
+
     business_name: str = Field(..., description="Ragione sociale / Nome")
     client_type: str = Field(default="cliente", description="cliente, fornitore, cliente_fornitore")
     persona_fisica: bool = False
@@ -37,43 +46,44 @@ class ClientBase(BaseModel):
     cognome: Optional[str] = ""
     nome: Optional[str] = ""
 
-    # Dati fiscali
     codice_fiscale: Optional[str] = None
     partita_iva: Optional[str] = None
     codice_sdi: Optional[str] = Field(default="0000000", description="Codice destinatario SDI")
     pec: Optional[str] = None
 
-    # Indirizzo
     address: Optional[str] = ""
     cap: Optional[str] = ""
     city: Optional[str] = ""
     province: Optional[str] = ""
     country: Optional[str] = "IT"
 
-    # Contatti principali
     phone: Optional[str] = None
     cellulare: Optional[str] = None
     fax: Optional[str] = None
     email: Optional[str] = None
     sito_web: Optional[str] = None
 
-    # Persone di riferimento
     contacts: List[ContactPerson] = []
 
-    # Condizioni pagamento CLIENTE
     payment_type_id: Optional[str] = None
-    payment_type_label: Optional[str] = None  # Cached label for display
+    payment_type_label: Optional[str] = None
     iban: Optional[str] = None
     banca: Optional[str] = None
 
-    # Condizioni pagamento FORNITORE (usate quando il soggetto è fornitore o cliente_fornitore)
     supplier_payment_type_id: Optional[str] = None
     supplier_payment_type_label: Optional[str] = None
     supplier_iban: Optional[str] = None
     supplier_banca: Optional[str] = None
 
-    # Note
     notes: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _nulls_to_defaults(cls, data):
+        """Strip null values so Pydantic uses field defaults instead of rejecting them."""
+        if isinstance(data, dict):
+            return {k: v for k, v in data.items() if v is not None}
+        return data
 
 
 class ClientCreate(ClientBase):
@@ -83,6 +93,8 @@ class ClientCreate(ClientBase):
 
 class ClientUpdate(BaseModel):
     """Model for updating a client — all optional."""
+    model_config = ConfigDict(extra="ignore")
+
     business_name: Optional[str] = None
     client_type: Optional[str] = None
     persona_fisica: Optional[bool] = None
