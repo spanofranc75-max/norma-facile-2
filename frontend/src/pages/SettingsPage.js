@@ -1132,7 +1132,7 @@ function BackupTab() {
     const handleRestore = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        if (!window.confirm('ATTENZIONE: Stai per importare dati dal file di backup. I record esistenti NON verranno sovrascritti. Vuoi procedere?')) {
+        if (!window.confirm('ATTENZIONE: Stai per importare dati dal file di backup. I record esistenti verranno AGGIORNATI con i dati del backup. Vuoi procedere?')) {
             e.target.value = '';
             return;
         }
@@ -1246,7 +1246,7 @@ function BackupTab() {
                             <UploadCloud className="h-4 w-4" /> Ripristina da Backup
                         </h3>
                         <p className="text-xs text-amber-600 mt-0.5">
-                            Importa dati da un file di backup precedente. I record esistenti <strong>non verranno sovrascritti</strong> (merge sicuro).
+                            Importa dati da un file di backup precedente. I record esistenti verranno <strong>aggiornati</strong>, i nuovi verranno inseriti (upsert sicuro).
                         </p>
                     </div>
 
@@ -1265,10 +1265,11 @@ function BackupTab() {
                         <div className="bg-white border border-amber-200 rounded-lg p-3 text-xs">
                             <p className="font-semibold text-emerald-700">{restoreResult.message}</p>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 mt-2">
-                                {Object.entries(restoreResult.details || {}).filter(([, v]) => v.inserted > 0 || v.skipped > 0).map(([k, v]) => (
+                                {Object.entries(restoreResult.details || {}).filter(([, v]) => v.inserted > 0 || v.updated > 0 || v.errors > 0).map(([k, v]) => (
                                     <span key={k} className="text-slate-600">
-                                        {COLLECTION_LABELS[k] || k}: <strong className="text-emerald-600">+{v.inserted}</strong>
-                                        {v.skipped > 0 && <span className="text-slate-400"> ({v.skipped} saltati)</span>}
+                                        {COLLECTION_LABELS[k] || k}: {v.inserted > 0 && <strong className="text-emerald-600">+{v.inserted}</strong>}
+                                        {v.updated > 0 && <span className="text-blue-600 font-semibold"> {v.inserted > 0 ? '/ ' : ''}{v.updated} agg.</span>}
+                                        {v.errors > 0 && <span className="text-red-500"> ({v.errors} errori)</span>}
                                     </span>
                                 ))}
                             </div>

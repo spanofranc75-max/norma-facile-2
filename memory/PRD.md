@@ -71,6 +71,9 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **P2**: Validazione Pydantic su dati migrati (response_model rimosso temporaneamente)
 - **P2**: Cache frontend (utente deve fare hard refresh dopo deploy)
 
+## Bug Risolti (sessione 4 Marzo 2026 - Fork)
+- **P0 FIX: Duplicazione dati nel Restore Backup** - La funzione `restore_backup` in `backup.py` usava logica "trova → salta se esiste", causando duplicati quando il PK mancava e non aggiornando mai i record modificati. Riscritta con `update_one(..., upsert=True)` per ogni documento. Aggiunta chiave PK per `company_settings` (user_id) e `catalogo_profili` (codice). La response ora restituisce `total_inserted`, `total_updated`, `total_errors`. Frontend aggiornato per riflettere la nuova logica. Test backend 100% (10/10 pytest).
+
 ## Backlog Prioritizzato
 
 ### P0
