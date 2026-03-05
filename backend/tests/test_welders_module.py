@@ -8,7 +8,7 @@ import os
 import uuid
 
 # API configuration - use public URL for testing
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://norma-facile-erp.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://perizia-pro-1.preview.emergentagent.com').rstrip('/')
 AUTH_TOKEN = "TGOMljLQmmdDakMy3F9zTH_X1-_w2HFsTfcSo8Kbq3Q"
 
 
