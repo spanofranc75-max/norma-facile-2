@@ -105,15 +105,19 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **P0 FIX: Integrazione Ciclo Passivo nel Cruscotto Finanziario** - Corretto uso campi fatture_ricevute: `imposta` (non `totale_iva`), `data_scadenza_pagamento` (non `data_scadenza`), `payment_status`. Creato `financial_service.py` con funzioni aggregate per ciclo attivo+passivo. Aggiunto: Flusso Cassa Reale (6 mesi), Aging Fornitori, IVA Vendite vs IVA Acquisti (Bilancino IVA), Scadenzario completo con debiti fornitori e badge scaduti. 26/26 test passati.
 
 ## Bug Risolti (sessione 5 Marzo 2026 - Fork 5)
-- **P0 FIX: Scadenzario Fornitori non splitta le rate** - Root cause: le fatture ricevute non avevano `scadenze_pagamento` popolato perché:
-  1. Il matching fornitori era rotto (P.IVA con prefisso "IT", matching nomi unidirezionale)
-  2. Il recalc non veniva mai eseguito con successo
+- **P0 FIX: Scadenzario Fornitori non splitta le rate** - Root cause multipla:
+  1. Nessuna FR aveva `scadenze_pagamento` popolato
+  2. Il matching fornitori P.IVA/CF non verificava la corrispondenza dei nomi (es. Bertolini FR collegata ad ALD Automotive per P.IVA condivisa)
+  3. Il matching CF accettava match senza verifica nome (CF di ALD = P.IVA di Bertolini nel XML)
+  4. Le query cashflow/receivables escludevano fatture con `payment_status: None`
   Fix applicati:
-  - `financial_service.py`: `get_payables_aging()` e `get_cashflow_forecast()` usano `scadenze_pagamento` con rate individuali
-  - `fatture_ricevute.py` (`recalc-scadenze`): riscritto matching fornitori (P.IVA senza prefisso IT, CF, nome bidirezionale con stop words). Ora collega correttamente Dinelli→RB30/60FM, Masotti→Bon30/180FM, etc.
-  - Query allargata per includere `payment_status: None` come "non_pagata"
-  - Risultato: DINELLI 2 rate 515€, MASOTTI 6 rate ~1159€, 20 scadenze calcolate
-- **P0 FIX: Cruscotto mostra tutto a zero** - Fatture attive con `payment_status: None` incluse nei filtri `$in` di cashflow e receivables
+  - `financial_service.py`: `get_payables_aging()` e `get_cashflow_forecast()` usano `scadenze_pagamento` per rate individuali; query ampliate per includere `payment_status: None`
+  - `fatture_ricevute.py` (`recalc-scadenze`): completamente riscritto con 3 fasi:
+    - **Phase 0**: Verifica link esistenti e corregge mismatch (BERTOLINI: ALD→BERTOLINI)
+    - **Phase 1**: Link FR non collegate via P.IVA+nome, CF+nome, nome word-based
+    - **Phase 2**: Calcolo rate da tipo pagamento fornitore
+  - P.IVA/CF matching ora verifica corrispondenza nome prima di accettare
+  - Risultato: DINELLI 2×515€, BERTOLINI 2×2.209€, MASOTTI 6×1.159€, 21 scadenze totali
 
 ## Issue Pendenti
 - **P1**: Verifica end-to-end generazione dinamica PDF (DoP/CE) con dati materiali reali

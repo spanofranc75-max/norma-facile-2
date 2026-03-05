@@ -1342,14 +1342,18 @@ async def sync_fatture_from_fic(
 @router.post("/recalc-scadenze")
 async def recalc_scadenze(user: dict = Depends(get_current_user)):
     """Recalculate due dates for all received invoices missing scadenze_pagamento, using supplier payment terms.
-    Also tries to link unlinked suppliers by P.IVA/CF and bidirectional name matching."""
+    Also tries to link unlinked suppliers by P.IVA/CF and bidirectional name matching.
+    Verifies existing links and fixes mismatches."""
     uid = user["user_id"]
     
     # Load all suppliers once for matching
     all_suppliers = await db.clients.find(
         {"user_id": uid},
-        {"_id": 0, "client_id": 1, "business_name": 1, "partita_iva": 1, "codice_fiscale": 1}
+        {"_id": 0, "client_id": 1, "business_name": 1, "partita_iva": 1, "codice_fiscale": 1,
+         "supplier_payment_type_id": 1, "payment_type_id": 1}
     ).to_list(500)
+    
+    supplier_by_id = {s["client_id"]: s for s in all_suppliers}
     
     # Build lookup indexes (strip IT prefix, lowercase)
     def clean_piva(p):
@@ -1357,15 +1361,129 @@ async def recalc_scadenze(user: dict = Depends(get_current_user)):
             return ""
         return re.sub(r'^IT', '', str(p).strip(), flags=re.IGNORECASE)
     
-    piva_map = {}  # clean_piva -> client_id
-    cf_map = {}    # cf -> client_id
+    suffixes_re = re.compile(r'\b(S\.?R\.?L\.?S?\.?|S\.?P\.?A\.?|S\.?N\.?C\.?|S\.?A\.?S\.?|SOC\.?\s*COOP\.?|UNIPERSONALE|DI\s+\S+.*)\b', re.IGNORECASE)
+    stop_words = {'DI', 'DEL', 'DELLA', 'DELLO', 'DEI', 'DEGLI', 'DELLE', 'E', 'ED', 'IL', 'LA', 'LO', 'LE', 'I', 'GLI', 'UN', 'UNA', 'UNO', 'PER', 'IN', 'CON', 'SU', 'TRA', 'FRA',
+                  'ITALIA', 'ITALIANA', 'ITALIANO', 'EUROPE', 'SERVIZI', 'SERVICE', 'GROUP', 'INTERNATIONAL'}
+    
+    def get_name_words(name):
+        n = suffixes_re.sub('', (name or "").upper().strip()).strip()
+        n = re.sub(r'[.,\s]+$', '', n).strip()
+        n = re.sub(r'\s{2,}', ' ', n).strip()
+        return [w for w in n.split() if w not in stop_words and len(w) >= 3]
+    
+    def find_best_name_match(fr_nome):
+        """Find supplier by name matching (word-based Jaccard)."""
+        nome_words = get_name_words(fr_nome)
+        if not nome_words:
+            return None
+        best_match = None
+        best_score = 0
+        for s in all_suppliers:
+            s_words = get_name_words(s.get("business_name", ""))
+            if not s_words:
+                continue
+            common = set(nome_words) & set(s_words)
+            if not common:
+                continue
+            score = len(common)
+            total = max(len(nome_words), len(s_words))
+            ratio = score / total if total else 0
+            if score >= 1 and ratio >= 0.5 and score > best_score:
+                best_score = score
+                best_match = s["client_id"]
+        return best_match
+    
+    piva_map = {}  # clean_piva -> [client_ids]
+    cf_map = {}
     for s in all_suppliers:
         cp = clean_piva(s.get("partita_iva"))
         if cp:
-            piva_map[cp] = s["client_id"]
+            piva_map.setdefault(cp, []).append(s["client_id"])
         cf = (s.get("codice_fiscale") or "").strip()
         if cf and cf != "None":
             cf_map[cf] = s["client_id"]
+    
+    def find_best_match(fr_nome, fr_piva, fr_cf):
+        """Find best supplier match: P.IVA with name verification > CF > Name."""
+        piva = clean_piva(fr_piva)
+        cf = (fr_cf or "").strip()
+        
+        # P.IVA match with name verification
+        if piva and piva in piva_map:
+            candidates = piva_map[piva]
+            if len(candidates) == 1:
+                # Verify name is not wildly different
+                s = supplier_by_id.get(candidates[0], {})
+                fr_words = get_name_words(fr_nome)
+                s_words = get_name_words(s.get("business_name", ""))
+                common = set(fr_words) & set(s_words)
+                if common or not fr_words or not s_words:
+                    return candidates[0]
+                # Name mismatch — try name-based instead
+            else:
+                # Multiple P.IVA matches — pick the one with best name match
+                best = None
+                best_score = -1
+                for cid in candidates:
+                    s = supplier_by_id.get(cid, {})
+                    s_words = get_name_words(s.get("business_name", ""))
+                    fr_words = get_name_words(fr_nome)
+                    common = set(fr_words) & set(s_words)
+                    if len(common) > best_score:
+                        best_score = len(common)
+                        best = cid
+                if best:
+                    return best
+        
+        # CF match with name verification
+        if cf and cf in cf_map:
+            cid = cf_map[cf]
+            s = supplier_by_id.get(cid, {})
+            fr_words = get_name_words(fr_nome)
+            s_words = get_name_words(s.get("business_name", ""))
+            common = set(fr_words) & set(s_words)
+            if common or not fr_words or not s_words:
+                return cid
+            # CF match but name mismatch — fall through to name matching
+        
+        # Name match
+        return find_best_name_match(fr_nome)
+    
+    # Phase 0: Verify and fix existing links where names don't match
+    relinked_count = 0
+    linked_frs = db.fatture_ricevute.find(
+        {"user_id": uid, "fornitore_id": {"$nin": [None, ""]},
+         "$or": [
+             {"scadenze_pagamento": {"$in": [[], None]}},
+             {"scadenze_pagamento": {"$exists": False}},
+         ]},
+        {"_id": 0, "fr_id": 1, "fornitore_id": 1, "fornitore_nome": 1, "fornitore_piva": 1, "fornitore_cf": 1}
+    )
+    async for fr in linked_frs:
+        current_id = fr.get("fornitore_id")
+        current_supplier = supplier_by_id.get(current_id, {})
+        fr_words = get_name_words(fr.get("fornitore_nome", ""))
+        s_words = get_name_words(current_supplier.get("business_name", ""))
+        
+        # Check if current link has no payment type OR name mismatch
+        has_pt = current_supplier.get("supplier_payment_type_id") or current_supplier.get("payment_type_id")
+        name_matches = bool(set(fr_words) & set(s_words))
+        
+        if not has_pt or not name_matches:
+            better = find_best_match(
+                fr.get("fornitore_nome", ""),
+                fr.get("fornitore_piva", ""),
+                fr.get("fornitore_cf", "")
+            )
+            if better and better != current_id:
+                better_supplier = supplier_by_id.get(better, {})
+                better_pt = better_supplier.get("supplier_payment_type_id") or better_supplier.get("payment_type_id")
+                if better_pt or name_matches:
+                    await db.fatture_ricevute.update_one(
+                        {"fr_id": fr["fr_id"]},
+                        {"$set": {"fornitore_id": better, "updated_at": datetime.now(timezone.utc)}}
+                    )
+                    relinked_count += 1
     
     # Phase 1: Link unlinked FRs
     unlinked = db.fatture_ricevute.find(
@@ -1374,62 +1492,11 @@ async def recalc_scadenze(user: dict = Depends(get_current_user)):
     )
     linked_count = 0
     async for fr in unlinked:
-        nome = fr.get("fornitore_nome", "")
-        piva = clean_piva(fr.get("fornitore_piva"))
-        cf = (fr.get("fornitore_cf") or "").strip()
-        match_id = None
-        
-        # Try P.IVA first
-        if piva:
-            match_id = piva_map.get(piva)
-        
-        # Try CF
-        if not match_id and cf:
-            match_id = cf_map.get(cf)
-        
-        # Fallback: bidirectional name matching
-        if not match_id and nome:
-            nome_up = nome.upper().strip()
-            # Remove common suffixes for comparison
-            suffixes_re = re.compile(r'\b(S\.?R\.?L\.?S?\.?|S\.?P\.?A\.?|S\.?N\.?C\.?|S\.?A\.?S\.?|SOC\.?\s*COOP\.?|UNIPERSONALE|DI\s+\S+.*)\b', re.IGNORECASE)
-            nome_clean = suffixes_re.sub('', nome_up).strip()
-            nome_clean = re.sub(r'[.,\s]+$', '', nome_clean).strip()
-            nome_clean = re.sub(r'\s{2,}', ' ', nome_clean).strip()
-            # Extract significant words (>= 3 chars, not articles/prepositions)
-            stop_words = {'DI', 'DEL', 'DELLA', 'DELLO', 'DEI', 'DEGLI', 'DELLE', 'E', 'ED', 'IL', 'LA', 'LO', 'LE', 'I', 'GLI', 'UN', 'UNA', 'UNO', 'PER', 'IN', 'CON', 'SU', 'TRA', 'FRA',
-                         'ITALIA', 'ITALIANA', 'ITALIANO', 'EUROPE', 'SERVIZI', 'SERVICE', 'GROUP', 'INTERNATIONAL'}
-            nome_words = [w for w in nome_clean.split() if w not in stop_words and len(w) >= 3]
-            
-            best_match = None
-            best_score = 0
-            for s in all_suppliers:
-                s_name = (s.get("business_name") or "").upper().strip()
-                s_clean = suffixes_re.sub('', s_name).strip()
-                s_clean = re.sub(r'[.,\s]+$', '', s_clean).strip()
-                s_clean = re.sub(r'\s{2,}', ' ', s_clean).strip()
-                s_words = [w for w in s_clean.split() if w not in stop_words and len(w) >= 3]
-                
-                if not s_words:
-                    continue
-                
-                # Match strategy: count common significant words
-                common = set(nome_words) & set(s_words)
-                if not common:
-                    continue
-                
-                # Score = matched words / max possible words (Jaccard on words)
-                score = len(common)
-                total = max(len(nome_words), len(s_words))
-                ratio = score / total if total else 0
-                
-                # Require at least 1 matching word AND ratio >= 50%
-                if score >= 1 and ratio >= 0.5 and score > best_score:
-                    best_score = score
-                    best_match = s["client_id"]
-            
-            if best_match:
-                match_id = best_match
-        
+        match_id = find_best_match(
+            fr.get("fornitore_nome", ""),
+            fr.get("fornitore_piva", ""),
+            fr.get("fornitore_cf", "")
+        )
         if match_id:
             await db.fatture_ricevute.update_one(
                 {"fr_id": fr["fr_id"]},
@@ -1465,7 +1532,10 @@ async def recalc_scadenze(user: dict = Depends(get_current_user)):
                 }}
             )
             updated += 1
-    return {"message": f"Collegati {linked_count} fornitori, ricalcolate {updated} scadenze", "linked": linked_count, "updated": updated}
+    return {
+        "message": f"Ricollegati {relinked_count}, collegati {linked_count} fornitori, ricalcolate {updated} scadenze",
+        "relinked": relinked_count, "linked": linked_count, "updated": updated
+    }
 
 
 # ── Recalculate single invoice scadenze ──────────────────────────
