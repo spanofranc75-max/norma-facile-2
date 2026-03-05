@@ -119,7 +119,19 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
   - P.IVA/CF matching ora verifica corrispondenza nome prima di accettare
   - `payment_calculator.py`: Fix critico "fine mese": il calcolo aggiungeva giorni letterali (31/01+30=02/03→fine marzo) invece di usare mesi di calendario (31/01 + 1 mese → fine febbraio). La convenzione italiana "30/60 gg FM" significa N/30 mesi dopo la data fattura, scadenza a fine mese. Esempio: DINELLI 31/01 RB30/60FM → era 31/03+30/04, ora corretto a 28/02+31/03.
 
+## Bug Risolti (sessione 5 Marzo 2026 - Fork 6)
+- **P0 FIX: UI "Segna come Pagata" (InvoicesPage.js)** - Riscrittura completa dello styling condizionale nella tabella fatture:
+  - Colonna "Da Pagare" rinominata in "Residuo" per allinearsi alla terminologia utente
+  - Righe pagate: sfondo verde chiaro (`bg-emerald-50/40`) per distinzione visiva immediata
+  - Colonna "Pagato": verde bold (`text-emerald-600 font-semibold`) per fatture pagate, verde chiaro per parziali, grigio neutro per "-"
+  - Colonna "Residuo": rosso solo quando importo > 0, grigio neutro per "-" quando saldato
+  - Pulsante "Pagata?" migliorato: più grande, ombra, bordo più forte per visibilità
+  - Pulizia codice: rimosso `PAYMENT_STATUS_ICONS` non usato, import `Clock`/`AlertCircle`
+  - Backend verificato: PATCH status→pagata setta correttamente `totale_pagato=total_document`, `residuo=0`, `payment_status=pagata`
+  - 11/11 test backend passati (`test_iteration133_mark_as_paid.py`)
+
 ## Issue Pendenti
+- **P1**: Bug condizioni pagamento cancellate alla chiusura form fornitore senza salvare
 - **P1**: Verifica end-to-end generazione dinamica PDF (DoP/CE) con dati materiali reali
 - **P1**: Verifica flusso creazione DDT (nuovo dialog con numero editabile)
 - **P2**: Gestione eccezioni generiche (`except Exception`) in tutto il backend
