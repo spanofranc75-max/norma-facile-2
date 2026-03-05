@@ -186,7 +186,17 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 1. Step 1: Dati cliente e indirizzo sopralluogo
 2. Step 2: Upload foto (Object Storage Emergent, max 10MB, JPEG/PNG/WebP)
 3. Step 3: Analisi AI con GPT-4o Vision (prompt specializzato EN 12453)
-4. Step 4: Risultati con rischi, dispositivi, materiali suggeriti → Genera Preventivo automatico
+4. Step 4: Risultati con rischi, dispositivi, materiali suggeriti → Scarica PDF Perizia / Genera Preventivo automatico
+
+### PDF Perizia
+- WeasyPrint HTML→PDF, 2 pagine A4
+- Header aziendale, info sopralluogo, indice conformità colorato
+- Foto sopralluogo embedded (da Object Storage)
+- Tabella rischi con gravità/zona/norma/soluzione
+- Dispositivi presenti/mancanti
+- Tabella materiali con prezzi e totale
+- Area firma tecnico + cliente
+- Endpoint: `GET /api/sopralluoghi/{id}/pdf`
 
 ### Articoli Catalogo
 - 14 articoli predefiniti (coste, fotocellule, rete, encoder, etc.)

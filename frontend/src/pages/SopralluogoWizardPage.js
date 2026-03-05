@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import {
     ArrowLeft, ArrowRight, Camera, Upload, Trash2, Brain, FileText,
     AlertTriangle, CheckCircle2, ShieldAlert, Loader2, X, Eye,
-    MapPin, User, Image as ImageIcon, ChevronRight, Wrench
+    MapPin, User, Image as ImageIcon, ChevronRight, Wrench, Download
 } from 'lucide-react';
 
 const STEPS = [
@@ -49,6 +49,7 @@ export default function SopralluogoWizardPage() {
     const [saving, setSaving] = useState(false);
     const [analyzing, setAnalyzing] = useState(false);
     const [generatingPrev, setGeneratingPrev] = useState(false);
+    const [generatingPdf, setGeneratingPdf] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [sopralluogo, setSopralluogo] = useState(null);
     const [photoUrls, setPhotoUrls] = useState({});
@@ -201,6 +202,32 @@ export default function SopralluogoWizardPage() {
             newAnalisi.rischi = rischi;
             return { ...prev, analisi_ai: newAnalisi };
         });
+    };
+
+    const handleDownloadPdf = async () => {
+        setGeneratingPdf(true);
+        try {
+            const response = await fetch(
+                `${process.env.REACT_APP_BACKEND_URL}/api/sopralluoghi/${sopralluogo.sopralluogo_id}/pdf`,
+                { credentials: 'include' }
+            );
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.detail || 'Errore generazione PDF');
+            }
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Perizia_${sopralluogo.document_number?.replace('/', '-') || 'SOP'}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+            toast.success('PDF scaricato');
+        } catch (err) {
+            toast.error(err.message, { duration: 8000 });
+        } finally {
+            setGeneratingPdf(false);
+        }
     };
 
     const handleGeneratePreventivo = async () => {
@@ -609,6 +636,16 @@ export default function SopralluogoWizardPage() {
                             <Brain className="h-4 w-4 mr-1" /> Ri-Analizza
                         </Button>
                         <div className="flex gap-3">
+                            <Button
+                                data-testid="btn-download-pdf"
+                                onClick={handleDownloadPdf}
+                                disabled={generatingPdf}
+                                variant="outline"
+                                className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                            >
+                                {generatingPdf ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
+                                Scarica PDF Perizia
+                            </Button>
                             <Button
                                 data-testid="btn-generate-preventivo"
                                 onClick={handleGeneratePreventivo}

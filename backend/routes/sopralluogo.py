@@ -437,3 +437,50 @@ async def genera_preventivo(sopralluogo_id: str, user: dict = Depends(get_curren
     )
 
     return {"preventivo": preventivo, "message": f"Preventivo {prev_number} generato con successo"}
+
+
+# ── PDF Generation ──
+
+@router.get("/{sopralluogo_id}/pdf")
+async def genera_pdf_perizia(sopralluogo_id: str, user: dict = Depends(get_current_user)):
+    """Generate a PDF perizia report with photos and analysis."""
+    doc = await db[COLLECTION].find_one(
+        {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"]},
+        {"_id": 0},
+    )
+    if not doc:
+        raise HTTPException(404, "Sopralluogo non trovato")
+
+    if not doc.get("analisi_ai"):
+        raise HTTPException(400, "Esegui prima l'analisi AI per generare il PDF")
+
+    # Get company settings
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+
+    # Enrich client name
+    if doc.get("client_id"):
+        client = await db.clients.find_one({"client_id": doc["client_id"]}, {"_id": 0, "business_name": 1})
+        doc["client_name"] = client.get("business_name", "") if client else ""
+
+    # Download photos as base64
+    photos_b64 = []
+    for foto in doc.get("foto", []):
+        try:
+            data, ct = get_object(foto["storage_path"])
+            photos_b64.append({
+                "base64": base64.b64encode(data).decode("utf-8"),
+                "mime_type": ct,
+                "label": foto.get("label", "foto"),
+            })
+        except Exception as e:
+            logger.warning(f"Failed to download photo for PDF: {e}")
+
+    from services.pdf_perizia_sopralluogo import generate_perizia_pdf
+    pdf_bytes = generate_perizia_pdf(doc, company, photos_b64)
+
+    filename = f"Perizia_{doc.get('document_number', 'SOP').replace('/', '-')}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )
