@@ -465,10 +465,27 @@ export default function InvoicesPage() {
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-1.5">
-                                                        <PsIcon className={`h-4 w-4 ${psColor}`} />
-                                                        <Badge className={STATUS_BADGES[inv.status]?.color}>
-                                                            {STATUS_BADGES[inv.status]?.label}
-                                                        </Badge>
+                                                        {inv.status === 'pagata' || ps === 'pagata' ? (
+                                                            <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                                                <CheckCircle2 className="h-3 w-3 mr-1" />Pagata
+                                                            </Badge>
+                                                        ) : (
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Badge className={STATUS_BADGES[inv.status]?.color}>
+                                                                    {STATUS_BADGES[inv.status]?.label}
+                                                                </Badge>
+                                                                {['emessa', 'inviata_sdi', 'accettata', 'scaduta'].includes(inv.status) && (
+                                                                    <button
+                                                                        data-testid={`btn-toggle-paid-${inv.invoice_id}`}
+                                                                        onClick={(e) => { e.stopPropagation(); handleChangeStatus(inv, 'pagata'); }}
+                                                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                                                                        title="Segna come pagata"
+                                                                    >
+                                                                        <CircleDollarSign className="h-3 w-3" />Pagata?
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
