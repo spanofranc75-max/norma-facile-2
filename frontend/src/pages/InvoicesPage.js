@@ -187,7 +187,7 @@ export default function InvoicesPage() {
             toast.success(result.message);
             fetchInvoices();
         } catch (error) {
-            toast.error(error.message);
+            toast.error(error.message, { duration: 10000, style: { maxWidth: '600px' } });
         }
     };
 

@@ -471,7 +471,10 @@ export default function InvoiceEditorPage() {
                                     try {
                                         const r = await apiRequest(`/invoices/${invoiceId}/send-sdi`, { method: 'POST' });
                                         toast.success(r.message);
-                                    } catch (e) { toast.error(e.message); }
+                                        fetchInvoice();
+                                    } catch (e) {
+                                        toast.error(e.message, { duration: 10000, style: { maxWidth: '600px' } });
+                                    }
                                 }}
                                 className="border-amber-400 text-amber-600 hover:bg-amber-50 text-xs h-9"
                             >

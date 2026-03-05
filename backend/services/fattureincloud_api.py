@@ -2,6 +2,7 @@
 NormaFacile - Fatture in Cloud API v2 Integration
 Sync fatture, clienti, fornitori, prodotti with Fatture in Cloud.
 """
+import json
 import logging
 import httpx
 from typing import Optional, Dict, Any, List
@@ -66,7 +67,8 @@ class FattureInCloudClient:
                 resp.raise_for_status()
                 return resp.json()
         except httpx.HTTPStatusError as e:
-            logger.error(f"FIC API error {e.response.status_code}: {e.response.text}")
+            error_body = e.response.text
+            logger.error(f"FIC API error {e.response.status_code}: {error_body}")
             raise
         except Exception as e:
             logger.error(f"FIC request failed: {e}")
@@ -153,10 +155,71 @@ class FattureInCloudClient:
         return await self._request("GET", "/info/vat_types")
 
 
+# ── VALIDAZIONE PRE-INVIO SDI ──
+
+def validate_invoice_for_sdi(invoice: dict, client: dict, company: dict) -> list:
+    """
+    Validates ALL required fields before sending to FIC/SDI.
+    Returns a list of error strings. Empty list = validation passed.
+    """
+    errors = []
+
+    # --- MITTENTE (Company) ---
+    if not company.get("partita_iva"):
+        errors.append("Mittente: manca la Partita IVA dell'azienda (Impostazioni)")
+    if not company.get("codice_fiscale"):
+        errors.append("Mittente: manca il Codice Fiscale dell'azienda (Impostazioni)")
+    if not company.get("address"):
+        errors.append("Mittente: manca l'Indirizzo dell'azienda (Impostazioni)")
+    if not company.get("cap"):
+        errors.append("Mittente: manca il CAP dell'azienda (Impostazioni)")
+    if not company.get("city"):
+        errors.append("Mittente: manca la Citta' dell'azienda (Impostazioni)")
+
+    # --- DESTINATARIO (Client) ---
+    if not client:
+        errors.append("Destinatario: cliente non trovato")
+        return errors
+
+    if not client.get("partita_iva") and not client.get("codice_fiscale"):
+        errors.append("Destinatario: manca P.IVA o Codice Fiscale del cliente")
+    if not client.get("address"):
+        errors.append("Destinatario: manca l'Indirizzo del cliente")
+    if not client.get("cap"):
+        errors.append("Destinatario: manca il CAP del cliente")
+    if not client.get("city"):
+        errors.append("Destinatario: manca la Citta' del cliente")
+    if not client.get("codice_sdi") and not client.get("pec"):
+        errors.append("Destinatario: manca il Codice SDI o la PEC del cliente")
+
+    # --- DOCUMENTO ---
+    lines = invoice.get("lines", [])
+    valid_lines = [ln for ln in lines if ln.get("description", "").strip()]
+    if not valid_lines:
+        errors.append("Documento: nessuna riga articolo con descrizione")
+
+    totals = invoice.get("totals", {})
+    total_doc = totals.get("total_document", 0)
+    if total_doc is None or (total_doc <= 0 and invoice.get("document_type") != "NC"):
+        errors.append(f"Documento: totale documento non valido ({total_doc})")
+
+    if not invoice.get("issue_date"):
+        errors.append("Documento: manca la data di emissione")
+
+    doc_num = invoice.get("document_number", "")
+    if not doc_num:
+        errors.append("Documento: manca il numero documento")
+
+    return errors
+
+
 def map_fattura_to_fic(invoice: dict, client: dict) -> Dict[str, Any]:
     """Map internal invoice format to FattureInCloud format."""
     items = []
     for line in invoice.get("lines", []):
+        desc = line.get("description", "").strip()
+        if not desc:
+            continue
         vat_val = line.get("vat_rate", 22)
         try:
             vat_val = float(vat_val) if str(vat_val) not in ("N3", "N4", "N1", "N2") else 0
@@ -165,11 +228,11 @@ def map_fattura_to_fic(invoice: dict, client: dict) -> Dict[str, Any]:
         items.append({
             "product_id": None,
             "code": line.get("code", ""),
-            "name": line.get("description", ""),
-            "net_price": line.get("unit_price", 0),
-            "qty": line.get("quantity", 1),
+            "name": desc,
+            "net_price": float(line.get("unit_price", 0)),
+            "qty": float(line.get("quantity", 1)),
             "vat": {"id": 0, "value": vat_val},
-            "discount": line.get("discount_percent", 0),
+            "discount": float(line.get("discount_percent", 0)),
         })
 
     # Extract numeric part from document_number (e.g. "16/2026" -> 16)
@@ -181,15 +244,14 @@ def map_fattura_to_fic(invoice: dict, client: dict) -> Dict[str, Any]:
 
     # Calculate total document amount for payment
     totals = invoice.get("totals", {})
-    amount_due = totals.get("total_document", 0)
+    amount_due = float(totals.get("total_document", 0) or 0)
     if not amount_due:
-        # Fallback: calculate from line items
         amount_due = sum(
-            (float(l.get("line_total", 0)) + float(l.get("vat_amount", 0)))
-            for l in invoice.get("lines", [])
+            (float(line.get("line_total", 0)) + float(line.get("vat_amount", 0)))
+            for line in invoice.get("lines", []) if line.get("description", "").strip()
         )
 
-    return {
+    payload = {
         "type": "invoice",
         "entity": {
             "name": client.get("business_name", ""),
@@ -204,7 +266,7 @@ def map_fattura_to_fic(invoice: dict, client: dict) -> Dict[str, Any]:
             "ei_code": client.get("codice_sdi", "0000000"),
             "certified_email": client.get("pec", ""),
         },
-        "date": invoice.get("issue_date") or (invoice.get("created_at", "").split("T")[0] if isinstance(invoice.get("created_at"), str) else None),
+        "date": invoice.get("issue_date") or None,
         "number": doc_number_int,
         "items_list": items,
         "payments_list": [
@@ -217,6 +279,38 @@ def map_fattura_to_fic(invoice: dict, client: dict) -> Dict[str, Any]:
             }
         ],
     }
+
+    # LOG DEBUG PAYLOAD - Sempre visibile nei log del backend
+    logger.info(f"=== DEBUG PAYLOAD SDI ===\n{json.dumps(payload, indent=2, default=str)}")
+
+    return payload
+
+
+def extract_fic_error_message(exc: httpx.HTTPStatusError) -> str:
+    """Extract a human-readable error message from a FIC API error response."""
+    try:
+        body = exc.response.json()
+        error_obj = body.get("error", {})
+        message = error_obj.get("message", "")
+        validation = error_obj.get("validation_result", None)
+        extra = body.get("extra", {})
+
+        parts = []
+        if message:
+            parts.append(message)
+        if validation:
+            for field, msgs in validation.items():
+                if isinstance(msgs, list):
+                    parts.append(f"{field}: {', '.join(msgs)}")
+                else:
+                    parts.append(f"{field}: {msgs}")
+        if extra and extra.get("totals"):
+            t = extra["totals"]
+            parts.append(f"(Totale netto: {t.get('amount_net')}, IVA: {t.get('amount_vat')}, Dovuto: {t.get('amount_due')}, Pagamenti: {t.get('payments_sum')})")
+
+        return " | ".join(parts) if parts else str(exc)
+    except Exception:
+        return str(exc)
 
 
 # Factory

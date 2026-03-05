@@ -1132,7 +1132,22 @@ async def send_invoice_email(invoice_id: str, payload: dict = None, user: dict =
 
 @router.post("/{invoice_id}/send-sdi")
 async def send_invoice_to_sdi(invoice_id: str, user: dict = Depends(get_current_user)):
-    """Sync invoice to Fatture in Cloud and send to SDI."""
+    """Sync invoice to Fatture in Cloud and send to SDI.
+    
+    Flow:
+    1. Validate ALL required fields BEFORE calling FIC
+    2. Map to FIC format + log payload
+    3. Create/update on FIC (handle 409 duplicates)
+    4. Send to SDI
+    5. Update local status
+    """
+    import httpx
+    from services.fattureincloud_api import (
+        get_fic_client, map_fattura_to_fic,
+        validate_invoice_for_sdi, extract_fic_error_message,
+    )
+
+    # ── Fetch data ──
     invoice = await db.invoices.find_one(
         {"invoice_id": invoice_id, "user_id": user["user_id"]}, {"_id": 0}
     )
@@ -1145,107 +1160,116 @@ async def send_invoice_to_sdi(invoice_id: str, user: dict = Depends(get_current_
     if invoice.get("status") == "bozza":
         raise HTTPException(400, "Non puoi inviare una bozza al SDI. Prima emetti il documento.")
 
-    client_doc = await db.clients.find_one({"client_id": invoice.get("client_id")}, {"_id": 0})
-    if not client_doc:
-        raise HTTPException(400, "Cliente non trovato")
+    client_doc = await db.clients.find_one({"client_id": invoice.get("client_id")}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
 
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0})
-    if not company or not company.get("partita_iva"):
-        raise HTTPException(400, "Configura i dati aziendali (P.IVA obbligatoria) prima di inviare al SDI")
+    # ── STEP 1: Validazione pre-invio ──
+    validation_errors = validate_invoice_for_sdi(invoice, client_doc, company)
+    if validation_errors:
+        error_msg = "Validazione SDI fallita:\n" + "\n".join(f"- {e}" for e in validation_errors)
+        logger.warning(f"SDI validation failed for {invoice.get('document_number')}: {validation_errors}")
+        raise HTTPException(422, error_msg)
 
-    # Get Fatture in Cloud credentials from company settings or env
+    # ── Check FIC credentials ──
     fic_token = company.get("fic_access_token") or os.environ.get("FIC_ACCESS_TOKEN")
     fic_company_id = company.get("fic_company_id") or os.environ.get("FIC_COMPANY_ID")
     if not fic_token or not fic_company_id:
-        raise HTTPException(400, "Configura le credenziali Fatture in Cloud in Impostazioni → Integrazioni")
+        raise HTTPException(400, "Configura le credenziali Fatture in Cloud in Impostazioni -> Integrazioni")
 
+    fic = get_fic_client(access_token=fic_token, company_id=int(fic_company_id))
+
+    # ── STEP 2: Map to FIC format (includes payload logging) ──
+    fic_data = map_fattura_to_fic(invoice, client_doc)
+
+    # ── STEP 3: Create or update on FIC ──
+    fic_doc_id = invoice.get("fic_document_id")
+
+    if not fic_doc_id:
+        try:
+            result = await fic.create_issued_invoice(fic_data)
+            fic_doc_id = result.get("data", {}).get("id")
+            logger.info(f"Created FIC document id={fic_doc_id}")
+
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 409:
+                # Document already exists — find and update
+                fic_doc_id = await _handle_fic_409(fic, invoice, fic_data)
+            else:
+                detail = extract_fic_error_message(e)
+                logger.error(f"FIC create failed ({e.response.status_code}): {detail}")
+                raise HTTPException(e.response.status_code, f"Errore Fatture in Cloud: {detail}")
+
+    if not fic_doc_id:
+        raise HTTPException(500, "Fatture in Cloud non ha restituito un ID documento")
+
+    # ── STEP 4: Send to SDI ──
     try:
-        from services.fattureincloud_api import get_fic_client, map_fattura_to_fic
-        import httpx
-        fic = get_fic_client(access_token=fic_token, company_id=int(fic_company_id))
-
-        fic_doc_id = invoice.get("fic_document_id")
-
-        if not fic_doc_id:
-            # Map invoice to FIC format
-            fic_data = map_fattura_to_fic(invoice, client_doc)
-
-            try:
-                # Try to create invoice on FIC
-                result = await fic.create_issued_invoice(fic_data)
-                fic_doc_id = result.get("data", {}).get("id")
-            except httpx.HTTPStatusError as e:
-                if e.response.status_code == 409:
-                    # Document number already exists on FIC — find it and update
-                    logger.info(f"Document {invoice.get('document_number')} already exists on FIC, searching...")
-                    doc_num_raw = invoice.get("document_number", "")
-                    try:
-                        num_int = int(str(doc_num_raw).split("/")[0])
-                    except (ValueError, IndexError):
-                        num_int = 0
-                    try:
-                        search_result = await fic._request("GET", "/issued_documents", params={
-                            "type": "invoice",
-                            "q": f"number = {num_int}",
-                            "per_page": 10,
-                        })
-                        docs = search_result.get("data", [])
-                    except Exception:
-                        docs = []
-
-                    existing_id = None
-                    for doc in docs:
-                        if doc.get("number") == num_int:
-                            existing_id = doc.get("id")
-                            break
-
-                    if existing_id:
-                        logger.info(f"Updating existing FIC document id={existing_id} with current invoice data")
-                        try:
-                            update_result = await fic.update_issued_invoice(existing_id, fic_data)
-                            fic_doc_id = update_result.get("data", {}).get("id") or existing_id
-                        except Exception as ue:
-                            logger.error(f"Failed to update FIC document: {ue}")
-                            raise HTTPException(
-                                409,
-                                f"Documento n.{num_int} esiste già su FIC (id={existing_id}). "
-                                f"Aggiornamento fallito. Verifica manualmente su FIC."
-                            )
-                    else:
-                        raise HTTPException(
-                            409,
-                            f"Documento n.{num_int} esiste già su FIC ma non trovato nella ricerca. "
-                            f"Verifica manualmente su FIC."
-                        )
-                else:
-                    raise
-
-        if not fic_doc_id:
-            raise HTTPException(500, "Fatture in Cloud non ha restituito un ID documento")
-
-        # Send to SDI via FIC
         sdi_result = await fic.send_to_sdi(fic_doc_id)
-
-        # Update invoice status
+        logger.info(f"SDI send result for doc {fic_doc_id}: {sdi_result}")
+    except httpx.HTTPStatusError as e:
+        detail = extract_fic_error_message(e)
+        logger.error(f"SDI send failed ({e.response.status_code}): {detail}")
+        # Save fic_doc_id even if SDI fails, so we don't recreate
         await db.invoices.update_one(
             {"invoice_id": invoice_id},
-            {"$set": {
-                "status": "inviata_sdi",
-                "fic_document_id": fic_doc_id,
-                "sdi_sent_at": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            }}
+            {"$set": {"fic_document_id": fic_doc_id, "updated_at": datetime.now(timezone.utc).isoformat()}}
         )
+        raise HTTPException(e.response.status_code, f"Documento creato su FIC (id={fic_doc_id}), ma invio SDI fallito: {detail}")
 
-        doc_num = invoice.get("document_number", "")
-        logger.info(f"Invoice {doc_num} synced to FIC (id={fic_doc_id}) and sent to SDI")
-        return {"message": "Fattura sincronizzata con Fatture in Cloud e inviata al SDI", "fic_document_id": fic_doc_id}
+    # ── STEP 5: Update local status ──
+    await db.invoices.update_one(
+        {"invoice_id": invoice_id},
+        {"$set": {
+            "status": "inviata_sdi",
+            "fic_document_id": fic_doc_id,
+            "sdi_sent_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }}
+    )
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"FIC/SDI error: {e}")
-        raise HTTPException(500, f"Errore invio SDI via Fatture in Cloud: {str(e)}")
+    doc_num = invoice.get("document_number", "")
+    logger.info(f"Invoice {doc_num} synced to FIC (id={fic_doc_id}) and sent to SDI")
+    return {"message": f"Fattura {doc_num} inviata al SDI con successo", "fic_document_id": fic_doc_id}
+
+
+async def _handle_fic_409(fic, invoice: dict, fic_data: dict) -> int:
+    """Handle 409 Conflict: document number exists on FIC. Find and update it."""
+    doc_num_raw = invoice.get("document_number", "")
+    try:
+        num_int = int(str(doc_num_raw).split("/")[0])
+    except (ValueError, IndexError):
+        raise HTTPException(409, f"Numero documento '{doc_num_raw}' non valido per la ricerca su FIC")
+
+    logger.info(f"Document {doc_num_raw} already exists on FIC, searching for number={num_int}...")
+    try:
+        search_result = await fic._request("GET", "/issued_documents", params={
+            "type": "invoice", "q": f"number = {num_int}", "per_page": 10,
+        })
+        docs = search_result.get("data", [])
+    except Exception as se:
+        logger.error(f"FIC search failed: {se}")
+        raise HTTPException(409, f"Documento n.{num_int} esiste gia' su FIC. Ricerca fallita: {str(se)[:100]}")
+
+    existing_id = None
+    for doc in docs:
+        if doc.get("number") == num_int:
+            existing_id = doc.get("id")
+            break
+
+    if not existing_id:
+        raise HTTPException(409, f"Documento n.{num_int} esiste gia' su FIC ma non trovato nella ricerca. Verifica manualmente.")
+
+    logger.info(f"Updating existing FIC document id={existing_id}")
+    try:
+        from services.fattureincloud_api import extract_fic_error_message
+        import httpx as httpx_lib
+        update_result = await fic.update_issued_invoice(existing_id, fic_data)
+        return update_result.get("data", {}).get("id") or existing_id
+    except httpx_lib.HTTPStatusError as ue:
+        detail = extract_fic_error_message(ue)
+        raise HTTPException(ue.response.status_code, f"Documento n.{num_int} su FIC (id={existing_id}): aggiornamento fallito. {detail}")
+    except Exception as ue:
+        raise HTTPException(409, f"Aggiornamento documento n.{num_int} fallito: {str(ue)[:150]}")
 
 
 @router.get("/{invoice_id}/stato-sdi")
