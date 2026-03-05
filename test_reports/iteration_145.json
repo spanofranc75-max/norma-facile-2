@@ -1,0 +1,165 @@
+{
+  "summary": "Iteration 145: PDF Content Fixes - ALL 23 TESTS PASS. Verified all 5 user-reported PDF issues have been correctly fixed: (1) No 'SOLUZIONE TIPO' label in reference images, (2) No 'Intelligenza Artificiale' text - replaced with 'analisi assistita', (3) Exactly ONE AI mention in footer disclaimer only, (4) No 'Note Analisi AI' in notes section - only user note_tecnico shown, (5) Photo label deduplication working correctly (PANORAMICA, PANORAMICA 2, PANORAMICA 3). AI prompt rules verified: dispositivi_mancanti→rischi mapping, professional language with ERRATO/CORRETTO examples, D.Lgs. 17/2010 retrofit context.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "pdf_content_fix_1_no_soluzione_tipo": {
+      "test": "test_no_soluzione_tipo_in_pdf",
+      "status": "PASS",
+      "detail": "PDF code contains no 'SOLUZIONE TIPO' or 'sostituibile con foto proprie installazioni'"
+    },
+    "pdf_content_fix_2_no_intelligenza_artificiale": {
+      "test": "test_no_intelligenza_artificiale_in_pdf",
+      "status": "PASS",
+      "detail": "PDF code contains no 'Intelligenza Artificiale' text (case insensitive)"
+    },
+    "pdf_content_fix_3_exactly_one_ai_mention": {
+      "test": "test_exactly_one_analisi_assistita_mention",
+      "status": "PASS",
+      "detail": "Exactly 1 occurrence of 'strumenti di analisi assistita' in disclaimer footer"
+    },
+    "pdf_content_fix_4_no_note_analisi_ai": {
+      "test": "test_no_note_analisi_ai_in_pdf",
+      "status": "PASS",
+      "detail": "No 'Note Analisi AI' in PDF, no reference to note_tecniche from AI"
+    },
+    "pdf_content_fix_5_notes_section_header": {
+      "test": "test_notes_section_header_text",
+      "status": "PASS",
+      "detail": "Notes section header is 'NOTE DEL TECNICO' (section 04)"
+    },
+    "pdf_only_note_tecnico_used": {
+      "test": "test_only_note_tecnico_used",
+      "status": "PASS",
+      "detail": "PDF uses sopralluogo.note_tecnico only, not analisi_ai.note_tecniche"
+    },
+    "pdf_validita_no_ai_mention": {
+      "test": "test_validita_documento_no_ai_mention",
+      "status": "PASS",
+      "detail": "Validita del Documento section has no AI or Intelligenza Artificiale mention"
+    },
+    "photo_label_dedup_logic": {
+      "test": "test_dedup_logic_in_code",
+      "status": "PASS",
+      "detail": "seen_labels dict with counter increment for duplicate labels"
+    },
+    "photo_label_dedup_2_same": {
+      "test": "test_dedup_with_two_same_labels",
+      "status": "PASS",
+      "detail": "['PANORAMICA', 'PANORAMICA 2']"
+    },
+    "photo_label_dedup_3_same": {
+      "test": "test_dedup_with_three_same_labels",
+      "status": "PASS",
+      "detail": "['PANORAMICA', 'PANORAMICA 2', 'PANORAMICA 3']"
+    },
+    "photo_label_dedup_mixed": {
+      "test": "test_dedup_mixed_labels",
+      "status": "PASS",
+      "detail": "['PANORAMICA', 'MOTORE', 'PANORAMICA 2', 'GUIDE', 'MOTORE 2', 'PANORAMICA 3']"
+    },
+    "photo_label_case_insensitive": {
+      "test": "test_dedup_case_insensitive",
+      "status": "PASS",
+      "detail": "Panoramica, PANORAMICA, panoramica → ['PANORAMICA', 'PANORAMICA 2', 'PANORAMICA 3']"
+    },
+    "ai_prompt_dispositivi_rischi_rule": {
+      "test": "test_prompt_dispositivi_mancanti_rischi_rule",
+      "status": "PASS",
+      "detail": "SYSTEM_PROMPT contains CRITICO rule: OGNI dispositivo_mancante DEVE avere scheda rischi"
+    },
+    "ai_prompt_professional_language": {
+      "test": "test_prompt_professional_language_rule",
+      "status": "PASS",
+      "detail": "SYSTEM_PROMPT has LINGUAGGIO section with ERRATO/CORRETTO examples"
+    },
+    "ai_prompt_dlgs_17_2010": {
+      "test": "test_prompt_dlgs_17_2010_context",
+      "status": "PASS",
+      "detail": "SYSTEM_PROMPT references D.Lgs. 17/2010 for retrofit vs new installation"
+    },
+    "ai_prompt_explicit_mancante_rischi": {
+      "test": "test_prompt_every_mancante_has_risk_explicit",
+      "status": "PASS",
+      "detail": "Explicit rule: 'OGNI dispositivo elencato in dispositivi_mancanti DEVE avere una corrispondente scheda in rischi'"
+    },
+    "ai_prompt_note_tecniche_tecnico_only": {
+      "test": "test_prompt_note_tecniche_for_tecnico_only",
+      "status": "PASS",
+      "detail": "note_tecniche defined as technician observations, warns against generic suggestions"
+    },
+    "pdf_generation_bytes": {
+      "test": "test_pdf_generation_returns_bytes",
+      "status": "PASS",
+      "detail": "PDF generated successfully with %PDF magic bytes"
+    },
+    "pdf_generation_no_photos": {
+      "test": "test_pdf_generation_without_photos",
+      "status": "PASS",
+      "detail": "PDF generates correctly without photos"
+    },
+    "code_notes_uses_note_tecnico": {
+      "test": "test_pdf_notes_section_uses_note_tecnico",
+      "status": "PASS",
+      "detail": "Notes section reads from sopralluogo.note_tecnico"
+    },
+    "code_disclaimer_correct": {
+      "test": "test_disclaimer_text_correct",
+      "status": "PASS",
+      "detail": "Disclaimer says 'strumenti di analisi assistita', not 'Intelligenza Artificiale'"
+    },
+    "code_ref_image_label_removed": {
+      "test": "test_ref_image_label_removed",
+      "status": "PASS",
+      "detail": "No 'SOLUZIONE TIPO', 'SOSTITUIBILE CON FOTO', or 'PROPRIE INSTALLAZIONI'"
+    },
+    "code_section_numbering": {
+      "test": "test_section_numbering_consistency",
+      "status": "PASS",
+      "detail": "Notes section numbered 04 with 'NOTE DEL TECNICO'"
+    },
+    "backend_health": {
+      "status": "PASS",
+      "detail": "/api/health returns healthy, version 2.1.0"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration145_pdf_content_fixes.py",
+    "/app/test_reports/pytest/iteration145_pdf_content_fixes_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "pdf_perizia_sopralluogo.py Line 479-489: Photo label deduplication uses seen_labels dict - first occurrence keeps label, subsequent get ' 2', ' 3' suffix",
+    "pdf_perizia_sopralluogo.py Line 590-598: Notes section uses sopralluogo.note_tecnico only, section numbered 04 'NOTE DEL TECNICO'",
+    "pdf_perizia_sopralluogo.py Line 613-617: Disclaimer uses 'strumenti di analisi assistita' - NO mention of 'Intelligenza Artificiale'",
+    "pdf_perizia_sopralluogo.py Line 519-525: Reference images rendered without 'SOLUZIONE TIPO' label",
+    "pdf_perizia_sopralluogo.py Line 769-772: Validita del Documento section has no AI mention",
+    "vision_analysis.py Line 130: CRITICO rule - dispositivi_mancanti MUST have corresponding rischi entries",
+    "vision_analysis.py Line 131-133: Professional language rules with ERRATO/CORRETTO examples",
+    "vision_analysis.py Line 134: D.Lgs. 17/2010 context for retrofit vs new installation",
+    "vision_analysis.py Line 135: note_tecniche for technician observations only, not generic suggestions"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration145_pdf_content_fixes.py"
+  ],
+  "success_rate": {
+    "backend": "100% (23/23 tests passed)",
+    "frontend": "N/A (backend only testing requested)"
+  },
+  "test_credentials": "None required - tests verify code structure",
+  "seed_data_creation": "None needed - tests use fixtures",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 145 verified all 5 PDF content fixes reported by user: (1) 'SOLUZIONE TIPO' internal label removed from reference images, (2) 'Intelligenza Artificiale' replaced with 'analisi assistita', (3) Exactly ONE AI mention in footer disclaimer only, (4) Notes section shows only note_tecnico (user notes), not note_tecniche (AI notes), (5) Photo label deduplication working (PANORAMICA → PANORAMICA 2 → PANORAMICA 3). Also verified AI prompt rules: dispositivi_mancanti must have rischi entries, professional language with ERRATO/CORRETTO examples, D.Lgs. 17/2010 retrofit context. All 23 tests pass.",
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "note": "All tests verify code structure and logic directly - no mocked APIs"
+  }
+}

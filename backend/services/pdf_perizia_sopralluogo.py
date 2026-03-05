@@ -472,13 +472,21 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
         </div>
     </div>"""
 
-    # ═══════════════ PHOTOS SECTION (2x2 Grid, no empty placeholders) ═══════════════
+    # ═══════════════ PHOTOS SECTION (2x2 Grid, no empty placeholders, unique labels) ═══════════════
     photos_html = ""
     if photos_b64:
-        # Build only real photo cards, arranged in rows of 2
         all_cards = []
+        seen_labels = {}
         for idx, p in enumerate(photos_b64):
-            lbl = _esc(p.get("label", f"Foto {idx + 1}")).upper()
+            raw_lbl = (p.get("label") or f"Foto {idx + 1}").strip().upper()
+            # Deduplicate labels: "PANORAMICA" → "PANORAMICA 1", "PANORAMICA 2"
+            if raw_lbl in seen_labels:
+                seen_labels[raw_lbl] += 1
+                lbl = f"{raw_lbl} {seen_labels[raw_lbl]}"
+            else:
+                seen_labels[raw_lbl] = 1
+                lbl = raw_lbl
+            lbl = _esc(lbl)
             all_cards.append(f'<div class="photo-card"><img src="data:{p["mime_type"]};base64,{p["base64"]}" /><div class="photo-card-label">{lbl}</div></div>')
 
         rows = []
@@ -513,7 +521,6 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             if ref_b64:
                 ref_img_html = f"""
                 <div class="risk-ref-image-container">
-                    <div class="risk-ref-image-label">Soluzione tipo (sostituibile con foto proprie installazioni)</div>
                     <img class="risk-ref-image" src="data:image/png;base64,{ref_b64}" />
                 </div>"""
 
@@ -580,20 +587,14 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             <div class="notes-box">{desc_gen}</div>
         </div>"""
 
-    # ═══════════════ NOTES ═══════════════
+    # ═══════════════ NOTES (solo note tecnico, no menzione AI) ═══════════════
     notes_html = ""
-    note_tec = analisi.get("note_tecniche", "")
     note_utente = sopralluogo.get("note_tecnico", "")
-    if note_tec or note_utente:
-        parts = []
-        if note_tec:
-            parts.append(f"<strong>Note Analisi AI:</strong> {_esc(note_tec)}")
-        if note_utente:
-            parts.append(f"<strong>Note Tecnico:</strong> {_esc(note_utente)}")
+    if note_utente:
         notes_html = f"""
         <div class="section">
-            <div class="section-header"><div class="section-header-num">04</div><div class="section-header-text">NOTE</div></div>
-            <div class="notes-box">{"<br/><br/>".join(parts)}</div>
+            <div class="section-header"><div class="section-header-num">04</div><div class="section-header-text">NOTE DEL TECNICO</div></div>
+            <div class="notes-box">{_esc(note_utente)}</div>
         </div>"""
 
     # ═══════════════ SIGNATURES ═══════════════
@@ -611,9 +612,8 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
 
     disclaimer = f"""
     <div class="disclaimer">
-        Documento generato da Norma Facile 2.0 il {now_str}<br/>
-        L'analisi e stata eseguita con supporto di Intelligenza Artificiale e deve essere validata dal tecnico responsabile.<br/>
-        Riferimenti normativi: UNI EN 12453, UNI EN 13241, Direttiva Macchine 2006/42/CE
+        Documento redatto con il supporto di strumenti di analisi assistita e validato e sottoscritto dal tecnico responsabile ai sensi delle normative vigenti.<br/>
+        Riferimenti: UNI EN 12453, UNI EN 13241, Direttiva Macchine 2006/42/CE, D.Lgs. 17/2010 — Generato il {now_str}
     </div>"""
 
     # ═══════════════ CONTENT PAGE HEADER ═══════════════
@@ -768,7 +768,7 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
         <div class="legal-section">
             <div class="legal-title">Validita del Documento</div>
             <div class="legal-text">
-                <p>Documento redatto con il supporto di Intelligenza Artificiale e validato dal tecnico firmatario. Ha validita tecnica e non costituisce certificazione di conformita. La perizia ha validita 12 mesi dalla data del sopralluogo.</p>
+                <p>Il presente documento ha validita tecnica e non costituisce certificazione di conformita. La perizia ha validita 12 mesi dalla data del sopralluogo, salvo modifiche all'impianto o aggiornamenti normativi.</p>
             </div>
         </div>
 

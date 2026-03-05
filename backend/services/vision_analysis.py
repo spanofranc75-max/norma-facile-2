@@ -127,6 +127,12 @@ REGOLE:
 - CRITICO: Ogni variante deve elencare TUTTI gli interventi inclusi esplicitamente. MAI scrivere "include gli interventi della Variante A" o simili. Il cliente deve capire ogni variante indipendentemente.
 - La stima_manodopera deve indicare ore e numero tecnici necessari
 - I rischi_residui devono descrivere rischi minimi che permangono anche dopo l'adeguamento totale
+- CRITICO: OGNI dispositivo elencato in "dispositivi_mancanti" DEVE avere una corrispondente scheda in "rischi" con zona, tipo_rischio, gravita, problema, norma_riferimento e soluzione. Non possono esistere dispositivi mancanti senza la relativa scheda di criticita.
+- LINGUAGGIO: Usa SEMPRE un registro tecnico-professionale da perizia ingegneristica. MAI consigli generici o colloquiali. Ogni nota deve essere contestualizzata con riferimento normativo o motivazione tecnica.
+  Esempio ERRATO: "Considerare l'installazione di un tettuccio per prevenire l'accumulo di fogliame"
+  Esempio CORRETTO: "Si consiglia di valutare l'installazione di una protezione superiore per limitare l'accumulo di detriti nella guida di scorrimento, al fine di preservare l'efficienza meccanica e ridurre la frequenza degli interventi di manutenzione ordinaria."
+- CONTESTO NORMATIVO: Distinguere tra nuova installazione (Direttiva Macchine 2006/42/CE) e adeguamento di impianto esistente (D.Lgs. 17/2010). Per impianti condominiali esistenti (retrofit), fare riferimento alla normativa applicabile.
+- Le note_tecniche devono contenere SOLO osservazioni tecniche rilevanti per il tecnico, non suggerimenti generici.
 """
 
 
