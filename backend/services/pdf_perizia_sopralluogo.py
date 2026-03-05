@@ -306,6 +306,37 @@ body {{ font-family: 'Segoe UI', Calibri, Arial, sans-serif; font-size: 9pt; col
 
 /* Disclaimer */
 .disclaimer {{ text-align: center; font-size: 6.5pt; color: #94a3b8; margin-top: 8mm; padding-top: 3mm; border-top: 1px solid #e2e8f0; }}
+
+/* ══════════ VARIANTS PAGE ══════════ */
+.variant-box {{ border: 1.5px solid #e2e8f0; border-radius: 2.5mm; margin-bottom: 5mm; overflow: hidden; page-break-inside: avoid; }}
+.variant-box-recommended {{ border-color: {BLUE_ACCENT}; box-shadow: 0 0 0 0.5mm rgba(0,102,255,0.15); }}
+.variant-header {{ display: table; width: 100%; }}
+.variant-letter {{ display: table-cell; width: 14mm; background: {NAVY}; color: white; text-align: center; vertical-align: middle; font-size: 20pt; font-weight: 900; }}
+.variant-letter-recommended {{ background: {BLUE_ACCENT}; }}
+.variant-title-area {{ display: table-cell; padding: 3mm 4mm; vertical-align: middle; }}
+.variant-title {{ font-size: 11pt; font-weight: 800; color: #0f172a; }}
+.variant-subtitle {{ font-size: 8pt; color: #64748b; margin-top: 0.5mm; }}
+.variant-recommended-badge {{ display: inline-block; background: {BLUE_ACCENT}; color: white; font-size: 6.5pt; font-weight: 700; padding: 0.5mm 2.5mm; border-radius: 1mm; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 3mm; vertical-align: middle; }}
+.variant-body {{ padding: 3mm 4mm; border-top: 1px solid #f1f5f9; }}
+.variant-desc {{ font-size: 8.5pt; color: #334155; margin-bottom: 2mm; line-height: 1.5; }}
+.variant-interventi {{ margin: 0; padding: 0 0 0 4mm; }}
+.variant-interventi li {{ font-size: 8pt; color: #475569; padding: 0.5mm 0; }}
+.variant-footer {{ display: table; width: 100%; background: {LIGHT_BG}; border-top: 1px solid #e2e8f0; }}
+.variant-footer-cell {{ display: table-cell; padding: 2.5mm 4mm; }}
+.variant-cost {{ font-size: 14pt; font-weight: 900; color: {NAVY}; }}
+.variant-cost-label {{ font-size: 7pt; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }}
+.variant-time {{ font-size: 9pt; font-weight: 600; color: #475569; text-align: right; }}
+.variant-time-label {{ font-size: 7pt; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; text-align: right; }}
+
+/* ══════════ LEGAL NOTES PAGE ══════════ */
+.legal-section {{ margin-bottom: 5mm; }}
+.legal-title {{ font-size: 10pt; font-weight: 700; color: {NAVY}; margin-bottom: 2mm; padding-bottom: 1.5mm; border-bottom: 1.5px solid {BLUE_ACCENT}; }}
+.legal-text {{ font-size: 8pt; color: #475569; line-height: 1.6; }}
+.legal-text p {{ margin-bottom: 2mm; }}
+.legal-highlight {{ background: #fefce8; border-left: 3px solid {AMBER_RISK}; padding: 2.5mm 4mm; border-radius: 0 1.5mm 1.5mm 0; margin: 3mm 0; font-size: 8pt; color: #713f12; }}
+.legal-stamp-area {{ margin-top: 10mm; padding: 4mm; border: 1.5px solid #e2e8f0; border-radius: 2.5mm; text-align: center; }}
+.legal-stamp-text {{ font-size: 7.5pt; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12mm; }}
+.legal-stamp-line {{ border-top: 1px solid {NAVY}; width: 60%; margin: 0 auto; padding-top: 1.5mm; font-size: 8pt; font-weight: 600; color: #475569; }}
 """
 
 
@@ -620,6 +651,113 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
         <div class="content-header-doc">{doc_num}</div>
     </div>"""
 
+    # ═══════════════ VARIANTS PAGE ═══════════════
+    varianti = analisi.get("varianti", {})
+    variants_html = ""
+    if varianti and any(varianti.get(k, {}).get("descrizione") for k in ("A", "B", "C")):
+        variant_cards = []
+        for key, label_default in [("A", "Adeguamento Minimo"), ("B", "Adeguamento Completo"), ("C", "Sostituzione Totale")]:
+            v = varianti.get(key, {})
+            if not v:
+                continue
+            titolo = _esc(v.get("titolo", label_default))
+            desc = _esc(v.get("descrizione", ""))
+            costo = v.get("costo_stimato", 0)
+            tempo = _esc(v.get("tempo_stimato", ""))
+            interventi = v.get("interventi", [])
+            is_recommended = key == "B"
+
+            box_cls = "variant-box variant-box-recommended" if is_recommended else "variant-box"
+            letter_cls = "variant-letter variant-letter-recommended" if is_recommended else "variant-letter"
+            badge = '<span class="variant-recommended-badge">Consigliato</span>' if is_recommended else ""
+
+            interventi_html = ""
+            if interventi:
+                items = "".join(f"<li>{_esc(i)}</li>" for i in interventi)
+                interventi_html = f'<ul class="variant-interventi">{items}</ul>'
+
+            costo_str = f"{costo:,.0f} &euro;" if costo > 0 else "Da Quotare"
+
+            variant_cards.append(f"""
+            <div class="{box_cls}">
+                <div class="variant-header">
+                    <div class="{letter_cls}">{key}</div>
+                    <div class="variant-title-area">
+                        <div class="variant-title">{titolo}{badge}</div>
+                        <div class="variant-subtitle">Variante {key}</div>
+                    </div>
+                </div>
+                <div class="variant-body">
+                    <div class="variant-desc">{desc}</div>
+                    {interventi_html}
+                </div>
+                <div class="variant-footer">
+                    <div class="variant-footer-cell">
+                        <div class="variant-cost-label">Costo Stimato</div>
+                        <div class="variant-cost">{costo_str}</div>
+                    </div>
+                    <div class="variant-footer-cell">
+                        <div class="variant-time-label">Tempi Previsti</div>
+                        <div class="variant-time">{tempo}</div>
+                    </div>
+                </div>
+            </div>""")
+
+        if variant_cards:
+            variants_html = f"""
+            <div class="section" style="page-break-before:always;">
+                <div class="section-header"><div class="section-header-num">{'06' if notes_html else '05'}</div><div class="section-header-text">PROPOSTE DI INTERVENTO</div></div>
+                {"".join(variant_cards)}
+            </div>"""
+
+    # ═══════════════ LEGAL NOTES PAGE ═══════════════
+    legal_html = f"""
+    <div style="page-break-before:always;">
+        <div class="section-header"><div class="section-header-num">{'07' if variants_html and notes_html else '06' if variants_html or notes_html else '05'}</div><div class="section-header-text">NOTE LEGALI E RESPONSABILITA</div></div>
+
+        <div class="legal-section">
+            <div class="legal-title">Responsabilita del Proprietario / Amministratore</div>
+            <div class="legal-text">
+                <p>Ai sensi della Direttiva Macchine 2006/42/CE e del D.Lgs. 17/2010, il proprietario o l'amministratore dell'immobile in cui e installata la chiusura automatica e responsabile della sicurezza dell'impianto e del suo mantenimento in conformita alle norme vigenti.</p>
+                <p>La presente perizia tecnica evidenzia le non conformita riscontrate durante il sopralluogo. Il mancato adeguamento espone il proprietario a responsabilita civile e penale in caso di infortunio.</p>
+            </div>
+        </div>
+
+        <div class="legal-highlight">
+            <strong>Attenzione:</strong> In caso di incidente, l'assenza dei dispositivi di sicurezza obbligatori previsti dalla norma EN 12453 costituisce elemento di colpa grave ai sensi dell'art. 2051 C.C. (responsabilita per cose in custodia).
+        </div>
+
+        <div class="legal-section">
+            <div class="legal-title">Riferimenti Normativi</div>
+            <div class="legal-text">
+                <p><strong>UNI EN 12453:2017</strong> — Porte e cancelli industriali, commerciali e da garage. Sicurezza in uso di porte motorizzate. Requisiti e metodi di prova.</p>
+                <p><strong>UNI EN 13241:2003+A2:2016</strong> — Porte e cancelli industriali, commerciali e da garage. Norma di prodotto. Requisiti prestazionali.</p>
+                <p><strong>Direttiva Macchine 2006/42/CE</strong> — Requisiti essenziali di sicurezza e salute per la progettazione e costruzione di macchine.</p>
+                <p><strong>UNI EN 12978</strong> — Porte e cancelli. Dispositivi di protezione per porte motorizzate. Requisiti e metodi di prova.</p>
+            </div>
+        </div>
+
+        <div class="legal-section">
+            <div class="legal-title">Limitazioni della Perizia</div>
+            <div class="legal-text">
+                <p>La presente relazione tecnica si basa sull'ispezione visiva e fotografica effettuata in data {created}. Le valutazioni sono limitate a quanto osservabile al momento del sopralluogo.</p>
+                <p>Non sostituisce una verifica strumentale completa delle forze d'impatto (EN 12453 All. A) ne un collaudo finale post-intervento. Si raccomanda di eseguire tali verifiche a completamento dei lavori di adeguamento.</p>
+            </div>
+        </div>
+
+        <div class="legal-section">
+            <div class="legal-title">Validita del Documento</div>
+            <div class="legal-text">
+                <p>Documento redatto con il supporto di Intelligenza Artificiale e validato dal tecnico firmatario. Ha validita tecnica e non costituisce certificazione di conformita. La perizia ha validita 12 mesi dalla data del sopralluogo.</p>
+            </div>
+        </div>
+
+        <div class="legal-stamp-area">
+            <div class="legal-stamp-text">Timbro e Firma del Tecnico Responsabile</div>
+            <div class="legal-stamp-line">{c_name}</div>
+        </div>
+    </div>"""
+
     # ═══════════════ ASSEMBLE ═══════════════
     html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{CSS}</style></head><body>
     {cover}
@@ -633,6 +771,8 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
         {materials_html}
         {notes_html}
         {signature_html}
+        {variants_html}
+        {legal_html}
         {disclaimer}
     </div>
     </body></html>"""

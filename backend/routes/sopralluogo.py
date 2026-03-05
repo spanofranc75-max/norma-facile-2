@@ -346,8 +346,16 @@ async def analizza_sopralluogo(sopralluogo_id: str, user: dict = Depends(get_cur
 # ── Generate Preventivo from Analysis ──
 
 @router.post("/{sopralluogo_id}/genera-preventivo")
-async def genera_preventivo(sopralluogo_id: str, user: dict = Depends(get_current_user)):
-    """Generate a draft quote from the AI analysis."""
+async def genera_preventivo(
+    sopralluogo_id: str,
+    variante: str = Query("B", description="Variante selezionata: A, B o C"),
+    user: dict = Depends(get_current_user),
+):
+    """Generate a draft quote from the AI analysis.
+
+    Uses the selected variant (A/B/C) for pricing. Creates a clean
+    single-line quote with synthetic text + reference to the perizia.
+    """
     doc = await db[COLLECTION].find_one(
         {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"]},
         {"_id": 0},
@@ -359,39 +367,68 @@ async def genera_preventivo(sopralluogo_id: str, user: dict = Depends(get_curren
     if not analisi:
         raise HTTPException(400, "Esegui prima l'analisi AI")
 
-    # Build quote lines from confirmed materials
+    varianti = analisi.get("varianti", {})
+    selected = varianti.get(variante.upper(), {})
+
+    # Build quote lines
     lines = []
-    rischi_confermati = [r for r in analisi.get("rischi", []) if r.get("confermato", True)]
-    materiali = analisi.get("materiali_suggeriti", [])
+    doc_number = doc.get("document_number", "")
 
-    for mat in materiali:
-        desc = mat.get("descrizione_catalogo") or mat.get("descrizione", "")
+    # Synthetic invoice line from AI or fallback
+    testo_sintetico = analisi.get("testo_sintetico_fattura", "")
+    titolo_variante = selected.get("titolo", f"Variante {variante.upper()}")
+
+    if not testo_sintetico:
+        testo_sintetico = f"Messa a norma chiusura automatica c/o {doc.get('indirizzo', '')} secondo EN 12453/EN 13241"
+
+    desc_line = f"{testo_sintetico} — {titolo_variante} (rif. Perizia {doc_number})"
+
+    costo_variante = selected.get("costo_stimato", 0)
+
+    if costo_variante > 0:
+        # Single clean line with variant cost
         lines.append({
             "line_id": f"line_{uuid.uuid4().hex[:8]}",
-            "codice": mat.get("articolo_id", ""),
-            "description": desc,
-            "quantity": mat.get("quantita", 1),
-            "unit_price": mat.get("prezzo", 0),
+            "codice": f"PER-{variante.upper()}",
+            "description": desc_line,
+            "quantity": 1,
+            "unit_price": costo_variante,
             "discount": 0,
             "vat_rate": 22,
-            "line_total": mat.get("prezzo", 0) * mat.get("quantita", 1),
-            "vat_amount": round(mat.get("prezzo", 0) * mat.get("quantita", 1) * 0.22, 2),
+            "line_total": costo_variante,
+            "vat_amount": round(costo_variante * 0.22, 2),
         })
-
-    # Add manodopera line
-    if lines:
-        ore_stimate = max(2, len(rischi_confermati) * 1.5)
-        lines.append({
-            "line_id": f"line_{uuid.uuid4().hex[:8]}",
-            "codice": "MAN",
-            "description": f"Manodopera installazione e messa a norma ({ore_stimate:.0f}h stimate)",
-            "quantity": ore_stimate,
-            "unit_price": 45,
-            "discount": 0,
-            "vat_rate": 22,
-            "line_total": ore_stimate * 45,
-            "vat_amount": round(ore_stimate * 45 * 0.22, 2),
-        })
+    else:
+        # Fallback: use materials list like before
+        materiali = analisi.get("materiali_suggeriti", [])
+        for mat in materiali:
+            desc = mat.get("descrizione_catalogo") or mat.get("descrizione", "")
+            lines.append({
+                "line_id": f"line_{uuid.uuid4().hex[:8]}",
+                "codice": mat.get("articolo_id", ""),
+                "description": desc,
+                "quantity": mat.get("quantita", 1),
+                "unit_price": mat.get("prezzo", 0),
+                "discount": 0,
+                "vat_rate": 22,
+                "line_total": mat.get("prezzo", 0) * mat.get("quantita", 1),
+                "vat_amount": round(mat.get("prezzo", 0) * mat.get("quantita", 1) * 0.22, 2),
+            })
+        # Add manodopera
+        rischi_confermati = [r for r in analisi.get("rischi", []) if r.get("confermato", True)]
+        if lines:
+            ore_stimate = max(2, len(rischi_confermati) * 1.5)
+            lines.append({
+                "line_id": f"line_{uuid.uuid4().hex[:8]}",
+                "codice": "MAN",
+                "description": f"Manodopera installazione e messa a norma ({ore_stimate:.0f}h stimate)",
+                "quantity": ore_stimate,
+                "unit_price": 45,
+                "discount": 0,
+                "vat_rate": 22,
+                "line_total": ore_stimate * 45,
+                "vat_amount": round(ore_stimate * 45 * 0.22, 2),
+            })
 
     # Create the preventivo
     year = datetime.now(timezone.utc).strftime("%Y")
@@ -399,6 +436,7 @@ async def genera_preventivo(sopralluogo_id: str, user: dict = Depends(get_curren
     prev_number = f"PRV-{year}-{q_count + 1:04d}"
 
     now = datetime.now(timezone.utc).isoformat()
+    rischi_confermati = [r for r in analisi.get("rischi", []) if r.get("confermato", True)]
     rischi_text = "\n".join(
         f"- {r.get('zona', '')}: {r.get('problema', '')} ({r.get('norma_riferimento', '')})"
         for r in rischi_confermati
@@ -411,14 +449,20 @@ async def genera_preventivo(sopralluogo_id: str, user: dict = Depends(get_curren
         "client_id": doc.get("client_id", ""),
         "issue_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         "valid_until": "",
-        "subject": f"Messa a Norma - Sopralluogo {doc.get('document_number', '')}",
-        "notes": f"Sopralluogo: {doc.get('indirizzo', '')}\nTipo: {analisi.get('tipo_chiusura', '')}\nConformità: {analisi.get('conformita_percentuale', 0)}%\n\nCriticità riscontrate:\n{rischi_text}",
-        "internal_notes": f"Generato automaticamente da sopralluogo {doc.get('sopralluogo_id', '')}",
+        "subject": f"Messa a Norma — {titolo_variante} — Perizia {doc_number}",
+        "notes": f"Sopralluogo: {doc.get('indirizzo', '')}\n"
+                 f"Tipo chiusura: {analisi.get('tipo_chiusura', '')}\n"
+                 f"Conformita: {analisi.get('conformita_percentuale', 0)}%\n"
+                 f"Variante selezionata: {variante.upper()} — {titolo_variante}\n\n"
+                 f"Criticita riscontrate:\n{rischi_text}\n\n"
+                 f"Vedi Perizia Tecnica allegata ({doc_number}) per dettagli completi.",
+        "internal_notes": f"Generato da sopralluogo {doc.get('sopralluogo_id', '')} — Variante {variante.upper()}",
         "lines": lines,
         "status": "bozza",
         "payment_terms": "",
         "payment_method": "",
         "sopralluogo_id": doc.get("sopralluogo_id"),
+        "variante_selezionata": variante.upper(),
         "created_at": now,
         "updated_at": now,
     }
@@ -431,12 +475,13 @@ async def genera_preventivo(sopralluogo_id: str, user: dict = Depends(get_curren
         {"sopralluogo_id": sopralluogo_id},
         {"$set": {
             "preventivo_id": preventivo["quote_id"],
+            "variante_selezionata": variante.upper(),
             "status": "completato",
             "updated_at": now,
         }},
     )
 
-    return {"preventivo": preventivo, "message": f"Preventivo {prev_number} generato con successo"}
+    return {"preventivo": preventivo, "message": f"Preventivo {prev_number} (Variante {variante.upper()}) generato con successo"}
 
 
 # ── PDF Generation ──

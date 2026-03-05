@@ -55,6 +55,7 @@ export default function SopralluogoWizardPage() {
     const [sopralluogo, setSopralluogo] = useState(null);
     const [photoUrls, setPhotoUrls] = useState({});
     const [showQuickClient, setShowQuickClient] = useState(false);
+    const [selectedVariant, setSelectedVariant] = useState('B');
 
     const [formData, setFormData] = useState({
         client_id: '',
@@ -265,7 +266,7 @@ export default function SopralluogoWizardPage() {
                 method: 'PUT',
                 body: { analisi_ai: sopralluogo.analisi_ai },
             });
-            const result = await apiRequest(`/sopralluoghi/${sopralluogo.sopralluogo_id}/genera-preventivo`, { method: 'POST' });
+            const result = await apiRequest(`/sopralluoghi/${sopralluogo.sopralluogo_id}/genera-preventivo?variante=${selectedVariant}`, { method: 'POST' });
             toast.success(result.message);
             navigate(`/preventivi/${result.preventivo.quote_id}`);
         } catch (err) {
@@ -702,6 +703,96 @@ export default function SopralluogoWizardPage() {
                         </Card>
                     )}
 
+                    {/* Varianti di Intervento (A/B/C) */}
+                    {analisi.varianti && Object.keys(analisi.varianti).length > 0 && (
+                        <Card data-testid="varianti-section">
+                            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b pb-3">
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <FileText className="h-5 w-5 text-blue-600" />
+                                    Proposte di Intervento
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 space-y-3">
+                                {['A', 'B', 'C'].map(key => {
+                                    const v = analisi.varianti[key];
+                                    if (!v) return null;
+                                    const isSelected = selectedVariant === key;
+                                    const colors = {
+                                        A: { border: 'border-amber-300', bg: 'bg-amber-50', badge: 'bg-amber-100 text-amber-800' },
+                                        B: { border: 'border-blue-400', bg: 'bg-blue-50', badge: 'bg-blue-100 text-blue-800' },
+                                        C: { border: 'border-purple-300', bg: 'bg-purple-50', badge: 'bg-purple-100 text-purple-800' },
+                                    }[key];
+                                    return (
+                                        <button
+                                            key={key}
+                                            onClick={() => setSelectedVariant(key)}
+                                            data-testid={`variant-${key}`}
+                                            className={`w-full text-left border-2 rounded-xl p-4 transition-all ${
+                                                isSelected ? `${colors.border} ${colors.bg} shadow-md ring-2 ring-offset-1 ring-blue-200` : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                            }`}
+                                        >
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-black ${
+                                                        isSelected ? 'bg-[#0B1F3A] text-white' : 'bg-gray-200 text-gray-600'
+                                                    }`}>{key}</div>
+                                                    <div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-bold text-sm text-gray-900">{v.titolo || `Variante ${key}`}</span>
+                                                            {key === 'B' && <Badge className="bg-blue-600 text-white text-[10px] px-1.5 py-0">Consigliato</Badge>}
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{v.descrizione}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <div className="text-lg font-black text-gray-900">
+                                                        {v.costo_stimato > 0 ? `${v.costo_stimato.toLocaleString('it-IT')} \u20AC` : 'Da Quotare'}
+                                                    </div>
+                                                    {v.tempo_stimato && <div className="text-xs text-gray-500">{v.tempo_stimato}</div>}
+                                                </div>
+                                            </div>
+                                            {v.interventi?.length > 0 && isSelected && (
+                                                <ul className="mt-3 ml-13 space-y-1 text-xs text-gray-600 border-t pt-2">
+                                                    {v.interventi.map((item, i) => (
+                                                        <li key={i} className="flex items-start gap-1.5">
+                                                            <CheckCircle2 className="h-3 w-3 text-green-500 mt-0.5 shrink-0" />
+                                                            {item}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                                <p className="text-xs text-gray-400 text-center pt-1">
+                                    Seleziona la variante per il preventivo. La Variante B (Adeguamento Completo) e consigliata.
+                                </p>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Testo Sintetico Fattura */}
+                    {analisi.testo_sintetico_fattura && (
+                        <Card data-testid="testo-sintetico-section">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm text-indigo-700 flex items-center gap-1"><FileText className="h-4 w-4" /> Testo per Preventivo/Fattura</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <Textarea
+                                    value={analisi.testo_sintetico_fattura || ''}
+                                    onChange={e => setSopralluogo(prev => ({
+                                        ...prev,
+                                        analisi_ai: { ...prev.analisi_ai, testo_sintetico_fattura: e.target.value }
+                                    }))}
+                                    rows={2}
+                                    className="text-sm bg-indigo-50 border-indigo-200 focus:bg-white"
+                                    data-testid="input-testo-sintetico"
+                                />
+                                <p className="text-xs text-gray-400 mt-1">Questo testo viene usato come voce sintetica nel preventivo generato.</p>
+                            </CardContent>
+                        </Card>
+                    )}
+
                     {/* Notes */}
                     <Card>
                         <CardHeader className="pb-2">
@@ -772,7 +863,7 @@ export default function SopralluogoWizardPage() {
                                 className="bg-green-600 text-white hover:bg-green-700"
                             >
                                 {generatingPrev ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileText className="h-4 w-4 mr-2" />}
-                                Genera Preventivo
+                                Preventivo (Var. {selectedVariant})
                             </Button>
                         </div>
                     </div>

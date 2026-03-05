@@ -1,6 +1,8 @@
-"""GPT-4o Vision analysis for gate safety compliance (EN 12453/EN 13241)."""
+"""GPT-4o Vision analysis for gate safety compliance (EN 12453/EN 13241).
+
+Enhanced with 3 intervention variants (A/B/C) and synthetic invoice text.
+"""
 import os
-import base64
 import json
 import logging
 from typing import List
@@ -8,78 +10,119 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """Sei un esperto certificato di sicurezza cancelli automatici e chiusure industriali.
-Le tue competenze coprono le seguenti normative:
-- UNI EN 12453 (Sicurezza in uso degli automatismi)
+SYSTEM_PROMPT = """Sei un Ingegnere esperto in Direttiva Macchine 2006/42/CE e Normativa Cancelli EN 12453 / EN 13241.
+Sei certificato per valutazioni di sicurezza su chiusure automatiche industriali, commerciali e residenziali.
+
+COMPETENZE NORMATIVE:
+- UNI EN 12453 (Sicurezza in uso degli automatismi per porte)
 - UNI EN 13241 (Norma prodotto per chiusure industriali, commerciali e da garage)
 - Direttiva Macchine 2006/42/CE
-- UNI EN 12978 (Dispositivi di protezione sensibili alla pressione - coste)
+- UNI EN 12978 (Dispositivi di protezione sensibili alla pressione)
+- UNI EN 12604 / 12605 (Requisiti meccanici e prove)
 
 ANALISI FOTO:
 Quando ricevi foto di un cancello/chiusura automatica, devi:
+
 1. IDENTIFICARE il tipo di chiusura (scorrevole, battente, sezionale, avvolgibile, basculante)
-2. INDIVIDUARE RISCHI specifici:
-   - Schiacciamento (punto di chiusura principale, zone laterali)
-   - Cesoiamento (maglie rete, giunti, cerniere)
-   - Convogliamento (rulli guida, catene, ingranaggi esposti)
-   - Impatto (mancanza limitatore di forza/encoder)
-   - Intrappolamento (spazi tra ante e struttura)
-3. VERIFICARE la presenza dei dispositivi di sicurezza obbligatori:
-   - Costa sensibile di sicurezza (8K2 o ottica)
-   - Fotocellule (coppia bassa + coppia alta se necessario)
-   - Lampeggiante con antenna
-   - Selettore a chiave/tastiera
-   - Finecorsa di apertura e chiusura
-   - Encoder o limitatore di coppia sul motore
-   - Protezione anti-caduta (per sezionali/basculanti)
-   - Rete anti-cesoiamento (maglia max 25x25mm per EN 13241)
+
+2. INDIVIDUARE RISCHI specifici con riferimento normativo preciso:
+   - Schiacciamento (punto di chiusura principale, zone laterali) — EN 12453 par. 5.1.1
+   - Cesoiamento (maglie rete, giunti, cerniere) — EN 13241 par. 4.3
+   - Convogliamento (rulli guida, catene, ingranaggi esposti) — EN 12453 par. 5.1.3
+   - Impatto (mancanza limitatore di forza/encoder) — EN 12453 par. 5.1.2
+   - Intrappolamento (spazi tra ante e struttura) — EN 12453 par. 5.1.4
+
+3. VERIFICARE dispositivi di sicurezza obbligatori:
+   - Costa sensibile (8K2 resistiva o ottica)
+   - Fotocellule (coppia bassa 40cm + alta 100cm)
+   - Lampeggiante con antenna integrata
+   - Selettore a chiave / tastiera codice
+   - Finecorsa apertura e chiusura
+   - Encoder o limitatore coppia sul motore
+   - Protezione anti-caduta (sezionali/basculanti)
+   - Rete anti-cesoiamento (maglia max 25x25mm)
+
+4. PROPORRE 3 VARIANTI DI INTERVENTO con stima costi:
+   - Variante A "Adeguamento Minimo": Solo dispositivi di sicurezza obbligatori mancanti
+   - Variante B "Adeguamento Completo": Sicurezze + nuova centralina + ottimizzazione impianto
+   - Variante C "Sostituzione Totale": Nuovo impianto completo (motore, centralina, sicurezze, struttura se necessario)
+
+5. GENERARE un testo sintetico per fattura/preventivo (max 2 righe commerciali)
 
 FORMATO RISPOSTA (JSON RIGOROSO):
-Rispondi ESCLUSIVAMENTE con un JSON valido, senza testo aggiuntivo, con questa struttura:
+Rispondi ESCLUSIVAMENTE con un JSON valido, senza testo aggiuntivo:
 {
   "tipo_chiusura": "scorrevole|battente|sezionale|avvolgibile|basculante|altro",
-  "descrizione_generale": "Breve descrizione di ciò che si vede nella foto",
+  "descrizione_generale": "Descrizione tecnica dettagliata di cio che si vede nelle foto",
   "rischi": [
     {
       "zona": "Zona specifica (es: 'Bordo chiusura lato muro')",
       "tipo_rischio": "schiacciamento|cesoiamento|convogliamento|impatto|intrappolamento",
       "gravita": "alta|media|bassa",
-      "problema": "Descrizione tecnica del problema",
-      "norma_riferimento": "EN 12453 par. X.X",
-      "soluzione": "Intervento correttivo specifico"
+      "problema": "Descrizione tecnica dettagliata del problema riscontrato",
+      "norma_riferimento": "EN 12453 par. X.X.X",
+      "soluzione": "Intervento correttivo specifico con materiale consigliato"
     }
   ],
-  "dispositivi_presenti": ["lista dispositivi di sicurezza visibili"],
-  "dispositivi_mancanti": ["lista dispositivi obbligatori non visibili"],
+  "dispositivi_presenti": ["lista dispositivi di sicurezza visibili/verificati"],
+  "dispositivi_mancanti": ["lista dispositivi obbligatori non visibili/assenti"],
   "materiali_suggeriti": [
     {
-      "keyword": "keyword per ricerca nel listino (es: costa, fotocellula, rete, lampeggiante, encoder, finecorsa, selettore)",
-      "descrizione": "Descrizione specifica del materiale necessario",
+      "keyword": "keyword per ricerca nel listino (costa, fotocellula, rete, lampeggiante, encoder, finecorsa, selettore, centralina, motore, batteria)",
+      "descrizione": "Descrizione specifica del materiale",
       "quantita": 1,
       "priorita": "obbligatorio|consigliato"
     }
   ],
-  "note_tecniche": "Eventuali osservazioni aggiuntive per il tecnico",
+  "varianti": {
+    "A": {
+      "titolo": "Adeguamento Minimo",
+      "descrizione": "Descrizione sintetica dell'intervento (2-3 frasi)",
+      "interventi": ["Lista puntata degli interventi inclusi"],
+      "costo_stimato": 0,
+      "tempo_stimato": "1 giorno"
+    },
+    "B": {
+      "titolo": "Adeguamento Completo",
+      "descrizione": "Descrizione sintetica dell'intervento (2-3 frasi)",
+      "interventi": ["Lista puntata degli interventi inclusi"],
+      "costo_stimato": 0,
+      "tempo_stimato": "2-3 giorni"
+    },
+    "C": {
+      "titolo": "Sostituzione Totale",
+      "descrizione": "Descrizione sintetica dell'intervento (2-3 frasi)",
+      "interventi": ["Lista puntata degli interventi inclusi"],
+      "costo_stimato": 0,
+      "tempo_stimato": "3-5 giorni"
+    }
+  },
+  "testo_sintetico_fattura": "Testo commerciale per preventivo/fattura (max 2 righe). Es: 'Messa a norma cancello scorrevole automatico c/o [indirizzo] secondo normativa EN 12453/EN 13241 come da perizia tecnica allegata.'",
+  "note_tecniche": "Osservazioni aggiuntive per il tecnico",
   "conformita_percentuale": 0
 }
 
-REGOLE IMPORTANTI:
+REGOLE:
 - Se non riesci a vedere chiaramente un elemento, segnalalo come "non verificabile dalla foto"
-- Sii conservativo: se non vedi un dispositivo, presumilo assente
+- Sii conservativo: dispositivo non visibile = presumilo assente
 - Le keyword in materiali_suggeriti devono corrispondere a termini generici del listino
-- La conformita_percentuale è una stima 0-100 basata sui dispositivi presenti vs obbligatori
+- conformita_percentuale: stima 0-100 basata su dispositivi presenti vs obbligatori
+- I costi stimati nelle varianti devono essere realistici per il mercato italiano (materiali + manodopera)
+- Variante A deve costare circa il 30-50% di Variante C
+- Variante B deve costare circa il 50-70% di Variante C
+- Il testo_sintetico_fattura deve essere professionale e generico (senza dettagli tecnici)
 """
 
 
 async def analyze_photos(photo_data_list: List[dict], user_description: str = "") -> dict:
     """Analyze gate photos using GPT-4o Vision.
-    
+
     Args:
         photo_data_list: List of {"base64": str, "mime_type": str, "label": str}
         user_description: Optional user description of the situation
-    
+
     Returns:
-        Structured analysis result dict
+        Structured analysis result dict with risks, variants A/B/C, and synthetic text
     """
     api_key = os.environ.get("EMERGENT_LLM_KEY")
     if not api_key:
@@ -98,10 +141,10 @@ async def analyze_photos(photo_data_list: List[dict], user_description: str = ""
     prompt_parts = []
     if user_description:
         prompt_parts.append(f"Descrizione del tecnico: {user_description}")
-    
+
     labels = [p.get("label", f"Foto {i+1}") for i, p in enumerate(photo_data_list)]
     prompt_parts.append(f"Foto allegate ({len(photo_data_list)}): {', '.join(labels)}")
-    prompt_parts.append("Analizza le foto e restituisci il JSON con l'analisi di sicurezza completa.")
+    prompt_parts.append("Analizza le foto e restituisci il JSON completo con analisi di sicurezza, 3 varianti di intervento e testo sintetico per fattura.")
 
     user_msg = UserMessage(
         text="\n".join(prompt_parts),
@@ -133,9 +176,26 @@ async def analyze_photos(photo_data_list: List[dict], user_description: str = ""
             "dispositivi_presenti": [],
             "dispositivi_mancanti": [],
             "materiali_suggeriti": [],
+            "varianti": _default_varianti(),
+            "testo_sintetico_fattura": "",
             "note_tecniche": "Errore nel parsing della risposta AI. Analisi testuale disponibile sopra.",
             "conformita_percentuale": 0,
             "_raw_response": response_text,
         }
 
+    # Ensure varianti and testo_sintetico exist (backward compat)
+    if "varianti" not in result:
+        result["varianti"] = _default_varianti()
+    if "testo_sintetico_fattura" not in result:
+        result["testo_sintetico_fattura"] = ""
+
     return result
+
+
+def _default_varianti() -> dict:
+    """Return empty variant structure as fallback."""
+    return {
+        "A": {"titolo": "Adeguamento Minimo", "descrizione": "", "interventi": [], "costo_stimato": 0, "tempo_stimato": ""},
+        "B": {"titolo": "Adeguamento Completo", "descrizione": "", "interventi": [], "costo_stimato": 0, "tempo_stimato": ""},
+        "C": {"titolo": "Sostituzione Totale", "descrizione": "", "interventi": [], "costo_stimato": 0, "tempo_stimato": ""},
+    }

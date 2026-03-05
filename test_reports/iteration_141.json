@@ -1,0 +1,78 @@
+{
+  "summary": "Iteration 141: Varianti in PDF + genera-preventivo variant selection - ALL 16 BACKEND TESTS PASS. Tested: (1) _default_varianti() function returns correct A/B/C structure, (2) PDF generation with varianti data (3 variant boxes), (3) PDF legal notes section present, (4) PDF backward compatibility without varianti, (5) PDF 'Da Quotare' for zero cost variants, (6) Variant B 'Consigliato' badge, (7) genera-preventivo endpoint variant selection logic (A/B/C), (8) Zero cost fallback to materials list. Frontend code verified: variant cards UI with data-testids present.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "_default_varianti_function": {
+      "returns_ABC_keys": "PASS - Returns dict with A, B, C keys",
+      "variant_A_structure": "PASS - titolo='Adeguamento Minimo', has descrizione/interventi/costo_stimato/tempo_stimato",
+      "variant_B_structure": "PASS - titolo='Adeguamento Completo', all required fields",
+      "variant_C_structure": "PASS - titolo='Sostituzione Totale', all required fields"
+    },
+    "pdf_with_varianti": {
+      "generates_with_varianti_data": "PASS - PDF generates (192KB) with full varianti",
+      "backward_compatibility": "PASS - PDF generates without varianti (189KB)",
+      "empty_varianti_dict": "PASS - PDF generates with empty varianti dict",
+      "zero_cost_shows_da_quotare": "PASS - costo_stimato=0 renders 'Da Quotare' text",
+      "variant_b_consigliato": "PASS - Variant B has 'Consigliato' badge (via CSS class)"
+    },
+    "pdf_legal_notes": {
+      "legal_section_included": "PASS - Legal notes section always included in PDF",
+      "direttiva_macchine_reference": "PASS - References 2006/42/CE in legal text",
+      "en_12453_reference": "PASS - References EN 12453:2017 in legal text"
+    },
+    "pdf_css_classes": {
+      "variant_box_classes": "PASS - variant-box, variant-box-recommended, variant-letter defined",
+      "legal_section_classes": "PASS - legal-section, legal-title, legal-text, legal-highlight defined"
+    },
+    "genera_preventivo_endpoint": {
+      "variant_A_selection": "PASS - titolo='Adeguamento Minimo', uses costo_stimato from A",
+      "variant_B_selection_default": "PASS - titolo='Adeguamento Completo', default when no param",
+      "variant_C_selection": "PASS - titolo='Sostituzione Totale', uses costo_stimato from C",
+      "zero_cost_fallback": "PASS - When costo_stimato=0, uses materials list + manodopera"
+    },
+    "frontend_variant_cards_ui": {
+      "varianti_section_testid": "PASS - data-testid='varianti-section' at line 708",
+      "variant_A_testid": "PASS - data-testid='variant-A' at line 729",
+      "variant_B_testid": "PASS - data-testid='variant-B' at line 729",
+      "variant_C_testid": "PASS - data-testid='variant-C' at line 729",
+      "consigliato_badge_on_B": "PASS - {key === 'B' && <Badge>Consigliato</Badge>} at line 742",
+      "testo_sintetico_testid": "PASS - data-testid='input-testo-sintetico' at line 789",
+      "preventivo_button_text": "PASS - 'Preventivo (Var. {selectedVariant})' at line 866",
+      "selectedVariant_default_B": "PASS - useState('B') at line 58",
+      "handleGeneratePreventivo": "PASS - Passes ?variante=${selectedVariant} to endpoint"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration141_varianti_preventivo.py",
+    "/app/test_reports/pytest/iteration141_varianti_preventivo_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "vision_analysis.py _default_varianti() correctly returns A/B/C with all required fields (titolo, descrizione, interventi, costo_stimato, tempo_stimato)",
+    "pdf_perizia_sopralluogo.py variants_html (lines 654-711) correctly generates 3 horizontal variant boxes with Consigliato badge on B",
+    "pdf_perizia_sopralluogo.py legal_html (lines 714-759) contains Direttiva Macchine references and EN norms",
+    "sopralluogo.py genera-preventivo (line 348-351) correctly accepts variante query param with default 'B'",
+    "SopralluogoWizardPage.js correctly implements variant selection UI with all data-testids",
+    "Frontend passes selectedVariant to endpoint via query param (line 269)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration141_varianti_preventivo.py"
+  ],
+  "success_rate": {
+    "backend": "100% (16/16 tests passed)",
+    "frontend": "100% (code structure verified - OAuth required for UI interaction)"
+  },
+  "test_credentials": "Google OAuth required for full UI testing",
+  "seed_data_creation": "None - all tests use mock data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 141 verifies the new Perizia module features: (1) PDF with 3 variant boxes (PROPOSTE DI INTERVENTO section) and legal notes (NOTE LEGALI E RESPONSABILITA section), (2) genera-preventivo endpoint accepts ?variante=A|B|C with default B, (3) frontend SopralluogoWizardPage.js has variant cards with radio selection and dynamic button text. Key files: vision_analysis.py _default_varianti(), pdf_perizia_sopralluogo.py variants_html/legal_html, sopralluogo.py genera-preventivo, SopralluogoWizardPage.js lines 705-870."
+}
