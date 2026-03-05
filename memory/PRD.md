@@ -174,6 +174,29 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **P2**: Gestione eccezioni generiche (`except Exception`) in tutto il backend
 - **P2**: Cache frontend (utente deve fare hard refresh dopo deploy)
 
+## Modulo Sopralluoghi & Messa a Norma AI (Implementato 5 Marzo 2026)
+
+### Architettura
+- **Backend**: `/app/backend/routes/sopralluogo.py` (API), `/app/backend/services/vision_analysis.py` (GPT-4o Vision), `/app/backend/services/object_storage.py` (Emergent Object Storage)
+- **Frontend**: `/app/frontend/src/pages/SopralluogoWizardPage.js` (Wizard 4 step), `/app/frontend/src/pages/SopralluoghiPage.js` (Lista)
+- **Models**: `/app/backend/models/sopralluogo.py`
+- **Collections MongoDB**: `sopralluoghi`, `articoli_perizia`
+
+### Flusso
+1. Step 1: Dati cliente e indirizzo sopralluogo
+2. Step 2: Upload foto (Object Storage Emergent, max 10MB, JPEG/PNG/WebP)
+3. Step 3: Analisi AI con GPT-4o Vision (prompt specializzato EN 12453)
+4. Step 4: Risultati con rischi, dispositivi, materiali suggeriti → Genera Preventivo automatico
+
+### Articoli Catalogo
+- 14 articoli predefiniti (coste, fotocellule, rete, encoder, etc.)
+- Configurabili dall'utente con `keyword_ai` per matching AI
+- Auto-seed al primo accesso
+
+### Test
+- 27/27 test backend passati (iteration_138)
+- Fix critico routing FastAPI (articoli-catalogo prima di /{sopralluogo_id})
+
 ## Backlog Prioritizzato
 
 ### P0
