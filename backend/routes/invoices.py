@@ -557,7 +557,7 @@ async def update_invoice_status(
     valid_transitions = {
         "bozza": ["emessa", "annullata"],
         "emessa": ["inviata_sdi", "pagata", "annullata"],
-        "inviata_sdi": ["accettata", "rifiutata"],
+        "inviata_sdi": ["accettata", "rifiutata", "pagata"],
         "accettata": ["pagata", "scaduta"],
         "rifiutata": ["bozza"],
         "pagata": [],
@@ -571,12 +571,21 @@ async def update_invoice_status(
             detail=f"Transizione non valida: {current_status} -> {new_status}"
         )
     
+    update_fields = {
+        "status": new_status,
+        "updated_at": datetime.now(timezone.utc)
+    }
+    
+    # When marking as paid, also update payment_status
+    if new_status == "pagata":
+        total_doc = existing.get("totals", {}).get("total_document", 0)
+        update_fields["payment_status"] = "pagata"
+        update_fields["totale_pagato"] = total_doc
+        update_fields["residuo"] = 0
+    
     await db.invoices.update_one(
         {"invoice_id": invoice_id},
-        {"$set": {
-            "status": new_status,
-            "updated_at": datetime.now(timezone.utc)
-        }}
+        {"$set": update_fields}
     )
 
     # Auto-generate payment deadlines when invoice is emitted

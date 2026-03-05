@@ -510,7 +510,7 @@ export default function InvoicesPage() {
                                                                     <Send className="mr-2 h-4 w-4" />Invia a SDI
                                                                 </DropdownMenuItem>
                                                             )}
-                                                            {inv.status === 'emessa' && (
+                                                            {['emessa', 'inviata_sdi', 'accettata', 'scaduta'].includes(inv.status) && inv.status !== 'pagata' && (
                                                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleChangeStatus(inv, 'pagata'); }} data-testid="btn-mark-paid" className="text-emerald-700">
                                                                     <CircleDollarSign className="mr-2 h-4 w-4" />Segna Pagata
                                                                 </DropdownMenuItem>
