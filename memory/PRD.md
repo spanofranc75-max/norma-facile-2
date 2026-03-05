@@ -51,6 +51,15 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **Header professionale** nelle pagine contenuto: barra Blu Notte con logo grande + "RELAZIONE TECNICA DI SOPRALLUOGO" + numero documento
 - 20/20 test passati (iteration_140)
 
+### Migliorie Professionali PDF Perizia v3 (5 Mar 2026)
+- **AI Prompt**: Varianti autonome (no "include Variante A"), campo `rischi_residui`, campo `stima_manodopera`
+- **PDF Registro Manutenzione**: Obbligo Libretto Impianto, manutenzioni semestrali
+- **PDF Check-list Post-Intervento**: 8 test specifici (forze impatto, coste, fotocellule, finecorsa, arresto emergenza, encoder, lampeggiante, Dichiarazione)
+- **PDF Rischi Residui**: Sezione warning ambra dopo le varianti
+- **PDF Manodopera**: Stima ore/tecnici nel footer di ogni variante
+- **Immagini**: Label aggiornata "Soluzione tipo (sostituibile con foto proprie installazioni)"
+- 18/18 test passati (iteration_143)
+
 ### P0 (Completati)
 - ~~Restyling PDF Perizia Pro con tachimetro Risk Score~~ COMPLETATO (5 Mar 2026)
 - ~~Preventivi accettati nella Planning Board~~ COMPLETATO
