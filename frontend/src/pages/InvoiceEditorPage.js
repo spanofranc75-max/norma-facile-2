@@ -454,7 +454,7 @@ export default function InvoiceEditorPage() {
                                         await apiRequest(`/invoices/${invoiceId}/status`, { method: 'PATCH', body: { status: 'emessa' } });
                                         toast.success('Documento emesso');
                                         setFormData(f => ({ ...f, status: 'emessa' }));
-                                    } catch (e) { toast.error(e.message); }
+                                    } catch (e) { toast.error((e && e.message) || 'Errore emissione'); }
                                 }}
                                 className="border-blue-500 text-blue-700 hover:bg-blue-50 text-xs h-9 font-semibold"
                             >
@@ -470,10 +470,12 @@ export default function InvoiceEditorPage() {
                                     if (!window.confirm('Confermi l\'invio al SDI?')) return;
                                     try {
                                         const r = await apiRequest(`/invoices/${invoiceId}/send-sdi`, { method: 'POST' });
-                                        toast.success(r.message);
+                                        toast.success(r.message || 'Fattura inviata al SDI');
                                         fetchInvoice();
-                                    } catch (e) {
-                                        toast.error(e.message, { duration: 10000, style: { maxWidth: '600px' } });
+                                    } catch (sdiErr) {
+                                        console.error('Errore invio SDI:', sdiErr);
+                                        const errorMessage = (sdiErr && sdiErr.message) ? sdiErr.message : 'Errore sconosciuto durante l\'invio SDI';
+                                        toast.error(errorMessage, { duration: 12000, style: { maxWidth: '600px', whiteSpace: 'pre-line' } });
                                     }
                                 }}
                                 className="border-amber-400 text-amber-600 hover:bg-amber-50 text-xs h-9"
