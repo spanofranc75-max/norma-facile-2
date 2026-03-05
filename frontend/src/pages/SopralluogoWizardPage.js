@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import {
     ArrowLeft, ArrowRight, Camera, Upload, Trash2, Brain, FileText,
     AlertTriangle, CheckCircle2, ShieldAlert, Loader2, X, Eye,
-    MapPin, User, Image as ImageIcon, ChevronRight, Wrench, Download, UserPlus
+    MapPin, User, Image as ImageIcon, ChevronRight, Wrench, Download, UserPlus, Mail
 } from 'lucide-react';
 import { ClientQuickCreateModal } from '../components/ClientQuickCreateModal';
 
@@ -56,6 +56,8 @@ export default function SopralluogoWizardPage() {
     const [photoUrls, setPhotoUrls] = useState({});
     const [showQuickClient, setShowQuickClient] = useState(false);
     const [selectedVariant, setSelectedVariant] = useState('B');
+    const [sendingEmail, setSendingEmail] = useState(false);
+    const [showEmailConfirm, setShowEmailConfirm] = useState(false);
 
     const [formData, setFormData] = useState({
         client_id: '',
@@ -273,6 +275,24 @@ export default function SopralluogoWizardPage() {
             toast.error(err.message, { duration: 8000 });
         } finally {
             setGeneratingPrev(false);
+        }
+    };
+
+    const handleSendEmail = async () => {
+        setSendingEmail(true);
+        try {
+            // Save edits first
+            await apiRequest(`/sopralluoghi/${sopralluogo.sopralluogo_id}`, {
+                method: 'PUT',
+                body: { analisi_ai: sopralluogo.analisi_ai, note_tecnico: sopralluogo.note_tecnico },
+            });
+            const result = await apiRequest(`/sopralluoghi/${sopralluogo.sopralluogo_id}/invia-email`, { method: 'POST' });
+            toast.success(result.message || 'Perizia inviata via email!');
+            setShowEmailConfirm(false);
+        } catch (err) {
+            toast.error(err.message || 'Errore invio email');
+        } finally {
+            setSendingEmail(false);
         }
     };
 
@@ -703,13 +723,14 @@ export default function SopralluogoWizardPage() {
                         </Card>
                     )}
 
-                    {/* Varianti di Intervento (A/B/C) */}
+                    {/* Varianti di Intervento (A/B/C) — Editabili */}
                     {analisi.varianti && Object.keys(analisi.varianti).length > 0 && (
                         <Card data-testid="varianti-section">
                             <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b pb-3">
                                 <CardTitle className="text-base flex items-center gap-2">
                                     <FileText className="h-5 w-5 text-blue-600" />
                                     Proposte di Intervento
+                                    <span className="text-xs font-normal text-gray-400 ml-auto">Modifica prezzi e voci prima di inviare</span>
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="p-4 space-y-3">
@@ -718,54 +739,106 @@ export default function SopralluogoWizardPage() {
                                     if (!v) return null;
                                     const isSelected = selectedVariant === key;
                                     const colors = {
-                                        A: { border: 'border-amber-300', bg: 'bg-amber-50', badge: 'bg-amber-100 text-amber-800' },
-                                        B: { border: 'border-blue-400', bg: 'bg-blue-50', badge: 'bg-blue-100 text-blue-800' },
-                                        C: { border: 'border-purple-300', bg: 'bg-purple-50', badge: 'bg-purple-100 text-purple-800' },
+                                        A: { border: 'border-amber-300', bg: 'bg-amber-50' },
+                                        B: { border: 'border-blue-400', bg: 'bg-blue-50' },
+                                        C: { border: 'border-purple-300', bg: 'bg-purple-50' },
                                     }[key];
+                                    const updateVariant = (field, value) => {
+                                        setSopralluogo(prev => ({
+                                            ...prev,
+                                            analisi_ai: {
+                                                ...prev.analisi_ai,
+                                                varianti: {
+                                                    ...prev.analisi_ai.varianti,
+                                                    [key]: { ...prev.analisi_ai.varianti[key], [field]: value }
+                                                }
+                                            }
+                                        }));
+                                    };
+                                    const addIntervento = () => {
+                                        const newItem = prompt('Aggiungi voce intervento:');
+                                        if (newItem?.trim()) {
+                                            updateVariant('interventi', [...(v.interventi || []), newItem.trim()]);
+                                        }
+                                    };
+                                    const removeIntervento = (idx) => {
+                                        updateVariant('interventi', (v.interventi || []).filter((_, i) => i !== idx));
+                                    };
                                     return (
-                                        <button
+                                        <div
                                             key={key}
-                                            onClick={() => setSelectedVariant(key)}
                                             data-testid={`variant-${key}`}
-                                            className={`w-full text-left border-2 rounded-xl p-4 transition-all ${
-                                                isSelected ? `${colors.border} ${colors.bg} shadow-md ring-2 ring-offset-1 ring-blue-200` : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                            className={`border-2 rounded-xl overflow-hidden transition-all ${
+                                                isSelected ? `${colors.border} ${colors.bg} shadow-md ring-2 ring-offset-1 ring-blue-200` : 'border-gray-200'
                                             }`}
                                         >
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-black ${
-                                                        isSelected ? 'bg-[#0B1F3A] text-white' : 'bg-gray-200 text-gray-600'
-                                                    }`}>{key}</div>
-                                                    <div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-bold text-sm text-gray-900">{v.titolo || `Variante ${key}`}</span>
-                                                            {key === 'B' && <Badge className="bg-blue-600 text-white text-[10px] px-1.5 py-0">Consigliato</Badge>}
+                                            <button
+                                                onClick={() => setSelectedVariant(key)}
+                                                className="w-full text-left p-4"
+                                            >
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-black ${
+                                                            isSelected ? 'bg-[#0B1F3A] text-white' : 'bg-gray-200 text-gray-600'
+                                                        }`}>{key}</div>
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-bold text-sm text-gray-900">{v.titolo || `Variante ${key}`}</span>
+                                                                {key === 'B' && <Badge className="bg-blue-600 text-white text-[10px] px-1.5 py-0">Consigliato</Badge>}
+                                                            </div>
+                                                            <p className="text-xs text-gray-500 mt-0.5">{v.descrizione}</p>
                                                         </div>
-                                                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{v.descrizione}</p>
                                                     </div>
                                                 </div>
-                                                <div className="text-right shrink-0">
-                                                    <div className="text-lg font-black text-gray-900">
-                                                        {v.costo_stimato > 0 ? `${v.costo_stimato.toLocaleString('it-IT')} \u20AC` : 'Da Quotare'}
+                                            </button>
+                                            {isSelected && (
+                                                <div className="px-4 pb-4 space-y-3 border-t pt-3">
+                                                    {/* Prezzo editabile */}
+                                                    <div className="flex items-center gap-3">
+                                                        <Label className="text-xs font-semibold text-gray-600 w-24">Prezzo (IVA escl.)</Label>
+                                                        <div className="relative flex-1 max-w-[180px]">
+                                                            <Input
+                                                                type="number"
+                                                                value={v.costo_stimato || ''}
+                                                                onChange={e => updateVariant('costo_stimato', parseFloat(e.target.value) || 0)}
+                                                                className="pr-8 text-right font-bold"
+                                                                data-testid={`variant-${key}-price`}
+                                                            />
+                                                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">&euro;</span>
+                                                        </div>
                                                     </div>
-                                                    {v.tempo_stimato && <div className="text-xs text-gray-500">{v.tempo_stimato}</div>}
+                                                    {/* Lista interventi editabile */}
+                                                    <div>
+                                                        <div className="flex items-center justify-between mb-1.5">
+                                                            <Label className="text-xs font-semibold text-gray-600">Interventi inclusi</Label>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={addIntervento}
+                                                                className="h-6 text-xs text-blue-600"
+                                                                data-testid={`variant-${key}-add-item`}
+                                                            >+ Aggiungi voce</Button>
+                                                        </div>
+                                                        <ul className="space-y-1">
+                                                            {(v.interventi || []).map((item, i) => (
+                                                                <li key={i} className="flex items-center gap-1.5 text-xs text-gray-600 group">
+                                                                    <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
+                                                                    <span className="flex-1">{item}</span>
+                                                                    <button
+                                                                        onClick={() => removeIntervento(i)}
+                                                                        className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600"
+                                                                    ><X className="h-3 w-3" /></button>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            {v.interventi?.length > 0 && isSelected && (
-                                                <ul className="mt-3 ml-13 space-y-1 text-xs text-gray-600 border-t pt-2">
-                                                    {v.interventi.map((item, i) => (
-                                                        <li key={i} className="flex items-start gap-1.5">
-                                                            <CheckCircle2 className="h-3 w-3 text-green-500 mt-0.5 shrink-0" />
-                                                            {item}
-                                                        </li>
-                                                    ))}
-                                                </ul>
                                             )}
-                                        </button>
+                                        </div>
                                     );
                                 })}
                                 <p className="text-xs text-gray-400 text-center pt-1">
-                                    Seleziona la variante per il preventivo. La Variante B (Adeguamento Completo) e consigliata.
+                                    Seleziona e personalizza la variante. Il cliente vedra i prezzi indicati.
                                 </p>
                             </CardContent>
                         </Card>
@@ -857,6 +930,15 @@ export default function SopralluogoWizardPage() {
                                 Scarica PDF Perizia
                             </Button>
                             <Button
+                                data-testid="btn-send-email"
+                                onClick={() => setShowEmailConfirm(true)}
+                                variant="outline"
+                                className="border-orange-300 text-orange-700 hover:bg-orange-50"
+                            >
+                                <Mail className="h-4 w-4 mr-2" />
+                                Invia via Email
+                            </Button>
+                            <Button
                                 data-testid="btn-generate-preventivo"
                                 onClick={handleGeneratePreventivo}
                                 disabled={generatingPrev || !canGenerate}
@@ -867,6 +949,40 @@ export default function SopralluogoWizardPage() {
                             </Button>
                         </div>
                     </div>
+
+                    {/* Email Confirmation Dialog */}
+                    {showEmailConfirm && (
+                        <Card className="border-2 border-orange-300 bg-orange-50" data-testid="email-confirm-dialog">
+                            <CardContent className="p-4 space-y-3">
+                                <div className="flex items-center gap-2 text-orange-800 font-semibold">
+                                    <Mail className="h-5 w-5" />
+                                    Conferma invio perizia via email
+                                </div>
+                                <p className="text-sm text-gray-600">
+                                    Stai per inviare la Perizia Tecnica <strong>{sopralluogo.document_number}</strong> al cliente.
+                                    Il PDF verra generato e allegato all'email.
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                    Assicurati di aver salvato tutte le modifiche e revisionato il documento prima dell'invio.
+                                </p>
+                                <div className="flex gap-3 justify-end pt-2">
+                                    <Button variant="outline" onClick={() => setShowEmailConfirm(false)} size="sm">
+                                        Annulla
+                                    </Button>
+                                    <Button
+                                        onClick={handleSendEmail}
+                                        disabled={sendingEmail}
+                                        className="bg-orange-600 text-white hover:bg-orange-700"
+                                        size="sm"
+                                        data-testid="btn-confirm-send-email"
+                                    >
+                                        {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
+                                        Conferma Invio
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
             )}
         </div>

@@ -557,45 +557,8 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             </div>
         </div>"""
 
-    # ═══════════════ MATERIALS TABLE (Smart pricing) ═══════════════
-    materiali = analisi.get("materiali_suggeriti", [])
-    materials_html = ""
-    if materiali:
-        has_any_price = any(m.get("prezzo", 0) > 0 for m in materiali)
-        mat_rows = ""
-        for m in materiali:
-            desc = _esc(m.get("descrizione_catalogo") or m.get("descrizione", ""))
-            qty = m.get("quantita", 1)
-            prezzo = m.get("prezzo", 0)
-            pri = m.get("priorita", "consigliato")
-            tot = prezzo * qty
-            if prezzo > 0:
-                prezzo_str = f"{prezzo:,.2f} &euro;"
-                tot_str = f"<strong>{tot:,.2f} &euro;</strong>"
-            else:
-                prezzo_str = '<span style="color:#94a3b8;font-style:italic;">Da Quotare</span>'
-                tot_str = '<span style="color:#94a3b8;font-style:italic;">—</span>'
-            mat_rows += f"""
-            <tr>
-                <td>{desc}</td>
-                <td><span class="badge-pri badge-{pri}">{_esc(pri).upper()}</span></td>
-                <td>{qty}</td>
-                <td>{prezzo_str}</td>
-                <td>{tot_str}</td>
-            </tr>"""
-        total_mat = sum(m.get("prezzo", 0) * m.get("quantita", 1) for m in materiali)
-        if has_any_price:
-            mat_rows += f'<tr class="mat-total"><td colspan="4" style="text-align:right;">TOTALE MATERIALI (IVA escl.)</td><td><strong>{total_mat:,.2f} &euro;</strong></td></tr>'
-        else:
-            mat_rows += '<tr class="mat-total"><td colspan="5" style="text-align:center;color:#94a3b8;font-style:italic;">Stima preliminare — Prezzi da definire in fase di preventivo</td></tr>'
-        materials_html = f"""
-        <div class="section">
-            <div class="section-header"><div class="section-header-num">04</div><div class="section-header-text">MATERIALI E INTERVENTI</div></div>
-            <table class="mat-table">
-                <tr><th>Descrizione</th><th>Priorita</th><th>Q.ta</th><th>Prezzo Unit.</th><th>Totale</th></tr>
-                {mat_rows}
-            </table>
-        </div>"""
+    # ═══════════════ MATERIALS TABLE — REMOVED from PDF (internal data only) ═══════════════
+    # Section 04 rimossa: il cliente non deve vedere i costi materiali interni
 
     # ═══════════════ GENERAL DESCRIPTION ═══════════════
     desc_html = ""
@@ -618,7 +581,7 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             parts.append(f"<strong>Note Tecnico:</strong> {_esc(note_utente)}")
         notes_html = f"""
         <div class="section">
-            <div class="section-header"><div class="section-header-num">05</div><div class="section-header-text">NOTE</div></div>
+            <div class="section-header"><div class="section-header-num">04</div><div class="section-header-text">NOTE</div></div>
             <div class="notes-box">{"<br/><br/>".join(parts)}</div>
         </div>"""
 
@@ -663,7 +626,6 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             titolo = _esc(v.get("titolo", label_default))
             desc = _esc(v.get("descrizione", ""))
             costo = v.get("costo_stimato", 0)
-            tempo = _esc(v.get("tempo_stimato", ""))
             interventi = v.get("interventi", [])
             is_recommended = key == "B"
 
@@ -693,27 +655,25 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
                 </div>
                 <div class="variant-footer">
                     <div class="variant-footer-cell">
-                        <div class="variant-cost-label">Costo Stimato</div>
+                        <div class="variant-cost-label">Costo Stimato (IVA escl.)</div>
                         <div class="variant-cost">{costo_str}</div>
-                    </div>
-                    <div class="variant-footer-cell">
-                        <div class="variant-time-label">Tempi Previsti</div>
-                        <div class="variant-time">{tempo}</div>
                     </div>
                 </div>
             </div>""")
 
         if variant_cards:
+            sec_num = "05" if notes_html else "04"
             variants_html = f"""
             <div class="section" style="page-break-before:always;">
-                <div class="section-header"><div class="section-header-num">{'06' if notes_html else '05'}</div><div class="section-header-text">PROPOSTE DI INTERVENTO</div></div>
+                <div class="section-header"><div class="section-header-num">{sec_num}</div><div class="section-header-text">PROPOSTE DI INTERVENTO</div></div>
                 {"".join(variant_cards)}
             </div>"""
 
     # ═══════════════ LEGAL NOTES PAGE ═══════════════
+    sec_legal = "06" if variants_html and notes_html else "05" if variants_html or notes_html else "04"
     legal_html = f"""
     <div style="page-break-before:always;">
-        <div class="section-header"><div class="section-header-num">{'07' if variants_html and notes_html else '06' if variants_html or notes_html else '05'}</div><div class="section-header-text">NOTE LEGALI E RESPONSABILITA</div></div>
+        <div class="section-header"><div class="section-header-num">{sec_legal}</div><div class="section-header-text">NOTE LEGALI E RESPONSABILITA</div></div>
 
         <div class="legal-section">
             <div class="legal-title">Responsabilita del Proprietario / Amministratore</div>
@@ -768,7 +728,6 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
         {photos_html}
         {risks_html}
         {devices_html}
-        {materials_html}
         {notes_html}
         {signature_html}
         {variants_html}

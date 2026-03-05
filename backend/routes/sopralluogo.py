@@ -564,3 +564,85 @@ async def genera_pdf_perizia(sopralluogo_id: str, user: dict = Depends(get_curre
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{filename}"'},
     )
+
+
+# ── Email Perizia ──
+
+@router.post("/{sopralluogo_id}/invia-email")
+async def invia_perizia_email(sopralluogo_id: str, user: dict = Depends(get_current_user)):
+    """Send the perizia PDF to the client via email."""
+    doc = await db[COLLECTION].find_one(
+        {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"]},
+        {"_id": 0},
+    )
+    if not doc:
+        raise HTTPException(404, "Sopralluogo non trovato")
+    if not doc.get("analisi_ai"):
+        raise HTTPException(400, "Esegui prima l'analisi AI")
+
+    # Get client email
+    client_email = None
+    if doc.get("client_id"):
+        client = await db.clients.find_one({"client_id": doc["client_id"]}, {"_id": 0})
+        if client:
+            client_email = client.get("email") or client.get("pec")
+            doc["client_name"] = client.get("business_name", "")
+
+    if not client_email:
+        raise HTTPException(400, "Il cliente non ha un indirizzo email configurato. Aggiungi l'email nella scheda cliente.")
+
+    # Generate PDF
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+
+    photos_b64 = []
+    for foto in doc.get("foto", []):
+        try:
+            data, ct = get_object(foto["storage_path"])
+            photos_b64.append({
+                "base64": base64.b64encode(data).decode("utf-8"),
+                "mime_type": ct,
+                "label": foto.get("label", "foto"),
+            })
+        except Exception as e:
+            logger.warning(f"Failed to download photo for email PDF: {e}")
+
+    from services.pdf_perizia_sopralluogo import generate_perizia_pdf
+    pdf_bytes = generate_perizia_pdf(doc, company, photos_b64)
+    filename = f"Perizia_{doc.get('document_number', 'SOP').replace('/', '-')}.pdf"
+
+    # Send email
+    from services.email_service import send_email_with_attachment
+    company_name = company.get("company_name", "")
+    doc_num = doc.get("document_number", "")
+    indirizzo = doc.get("indirizzo", "")
+    client_name = doc.get("client_name", "")
+
+    subject = f"Perizia Tecnica {doc_num} — Relazione di Sopralluogo"
+    body = (
+        f"Gentile {client_name},\n\n"
+        f"in allegato trova la Perizia Tecnica {doc_num} relativa al sopralluogo "
+        f"effettuato presso {indirizzo}.\n\n"
+        f"Il documento contiene l'analisi di conformita del Suo impianto di chiusura "
+        f"automatica secondo le normative EN 12453 / EN 13241 e le proposte di intervento "
+        f"con i relativi costi stimati.\n\n"
+        f"Restiamo a disposizione per qualsiasi chiarimento.\n\n"
+        f"Cordiali saluti,\n{company_name}"
+    )
+
+    success = await send_email_with_attachment(
+        to_email=client_email,
+        subject=subject,
+        body=body,
+        pdf_bytes=pdf_bytes,
+        filename=filename,
+    )
+
+    if success:
+        # Update sopralluogo status
+        await db[COLLECTION].update_one(
+            {"sopralluogo_id": sopralluogo_id},
+            {"$set": {"email_inviata": True, "email_inviata_at": datetime.now(timezone.utc).isoformat()}},
+        )
+        return {"message": f"Perizia inviata a {client_email}", "email": client_email}
+    else:
+        raise HTTPException(500, "Errore nell'invio email. Verifica la configurazione del servizio email (Resend).")

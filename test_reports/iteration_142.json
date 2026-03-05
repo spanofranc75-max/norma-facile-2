@@ -1,0 +1,80 @@
+{
+  "summary": "Iteration 142: PDF Section 04 (MATERIALI) removed, tempo_stimato removed from variant footer, editable variant prices in frontend, email sending capability - ALL 15 BACKEND TESTS PASS",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "pdf_section_04_removed": {
+      "materiali_e_interventi_header": "PASS - NOT in PDF generator source",
+      "comment_present": "PASS - Line 561: 'Section 04 rimossa: il cliente non deve vedere i costi materiali interni'",
+      "pdf_generates_without_materials_section": "PASS - PDF 38KB without materials table"
+    },
+    "pdf_variant_no_tempo": {
+      "tempi_previsti_not_in_html": "PASS - grep returns empty for 'Tempi Previsti' in pdf_perizia_sopralluogo.py",
+      "tempo_stimato_not_in_html": "PASS - grep returns empty for 'tempo_stimato' in variant HTML",
+      "variant_footer_only_cost": "PASS - variant-footer HTML only contains variant-cost-label and variant-cost"
+    },
+    "pdf_variant_still_has_cost": {
+      "costo_stimato_label": "PASS - 'Costo Stimato (IVA escl.)' present in variant-footer HTML",
+      "costo_str_rendered": "PASS - {costo_str} variable rendered in variant-cost div"
+    },
+    "pdf_section_numbering": {
+      "sections_verified": "PASS - 00(Descrizione), 01(Foto), 02(Criticita), 03(Dispositivi), 04(Note), 05(Proposte), 06(Legali)"
+    },
+    "email_endpoint": {
+      "endpoint_defined": "PASS - @router.post('/{sopralluogo_id}/invia-email') at line 571",
+      "checks_client_email": "PASS - Returns 400 with 'non ha un indirizzo email configurato' message",
+      "checks_ai_analysis": "PASS - Returns 400 'Esegui prima l'analisi AI'"
+    },
+    "genera_preventivo_fix": {
+      "uses_preventivo_id": "PASS - Line 434: prev_id = f'prev_{uuid.uuid4().hex[:10]}'",
+      "no_quote_id": "PASS - 'quote_id' not found in sopralluogo.py"
+    },
+    "frontend_editable_variants": {
+      "variant_price_inputs": "PASS - data-testid={`variant-${key}-price`} present",
+      "add_item_button": "PASS - data-testid={`variant-${key}-add-item`} present",
+      "send_email_button": "PASS - data-testid='btn-send-email' present",
+      "email_confirm_dialog": "PASS - data-testid='email-confirm-dialog' and 'btn-confirm-send-email' present"
+    },
+    "frontend_loads": {
+      "landing_page": "PASS - Google OAuth login page loads correctly",
+      "no_js_errors": "PASS - No error elements found"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration142_pdf_email_editable.py",
+    "/app/test_reports/pytest/iteration142_pdf_email_editable_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "pdf_perizia_sopralluogo.py Line 560-561: Section 04 correctly removed with comment explaining client should not see internal material costs",
+    "pdf_perizia_sopralluogo.py Lines 656-662: variant-footer HTML only contains cost section, no time section",
+    "sopralluogo.py Line 434: genera-preventivo correctly creates prev_id with prev_ prefix",
+    "sopralluogo.py Lines 570-648: invia-email endpoint with proper validation for client email and AI analysis",
+    "SopralluogoWizardPage.js Lines 800-808: Editable price input with proper data-testid",
+    "SopralluogoWizardPage.js Lines 814-833: Add/remove intervento items functionality",
+    "SopralluogoWizardPage.js Lines 932-985: Email confirmation dialog with proper testids",
+    "EMAIL SERVICE: Uses Resend with RESEND_API_KEY from env - actual sending requires valid API key in production"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration142_pdf_email_editable.py"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 tests passed)",
+    "frontend": "100% (code structure verified - OAuth required for UI interaction)"
+  },
+  "test_credentials": "Google OAuth required for full UI testing",
+  "seed_data_creation": "None - all tests use mock data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 142 verifies: (1) PDF Section 04 MATERIALI E INTERVENTI is REMOVED - materiali_suggeriti data exists but is NOT rendered in PDF, (2) PDF variant boxes do NOT show tempo_stimato/Tempi Previsti - only Costo Stimato (IVA escl.), (3) Frontend has editable variant prices via data-testid='variant-{A|B|C}-price', (4) Frontend has add/remove item buttons via data-testid='variant-{A|B|C}-add-item', (5) Email endpoint POST /api/sopralluoghi/{id}/invia-email validates client email and AI analysis before sending, (6) genera-preventivo uses preventivo_id (prev_xxx) not quote_id. Key files: pdf_perizia_sopralluogo.py (lines 560-662), sopralluogo.py (lines 434, 570-648), SopralluogoWizardPage.js (lines 800-985).",
+  "mocked_apis": {
+    "email_sending": "Email via Resend - actual send requires RESEND_API_KEY to be valid. The endpoint logic and validation is testable."
+  }
+}
