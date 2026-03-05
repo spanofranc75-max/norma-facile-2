@@ -146,7 +146,7 @@ async def get_receivables_aging(uid: str, today_iso: str):
         {"user_id": uid,
          "payment_status": {"$in": ["non_pagata", "parzialmente_pagata", None]},
          "status": {"$in": ["emessa", "inviata_sdi", "accettata"]}},
-        {"_id": 0, "invoice_id": 1, "number": 1, "client_name": 1,
+        {"_id": 0, "invoice_id": 1, "document_number": 1, "client_business_name": 1,
          "totals.total_document": 1, "due_date": 1, "issue_date": 1}
     ).sort("due_date", 1).to_list(200)
 
@@ -174,8 +174,8 @@ async def get_receivables_aging(uid: str, today_iso: str):
 
         detail.append({
             "id": inv.get("invoice_id"),
-            "number": inv.get("number", ""),
-            "client_name": inv.get("client_name", ""),
+            "numero": inv.get("document_number", ""),
+            "client_name": inv.get("client_business_name", ""),
             "amount": round(amount, 2),
             "due_date": str(dd)[:10] if dd else None,
             "days_overdue": max(days, 0),
@@ -234,7 +234,7 @@ async def get_payables_aging(uid: str, today_iso: str):
             except Exception:
                 pass
 
-        numero = fr.get("numero_documento", "")
+        numero = fr.get("numero_documento", "") or fr.get("data_documento", "")
         if rata_label:
             numero = f"{numero} (Rata {rata_label})"
 

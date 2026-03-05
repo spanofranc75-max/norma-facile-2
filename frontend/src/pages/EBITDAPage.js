@@ -476,7 +476,7 @@ function ScadenzarioTab({ clienti, fornitori, totaleCrediti, totaleDebiti, forni
                                         const isOverdue = item.days_overdue > 0;
                                         return (
                                             <tr key={i} className={`border-b border-slate-100 ${isOverdue ? 'bg-red-50/50' : i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}`}>
-                                                <td className="px-4 py-2.5 font-mono text-xs">{item.number || item.numero || '-'}</td>
+                                                <td className="px-4 py-2.5 font-mono text-xs">{item.numero || item.number || '-'}</td>
                                                 <td className="px-4 py-2.5 font-medium text-[#1E293B] truncate max-w-[200px]">
                                                     {item.client_name || item.fornitore || '-'}
                                                 </td>
