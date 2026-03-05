@@ -102,6 +102,9 @@ class FattureInCloudClient:
     async def create_issued_invoice(self, invoice_data: Dict[str, Any]) -> Dict[str, Any]:
         return await self._request("POST", "/issued_documents", json={"data": invoice_data})
 
+    async def update_issued_invoice(self, document_id: int, invoice_data: Dict[str, Any]) -> Dict[str, Any]:
+        return await self._request("PUT", f"/issued_documents/{document_id}", json={"data": invoice_data})
+
     async def send_to_sdi(self, document_id: int) -> Dict[str, Any]:
         """Send an issued document to SDI via FattureInCloud."""
         return await self._request("POST", f"/issued_documents/{document_id}/e_invoice/send")

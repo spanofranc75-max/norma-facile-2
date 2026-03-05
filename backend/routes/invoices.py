@@ -1079,14 +1079,13 @@ async def send_invoice_to_sdi(invoice_id: str, user: dict = Depends(get_current_
                 fic_doc_id = result.get("data", {}).get("id")
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 409:
-                    # Document number already exists on FIC — search for it
+                    # Document number already exists on FIC — find it and update
                     logger.info(f"Document {invoice.get('document_number')} already exists on FIC, searching...")
                     doc_num_raw = invoice.get("document_number", "")
                     try:
                         num_int = int(str(doc_num_raw).split("/")[0])
                     except (ValueError, IndexError):
                         num_int = 0
-                    # FIC v2 query language: "number = 16"
                     try:
                         search_result = await fic._request("GET", "/issued_documents", params={
                             "type": "invoice",
@@ -1097,24 +1096,29 @@ async def send_invoice_to_sdi(invoice_id: str, user: dict = Depends(get_current_
                     except Exception:
                         docs = []
 
-                    client_name = client_doc.get("business_name", "").lower().strip()
+                    existing_id = None
                     for doc in docs:
-                        fic_entity = (doc.get("entity", {}).get("name", "") or "").lower().strip()
                         if doc.get("number") == num_int:
-                            if client_name and fic_entity and client_name in fic_entity or fic_entity in client_name:
-                                # Same number AND matching entity → safe to reuse
-                                fic_doc_id = doc.get("id")
-                                logger.info(f"Found matching FIC document id={fic_doc_id} for number {num_int}, entity '{fic_entity}'")
-                                break
-                            else:
-                                # Same number but DIFFERENT entity → conflict
-                                logger.warning(f"FIC doc #{num_int} belongs to '{fic_entity}', not '{client_name}'")
+                            existing_id = doc.get("id")
+                            break
 
-                    if not fic_doc_id:
+                    if existing_id:
+                        logger.info(f"Updating existing FIC document id={existing_id} with current invoice data")
+                        try:
+                            update_result = await fic.update_issued_invoice(existing_id, fic_data)
+                            fic_doc_id = update_result.get("data", {}).get("id") or existing_id
+                        except Exception as ue:
+                            logger.error(f"Failed to update FIC document: {ue}")
+                            raise HTTPException(
+                                409,
+                                f"Documento n.{num_int} esiste già su FIC (id={existing_id}). "
+                                f"Aggiornamento fallito. Verifica manualmente su FIC."
+                            )
+                    else:
                         raise HTTPException(
                             409,
-                            f"Documento n.{num_int} esiste già su Fatture in Cloud per un altro cliente. "
-                            f"Elimina il documento #{num_int} su FIC oppure modifica il numero in Norma Facile prima di riprovare."
+                            f"Documento n.{num_int} esiste già su FIC ma non trovato nella ricerca. "
+                            f"Verifica manualmente su FIC."
                         )
                 else:
                     raise
