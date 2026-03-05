@@ -1064,14 +1064,42 @@ async def send_invoice_to_sdi(invoice_id: str, user: dict = Depends(get_current_
 
     try:
         from services.fattureincloud_api import get_fic_client, map_fattura_to_fic
+        import httpx
         fic = get_fic_client(access_token=fic_token, company_id=int(fic_company_id))
 
-        # Map invoice to FIC format
-        fic_data = map_fattura_to_fic(invoice, client_doc)
+        fic_doc_id = invoice.get("fic_document_id")
 
-        # Create invoice on FIC
-        result = await fic.create_issued_invoice(fic_data)
-        fic_doc_id = result.get("data", {}).get("id")
+        if not fic_doc_id:
+            # Map invoice to FIC format
+            fic_data = map_fattura_to_fic(invoice, client_doc)
+
+            try:
+                # Try to create invoice on FIC
+                result = await fic.create_issued_invoice(fic_data)
+                fic_doc_id = result.get("data", {}).get("id")
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 409:
+                    # Document already exists on FIC — search for it
+                    logger.info(f"Document {invoice.get('document_number')} already exists on FIC, searching...")
+                    doc_num_raw = invoice.get("document_number", "")
+                    try:
+                        num_int = int(str(doc_num_raw).split("/")[0])
+                    except (ValueError, IndexError):
+                        num_int = 0
+                    search_result = await fic._request("GET", "/issued_documents", params={
+                        "type": "invoice",
+                        "q": str(num_int),
+                        "per_page": 5,
+                    })
+                    docs = search_result.get("data", [])
+                    for doc in docs:
+                        if doc.get("number") == num_int:
+                            fic_doc_id = doc.get("id")
+                            break
+                    if not fic_doc_id:
+                        raise HTTPException(409, f"Documento {doc_num_raw} esiste già su Fatture in Cloud ma non è stato possibile recuperarne l'ID. Verifica manualmente su FIC.")
+                else:
+                    raise
 
         if not fic_doc_id:
             raise HTTPException(500, "Fatture in Cloud non ha restituito un ID documento")
