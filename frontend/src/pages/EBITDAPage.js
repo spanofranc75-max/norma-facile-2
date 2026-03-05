@@ -60,8 +60,10 @@ export default function EBITDAPage() {
     const liq = data?.liquidita || {};
     const sem = SEMAFORO_COLORS[liq.semaforo] || SEMAFORO_COLORS.verde;
     const iva = data?.iva_trimestri || [];
-    const aging = data?.aging_clienti || {};
+    const agingClienti = data?.aging_clienti || {};
+    const agingFornitori = data?.aging_fornitori || {};
     const cashflow = data?.cashflow_preview || [];
+    const flussoReale = data?.flusso_reale || [];
 
     const tabs = [
         { id: 'panoramica', label: 'Panoramica' },
@@ -115,9 +117,9 @@ export default function EBITDAPage() {
                     </div>
                 ) : (
                     <>
-                        {activeTab === 'panoramica' && <PanoramicaTab data={data} liq={liq} sem={sem} aging={aging} cashflow={cashflow} />}
+                        {activeTab === 'panoramica' && <PanoramicaTab data={data} liq={liq} sem={sem} agingClienti={agingClienti} agingFornitori={agingFornitori} cashflow={cashflow} flussoReale={flussoReale} />}
                         {activeTab === 'iva' && <IvaTab iva={iva} ivaAnnuale={data?.iva_annuale} year={year} />}
-                        {activeTab === 'scadenzario' && <ScadenzarioTab clienti={data?.scadenzario_clienti} fornitori={data?.scadenzario_fornitori} />}
+                        {activeTab === 'scadenzario' && <ScadenzarioTab clienti={data?.scadenzario_clienti} fornitori={data?.scadenzario_fornitori} totaleCrediti={data?.totale_crediti} totaleDebiti={data?.totale_debiti} fornitoriScaduti={data?.fornitori_scaduti} />}
                         {activeTab === 'margini' && <MarginiTab top={data?.top_margin} bottom={data?.bottom_margin} />}
                     </>
                 )}
@@ -129,7 +131,7 @@ export default function EBITDAPage() {
 
 // ── TAB: PANORAMICA ──────────────────────────────────────────────
 
-function PanoramicaTab({ data, liq, sem, aging, cashflow }) {
+function PanoramicaTab({ data, liq, sem, agingClienti, agingFornitori, cashflow, flussoReale }) {
     return (
         <div className="space-y-5">
             {/* Semaforo Liquidità */}
@@ -147,19 +149,26 @@ function PanoramicaTab({ data, liq, sem, aging, cashflow }) {
                                 <span className="text-sm font-medium text-slate-600">Liquidità Mese Corrente</span>
                             </div>
                             <p className={`text-sm ${sem.text} font-medium`}>{liq.semaforo_msg}</p>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
-                                <MiniStat label="Incassi ricevuti" value={liq.incassi_mese} color="text-emerald-600" />
-                                <MiniStat label="Da incassare" value={liq.da_incassare_mese} color="text-blue-600" />
-                                <MiniStat label="Pagamenti fornitori" value={liq.pagamenti_mese} color="text-amber-600" negative />
-                                <MiniStat label="IVA prossimo F24" value={liq.iva_prossima} color="text-red-600" negative />
+                            {/* Entrate row */}
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-3">
+                                <MiniStat label="Incassi ricevuti" value={liq.incassi_mese} color="text-emerald-600" icon={<ArrowUpRight className="h-3 w-3" />} />
+                                <MiniStat label="Da incassare" value={liq.da_incassare_mese} color="text-blue-600" icon={<Clock className="h-3 w-3" />} />
+                                <MiniStat label="Tot. entrate previste" value={liq.entrate_previste} color="text-emerald-700" bold />
+                            </div>
+                            {/* Uscite row */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
+                                <MiniStat label="Pagamenti effettuati" value={liq.pagamenti_effettuati} color="text-orange-600" negative icon={<ArrowDownRight className="h-3 w-3" />} />
+                                <MiniStat label="Da pagare fornitori" value={liq.da_pagare_fornitori} color="text-amber-600" negative icon={<Building2 className="h-3 w-3" />} />
+                                <MiniStat label="IVA prossimo F24" value={liq.iva_prossima} color="text-red-600" negative icon={<Receipt className="h-3 w-3" />} />
+                                <MiniStat label="Tot. uscite previste" value={liq.uscite_previste} color="text-red-700" negative bold />
                             </div>
                         </div>
                     </div>
                     {/* Barra Entrate vs Uscite */}
                     <div className="mt-4 pt-3 border-t border-slate-200/50">
                         <div className="flex justify-between text-xs text-slate-500 mb-1.5">
-                            <span>Entrate previste: <strong className="text-emerald-600">{fmt(liq.entrate_previste)}</strong></span>
-                            <span>Uscite previste: <strong className="text-red-600">{fmt(liq.uscite_previste)}</strong></span>
+                            <span>Entrate: <strong className="text-emerald-600">{fmt(liq.entrate_previste)}</strong></span>
+                            <span>Uscite: <strong className="text-red-600">{fmt(liq.uscite_previste)}</strong></span>
                         </div>
                         <div className="h-3 bg-slate-200 rounded-full overflow-hidden flex">
                             {(liq.entrate_previste + liq.uscite_previste) > 0 && (
@@ -181,12 +190,36 @@ function PanoramicaTab({ data, liq, sem, aging, cashflow }) {
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {/* Flusso di Cassa Reale (ultimi 6 mesi) */}
+                <Card className="border-gray-200" data-testid="flusso-reale">
+                    <CardHeader className="pb-2 px-5 pt-5">
+                        <CardTitle className="text-sm font-semibold text-[#1E293B] flex items-center gap-2">
+                            <Wallet className="h-4 w-4 text-[#0055FF]" />
+                            Flusso di Cassa Reale (6 mesi)
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-2 pb-4">
+                        <ResponsiveContainer width="100%" height={220}>
+                            <BarChart data={flussoReale} margin={{ top: 5, right: 15, left: 10, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+                                <XAxis dataKey="mese" tick={{ fontSize: 11, fill: '#64748B' }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false}
+                                       tickFormatter={v => Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(0)}k` : v} />
+                                <Tooltip content={<ChartTooltipContent />} cursor={{ fill: '#F1F5F9' }} />
+                                <Legend verticalAlign="top" height={30} />
+                                <Bar name="Entrate Reali" dataKey="entrate" fill="#10B981" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                                <Bar name="Uscite Reali" dataKey="uscite" fill="#EF4444" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+
                 {/* Cash Flow Previsionale */}
                 <Card className="border-gray-200" data-testid="cashflow-preview">
                     <CardHeader className="pb-2 px-5 pt-5">
                         <CardTitle className="text-sm font-semibold text-[#1E293B] flex items-center gap-2">
                             <CalendarClock className="h-4 w-4 text-[#0055FF]" />
-                            Cash Flow Previsionale
+                            Previsione Cash Flow
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="px-2 pb-4">
@@ -198,57 +231,78 @@ function PanoramicaTab({ data, liq, sem, aging, cashflow }) {
                                        tickFormatter={v => Math.abs(v) >= 1000 ? `${(v / 1000).toFixed(0)}k` : v} />
                                 <Tooltip content={<ChartTooltipContent />} cursor={{ fill: '#F1F5F9' }} />
                                 <Legend verticalAlign="top" height={30} />
-                                <Bar name="Entrate" dataKey="entrate" fill="#10B981" radius={[4, 4, 0, 0]} maxBarSize={35} />
-                                <Bar name="Uscite" dataKey="uscite" fill="#EF4444" radius={[4, 4, 0, 0]} maxBarSize={35} />
+                                <Bar name="Entrate Attese" dataKey="entrate" fill="#10B981" radius={[4, 4, 0, 0]} maxBarSize={35} />
+                                <Bar name="Uscite Previste" dataKey="uscite" fill="#EF4444" radius={[4, 4, 0, 0]} maxBarSize={35} />
                             </BarChart>
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>
+            </div>
 
-                {/* Aging Crediti */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {/* Aging Crediti (Clienti) */}
                 <Card className="border-gray-200" data-testid="aging-clienti">
                     <CardHeader className="pb-2 px-5 pt-5">
                         <CardTitle className="text-sm font-semibold text-[#1E293B] flex items-center gap-2">
-                            <FileWarning className="h-4 w-4 text-amber-500" />
-                            Crediti per Anzianità
+                            <ArrowUpRight className="h-4 w-4 text-emerald-500" />
+                            Crediti Clienti (da incassare)
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="px-5 pb-4">
-                        <div className="space-y-3">
-                            <AgingBar label="0-30 giorni" amount={aging["0_30"]} color="bg-emerald-500" max={Math.max(aging["0_30"], aging["30_60"], aging["60_90"], aging["over_90"], 1)} />
-                            <AgingBar label="30-60 giorni" amount={aging["30_60"]} color="bg-amber-500" max={Math.max(aging["0_30"], aging["30_60"], aging["60_90"], aging["over_90"], 1)} />
-                            <AgingBar label="60-90 giorni" amount={aging["60_90"]} color="bg-orange-500" max={Math.max(aging["0_30"], aging["30_60"], aging["60_90"], aging["over_90"], 1)} />
-                            <AgingBar label="Oltre 90 giorni" amount={aging["over_90"]} color="bg-red-600" max={Math.max(aging["0_30"], aging["30_60"], aging["60_90"], aging["over_90"], 1)} />
-                        </div>
+                        <AgingBars aging={agingClienti} />
                         <div className="mt-3 pt-3 border-t border-slate-100">
                             <p className="text-xs text-slate-500">Totale crediti: <strong className="text-[#1E293B]">
-                                {fmt((aging["0_30"] || 0) + (aging["30_60"] || 0) + (aging["60_90"] || 0) + (aging["over_90"] || 0))}
+                                {fmt(data?.totale_crediti)}
                             </strong></p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Aging Debiti (Fornitori) */}
+                <Card className="border-gray-200" data-testid="aging-fornitori">
+                    <CardHeader className="pb-2 px-5 pt-5">
+                        <CardTitle className="text-sm font-semibold text-[#1E293B] flex items-center gap-2">
+                            <ArrowDownRight className="h-4 w-4 text-red-500" />
+                            Debiti Fornitori (da pagare)
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-5 pb-4">
+                        <AgingBars aging={agingFornitori} isDebit />
+                        <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between">
+                            <p className="text-xs text-slate-500">Totale debiti: <strong className="text-red-600">
+                                {fmt(data?.totale_debiti)}
+                            </strong></p>
+                            {(data?.fornitori_scaduti || 0) > 0 && (
+                                <p className="text-xs font-semibold text-red-600 flex items-center gap-1">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Scaduti: {fmt(data?.fornitori_scaduti)}
+                                </p>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* IVA Quick Summary */}
+            {/* Bilancino IVA */}
             <Card className="border-gray-200" data-testid="iva-quick">
                 <CardHeader className="pb-2 px-5 pt-5">
                     <CardTitle className="text-sm font-semibold text-[#1E293B] flex items-center gap-2">
                         <Receipt className="h-4 w-4 text-[#0055FF]" />
-                        IVA — Riepilogo Annuale {data?.year}
+                        Bilancino IVA — {data?.year}
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="px-5 pb-4">
                     <div className="grid grid-cols-3 gap-4">
                         <div className="text-center p-3 bg-blue-50 rounded-lg">
-                            <p className="text-xs text-slate-500 mb-1">IVA a Debito</p>
+                            <p className="text-xs text-slate-500 mb-1">IVA Vendite (Debito)</p>
                             <p className="text-lg font-mono font-bold text-blue-700">{fmt(data?.iva_annuale?.totale_debito)}</p>
                         </div>
                         <div className="text-center p-3 bg-emerald-50 rounded-lg">
-                            <p className="text-xs text-slate-500 mb-1">IVA a Credito</p>
+                            <p className="text-xs text-slate-500 mb-1">IVA Acquisti (Credito)</p>
                             <p className="text-lg font-mono font-bold text-emerald-700">{fmt(data?.iva_annuale?.totale_credito)}</p>
                         </div>
                         <div className={`text-center p-3 rounded-lg ${(data?.iva_annuale?.totale_versare || 0) > 0 ? 'bg-red-50' : 'bg-emerald-50'}`}>
-                            <p className="text-xs text-slate-500 mb-1">IVA da Versare</p>
+                            <p className="text-xs text-slate-500 mb-1">Saldo da Versare</p>
                             <p className={`text-lg font-mono font-bold ${(data?.iva_annuale?.totale_versare || 0) > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
                                 {fmt(data?.iva_annuale?.totale_versare)}
                             </p>
@@ -322,7 +376,9 @@ function IvaTab({ iva, ivaAnnuale, year }) {
                                     </p>
                                 </div>
                             </div>
-                            <p className="text-xs text-slate-400 mt-2">Fatturato: {fmt(q.fatturato)} ({q.n_fatture} fatture)</p>
+                            <p className="text-xs text-slate-400 mt-2">
+                                Emesse: {fmt(q.fatturato_attivo)} ({q.n_fatture_emesse} fatt.) — Ricevute: {fmt(q.fatturato_passivo)} ({q.n_fatture_ricevute} fatt.)
+                            </p>
                         </CardContent>
                     </Card>
                 ))}
@@ -357,13 +413,13 @@ function IvaTab({ iva, ivaAnnuale, year }) {
 
 // ── TAB: SCADENZARIO ─────────────────────────────────────────────
 
-function ScadenzarioTab({ clienti, fornitori }) {
+function ScadenzarioTab({ clienti, fornitori, totaleCrediti, totaleDebiti, fornitoriScaduti }) {
     const [view, setView] = useState('clienti');
     const items = view === 'clienti' ? (clienti || []) : (fornitori || []);
 
     return (
         <div className="space-y-4">
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
                 <Button
                     variant={view === 'clienti' ? 'default' : 'outline'}
                     size="sm"
@@ -372,6 +428,7 @@ function ScadenzarioTab({ clienti, fornitori }) {
                     data-testid="btn-scad-clienti"
                 >
                     <ArrowUpRight className="h-4 w-4 mr-1" /> Crediti Clienti ({(clienti || []).length})
+                    {totaleCrediti > 0 && <span className="ml-1 font-mono">{fmt(totaleCrediti)}</span>}
                 </Button>
                 <Button
                     variant={view === 'fornitori' ? 'default' : 'outline'}
@@ -381,7 +438,14 @@ function ScadenzarioTab({ clienti, fornitori }) {
                     data-testid="btn-scad-fornitori"
                 >
                     <ArrowDownRight className="h-4 w-4 mr-1" /> Debiti Fornitori ({(fornitori || []).length})
+                    {totaleDebiti > 0 && <span className="ml-1 font-mono">{fmt(totaleDebiti)}</span>}
                 </Button>
+                {(fornitoriScaduti || 0) > 0 && (
+                    <Badge className="bg-red-100 text-red-800 text-xs self-center">
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        Scaduti: {fmt(fornitoriScaduti)}
+                    </Badge>
+                )}
             </div>
 
             <Card className="border-gray-200" data-testid="scadenzario-table">
@@ -498,13 +562,34 @@ function MarginiTab({ top, bottom }) {
 
 // ── Utility Components ───────────────────────────────────────────
 
-function MiniStat({ label, value, color, negative }) {
+function MiniStat({ label, value, color, negative, bold, icon }) {
     return (
         <div className="text-center">
-            <p className="text-[10px] text-slate-500 mb-0.5">{label}</p>
-            <p className={`text-sm font-mono font-bold ${color}`}>
+            <p className="text-[10px] text-slate-500 mb-0.5 flex items-center justify-center gap-1">
+                {icon}{label}
+            </p>
+            <p className={`text-sm font-mono ${bold ? 'font-extrabold' : 'font-bold'} ${color}`}>
                 {negative && value > 0 ? '-' : ''}{fmt(value)}
             </p>
+        </div>
+    );
+}
+
+function AgingBars({ aging, isDebit }) {
+    const max = Math.max(aging["0_30"] || 0, aging["30_60"] || 0, aging["60_90"] || 0, aging["over_90"] || 0, 1);
+    const colors = isDebit
+        ? ['bg-blue-400', 'bg-amber-500', 'bg-orange-500', 'bg-red-600']
+        : ['bg-emerald-500', 'bg-amber-500', 'bg-orange-500', 'bg-red-600'];
+    return (
+        <div className="space-y-3">
+            {[
+                { label: '0-30 giorni', key: '0_30', color: colors[0] },
+                { label: '30-60 giorni', key: '30_60', color: colors[1] },
+                { label: '60-90 giorni', key: '60_90', color: colors[2] },
+                { label: 'Oltre 90 giorni', key: 'over_90', color: colors[3] },
+            ].map(b => (
+                <AgingBar key={b.key} label={b.label} amount={aging[b.key] || 0} color={b.color} max={max} />
+            ))}
         </div>
     );
 }

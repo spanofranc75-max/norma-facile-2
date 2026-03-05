@@ -1,0 +1,98 @@
+{
+  "summary": "Iteration 131: Cruscotto Finanziario Bug Fix Verification - ALL TESTS PASS. The financial dashboard now correctly integrates both active (invoices) and passive (fatture_ricevute) cycles. Backend API returns all required new fields: flusso_reale (6 months), aging_fornitori, totale_crediti, totale_debiti, fornitori_scaduti, fornitori_scadenza_mese. IVA trimestri now includes fatturato_attivo, fatturato_passivo, n_fatture_emesse, n_fatture_ricevute. Liquidita has new passive cycle fields: pagamenti_effettuati, da_pagare_fornitori, saldo_reale, n_pagamenti. Frontend EBITDAPage correctly displays all new components.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "active_passive_integration": {
+      "description": "Financial dashboard now integrates both active (invoices) and passive (fatture_ricevute) cycles",
+      "result": "PASS - 26/26 tests passed"
+    },
+    "new_fields_in_response": {
+      "flusso_reale": "PASS - Array with 6 months of real cash flow (entrate, uscite, saldo)",
+      "aging_fornitori": "PASS - Aging buckets for supplier payables (0_30, 30_60, 60_90, over_90)",
+      "totale_crediti": "PASS - Total receivables amount",
+      "totale_debiti": "PASS - Total payables amount",
+      "fornitori_scaduti": "PASS - Overdue supplier invoices total",
+      "fornitori_scadenza_mese": "PASS - Supplier invoices due this month"
+    },
+    "iva_trimestri_updates": {
+      "fatturato_attivo": "PASS - Revenue from active invoices",
+      "fatturato_passivo": "PASS - Expenses from passive invoices",
+      "n_fatture_emesse": "PASS - Count of emitted invoices",
+      "n_fatture_ricevute": "PASS - Count of received invoices",
+      "iva_debito": "PASS - IVA from sales (active cycle)",
+      "iva_credito": "PASS - IVA from purchases (passive cycle)",
+      "iva_da_versare": "PASS - Calculated as iva_debito - iva_credito"
+    },
+    "liquidita_passive_fields": {
+      "pagamenti_effettuati": "PASS - Payments made to suppliers",
+      "da_pagare_fornitori": "PASS - Unpaid supplier invoices",
+      "saldo_reale": "PASS - Real cash balance (incassi - pagamenti)",
+      "n_incassi": "PASS - Count of received payments",
+      "n_pagamenti": "PASS - Count of made payments"
+    },
+    "financial_service_field_names": {
+      "description": "financial_service.py uses correct field names for fatture_ricevute",
+      "imposta": "PASS - Uses 'imposta' (not 'totale_iva')",
+      "data_scadenza_pagamento": "PASS - Uses 'data_scadenza_pagamento' (not 'data_scadenza')",
+      "payment_status": "PASS - Uses 'payment_status' for both cycles",
+      "data_documento": "PASS - Uses ISO string dates for filtering"
+    }
+  },
+  "frontend_tests": {
+    "page_load": "PASS - EBITDAPage (Cruscotto Finanziario) loads at /ebitda",
+    "panoramica_tab": {
+      "semaforo_liquidita": "PASS - Card with ATTENZIONE/verde/giallo/rosso status",
+      "flusso_reale_chart": "PASS - 'Flusso di Cassa Reale (6 mesi)' chart found",
+      "cashflow_preview": "PASS - 'Previsione Cash Flow' 30/60/90 days chart",
+      "aging_clienti": "PASS - 'Crediti Clienti (da incassare)' aging buckets",
+      "aging_fornitori": "PASS - 'Debiti Fornitori (da pagare)' aging buckets - NEW",
+      "bilancino_iva": "PASS - Shows IVA Vendite (Debito) vs IVA Acquisti (Credito)"
+    },
+    "iva_trimestrale_tab": {
+      "chart": "PASS - IVA quarterly chart with Da Versare, IVA Credito, IVA Debito",
+      "quarterly_cards": "PASS - All 4 Q1-Q4 cards with F24 deadlines",
+      "annual_summary": "PASS - Riepilogo Annuale IVA with totals"
+    },
+    "scadenzario_tab": {
+      "clienti_button": "PASS - 'Crediti Clienti' toggle button",
+      "fornitori_button": "PASS - 'Debiti Fornitori' toggle button",
+      "table": "PASS - Scadenzario table with empty state handling"
+    },
+    "margini_tab": {
+      "top_margin": "PASS - 'Top Commesse per Margine' card with empty state"
+    },
+    "year_navigation": "PASS - Year selector with prev/next buttons"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration131_cruscotto_fix.py",
+    "/app/test_reports/pytest/iteration131_cruscotto_fix_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "financial_service.py correctly uses 'imposta' field (not 'totale_iva') for IVA credit from fatture_ricevute",
+    "Date filtering uses 'data_documento' (ISO string) consistently for both active and passive invoices",
+    "payment_status field used correctly for both cycles to track paid/unpaid status",
+    "All aging calculations use data_scadenza_pagamento for supplier invoices (not data_scadenza)",
+    "flusso_reale correctly shows last 6 months of actual cash flow (incassi from paid invoices, uscite from paid fatture_ricevute)",
+    "IVA calculation now properly shows both iva_debito (from sales) and iva_credito (from purchases)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration131_cruscotto_fix.py"
+  ],
+  "success_rate": {
+    "backend": "100% (26/26 tests)",
+    "frontend": "100% (all UI components verified)"
+  },
+  "seed_data_creation": "Test user and session created/cleaned up automatically during test run",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Financial dashboard (Cruscotto Finanziario) bug fix complete and verified. The endpoint /api/dashboard/cruscotto-finanziario now correctly integrates both active (invoices) and passive (fatture_ricevute) cycles. Key changes: 1) Uses correct field names for fatture_ricevute (imposta, data_scadenza_pagamento, payment_status), 2) Returns new fields (flusso_reale, aging_fornitori, totale_debiti, fornitori_scaduti), 3) IVA calculation shows both debito and credito. Frontend displays all new data correctly including aging bars for both Crediti Clienti AND Debiti Fornitori."
+}
