@@ -117,11 +117,12 @@ const NAV_GROUPS = [
     },
     {
         id: 'perizie',
-        label: 'Perizie',
+        label: 'Sopralluoghi & Perizie',
         icon: ShieldAlert,
         type: 'group',
         roles: ['admin', 'ufficio_tecnico'],
         children: [
+            { path: '/sopralluoghi', label: 'Sopralluoghi AI', icon: ShieldAlert },
             { path: '/perizie', label: 'Perizie Sinistro', icon: ShieldAlert },
             { path: '/archivio-sinistri', label: 'Archivio Sinistri', icon: BarChart3 },
         ],

@@ -29,6 +29,8 @@ import DDTEditorPage from './pages/DDTEditorPage';
 import FornitoriPage from './pages/FornitoriPage';
 import PeriziaListPage from './pages/PeriziaListPage';
 import PeriziaEditorPage from './pages/PeriziaEditorPage';
+import SopralluoghiPage from './pages/SopralluoghiPage';
+import SopralluogoWizardPage from './pages/SopralluogoWizardPage';
 import ArchivioSinistriPage from './pages/ArchivioSinistriPage';
 import ArticoliPage from './pages/ArticoliPage';
 import FattureRicevutePage from './pages/FattureRicevutePage';
@@ -204,6 +206,10 @@ function AppRouter() {
             <Route path="/perizie" element={<ProtectedRoute><PeriziaListPage /></ProtectedRoute>} />
             <Route path="/perizie/new" element={<ProtectedRoute><PeriziaEditorPage /></ProtectedRoute>} />
             <Route path="/perizie/:periziaId" element={<ProtectedRoute><PeriziaEditorPage /></ProtectedRoute>} />
+            {/* Sopralluoghi & Messa a Norma AI */}
+            <Route path="/sopralluoghi" element={<ProtectedRoute><SopralluoghiPage /></ProtectedRoute>} />
+            <Route path="/sopralluoghi/new" element={<ProtectedRoute><SopralluogoWizardPage /></ProtectedRoute>} />
+            <Route path="/sopralluoghi/:sopralluogoId" element={<ProtectedRoute><SopralluogoWizardPage /></ProtectedRoute>} />
             {/* Archivio Sinistri */}
             <Route path="/archivio-sinistri" element={<ProtectedRoute><ArchivioSinistriPage /></ProtectedRoute>} />
             {/* Catalogo Articoli */}
