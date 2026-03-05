@@ -1341,50 +1341,110 @@ async def sync_fatture_from_fic(
 
 @router.post("/recalc-scadenze")
 async def recalc_scadenze(user: dict = Depends(get_current_user)):
-    """Recalculate due dates for all received invoices missing data_scadenza_pagamento, using supplier payment terms.
-    Also tries to link unlinked suppliers by name matching."""
+    """Recalculate due dates for all received invoices missing scadenze_pagamento, using supplier payment terms.
+    Also tries to link unlinked suppliers by P.IVA/CF and bidirectional name matching."""
     uid = user["user_id"]
     
-    # First, try to link unlinked suppliers by name
+    # Load all suppliers once for matching
+    all_suppliers = await db.clients.find(
+        {"user_id": uid},
+        {"_id": 0, "client_id": 1, "business_name": 1, "partita_iva": 1, "codice_fiscale": 1}
+    ).to_list(500)
+    
+    # Build lookup indexes (strip IT prefix, lowercase)
+    def clean_piva(p):
+        if not p or p in ("00000000000", "None"):
+            return ""
+        return re.sub(r'^IT', '', str(p).strip(), flags=re.IGNORECASE)
+    
+    piva_map = {}  # clean_piva -> client_id
+    cf_map = {}    # cf -> client_id
+    for s in all_suppliers:
+        cp = clean_piva(s.get("partita_iva"))
+        if cp:
+            piva_map[cp] = s["client_id"]
+        cf = (s.get("codice_fiscale") or "").strip()
+        if cf and cf != "None":
+            cf_map[cf] = s["client_id"]
+    
+    # Phase 1: Link unlinked FRs
     unlinked = db.fatture_ricevute.find(
         {"user_id": uid, "$or": [{"fornitore_id": None}, {"fornitore_id": ""}]},
-        {"_id": 0, "fr_id": 1, "fornitore_nome": 1, "fornitore_piva": 1}
+        {"_id": 0, "fr_id": 1, "fornitore_nome": 1, "fornitore_piva": 1, "fornitore_cf": 1}
     )
     linked_count = 0
     async for fr in unlinked:
         nome = fr.get("fornitore_nome", "")
-        piva = fr.get("fornitore_piva", "")
-        match = None
-        # Try P.IVA first (if valid)
-        if piva and piva not in ("00000000000", ""):
-            match = await db.clients.find_one(
-                {"user_id": uid, "partita_iva": piva},
-                {"_id": 0, "client_id": 1}
-            )
-        # Fallback: match by name (case-insensitive, contains)
-        if not match and nome:
-            # Clean company suffixes for fuzzy matching
-            clean_name = re.sub(r'\b(S\.?R\.?L\.?S?\.?|S\.?P\.?A\.?|S\.?N\.?C\.?|S\.?A\.?S\.?|SOC\.?\s*COOP\.?|UNIPERSONALE)\b', '', nome, flags=re.IGNORECASE)
-            clean_name = re.sub(r"SOCIETA'?\s*A\s*SOCIO\s*UNICO", '', clean_name, flags=re.IGNORECASE)
-            clean_name = re.sub(r'[.\s]+$', '', clean_name).strip()
-            clean_name = re.sub(r'\s{2,}', ' ', clean_name).strip()
-            if len(clean_name) >= 3:
-                match = await db.clients.find_one(
-                    {"user_id": uid, "business_name": {"$regex": re.escape(clean_name[:25]), "$options": "i"}},
-                    {"_id": 0, "client_id": 1}
-                )
-        if match:
+        piva = clean_piva(fr.get("fornitore_piva"))
+        cf = (fr.get("fornitore_cf") or "").strip()
+        match_id = None
+        
+        # Try P.IVA first
+        if piva:
+            match_id = piva_map.get(piva)
+        
+        # Try CF
+        if not match_id and cf:
+            match_id = cf_map.get(cf)
+        
+        # Fallback: bidirectional name matching
+        if not match_id and nome:
+            nome_up = nome.upper().strip()
+            # Remove common suffixes for comparison
+            suffixes_re = re.compile(r'\b(S\.?R\.?L\.?S?\.?|S\.?P\.?A\.?|S\.?N\.?C\.?|S\.?A\.?S\.?|SOC\.?\s*COOP\.?|UNIPERSONALE|DI\s+\S+.*)\b', re.IGNORECASE)
+            nome_clean = suffixes_re.sub('', nome_up).strip()
+            nome_clean = re.sub(r'[.,\s]+$', '', nome_clean).strip()
+            nome_clean = re.sub(r'\s{2,}', ' ', nome_clean).strip()
+            # Extract significant words (>= 3 chars, not articles/prepositions)
+            stop_words = {'DI', 'DEL', 'DELLA', 'DELLO', 'DEI', 'DEGLI', 'DELLE', 'E', 'ED', 'IL', 'LA', 'LO', 'LE', 'I', 'GLI', 'UN', 'UNA', 'UNO', 'PER', 'IN', 'CON', 'SU', 'TRA', 'FRA',
+                         'ITALIA', 'ITALIANA', 'ITALIANO', 'EUROPE', 'SERVIZI', 'SERVICE', 'GROUP', 'INTERNATIONAL'}
+            nome_words = [w for w in nome_clean.split() if w not in stop_words and len(w) >= 3]
+            
+            best_match = None
+            best_score = 0
+            for s in all_suppliers:
+                s_name = (s.get("business_name") or "").upper().strip()
+                s_clean = suffixes_re.sub('', s_name).strip()
+                s_clean = re.sub(r'[.,\s]+$', '', s_clean).strip()
+                s_clean = re.sub(r'\s{2,}', ' ', s_clean).strip()
+                s_words = [w for w in s_clean.split() if w not in stop_words and len(w) >= 3]
+                
+                if not s_words:
+                    continue
+                
+                # Match strategy: count common significant words
+                common = set(nome_words) & set(s_words)
+                if not common:
+                    continue
+                
+                # Score = matched words / max possible words (Jaccard on words)
+                score = len(common)
+                total = max(len(nome_words), len(s_words))
+                ratio = score / total if total else 0
+                
+                # Require at least 1 matching word AND ratio >= 50%
+                if score >= 1 and ratio >= 0.5 and score > best_score:
+                    best_score = score
+                    best_match = s["client_id"]
+            
+            if best_match:
+                match_id = best_match
+        
+        if match_id:
             await db.fatture_ricevute.update_one(
                 {"fr_id": fr["fr_id"]},
-                {"$set": {"fornitore_id": match["client_id"], "updated_at": datetime.now(timezone.utc)}}
+                {"$set": {"fornitore_id": match_id, "updated_at": datetime.now(timezone.utc)}}
             )
             linked_count += 1
 
-    # Now recalculate scadenze for all FR with fornitore_id but no scadenza
+    # Phase 2: Recalculate scadenze for all FR with fornitore_id but no scadenze_pagamento
     cursor = db.fatture_ricevute.find(
         {"user_id": uid, "fornitore_id": {"$nin": [None, ""]},
-         "$or": [{"data_scadenza_pagamento": ""}, {"data_scadenza_pagamento": None},
-                 {"scadenze_pagamento": {"$in": [[], None]}}, {"scadenze_pagamento": {"$exists": False}}]},
+         "$or": [
+             {"scadenze_pagamento": {"$in": [[], None]}},
+             {"scadenze_pagamento": {"$exists": False}},
+             {"scadenze_pagamento": {"$size": 0}},
+         ]},
         {"_id": 0, "fr_id": 1, "fornitore_id": 1, "data_documento": 1, "totale_documento": 1}
     )
     updated = 0

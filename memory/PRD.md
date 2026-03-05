@@ -105,8 +105,15 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **P0 FIX: Integrazione Ciclo Passivo nel Cruscotto Finanziario** - Corretto uso campi fatture_ricevute: `imposta` (non `totale_iva`), `data_scadenza_pagamento` (non `data_scadenza`), `payment_status`. Creato `financial_service.py` con funzioni aggregate per ciclo attivo+passivo. Aggiunto: Flusso Cassa Reale (6 mesi), Aging Fornitori, IVA Vendite vs IVA Acquisti (Bilancino IVA), Scadenzario completo con debiti fornitori e badge scaduti. 26/26 test passati.
 
 ## Bug Risolti (sessione 5 Marzo 2026 - Fork 5)
-- **P0 FIX: Scadenzario Fornitori non splitta le rate** - Le fatture passive con condizioni di pagamento multi-rata (es. "RIBA 30-60 gg") venivano mostrate come importo unico nel Cruscotto Finanziario. Fix: `get_payables_aging()` in `financial_service.py` ora legge il campo `scadenze_pagamento` e genera voci separate per ogni rata non pagata. Anche `get_cashflow_forecast()` aggiornato per usare le rate individuali. 8/8 test passati.
-- **P0 FIX: Cruscotto mostra tutto a zero** - Le fatture attive avevano `payment_status: None` (campo mai impostato), ma le query filtravano solo per "non_pagata"/"pagata". Fix: incluso `None` nei filtri `$in` di `get_monthly_cashflow()`, `get_receivables_aging()` e `get_cashflow_forecast()`. Ora crediti clienti (37.752€) e cashflow (10.388€ da incassare) appaiono correttamente. 9/9 test passati.
+- **P0 FIX: Scadenzario Fornitori non splitta le rate** - Root cause: le fatture ricevute non avevano `scadenze_pagamento` popolato perché:
+  1. Il matching fornitori era rotto (P.IVA con prefisso "IT", matching nomi unidirezionale)
+  2. Il recalc non veniva mai eseguito con successo
+  Fix applicati:
+  - `financial_service.py`: `get_payables_aging()` e `get_cashflow_forecast()` usano `scadenze_pagamento` con rate individuali
+  - `fatture_ricevute.py` (`recalc-scadenze`): riscritto matching fornitori (P.IVA senza prefisso IT, CF, nome bidirezionale con stop words). Ora collega correttamente Dinelli→RB30/60FM, Masotti→Bon30/180FM, etc.
+  - Query allargata per includere `payment_status: None` come "non_pagata"
+  - Risultato: DINELLI 2 rate 515€, MASOTTI 6 rate ~1159€, 20 scadenze calcolate
+- **P0 FIX: Cruscotto mostra tutto a zero** - Fatture attive con `payment_status: None` incluse nei filtri `$in` di cashflow e receivables
 
 ## Issue Pendenti
 - **P1**: Verifica end-to-end generazione dinamica PDF (DoP/CE) con dati materiali reali
