@@ -186,37 +186,38 @@ export default function InvoiceEditorPage() {
         fetchData();
     }, []);
 
+    // Reload invoice data from API
+    const fetchInvoice = async () => {
+        try {
+            const data = await apiRequest(`/invoices/${invoiceId}`);
+            setFormData({
+                document_type: data.document_type,
+                document_number: data.document_number || '',
+                client_id: data.client_id,
+                issue_date: data.issue_date,
+                due_date: data.due_date || '',
+                payment_method: data.payment_method,
+                payment_terms: data.payment_terms,
+                notes: data.notes || '',
+                internal_notes: data.internal_notes || '',
+                tax_settings: data.tax_settings || formData.tax_settings,
+                lines: data.lines.length > 0 ? data.lines : [{ ...emptyLine }],
+                status: data.status || 'bozza',
+            });
+            setTotals(data.totals);
+        } catch (error) {
+            toast.error('Documento non trovato');
+            navigate('/invoices');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Fetch invoice if editing
     useEffect(() => {
         if (!isEditing) return;
-        
-        const fetchInvoice = async () => {
-            try {
-                const data = await apiRequest(`/invoices/${invoiceId}`);
-                setFormData({
-                    document_type: data.document_type,
-                    document_number: data.document_number || '',
-                    client_id: data.client_id,
-                    issue_date: data.issue_date,
-                    due_date: data.due_date || '',
-                    payment_method: data.payment_method,
-                    payment_terms: data.payment_terms,
-                    notes: data.notes || '',
-                    internal_notes: data.internal_notes || '',
-                    tax_settings: data.tax_settings || formData.tax_settings,
-                    lines: data.lines.length > 0 ? data.lines : [{ ...emptyLine }],
-                    status: data.status || 'bozza',
-                });
-                setTotals(data.totals);
-            } catch (error) {
-                toast.error('Documento non trovato');
-                navigate('/invoices');
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchInvoice();
-    }, [invoiceId, isEditing, navigate]);
+    }, [invoiceId, isEditing]);
 
     // Calculate totals when lines or tax settings change
     useEffect(() => {

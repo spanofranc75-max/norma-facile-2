@@ -47,10 +47,14 @@ export async function apiRequest(endpoint, options = {}) {
         let detail = `Errore ${response.status}`;
         let rawBody = '';
         try {
-            rawBody = await response.text();
+            rawBody = await response.clone().text();
             console.error(`[apiRequest] ${response.status} response body:`, rawBody);
         } catch (readErr) {
-            console.error('[apiRequest] Failed to read response body:', readErr);
+            try {
+                rawBody = await response.text();
+            } catch {
+                console.error('[apiRequest] Failed to read response body:', readErr);
+            }
         }
         if (rawBody) {
             try {
