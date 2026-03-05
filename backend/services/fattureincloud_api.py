@@ -179,6 +179,16 @@ def map_fattura_to_fic(invoice: dict, client: dict) -> Dict[str, Any]:
     except (ValueError, IndexError):
         doc_number_int = 0
 
+    # Calculate total document amount for payment
+    totals = invoice.get("totals", {})
+    amount_due = totals.get("total_document", 0)
+    if not amount_due:
+        # Fallback: calculate from line items
+        amount_due = sum(
+            (float(l.get("line_total", 0)) + float(l.get("vat_amount", 0)))
+            for l in invoice.get("lines", [])
+        )
+
     return {
         "type": "invoice",
         "entity": {
@@ -197,7 +207,15 @@ def map_fattura_to_fic(invoice: dict, client: dict) -> Dict[str, Any]:
         "date": invoice.get("issue_date") or (invoice.get("created_at", "").split("T")[0] if isinstance(invoice.get("created_at"), str) else None),
         "number": doc_number_int,
         "items_list": items,
-        "payment_method": {"id": 0},
+        "payments_list": [
+            {
+                "amount": round(amount_due, 2),
+                "due_date": invoice.get("due_date") or invoice.get("issue_date"),
+                "paid_date": None,
+                "status": "not_paid",
+                "payment_account": None,
+            }
+        ],
     }
 
 
