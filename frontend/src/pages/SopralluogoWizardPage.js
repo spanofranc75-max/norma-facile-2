@@ -65,7 +65,7 @@ export default function SopralluogoWizardPage() {
 
     // Load clients
     useEffect(() => {
-        apiRequest('/clients/?limit=200').then(d => setClients(d.clients || [])).catch(() => {});
+        apiRequest('/clients/?limit=100').then(d => setClients(d.clients || [])).catch(() => {});
     }, []);
 
     // Load existing sopralluogo
@@ -194,6 +194,26 @@ export default function SopralluogoWizardPage() {
         }
     };
 
+    const handleEditRischio = (index, field, value) => {
+        setSopralluogo(prev => {
+            const newAnalisi = { ...prev.analisi_ai };
+            const rischi = [...newAnalisi.rischi];
+            rischi[index] = { ...rischi[index], [field]: value };
+            newAnalisi.rischi = rischi;
+            return { ...prev, analisi_ai: newAnalisi };
+        });
+    };
+
+    const handleEditMateriale = (index, field, value) => {
+        setSopralluogo(prev => {
+            const newAnalisi = { ...prev.analisi_ai };
+            const materiali = [...newAnalisi.materiali_suggeriti];
+            materiali[index] = { ...materiali[index], [field]: value };
+            newAnalisi.materiali_suggeriti = materiali;
+            return { ...prev, analisi_ai: newAnalisi };
+        });
+    };
+
     const handleToggleRischio = (index) => {
         setSopralluogo(prev => {
             const newAnalisi = { ...prev.analisi_ai };
@@ -207,6 +227,11 @@ export default function SopralluogoWizardPage() {
     const handleDownloadPdf = async () => {
         setGeneratingPdf(true);
         try {
+            // Save edits before generating PDF
+            await apiRequest(`/sopralluoghi/${sopralluogo.sopralluogo_id}`, {
+                method: 'PUT',
+                body: { analisi_ai: sopralluogo.analisi_ai, note_tecnico: sopralluogo.note_tecnico },
+            });
             const response = await fetch(
                 `${process.env.REACT_APP_BACKEND_URL}/api/sopralluoghi/${sopralluogo.sopralluogo_id}/pdf`,
                 { credentials: 'include' }
@@ -535,16 +560,30 @@ export default function SopralluogoWizardPage() {
                                             <div className="h-5 w-5 rounded-full border-2 border-gray-300" />
                                         )}
                                     </button>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-start gap-2 flex-wrap mb-1">
+                                    <div className="flex-1 min-w-0 space-y-2">
+                                        <div className="flex items-start gap-2 flex-wrap">
                                             <Badge className={GRAVITA_COLORS[r.gravita] || GRAVITA_COLORS.media}>{r.gravita?.toUpperCase()}</Badge>
                                             <span className="text-xs text-gray-500 font-mono">{r.norma_riferimento}</span>
                                         </div>
-                                        <p className="font-medium text-sm">{r.zona}</p>
-                                        <p className="text-sm text-gray-600">{r.problema}</p>
-                                        <p className="text-xs text-green-700 mt-1 flex items-center gap-1">
-                                            <Wrench className="h-3 w-3" /> {r.soluzione}
-                                        </p>
+                                        <p className="font-semibold text-sm text-gray-900">{r.zona}</p>
+                                        <div>
+                                            <label className="text-xs text-gray-400 uppercase tracking-wide">Problema</label>
+                                            <Textarea
+                                                value={r.problema || ''}
+                                                onChange={e => handleEditRischio(i, 'problema', e.target.value)}
+                                                rows={2}
+                                                className="mt-0.5 text-sm bg-gray-50 border-gray-200 focus:bg-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-green-600 uppercase tracking-wide flex items-center gap-1"><Wrench className="h-3 w-3" /> Soluzione</label>
+                                            <Textarea
+                                                value={r.soluzione || ''}
+                                                onChange={e => handleEditRischio(i, 'soluzione', e.target.value)}
+                                                rows={2}
+                                                className="mt-0.5 text-sm bg-green-50 border-green-200 focus:bg-white"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -604,14 +643,34 @@ export default function SopralluogoWizardPage() {
                                         {analisi.materiali_suggeriti.map((m, i) => (
                                             <tr key={i}>
                                                 <td className="p-3">
-                                                    <p className="font-medium">{m.descrizione_catalogo || m.descrizione}</p>
-                                                    <p className="text-xs text-gray-500">keyword: {m.keyword}</p>
+                                                    <Input
+                                                        value={m.descrizione_catalogo || m.descrizione || ''}
+                                                        onChange={e => handleEditMateriale(i, 'descrizione_catalogo', e.target.value)}
+                                                        className="text-sm h-8 bg-gray-50 focus:bg-white"
+                                                    />
+                                                    <p className="text-xs text-gray-400 mt-0.5">keyword: {m.keyword}</p>
                                                 </td>
-                                                <td className="text-center p-3">{m.quantita}</td>
+                                                <td className="text-center p-3">
+                                                    <Input
+                                                        type="number"
+                                                        value={m.quantita}
+                                                        onChange={e => handleEditMateriale(i, 'quantita', parseInt(e.target.value) || 1)}
+                                                        className="text-sm h-8 w-16 text-center mx-auto"
+                                                        min={1}
+                                                    />
+                                                </td>
                                                 <td className="text-center p-3">
                                                     <Badge variant="outline" className={m.priorita === 'obbligatorio' ? 'border-red-200 text-red-700' : 'border-gray-200'}>{m.priorita}</Badge>
                                                 </td>
-                                                <td className="text-right p-3 font-mono">{m.prezzo ? `${m.prezzo.toFixed(2)} €` : '-'}</td>
+                                                <td className="text-right p-3">
+                                                    <Input
+                                                        type="number"
+                                                        value={m.prezzo || 0}
+                                                        onChange={e => handleEditMateriale(i, 'prezzo', parseFloat(e.target.value) || 0)}
+                                                        className="text-sm h-8 w-24 text-right ml-auto font-mono"
+                                                        step={0.01}
+                                                    />
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -621,21 +680,58 @@ export default function SopralluogoWizardPage() {
                     )}
 
                     {/* Notes */}
-                    {analisi.note_tecniche && (
-                        <Card className="bg-blue-50">
-                            <CardContent className="p-4">
-                                <p className="text-sm font-medium text-blue-800 mb-1">Note Tecniche AI:</p>
-                                <p className="text-sm text-blue-700">{analisi.note_tecniche}</p>
-                            </CardContent>
-                        </Card>
-                    )}
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm text-blue-800 flex items-center gap-1"><FileText className="h-4 w-4" /> Note</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            <div>
+                                <label className="text-xs text-gray-400 uppercase tracking-wide">Note AI (editabili)</label>
+                                <Textarea
+                                    value={analisi.note_tecniche || ''}
+                                    onChange={e => setSopralluogo(prev => ({
+                                        ...prev,
+                                        analisi_ai: { ...prev.analisi_ai, note_tecniche: e.target.value }
+                                    }))}
+                                    rows={2}
+                                    className="mt-0.5 text-sm bg-blue-50 border-blue-200"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-gray-400 uppercase tracking-wide">Note Tecnico (tue osservazioni)</label>
+                                <Textarea
+                                    data-testid="input-note-tecnico"
+                                    value={sopralluogo.note_tecnico || ''}
+                                    onChange={e => setSopralluogo(prev => ({ ...prev, note_tecnico: e.target.value }))}
+                                    rows={2}
+                                    placeholder="Aggiungi le tue osservazioni personali..."
+                                    className="mt-0.5 text-sm"
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
 
                     {/* Actions */}
                     <div className="flex flex-wrap gap-3 justify-between pt-2">
                         <Button variant="outline" onClick={() => setStep(2)}>
                             <Brain className="h-4 w-4 mr-1" /> Ri-Analizza
                         </Button>
-                        <div className="flex gap-3">
+                        <div className="flex gap-3 flex-wrap">
+                            <Button
+                                variant="outline"
+                                onClick={async () => {
+                                    try {
+                                        await apiRequest(`/sopralluoghi/${sopralluogo.sopralluogo_id}`, {
+                                            method: 'PUT',
+                                            body: { analisi_ai: sopralluogo.analisi_ai, note_tecnico: sopralluogo.note_tecnico },
+                                        });
+                                        toast.success('Modifiche salvate');
+                                    } catch (err) { toast.error(err.message); }
+                                }}
+                                data-testid="btn-save-edits"
+                            >
+                                <CheckCircle2 className="h-4 w-4 mr-1" /> Salva Modifiche
+                            </Button>
                             <Button
                                 data-testid="btn-download-pdf"
                                 onClick={handleDownloadPdf}

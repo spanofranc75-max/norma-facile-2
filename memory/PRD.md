@@ -188,15 +188,16 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 3. Step 3: Analisi AI con GPT-4o Vision (prompt specializzato EN 12453)
 4. Step 4: Risultati con rischi, dispositivi, materiali suggeriti → Scarica PDF Perizia / Genera Preventivo automatico
 
-### PDF Perizia
-- WeasyPrint HTML→PDF, 2 pagine A4
-- Header aziendale, info sopralluogo, indice conformità colorato
-- Foto sopralluogo embedded (da Object Storage)
-- Tabella rischi con gravità/zona/norma/soluzione
-- Dispositivi presenti/mancanti
-- Tabella materiali con prezzi e totale
-- Area firma tecnico + cliente
+### PDF Perizia (Design Ingegneristico Pro)
+- WeasyPrint HTML/CSS, 3+ pagine A4
+- **Copertina**: Logo aziendale + foto principale sfumata + indice conformita (semaforo rosso/ambra/verde) + dati sopralluogo
+- **Criticita**: Schede rischio con barra colorata (alta/media/bassa) + norma EN + problema editabile + soluzione editabile
+- **Dispositivi**: Colonna presenti (verde) vs mancanti (rosso)
+- **Materiali**: Tabella con descrizione editabile, quantita, priorita, prezzi
+- **Note**: AI + tecnico (editabili) + area firma tecnico/cliente
+- **Editing pre-stampa**: L'utente puo modificare tutti i testi generati dall'AI (problema, soluzione, descrizione materiale, note) nel wizard Step 4 prima di generare il PDF
 - Endpoint: `GET /api/sopralluoghi/{id}/pdf`
+- Servizio: `/app/backend/services/pdf_perizia_sopralluogo.py`
 
 ### Articoli Catalogo
 - 14 articoli predefiniti (coste, fotocellule, rete, encoder, etc.)
