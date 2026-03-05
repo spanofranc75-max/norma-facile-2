@@ -106,6 +106,7 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 
 ## Bug Risolti (sessione 5 Marzo 2026 - Fork 5)
 - **P0 FIX: Scadenzario Fornitori non splitta le rate** - Le fatture passive con condizioni di pagamento multi-rata (es. "RIBA 30-60 gg") venivano mostrate come importo unico nel Cruscotto Finanziario. Fix: `get_payables_aging()` in `financial_service.py` ora legge il campo `scadenze_pagamento` e genera voci separate per ogni rata non pagata. Anche `get_cashflow_forecast()` aggiornato per usare le rate individuali. 8/8 test passati.
+- **P0 FIX: Cruscotto mostra tutto a zero** - Le fatture attive avevano `payment_status: None` (campo mai impostato), ma le query filtravano solo per "non_pagata"/"pagata". Fix: incluso `None` nei filtri `$in` di `get_monthly_cashflow()`, `get_receivables_aging()` e `get_cashflow_forecast()`. Ora crediti clienti (37.752€) e cashflow (10.388€ da incassare) appaiono correttamente. 9/9 test passati.
 
 ## Issue Pendenti
 - **P1**: Verifica end-to-end generazione dinamica PDF (DoP/CE) con dati materiali reali

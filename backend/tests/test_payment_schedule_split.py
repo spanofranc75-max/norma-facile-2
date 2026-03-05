@@ -351,5 +351,45 @@ async def test_cashflow_forecast_excludes_paid_installments(today_iso):
     assert result[1]["uscite"] == 3000.0, f"Expected 3000€ at 60d, got {result[1]['uscite']}"
 
 
+# ── Test 9: Receivables aging includes payment_status=None ──
+
+
+async def test_receivables_includes_null_payment_status(today_iso):
+    """Invoices with payment_status=None should be treated as unpaid."""
+    from services.financial_service import get_receivables_aging
+    
+    d30 = (date.today() + timedelta(days=30)).isoformat()
+    
+    items = [
+        {
+            "invoice_id": "inv_001",
+            "number": "1/2026",
+            "client_name": "Cliente Test",
+            "totals": {"total_document": 5000.0},
+            "due_date": d30,
+            "issue_date": "2026-01-15",
+            "payment_status": None,
+            "status": "emessa",
+        },
+        {
+            "invoice_id": "inv_002",
+            "number": "2/2026",
+            "client_name": "Cliente Due",
+            "totals": {"total_document": 3000.0},
+            "due_date": d30,
+            "issue_date": "2026-01-20",
+            "payment_status": "non_pagata",
+            "status": "emessa",
+        },
+    ]
+
+    with patch("services.financial_service.db") as mock_db:
+        mock_db.invoices = FakeCollection(items)
+        result = await get_receivables_aging("user1", today_iso)
+
+    assert len(result["detail"]) == 2, f"Expected 2, got {len(result['detail'])}"
+    assert result["total"] == 8000.0, f"Expected 8000, got {result['total']}"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
