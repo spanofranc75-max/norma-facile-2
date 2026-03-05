@@ -138,6 +138,13 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
   - Footer normativo: "Azienda Certificata EN 1090-1 EXC2 • ISO 3834-2 • Centro di Trasformazione Acciaio"
   - Rimossa variabile inutilizzata `netto_row`
 
+- **FEATURE: Anteprima Live PDF nell'Editor Fattura** - Split-view con generazione PDF in tempo reale:
+  - Backend: nuovo endpoint `POST /api/invoices/preview-pdf` genera PDF dai dati form correnti senza salvare
+  - Frontend: componente `LivePDFPreview.js` con pannello laterale toggle (45% width)
+  - Bottone "Anteprima Live" nell'header editor con icona PanelRightOpen
+  - Pannello espandibile a fullscreen, bottone Aggiorna manuale, chiusura X
+  - 10/10 test backend passati (`test_iteration134_preview_pdf.py`)
+
 ## Issue Pendenti
 - **P1**: Bug condizioni pagamento cancellate alla chiusura form fornitore senza salvare
 - **P1**: Verifica end-to-end generazione dinamica PDF (DoP/CE) con dati materiali reali
