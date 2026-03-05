@@ -762,6 +762,57 @@ async def convert_document(
     return InvoiceResponse(**created)
 
 
+
+@router.post("/preview-pdf")
+async def preview_invoice_pdf(
+    data: dict,
+    user: dict = Depends(get_current_user)
+):
+    """Generate a live PDF preview from unsaved form data."""
+    client_id = data.get("client_id")
+    client = {}
+    if client_id:
+        client = await db.clients.find_one({"client_id": client_id}, {"_id": 0}) or {}
+
+    company = await db.company_settings.find_one(
+        {"user_id": user["user_id"]}, {"_id": 0}
+    ) or {"business_name": user.get("name", ""), "email": user.get("email", "")}
+
+    # Build a temporary invoice dict from form data
+    lines = data.get("lines", [])
+    for ln in lines:
+        qty = float(ln.get("quantity") or 0)
+        price = float(ln.get("unit_price") or 0)
+        disc = float(ln.get("discount_percent") or 0)
+        net = qty * price * (1 - disc / 100)
+        ln["line_total"] = round(net, 2)
+        vat_rate = ln.get("vat_rate", "22")
+        vr = 0 if vat_rate in ("N3", "N4") else float(vat_rate or 0)
+        ln["vat_amount"] = round(net * vr / 100, 2)
+
+    invoice_data = {
+        "document_type": data.get("document_type", "FT"),
+        "document_number": data.get("document_number") or "ANTEPRIMA",
+        "issue_date": data.get("issue_date", ""),
+        "due_date": data.get("due_date", ""),
+        "payment_method": data.get("payment_method", "bonifico"),
+        "payment_terms": data.get("payment_terms", ""),
+        "payment_type_label": data.get("payment_type_label", ""),
+        "notes": data.get("notes", ""),
+        "lines": lines,
+        "totals": data.get("totals", {}),
+    }
+
+    pdf_bytes = pdf_service.generate_invoice_pdf(invoice_data, client, company)
+
+    return StreamingResponse(
+        BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": "inline; filename=anteprima.pdf"}
+    )
+
+
+
 @router.get("/{invoice_id}/pdf")
 async def get_invoice_pdf(
     invoice_id: str,

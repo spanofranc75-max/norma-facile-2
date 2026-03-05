@@ -1,0 +1,51 @@
+{
+  "summary": "Iteration 134: Live PDF Preview Endpoint Tests - ALL 10 TESTS PASS. POST /api/invoices/preview-pdf correctly generates PDFs from unsaved form data. Returns application/pdf content type with valid PDF binary. Works with empty lines, handles discount calculations, fetches client data when client_id provided, and works without client_id. Supports FT, NC, PRV document types and exempt VAT rates (N3, N4). Authentication required (401 without session).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "preview_pdf_endpoint": {
+      "returns_pdf_content_type": "PASS - Returns application/pdf with valid %PDF header (16131 bytes)",
+      "works_with_empty_lines": "PASS - No crash with empty lines array (15040 bytes generated)",
+      "calculates_line_total": "PASS - line_total = qty * price * (1 - disc/100) calculated server-side",
+      "fetches_client_data": "PASS - Client info populated in PDF when client_id provided (16375 bytes)",
+      "works_without_client_id": "PASS - PDF generated with empty client section (15662 bytes)"
+    },
+    "additional_tests": {
+      "multiple_lines": "PASS - Multiple line items render correctly",
+      "exempt_vat_rates": "PASS - N3/N4 exempt rates handled correctly (VAT=0)",
+      "different_doc_types": "PASS - FT, NC, PRV all generate valid PDFs",
+      "authentication_required": "PASS - Returns 401 without valid session token",
+      "full_form_fields": "PASS - All form fields (doc_number, dates, payment terms, notes) work"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration134_preview_pdf.py",
+    "/app/test_reports/pytest/iteration134_preview_pdf_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "POST /api/invoices/preview-pdf endpoint at lines 766-812 in invoices.py is well implemented",
+    "Line total calculation (lines 783-791) correctly applies: qty * price * (1 - discount/100)",
+    "Client fetching (lines 773-775) properly handles missing client_id with empty dict fallback",
+    "VAT calculation handles N3/N4 exempt codes correctly (line 790: vr=0 if N3/N4)",
+    "Uses generate_modern_invoice_pdf from pdf_invoice_modern.py via pdf_service"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration134_preview_pdf.py"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 tests passed)"
+  },
+  "test_credentials": "Test user/session/client created via mongosh setup fixture, cleaned up after tests",
+  "seed_data_creation": "Test user, session, client, and company_settings created per test run",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Live PDF Preview backend endpoint verified working. POST /api/invoices/preview-pdf generates valid PDFs from unsaved form data. Frontend component LivePDFPreview.js uses this endpoint. Frontend testing skipped per instruction (Google OAuth required). Test file at /app/backend/tests/test_iteration134_preview_pdf.py can be reused for regression testing."
+}

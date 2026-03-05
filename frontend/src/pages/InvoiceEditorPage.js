@@ -38,11 +38,13 @@ import {
     Mail,
     Send,
     CheckCircle2,
+    PanelRightOpen,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import ArticleSearch from '../components/ArticleSearch';
 import { QuickFillModal } from '../components/QuickFillModal';
 import { PDFPreviewButton } from '../components/PDFPreviewModal';
+import { LivePDFPreview } from '../components/LivePDFPreview';
 import { AutoExpandTextarea } from '../components/AutoExpandTextarea';
 import EmailPreviewDialog from '../components/EmailPreviewDialog';
 
@@ -144,6 +146,7 @@ export default function InvoiceEditorPage() {
 
     const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
     const [paymentTypes, setPaymentTypes] = useState([]);
+    const [showLivePreview, setShowLivePreview] = useState(false);
 
     // Calculate due date from issue_date and payment type
     const calcDueDate = (issueDate, pt) => {
@@ -395,7 +398,10 @@ export default function InvoiceEditorPage() {
 
     return (
         <DashboardLayout>
-            <div className="space-y-6 max-w-6xl">
+            <div className={`flex gap-0 ${showLivePreview ? 'h-[calc(100vh-64px)]' : ''}`}>
+                {/* Editor Column */}
+                <div className={`${showLivePreview ? 'w-[55%] overflow-y-auto pr-2' : 'w-full'} transition-all duration-300`}>
+                <div className={`space-y-6 ${showLivePreview ? '' : 'max-w-6xl'}`}>
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -415,6 +421,17 @@ export default function InvoiceEditorPage() {
                     </div>
                     <div className="flex gap-2">
                         {isEditing && <PDFPreviewButton pdfUrl={`/invoices/${invoiceId}/pdf`} title="Anteprima Fattura" className="border-emerald-500 text-emerald-600 hover:bg-emerald-50" />}
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            data-testid="btn-live-preview"
+                            onClick={() => setShowLivePreview(v => !v)}
+                            className={`text-xs h-9 ${showLivePreview ? 'bg-sky-50 border-sky-400 text-sky-700' : 'border-sky-300 text-sky-600 hover:bg-sky-50'}`}
+                        >
+                            <PanelRightOpen className="h-3.5 w-3.5 mr-1" />
+                            {showLivePreview ? 'Chiudi Anteprima' : 'Anteprima Live'}
+                        </Button>
                         {isEditing && (
                             <Button
                                 type="button"
@@ -930,6 +947,18 @@ export default function InvoiceEditorPage() {
                     onOpenChange={setQuickFillOpen}
                     onSelect={handleQuickFill}
                 />
+            </div>
+            </div>
+            {/* Live Preview Panel */}
+            {showLivePreview && (
+                <div className="w-[45%] shrink-0 h-full">
+                    <LivePDFPreview
+                        formData={formData}
+                        totals={totals}
+                        onClose={() => setShowLivePreview(false)}
+                    />
+                </div>
+            )}
             </div>
             <EmailPreviewDialog
                 open={emailPreviewOpen}
