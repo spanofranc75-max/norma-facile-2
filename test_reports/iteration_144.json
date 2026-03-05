@@ -1,0 +1,101 @@
+{
+  "summary": "Iteration 144: Email Template System - ALL 39 BACKEND CODE TESTS PASS. Verified: Dynamic email template generation based on conformity % (urgent <40%, warning 40-65%, normal >65%), editable email preview panel with proper data-testid attributes, and backend accepting custom subject/body for sending.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "generateEmailTemplate_function": {
+      "location": "SopralluogoWizardPage.js lines 283-370",
+      "threshold_urgent": "PASS - conf < 40 triggers URGENTE template",
+      "threshold_warning": "PASS - conf >= 40 && conf < 65 triggers ATTENZIONE template",
+      "threshold_normal": "PASS - conf >= 65 triggers normal template (no prefix)"
+    },
+    "email_subject_generation": {
+      "urgent_prefix": "PASS - 'URGENTE - ' prefix for conformity < 40%",
+      "warning_prefix": "PASS - 'ATTENZIONE - ' prefix for conformity 40-65%",
+      "normal_subject": "PASS - No prefix for conformity > 65%",
+      "format": "PASS - 'Esito Perizia Tecnica Cancello ${indirizzo}'"
+    },
+    "email_body_content": {
+      "urgent_art_2051": "PASS - References Art. 2051 C.C. and 'Colpa Grave' for urgent cases",
+      "urgent_rischio_penale": "PASS - Mentions 'Rischio Penale' for urgent cases",
+      "urgent_rischio_assicurativo": "PASS - Mentions 'Rischio Assicurativo' for urgent cases",
+      "warning_art_2051": "PASS - References Art. 2051 C.C. for warning cases",
+      "variant_prices": "PASS - Includes variant A/B/C costo_stimato from analisi.varianti",
+      "variant_page_reference": "PASS - 'A pagina ${variantPage}' references the variant section"
+    },
+    "email_preview_panel_testids": {
+      "email-subject-input": "PASS - data-testid present on subject Input",
+      "email-body-input": "PASS - data-testid present on body Textarea",
+      "email-preview-download-pdf": "PASS - data-testid on 'Scarica PDF (Anteprima)' button",
+      "btn-confirm-send-email": "PASS - data-testid on send button",
+      "email-confirm-dialog": "PASS - data-testid on preview panel Card"
+    },
+    "send_button_disabled_logic": {
+      "condition": "PASS - disabled={sendingEmail || !emailSubject.trim() || !emailBody.trim()}",
+      "prevents_empty_send": "PASS - Button disabled when subject or body is empty"
+    },
+    "handleSendEmail_function": {
+      "endpoint": "PASS - Calls POST /sopralluoghi/{id}/invia-email",
+      "payload": "PASS - Sends { subject: emailSubject, body: emailBody } in POST body"
+    },
+    "backend_invia_email_endpoint": {
+      "route": "PASS - @router.post('/{sopralluogo_id}/invia-email')",
+      "signature": "PASS - accepts 'payload: dict = None'",
+      "extracts_subject": "PASS - payload.get('subject', '').strip()",
+      "extracts_body": "PASS - payload.get('body', '').strip()",
+      "fallback_subject": "PASS - Default subject if empty",
+      "fallback_body": "PASS - Default body if empty",
+      "passes_to_email_service": "PASS - subject=subject, body=body in send_email_with_attachment",
+      "saves_to_db": "PASS - 'email_subject': subject saved to DB on success"
+    },
+    "frontend_loads": {
+      "landing_page": "PASS - Google OAuth login page loads correctly",
+      "no_js_errors": "PASS - No error elements found",
+      "page_title": "PASS - 'Norma Facile 2.0'"
+    },
+    "backend_health": {
+      "status": "PASS - /api/health returns healthy",
+      "version": "2.1.0"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration144_email_template_system.py",
+    "/app/test_reports/pytest/iteration144_email_template_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "SopralluogoWizardPage.js Lines 292-293: Clean conformity threshold logic (isUrgent < 40, isWarning 40-65)",
+    "SopralluogoWizardPage.js Lines 296-297: Subject built with urgentTag prefix based on thresholds",
+    "SopralluogoWizardPage.js Lines 300-306: Variant prices pulled from analisi.varianti[k].costo_stimato",
+    "SopralluogoWizardPage.js Lines 315-334: Urgent template includes Art. 2051 C.C., Colpa Grave, Rischio Penale/Assicurativo",
+    "SopralluogoWizardPage.js Lines 335-351: Warning template includes Art. 2051 C.C. reminder",
+    "SopralluogoWizardPage.js Lines 352-365: Normal template (>65%) has no severe warnings",
+    "SopralluogoWizardPage.js Lines 379-382: handleSendEmail POSTs {subject, body} to /invia-email",
+    "SopralluogoWizardPage.js Line 1134: Send button disabled when subject or body empty",
+    "sopralluogo.py Lines 571-649: invia_perizia_email accepts payload dict with subject/body",
+    "sopralluogo.py Lines 622-628: Extracts subject/body from payload with .strip() and fallback defaults"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration144_email_template_system.py"
+  ],
+  "success_rate": {
+    "backend": "100% (39/39 tests passed)",
+    "frontend": "100% (code structure verified - OAuth required for full UI interaction)"
+  },
+  "test_credentials": "Google OAuth required for full UI testing",
+  "seed_data_creation": "None needed - tests verify code structure only",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 144 verifies the NEW EMAIL TEMPLATE SYSTEM: (1) Frontend generateEmailTemplate() creates dynamic templates based on conformity % thresholds: URGENTE (<40%), ATTENZIONE (40-65%), Normal (>65%), (2) Email preview panel has editable Subject/Body inputs with proper data-testid attributes, (3) 'Scarica PDF (Anteprima)' button allows reviewing PDF before sending, (4) Send button is disabled when subject/body empty, (5) Backend POST /invia-email accepts {subject, body} JSON payload and passes to email service, falling back to defaults if empty. All 39 code verification tests pass. The email service uses Resend API which requires valid API key for actual sending.",
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "note": "Email sending via Resend requires API key. Tests verify code structure only - actual email delivery depends on Resend configuration."
+  }
+}

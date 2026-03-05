@@ -58,6 +58,8 @@ export default function SopralluogoWizardPage() {
     const [selectedVariant, setSelectedVariant] = useState('B');
     const [sendingEmail, setSendingEmail] = useState(false);
     const [showEmailConfirm, setShowEmailConfirm] = useState(false);
+    const [emailSubject, setEmailSubject] = useState('');
+    const [emailBody, setEmailBody] = useState('');
 
     const [formData, setFormData] = useState({
         client_id: '',
@@ -278,15 +280,106 @@ export default function SopralluogoWizardPage() {
         }
     };
 
+    const generateEmailTemplate = () => {
+        if (!sopralluogo || !analisi) return;
+        const conf = analisi.conformita_percentuale || 0;
+        const docNum = sopralluogo.document_number || '';
+        const indirizzo = sopralluogo.indirizzo || '';
+        const clientName = clients.find(c => c.client_id === sopralluogo.client_id)?.business_name || 'Cliente';
+        const createdDate = sopralluogo.created_at?.substring(0, 10)?.split('-').reverse().join('/') || '';
+
+        // Determine urgency based on conformity
+        const isUrgent = conf < 40;
+        const isWarning = conf >= 40 && conf < 65;
+
+        // Build subject
+        const urgentTag = isUrgent ? 'URGENTE - ' : isWarning ? 'ATTENZIONE - ' : '';
+        const subject = `${urgentTag}Esito Perizia Tecnica Cancello ${indirizzo}`;
+
+        // Build variant prices summary
+        const varianti = analisi.varianti || {};
+        const priceLines = ['A', 'B', 'C'].map(k => {
+            const v = varianti[k];
+            if (!v) return null;
+            const cost = v.costo_stimato > 0 ? `${v.costo_stimato.toLocaleString('it-IT')}\u20AC` : 'da quotare';
+            return `   ${k}) ${v.titolo || 'Variante ' + k}: ${cost}`;
+        }).filter(Boolean).join('\n');
+
+        // Find critical missing devices
+        const mancanti = (analisi.dispositivi_mancanti || []).slice(0, 3).join(', ').toLowerCase();
+
+        // Determine variant page number (approximate)
+        const variantPage = analisi.rischi?.length > 3 ? '7' : '6';
+
+        let body = '';
+        if (isUrgent) {
+            body = `Gentile ${clientName},
+
+Le invio in allegato la perizia tecnica (${docNum}) relativa al sopralluogo effettuato il ${createdDate} presso ${indirizzo}.
+
+Purtroppo l'impianto ha un indice di conformita di solo il ${conf}%.
+
+Data la gravita delle carenze rilevate${mancanti ? ` (${mancanti})` : ''}, Le segnalo che si trova in una situazione di "Colpa Grave" ai sensi dell'Art. 2051 C.C.
+
+Cosa comporta:
+
+- Rischio Penale: In caso di infortunio, la responsabilita e diretta.
+- Rischio Assicurativo: La polizza fabbricati potrebbe non coprire i danni per impianti non a norma.
+
+A pagina ${variantPage} della perizia trovera le 3 opzioni di adeguamento:
+${priceLines}
+
+Resto a disposizione per un incontro e illustrare la soluzione piu idonea per mettere in sicurezza l'impianto.
+
+Cordiali saluti`;
+        } else if (isWarning) {
+            body = `Gentile ${clientName},
+
+Le invio in allegato la perizia tecnica (${docNum}) relativa al sopralluogo effettuato il ${createdDate} presso ${indirizzo}.
+
+L'impianto presenta un indice di conformita del ${conf}%, con alcune carenze${mancanti ? ` (${mancanti})` : ''} che richiedono attenzione.
+
+Le ricordo che ai sensi dell'Art. 2051 C.C., il proprietario e responsabile della sicurezza dell'impianto.
+
+A pagina ${variantPage} della perizia trovera le 3 opzioni di intervento:
+${priceLines}
+
+Consiglio di procedere con l'adeguamento per garantire la sicurezza dell'impianto e la conformita normativa.
+
+Resto a disposizione per qualsiasi chiarimento.
+
+Cordiali saluti`;
+        } else {
+            body = `Gentile ${clientName},
+
+Le invio in allegato la perizia tecnica (${docNum}) relativa al sopralluogo effettuato il ${createdDate} presso ${indirizzo}.
+
+L'impianto risulta in buono stato di conformita (${conf}%).
+
+A pagina ${variantPage} della perizia trovera eventuali suggerimenti migliorativi:
+${priceLines}
+
+Resto a disposizione per qualsiasi chiarimento.
+
+Cordiali saluti`;
+        }
+
+        setEmailSubject(subject);
+        setEmailBody(body);
+        setShowEmailConfirm(true);
+    };
+
     const handleSendEmail = async () => {
         setSendingEmail(true);
         try {
-            // Save edits first
             await apiRequest(`/sopralluoghi/${sopralluogo.sopralluogo_id}`, {
                 method: 'PUT',
                 body: { analisi_ai: sopralluogo.analisi_ai, note_tecnico: sopralluogo.note_tecnico },
             });
-            const result = await apiRequest(`/sopralluoghi/${sopralluogo.sopralluogo_id}/invia-email`, { method: 'POST' });
+            const result = await apiRequest(`/sopralluoghi/${sopralluogo.sopralluogo_id}/invia-email`, {
+                method: 'POST',
+                body: { subject: emailSubject, body: emailBody },
+            });
             toast.success(result.message || 'Perizia inviata via email!');
             setShowEmailConfirm(false);
         } catch (err) {
@@ -960,7 +1053,7 @@ export default function SopralluogoWizardPage() {
                             </Button>
                             <Button
                                 data-testid="btn-send-email"
-                                onClick={() => setShowEmailConfirm(true)}
+                                onClick={generateEmailTemplate}
                                 variant="outline"
                                 className="border-orange-300 text-orange-700 hover:bg-orange-50"
                             >
@@ -979,34 +1072,72 @@ export default function SopralluogoWizardPage() {
                         </div>
                     </div>
 
-                    {/* Email Confirmation Dialog */}
+                    {/* Email Preview & Send Panel */}
                     {showEmailConfirm && (
-                        <Card className="border-2 border-orange-300 bg-orange-50" data-testid="email-confirm-dialog">
-                            <CardContent className="p-4 space-y-3">
-                                <div className="flex items-center gap-2 text-orange-800 font-semibold">
-                                    <Mail className="h-5 w-5" />
-                                    Conferma invio perizia via email
+                        <Card className="border-2 border-orange-400 shadow-lg" data-testid="email-confirm-dialog">
+                            <CardHeader className="bg-gradient-to-r from-orange-50 to-amber-50 border-b pb-3">
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <Mail className="h-5 w-5 text-orange-600" />
+                                    Anteprima Email — Perizia {sopralluogo.document_number}
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setShowEmailConfirm(false)}
+                                        className="ml-auto h-7 w-7 p-0"
+                                    ><X className="h-4 w-4" /></Button>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 space-y-4">
+                                {/* Subject */}
+                                <div>
+                                    <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Oggetto</Label>
+                                    <Input
+                                        value={emailSubject}
+                                        onChange={e => setEmailSubject(e.target.value)}
+                                        className="mt-1 font-semibold"
+                                        data-testid="email-subject-input"
+                                    />
                                 </div>
-                                <p className="text-sm text-gray-600">
-                                    Stai per inviare la Perizia Tecnica <strong>{sopralluogo.document_number}</strong> al cliente.
-                                    Il PDF verra generato e allegato all'email.
-                                </p>
+                                {/* Body */}
+                                <div>
+                                    <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Corpo del Messaggio</Label>
+                                    <Textarea
+                                        value={emailBody}
+                                        onChange={e => setEmailBody(e.target.value)}
+                                        rows={16}
+                                        className="mt-1 text-sm font-mono leading-relaxed"
+                                        data-testid="email-body-input"
+                                    />
+                                </div>
                                 <p className="text-xs text-gray-400">
-                                    Assicurati di aver salvato tutte le modifiche e revisionato il documento prima dell'invio.
+                                    Il PDF della perizia verra allegato automaticamente. Modifica il testo come preferisci prima dell'invio.
                                 </p>
-                                <div className="flex gap-3 justify-end pt-2">
-                                    <Button variant="outline" onClick={() => setShowEmailConfirm(false)} size="sm">
+                                {/* Actions */}
+                                <div className="flex items-center gap-3 pt-2 border-t">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleDownloadPdf}
+                                        disabled={generatingPdf}
+                                        className="border-blue-300 text-blue-700"
+                                        data-testid="email-preview-download-pdf"
+                                    >
+                                        {generatingPdf ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
+                                        Scarica PDF (Anteprima)
+                                    </Button>
+                                    <div className="flex-1" />
+                                    <Button variant="outline" size="sm" onClick={() => setShowEmailConfirm(false)}>
                                         Annulla
                                     </Button>
                                     <Button
                                         onClick={handleSendEmail}
-                                        disabled={sendingEmail}
+                                        disabled={sendingEmail || !emailSubject.trim() || !emailBody.trim()}
                                         className="bg-orange-600 text-white hover:bg-orange-700"
                                         size="sm"
                                         data-testid="btn-confirm-send-email"
                                     >
                                         {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
-                                        Conferma Invio
+                                        Invia Email con PDF Allegato
                                     </Button>
                                 </div>
                             </CardContent>

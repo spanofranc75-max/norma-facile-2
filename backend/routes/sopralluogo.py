@@ -569,8 +569,13 @@ async def genera_pdf_perizia(sopralluogo_id: str, user: dict = Depends(get_curre
 # ── Email Perizia ──
 
 @router.post("/{sopralluogo_id}/invia-email")
-async def invia_perizia_email(sopralluogo_id: str, user: dict = Depends(get_current_user)):
-    """Send the perizia PDF to the client via email."""
+async def invia_perizia_email(
+    sopralluogo_id: str,
+    payload: dict = None,
+    user: dict = Depends(get_current_user),
+):
+    """Send the perizia PDF to the client via email with custom subject/body."""
+    payload = payload or {}
     doc = await db[COLLECTION].find_one(
         {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"]},
         {"_id": 0},
@@ -610,24 +615,17 @@ async def invia_perizia_email(sopralluogo_id: str, user: dict = Depends(get_curr
     pdf_bytes = generate_perizia_pdf(doc, company, photos_b64)
     filename = f"Perizia_{doc.get('document_number', 'SOP').replace('/', '-')}.pdf"
 
-    # Send email
+    # Use custom subject/body from frontend or fallback
     from services.email_service import send_email_with_attachment
     company_name = company.get("company_name", "")
-    doc_num = doc.get("document_number", "")
-    indirizzo = doc.get("indirizzo", "")
-    client_name = doc.get("client_name", "")
 
-    subject = f"Perizia Tecnica {doc_num} — Relazione di Sopralluogo"
-    body = (
-        f"Gentile {client_name},\n\n"
-        f"in allegato trova la Perizia Tecnica {doc_num} relativa al sopralluogo "
-        f"effettuato presso {indirizzo}.\n\n"
-        f"Il documento contiene l'analisi di conformita del Suo impianto di chiusura "
-        f"automatica secondo le normative EN 12453 / EN 13241 e le proposte di intervento "
-        f"con i relativi costi stimati.\n\n"
-        f"Restiamo a disposizione per qualsiasi chiarimento.\n\n"
-        f"Cordiali saluti,\n{company_name}"
-    )
+    subject = payload.get("subject", "").strip()
+    body = payload.get("body", "").strip()
+
+    if not subject:
+        subject = f"Perizia Tecnica {doc.get('document_number', '')} — Relazione di Sopralluogo"
+    if not body:
+        body = f"In allegato la perizia tecnica.\n\nCordiali saluti,\n{company_name}"
 
     success = await send_email_with_attachment(
         to_email=client_email,
@@ -638,10 +636,13 @@ async def invia_perizia_email(sopralluogo_id: str, user: dict = Depends(get_curr
     )
 
     if success:
-        # Update sopralluogo status
         await db[COLLECTION].update_one(
             {"sopralluogo_id": sopralluogo_id},
-            {"$set": {"email_inviata": True, "email_inviata_at": datetime.now(timezone.utc).isoformat()}},
+            {"$set": {
+                "email_inviata": True,
+                "email_inviata_at": datetime.now(timezone.utc).isoformat(),
+                "email_subject": subject,
+            }},
         )
         return {"message": f"Perizia inviata a {client_email}", "email": client_email}
     else:
