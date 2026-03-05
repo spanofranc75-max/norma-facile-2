@@ -104,6 +104,9 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 
 - **P0 FIX: Integrazione Ciclo Passivo nel Cruscotto Finanziario** - Corretto uso campi fatture_ricevute: `imposta` (non `totale_iva`), `data_scadenza_pagamento` (non `data_scadenza`), `payment_status`. Creato `financial_service.py` con funzioni aggregate per ciclo attivo+passivo. Aggiunto: Flusso Cassa Reale (6 mesi), Aging Fornitori, IVA Vendite vs IVA Acquisti (Bilancino IVA), Scadenzario completo con debiti fornitori e badge scaduti. 26/26 test passati.
 
+## Bug Risolti (sessione 5 Marzo 2026 - Fork 5)
+- **P0 FIX: Scadenzario Fornitori non splitta le rate** - Le fatture passive con condizioni di pagamento multi-rata (es. "RIBA 30-60 gg") venivano mostrate come importo unico nel Cruscotto Finanziario. Fix: `get_payables_aging()` in `financial_service.py` ora legge il campo `scadenze_pagamento` e genera voci separate per ogni rata non pagata. Anche `get_cashflow_forecast()` aggiornato per usare le rate individuali. 8/8 test passati.
+
 ## Issue Pendenti
 - **P1**: Verifica end-to-end generazione dinamica PDF (DoP/CE) con dati materiali reali
 - **P1**: Verifica flusso creazione DDT (nuovo dialog con numero editabile)
