@@ -1262,7 +1262,11 @@ async def send_invoice_to_sdi(invoice_id: str, user: dict = Depends(get_current_
 
 
 async def _handle_fic_409(fic, invoice: dict, fic_data: dict) -> int:
-    """Handle 409 Conflict: document number exists on FIC. Find and update it."""
+    """Handle 409 Conflict: document number exists on FIC. Find and update it.
+    
+    If document is locked or already sent to SDI, return the ID anyway
+    so the caller can proceed with the SDI send (which will trigger auto-recovery).
+    """
     doc_num_raw = invoice.get("document_number", "")
     try:
         num_int = int(str(doc_num_raw).split("/")[0])
@@ -1273,6 +1277,7 @@ async def _handle_fic_409(fic, invoice: dict, fic_data: dict) -> int:
     try:
         search_result = await fic._request("GET", "/issued_documents", params={
             "type": "invoice", "q": f"number = {num_int}", "per_page": 10,
+            "fields": "id,number,date,ei_status",
         })
         docs = search_result.get("data", [])
     except Exception as se:
@@ -1283,7 +1288,6 @@ async def _handle_fic_409(fic, invoice: dict, fic_data: dict) -> int:
     for doc in docs:
         if doc.get("number") == num_int:
             existing_id = doc.get("id")
-            # If doc already has ei_status (already sent to SDI), just return the ID — don't try to update
             ei_status = doc.get("ei_status")
             if ei_status:
                 logger.info(f"FIC doc {existing_id} already has ei_status={ei_status}, skipping update")
@@ -1301,6 +1305,11 @@ async def _handle_fic_409(fic, invoice: dict, fic_data: dict) -> int:
         return update_result.get("data", {}).get("id") or existing_id
     except httpx_lib.HTTPStatusError as ue:
         detail = extract_fic_error_message(ue)
+        detail_lower = detail.lower()
+        # If document is locked (already in SDI pipeline), return ID anyway — let SDI send handle it
+        if "locked" in detail_lower or "bloccato" in detail_lower:
+            logger.info(f"FIC doc {existing_id} is locked, returning ID for SDI send attempt")
+            return existing_id
         raise HTTPException(ue.response.status_code, f"Documento n.{num_int} su FIC (id={existing_id}): aggiornamento fallito. {detail}")
     except Exception as ue:
         raise HTTPException(409, f"Aggiornamento documento n.{num_int} fallito: {str(ue)[:150]}")

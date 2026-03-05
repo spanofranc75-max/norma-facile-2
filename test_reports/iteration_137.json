@@ -1,0 +1,96 @@
+{
+  "summary": "Iteration 137: FIC (FattureInCloud) Integration Fixes - ALL 18 TESTS PASS. Verified 3 bug fixes: (1) map_fattura_to_fic now sends certified_email as empty string instead of null, (2) _handle_fic_409 includes 'fields' param with ei_status and handles locked documents, (3) auto-recovery keywords include 'in corso un tentativo' and fic_document_id saved on SDI failure.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "bug_fix_1_certified_email_null_to_empty": {
+      "test_null_pec_becomes_empty_string": "PASS - client.pec=None maps to certified_email='' (not null)",
+      "test_valid_pec_preserved": "PASS - client.pec='test@pec.it' maps correctly",
+      "test_vat_number_null_to_empty": "PASS - partita_iva=None maps to vat_number='' (not null)",
+      "test_all_entity_fields_strings": "PASS - All 11 entity fields are strings, never None",
+      "test_empty_strings_preserved": "PASS - Empty string values preserved correctly",
+      "test_codice_sdi_default": "PASS - codice_sdi=None defaults to '0000000'"
+    },
+    "bug_fix_2_handle_fic_409": {
+      "test_search_includes_fields_ei_status": "PASS - Search params include 'fields': 'id,number,date,ei_status'",
+      "test_skips_update_when_ei_status_set": "PASS - Returns ID without update when document already sent to SDI",
+      "test_returns_id_on_locked_document": "PASS - Returns ID instead of raising exception when document is locked"
+    },
+    "bug_fix_3_auto_recovery_and_save": {
+      "test_in_corso_un_tentativo_keyword": "PASS - Auto-recovery keywords include 'in corso un tentativo'",
+      "test_all_auto_recovery_keywords": "PASS - Found 7 auto-recovery keywords in code",
+      "test_fic_document_id_saved_on_failure": "PASS - fic_document_id saved before raising exception on SDI failure"
+    },
+    "validation_for_sdi": {
+      "test_fails_without_sdi_or_pec": "PASS - Validation correctly requires SDI or PEC",
+      "test_passes_with_pec": "PASS - Validation passes with pec only",
+      "test_passes_with_codice_sdi": "PASS - Validation passes with codice_sdi only"
+    },
+    "mocked_fic_409_handling": {
+      "test_ei_status_set_returns_id": "PASS - With mocked FIC, returns ID when ei_status set",
+      "test_no_ei_status_updates_doc": "PASS - With mocked FIC, updates document when no ei_status",
+      "test_locked_error_returns_id": "PASS - With mocked FIC, returns ID on 'locked' error"
+    }
+  },
+  "code_fixes_verified": {
+    "fattureincloud_api_py_line_284": {
+      "before": "client.get('pec') - could return null",
+      "after": "client.get('pec') or '' - always returns string",
+      "verified": true
+    },
+    "invoices_py_line_1280": {
+      "before": "Search without 'fields' param",
+      "after": "Search includes 'fields': 'id,number,date,ei_status'",
+      "verified": true
+    },
+    "invoices_py_line_1291_1294": {
+      "description": "Skip update when ei_status is set, return ID directly",
+      "verified": true
+    },
+    "invoices_py_line_1309_1312": {
+      "description": "Handle 'locked/bloccato' errors by returning ID instead of raising",
+      "verified": true
+    },
+    "invoices_py_line_1219_1221": {
+      "description": "Auto-recovery keywords include 'in corso un tentativo'",
+      "verified": true
+    },
+    "invoices_py_line_1242_1246": {
+      "description": "Save fic_document_id even when SDI send fails",
+      "verified": true
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration137_fic_integration_fixes.py",
+    "/app/test_reports/pytest/iteration137_fic_integration_fixes_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "All 3 FIC integration bug fixes verified through unit tests and code inspection",
+    "map_fattura_to_fic correctly uses 'or \"\"' pattern to prevent null values in entity dict",
+    "_handle_fic_409 properly includes ei_status in search and handles locked documents gracefully",
+    "Auto-recovery keywords cover all known FIC error messages for duplicate/in-progress documents",
+    "fic_document_id is correctly persisted even on SDI send failure to prevent duplicate creation"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration137_fic_integration_fixes.py"
+  ],
+  "success_rate": {
+    "backend": "100% (18/18 tests passed)"
+  },
+  "test_credentials": "N/A - unit tests with mocked FIC API",
+  "seed_data_creation": "N/A - unit tests use inline test data",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 137 verified FIC integration bug fixes: (1) certified_email mapping never null, (2) _handle_fic_409 includes ei_status in search and handles locked docs, (3) auto-recovery keywords complete and fic_document_id saved on failure. Tests use mocked FIC API - no real API calls made. Test file at /app/backend/tests/test_iteration137_fic_integration_fixes.py.",
+  "mocked_apis": {
+    "FattureInCloud_API": "MOCKED - All FIC API calls in tests use unittest.mock to verify logic without real API calls"
+  }
+}
