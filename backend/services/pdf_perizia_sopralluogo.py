@@ -327,6 +327,17 @@ body {{ font-family: 'Segoe UI', Calibri, Arial, sans-serif; font-size: 9pt; col
 .variant-cost-label {{ font-size: 7pt; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }}
 .variant-time {{ font-size: 9pt; font-weight: 600; color: #475569; text-align: right; }}
 .variant-time-label {{ font-size: 7pt; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; text-align: right; }}
+.variant-mano {{ font-size: 9pt; font-weight: 600; color: #475569; text-align: right; }}
+
+/* Residual Risks */
+.residual-risk-box {{ background: #fffbeb; border: 1px solid #fde68a; border-radius: 2mm; padding: 3mm 4mm; margin-top: 3mm; }}
+.residual-risk-title {{ font-size: 8pt; font-weight: 700; color: #92400e; margin-bottom: 1.5mm; text-transform: uppercase; letter-spacing: 0.3px; }}
+.residual-risk-item {{ font-size: 8pt; color: #78350f; padding: 0.5mm 0 0.5mm 4mm; line-height: 1.5; }}
+
+/* Checklist */
+.checklist-box {{ background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 2mm; padding: 3mm 4mm; }}
+.checklist-title {{ font-size: 8.5pt; font-weight: 700; color: #15803d; margin-bottom: 2mm; }}
+.checklist-item {{ font-size: 8pt; color: #166534; padding: 1mm 0 1mm 4mm; }}
 
 /* ══════════ LEGAL NOTES PAGE ══════════ */
 .legal-section {{ margin-bottom: 5mm; }}
@@ -502,7 +513,7 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             if ref_b64:
                 ref_img_html = f"""
                 <div class="risk-ref-image-container">
-                    <div class="risk-ref-image-label">Esempio Soluzione Consigliata</div>
+                    <div class="risk-ref-image-label">Soluzione tipo (sostituibile con foto proprie installazioni)</div>
                     <img class="risk-ref-image" src="data:image/png;base64,{ref_b64}" />
                 </div>"""
 
@@ -639,6 +650,8 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
                 interventi_html = f'<ul class="variant-interventi">{items}</ul>'
 
             costo_str = f"{costo:,.0f} &euro;" if costo > 0 else "Da Quotare"
+            stima_mano = _esc(v.get("stima_manodopera", ""))
+            mano_html = f'<div class="variant-mano">{stima_mano}</div>' if stima_mano else ""
 
             variant_cards.append(f"""
             <div class="{box_cls}">
@@ -658,6 +671,10 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
                         <div class="variant-cost-label">Costo Stimato (IVA escl.)</div>
                         <div class="variant-cost">{costo_str}</div>
                     </div>
+                    <div class="variant-footer-cell" style="text-align:right;">
+                        <div class="variant-cost-label">Manodopera Stimata</div>
+                        {mano_html}
+                    </div>
                 </div>
             </div>""")
 
@@ -668,6 +685,18 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
                 <div class="section-header"><div class="section-header-num">{sec_num}</div><div class="section-header-text">PROPOSTE DI INTERVENTO</div></div>
                 {"".join(variant_cards)}
             </div>"""
+
+    # ═══════════════ RESIDUAL RISKS ═══════════════
+    rischi_residui = analisi.get("rischi_residui", [])
+    residual_html = ""
+    if rischi_residui:
+        items = "".join(f'<div class="residual-risk-item">&#9888; {_esc(r)}</div>' for r in rischi_residui)
+        residual_html = f"""
+        <div class="residual-risk-box">
+            <div class="residual-risk-title">Rischi Residui (post-adeguamento)</div>
+            <div style="font-size:7.5pt;color:#92400e;margin-bottom:1.5mm;">Anche dopo l'intervento di adeguamento completo, i seguenti rischi residui minimi permangono per caratteristiche strutturali dell'impianto:</div>
+            {items}
+        </div>"""
 
     # ═══════════════ LEGAL NOTES PAGE ═══════════════
     sec_legal = "06" if variants_html and notes_html else "05" if variants_html or notes_html else "04"
@@ -706,6 +735,37 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
         </div>
 
         <div class="legal-section">
+            <div class="legal-title">Obbligo Registro di Manutenzione (Libretto Impianto)</div>
+            <div class="legal-text">
+                <p>Si ricorda che, ai sensi della normativa vigente, ogni chiusura automatica deve essere dotata di un <strong>Libretto dell'Impianto</strong> (Registro di Manutenzione) costantemente aggiornato.</p>
+                <p>Il libretto deve riportare:</p>
+                <p>&bull; Dati identificativi dell'impianto (marca, modello, anno installazione, numero serie)</p>
+                <p>&bull; Registro degli interventi di manutenzione ordinaria e straordinaria</p>
+                <p>&bull; Esiti delle verifiche periodiche delle forze d'impatto</p>
+                <p>&bull; Dichiarazione di conformita CE o dichiarazione di adeguamento</p>
+            </div>
+        </div>
+
+        <div class="legal-highlight">
+            <strong>Manutenzione Periodica Obbligatoria:</strong> La norma UNI EN 12453 prevede verifiche e manutenzioni <strong>almeno semestrali</strong> da parte di personale qualificato, con annotazione sul Libretto dell'Impianto. Il mancato rispetto della periodicita puo invalidare le garanzie e la copertura assicurativa.
+        </div>
+
+        <div class="legal-section">
+            <div class="legal-title">Check-list Verifiche Post-Intervento</div>
+            <div class="checklist-box">
+                <div class="checklist-title">Al completamento dei lavori di adeguamento, verranno eseguiti i seguenti test:</div>
+                <div class="checklist-item">&#9745; Misurazione forze d'impatto con strumento certificato (EN 12453 Allegato A)</div>
+                <div class="checklist-item">&#9745; Verifica funzionamento coste sensibili (test pressione e rilascio)</div>
+                <div class="checklist-item">&#9745; Test fotocellule (interruzione fascio e risposta impianto)</div>
+                <div class="checklist-item">&#9745; Verifica finecorsa apertura e chiusura</div>
+                <div class="checklist-item">&#9745; Test arresto di emergenza e inversione marcia</div>
+                <div class="checklist-item">&#9745; Verifica limitazione forza motore / encoder</div>
+                <div class="checklist-item">&#9745; Controllo visivo e funzionale segnalazione ottica (lampeggiante)</div>
+                <div class="checklist-item">&#9745; Rilascio Dichiarazione di Adeguamento e aggiornamento Libretto Impianto</div>
+            </div>
+        </div>
+
+        <div class="legal-section">
             <div class="legal-title">Validita del Documento</div>
             <div class="legal-text">
                 <p>Documento redatto con il supporto di Intelligenza Artificiale e validato dal tecnico firmatario. Ha validita tecnica e non costituisce certificazione di conformita. La perizia ha validita 12 mesi dalla data del sopralluogo.</p>
@@ -731,6 +791,7 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
         {notes_html}
         {signature_html}
         {variants_html}
+        {residual_html}
         {legal_html}
         {disclaimer}
     </div>

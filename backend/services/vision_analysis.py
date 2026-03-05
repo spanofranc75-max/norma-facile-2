@@ -46,8 +46,18 @@ Quando ricevi foto di un cancello/chiusura automatica, devi:
    - Variante A "Adeguamento Minimo": Solo dispositivi di sicurezza obbligatori mancanti
    - Variante B "Adeguamento Completo": Sicurezze + nuova centralina + ottimizzazione impianto
    - Variante C "Sostituzione Totale": Nuovo impianto completo (motore, centralina, sicurezze, struttura se necessario)
+   IMPORTANTE: Ogni variante deve essere AUTONOMA. NON scrivere "Include interventi Variante A" o riferimenti incrociati.
+   Elenca esplicitamente TUTTI gli interventi previsti in OGNI variante, anche se si ripetono tra A e B.
+   Il cliente deve capire esattamente cosa include ogni opzione senza dover leggere le altre.
 
-5. GENERARE un testo sintetico per fattura/preventivo (max 2 righe commerciali)
+5. STIMARE i costi separando materiali e manodopera:
+   - Per ogni variante, includi una stima ore manodopera nel campo "stima_manodopera"
+   - costo_stimato deve includere materiali + manodopera
+
+6. IDENTIFICARE RISCHI RESIDUI: Anche dopo l'adeguamento completo, possono permanere rischi
+   non totalmente eliminabili. Dichiararli con onesta intellettuale.
+
+7. GENERARE un testo sintetico per fattura/preventivo (max 2 righe commerciali)
 
 FORMATO RISPOSTA (JSON RIGOROSO):
 Rispondi ESCLUSIVAMENTE con un JSON valido, senza testo aggiuntivo:
@@ -78,25 +88,28 @@ Rispondi ESCLUSIVAMENTE con un JSON valido, senza testo aggiuntivo:
     "A": {
       "titolo": "Adeguamento Minimo",
       "descrizione": "Descrizione sintetica dell'intervento (2-3 frasi)",
-      "interventi": ["Lista puntata degli interventi inclusi"],
-      "costo_stimato": 0,
-      "tempo_stimato": "1 giorno"
+      "interventi": ["ELENCARE OGNI SINGOLO INTERVENTO esplicitamente, senza rimandi ad altre varianti"],
+      "stima_manodopera": "es: 4-6 ore (1 tecnico)",
+      "costo_stimato": 0
     },
     "B": {
       "titolo": "Adeguamento Completo",
       "descrizione": "Descrizione sintetica dell'intervento (2-3 frasi)",
-      "interventi": ["Lista puntata degli interventi inclusi"],
-      "costo_stimato": 0,
-      "tempo_stimato": "2-3 giorni"
+      "interventi": ["ELENCARE OGNI SINGOLO INTERVENTO esplicitamente — NON scrivere 'include Variante A'"],
+      "stima_manodopera": "es: 12-16 ore (1-2 tecnici)",
+      "costo_stimato": 0
     },
     "C": {
       "titolo": "Sostituzione Totale",
       "descrizione": "Descrizione sintetica dell'intervento (2-3 frasi)",
-      "interventi": ["Lista puntata degli interventi inclusi"],
-      "costo_stimato": 0,
-      "tempo_stimato": "3-5 giorni"
+      "interventi": ["ELENCARE OGNI SINGOLO INTERVENTO esplicitamente — NON scrivere 'include Variante A/B'"],
+      "stima_manodopera": "es: 24-32 ore (2 tecnici)",
+      "costo_stimato": 0
     }
   },
+  "rischi_residui": [
+    "Descrizione di rischi che permangono anche dopo l'adeguamento completo (es: 'Rischio residuo minimo di intrappolamento per geometria strutturale non modificabile')"
+  ],
   "testo_sintetico_fattura": "Testo commerciale per preventivo/fattura (max 2 righe). Es: 'Messa a norma cancello scorrevole automatico c/o [indirizzo] secondo normativa EN 12453/EN 13241 come da perizia tecnica allegata.'",
   "note_tecniche": "Osservazioni aggiuntive per il tecnico",
   "conformita_percentuale": 0
@@ -111,6 +124,9 @@ REGOLE:
 - Variante A deve costare circa il 30-50% di Variante C
 - Variante B deve costare circa il 50-70% di Variante C
 - Il testo_sintetico_fattura deve essere professionale e generico (senza dettagli tecnici)
+- CRITICO: Ogni variante deve elencare TUTTI gli interventi inclusi esplicitamente. MAI scrivere "include gli interventi della Variante A" o simili. Il cliente deve capire ogni variante indipendentemente.
+- La stima_manodopera deve indicare ore e numero tecnici necessari
+- I rischi_residui devono descrivere rischi minimi che permangono anche dopo l'adeguamento totale
 """
 
 
@@ -195,7 +211,7 @@ async def analyze_photos(photo_data_list: List[dict], user_description: str = ""
 def _default_varianti() -> dict:
     """Return empty variant structure as fallback."""
     return {
-        "A": {"titolo": "Adeguamento Minimo", "descrizione": "", "interventi": [], "costo_stimato": 0, "tempo_stimato": ""},
-        "B": {"titolo": "Adeguamento Completo", "descrizione": "", "interventi": [], "costo_stimato": 0, "tempo_stimato": ""},
-        "C": {"titolo": "Sostituzione Totale", "descrizione": "", "interventi": [], "costo_stimato": 0, "tempo_stimato": ""},
+        "A": {"titolo": "Adeguamento Minimo", "descrizione": "", "interventi": [], "stima_manodopera": "", "costo_stimato": 0},
+        "B": {"titolo": "Adeguamento Completo", "descrizione": "", "interventi": [], "stima_manodopera": "", "costo_stimato": 0},
+        "C": {"titolo": "Sostituzione Totale", "descrizione": "", "interventi": [], "stima_manodopera": "", "costo_stimato": 0},
     }

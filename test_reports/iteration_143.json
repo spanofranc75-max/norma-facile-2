@@ -1,0 +1,118 @@
+{
+  "summary": "Iteration 143: PDF Content Improvements - ALL 18 BACKEND TESTS PASS. Verified: AI prompt anti-cross-reference, rischi_residui, stima_manodopera; PDF Registro Manutenzione, 8-item Checklist, Rischi Residui section, Manodopera label, updated image label; Frontend rischi-residui-section and stima_manodopera display.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "ai_prompt_anti_cross_reference": {
+      "line_49": "PASS - 'NON scrivere Include interventi Variante A o riferimenti incrociati'",
+      "line_98": "PASS - 'NON scrivere include Variante A' in variant B schema",
+      "line_105": "PASS - 'NON scrivere include Variante A/B' in variant C schema",
+      "autonoma_requirement": "PASS - 'Ogni variante deve essere AUTONOMA'"
+    },
+    "ai_prompt_rischi_residui": {
+      "json_schema": "PASS - 'rischi_residui' array field in JSON schema (lines 110-112)",
+      "description": "PASS - Includes description about residual risks post-adeguamento"
+    },
+    "ai_prompt_stima_manodopera": {
+      "json_schema": "PASS - 'stima_manodopera' field in each variant (lines 92, 99, 106)",
+      "instruction": "PASS - Line 54: 'Per ogni variante, includi una stima ore manodopera nel campo stima_manodopera'"
+    },
+    "default_varianti_stima_manodopera": {
+      "function_verified": "PASS - _default_varianti() returns stima_manodopera field for A, B, C variants (lines 214-216)",
+      "no_tempo_stimato": "PASS - tempo_stimato NOT present in default varianti"
+    },
+    "pdf_registro_manutenzione": {
+      "section_title": "PASS - 'Obbligo Registro di Manutenzione (Libretto Impianto)' at line 738",
+      "semiannual_text": "PASS - 'almeno semestrali' at line 750",
+      "libretto_impianto": "PASS - References to Libretto dell'Impianto present"
+    },
+    "pdf_checklist_post_intervento": {
+      "section_title": "PASS - 'Check-list Verifiche Post-Intervento' at line 754",
+      "item_count": "PASS - Exactly 8 checklist items (lines 757-764)",
+      "items_verified": [
+        "Misurazione forze d'impatto",
+        "Verifica coste sensibili",
+        "Test fotocellule",
+        "Verifica finecorsa",
+        "Test arresto emergenza",
+        "Verifica limitazione forza motore/encoder",
+        "Controllo lampeggiante",
+        "Rilascio Dichiarazione e aggiornamento Libretto"
+      ]
+    },
+    "pdf_rischi_residui_section": {
+      "section_exists": "PASS - 'Rischi Residui (post-adeguamento)' section at lines 689-699",
+      "conditional_rendering": "PASS - Only renders when rischi_residui data exists",
+      "styling": "PASS - residual-risk-box CSS class with amber warning styling"
+    },
+    "pdf_manodopera_stimata_label": {
+      "label_present": "PASS - 'Manodopera Stimata' label at line 675",
+      "in_variant_footer": "PASS - Displayed in variant footer alongside Costo Stimato"
+    },
+    "pdf_solution_image_label": {
+      "new_label": "PASS - 'Soluzione tipo (sostituibile con foto proprie installazioni)' at line 516-517",
+      "old_label_removed": "PASS - 'Esempio Soluzione Consigliata' NOT found in PDF source"
+    },
+    "pdf_materiali_section_removed_regression": {
+      "status": "PASS - MATERIALI E INTERVENTI section still removed",
+      "comment": "PASS - Line 571-572: 'Section 04 rimossa: il cliente non deve vedere i costi materiali interni'"
+    },
+    "pdf_generation_test": {
+      "with_rischi_residui": "PASS - PDF generated successfully (197KB) with all new sections",
+      "without_rischi_residui": "PASS - PDF generates correctly when rischi_residui is empty"
+    },
+    "frontend_rischi_residui_section": {
+      "data_testid": "PASS - data-testid='rischi-residui-section' at line 856",
+      "conditional_display": "PASS - analisi.rischi_residui?.length > 0 check at line 855"
+    },
+    "frontend_stima_manodopera_display": {
+      "in_variant_cards": "PASS - v.stima_manodopera displayed at lines 836-840",
+      "label": "PASS - 'Manodopera' label present in variant expansion"
+    },
+    "frontend_loads": {
+      "landing_page": "PASS - Google OAuth login page loads correctly",
+      "no_js_errors": "PASS - No error elements found"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration143_pdf_content_improvements.py",
+    "/app/test_reports/pytest/iteration143_pdf_content_improvements_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "vision_analysis.py Lines 49-51: Strong anti-cross-reference instructions - variants must be AUTONOMA, explicitly listing ALL interventions",
+    "vision_analysis.py Lines 110-112, 127-130: rischi_residui array properly documented with examples",
+    "vision_analysis.py Lines 92, 99, 106: stima_manodopera field with example format 'X-Y ore (N tecnici)'",
+    "vision_analysis.py Lines 214-217: _default_varianti() correctly returns stima_manodopera (not tempo_stimato)",
+    "pdf_perizia_sopralluogo.py Lines 738-751: Registro Manutenzione section with Libretto Impianto references and almeno semestrali",
+    "pdf_perizia_sopralluogo.py Lines 754-764: 8-item checklist for post-intervention verification",
+    "pdf_perizia_sopralluogo.py Lines 689-699: Rischi Residui section renders conditionally with warning styling",
+    "pdf_perizia_sopralluogo.py Line 675: 'Manodopera Stimata' label in variant footer",
+    "pdf_perizia_sopralluogo.py Lines 516-517: Updated image label encouraging real installation photos",
+    "SopralluogoWizardPage.js Lines 854-874: rischi_residui section with proper data-testid and conditional rendering",
+    "SopralluogoWizardPage.js Lines 836-840: stima_manodopera displayed in variant expansion with Manodopera label"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration143_pdf_content_improvements.py"
+  ],
+  "success_rate": {
+    "backend": "100% (18/18 tests passed)",
+    "frontend": "100% (code structure verified - OAuth required for full UI interaction)"
+  },
+  "test_credentials": "Google OAuth required for full UI testing",
+  "seed_data_creation": "Mock sopralluogo with rischi_residui and stima_manodopera data for PDF generation test",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 143 verifies PDF CONTENT IMPROVEMENTS: (1) AI prompt has strong anti-cross-reference instructions requiring each variant to be AUTONOMA with ALL interventions listed explicitly, (2) AI prompt JSON schema includes rischi_residui array and stima_manodopera field in all variants, (3) PDF has new 'Registro di Manutenzione' section with semi-annual obligation text, (4) PDF has 8-item 'Check-list Verifiche Post-Intervento', (5) PDF Rischi Residui section renders conditionally with warning styling, (6) PDF variant footer shows 'Manodopera Stimata' label, (7) PDF solution image label updated to 'Soluzione tipo (sostituibile con foto proprie installazioni)', (8) Frontend has data-testid='rischi-residui-section' and displays stima_manodopera in variant cards. Test PDF generated at /tmp/test_iteration143_full.pdf (197KB).",
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "note": "All tests use direct code imports and mock data - no external API calls mocked"
+  }
+}

@@ -832,6 +832,13 @@ export default function SopralluogoWizardPage() {
                                                             ))}
                                                         </ul>
                                                     </div>
+                                                    {/* Stima Manodopera */}
+                                                    {v.stima_manodopera && (
+                                                        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-dashed">
+                                                            <Label className="text-xs font-semibold text-gray-500 w-24">Manodopera</Label>
+                                                            <span className="text-xs text-gray-600">{v.stima_manodopera}</span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -840,6 +847,28 @@ export default function SopralluogoWizardPage() {
                                 <p className="text-xs text-gray-400 text-center pt-1">
                                     Seleziona e personalizza la variante. Il cliente vedra i prezzi indicati.
                                 </p>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Rischi Residui */}
+                    {analisi.rischi_residui?.length > 0 && (
+                        <Card className="border-amber-200 bg-amber-50/50" data-testid="rischi-residui-section">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm text-amber-800 flex items-center gap-1">
+                                    <AlertTriangle className="h-4 w-4" /> Rischi Residui (post-adeguamento)
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-xs text-gray-500 mb-2">Rischi minimi che permangono anche dopo l'intervento completo:</p>
+                                <ul className="space-y-1.5">
+                                    {analisi.rischi_residui.map((r, i) => (
+                                        <li key={i} className="flex items-start gap-2 text-xs text-amber-900">
+                                            <AlertTriangle className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
+                                            {r}
+                                        </li>
+                                    ))}
+                                </ul>
                             </CardContent>
                         </Card>
                     )}
