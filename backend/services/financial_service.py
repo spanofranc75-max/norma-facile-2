@@ -187,13 +187,14 @@ async def get_receivables_aging(uid: str, today_iso: str):
 
 
 async def get_payables_aging(uid: str, today_iso: str):
-    """Scadenzario debiti fornitori per fascia di anzianità."""
+    """Scadenzario debiti fornitori per fascia di anzianità.
+    Supporta rate multiple da scadenze_pagamento (RIBA 30-60, ecc.)."""
     items = await db.fatture_ricevute.find(
         {"user_id": uid,
          "payment_status": {"$in": ["non_pagata", "parzialmente_pagata"]}},
         {"_id": 0, "fr_id": 1, "numero_documento": 1, "fornitore_nome": 1,
          "totale_documento": 1, "data_scadenza_pagamento": 1, "data_documento": 1,
-         "residuo": 1}
+         "residuo": 1, "scadenze_pagamento": 1}
     ).sort("data_scadenza_pagamento", 1).to_list(200)
 
     today = date.fromisoformat(today_iso)
@@ -202,15 +203,15 @@ async def get_payables_aging(uid: str, today_iso: str):
     scadenza_mese = 0
     detail = []
 
-    for fr in items:
-        dd = fr.get("data_scadenza_pagamento") or fr.get("data_documento")
+    def _add_to_aging(amount, due_date_str, fr, rata_label=None):
+        """Helper: classifica una singola scadenza nei bucket aging."""
+        nonlocal scadute, scadenza_mese
         try:
-            due = date.fromisoformat(str(dd)[:10]) if dd else today
+            due = date.fromisoformat(str(due_date_str)[:10]) if due_date_str else today
             days = (today - due).days
         except Exception:
             days = 0
 
-        amount = fr.get("residuo") or fr.get("totale_documento", 0) or 0
         if days <= 30:
             aging["0_30"] += amount
         elif days <= 60:
@@ -222,28 +223,50 @@ async def get_payables_aging(uid: str, today_iso: str):
 
         if days > 0:
             scadute += amount
-        # Check if due this month
-        if dd:
+        if due_date_str:
             try:
-                due_d = date.fromisoformat(str(dd)[:10])
+                due_d = date.fromisoformat(str(due_date_str)[:10])
                 if due_d.year == today.year and due_d.month == today.month:
                     scadenza_mese += amount
             except Exception:
                 pass
 
+        numero = fr.get("numero_documento", "")
+        if rata_label:
+            numero = f"{numero} (Rata {rata_label})"
+
         detail.append({
             "id": fr.get("fr_id"),
-            "numero": fr.get("numero_documento", ""),
+            "numero": numero,
             "fornitore": fr.get("fornitore_nome", ""),
             "amount": round(amount, 2),
-            "due_date": str(dd)[:10] if dd else None,
+            "due_date": str(due_date_str)[:10] if due_date_str else None,
             "days_overdue": max(days, 0),
             "urgency": "scaduta" if days > 0 else "in_scadenza",
         })
 
+    for fr in items:
+        scadenze = fr.get("scadenze_pagamento") or []
+        unpaid_scadenze = [s for s in scadenze if not s.get("pagata")]
+
+        if unpaid_scadenze:
+            for s in unpaid_scadenze:
+                _add_to_aging(
+                    s.get("importo", 0),
+                    s.get("data_scadenza", fr.get("data_documento")),
+                    fr,
+                    rata_label=s.get("rata"),
+                )
+        else:
+            dd = fr.get("data_scadenza_pagamento") or fr.get("data_documento")
+            amount = fr.get("residuo") or fr.get("totale_documento", 0) or 0
+            _add_to_aging(amount, dd, fr)
+
+    detail.sort(key=lambda x: x.get("due_date") or "9999-12-31")
+
     return {
         "aging": {k: round(v, 2) for k, v in aging.items()},
-        "detail": detail[:20],
+        "detail": detail[:30],
         "total": round(sum(aging.values()), 2),
         "scadute": round(scadute, 2),
         "scadenza_mese": round(scadenza_mese, 2),
@@ -251,7 +274,8 @@ async def get_payables_aging(uid: str, today_iso: str):
 
 
 async def get_cashflow_forecast(uid: str, today_iso: str):
-    """Previsione cash flow a 30/60/90 giorni."""
+    """Previsione cash flow a 30/60/90 giorni.
+    Usa scadenze_pagamento (rate individuali) se disponibili."""
     today = date.fromisoformat(today_iso)
     results = []
 
@@ -270,22 +294,31 @@ async def get_cashflow_forecast(uid: str, today_iso: str):
         ent_res = await db.invoices.aggregate(ent_pipeline).to_list(1)
         entrate = round(ent_res[0]["total"], 2) if ent_res else 0
 
-        # Uscite previste (fatture fornitori non pagate in scadenza)
-        usc_pipeline = [
-            {"$match": {
-                "user_id": uid,
-                "payment_status": {"$in": ["non_pagata", "parzialmente_pagata"]},
-                "data_scadenza_pagamento": {"$gte": today_iso, "$lte": horizon},
-            }},
-            {"$group": {"_id": None, "total": {"$sum": "$totale_documento"}, "count": {"$sum": 1}}},
-        ]
-        usc_res = await db.fatture_ricevute.aggregate(usc_pipeline).to_list(1)
-        uscite = round(usc_res[0]["total"], 2) if usc_res else 0
+        # Uscite previste — iterate through scadenze_pagamento for accuracy
+        uscite = 0
+        fr_cursor = db.fatture_ricevute.find(
+            {"user_id": uid,
+             "payment_status": {"$in": ["non_pagata", "parzialmente_pagata"]}},
+            {"_id": 0, "totale_documento": 1, "data_scadenza_pagamento": 1,
+             "scadenze_pagamento": 1, "residuo": 1}
+        )
+        async for fr in fr_cursor:
+            scadenze = fr.get("scadenze_pagamento") or []
+            unpaid = [s for s in scadenze if not s.get("pagata")]
+            if unpaid:
+                for s in unpaid:
+                    sd = s.get("data_scadenza", "")
+                    if sd and today_iso <= sd <= horizon:
+                        uscite += s.get("importo", 0)
+            else:
+                sd = fr.get("data_scadenza_pagamento", "")
+                if sd and today_iso <= sd <= horizon:
+                    uscite += fr.get("residuo") or fr.get("totale_documento", 0)
 
         results.append({
             "label": label,
             "entrate": entrate,
-            "uscite": uscite,
+            "uscite": round(uscite, 2),
             "saldo": round(entrate - uscite, 2),
         })
 
