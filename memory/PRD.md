@@ -117,7 +117,7 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
     - **Phase 1**: Link FR non collegate via P.IVA+nome, CF+nome, nome word-based
     - **Phase 2**: Calcolo rate da tipo pagamento fornitore
   - P.IVA/CF matching ora verifica corrispondenza nome prima di accettare
-  - Risultato: DINELLI 2×515€, BERTOLINI 2×2.209€, MASOTTI 6×1.159€, 21 scadenze totali
+  - `payment_calculator.py`: Fix critico "fine mese": il calcolo aggiungeva giorni letterali (31/01+30=02/03→fine marzo) invece di usare mesi di calendario (31/01 + 1 mese → fine febbraio). La convenzione italiana "30/60 gg FM" significa N/30 mesi dopo la data fattura, scadenza a fine mese. Esempio: DINELLI 31/01 RB30/60FM → era 31/03+30/04, ora corretto a 28/02+31/03.
 
 ## Issue Pendenti
 - **P1**: Verifica end-to-end generazione dinamica PDF (DoP/CE) con dati materiali reali

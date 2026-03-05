@@ -36,13 +36,22 @@ def calculate_due_dates(
         giorni = q.get("giorni", 0)
         quota_pct = q.get("quota", 100)
 
-        target = d0 + timedelta(days=giorni)
-
-        if fine_mese:
-            last_day = calendar.monthrange(target.year, target.month)[1]
-            target = target.replace(day=last_day)
+        if fine_mese and giorni > 0:
+            # Italian "fine mese" convention: N giorni → N/30 calendar months
+            # from invoice date, payment due at end of that month.
+            # Example: invoice 31/01, "30 FM" → end Feb, "60 FM" → end Mar
+            n_months = round(giorni / 30)
+            if n_months < 1:
+                n_months = 1
+            target_month = d0.month + n_months
+            target_year = d0.year + (target_month - 1) // 12
+            target_month = (target_month - 1) % 12 + 1
+            last_day = calendar.monthrange(target_year, target_month)[1]
+            target = date(target_year, target_month, last_day)
             if extra_days:
                 target = target + timedelta(days=extra_days)
+        else:
+            target = d0 + timedelta(days=giorni)
 
         importo = round(total_amount * quota_pct / 100, 2)
 
