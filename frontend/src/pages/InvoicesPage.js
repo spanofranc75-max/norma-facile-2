@@ -89,18 +89,19 @@ export default function InvoicesPage() {
             if (filters.status) params.append('status', filters.status);
             if (filters.year) params.append('year', filters.year);
             const data = await apiRequest(`/invoices/?${params}`);
-            // Sort by document number descending (handle both "18/2026" and "FT-2026/0018" formats)
             const sorted = (data.invoices || []).sort((a, b) => {
-                const extractNum = (dn) => {
+                const getNum = (dn) => {
                     if (!dn) return 0;
-                    const parts = dn.split('/');
-                    // "FT-2026/0018" → last part "0018" → 18
-                    // "18/2026" → first part "18" → 18
-                    const last = parseInt(parts[parts.length - 1]) || 0;
-                    const first = parseInt(parts[0]) || 0;
-                    return last > 2000 ? first : last; // if last part is year (>2000), use first part
+                    const match = dn.match(/(\d+)/g);
+                    if (!match) return 0;
+                    // Pick the number that's NOT a year (not > 2000)
+                    for (const m of match) {
+                        const n = parseInt(m, 10);
+                        if (n > 0 && n < 2000) return n;
+                    }
+                    return parseInt(match[0], 10) || 0;
                 };
-                return extractNum(b) - extractNum(a);
+                return getNum(b.document_number) - getNum(a.document_number);
             });
             setInvoices(sorted);
             setTotal(data.total);
