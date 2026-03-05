@@ -34,7 +34,22 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - Matching via keyword: costa, fotocellula, rete, encoder (+ sinonimi: motore→encoder, limitatore→encoder, fotocellule→fotocellula)
 - Cache in memoria per performance
 
-## Backlog Prioritizzato
+## Feature Completate (sessione 5 Marzo 2026 - Fork 8)
+
+### PDF Perizia Pro - Restyling Completo
+- **Tachimetro SVG semicircolare** sulla copertina con 3 livelli colore (rosso <35%, ambra 35-65%, verde >65%)
+- **Schede criticità a 2 colonne**: problema+foto SX | soluzione+immagine esempio DX
+- **Immagini soluzione** dalla libreria statica (costa, fotocellula, rete, encoder) matchate per keyword
+- **Box riepilogo** con contatori: Conformità%, Rischi Critici, Rischi Medi, Dispositivi Mancanti, Interventi
+- **Sezioni numerate** (01-05) con header navy professionale
+- 28/28 test passati (iteration_139)
+
+### Quick Create Cliente + Restyling PDF v2
+- **Modale "Nuovo Cliente Rapido"** nel wizard sopralluogo step 1: bottone "+ Nuovo" accanto alla dropdown cliente, modale con Nome (obbligatorio), Indirizzo, Telefono, Email. Al salvataggio seleziona automaticamente il cliente creato.
+- **Griglia foto 2x2** senza placeholder vuoti per numero dispari di foto
+- **Prezzi smart** nella tabella materiali: "Da Quotare" per prezzi a 0, totale solo se almeno un prezzo > 0
+- **Header professionale** nelle pagine contenuto: barra Blu Notte con logo grande + "RELAZIONE TECNICA DI SOPRALLUOGO" + numero documento
+- 20/20 test passati (iteration_140)
 
 ### P0 (Completati)
 - ~~Restyling PDF Perizia Pro con tachimetro Risk Score~~ COMPLETATO (5 Mar 2026)
