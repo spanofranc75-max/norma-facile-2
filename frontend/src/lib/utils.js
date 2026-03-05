@@ -46,7 +46,8 @@ export async function apiRequest(endpoint, options = {}) {
     if (!response.ok) {
         let detail = `Errore ${response.status}`;
         try {
-            const text = await response.text();
+            const cloned = response.clone();
+            const text = await cloned.text();
             console.error(`[apiRequest] ${response.status} response body:`, text);
             try {
                 const err = JSON.parse(text);
