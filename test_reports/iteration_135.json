@@ -1,0 +1,75 @@
+{
+  "summary": "Iteration 135: Renumber Invoice and Create Nota Credito Endpoints - ALL 19 TESTS PASS after 2 bug fixes. PATCH /api/invoices/{id}/renumber works on all statuses (bozza, emessa, inviata_sdi, pagata). POST /api/invoices/{id}/create-nota-credito creates NC with document_type='NC', status='bozza', copies lines, references original invoice, and fails for non-FT documents.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "renumber_invoice": {
+      "bozza_status": "PASS - Renumber works on bozza invoice",
+      "emessa_status": "PASS - Renumber works on emessa invoice (not restricted)",
+      "inviata_sdi_status": "PASS - Renumber works on inviata_sdi invoice",
+      "pagata_status": "PASS - Renumber works on pagata invoice",
+      "empty_number_rejected": "PASS - Returns 400 for empty document_number",
+      "whitespace_rejected": "PASS - Returns 400 for whitespace-only document_number",
+      "nonexistent_404": "PASS - Returns 404 for non-existent invoice",
+      "returns_updated_invoice": "PASS - Returns full updated invoice object"
+    },
+    "create_nota_credito": {
+      "create_from_ft": "PASS - Creates NC from FT invoice successfully",
+      "document_type_nc": "PASS - Created NC has document_type='NC'",
+      "status_bozza": "PASS - Created NC has status='bozza'",
+      "references_original": "PASS - NC has related_invoice_id and related_invoice_number",
+      "copies_lines": "PASS - NC copies lines from original with new line_id",
+      "prv_fails": "PASS - Returns 400 for PRV (Preventivo) documents",
+      "ddt_fails": "PASS - Returns 400 for DDT documents",
+      "nonexistent_404": "PASS - Returns 404 for non-existent invoice",
+      "storno_note": "PASS - NC has storno note referencing original invoice"
+    },
+    "authentication": {
+      "renumber_requires_auth": "PASS - Returns 401 without session token",
+      "create_nc_requires_auth": "PASS - Returns 401 without session token"
+    }
+  },
+  "bugs_fixed": [
+    {
+      "file": "/app/backend/routes/invoices.py",
+      "line": 567,
+      "issue": "renumber_invoice returned InvoiceResponse(**updated) causing Pydantic validation errors for invoices missing optional fields",
+      "fix": "Changed to return raw dict instead of InvoiceResponse"
+    },
+    {
+      "file": "/app/backend/routes/invoices.py",
+      "line": 588,
+      "issue": "create_nota_credito called get_next_number() without required 'year' argument",
+      "fix": "Added year=datetime.now().year argument to get_next_number() call"
+    }
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_iteration135_renumber_nota_credito.py",
+    "/app/test_reports/pytest/iteration135_renumber_nota_credito_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Both bugs were coding errors: missing argument and wrong return type",
+    "Renumber endpoint now correctly allows changes on any status (for SDI error correction)",
+    "Create NC endpoint correctly validates source document type (only FT/NC allowed)"
+  ],
+  "updated_files": [
+    "/app/backend/routes/invoices.py",
+    "/app/backend/tests/test_iteration135_renumber_nota_credito.py"
+  ],
+  "success_rate": {
+    "backend": "100% (19/19 tests passed)"
+  },
+  "test_credentials": "Test user/session/client/invoices created via mongosh setup fixture",
+  "seed_data_creation": "6 test invoices with various statuses (bozza, emessa, inviata_sdi, pagata) plus PRV and DDT for failure testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Renumber and Create Nota Credito endpoints verified working after bug fixes. Test file at /app/backend/tests/test_iteration135_renumber_nota_credito.py covers all specified requirements. Frontend testing skipped per instruction (Google OAuth required)."
+}

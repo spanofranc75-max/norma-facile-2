@@ -26,7 +26,7 @@ import { toast } from 'sonner';
 import {
     Plus, MoreHorizontal, Download, RefreshCw, Trash2, Eye, FileCode,
     Copy, CreditCard, CircleDollarSign, CheckCircle2,
-    Mail, Send,
+    Mail, Send, Hash, FileText,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import { PDFPreviewModal } from '../components/PDFPreviewModal';
@@ -214,6 +214,37 @@ export default function InvoicesPage() {
             await apiRequest(`/invoices/${invoice.invoice_id}`, { method: 'DELETE' });
             toast.success('Documento eliminato');
             fetchInvoices();
+        } catch (error) {
+            toast.error(error.message);
+        }
+    };
+
+    const handleRenumber = async (invoice) => {
+        const newNumber = window.prompt(
+            `Modifica numero documento\n\nAttuale: ${invoice.document_number}\n\nInserisci il nuovo numero:`,
+            invoice.document_number
+        );
+        if (!newNumber || newNumber === invoice.document_number) return;
+        try {
+            await apiRequest(`/invoices/${invoice.invoice_id}/renumber`, {
+                method: 'PATCH',
+                body: JSON.stringify({ document_number: newNumber }),
+            });
+            toast.success(`Numero cambiato: ${invoice.document_number} → ${newNumber}`);
+            fetchInvoices();
+        } catch (error) {
+            toast.error(error.message);
+        }
+    };
+
+    const handleCreateNC = async (invoice) => {
+        if (!window.confirm(`Creare una Nota di Credito per stornare la fattura ${invoice.document_number}?`)) return;
+        try {
+            const result = await apiRequest(`/invoices/${invoice.invoice_id}/create-nota-credito`, {
+                method: 'POST',
+            });
+            toast.success(result.message);
+            navigate(`/invoices/${result.invoice_id}`);
         } catch (error) {
             toast.error(error.message);
         }
@@ -528,6 +559,21 @@ export default function InvoicesPage() {
                                                             {inv.document_type === 'DDT' && (
                                                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleConvert(inv, 'FT'); }}>
                                                                     <RefreshCw className="mr-2 h-4 w-4" />Converti in Fattura
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            <DropdownMenuSeparator />
+                                                            {/* Modifica Numero — sempre disponibile */}
+                                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRenumber(inv); }}>
+                                                                <Hash className="mr-2 h-4 w-4" />Modifica Numero
+                                                            </DropdownMenuItem>
+                                                            {/* Crea NC — solo da fatture FT non in bozza */}
+                                                            {inv.document_type === 'FT' && inv.status !== 'bozza' && (
+                                                                <DropdownMenuItem
+                                                                    onClick={(e) => { e.stopPropagation(); handleCreateNC(inv); }}
+                                                                    data-testid={`btn-create-nc-${inv.invoice_id}`}
+                                                                    className="text-amber-700 font-medium"
+                                                                >
+                                                                    <FileText className="mr-2 h-4 w-4" />Crea Nota di Credito
                                                                 </DropdownMenuItem>
                                                             )}
                                                             <DropdownMenuSeparator />

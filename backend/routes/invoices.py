@@ -535,6 +535,103 @@ async def update_invoice(
     return InvoiceResponse(**updated)
 
 
+
+@router.patch("/{invoice_id}/renumber")
+async def renumber_invoice(
+    invoice_id: str,
+    data: dict,
+    user: dict = Depends(get_current_user)
+):
+    """Change document number on any invoice regardless of status. For fixing numbering errors."""
+    new_number = data.get("document_number", "").strip()
+    if not new_number:
+        raise HTTPException(400, "Numero documento obbligatorio")
+
+    existing = await db.invoices.find_one(
+        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"_id": 0}
+    )
+    if not existing:
+        raise HTTPException(404, "Documento non trovato")
+
+    old_number = existing.get("document_number", "")
+    await db.invoices.update_one(
+        {"invoice_id": invoice_id},
+        {"$set": {
+            "document_number": new_number,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }}
+    )
+    logger.info(f"Invoice renumbered: {old_number} -> {new_number} by user {user['user_id']}")
+    updated = await db.invoices.find_one({"invoice_id": invoice_id}, {"_id": 0})
+    # Return raw dict to avoid strict model validation for older invoices
+    return updated
+
+
+@router.post("/{invoice_id}/create-nota-credito")
+async def create_nota_credito(
+    invoice_id: str,
+    user: dict = Depends(get_current_user)
+):
+    """Create a Credit Note (Nota di Credito) from an existing invoice."""
+    original = await db.invoices.find_one(
+        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"_id": 0}
+    )
+    if not original:
+        raise HTTPException(404, "Fattura originale non trovata")
+
+    if original.get("document_type") not in ["FT", "NC"]:
+        raise HTTPException(400, "La nota di credito può essere creata solo da una fattura o nota di credito")
+
+    # Get next NC number
+    year = datetime.now().year
+    nc_number = await invoice_service.get_next_number(user["user_id"], "NC", year)
+
+    now = datetime.now(timezone.utc).isoformat()
+    nc_id = f"inv_{uuid.uuid4().hex[:16]}"
+
+    # Copy lines from original
+    nc_lines = []
+    for line in original.get("lines", []):
+        nc_line = {**line}
+        nc_line["line_id"] = f"line_{uuid.uuid4().hex[:8]}"
+        nc_lines.append(nc_line)
+
+    nc_doc = {
+        "invoice_id": nc_id,
+        "user_id": user["user_id"],
+        "document_type": "NC",
+        "document_number": nc_number,
+        "issue_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "due_date": None,
+        "status": "bozza",
+        "client_id": original.get("client_id"),
+        "client_name": original.get("client_name"),
+        "payment_method": original.get("payment_method"),
+        "payment_terms": original.get("payment_terms"),
+        "settings": original.get("settings", {}),
+        "lines": nc_lines,
+        "totals": original.get("totals", {}),
+        "notes": f"Nota di credito per storno fattura n. {original.get('document_number', '')}",
+        "internal_notes": None,
+        "created_at": now,
+        "updated_at": now,
+        "related_invoice_id": invoice_id,
+        "related_invoice_number": original.get("document_number", ""),
+    }
+
+    await db.invoices.insert_one(nc_doc)
+    logger.info(f"Credit note {nc_number} created from invoice {original.get('document_number')} by user {user['user_id']}")
+
+    return {
+        "message": f"Nota di Credito {nc_number} creata da fattura {original.get('document_number', '')}",
+        "invoice_id": nc_id,
+        "document_number": nc_number,
+    }
+
+
+
 @router.patch("/{invoice_id}/status", response_model=InvoiceResponse)
 async def update_invoice_status(
     invoice_id: str,
