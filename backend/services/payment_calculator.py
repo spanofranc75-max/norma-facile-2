@@ -91,10 +91,17 @@ async def calc_scadenze_from_supplier(db, fornitore_id: str, user_id: str, data_
     if not pt or not pt.get("quote"):
         return []
 
+    quote = pt["quote"]
+    # Safety: if total quota sums to 0 (data entry error), distribute evenly
+    total_quota = sum(q.get("quota", 0) for q in quote)
+    if total_quota == 0:
+        even = round(100 / len(quote), 2)
+        quote = [{**q, "quota": even} for q in quote]
+
     return calculate_due_dates(
         invoice_date=data_documento,
         total_amount=totale,
-        quote=pt["quote"],
+        quote=quote,
         fine_mese=pt.get("fine_mese", False),
         extra_days=pt.get("extra_days") or 0,
     )
