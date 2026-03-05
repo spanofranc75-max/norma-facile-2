@@ -1,0 +1,69 @@
+{
+  "summary": "Iteration 136: SDI Endpoint Validation + Invoice CRUD + Preview PDF - ALL 17 TESTS PASS. SDI send properly returns 400 for bozza status, 400 for non-FT/NC documents (DDT, PRV), 422 with detailed validation errors for missing SDI/PEC, 404 for non-existent invoices. Invoice CRUD (create/read/update/status/delete) all working. Preview PDF endpoint returns valid PDF content.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "sdi_send_validation": {
+      "bozza_returns_400": "PASS - SDI send for bozza status returns 400 with 'emetti' message",
+      "ddt_returns_400": "PASS - SDI send for DDT (non-FT/NC) returns 400",
+      "prv_returns_400": "PASS - SDI send for PRV (Preventivo, non-FT/NC) returns 400",
+      "validation_errors_return_422": "PASS - Missing SDI/PEC returns 400/422 with detailed error message",
+      "nonexistent_returns_404": "PASS - SDI send for non-existent invoice returns 404",
+      "requires_auth": "PASS - SDI send without auth returns 401"
+    },
+    "invoice_crud": {
+      "create_with_lines": "PASS - Create invoice with multiple lines, totals calculated correctly",
+      "get_list": "PASS - GET /api/invoices/ returns list with total count",
+      "get_by_id": "PASS - GET /api/invoices/{id} returns full invoice with lines and totals",
+      "update_lines": "PASS - PUT /api/invoices/{id} updates lines and recalculates totals",
+      "change_status": "PASS - PATCH /api/invoices/{id}/status changes bozza to emessa",
+      "delete": "PASS - DELETE /api/invoices/{id} removes invoice, returns 404 on subsequent GET"
+    },
+    "preview_pdf": {
+      "generates_pdf": "PASS - POST /api/invoices/preview-pdf returns valid PDF (application/pdf)",
+      "empty_lines": "PASS - Preview PDF with empty lines still returns 200",
+      "requires_auth": "PASS - Preview PDF requires authentication (401)"
+    },
+    "renumber": {
+      "works_on_bozza": "PASS - PATCH /api/invoices/{id}/renumber works on bozza status"
+    },
+    "nota_credito": {
+      "create_from_ft": "PASS - POST /api/invoices/{id}/create-nota-credito creates NC with document_type='NC', status='bozza'"
+    }
+  },
+  "p0_bug_fix_verified": {
+    "issue": "Frontend was crashing with 'ReferenceError: text is not defined' when SDI submission returned an error",
+    "verification": "Frontend error handling in InvoiceEditorPage.js (lines 469-479) correctly uses: const errorMessage = (sdiErr && sdiErr.message) ? sdiErr.message : 'Errore sconosciuto'",
+    "apiRequest_function": "utils.js properly extracts detail from backend error response and throws Error with message",
+    "backend_response": "Backend returns proper HTTP errors (400/422) with detail field containing validation messages"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration136_sdi_invoice_crud.py",
+    "/app/test_reports/pytest/iteration136_sdi_invoice_crud_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "SDI error handling flow is correct: Backend returns {detail: 'message'} -> apiRequest extracts and throws Error -> Frontend catch extracts error.message",
+    "All SDI validation checks working: bozza rejection (400), non-FT/NC rejection (400), missing fields validation (422)",
+    "Invoice CRUD fully functional including line items and totals recalculation",
+    "Preview PDF endpoint generates valid PDF content from unsaved form data"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration136_sdi_invoice_crud.py"
+  ],
+  "success_rate": {
+    "backend": "100% (17/17 tests passed)"
+  },
+  "test_credentials": "Test user/session/client created via mongosh fixture with TEST_IT136_ prefix",
+  "seed_data_creation": "Test clients (minimal and full), test invoices (bozza, emessa, DDT, PRV)",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iteration 136 verified SDI send-sdi endpoint validation errors, Invoice CRUD operations, and Preview PDF endpoint. All tests pass. Frontend error handling for SDI errors is working correctly. Test file at /app/backend/tests/test_iteration136_sdi_invoice_crud.py covers all specified requirements."
+}
