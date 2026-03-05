@@ -66,7 +66,14 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **Immagini**: Label aggiornata "Soluzione tipo (sostituibile con foto proprie installazioni)"
 - 18/18 test passati (iteration_143)
 
+### Bug Fix: Crash Dettaglio Fattura da Preventivo (5 Mar 2026)
+- **Causa**: Le funzioni `create_invoice_from_preventivo` (invoices.py) e `create_progressive_invoice` (preventivi.py) creavano un oggetto `totals` incompleto, senza `vat_breakdown`, `total_to_pay`, `rivalsa_inps`, `cassa`, `ritenuta`.
+- **Frontend** `InvoiceEditorPage.js` riga 904 fa `Object.entries(totals.vat_breakdown)` che crashava.
+- **Fix**: Entrambe le funzioni ora generano un `totals` completo e coerente con `InvoiceTotals`. Corretta anche la fattura 19/2026 (Merighi Giancarlo) già nel DB.
+- Verificato via API e screenshot: pagina caricata correttamente con tutti i totali.
+
 ### P0 (Completati)
+- ~~Crash pagina dettaglio fattura da preventivo~~ COMPLETATO (5 Mar 2026)
 - ~~Restyling PDF Perizia Pro con tachimetro Risk Score~~ COMPLETATO (5 Mar 2026)
 - ~~Preventivi accettati nella Planning Board~~ COMPLETATO
 - ~~Error handling SDI~~ COMPLETATO

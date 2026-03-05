@@ -925,6 +925,20 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
     subtotal = sum(ln["line_total"] for ln in invoice_lines)
     total_vat = sum(ln["vat_amount"] for ln in invoice_lines)
 
+    # Build VAT breakdown from lines (required by frontend)
+    vat_breakdown = {}
+    for ln in invoice_lines:
+        rate = ln.get("vat_rate", "22")
+        if rate not in vat_breakdown:
+            vat_breakdown[rate] = {"imponibile": 0.0, "imposta": 0.0}
+        vat_breakdown[rate]["imponibile"] += ln["line_total"]
+        vat_breakdown[rate]["imposta"] += ln["vat_amount"]
+    for rate in vat_breakdown:
+        vat_breakdown[rate]["imponibile"] = round(vat_breakdown[rate]["imponibile"], 2)
+        vat_breakdown[rate]["imposta"] = round(vat_breakdown[rate]["imposta"], 2)
+
+    total_document = round(subtotal + total_vat, 2)
+
     # Build label for progressive type
     type_labels = {"acconto": "Acconto", "sal": "SAL", "saldo": "Saldo Finale"}
 
@@ -947,10 +961,13 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
         "lines": invoice_lines,
         "totals": {
             "subtotal": round(subtotal, 2),
-            "taxable_amount": round(subtotal, 2),
+            "vat_breakdown": vat_breakdown,
             "total_vat": round(total_vat, 2),
-            "total_document": round(subtotal + total_vat, 2),
-            "total_due": round(subtotal + total_vat, 2),
+            "rivalsa_inps": 0.0,
+            "cassa": 0.0,
+            "ritenuta": 0.0,
+            "total_document": total_document,
+            "total_to_pay": total_document,
         },
         "notes": f"Rif. Preventivo {prev_number} — {type_labels.get(body.invoice_type, body.invoice_type)}",
         "internal_notes": None,
