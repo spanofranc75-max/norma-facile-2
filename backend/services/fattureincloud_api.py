@@ -251,8 +251,25 @@ def map_fattura_to_fic(invoice: dict, client: dict) -> Dict[str, Any]:
             for line in invoice.get("lines", []) if line.get("description", "").strip()
         )
 
+    # Map payment method to SDI code (MP05=bonifico, MP01=contanti, MP02=assegno)
+    payment_method_code = invoice.get("payment_method", "bonifico")
+    ei_payment_map = {
+        "bonifico": "MP05",
+        "contanti": "MP01",
+        "assegno": "MP02",
+        "carta_credito": "MP08",
+        "riba": "MP12",
+        "rid": "MP09",
+        "rimessa_diretta": "MP01",
+    }
+    ei_payment = ei_payment_map.get(payment_method_code, "MP05")
+
     payload = {
         "type": "invoice",
+        "e_invoice": True,
+        "ei_data": {
+            "payment_method": ei_payment,
+        },
         "entity": {
             "name": client.get("business_name", ""),
             "vat_number": client.get("partita_iva", ""),
