@@ -610,10 +610,10 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
             {_s(invoice["notes"]).replace(chr(10), "<br>")}
         </div>"""
 
-    # ── Conditions page ──
+    # ── Conditions page (SOLO per Preventivi, NON per Fatture) ──
     conditions_html = ""
     condizioni = co.get("condizioni_vendita", "") or ""
-    if condizioni.strip():
+    if condizioni.strip() and doc_type == "PRV":
         conditions_html = f"""
         <div class="page-break"></div>
         <h2 class="conditions-title">CONDIZIONI GENERALI DI VENDITA</h2>

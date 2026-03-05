@@ -455,31 +455,16 @@ export default function InvoicesPage() {
                                                 <TableCell className={`text-right font-mono ${dueAmount > 0.01 ? 'text-red-600' : 'text-slate-400'}`} data-testid={`residuo-amount-${inv.invoice_id}`}>
                                                     {dueAmount > 0.01 ? formatCurrency(dueAmount) : '-'}
                                                 </TableCell>
+                                                {/* Colonna Stato: SOLO badge, nessun bottone */}
                                                 <TableCell>
-                                                    <div className="flex items-center gap-1.5">
-                                                        {isPaid ? (
-                                                            <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                                                <CheckCircle2 className="h-3 w-3 mr-1" />Pagata
-                                                            </Badge>
-                                                        ) : (
-                                                            <div className="flex items-center gap-1.5">
-                                                                <Badge className={STATUS_BADGES[inv.status]?.color}>
-                                                                    {STATUS_BADGES[inv.status]?.label}
-                                                                </Badge>
-                                                                {['emessa', 'inviata_sdi', 'accettata', 'scaduta'].includes(inv.status) && (
-                                                                    <button
-                                                                        data-testid={`btn-toggle-paid-${inv.invoice_id}`}
-                                                                        onClick={(e) => { e.stopPropagation(); handleChangeStatus(inv, 'pagata'); }}
-                                                                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-200 hover:border-emerald-400 transition-all shadow-sm"
-                                                                        title="Segna come pagata"
-                                                                    >
-                                                                        <CircleDollarSign className="h-3 w-3" />Pagata?
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
+                                                    <Badge className={isPaid
+                                                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                                        : (STATUS_BADGES[inv.status]?.color || 'bg-slate-100 text-slate-600')
+                                                    }>
+                                                        {isPaid ? 'Pagata' : (STATUS_BADGES[inv.status]?.label || inv.status)}
+                                                    </Badge>
                                                 </TableCell>
+                                                {/* Menu Azioni */}
                                                 <TableCell>
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -519,9 +504,14 @@ export default function InvoicesPage() {
                                                                     <Send className="mr-2 h-4 w-4" />Invia a SDI
                                                                 </DropdownMenuItem>
                                                             )}
-                                                            {['emessa', 'inviata_sdi', 'accettata', 'scaduta'].includes(inv.status) && inv.status !== 'pagata' && (
-                                                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleChangeStatus(inv, 'pagata'); }} data-testid="btn-mark-paid" className="text-emerald-700">
-                                                                    <CircleDollarSign className="mr-2 h-4 w-4" />Segna Pagata
+                                                            {/* Registra Incasso — visibile se NON già pagata */}
+                                                            {!isPaid && inv.status !== 'bozza' && (
+                                                                <DropdownMenuItem
+                                                                    onClick={(e) => { e.stopPropagation(); handleChangeStatus(inv, 'pagata'); }}
+                                                                    data-testid={`btn-registra-incasso-${inv.invoice_id}`}
+                                                                    className="text-emerald-700 font-medium"
+                                                                >
+                                                                    <CircleDollarSign className="mr-2 h-4 w-4" />Registra Incasso
                                                                 </DropdownMenuItem>
                                                             )}
                                                             <DropdownMenuSeparator />

@@ -145,6 +145,15 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
   - Pannello espandibile a fullscreen, bottone Aggiorna manuale, chiusura X
   - 10/10 test backend passati (`test_iteration134_preview_pdf.py`)
 
+- **FIX: Condizioni di Vendita solo nel Preventivo** - Le condizioni generali di vendita (pagina 2 del PDF) ora appaiono SOLO per documenti di tipo PRV (Preventivo), NON nelle Fatture (FT), Note di Credito (NC), DDT. Verificato con test PDF: FT=1 pagina, PRV=2 pagine con condizioni.
+
+- **FEATURE: Cleanup UX Tabella Fatture** - Pulizia completa della lista fatture:
+  - Rimosso bottone "Pagata?" dalla colonna Stato (era brutto e confondeva)
+  - Colonna Stato ora mostra SOLO badge colorati: Emessa (blu), Inviata SDI (giallo), Pagata (verde), Scaduta (rosso)
+  - Nuova voce "Registra Incasso" nel menu azioni (3 puntini) per marcare fatture come pagate
+  - Visibile per tutte le fatture non-bozza che non sono già pagate (incluse fatture vecchie di migrazione)
+  - Funziona anche per fatture senza sdi_id (storiche importate)
+
 ## Issue Pendenti
 - **P1**: Bug condizioni pagamento cancellate alla chiusura form fornitore senza salvare
 - **P1**: Verifica end-to-end generazione dinamica PDF (DoP/CE) con dati materiali reali
