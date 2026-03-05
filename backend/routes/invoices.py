@@ -1184,6 +1184,10 @@ async def send_invoice_to_sdi(invoice_id: str, user: dict = Depends(get_current_
     # ── STEP 3: Create or update on FIC ──
     fic_doc_id = invoice.get("fic_document_id")
 
+    # If already sent to SDI, check status instead of re-sending
+    if fic_doc_id and invoice.get("status") == "inviata_sdi":
+        return {"message": f"Fattura {invoice.get('document_number')} gia' inviata al SDI (FIC id={fic_doc_id})", "fic_document_id": fic_doc_id}
+
     if not fic_doc_id:
         try:
             result = await fic.create_issued_invoice(fic_data)
