@@ -1213,6 +1213,31 @@ async def send_invoice_to_sdi(invoice_id: str, user: dict = Depends(get_current_
     except httpx.HTTPStatusError as e:
         detail = extract_fic_error_message(e)
         logger.error(f"SDI send failed ({e.response.status_code}): {detail}")
+
+        # AUTO-RECOVERY: se la fattura è già stata inviata/è in corso, allinea lo stato locale
+        detail_lower = detail.lower()
+        already_sent = any(kw in detail_lower for kw in [
+            "già in corso", "gia in corso", "già presente", "gia presente",
+            "duplicat", "already", "in corso un tentativo",
+        ])
+        if already_sent:
+            logger.info(f"Auto-recovery: document {fic_doc_id} already sent to SDI, syncing local status")
+            await db.invoices.update_one(
+                {"invoice_id": invoice_id},
+                {"$set": {
+                    "status": "inviata_sdi",
+                    "fic_document_id": fic_doc_id,
+                    "sdi_sent_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }}
+            )
+            doc_num = invoice.get("document_number", "")
+            return {
+                "message": f"Fattura {doc_num} gia' presente su SDI. Stato locale allineato.",
+                "fic_document_id": fic_doc_id,
+                "recovered": True,
+            }
+
         # Save fic_doc_id even if SDI fails, so we don't recreate
         await db.invoices.update_one(
             {"invoice_id": invoice_id},
@@ -1258,6 +1283,11 @@ async def _handle_fic_409(fic, invoice: dict, fic_data: dict) -> int:
     for doc in docs:
         if doc.get("number") == num_int:
             existing_id = doc.get("id")
+            # If doc already has ei_status (already sent to SDI), just return the ID — don't try to update
+            ei_status = doc.get("ei_status")
+            if ei_status:
+                logger.info(f"FIC doc {existing_id} already has ei_status={ei_status}, skipping update")
+                return existing_id
             break
 
     if not existing_id:
