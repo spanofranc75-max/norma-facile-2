@@ -96,7 +96,7 @@ body {
 /* ── DIVIDER ── */
 .inv-divider {
     height: 3px;
-    background: #1a3a6b;
+    background: #0F172A;
     margin: 3mm 0 5mm;
     border-radius: 1px;
 }
@@ -129,7 +129,7 @@ body {
 .inv-doc-number {
     font-size: 22pt;
     font-weight: 800;
-    color: #1a3a6b;
+    color: #0F172A;
     line-height: 1.1;
 }
 .inv-meta {
@@ -177,20 +177,20 @@ body {
     font-size: 8.5pt;
 }
 .inv-items thead th {
-    background: #f1f5f9;
-    border-bottom: 2px solid #cbd5e1;
-    padding: 8px 8px;
+    background: #0F172A;
+    border-bottom: 2px solid #0F172A;
+    padding: 10px 10px;
     font-weight: 700;
     font-size: 7.5pt;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #475569;
+    color: #ffffff;
 }
 .inv-items thead th.al { text-align: left; }
 .inv-items thead th.ar { text-align: right; }
 .inv-items thead th.ac { text-align: center; }
 .inv-items tbody td {
-    padding: 9px 8px;
+    padding: 10px 10px;
     border-bottom: 1px solid #e2e8f0;
     vertical-align: top;
 }
@@ -277,38 +277,38 @@ body {
     padding-top: 6px;
 }
 .inv-totals .grand td {
-    border-top: 2px solid #1a3a6b;
+    border-top: 2px solid #0F172A;
     padding-top: 8px;
     padding-bottom: 8px;
 }
 .inv-totals .grand .lbl {
-    font-size: 11pt;
+    font-size: 12pt;
     font-weight: 800;
-    color: #1a1a2e;
+    color: #0F172A;
 }
 .inv-totals .grand .val {
-    font-size: 14pt;
+    font-size: 18pt;
     font-weight: 800;
-    color: #1a3a6b;
+    color: #0F172A;
 }
 
 /* ── DUE DATE ── */
 .inv-due {
     margin-top: 3mm;
     padding: 3mm 4mm;
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
     border-radius: 4px;
     font-size: 9pt;
 }
 .inv-due-label {
     font-weight: 600;
-    color: #1e40af;
+    color: #b91c1c;
 }
 .inv-due-date {
     font-weight: 800;
-    color: #1e3a8a;
-    font-size: 10pt;
+    color: #991b1b;
+    font-size: 11pt;
 }
 
 /* ── NOTES ── */
@@ -333,6 +333,26 @@ body {
 
 /* ── PAGE 2: CONDITIONS ── */
 .page-break { page-break-before: always; }
+
+/* ── LEGAL FOOTER ── */
+.inv-legal-notes {
+    margin-top: 5mm;
+    padding: 2mm 3mm;
+    font-size: 7pt;
+    color: #94a3b8;
+    line-height: 1.4;
+    border-top: 1px solid #e2e8f0;
+}
+.inv-regulatory-footer {
+    margin-top: 2mm;
+    padding: 2mm 3mm;
+    text-align: center;
+    font-size: 7.5pt;
+    font-weight: 600;
+    color: #64748b;
+    letter-spacing: 0.5px;
+}
+
 .conditions-title {
     font-size: 11pt;
     font-weight: bold;
@@ -464,7 +484,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
 
     client_html = f"""
     <div class="inv-client">
-        <div class="inv-client-label">Destinatario</div>
+        <div class="inv-client-label">Spettabile Cliente</div>
         <div class="inv-client-name">{cl_name}</div>
         <div class="inv-client-details">
             {cl_full}
@@ -515,7 +535,6 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     totals = invoice.get("totals", {})
     ritenuta = float(totals.get("ritenuta", 0) or 0)
     ritenuta_rows = ""
-    netto_row = ""
     if ritenuta > 0:
         netto = iva_data["total"] - ritenuta
         ritenuta_rows = f"""<tr>
@@ -554,21 +573,32 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
             <span class="inv-due-date">{_date(due_date)}</span>
         </div>"""
 
-    # ── Bank info ──
+    # ── Bank info + Payment Conditions ──
     bank_html = ""
     bank = co.get("bank_details", {}) or {}
     bank_name = _s(bank.get("bank_name", ""))
     bank_iban = _s(bank.get("iban", ""))
     bank_bic = _s(bank.get("bic_swift", ""))
 
-    if bank_name or bank_iban:
-        bank_html = f"""
+    # Build payment conditions label
+    payment_cond_label = _s(payment_label)
+    payment_type_label = _s(invoice.get("payment_type_label", ""))
+    if payment_type_label:
+        payment_cond_label = payment_type_label
+
+    bank_lines = []
+    bank_lines.append(f'<span class="inv-bank-label">Condizioni di Pagamento:</span> {payment_cond_label}<br>')
+    if bank_name:
+        bank_lines.append(f'<span class="inv-bank-label">Banca:</span> {bank_name}<br>')
+    if bank_iban:
+        bank_lines.append(f'<span class="inv-bank-label">IBAN:</span> {bank_iban}<br>')
+    if bank_bic:
+        bank_lines.append(f'<span class="inv-bank-label">BIC/SWIFT:</span> {bank_bic}')
+
+    bank_html = f"""
         <div class="inv-bank">
-            <div class="inv-bank-title">Coordinate Bancarie</div>
-            <span class="inv-bank-label">Modalita':</span> {_s(payment_label)}<br>
-            {"<span class='inv-bank-label'>Banca:</span> " + bank_name + "<br>" if bank_name else ""}
-            {"<span class='inv-bank-label'>IBAN:</span> " + bank_iban + "<br>" if bank_iban else ""}
-            {"<span class='inv-bank-label'>BIC:</span> " + bank_bic if bank_bic else ""}
+            <div class="inv-bank-title">Dati Pagamento</div>
+            {''.join(bank_lines)}
         </div>"""
 
     # ── Notes ──
@@ -610,6 +640,16 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
             <p>{company_name}</p>
             <p>Documento {display_num}</p>
         </div>"""
+
+    # ── Legal + Regulatory footer ──
+    legal_html = """
+    <div class="inv-legal-notes">
+        Condizioni Generali di Vendita: Riserva di propriet&agrave; ex art. 1523 C.C. &mdash;
+        Interessi moratori ex D.Lgs 231/02 &mdash; Foro competente esclusivo quello della sede legale del venditore.
+    </div>
+    <div class="inv-regulatory-footer">
+        Azienda Certificata EN 1090-1 EXC2 &bull; ISO 3834-2 &bull; Centro di Trasformazione Acciaio
+    </div>"""
 
     # ── Assemble full HTML ──
     full_html = f"""<!DOCTYPE html>
@@ -664,6 +704,9 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
             {due_html}
         </div>
     </div>
+
+    <!-- LEGAL + REGULATORY FOOTER -->
+    {legal_html}
 
     {conditions_html}
 

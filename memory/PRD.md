@@ -123,12 +123,20 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **P0 FIX: UI "Segna come Pagata" (InvoicesPage.js)** - Riscrittura completa dello styling condizionale nella tabella fatture:
   - Colonna "Da Pagare" rinominata in "Residuo" per allinearsi alla terminologia utente
   - Righe pagate: sfondo verde chiaro (`bg-emerald-50/40`) per distinzione visiva immediata
-  - Colonna "Pagato": verde bold (`text-emerald-600 font-semibold`) per fatture pagate, verde chiaro per parziali, grigio neutro per "-"
+  - Colonna "Pagato": verde bold per fatture pagate, verde chiaro per parziali, grigio neutro per "-"
   - Colonna "Residuo": rosso solo quando importo > 0, grigio neutro per "-" quando saldato
   - Pulsante "Pagata?" migliorato: più grande, ombra, bordo più forte per visibilità
-  - Pulizia codice: rimosso `PAYMENT_STATUS_ICONS` non usato, import `Clock`/`AlertCircle`
-  - Backend verificato: PATCH status→pagata setta correttamente `totale_pagato=total_document`, `residuo=0`, `payment_status=pagata`
   - 11/11 test backend passati (`test_iteration133_mark_as_paid.py`)
+
+- **FEATURE: Restyling Template Fattura PDF (pdf_invoice_modern.py)** - Riprogettazione completa del layout:
+  - Header: divider Blu Notte #0F172A
+  - Cliente: "Spettabile Cliente" senza box/bordi, layout arioso
+  - Tabella: header scuro #0F172A con testo bianco, padding 10px per leggibilità
+  - Footer SX: "Dati Pagamento" con Condizioni di Pagamento, Banca, IBAN, BIC visibili
+  - Footer DX: Totale 18pt bold, scadenza in ROSSO (#b91c1c) evidenziata
+  - Note legali: "Riserva di proprietà ex art. 1523 C.C. — Interessi moratori ex D.Lgs 231/02"
+  - Footer normativo: "Azienda Certificata EN 1090-1 EXC2 • ISO 3834-2 • Centro di Trasformazione Acciaio"
+  - Rimossa variabile inutilizzata `netto_row`
 
 ## Issue Pendenti
 - **P1**: Bug condizioni pagamento cancellate alla chiusura form fornitore senza salvare
