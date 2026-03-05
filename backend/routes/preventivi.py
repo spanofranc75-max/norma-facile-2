@@ -911,8 +911,15 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
     invoice_id = f"inv_{uuid.uuid4().hex[:12]}"
     year = now.year
 
-    count = await db.invoices.count_documents({"user_id": uid, "document_type": {"$in": ["fattura", "FT"]}})
-    doc_number = f"FT-{year}/{count + 1:04d}"
+    # Use the SAME atomic counter as regular invoices for consistent numbering
+    ft_counter_id = f"{uid}_FT_{year}"
+    ft_counter = await db.document_counters.find_one_and_update(
+        {"counter_id": ft_counter_id},
+        {"$inc": {"counter": 1}},
+        upsert=True,
+        return_document=True,
+    )
+    doc_number = f"{ft_counter.get('counter', 1)}/{year}"
 
     # Calculate totals
     subtotal = sum(ln["line_total"] for ln in invoice_lines)
