@@ -1,0 +1,54 @@
+{
+  "summary": "Iteration 133: Mark As Paid Status Change Tests - ALL 11 TESTS PASS. Backend endpoint PATCH /api/invoices/{id}/status with {status: 'pagata'} correctly updates: status='pagata', payment_status='pagata', totale_pagato=total_document, residuo=0. Valid transitions (emessa/inviata_sdi/accettata/scaduta → pagata) work correctly. Invalid transitions (bozza→pagata, pagata→pagata) correctly rejected with 400.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "valid_status_transitions": {
+      "emessa_to_pagata": "PASS - Status='pagata', payment_status='pagata', totale_pagato=1220.00, residuo=0",
+      "inviata_sdi_to_pagata": "PASS - Status='pagata', payment_status='pagata', totale_pagato=610.00, residuo=0",
+      "accettata_to_pagata": "PASS - Status='pagata', payment_status='pagata', totale_pagato=2440.00, residuo=0",
+      "scaduta_to_pagata": "PASS - Status='pagata', payment_status='pagata', totale_pagato=915.00, residuo=0"
+    },
+    "invalid_status_transitions": {
+      "bozza_to_pagata": "PASS - Correctly rejected with 400 'Transizione non valida: bozza -> pagata'",
+      "pagata_to_pagata": "PASS - Correctly rejected with 400 'Transizione non valida: pagata -> pagata'"
+    },
+    "payment_fields_calculation": {
+      "totale_pagato": "PASS - Set to totals.total_document when marking as paid",
+      "residuo": "PASS - Set to 0 when marking as paid",
+      "payment_status": "PASS - Set to 'pagata' when marking as paid"
+    },
+    "get_invoices_response": {
+      "includes_payment_fields": "PASS - GET /api/invoices/ returns totale_pagato, residuo, payment_status"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration133_mark_as_paid.py",
+    "/app/test_reports/pytest/iteration133_mark_as_paid_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Backend code at /app/backend/routes/invoices.py lines 579-584 correctly handles 'pagata' status transition",
+    "update_fields correctly sets payment_status, totale_pagato, and residuo when status='pagata'",
+    "Valid transitions defined at lines 557-566 correctly include paths to 'pagata' from emessa, inviata_sdi, accettata, scaduta",
+    "Invalid transitions from bozza and pagata correctly rejected with 400 error"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration133_mark_as_paid.py"
+  ],
+  "success_rate": {
+    "backend": "100% (11/11 tests passed)"
+  },
+  "test_credentials": "Test user/session created via mongosh setup fixture",
+  "seed_data_creation": "6 test invoices created with different statuses (emessa, inviata_sdi, accettata, scaduta, bozza, pagata)",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Mark As Paid backend functionality verified working correctly. The PATCH /api/invoices/{id}/status endpoint properly handles 'pagata' status transitions and updates payment fields (payment_status, totale_pagato, residuo). Frontend testing skipped per instruction (Google OAuth required). Test file at /app/backend/tests/test_iteration133_mark_as_paid.py can be reused for regression testing."
+}

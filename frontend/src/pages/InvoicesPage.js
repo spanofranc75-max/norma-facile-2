@@ -25,7 +25,7 @@ import {
 import { toast } from 'sonner';
 import {
     Plus, MoreHorizontal, Download, RefreshCw, Trash2, Eye, FileCode,
-    Copy, CreditCard, CircleDollarSign, CheckCircle2, Clock, AlertCircle,
+    Copy, CreditCard, CircleDollarSign, CheckCircle2,
     Mail, Send,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
@@ -49,12 +49,6 @@ const STATUS_BADGES = {
     pagata: { label: 'Pagata', color: 'bg-emerald-100 text-emerald-800' },
     scaduta: { label: 'Scaduta', color: 'bg-orange-100 text-orange-800' },
     annullata: { label: 'Annullata', color: 'bg-gray-100 text-gray-500' },
-};
-
-const PAYMENT_STATUS_ICONS = {
-    pagata: { icon: CheckCircle2, color: 'text-emerald-600', label: 'Pagata' },
-    parzialmente_pagata: { icon: Clock, color: 'text-amber-600', label: 'Parziale' },
-    non_pagata: { icon: AlertCircle, color: 'text-red-500', label: 'Non pagata' },
 };
 
 const formatCurrency = (value) =>
@@ -403,7 +397,7 @@ export default function InvoicesPage() {
                                     <TableHead className="text-white font-semibold">Scadenza</TableHead>
                                     <TableHead className="text-white font-semibold text-right">Totale</TableHead>
                                     <TableHead className="text-white font-semibold text-right">Pagato</TableHead>
-                                    <TableHead className="text-white font-semibold text-right">Da Pagare</TableHead>
+                                    <TableHead className="text-white font-semibold text-right">Residuo</TableHead>
                                     <TableHead className="text-white font-semibold">Stato</TableHead>
                                     <TableHead className="w-[60px]"></TableHead>
                                 </TableRow>
@@ -432,15 +426,13 @@ export default function InvoicesPage() {
                                         const totalAmount = inv.totals?.total_document || 0;
                                         const paidAmount = inv.totale_pagato || 0;
                                         const dueAmount = totalAmount - paidAmount;
-                                        const ps = inv.payment_status || (paidAmount >= totalAmount && totalAmount > 0 ? 'pagata' : paidAmount > 0 ? 'parzialmente_pagata' : 'non_pagata');
-                                        const PsIcon = PAYMENT_STATUS_ICONS[ps]?.icon || AlertCircle;
-                                        const psColor = PAYMENT_STATUS_ICONS[ps]?.color || 'text-slate-400';
+                                        const isPaid = inv.status === 'pagata' || inv.payment_status === 'pagata' || (paidAmount >= totalAmount && totalAmount > 0);
 
                                         return (
                                             <TableRow
                                                 key={inv.invoice_id}
                                                 data-testid={`invoice-row-${inv.invoice_id}`}
-                                                className="hover:bg-slate-50 cursor-pointer"
+                                                className={`cursor-pointer transition-colors ${isPaid ? 'bg-emerald-50/40 hover:bg-emerald-50/70' : 'hover:bg-slate-50'}`}
                                                 onClick={() => navigate(`/invoices/${inv.invoice_id}`)}
                                             >
                                                 <TableCell className="font-mono font-medium">
@@ -457,15 +449,15 @@ export default function InvoicesPage() {
                                                 <TableCell className="text-right font-mono font-semibold text-[#0055FF]">
                                                     {formatCurrency(totalAmount)}
                                                 </TableCell>
-                                                <TableCell className="text-right font-mono text-emerald-700">
-                                                    {paidAmount > 0 ? formatCurrency(paidAmount) : '-'}
+                                                <TableCell className={`text-right font-mono ${isPaid ? 'font-semibold text-emerald-600' : paidAmount > 0 ? 'text-emerald-700' : 'text-slate-400'}`} data-testid={`paid-amount-${inv.invoice_id}`}>
+                                                    {isPaid ? formatCurrency(totalAmount) : paidAmount > 0 ? formatCurrency(paidAmount) : '-'}
                                                 </TableCell>
-                                                <TableCell className="text-right font-mono text-red-600">
+                                                <TableCell className={`text-right font-mono ${dueAmount > 0.01 ? 'text-red-600' : 'text-slate-400'}`} data-testid={`residuo-amount-${inv.invoice_id}`}>
                                                     {dueAmount > 0.01 ? formatCurrency(dueAmount) : '-'}
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-1.5">
-                                                        {inv.status === 'pagata' || ps === 'pagata' ? (
+                                                        {isPaid ? (
                                                             <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300">
                                                                 <CheckCircle2 className="h-3 w-3 mr-1" />Pagata
                                                             </Badge>
@@ -478,7 +470,7 @@ export default function InvoicesPage() {
                                                                     <button
                                                                         data-testid={`btn-toggle-paid-${inv.invoice_id}`}
                                                                         onClick={(e) => { e.stopPropagation(); handleChangeStatus(inv, 'pagata'); }}
-                                                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                                                                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-200 hover:border-emerald-400 transition-all shadow-sm"
                                                                         title="Segna come pagata"
                                                                     >
                                                                         <CircleDollarSign className="h-3 w-3" />Pagata?
@@ -571,7 +563,7 @@ export default function InvoicesPage() {
                                 <div className="flex gap-6">
                                     <span>Totale: <strong className="font-mono">{formatCurrency(totalDoc)}</strong></span>
                                     <span>Pagato: <strong className="font-mono text-emerald-700">{formatCurrency(totalPaid)}</strong></span>
-                                    <span>Residuo: <strong className="font-mono text-red-600">{formatCurrency(totalDue)}</strong></span>
+                                    <span>Residuo: <strong className="font-mono text-red-600">{totalDue > 0.01 ? formatCurrency(totalDue) : '-'}</strong></span>
                                 </div>
                             </div>
                         )}
