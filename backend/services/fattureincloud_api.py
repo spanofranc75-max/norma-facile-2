@@ -154,15 +154,27 @@ def map_fattura_to_fic(invoice: dict, client: dict) -> Dict[str, Any]:
     """Map internal invoice format to FattureInCloud format."""
     items = []
     for line in invoice.get("lines", []):
+        vat_val = line.get("vat_rate", 22)
+        try:
+            vat_val = float(vat_val) if str(vat_val) not in ("N3", "N4", "N1", "N2") else 0
+        except (ValueError, TypeError):
+            vat_val = 22
         items.append({
             "product_id": None,
             "code": line.get("code", ""),
             "name": line.get("description", ""),
             "net_price": line.get("unit_price", 0),
             "qty": line.get("quantity", 1),
-            "vat": {"id": 0, "value": line.get("iva_rate", 22)},
-            "discount": line.get("discount_1", 0),
+            "vat": {"id": 0, "value": vat_val},
+            "discount": line.get("discount_percent", 0),
         })
+
+    # Extract numeric part from document_number (e.g. "16/2026" -> 16)
+    doc_num_raw = invoice.get("document_number", "")
+    try:
+        doc_number_int = int(str(doc_num_raw).split("/")[0])
+    except (ValueError, IndexError):
+        doc_number_int = 0
 
     return {
         "type": "invoice",
@@ -180,7 +192,7 @@ def map_fattura_to_fic(invoice: dict, client: dict) -> Dict[str, Any]:
             "certified_email": client.get("pec", ""),
         },
         "date": invoice.get("issue_date") or (invoice.get("created_at", "").split("T")[0] if isinstance(invoice.get("created_at"), str) else None),
-        "number": invoice.get("document_number", ""),
+        "number": doc_number_int,
         "items_list": items,
         "payment_method": {"id": 0},
     }

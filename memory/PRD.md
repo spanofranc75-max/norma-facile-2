@@ -154,6 +154,12 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
   - Visibile per tutte le fatture non-bozza che non sono già pagate (incluse fatture vecchie di migrazione)
   - Funziona anche per fatture senza sdi_id (storiche importate)
 
+- **BUG FIX: Invio SDI errore 500** (`fattureincloud_api.py`):
+  - Fix campo `number`: ora estrae la parte numerica da "16/2026" → `16` (intero), FIC API richiedeva un intero
+  - Fix campo `vat`: leggeva `iva_rate` (inesistente) → ora legge `vat_rate` (campo corretto)
+  - Fix campo `discount`: leggeva `discount_1` (inesistente) → ora legge `discount_percent` (campo corretto)
+  - Gestione aliquote esenti (N3, N4) → valore IVA = 0
+
 ## Issue Pendenti
 - **P1**: Bug condizioni pagamento cancellate alla chiusura form fornitore senza salvare
 - **P1**: Verifica end-to-end generazione dinamica PDF (DoP/CE) con dati materiali reali
