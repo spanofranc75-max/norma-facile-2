@@ -45,16 +45,20 @@ export async function apiRequest(endpoint, options = {}) {
     
     if (!response.ok) {
         let detail = `Errore ${response.status}`;
+        let rawBody = '';
         try {
-            const text = await response.text();
-            console.error(`[apiRequest] ${response.status} response body:`, text);
+            rawBody = await response.text();
+            console.error(`[apiRequest] ${response.status} response body:`, rawBody);
+        } catch (readErr) {
+            console.error('[apiRequest] Failed to read response body:', readErr);
+        }
+        if (rawBody) {
             try {
-                const err = JSON.parse(text);
+                const err = JSON.parse(rawBody);
                 if (err.detail) {
                     if (typeof err.detail === 'string') {
                         detail = err.detail;
                     } else if (Array.isArray(err.detail)) {
-                        // FastAPI 422 validation errors: extract human-readable messages
                         const messages = err.detail.map(e => {
                             const field = (e.loc || []).filter(l => l !== 'body').join('.');
                             return field ? `${field}: ${e.msg}` : e.msg;
@@ -65,10 +69,8 @@ export async function apiRequest(endpoint, options = {}) {
                     }
                 }
             } catch {
-                if (text) detail = text.substring(0, 300);
+                detail = rawBody.substring(0, 500);
             }
-        } catch (readErr) {
-            console.error('[apiRequest] Failed to read response body:', readErr);
         }
         throw new Error(detail);
     }
