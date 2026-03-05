@@ -161,7 +161,7 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
   - Gestione aliquote esenti (N3, N4) → valore IVA = 0
 
 ## Issue Pendenti
-- **P1**: Bug condizioni pagamento cancellate alla chiusura form fornitore senza salvare
+- **P1**: Bug condizioni pagamento cancellate alla chiusura form fornitore senza salvare (analizzato: nessun bug strutturale trovato nel codice, chiusura dialog non ha side effects — serve riproduzione utente)
 - **P1**: Verifica end-to-end generazione dinamica PDF (DoP/CE) con dati materiali reali
 - **P1**: Verifica flusso creazione DDT (nuovo dialog con numero editabile)
 - **P2**: Gestione eccezioni generiche (`except Exception`) in tutto il backend
@@ -171,7 +171,8 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 
 ### P0
 - ~~Preventivi accettati nella Planning Board~~ COMPLETATO
-- Conversione RdP in Ordine di Acquisto (OdA)
+- ~~Conversione RdP in Ordine di Acquisto (OdA)~~ COMPLETATO
+- ~~Error handling SDI (ReferenceError crash)~~ VERIFICATO (17/17 test, iteration_136)
 - Firma digitale su tablet (QR code per fasi produzione)
 
 ### P1
