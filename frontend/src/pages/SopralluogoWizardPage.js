@@ -268,7 +268,7 @@ export default function SopralluogoWizardPage() {
             });
             const result = await apiRequest(`/sopralluoghi/${sopralluogo.sopralluogo_id}/genera-preventivo?variante=${selectedVariant}`, { method: 'POST' });
             toast.success(result.message);
-            navigate(`/preventivi/${result.preventivo.quote_id}`);
+            navigate(`/preventivi/${result.preventivo.preventivo_id}`);
         } catch (err) {
             toast.error(err.message, { duration: 8000 });
         } finally {

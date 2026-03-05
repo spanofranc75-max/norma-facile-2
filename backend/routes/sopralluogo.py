@@ -430,25 +430,55 @@ async def genera_preventivo(
                 "vat_amount": round(ore_stimate * 45 * 0.22, 2),
             })
 
-    # Create the preventivo
-    year = datetime.now(timezone.utc).strftime("%Y")
-    q_count = await db.preventivi.count_documents({"user_id": user["user_id"]})
-    prev_number = f"PRV-{year}-{q_count + 1:04d}"
+    # Create the preventivo using the same schema as preventivi.py
+    prev_id = f"prev_{uuid.uuid4().hex[:10]}"
+    now_dt = datetime.now(timezone.utc)
+    year = now_dt.year
+    uid = user["user_id"]
+    now = now_dt.isoformat()
 
-    now = datetime.now(timezone.utc).isoformat()
+    # Atomic counter for sequential numbering (same as preventivi.py)
+    counter_id = f"PRV-{uid}-{year}"
+    counter = await db.document_counters.find_one_and_update(
+        {"counter_id": counter_id},
+        {"$inc": {"counter": 1}},
+        upsert=True,
+        return_document=True,
+    )
+    seq = counter.get("counter", 1)
+    prev_number = f"PRV-{year}-{seq:04d}"
+
     rischi_confermati = [r for r in analisi.get("rischi", []) if r.get("confermato", True)]
     rischi_text = "\n".join(
         f"- {r.get('zona', '')}: {r.get('problema', '')} ({r.get('norma_riferimento', '')})"
         for r in rischi_confermati
     )
 
+    # Compute line totals
+    computed_lines = []
+    for line in lines:
+        line["netto"] = line["unit_price"] * line["quantity"]
+        line["line_total"] = line["netto"]
+        line["vat_amount"] = round(line["netto"] * line["vat_rate"] / 100, 2)
+        computed_lines.append(line)
+
+    subtotal = sum(ln["line_total"] for ln in computed_lines)
+    total_iva = sum(ln["vat_amount"] for ln in computed_lines)
+    totals = {
+        "subtotal": round(subtotal, 2),
+        "sconto_globale": 0,
+        "imponibile": round(subtotal, 2),
+        "total_iva": round(total_iva, 2),
+        "total": round(subtotal + total_iva, 2),
+        "acconto": 0,
+        "netto_a_pagare": round(subtotal + total_iva, 2),
+    }
+
     preventivo = {
-        "quote_id": f"quote_{uuid.uuid4().hex[:12]}",
-        "user_id": user["user_id"],
-        "document_number": prev_number,
+        "preventivo_id": prev_id,
+        "user_id": uid,
+        "number": prev_number,
         "client_id": doc.get("client_id", ""),
-        "issue_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-        "valid_until": "",
         "subject": f"Messa a Norma — {titolo_variante} — Perizia {doc_number}",
         "notes": f"Sopralluogo: {doc.get('indirizzo', '')}\n"
                  f"Tipo chiusura: {analisi.get('tipo_chiusura', '')}\n"
@@ -456,11 +486,16 @@ async def genera_preventivo(
                  f"Variante selezionata: {variante.upper()} — {titolo_variante}\n\n"
                  f"Criticita riscontrate:\n{rischi_text}\n\n"
                  f"Vedi Perizia Tecnica allegata ({doc_number}) per dettagli completi.",
-        "internal_notes": f"Generato da sopralluogo {doc.get('sopralluogo_id', '')} — Variante {variante.upper()}",
-        "lines": lines,
+        "note_pagamento": "",
+        "riferimento": doc_number,
+        "normativa": "EN_13241",
+        "validity_days": 30,
+        "giorni_consegna": selected.get("tempo_stimato", ""),
+        "sconto_globale": 0,
+        "acconto": 0,
+        "lines": computed_lines,
+        "totals": totals,
         "status": "bozza",
-        "payment_terms": "",
-        "payment_method": "",
         "sopralluogo_id": doc.get("sopralluogo_id"),
         "variante_selezionata": variante.upper(),
         "created_at": now,
@@ -474,7 +509,7 @@ async def genera_preventivo(
     await db[COLLECTION].update_one(
         {"sopralluogo_id": sopralluogo_id},
         {"$set": {
-            "preventivo_id": preventivo["quote_id"],
+            "preventivo_id": prev_id,
             "variante_selezionata": variante.upper(),
             "status": "completato",
             "updated_at": now,
