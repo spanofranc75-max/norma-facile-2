@@ -51,6 +51,12 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **Header professionale** nelle pagine contenuto: barra Blu Notte con logo grande + "RELAZIONE TECNICA DI SOPRALLUOGO" + numero documento
 - 20/20 test passati (iteration_140)
 
+### Sistema Email Perizia Professionale (5 Mar 2026)
+- **Template dinamico**: 3 livelli in base a conformità%: URGENTE (<40%, Art. 2051 C.C., Rischio Penale/Assicurativo), ATTENZIONE (40-65%), Normale (>65%)
+- **Anteprima completa**: Pannello con Oggetto + Corpo editabili, "Scarica PDF (Anteprima)" per revisione prima dell'invio
+- **Backend**: Accetta subject/body personalizzati dal frontend, fallback a default se vuoti
+- 39/39 test passati (iteration_144)
+
 ### Migliorie Professionali PDF Perizia v3 (5 Mar 2026)
 - **AI Prompt**: Varianti autonome (no "include Variante A"), campo `rischi_residui`, campo `stima_manodopera`
 - **PDF Registro Manutenzione**: Obbligo Libretto Impianto, manutenzioni semestrali
