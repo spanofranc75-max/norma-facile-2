@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import {
     ArrowLeft, ArrowRight, Camera, Upload, Trash2, Brain, FileText,
     AlertTriangle, CheckCircle2, ShieldAlert, Loader2, X, Eye,
-    MapPin, User, Image as ImageIcon, ChevronRight, Wrench, Download
+    MapPin, User, Image as ImageIcon, ChevronRight, Wrench, Download, UserPlus
 } from 'lucide-react';
+import { ClientQuickCreateModal } from '../components/ClientQuickCreateModal';
 
 const STEPS = [
     { id: 'cliente', label: 'Cliente & Luogo', icon: User },
@@ -53,6 +54,7 @@ export default function SopralluogoWizardPage() {
     const [uploading, setUploading] = useState(false);
     const [sopralluogo, setSopralluogo] = useState(null);
     const [photoUrls, setPhotoUrls] = useState({});
+    const [showQuickClient, setShowQuickClient] = useState(false);
 
     const [formData, setFormData] = useState({
         client_id: '',
@@ -330,13 +332,34 @@ export default function SopralluogoWizardPage() {
                     <CardContent className="p-6 space-y-4">
                         <div>
                             <Label>Cliente</Label>
-                            <Select value={formData.client_id || '__none__'} onValueChange={v => setFormData(p => ({ ...p, client_id: v === '__none__' ? '' : v }))}>
-                                <SelectTrigger data-testid="select-client"><SelectValue placeholder="Seleziona cliente..." /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="__none__">-- Nessun cliente --</SelectItem>
-                                    {clients.map(c => <SelectItem key={c.client_id} value={c.client_id}>{c.business_name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
+                            <div className="flex gap-2">
+                                <div className="flex-1">
+                                    <Select value={formData.client_id || '__none__'} onValueChange={v => setFormData(p => ({ ...p, client_id: v === '__none__' ? '' : v }))}>
+                                        <SelectTrigger data-testid="select-client"><SelectValue placeholder="Seleziona cliente..." /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="__none__">-- Nessun cliente --</SelectItem>
+                                            {clients.map(c => <SelectItem key={c.client_id} value={c.client_id}>{c.business_name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setShowQuickClient(true)}
+                                    className="border-blue-300 text-blue-600 hover:bg-blue-50 shrink-0"
+                                    data-testid="btn-quick-create-client"
+                                >
+                                    <UserPlus className="h-4 w-4 mr-1" /> Nuovo
+                                </Button>
+                            </div>
+                            <ClientQuickCreateModal
+                                open={showQuickClient}
+                                onOpenChange={setShowQuickClient}
+                                onCreated={(newClient) => {
+                                    setClients(prev => [...prev, newClient].sort((a, b) => a.business_name.localeCompare(b.business_name)));
+                                    setFormData(p => ({ ...p, client_id: newClient.client_id }));
+                                }}
+                            />
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div className="sm:col-span-2">

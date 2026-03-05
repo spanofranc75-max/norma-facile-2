@@ -205,6 +205,14 @@ body {{ font-family: 'Segoe UI', Calibri, Arial, sans-serif; font-size: 9pt; col
 
 /* ══════════ CONTENT PAGES ══════════ */
 .content-page {{ page: content; }}
+
+/* Professional header bar on content pages */
+.content-header {{ background: {NAVY}; padding: 4mm 5mm; margin-bottom: 6mm; border-radius: 0 0 2mm 2mm; display: table; width: 100%; }}
+.content-header-logo {{ display: table-cell; width: 20mm; vertical-align: middle; }}
+.content-header-logo img {{ height: 10mm; }}
+.content-header-title {{ display: table-cell; vertical-align: middle; text-align: center; color: white; font-size: 11pt; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }}
+.content-header-doc {{ display: table-cell; width: 28mm; vertical-align: middle; text-align: right; color: {BLUE_ACCENT}; font-size: 7.5pt; font-weight: 600; }}
+
 .section {{ margin-bottom: 7mm; }}
 .section-header {{ background: {NAVY}; color: white; padding: 2.5mm 5mm; font-size: 10pt; font-weight: 700; letter-spacing: 0.3px; margin-bottom: 4mm; border-radius: 1.5mm; display: table; width: 100%; }}
 .section-header-num {{ display: table-cell; width: 8mm; font-size: 12pt; font-weight: 900; color: {BLUE_ACCENT}; vertical-align: middle; }}
@@ -422,21 +430,20 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
         </div>
     </div>"""
 
-    # ═══════════════ PHOTOS SECTION ═══════════════
+    # ═══════════════ PHOTOS SECTION (2x2 Grid, no empty placeholders) ═══════════════
     photos_html = ""
     if photos_b64:
+        # Build only real photo cards, arranged in rows of 2
+        all_cards = []
+        for idx, p in enumerate(photos_b64):
+            lbl = _esc(p.get("label", f"Foto {idx + 1}")).upper()
+            all_cards.append(f'<div class="photo-card"><img src="data:{p["mime_type"]};base64,{p["base64"]}" /><div class="photo-card-label">{lbl}</div></div>')
+
         rows = []
-        for i in range(0, len(photos_b64), 2):
-            cards = []
-            for j in range(2):
-                idx = i + j
-                if idx < len(photos_b64):
-                    p = photos_b64[idx]
-                    lbl = _esc(p.get("label", f"Foto {idx + 1}")).upper()
-                    cards.append(f'<div class="photo-card"><img src="data:{p["mime_type"]};base64,{p["base64"]}" /><div class="photo-card-label">{lbl}</div></div>')
-                else:
-                    cards.append('<div class="photo-card" style="border:none;background:none;"></div>')
-            rows.append(f'<div class="photos-row">{"".join(cards)}</div>')
+        for i in range(0, len(all_cards), 2):
+            chunk = all_cards[i:i + 2]
+            rows.append(f'<div class="photos-row">{"".join(chunk)}</div>')
+
         photos_html = f"""
         <div class="section">
             <div class="section-header"><div class="section-header-num">01</div><div class="section-header-text">DOCUMENTAZIONE FOTOGRAFICA</div></div>
@@ -519,10 +526,11 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             </div>
         </div>"""
 
-    # ═══════════════ MATERIALS TABLE ═══════════════
+    # ═══════════════ MATERIALS TABLE (Smart pricing) ═══════════════
     materiali = analisi.get("materiali_suggeriti", [])
     materials_html = ""
     if materiali:
+        has_any_price = any(m.get("prezzo", 0) > 0 for m in materiali)
         mat_rows = ""
         for m in materiali:
             desc = _esc(m.get("descrizione_catalogo") or m.get("descrizione", ""))
@@ -530,16 +538,25 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             prezzo = m.get("prezzo", 0)
             pri = m.get("priorita", "consigliato")
             tot = prezzo * qty
+            if prezzo > 0:
+                prezzo_str = f"{prezzo:,.2f} &euro;"
+                tot_str = f"<strong>{tot:,.2f} &euro;</strong>"
+            else:
+                prezzo_str = '<span style="color:#94a3b8;font-style:italic;">Da Quotare</span>'
+                tot_str = '<span style="color:#94a3b8;font-style:italic;">—</span>'
             mat_rows += f"""
             <tr>
                 <td>{desc}</td>
                 <td><span class="badge-pri badge-{pri}">{_esc(pri).upper()}</span></td>
                 <td>{qty}</td>
-                <td>{prezzo:,.2f} &euro;</td>
-                <td><strong>{tot:,.2f} &euro;</strong></td>
+                <td>{prezzo_str}</td>
+                <td>{tot_str}</td>
             </tr>"""
         total_mat = sum(m.get("prezzo", 0) * m.get("quantita", 1) for m in materiali)
-        mat_rows += f'<tr class="mat-total"><td colspan="4" style="text-align:right;">TOTALE MATERIALI (IVA escl.)</td><td><strong>{total_mat:,.2f} &euro;</strong></td></tr>'
+        if has_any_price:
+            mat_rows += f'<tr class="mat-total"><td colspan="4" style="text-align:right;">TOTALE MATERIALI (IVA escl.)</td><td><strong>{total_mat:,.2f} &euro;</strong></td></tr>'
+        else:
+            mat_rows += '<tr class="mat-total"><td colspan="5" style="text-align:center;color:#94a3b8;font-style:italic;">Stima preliminare — Prezzi da definire in fase di preventivo</td></tr>'
         materials_html = f"""
         <div class="section">
             <div class="section-header"><div class="section-header-num">04</div><div class="section-header-text">MATERIALI E INTERVENTI</div></div>
@@ -594,10 +611,20 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
         Riferimenti normativi: UNI EN 12453, UNI EN 13241, Direttiva Macchine 2006/42/CE
     </div>"""
 
+    # ═══════════════ CONTENT PAGE HEADER ═══════════════
+    content_logo = f'<img src="{logo_url}" />' if logo_url else f'<div style="font-size:8pt;font-weight:800;color:white;">{c_name}</div>'
+    content_header = f"""
+    <div class="content-header">
+        <div class="content-header-logo">{content_logo}</div>
+        <div class="content-header-title">Relazione Tecnica di Sopralluogo</div>
+        <div class="content-header-doc">{doc_num}</div>
+    </div>"""
+
     # ═══════════════ ASSEMBLE ═══════════════
     html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{CSS}</style></head><body>
     {cover}
     <div class="content-page">
+        {content_header}
         {summary_html}
         {desc_html}
         {photos_html}
