@@ -160,6 +160,11 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
   - Fix campo `discount`: leggeva `discount_1` (inesistente) → ora legge `discount_percent` (campo corretto)
   - Gestione aliquote esenti (N3, N4) → valore IVA = 0
 
+## Bug Risolti (sessione 5 Marzo 2026 - Fork 7)
+- **P0 FIX: certified_email null causa 422 su FIC** - `map_fattura_to_fic` usava `client.get("pec", "")` che restituisce `None` quando la chiave esiste con valore `None` nel DB. FIC API rifiutava `null`. Fix: `client.get("pec") or ""` su TUTTI i campi entity. 18/18 test passati (iteration_137).
+- **P0 FIX: Auto-recovery 409 per documenti bloccati** - `_handle_fic_409` ora include `fields=ei_status` nella ricerca FIC per identificare documenti già inviati al SDI. Se il doc ha `ei_status`, skip update e restituisce ID direttamente. Se l'update fallisce con "locked", restituisce ID comunque per permettere il flusso auto-recovery SDI.
+- **Diagnosi SDI completa**: Eseguito test reale su FIC con le fatture 5,6,14,15,18/2026. Risultato: tutte già inviate su FIC con `ei_status='sent'`. Il flusso auto-recovery ora allinea correttamente lo stato locale.
+
 ## Issue Pendenti
 - **P1**: Bug condizioni pagamento cancellate alla chiusura form fornitore senza salvare (analizzato: nessun bug strutturale trovato nel codice, chiusura dialog non ha side effects — serve riproduzione utente)
 - **P1**: Verifica end-to-end generazione dinamica PDF (DoP/CE) con dati materiali reali
