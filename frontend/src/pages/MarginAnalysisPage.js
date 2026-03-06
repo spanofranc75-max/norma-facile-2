@@ -89,6 +89,7 @@ function DetailDialog({ commessaId, open, onClose }) {
                             <CardContent className="px-4 pb-4 space-y-2 text-sm">
                                 <div className="flex justify-between"><span className="text-slate-500">Materiali (manuali)</span><span className="font-mono">{fmtEur(data.costi_materiali_manuali)}</span></div>
                                 <div className="flex justify-between"><span className="text-slate-500">Fatture imputate</span><span className="font-mono">{fmtEur(data.costi_fatture_imputate)}</span></div>
+                                <div className="flex justify-between"><span className="text-slate-500">Ordini acquisto (OdA)</span><span className="font-mono">{fmtEur(data.costi_oda)}</span></div>
                                 <div className="flex justify-between"><span className="text-slate-500">Lavorazioni esterne</span><span className="font-mono">{fmtEur(data.costi_esterni)}</span></div>
                                 <div className="flex justify-between"><span className="text-slate-500">Manodopera ({data.ore_lavorate}h x {fmtEur(data.costo_orario)}/h)</span><span className="font-mono">{fmtEur(data.costo_personale)}</span></div>
                                 <div className="flex justify-between border-t pt-2 font-bold"><span>Totale Costi</span><span className="font-mono text-red-600">{fmtEur(data.costo_totale)}</span></div>

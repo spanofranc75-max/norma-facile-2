@@ -458,6 +458,12 @@ export default function CommessaHubPage() {
                                                 <span className="font-mono text-slate-700">{fmtEur(costAnalysis.costi_fatture_imputate)}</span>
                                             </div>
                                         )}
+                                        {costAnalysis.costi_oda > 0 && (
+                                            <div className="flex justify-between py-1 border-b border-dashed">
+                                                <span className="text-slate-500 flex items-center gap-1"><Tag className="h-3 w-3 text-indigo-500" /> Ordini (OdA)</span>
+                                                <span className="font-mono text-slate-700">{fmtEur(costAnalysis.costi_oda)}</span>
+                                            </div>
+                                        )}
                                         {costAnalysis.costi_esterni > 0 && (
                                             <div className="flex justify-between py-1 border-b border-dashed">
                                                 <span className="text-slate-500 flex items-center gap-1"><WrenchIcon className="h-3 w-3 text-amber-500" /> Lav. Esterne</span>

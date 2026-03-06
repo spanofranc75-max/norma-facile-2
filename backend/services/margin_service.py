@@ -78,14 +78,17 @@ async def get_commessa_margin_full(commessa_id: str, uid: str) -> dict:
                     })
                     break
 
-    # 3. DDT conto lavoro
+    # 3. DDT conto lavoro + OdA costs from approvvigionamento
     costo_esterni = 0
+    costo_oda = 0
     cl_detail = []
-    async for cl in db.commesse.aggregate([
-        {"$match": {"commessa_id": commessa_id, "user_id": uid}},
-        {"$project": {"conto_lavoro": 1}},
-    ]):
-        for item in cl.get("conto_lavoro", []):
+    oda_detail = []
+    comm_full = await db.commesse.find_one(
+        {"commessa_id": commessa_id, "user_id": uid},
+        {"_id": 0, "conto_lavoro": 1, "approvvigionamento": 1}
+    )
+    if comm_full:
+        for item in comm_full.get("conto_lavoro", []):
             importo = float(item.get("costo_totale", 0) or 0)
             costo_esterni += importo
             cl_detail.append({
@@ -93,6 +96,18 @@ async def get_commessa_margin_full(commessa_id: str, uid: str) -> dict:
                 "fornitore": item.get("fornitore_nome", ""),
                 "importo": round(importo, 2),
             })
+        # OdA (ordini di acquisto) from approvvigionamento
+        approv = comm_full.get("approvvigionamento", {})
+        for oda in approv.get("ordini", []):
+            importo = float(oda.get("importo_totale", 0) or 0)
+            if importo > 0:
+                costo_oda += importo
+                oda_detail.append({
+                    "ordine_id": oda.get("ordine_id", ""),
+                    "fornitore": oda.get("fornitore_nome", ""),
+                    "importo": round(importo, 2),
+                    "stato": oda.get("stato", ""),
+                })
 
     # 4. Fatture emesse collegate
     fatturato = 0
@@ -106,7 +121,7 @@ async def get_commessa_margin_full(commessa_id: str, uid: str) -> dict:
     # Calcoli
     costo_personale = round(ore * costo_orario, 2)
     costo_materiali_totale = round(materiali_manuali + fatture_imputate, 2)
-    costo_totale = round(costo_materiali_totale + costo_personale + costo_esterni, 2)
+    costo_totale = round(costo_materiali_totale + costo_personale + costo_esterni + costo_oda, 2)
     ricavo = max(valore, fatturato)
     margine = round(ricavo - costo_totale, 2)
     margine_pct = round((margine / ricavo * 100) if ricavo > 0 else 0, 1)
@@ -135,6 +150,7 @@ async def get_commessa_margin_full(commessa_id: str, uid: str) -> dict:
         "costi_materiali_manuali": round(materiali_manuali, 2),
         "costi_fatture_imputate": round(fatture_imputate, 2),
         "costi_esterni": round(costo_esterni, 2),
+        "costi_oda": round(costo_oda, 2),
         "costo_materiali_totale": costo_materiali_totale,
         "costo_personale": costo_personale,
         "ore_lavorate": ore,
@@ -148,6 +164,7 @@ async def get_commessa_margin_full(commessa_id: str, uid: str) -> dict:
         "costi_per_tipo": {k: round(v, 2) for k, v in by_tipo.items()},
         "fatture_imputate_detail": fr_detail,
         "conto_lavoro_detail": cl_detail,
+        "oda_detail": oda_detail,
         "num_voci_manuali": len(costi_manuali),
     }
 
@@ -159,7 +176,9 @@ async def get_all_margins(uid: str) -> dict:
     commesse = await db.commesse.find(
         {"user_id": uid, "stato": {"$nin": ["bozza"]}},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "client_name": 1,
-         "value": 1, "costi_reali": 1, "ore_lavorate": 1, "stato": 1}
+         "value": 1, "costi_reali": 1, "ore_lavorate": 1, "stato": 1,
+         "approvvigionamento.ordini.importo_totale": 1,
+         "conto_lavoro.costo_totale": 1}
     ).sort("numero", -1).to_list(300)
 
     # Pre-fetch fatture imputate per commessa
@@ -188,9 +207,13 @@ async def get_all_margins(uid: str) -> dict:
         ore = float(c.get("ore_lavorate", 0) or 0)
         costi_manuali = sum(float(x.get("importo", 0) or 0) for x in c.get("costi_reali", []))
         costi_fr = fr_by_commessa.get(cid, 0)
+        # OdA costs from approvvigionamento
+        costi_oda = sum(float(o.get("importo_totale", 0) or 0) for o in c.get("approvvigionamento", {}).get("ordini", []))
+        # Conto lavoro costs
+        costi_cl = sum(float(cl.get("costo_totale", 0) or 0) for cl in c.get("conto_lavoro", []))
 
         costo_personale = round(ore * costo_orario, 2)
-        costo_totale = round(costi_manuali + costi_fr + costo_personale, 2)
+        costo_totale = round(costi_manuali + costi_fr + costi_oda + costi_cl + costo_personale, 2)
         margine = round(valore - costo_totale, 2)
         margine_pct = round((margine / valore * 100) if valore > 0 else 0, 1)
 
@@ -213,7 +236,7 @@ async def get_all_margins(uid: str) -> dict:
             "client_name": c.get("client_name", ""),
             "stato": c.get("stato", ""),
             "valore": round(valore, 2),
-            "costi_materiali": round(costi_manuali + costi_fr, 2),
+            "costi_materiali": round(costi_manuali + costi_fr + costi_oda + costi_cl, 2),
             "costo_personale": costo_personale,
             "ore": ore,
             "costo_totale": costo_totale,

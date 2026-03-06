@@ -1,0 +1,46 @@
+{
+  "summary": "Iteration 155: Verified OdA cost inclusion bug fix in margin analysis. All 18 tests passed. The fix correctly reads approvvigionamento.ordini[].importo_totale and conto_lavoro[].costo_totale into margin calculations.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration155_oda_margin.py",
+    "/app/test_reports/pytest/iteration155_oda_margin_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "margin_service.py line 99-110: Correctly reads approvvigionamento.ordini[].importo_totale for single commessa",
+    "margin_service.py line 124: costo_totale formula now includes costo_oda: costo_materiali_totale + costo_personale + costo_esterni + costo_oda",
+    "margin_service.py line 211: get_all_margins reads OdA costs: sum(o.get('importo_totale', 0) for o in c.get('approvvigionamento', {}).get('ordini', []))",
+    "margin_service.py line 216: Overview costo_totale includes costi_oda: costi_manuali + costi_fr + costi_oda + costi_cl + costo_personale",
+    "margin_service.py line 239: costi_materiali field includes OdA and CL: costi_manuali + costi_fr + costi_oda + costi_cl",
+    "Response includes oda_detail array with ordine_id, fornitore, importo, stato for transparency"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration155_oda_margin.py"
+  ],
+  "success_rate": {
+    "backend": "100% (18/18 tests passed)",
+    "frontend": "N/A (backend-only testing requested)"
+  },
+  "seed_data_creation": "Created 4 test commesse: (1) with single OdA €1029.87, (2) with multiple OdA totaling €3500, (3) without OdA for comparison, (4) with only conto_lavoro. All use user_id=TEST_oda_margin_user_155 and commessa_ids prefixed with TEST_ODA_155_. Automatic cleanup via pytest fixture.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 155 verified the OdA cost inclusion fix. Key changes: 1) margin_service.py now reads approvvigionamento.ordini[].importo_totale for each commessa, 2) costo_totale includes OdA costs in both single commessa and overview endpoints, 3) Response includes new 'costi_oda' field and 'oda_detail' array. Test commessa structure: { approvvigionamento: { richieste: [], ordini: [{ ordine_id, importo_totale, fornitore_nome, stato }], arrivi: [] } }. The fix resolves the bug where RdP → OdA (€1029.87) → Registra Arrivo costs didn't appear in margin analysis.",
+  "verified_fixes": [
+    "approvvigionamento.ordini[].importo_totale is read in get_commessa_margin_full",
+    "costo_oda is calculated and added to costo_totale in single commessa endpoint",
+    "get_all_margins includes OdA costs via line 211: costi_oda sum",
+    "Overview costo_totale includes costi_oda in formula (line 216)",
+    "costi_materiali field in overview includes OdA and CL costs (line 239)",
+    "oda_detail array returned with ordine_id, fornitore, importo, stato",
+    "Empty ordini arrays handled safely with default {}",
+    "Zero importo_totale ordini are filtered out (if importo > 0 check)"
+  ]
+}
