@@ -1139,6 +1139,68 @@ async def create_split_commesse(preventivo_id: str, body: SplitCommessaRequest, 
     }
 
 
+# ── Chiusura Diretta (senza certificazione) ──────────────────────
+
+CHIUSURA_DIRETTA_ALLOWED = [
+    "richiesta", "bozza", "rilievo_completato", "firmato",
+    "in_produzione", "fatturato",
+]
+
+
+@router.post("/{commessa_id}/complete-simple")
+async def complete_commessa_simple(
+    commessa_id: str,
+    note: Optional[str] = Body(None, embed=True),
+    user: dict = Depends(get_current_user),
+):
+    """Close a commessa directly without going through certification/production steps."""
+    uid = user["user_id"]
+    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid})
+    if not doc:
+        raise HTTPException(404, "Commessa non trovata")
+
+    current_stato = doc.get("stato", "bozza")
+    if current_stato not in CHIUSURA_DIRETTA_ALLOWED:
+        raise HTTPException(
+            400,
+            f"Chiusura diretta non permessa dallo stato '{current_stato}'. "
+            f"Stati consentiti: {CHIUSURA_DIRETTA_ALLOWED}"
+        )
+
+    now = datetime.now(timezone.utc)
+    event = build_event(
+        "CHIUSURA_DIRETTA", user,
+        note or "Commessa chiusa senza certificazione (percorso semplificato)",
+    )
+
+    await db[COLLECTION].update_one(
+        {"commessa_id": commessa_id},
+        {
+            "$set": {
+                "stato": "chiuso",
+                "stato_precedente": current_stato,
+                "status": "completato",
+                "updated_at": now,
+            },
+            "$push": {
+                "eventi": event,
+                "status_history": {
+                    "status": "completato",
+                    "date": now.isoformat(),
+                    "note": "Chiusura diretta senza certificazione",
+                },
+            },
+        },
+    )
+
+    logger.info(f"Commessa {commessa_id}: chiusura diretta da '{current_stato}' → chiuso")
+    return {
+        "message": "Commessa chiusa con successo",
+        "stato": "chiuso",
+        "stato_label": "Chiuso",
+    }
+
+
 # ── Dossier Unico di Commessa ────────────────────────────────────
 
 @router.get("/{commessa_id}/dossier")

@@ -1,0 +1,121 @@
+{
+  "summary": "Iteration 146: Chiusura Diretta (Close without certification) feature - ALL 10 BACKEND TESTS PASS + FULL FRONTEND UI VERIFICATION. New POST /api/commesse/{id}/complete-simple endpoint successfully tested. Frontend button 'Chiudi senza certificazione' appears correctly on CommessaHubPage for active states and is hidden for closed/suspended states.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "CommessaHubPage dialog",
+        "issues": ["Minor: Dialog has console warning 'Missing Description or aria-describedby' - accessibility enhancement suggested"]
+      }
+    ]
+  },
+  "features_verified": {
+    "backend_endpoint_complete_simple": {
+      "test": "test_endpoint_exists_and_accessible",
+      "status": "PASS",
+      "detail": "POST /api/commesse/{id}/complete-simple exists and returns 200"
+    },
+    "close_from_firmato_state": {
+      "test": "test_close_commessa_from_firmato_state",
+      "status": "PASS",
+      "detail": "Commessa closed from 'firmato' → 'chiuso', status → 'completato'"
+    },
+    "close_from_richiesta_state": {
+      "test": "test_close_commessa_from_richiesta_state",
+      "status": "PASS",
+      "detail": "Commessa closed from 'richiesta' → 'chiuso'"
+    },
+    "reject_close_already_chiuso": {
+      "test": "test_reject_close_already_chiuso",
+      "status": "PASS",
+      "detail": "Returns 400 with message 'Chiusura diretta non permessa dallo stato chiuso'"
+    },
+    "event_chiusura_diretta_recorded": {
+      "test": "test_event_chiusura_diretta_recorded",
+      "status": "PASS",
+      "detail": "CHIUSURA_DIRETTA event recorded in timeline with note and operator info"
+    },
+    "unauthorized_access_rejected": {
+      "test": "test_unauthorized_access_rejected",
+      "status": "PASS",
+      "detail": "Returns 401 without valid session"
+    },
+    "nonexistent_commessa_404": {
+      "test": "test_nonexistent_commessa_returns_404",
+      "status": "PASS",
+      "detail": "Returns 404 for non-existent commessa_id"
+    },
+    "allowed_states_validation": {
+      "test": "test_allowed_states_list",
+      "status": "PASS",
+      "detail": "CHIUSURA_DIRETTA_ALLOWED includes: richiesta, bozza, rilievo_completato, firmato, in_produzione, fatturato. Excludes: chiuso, sospesa"
+    },
+    "frontend_button_defined": {
+      "test": "test_frontend_button_states_defined",
+      "status": "PASS",
+      "detail": "CommessaHubPage.js has CHIUSURA_DIRETTA_STATES, button with data-testid='action-CHIUSURA_DIRETTA', dialog with data-testid='close-simple-dialog'"
+    },
+    "frontend_endpoint_call": {
+      "test": "test_frontend_calls_complete_simple_endpoint",
+      "status": "PASS",
+      "detail": "Frontend calls /complete-simple endpoint via handleCloseSimple"
+    },
+    "frontend_ui_button_visible": {
+      "test": "UI Playwright test",
+      "status": "PASS",
+      "detail": "Button 'Chiudi senza certificazione' visible on CommessaHubPage for commessa with 'firmato' state"
+    },
+    "frontend_ui_dialog_opens": {
+      "test": "UI Playwright test",
+      "status": "PASS",
+      "detail": "Dialog opens with Italian text, note textarea, Annulla/Chiudi Commessa buttons"
+    },
+    "frontend_ui_close_action": {
+      "test": "UI Playwright test",
+      "status": "PASS",
+      "detail": "Clicking confirm changes stato badge to 'Chiuso', shows success toast 'Commessa chiusa con successo'"
+    },
+    "frontend_ui_button_hidden_for_closed": {
+      "test": "UI Playwright test",
+      "status": "PASS",
+      "detail": "Button NOT visible for commessa already in 'chiuso' state - no AZIONI DISPONIBILI section shown"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration146_chiusura_diretta.py",
+    "/app/test_reports/pytest/iteration146_chiusura_diretta_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Backend routes/commesse.py lines 1142-1201: New endpoint complete-simple correctly validates state before closing",
+    "Backend CHIUSURA_DIRETTA_ALLOWED list at line 1144-1147 correctly excludes 'chiuso' and 'sospesa' states",
+    "Frontend CommessaHubPage.js line 61: CHIUSURA_DIRETTA_STATES matches backend allowed states",
+    "Frontend handles optional note correctly - sends empty object {} when no note provided",
+    "CHIUSURA_DIRETTA event correctly recorded with operatore_id, operatore_nome, note, and timestamp"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration146_chiusura_diretta.py"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 tests passed)",
+    "frontend": "100% (4 UI verification tests passed via Playwright)"
+  },
+  "test_credentials": {
+    "user_id": "user_97c773827822",
+    "email": "spano.franc75@gmail.com",
+    "session_token": "test_session_pytest_1772778592685"
+  },
+  "seed_data_creation": "Used existing test commesse: com_a418e85eb68a (richiesta), com_a9450707e479 (richiesta), com_1fa6adc6ca90 (firmato), com_e8c4810ad476 (chiuso)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 146 fully verified the 'Chiudi senza certificazione' feature. Backend endpoint POST /api/commesse/{id}/complete-simple works correctly - changes stato to 'chiuso', status to 'completato', records CHIUSURA_DIRETTA event. Frontend CommessaHubPage shows button only for active states (richiesta, bozza, rilievo_completato, firmato, in_produzione, fatturato), hides it for chiuso/sospesa. Dialog has Italian text, optional note textarea, confirm button. All tests pass.",
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "note": "All tests hit real backend API and MongoDB database"
+  }
+}

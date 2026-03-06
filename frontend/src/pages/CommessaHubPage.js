@@ -57,6 +57,9 @@ const AVAILABLE_EVENTS = {
 // Can always suspend (if not already)
 const SUSPEND_STATES = ['bozza', 'richiesta', 'rilievo_completato', 'firmato', 'in_produzione'];
 
+// Can close directly without certification
+const CHIUSURA_DIRETTA_STATES = ['richiesta', 'bozza', 'rilievo_completato', 'firmato', 'in_produzione', 'fatturato'];
+
 function formatEventDate(d) {
     if (!d) return '-';
     try {
@@ -81,6 +84,9 @@ export default function CommessaHubPage() {
     const [confirmEvent, setConfirmEvent] = useState(null);
     const [costAnalysis, setCostAnalysis] = useState(null);
     const [qrOpen, setQrOpen] = useState(false);
+    const [closeSimpleOpen, setCloseSimpleOpen] = useState(false);
+    const [closeSimpleNote, setCloseSimpleNote] = useState('');
+    const [closingSimple, setClosingSimple] = useState(false);
 
     const fetchHub = useCallback(async () => {
         try {
@@ -172,6 +178,24 @@ export default function CommessaHubPage() {
         }
     };
 
+    const handleCloseSimple = async () => {
+        setClosingSimple(true);
+        try {
+            const res = await apiRequest(`/commesse/${commessaId}/complete-simple`, {
+                method: 'POST',
+                body: { note: closeSimpleNote || '' },
+            });
+            toast.success(res.message);
+            setCloseSimpleOpen(false);
+            setCloseSimpleNote('');
+            fetchHub();
+        } catch (e) {
+            toast.error(e.message);
+        } finally {
+            setClosingSimple(false);
+        }
+    };
+
     if (loading) return (
         <DashboardLayout title="Commessa">
             <div className="flex items-center justify-center py-24"><Loader2 className="h-6 w-6 animate-spin text-[#0055FF]" /></div>
@@ -192,6 +216,7 @@ export default function CommessaHubPage() {
     const eventi = (c.eventi || []).slice().reverse(); // newest first
     const availableEvents = AVAILABLE_EVENTS[stato] || [];
     const canSuspend = SUSPEND_STATES.includes(stato);
+    const canCloseDirect = CHIUSURA_DIRETTA_STATES.includes(stato);
     const fattSummary = hub.fatturazione_summary;
 
     return (
@@ -291,7 +316,7 @@ export default function CommessaHubPage() {
                     <div className="lg:col-span-2 space-y-4">
 
                         {/* Action Buttons */}
-                        {(availableEvents.length > 0 || canSuspend) && (
+                        {(availableEvents.length > 0 || canSuspend || canCloseDirect) && (
                             <Card className="border-gray-200" data-testid="action-buttons">
                                 <CardHeader className="py-2 px-4"><CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Azioni Disponibili</CardTitle></CardHeader>
                                 <CardContent className="px-4 pb-3 flex flex-wrap gap-2">
@@ -304,6 +329,15 @@ export default function CommessaHubPage() {
                                             <ev.icon className="h-3.5 w-3.5 mr-1.5" /> {ev.label}
                                         </Button>
                                     ))}
+                                    {canCloseDirect && (
+                                        <Button size="sm" variant="outline"
+                                            onClick={() => setCloseSimpleOpen(true)}
+                                            className="text-xs border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+                                            data-testid="action-CHIUSURA_DIRETTA"
+                                        >
+                                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Chiudi senza certificazione
+                                        </Button>
+                                    )}
                                     {canSuspend && (
                                         <Button size="sm" variant="outline"
                                             onClick={() => setConfirmEvent({ tipo: 'SOSPENSIONE', label: 'Sospendi Commessa', icon: Pause })}
@@ -609,6 +643,42 @@ export default function CommessaHubPage() {
                                 <Download className="h-3.5 w-3.5 mr-1.5" /> Scarica QR
                             </Button>
                         </div>
+                    </DialogContent>
+                </Dialog>
+                {/* Close Simple Confirmation Dialog */}
+                <Dialog open={closeSimpleOpen} onOpenChange={setCloseSimpleOpen}>
+                    <DialogContent className="max-w-sm" data-testid="close-simple-dialog">
+                        <DialogHeader>
+                            <DialogTitle className="text-[#1E293B] flex items-center gap-2">
+                                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                                Chiudi senza certificazione
+                            </DialogTitle>
+                        </DialogHeader>
+                        <p className="text-sm text-slate-500">
+                            La commessa verra' chiusa direttamente saltando i passaggi di produzione e certificazione.
+                            Questa azione e' indicata per lavori semplici che non richiedono certificazione.
+                        </p>
+                        <div className="mt-2">
+                            <Label className="text-xs">Nota (opzionale)</Label>
+                            <Textarea
+                                value={closeSimpleNote}
+                                onChange={e => setCloseSimpleNote(e.target.value)}
+                                placeholder="Es: Lavoro di manutenzione completato..."
+                                className="mt-1 text-sm h-16"
+                                data-testid="close-simple-note"
+                            />
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" size="sm" onClick={() => setCloseSimpleOpen(false)}>Annulla</Button>
+                            <Button size="sm" disabled={closingSimple}
+                                className="bg-emerald-600 text-white hover:bg-emerald-700"
+                                onClick={handleCloseSimple}
+                                data-testid="btn-confirm-close-simple"
+                            >
+                                {closingSimple ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />}
+                                Chiudi Commessa
+                            </Button>
+                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
             </div>
