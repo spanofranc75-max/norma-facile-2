@@ -1,0 +1,56 @@
+{
+  "summary": "Iteration 153: Tested scadenziario sync and financial dashboard fixes for bug where invoices without scadenze_pagamento were invisible to the scadenziario. All 13 backend tests passed (1 skipped due to auth requirement). Key fixes verified: 1) POST /api/invoices/sync-scadenze endpoint exists and generates scadenze from due_date as fallback, 2) Scadenziario dashboard includes invoices BOTH with and without scadenze_pagamento (sections 5a and 5b), 3) Financial dashboard uses $nin:['pagata'] pattern correctly to catch all unpaid statuses including null/undefined, 4) Frontend ScadenziarioPage calls both /fatture-ricevute/sync-fic AND /invoices/sync-scadenze in parallel.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration153_scadenziario_sync.py",
+    "/app/test_reports/pytest/iteration153_scadenziario_sync_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Code verified: fatture_ricevute.py lines 1744-1782 correctly implements section 5b for invoices WITHOUT scadenze_pagamento",
+    "Code verified: invoices.py lines 762-811 implements sync-scadenze with due_date fallback",
+    "Code verified: financial_service.py line 97 uses $nin:['pagata'] pattern (catches null, undefined, non_pagata, parzialmente_pagata)",
+    "Code verified: ScadenziarioPage.js lines 80-91 calls both sync endpoints in parallel using Promise.all"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration153_scadenziario_sync.py"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 tests passed, 1 skipped)",
+    "frontend": "N/A (backend-only testing)"
+  },
+  "seed_data_creation": "No seed data created - tests verify code patterns and endpoint existence",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 153 verified scadenziario/financial dashboard bug fixes: 1) sync-scadenze endpoint creates fallback scadenze from due_date when client has no payment_type; 2) scadenziario dashboard section 5b now includes invoices without scadenze_pagamento by using due_date; 3) $nin:['pagata'] pattern replaces old $in:['non_pagata','parzialmente_pagata',None] to catch ALL non-paid statuses; 4) Frontend calls both /fatture-ricevute/sync-fic AND /invoices/sync-scadenze on sync button click. Collections: invoices.scadenze_pagamento, invoices.payment_status, invoices.due_date.",
+  "verified_features": [
+    "POST /api/invoices/sync-scadenze - endpoint exists and returns proper response",
+    "POST /api/invoices/sync-scadenze - uses due_date as fallback when payment_type unavailable",
+    "GET /api/fatture-ricevute/scadenziario/dashboard - endpoint exists",
+    "GET /api/fatture-ricevute/scadenziario/dashboard - section 5a handles invoices WITH scadenze_pagamento",
+    "GET /api/fatture-ricevute/scadenziario/dashboard - section 5b handles invoices WITHOUT scadenze_pagamento using due_date",
+    "GET /api/dashboard/cruscotto-finanziario - endpoint exists",
+    "financial_service.py - uses $nin:['pagata'] pattern for da_incassare_mese query",
+    "financial_service.py - uses $nin:['pagata'] pattern for receivables_aging query",
+    "financial_service.py - uses $nin:['pagata'] pattern for cashflow_forecast query",
+    "ScadenziarioPage.js - calls /fatture-ricevute/sync-fic on sync button",
+    "ScadenziarioPage.js - calls /invoices/sync-scadenze on sync button",
+    "ScadenziarioPage.js - uses Promise.all for parallel sync execution",
+    "ScadenziarioPage.js - handles 'incasso' tipo correctly",
+    "ScadenziarioPage.js - has 'clienti' view for incassi"
+  ],
+  "bug_fix_verification": {
+    "original_issue": "Scadenziario shows only 2 invoices to collect instead of more, financial dashboard shows incorrect values",
+    "root_cause": "Invoices without scadenze_pagamento field were invisible to scadenziario; payment_status queries used $in with explicit values missing null/undefined",
+    "fix_applied": "1) Added section 5b in scadenziario to include invoices using due_date, 2) Added sync-scadenze endpoint, 3) Changed payment_status queries to use $nin:['pagata']",
+    "fix_verified": "Yes - all code patterns verified through static analysis and endpoint existence tests"
+  }
+}

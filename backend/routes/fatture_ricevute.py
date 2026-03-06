@@ -1707,10 +1707,14 @@ async def get_scadenziario_dashboard(
     # 5. Incassi attesi — scadenze da fatture attive emesse
     incassi_scaduti = 0
     incassi_mese = 0
+    seen_invoice_ids = set()
+
+    # 5a. Invoices WITH scadenze_pagamento (structured installments)
     async for inv in db.invoices.find(
-        {"user_id": uid, "status": {"$in": ["emessa", "inviata_sdi", "accettata"]}, "scadenze_pagamento": {"$exists": True}},
-        {"_id": 0, "invoice_id": 1, "document_number": 1, "client_id": 1, "scadenze_pagamento": 1}
+        {"user_id": uid, "status": {"$in": ["emessa", "inviata_sdi", "accettata"]}, "scadenze_pagamento": {"$exists": True, "$ne": []}},
+        {"_id": 0, "invoice_id": 1, "document_number": 1, "client_id": 1, "scadenze_pagamento": 1, "issue_date": 1, "payment_terms": 1}
     ):
+        seen_invoice_ids.add(inv.get("invoice_id"))
         client = await db.clients.find_one({"client_id": inv.get("client_id")}, {"_id": 0, "business_name": 1})
         client_name = client.get("business_name", "") if client else ""
         for s in inv.get("scadenze_pagamento", []):
@@ -1736,6 +1740,46 @@ async def get_scadenziario_dashboard(
                 "link": "/fatturazione",
                 "rata": s.get("rata"),
             })
+
+    # 5b. Invoices WITHOUT scadenze_pagamento — use due_date as single payment
+    async for inv in db.invoices.find(
+        {"user_id": uid,
+         "status": {"$in": ["emessa", "inviata_sdi", "accettata"]},
+         "payment_status": {"$ne": "pagata"},
+         "$or": [
+             {"scadenze_pagamento": {"$exists": False}},
+             {"scadenze_pagamento": []},
+             {"scadenze_pagamento": None},
+         ]},
+        {"_id": 0, "invoice_id": 1, "document_number": 1, "client_id": 1,
+         "totals": 1, "due_date": 1, "issue_date": 1, "payment_terms": 1}
+    ):
+        if inv.get("invoice_id") in seen_invoice_ids:
+            continue
+        sc_date = inv.get("due_date") or inv.get("issue_date") or ""
+        importo = inv.get("totals", {}).get("total_document", 0) or 0
+        if not importo:
+            continue
+        stato = "scaduto" if sc_date and sc_date < today else ("in_scadenza" if sc_date and sc_date <= fine_mese else "ok")
+        if stato == "scaduto":
+            incassi_scaduti += importo
+        elif stato == "in_scadenza":
+            incassi_mese += importo
+        client = await db.clients.find_one({"client_id": inv.get("client_id")}, {"_id": 0, "business_name": 1})
+        client_name = client.get("business_name", "") if client else ""
+        scadenze.append({
+            "tipo": "incasso",
+            "id": inv.get("invoice_id"),
+            "titolo": f"Incasso {inv.get('document_number', '?')} (Rata 1)",
+            "sottotitolo": client_name,
+            "data_scadenza": sc_date,
+            "data_documento": inv.get("issue_date", ""),
+            "pagamento": inv.get("payment_terms", ""),
+            "importo": importo,
+            "stato": stato,
+            "link": "/fatturazione",
+            "rata": 1,
+        })
 
     # Sort by date
     scadenze.sort(key=lambda x: x.get("data_scadenza") or "9999-12-31")

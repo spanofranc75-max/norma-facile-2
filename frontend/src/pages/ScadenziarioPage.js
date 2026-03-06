@@ -80,8 +80,15 @@ export default function ScadenziarioPage() {
     const handleSync = async () => {
         setSyncing(true);
         try {
-            const result = await apiRequest('/fatture-ricevute/sync-fic', { method: 'POST' });
-            toast.success(result.message || 'Sincronizzazione completata');
+            // Sync both: fatture ricevute (FIC) + fatture emesse (scadenze)
+            const [ficResult, invResult] = await Promise.all([
+                apiRequest('/fatture-ricevute/sync-fic', { method: 'POST' }).catch(() => null),
+                apiRequest('/invoices/sync-scadenze', { method: 'POST' }).catch(() => null),
+            ]);
+            const messages = [];
+            if (ficResult?.message) messages.push(ficResult.message);
+            if (invResult?.message) messages.push(invResult.message);
+            toast.success(messages.join(' | ') || 'Sincronizzazione completata');
             fetchData();
         } catch (e) {
             toast.error(e.message || 'Errore sincronizzazione');

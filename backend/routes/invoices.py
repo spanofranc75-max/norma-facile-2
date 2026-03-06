@@ -759,6 +759,59 @@ async def regenerate_invoice_scadenze(invoice_id: str, user: dict = Depends(get_
     return {"scadenze": updated.get("scadenze_pagamento", []), "message": "Scadenze generate"}
 
 
+@router.post("/sync-scadenze")
+async def sync_all_scadenze(user: dict = Depends(get_current_user)):
+    """Generate scadenze_pagamento for all invoices that don't have them.
+    Uses client payment type if available, otherwise creates single scadenza from due_date."""
+    uid = user["user_id"]
+    invoices = await db.invoices.find(
+        {"user_id": uid,
+         "status": {"$in": ["emessa", "inviata_sdi", "accettata"]},
+         "payment_status": {"$ne": "pagata"},
+         "$or": [
+             {"scadenze_pagamento": {"$exists": False}},
+             {"scadenze_pagamento": []},
+             {"scadenze_pagamento": None},
+         ]},
+        {"_id": 0, "invoice_id": 1, "client_id": 1, "due_date": 1,
+         "issue_date": 1, "totals": 1}
+    ).to_list(500)
+
+    synced = 0
+    for inv in invoices:
+        # Try generating from payment type first
+        await generate_scadenze_pagamento(inv, uid)
+        # Check if it worked
+        check = await db.invoices.find_one(
+            {"invoice_id": inv["invoice_id"]},
+            {"_id": 0, "scadenze_pagamento": 1}
+        )
+        if check and check.get("scadenze_pagamento"):
+            synced += 1
+            continue
+
+        # Fallback: create single scadenza from due_date
+        due = inv.get("due_date") or inv.get("issue_date")
+        total = inv.get("totals", {}).get("total_document", 0) or 0
+        if due and total:
+            scadenza = [{
+                "rata": 1,
+                "data_scadenza": due,
+                "quota_pct": 100,
+                "importo": round(total, 2),
+                "pagata": False,
+                "data_pagamento": None,
+            }]
+            await db.invoices.update_one(
+                {"invoice_id": inv["invoice_id"]},
+                {"$set": {"scadenze_pagamento": scadenza}}
+            )
+            synced += 1
+
+    return {"message": f"Sincronizzazione completata: {synced} fatture aggiornate su {len(invoices)} trovate", "synced": synced, "total": len(invoices)}
+
+
+
 @router.patch("/{invoice_id}/scadenze/{rata}/paga")
 async def mark_scadenza_pagata(invoice_id: str, rata: int, user: dict = Depends(get_current_user)):
     """Mark a specific installment as paid."""

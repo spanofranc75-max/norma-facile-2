@@ -89,12 +89,12 @@ async def get_monthly_cashflow(uid: str, year: int, month: int):
     n_incassi = inc_res[0]["count"] if inc_res else 0
 
     # Da incassare (fatture attive non pagate in scadenza nel mese)
-    # Include payment_status=None (field never set) as unpaid
+    # Include invoices where payment_status is null, missing, or explicitly unpaid
     da_inc_pipeline = [
         {"$match": {
             "user_id": uid,
-            "payment_status": {"$in": ["non_pagata", "parzialmente_pagata", None]},
             "status": {"$in": ["emessa", "inviata_sdi", "accettata"]},
+            "payment_status": {"$nin": ["pagata"]},
             "due_date": {"$gte": m_start, "$lt": m_end},
         }},
         {"$group": {"_id": None, "total": {"$sum": "$totals.total_document"}, "count": {"$sum": 1}}},
@@ -141,10 +141,10 @@ async def get_monthly_cashflow(uid: str, year: int, month: int):
 
 async def get_receivables_aging(uid: str, today_iso: str):
     """Scadenzario crediti clienti per fascia di anzianità."""
-    # Include payment_status=None as unpaid
+    # Include all unpaid invoices (payment_status != "pagata")
     items = await db.invoices.find(
         {"user_id": uid,
-         "payment_status": {"$in": ["non_pagata", "parzialmente_pagata", None]},
+         "payment_status": {"$nin": ["pagata"]},
          "status": {"$in": ["emessa", "inviata_sdi", "accettata"]}},
         {"_id": 0, "invoice_id": 1, "document_number": 1, "client_business_name": 1,
          "totals.total_document": 1, "due_date": 1, "issue_date": 1}
@@ -286,11 +286,10 @@ async def get_cashflow_forecast(uid: str, today_iso: str):
         horizon = (today + timedelta(days=days)).isoformat()
 
         # Entrate attese (fatture clienti non pagate in scadenza)
-        # Include payment_status=None as unpaid
         ent_pipeline = [
             {"$match": {
                 "user_id": uid,
-                "payment_status": {"$in": ["non_pagata", "parzialmente_pagata", None]},
+                "payment_status": {"$nin": ["pagata"]},
                 "status": {"$in": ["emessa", "inviata_sdi", "accettata"]},
                 "due_date": {"$gte": today_iso, "$lte": horizon},
             }},
