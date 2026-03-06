@@ -13,6 +13,7 @@ import { Textarea } from '../components/ui/textarea';
 import { Checkbox } from '../components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../components/ui/dialog';
+import { useConfirm } from '../components/ConfirmProvider';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { toast } from 'sonner';
 import {
@@ -63,6 +64,7 @@ function Section({ title, icon: Icon, count, defaultOpen, children }) {
 }
 
 export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh }) {
+    const confirm = useConfirm();
     const [ops, setOps] = useState(null);
     const [docs, setDocs] = useState([]);
     const [materialBatches, setMaterialBatches] = useState([]);
@@ -1391,7 +1393,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                             <Button size="sm" variant="outline" className="text-xs border-red-300 text-red-600 hover:bg-red-50 ml-auto"
                                 data-testid="btn-delete-all-cam"
                                 onClick={async () => {
-                                    if (!window.confirm(`Eliminare tutti i ${camLotti.length} lotti CAM di questa commessa?`)) return;
+                                    if (!(await confirm(`Eliminare tutti i ${camLotti.length} lotti CAM di questa commessa?`))) return;
                                     try {
                                         await apiRequest(`/cam/lotti/commessa/${commessaId}`, { method: 'DELETE' });
                                         toast.success('Tutti i lotti CAM eliminati');
@@ -1444,7 +1446,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                         data-testid={`delete-cam-lotto-${lotto.lotto_id}`}
                                         onClick={async (e) => {
                                             e.stopPropagation();
-                                            if (!window.confirm(`Eliminare il lotto CAM "${lotto.descrizione}"?`)) return;
+                                            if (!(await confirm(`Eliminare il lotto CAM "${lotto.descrizione}"?`))) return;
                                             try {
                                                 await apiRequest(`/cam/lotti/${lotto.lotto_id}`, { method: 'DELETE' });
                                                 toast.success('Lotto CAM eliminato');

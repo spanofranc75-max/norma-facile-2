@@ -13,6 +13,7 @@ import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../components/ui/dialog';
 import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
+import { useConfirm } from '../components/ConfirmProvider';
 import { toast } from 'sonner';
 import {
     Send, Package, Check, ChevronDown, ChevronUp, Trash2, FileDown,
@@ -36,6 +37,7 @@ const STATUS_LABELS = {
 };
 
 export default function RdpPanel({ prevId, lines = [], suppliers = [], onPricesUpdated, apiRequest }) {
+    const confirm = useConfirm();
     const [rdpList, setRdpList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showCreate, setShowCreate] = useState(false);
@@ -147,7 +149,7 @@ export default function RdpPanel({ prevId, lines = [], suppliers = [], onPricesU
 
     // ── Delete ──
     const handleDelete = async (rdpId) => {
-        if (!window.confirm('Eliminare questa RdP?')) return;
+        if (!(await confirm('Eliminare questa RdP?'))) return;
         try {
             await apiRequest(`/preventivi/${prevId}/rdp/${rdpId}`, { method: 'DELETE' });
             toast.success('RdP eliminata');
