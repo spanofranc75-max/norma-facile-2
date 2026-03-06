@@ -87,8 +87,16 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 
 ## Backlog Prioritizzato
 
+### Fix Numerazione Preventivi Non Continua (7 Mar 2026)
+- **Causa**: Il contatore atomico `document_counters` incrementava sempre, anche per preventivi poi cancellati. Risultato: PRV-0053 come max con solo 44 preventivi nel DB.
+- **Fix Backend (create/clone)**: Prima di generare un nuovo numero, il sistema ora confronta il contatore con il max numero reale nel DB. Se il contatore è "avanti" (per cancellazioni), lo resetta al max esistente prima di incrementare.
+- **Fix Backend (delete)**: Dopo l'eliminazione, ricalcola il contatore basandosi sul max numero reale via aggregazione MongoDB.
+- **Fix Frontend**: Header ora mostra `total` dal DB (non `array.length`). Limite API aumentato da 50 a 500 per mostrare tutti i preventivi.
+- **10/10 test passati** (iteration_152)
+
 ### P0 (Completati)
 - ~~Ripristino Intelligente Backup~~ COMPLETATO (7 Mar 2026)
+- ~~Numerazione Preventivi Non Continua~~ COMPLETATO (7 Mar 2026)
 - ~~Crash pagina dettaglio fattura da preventivo~~ COMPLETATO (5 Mar 2026)
 - ~~Termini pagamento spariti in fatturazione~~ COMPLETATO (6 Mar 2026)
 - ~~Errore 400 salvataggio fattura emessa~~ COMPLETATO (6 Mar 2026)
