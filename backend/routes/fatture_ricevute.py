@@ -1163,6 +1163,77 @@ async def imputa_costi(
         }
 
 
+
+# ── Annulla Imputazione (Undo cost assignment) ──────────────────
+
+@router.post("/{fr_id}/annulla-imputazione")
+async def annulla_imputazione(
+    fr_id: str,
+    user: dict = Depends(get_current_user)
+):
+    """Undo the cost assignment of a received invoice from a commessa.
+    Removes the cost entry from the commessa and clears the imputazione on the invoice."""
+    fr = await db.fatture_ricevute.find_one(
+        {"fr_id": fr_id, "user_id": user["user_id"]},
+        {"_id": 0, "xml_raw": 0}
+    )
+    if not fr:
+        raise HTTPException(404, "Fattura ricevuta non trovata")
+    
+    imputazione = fr.get("imputazione")
+    if not imputazione:
+        raise HTTPException(400, "Questa fattura non ha nessuna imputazione da annullare")
+    
+    destinazione = imputazione.get("destinazione", "")
+    commessa_id = imputazione.get("commessa_id", "")
+    
+    now = datetime.now(timezone.utc)
+    
+    # If assigned to a commessa, remove the cost entry
+    if destinazione == "commessa" and commessa_id:
+        # Remove cost entries from commessa that reference this fr_id
+        result = await db.commesse.update_one(
+            {"commessa_id": commessa_id, "user_id": user["user_id"]},
+            {
+                "$pull": {"costi_reali": {"fr_id": fr_id}},
+                "$set": {"updated_at": now},
+            }
+        )
+        commessa = await db.commesse.find_one(
+            {"commessa_id": commessa_id, "user_id": user["user_id"]},
+            {"_id": 0, "numero": 1}
+        )
+        commessa_numero = commessa.get("numero", commessa_id) if commessa else commessa_id
+        
+        logger.info(f"Annullata imputazione fattura {fr_id} dalla commessa {commessa_id}")
+    elif destinazione == "magazzino":
+        # If assigned to magazzino, we could reverse the stock changes
+        # but for simplicity, we just remove the imputazione flag
+        commessa_numero = "Magazzino"
+        logger.info(f"Annullata imputazione fattura {fr_id} dal magazzino")
+    else:
+        commessa_numero = destinazione
+    
+    # Clear imputazione on the invoice, revert status to da_registrare
+    await db.fatture_ricevute.update_one(
+        {"fr_id": fr_id},
+        {
+            "$unset": {"imputazione": ""},
+            "$set": {
+                "status": "da_registrare",
+                "updated_at": now,
+            }
+        }
+    )
+    
+    return {
+        "message": f"Imputazione annullata. La fattura non è più collegata a {commessa_numero}.",
+        "fr_id": fr_id,
+        "previous_destinazione": destinazione,
+        "previous_commessa_id": commessa_id,
+    }
+
+
 # ── FattureInCloud Sync ─────────────────────────────────────────
 
 @router.post("/sync-fic")

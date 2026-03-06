@@ -69,6 +69,7 @@ class ArticoloResponse(BaseModel):
     fornitore_nome: Optional[str] = None
     fornitore_id: Optional[str] = None
     note: Optional[str] = None
+    giacenza: float = 0
     created_at: datetime
     updated_at: Optional[datetime] = None
     # Price history
@@ -120,7 +121,8 @@ async def search_articoli(
     cursor = db.articoli.find(
         query,
         {"_id": 0, "articolo_id": 1, "codice": 1, "descrizione": 1,
-         "prezzo_unitario": 1, "aliquota_iva": 1, "unita_misura": 1, "categoria": 1}
+         "prezzo_unitario": 1, "aliquota_iva": 1, "unita_misura": 1, "categoria": 1,
+         "giacenza": 1}
     ).limit(limit).sort("codice", 1)
     items = await cursor.to_list(length=limit)
     return {"results": items}

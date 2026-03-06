@@ -252,6 +252,7 @@ export default function ArticoliPage() {
                                     <TableHead className="text-white font-semibold">Categoria</TableHead>
                                     <TableHead className="text-white font-semibold">U.M.</TableHead>
                                     <TableHead className="text-white font-semibold text-right">Prezzo</TableHead>
+                                    <TableHead className="text-white font-semibold text-right">Giacenza</TableHead>
                                     <TableHead className="text-white font-semibold">IVA</TableHead>
                                     <TableHead className="text-white font-semibold">Fornitore</TableHead>
                                     <TableHead className="w-[120px]"></TableHead>
@@ -260,13 +261,13 @@ export default function ArticoliPage() {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="text-center py-8">
+                                        <TableCell colSpan={9} className="text-center py-8">
                                             <div className="w-6 h-6 loading-spinner mx-auto" />
                                         </TableCell>
                                     </TableRow>
                                 ) : articoli.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={8} className="p-0">
+                                        <TableCell colSpan={9} className="p-0">
                                             <EmptyState
                                                 type="articoli"
                                                 title="Nessun articolo in catalogo"
@@ -297,6 +298,13 @@ export default function ArticoliPage() {
                                             <TableCell className="text-slate-600">{art.unita_misura}</TableCell>
                                             <TableCell className="text-right font-mono font-semibold">
                                                 {formatCurrency(art.prezzo_unitario)}
+                                            </TableCell>
+                                            <TableCell className="text-right font-mono">
+                                                {(art.giacenza || 0) > 0 ? (
+                                                    <span className="font-semibold text-emerald-700">{art.giacenza} {art.unita_misura}</span>
+                                                ) : (
+                                                    <span className="text-slate-300">0</span>
+                                                )}
                                             </TableCell>
                                             <TableCell>{art.aliquota_iva}%</TableCell>
                                             <TableCell className="text-slate-600 text-sm">

@@ -12,7 +12,7 @@ from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from io import BytesIO
 
 from core.database import db
@@ -149,6 +149,8 @@ class MaterialeRicevuto(BaseModel):
     descrizione: str
     quantita: float = 1
     unita_misura: str = "kg"
+    quantita_utilizzata: Optional[float] = None  # If set, only this qty is costed to commessa; remainder goes to stock
+    prezzo_unitario: Optional[float] = None  # Unit price for cost calculation
     ordine_id: Optional[str] = None  # Riferimento a OdA
     commessa_id: Optional[str] = None  # Per smistamento multi-commessa
     richiede_cert_31: bool = False
@@ -370,7 +372,63 @@ async def register_arrivo_materiale(cid: str, data: ArrivoMateriale, user: dict 
             array_filters=[{"elem.ordine_id": oid}],
         )
     
-    return {"message": f"Arrivo materiale registrato (DDT: {data.ddt_fornitore})", "arrivo": arrivo}
+    # Handle partial usage: remainder goes to warehouse stock
+    stock_updates = []
+    for mat in materiali_dict:
+        qty_arrived = float(mat.get("quantita", 0))
+        qty_used = mat.get("quantita_utilizzata")
+        if qty_used is not None and qty_used < qty_arrived:
+            qty_remainder = round(qty_arrived - float(qty_used), 4)
+            desc = mat.get("descrizione", "").strip()
+            um = (mat.get("unita_misura") or "kg").lower()
+            prezzo = float(mat.get("prezzo_unitario", 0))
+            
+            if desc and qty_remainder > 0:
+                # Try to find existing article by description
+                codice_words = re.sub(r'[^a-zA-Z0-9\s]', '', desc).upper().split()[:3]
+                auto_codice = "-".join(codice_words) if codice_words else f"ART-{uuid.uuid4().hex[:4].upper()}"
+                
+                existing_art = await db.articoli.find_one(
+                    {"user_id": user["user_id"], "descrizione": {"$regex": f"^{re.escape(desc[:30])}", "$options": "i"}},
+                    {"_id": 0}
+                )
+                
+                now_stock = ts()
+                if existing_art:
+                    old_stock = float(existing_art.get("giacenza", 0))
+                    new_stock = round(old_stock + qty_remainder, 4)
+                    await db.articoli.update_one(
+                        {"articolo_id": existing_art["articolo_id"]},
+                        {"$set": {"giacenza": new_stock, "updated_at": now_stock}}
+                    )
+                    stock_updates.append(f"{qty_remainder} {um} di {desc[:40]} → magazzino (tot: {new_stock})")
+                else:
+                    art_doc = {
+                        "articolo_id": f"art_{uuid.uuid4().hex[:12]}",
+                        "user_id": user["user_id"],
+                        "codice": auto_codice,
+                        "descrizione": desc,
+                        "categoria": "materiale",
+                        "unita_misura": um,
+                        "prezzo_unitario": prezzo,
+                        "giacenza": qty_remainder,
+                        "aliquota_iva": "22",
+                        "fornitore_nome": data.fornitore_nome or "",
+                        "fornitore_id": data.fornitore_id or "",
+                        "storico_prezzi": [{"prezzo": prezzo, "data": now_stock.isoformat(), "fonte": f"Resto arrivo DDT {data.ddt_fornitore}"}],
+                        "note": f"Creato automaticamente da resto arrivo DDT {data.ddt_fornitore}",
+                        "created_at": now_stock,
+                        "updated_at": now_stock,
+                    }
+                    await db.articoli.insert_one(art_doc)
+                    stock_updates.append(f"{qty_remainder} {um} di {desc[:40]} → nuovo articolo magazzino")
+    
+    result = {"message": f"Arrivo materiale registrato (DDT: {data.ddt_fornitore})", "arrivo": arrivo}
+    if stock_updates:
+        result["stock_updates"] = stock_updates
+        result["message"] += f" — {len(stock_updates)} materiali con resto a magazzino"
+    
+    return result
 
 
 @router.put("/{cid}/approvvigionamento/arrivi/{arrivo_id}/materiale/{mat_idx}/certificato")
@@ -2709,3 +2767,79 @@ async def download_pacchetto_consegna(cid: str, consegna_id: str, user: dict = D
         output, media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+
+# ══════════════════════════════════════════════════════════════════
+#  PRELIEVO DA MAGAZZINO (Withdraw from warehouse stock to commessa)
+# ══════════════════════════════════════════════════════════════════
+
+class PrelievoMagazzinoRequest(BaseModel):
+    articolo_id: str
+    quantita: float = Field(..., gt=0)
+    note: Optional[str] = ""
+
+
+@router.post("/{cid}/preleva-da-magazzino")
+async def preleva_da_magazzino(cid: str, data: PrelievoMagazzinoRequest, user: dict = Depends(get_current_user)):
+    """Withdraw material from warehouse stock and assign cost to commessa."""
+    comm = await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
+    
+    # Get the article from catalog
+    articolo = await db.articoli.find_one(
+        {"articolo_id": data.articolo_id, "user_id": user["user_id"]},
+        {"_id": 0}
+    )
+    if not articolo:
+        raise HTTPException(404, "Articolo non trovato nel catalogo")
+    
+    giacenza = float(articolo.get("giacenza", 0))
+    if giacenza < data.quantita:
+        raise HTTPException(
+            400,
+            f"Giacenza insufficiente: disponibili {giacenza} {articolo.get('unita_misura', 'pz')}, "
+            f"richiesti {data.quantita} {articolo.get('unita_misura', 'pz')}"
+        )
+    
+    prezzo_unitario = float(articolo.get("prezzo_unitario", 0))
+    importo_totale = round(prezzo_unitario * data.quantita, 2)
+    now = ts()
+    
+    # 1. Decrease stock in articoli
+    new_giacenza = round(giacenza - data.quantita, 4)
+    await db.articoli.update_one(
+        {"articolo_id": data.articolo_id},
+        {"$set": {"giacenza": new_giacenza, "updated_at": now}}
+    )
+    
+    # 2. Add cost entry to commessa
+    cost_entry = {
+        "cost_id": new_id("cost_"),
+        "tipo": "materiale_magazzino",
+        "descrizione": f"Prelievo magazzino: {articolo.get('codice', '')} — {articolo.get('descrizione', '')}",
+        "fornitore": articolo.get("fornitore_nome", ""),
+        "importo": importo_totale,
+        "quantita": data.quantita,
+        "prezzo_unitario": prezzo_unitario,
+        "unita_misura": articolo.get("unita_misura", "pz"),
+        "articolo_id": data.articolo_id,
+        "data": now.isoformat(),
+        "note": data.note or "",
+    }
+    
+    await db[COLL].update_one(
+        {"commessa_id": cid},
+        build_update_with_event(
+            push_items={"costi_reali": cost_entry},
+            tipo="PRELIEVO_MAGAZZINO", user=user,
+            note=f"Prelievo {data.quantita} {articolo.get('unita_misura', 'pz')} di {articolo.get('codice', '')} — {importo_totale:.2f}€",
+            payload={"articolo_id": data.articolo_id, "quantita": data.quantita, "importo": importo_totale}
+        ),
+    )
+    
+    return {
+        "message": f"Prelevati {data.quantita} {articolo.get('unita_misura', 'pz')} di {articolo.get('codice', '')} — {importo_totale:.2f}€ imputati alla commessa {comm.get('numero', cid)}",
+        "cost_entry": cost_entry,
+        "giacenza_residua": new_giacenza,
+    }

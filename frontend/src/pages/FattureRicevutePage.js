@@ -28,7 +28,7 @@ import { toast } from 'sonner';
 import {
     Plus, Search, Upload, MoreHorizontal, Eye, Trash2, CreditCard,
     FileCode, PackagePlus, CheckCircle2, Clock, AlertCircle,
-    CircleDollarSign, FileUp, RefreshCw, Loader2, Pencil,
+    CircleDollarSign, FileUp, RefreshCw, Loader2, Pencil, Undo2,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import EmptyState from '../components/EmptyState';
@@ -262,6 +262,24 @@ export default function FattureRicevutePage() {
             toast.error('Errore aggiornamento stato');
         }
     };
+
+    const handleAnnullaImputazione = async (fr) => {
+        const ok = await confirm({
+            title: 'Annulla Imputazione',
+            description: `Vuoi annullare l'imputazione della fattura "${fr.numero_documento}" di ${fr.fornitore_nome}? Il costo verrà rimosso dalla commessa associata.`,
+            confirmText: 'Annulla Imputazione',
+            cancelText: 'Indietro',
+        });
+        if (!ok) return;
+        try {
+            const res = await apiRequest(`/fatture-ricevute/${fr.fr_id}/annulla-imputazione`, { method: 'POST' });
+            toast.success(res.message || 'Imputazione annullata');
+            fetchFatture();
+        } catch (e) {
+            toast.error(e.message || 'Errore annullamento imputazione');
+        }
+    };
+
 
     // Payment dialog
     const openPaymentDialog = async (fr) => {
@@ -505,6 +523,11 @@ export default function FattureRicevutePage() {
                                                         <Badge className={STATUS_BADGES[fr.status]?.color || STATUS_BADGES.da_registrare.color}>
                                                             {STATUS_BADGES[fr.status]?.label || fr.status}
                                                         </Badge>
+                                                        {fr.imputazione && (
+                                                            <Badge className="bg-indigo-100 text-indigo-700 text-[9px]" title={`Imputata a: ${fr.imputazione.destinazione === 'commessa' ? 'Commessa ' + (fr.imputazione.commessa_id || '') : fr.imputazione.destinazione}`}>
+                                                                Imputata
+                                                            </Badge>
+                                                        )}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
@@ -527,6 +550,14 @@ export default function FattureRicevutePage() {
                                                             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleExtract(fr); }} disabled={extracting}>
                                                                 <PackagePlus className="mr-2 h-4 w-4" />Estrai Articoli
                                                             </DropdownMenuItem>
+                                                            {fr.imputazione && (
+                                                                <>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleAnnullaImputazione(fr); }} className="text-orange-600" data-testid={`btn-annulla-imputazione-${fr.fr_id}`}>
+                                                                        <Undo2 className="mr-2 h-4 w-4" />Annulla Imputazione
+                                                                    </DropdownMenuItem>
+                                                                </>
+                                                            )}
                                                             <DropdownMenuSeparator />
                                                             {fr.status === 'da_registrare' && (
                                                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleStatusChange(fr, 'registrata'); }}>

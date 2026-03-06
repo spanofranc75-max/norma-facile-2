@@ -79,6 +79,10 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     const [clOpen, setClOpen] = useState(false);
     const [uploadType, setUploadType] = useState('altro');
     const [parsing, setParsing] = useState(null); // doc_id being parsed
+    const [prelievoOpen, setPrelievoOpen] = useState(false);
+    const [articoliCatalogo, setArticoliCatalogo] = useState([]);
+    const [prelievoForm, setPrelievoForm] = useState({ articolo_id: '', quantita: 1, note: '' });
+    const [prelievoLoading, setPrelievoLoading] = useState(false);
 
     // Empty line templates
     const emptyRdpLine = () => ({ id: `l${Date.now()}`, descrizione: '', quantita: 1, unita_misura: 'kg', richiede_cert_31: false });
@@ -346,13 +350,23 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         try {
             const payload = {
                 ...arrivoForm,
-                materiali: arrivoForm.materiali.filter(m => m.descrizione.trim()).map(m => ({
-                    descrizione: m.descrizione,
-                    quantita: parseFloat(m.quantita) || 1,
-                    unita_misura: m.unita_misura,
-                    ordine_id: m.ordine_id || '',
-                    richiede_cert_31: m.richiede_cert_31,
-                })),
+                materiali: arrivoForm.materiali.filter(m => m.descrizione.trim()).map(m => {
+                    const mapped = {
+                        descrizione: m.descrizione,
+                        quantita: parseFloat(m.quantita) || 1,
+                        unita_misura: m.unita_misura,
+                        ordine_id: m.ordine_id || '',
+                        richiede_cert_31: m.richiede_cert_31,
+                    };
+                    if (m.prezzo_unitario && parseFloat(m.prezzo_unitario) > 0) {
+                        mapped.prezzo_unitario = parseFloat(m.prezzo_unitario);
+                    }
+                    const qtyUsed = parseFloat(m.quantita_utilizzata);
+                    if (!isNaN(qtyUsed) && qtyUsed >= 0 && qtyUsed < mapped.quantita) {
+                        mapped.quantita_utilizzata = qtyUsed;
+                    }
+                    return mapped;
+                }),
             };
             await apiRequest(`/commesse/${commessaId}/approvvigionamento/arrivi`, { method: 'POST', body: payload });
             toast.success('Arrivo registrato');
@@ -362,7 +376,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                 data_ddt: '', 
                 fornitore_nome: '', 
                 fornitore_id: '',
-                materiali: [{ descrizione: '', quantita: 1, unita_misura: 'kg', ordine_id: '', richiede_cert_31: false }],
+                materiali: [emptyArrivoMat()],
                 note: '' 
             });
             fetchData(); onRefresh?.();
@@ -370,7 +384,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
     };
 
     // Arrivo materiali helpers
-    const emptyArrivoMat = () => ({ id: `m${Date.now()}`, descrizione: '', quantita: 1, unita_misura: 'kg', ordine_id: '', richiede_cert_31: false });
+    const emptyArrivoMat = () => ({ id: `m${Date.now()}`, descrizione: '', quantita: 1, unita_misura: 'kg', ordine_id: '', richiede_cert_31: false, prezzo_unitario: 0, quantita_utilizzata: '' });
     const addArrivoMat = () => setArrivoForm(f => ({ ...f, materiali: [...f.materiali, emptyArrivoMat()] }));
     const removeArrivoMat = (idx) => setArrivoForm(f => ({ ...f, materiali: f.materiali.filter((_, i) => i !== idx) }));
     const updateArrivoMat = (idx, field, value) => setArrivoForm(f => {
@@ -378,6 +392,37 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         materiali[idx] = { ...materiali[idx], [field]: value };
         return { ...f, materiali };
     });
+
+    // Prelievo da magazzino handlers
+    const openPrelievoDialog = async () => {
+        try {
+            const data = await apiRequest('/articoli');
+            const withStock = (data.articoli || data || []).filter(a => (a.giacenza || 0) > 0);
+            setArticoliCatalogo(withStock);
+            setPrelievoForm({ articolo_id: '', quantita: 1, note: '' });
+            setPrelievoOpen(true);
+        } catch (e) { toast.error('Errore caricamento articoli: ' + e.message); }
+    };
+    const handlePrelievo = async () => {
+        if (!prelievoForm.articolo_id) { toast.error('Seleziona un articolo'); return; }
+        if (!prelievoForm.quantita || parseFloat(prelievoForm.quantita) <= 0) { toast.error('Quantità non valida'); return; }
+        setPrelievoLoading(true);
+        try {
+            const res = await apiRequest(`/commesse/${commessaId}/preleva-da-magazzino`, {
+                method: 'POST',
+                body: {
+                    articolo_id: prelievoForm.articolo_id,
+                    quantita: parseFloat(prelievoForm.quantita),
+                    note: prelievoForm.note || '',
+                },
+            });
+            toast.success(res.message || 'Prelievo registrato');
+            setPrelievoOpen(false);
+            fetchData(); onRefresh?.();
+        } catch (e) { toast.error(e.message); }
+        finally { setPrelievoLoading(false); }
+    };
+
 
     const handleVerificaArrivo = async (arrivoId) => {
         try {
@@ -872,6 +917,9 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => setArrivoOpen(true)} className="text-xs" data-testid="btn-new-arrivo">
                             <Package className="h-3 w-3 mr-1" /> Registra Arrivo
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={openPrelievoDialog} className="text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50" data-testid="btn-preleva-magazzino">
+                            <Truck className="h-3 w-3 mr-1" /> Preleva da Magazzino
                         </Button>
                     </div>
 
@@ -1975,11 +2023,13 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="bg-amber-50">
-                                            <TableHead className="w-[40%] text-xs">Descrizione</TableHead>
-                                            <TableHead className="w-[15%] text-xs text-center">Q.tà</TableHead>
-                                            <TableHead className="w-[12%] text-xs text-center">U.M.</TableHead>
-                                            <TableHead className="w-[20%] text-xs">Rif. Ordine</TableHead>
-                                            <TableHead className="w-[8%] text-xs text-center">3.1</TableHead>
+                                            <TableHead className="w-[28%] text-xs">Descrizione</TableHead>
+                                            <TableHead className="w-[10%] text-xs text-center">Q.tà</TableHead>
+                                            <TableHead className="w-[8%] text-xs text-center">U.M.</TableHead>
+                                            <TableHead className="w-[12%] text-xs text-center">€/unità</TableHead>
+                                            <TableHead className="w-[12%] text-xs text-center" title="Lascia vuoto se usi tutto. Se ne usi solo una parte, indica la quantità usata per la commessa. Il resto andrà in magazzino.">Q.tà Usata</TableHead>
+                                            <TableHead className="w-[17%] text-xs">Rif. Ordine</TableHead>
+                                            <TableHead className="w-[5%] text-xs text-center">3.1</TableHead>
                                             <TableHead className="w-[5%]"></TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -2016,6 +2066,31 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                                             <SelectItem value="t">t</SelectItem>
                                                         </SelectContent>
                                                     </Select>
+                                                </TableCell>
+                                                <TableCell className="p-1">
+                                                    <Input
+                                                        type="number"
+                                                        value={mat.prezzo_unitario || ''}
+                                                        onChange={e => updateArrivoMat(idx, 'prezzo_unitario', e.target.value)}
+                                                        className="h-8 text-sm text-center"
+                                                        min="0"
+                                                        step="0.01"
+                                                        placeholder="0.00"
+                                                        data-testid={`arrivo-mat-${idx}-prezzo`}
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="p-1">
+                                                    <Input
+                                                        type="number"
+                                                        value={mat.quantita_utilizzata}
+                                                        onChange={e => updateArrivoMat(idx, 'quantita_utilizzata', e.target.value)}
+                                                        className="h-8 text-sm text-center"
+                                                        min="0"
+                                                        step="0.01"
+                                                        placeholder="Tutto"
+                                                        title="Lascia vuoto se usi tutto. Indica qui la quantità effettivamente usata per la commessa."
+                                                        data-testid={`arrivo-mat-${idx}-qty-usata`}
+                                                    />
                                                 </TableCell>
                                                 <TableCell className="p-1">
                                                     <Select value={mat.ordine_id || '__none__'} onValueChange={v => updateArrivoMat(idx, 'ordine_id', v === '__none__' ? '' : v)}>
@@ -2059,6 +2134,9 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                             <p className="text-xs text-muted-foreground mt-1">
                                 ☑️ 3.1 = richiede certificato materiale. Collegherai i certificati dopo la registrazione.
                             </p>
+                            <p className="text-xs text-muted-foreground">
+                                💡 <strong>Q.tà Usata:</strong> Se usi solo parte del materiale ordinato, indica qui la quantità reale per la commessa. Il resto torna in giacenza magazzino.
+                            </p>
                         </div>
 
                         {/* Note */}
@@ -2082,6 +2160,92 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                             data-testid="btn-confirm-arrivo"
                         >
                             <Package className="h-4 w-4 mr-1" /> Registra Arrivo
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Prelievo da Magazzino Dialog */}
+            <Dialog open={prelievoOpen} onOpenChange={setPrelievoOpen}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Truck className="h-5 w-5 text-emerald-600" />
+                            Preleva da Magazzino
+                        </DialogTitle>
+                        <DialogDescription>
+                            Seleziona un articolo dal magazzino e la quantità da assegnare alla commessa <span className="font-semibold">{commessaNumero}</span>.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div>
+                            <Label className="text-sm font-medium">Articolo *</Label>
+                            <select
+                                value={prelievoForm.articolo_id}
+                                onChange={e => setPrelievoForm(f => ({ ...f, articolo_id: e.target.value }))}
+                                className="mt-1 w-full h-9 text-sm rounded-md border border-input bg-transparent px-3 shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                                data-testid="prelievo-articolo-select"
+                            >
+                                <option value="">Seleziona articolo...</option>
+                                {articoliCatalogo.map(a => (
+                                    <option key={a.articolo_id} value={a.articolo_id}>
+                                        {a.codice} — {a.descrizione} (Disp: {a.giacenza} {a.unita_misura})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        {prelievoForm.articolo_id && (() => {
+                            const art = articoliCatalogo.find(a => a.articolo_id === prelievoForm.articolo_id);
+                            return art ? (
+                                <div className="bg-emerald-50 p-3 rounded-md text-xs space-y-1 border border-emerald-200">
+                                    <div className="flex justify-between"><span className="text-slate-600">Descrizione:</span><span className="font-medium">{art.descrizione}</span></div>
+                                    <div className="flex justify-between"><span className="text-slate-600">Giacenza attuale:</span><span className="font-bold text-emerald-700">{art.giacenza} {art.unita_misura}</span></div>
+                                    <div className="flex justify-between"><span className="text-slate-600">Prezzo unitario:</span><span className="font-medium">{fmtEur(art.prezzo_unitario)}</span></div>
+                                    {prelievoForm.quantita > 0 && (
+                                        <div className="flex justify-between border-t border-emerald-200 pt-1 mt-1">
+                                            <span className="text-slate-600">Costo totale prelievo:</span>
+                                            <span className="font-bold text-emerald-800">{fmtEur(art.prezzo_unitario * parseFloat(prelievoForm.quantita || 0))}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : null;
+                        })()}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label className="text-sm font-medium">Quantità *</Label>
+                                <Input
+                                    type="number"
+                                    value={prelievoForm.quantita}
+                                    onChange={e => setPrelievoForm(f => ({ ...f, quantita: e.target.value }))}
+                                    className="mt-1"
+                                    min="0.01"
+                                    step="0.01"
+                                    data-testid="prelievo-quantita"
+                                />
+                            </div>
+                            <div>
+                                <Label className="text-sm font-medium">Note</Label>
+                                <Input
+                                    value={prelievoForm.note}
+                                    onChange={e => setPrelievoForm(f => ({ ...f, note: e.target.value }))}
+                                    className="mt-1"
+                                    placeholder="Opzionale..."
+                                    data-testid="prelievo-note"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setPrelievoOpen(false)}>Annulla</Button>
+                        <Button
+                            size="sm"
+                            disabled={!prelievoForm.articolo_id || prelievoLoading}
+                            onClick={handlePrelievo}
+                            className="bg-emerald-600 text-white hover:bg-emerald-700"
+                            data-testid="btn-confirm-prelievo"
+                        >
+                            {prelievoLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Truck className="h-4 w-4 mr-1" />}
+                            Conferma Prelievo
                         </Button>
                     </DialogFooter>
                 </DialogContent>

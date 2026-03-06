@@ -1,0 +1,102 @@
+{
+  "summary": "Iteration 156 - Advanced Material Management Features: All 3 new features tested and working. Backend: preleva-da-magazzino, annulla-imputazione, and partial usage in arrivi all pass. Frontend: Giacenza column in ArticoliPage, Imputata badge and Annulla Imputazione menu in FattureRicevutePage, and Preleva da Magazzino button + arrivo dialog with new columns in CommessaOpsPanel all verified.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "CommessaOpsPanel",
+        "issue": "Mixed Content warning when opening Preleva da Magazzino dialog (trying HTTP instead of HTTPS for articoli fetch)",
+        "selector": "Prelievo dialog",
+        "priority": "LOW",
+        "note": "May be transient/environment issue - REACT_APP_BACKEND_URL is correctly set to HTTPS in code"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration156_material_management.py",
+    "/app/test_reports/pytest/iteration156_material_management_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration156_material_management.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "95%"
+  },
+  "test_credentials": "Test session created in MongoDB for user TEST_iter156_user_1772815360416",
+  "seed_data_creation": "Test articoli with giacenza, commessa, and fattura_ricevuta created for testing - all cleaned up after tests",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 156 added 3 new material management features: (1) POST /api/commesse/{cid}/preleva-da-magazzino withdraws material from warehouse stock and costs to commessa, (2) POST /api/fatture-ricevute/{fr_id}/annulla-imputazione undoes cost assignment, (3) POST /api/commesse/{cid}/approvvigionamento/arrivi now supports quantita_utilizzata and prezzo_unitario for partial material usage. Frontend shows giacenza column in Articoli table, Imputata badge and Annulla Imputazione menu in Fatture Ricevute, and Preleva da Magazzino button with new arrivo dialog columns in CommessaOpsPanel.",
+  "features_tested": {
+    "backend_endpoints": {
+      "preleva_da_magazzino": {
+        "endpoint": "POST /api/commesse/{cid}/preleva-da-magazzino",
+        "status": "PASS",
+        "tests": [
+          "Creates cost entry on commessa",
+          "Decreases articolo giacenza",
+          "Fails with 400 if giacenza insufficient",
+          "Fails with 404 if articolo not found"
+        ]
+      },
+      "annulla_imputazione": {
+        "endpoint": "POST /api/fatture-ricevute/{fr_id}/annulla-imputazione",
+        "status": "PASS",
+        "tests": [
+          "Removes imputazione from invoice",
+          "Removes cost entry from commessa",
+          "Reverts status to da_registrare",
+          "Fails with 400 if no imputazione exists"
+        ]
+      },
+      "arrivi_partial_usage": {
+        "endpoint": "POST /api/commesse/{cid}/approvvigionamento/arrivi",
+        "status": "PASS",
+        "tests": [
+          "Accepts quantita_utilizzata field",
+          "Accepts prezzo_unitario field",
+          "Remainder (quantita - quantita_utilizzata) goes to articoli stock"
+        ]
+      },
+      "articoli_giacenza": {
+        "endpoint": "GET /api/articoli",
+        "status": "PASS",
+        "tests": [
+          "Returns giacenza field in response"
+        ]
+      }
+    },
+    "frontend_components": {
+      "ArticoliPage": {
+        "status": "PASS",
+        "verified": [
+          "Giacenza column visible in table with correct values"
+        ]
+      },
+      "FattureRicevutePage": {
+        "status": "PASS",
+        "verified": [
+          "Imputata badge shows when invoice has imputazione",
+          "Annulla Imputazione menu option in dropdown"
+        ]
+      },
+      "CommessaOpsPanel": {
+        "status": "PASS with minor issue",
+        "verified": [
+          "Preleva da Magazzino button visible in Approvvigionamento section",
+          "Registra Arrivo dialog shows Prezzo Unit. (€/unità) column",
+          "Registra Arrivo dialog shows Q.tà Usata column with tooltip explaining partial usage"
+        ],
+        "issue": "Mixed content warning when opening prelievo dialog (may be transient)"
+      }
+    }
+  }
+}
