@@ -117,8 +117,23 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - ~~Bug condizioni pagamento fornitore~~ COMPLETATO (7 Mar 2026)
 - ~~Modulo Sopralluoghi & Perizie~~ COMPLETATO
 
-### P1
-- **Firma digitale su tablet** — Permettere al cliente di firmare il PDF perizia su tablet
+### Analisi Margini Predittiva (7 Mar 2026)
+- **Nuovo servizio**: `margin_service.py` — aggrega 4 fonti di costo:
+  1. `costi_reali` (manuali sulla commessa)
+  2. `fatture_ricevute` imputate alla commessa
+  3. `conto_lavoro` (verniciatura, zincatura, ecc.)
+  4. `ore_lavorate × costo_orario_pieno` (manodopera)
+- **3 nuovi endpoint**:
+  - `GET /api/costs/margin-full` — overview tutte le commesse con KPI aggregati
+  - `GET /api/costs/commessa/{id}/margin-full` — dettaglio per singola commessa
+  - `GET /api/costs/commessa/{id}/predict` — previsione AI basata su commesse storiche (rischio alto/medio/basso, ore stimate, margine stimato)
+- **Frontend**: Pagina dedicata `/analisi-margini` con tabella, filtri per salute (verde/giallo/arancione/rosso), dialog dettaglio con breakdown costi e sezione previsione AI
+- **CommessaHubPage**: Sezione "Analisi Margine Completa" aggiornata per usare i dati full (materiali + fatt. imputate + esterni + manodopera)
+- **Alert**: verde >=20%, giallo 10-20%, arancione 0-10%, rosso <0%
+- **23/23 test passati** (iteration_154)
+
+### P1 (Completati)
+- ~~Analisi Margini Predittiva~~ COMPLETATO (7 Mar 2026)
 - Verifica end-to-end flusso DDT creazione
 - Portale cliente read-only per tracking commesse
 
