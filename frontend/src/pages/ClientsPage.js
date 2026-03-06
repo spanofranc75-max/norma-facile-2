@@ -97,16 +97,24 @@ export default function ClientsPage() {
 
     const updateField = (key, val) => setFormData(f => ({ ...f, [key]: val }));
 
-    const handleOpenDialog = (client) => {
+    const handleOpenDialog = async (client) => {
         if (client) {
             setEditingClient(client);
-            setFormData({ ...emptyClient, ...client });
+            setActiveTab('anagrafica');
+            setDialogOpen(true);
+            // Fetch full client details to ensure all fields (including payment) are loaded
+            try {
+                const fullData = await apiRequest(`/clients/${client.client_id}`);
+                setFormData({ ...emptyClient, ...fullData });
+            } catch {
+                setFormData({ ...emptyClient, ...client });
+            }
         } else {
             setEditingClient(null);
             setFormData(emptyClient);
+            setActiveTab('anagrafica');
+            setDialogOpen(true);
         }
-        setActiveTab('anagrafica');
-        setDialogOpen(true);
     };
 
     const handleSave = async (e) => {

@@ -96,16 +96,25 @@ export default function FornitoriPage() {
 
     const updateField = (key, val) => setFormData(f => ({ ...f, [key]: val }));
 
-    const handleOpenDialog = (supplier) => {
+    const handleOpenDialog = async (supplier) => {
         if (supplier) {
             setEditingSupplier(supplier);
-            setFormData({ ...emptySupplier, ...supplier });
+            setActiveTab('anagrafica');
+            setDialogOpen(true);
+            // Fetch full supplier details to ensure all fields (including payment) are loaded
+            try {
+                const fullData = await apiRequest(`/clients/${supplier.client_id}`);
+                setFormData({ ...emptySupplier, ...fullData });
+            } catch {
+                // Fallback to list data if detail fetch fails
+                setFormData({ ...emptySupplier, ...supplier });
+            }
         } else {
             setEditingSupplier(null);
             setFormData(emptySupplier);
+            setActiveTab('anagrafica');
+            setDialogOpen(true);
         }
-        setActiveTab('anagrafica');
-        setDialogOpen(true);
     };
 
     const handleSave = async () => {

@@ -8,7 +8,7 @@ import json
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 
 from core.database import db
@@ -155,13 +155,18 @@ async def get_backup_stats(user: dict = Depends(get_current_user)):
 @router.post("/restore")
 async def restore_backup(
     file: UploadFile = File(...),
+    mode: str = Form("merge"),
     user: dict = Depends(get_current_user),
 ):
     """Restore data from a JSON backup file.
-    Uses UPSERT strategy: existing records are updated, new ones are inserted.
-    No data duplication occurs.
+
+    mode = "merge"  → UPSERT: existing records updated, new ones inserted.
+    mode = "wipe"   → SOSTITUZIONE TOTALE: all user data wiped first, then imported.
     """
     uid = user["user_id"]
+
+    if mode not in ("merge", "wipe"):
+        raise HTTPException(400, "Modalità non valida. Usa 'merge' o 'wipe'.")
 
     content = await file.read()
     try:
@@ -171,6 +176,18 @@ async def restore_backup(
 
     if "metadata" not in backup or "data" not in backup:
         raise HTTPException(400, "Formato backup non riconosciuto")
+
+    total_deleted = 0
+
+    # --- WIPE MODE: cancella tutti i dati utente prima dell'importazione ---
+    if mode == "wipe":
+        for coll_name in BACKUP_COLLECTIONS:
+            try:
+                coll = db[coll_name]
+                del_result = await coll.delete_many({"user_id": uid})
+                total_deleted += del_result.deleted_count
+            except Exception as e:
+                logger.warning(f"Wipe error in {coll_name}: {e}")
 
     results = {}
     total_inserted = 0
@@ -196,7 +213,6 @@ async def restore_backup(
 
             try:
                 if pk_field and doc.get(pk_field):
-                    # Upsert: update if exists, insert if not
                     result = await coll.update_one(
                         {pk_field: doc[pk_field], "user_id": uid},
                         {"$set": doc},
@@ -207,10 +223,8 @@ async def restore_backup(
                     elif result.modified_count > 0:
                         updated += 1
                     else:
-                        # Document exists but is identical — count as updated (no-op)
                         updated += 1
                 else:
-                    # No PK available — insert as new document
                     await coll.insert_one(doc)
                     inserted += 1
             except Exception as e:
@@ -222,8 +236,17 @@ async def restore_backup(
         total_updated += updated
         total_errors += errors
 
+    msg_parts = []
+    if mode == "wipe":
+        msg_parts.append(f"{total_deleted} eliminati")
+    msg_parts.append(f"{total_inserted} inseriti")
+    msg_parts.append(f"{total_updated} aggiornati")
+    msg_parts.append(f"{total_errors} errori")
+
     return {
-        "message": f"Restore completato: {total_inserted} inseriti, {total_updated} aggiornati, {total_errors} errori",
+        "message": f"Restore completato ({('Sostituzione Totale' if mode == 'wipe' else 'Unisci/Aggiorna')}): {', '.join(msg_parts)}",
+        "mode": mode,
+        "total_deleted": total_deleted if mode == "wipe" else 0,
         "total_inserted": total_inserted,
         "total_updated": total_updated,
         "total_errors": total_errors,

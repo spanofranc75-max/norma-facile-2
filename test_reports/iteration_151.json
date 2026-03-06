@@ -1,0 +1,48 @@
+{
+  "summary": "Iteration 151: Tested backup restore modes (merge/wipe), restore mode dialog UI, and payment conditions bug fix. All 9 backend tests passed. Frontend verified: restore mode dialog shows with correct data-testid attributes (restore-mode-dialog, btn-restore-merge, btn-restore-wipe, btn-restore-cancel), no window.confirm in BackupTab/DeployTab.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration151_backup_restore_modes.py",
+    "/app/test_reports/pytest/iteration151_backup_restore_modes_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Other pages still use window.confirm: CommessaOpsPanel.js (lines 1394, 1447), RdpPanel.js (line 150), RilieviPage.js (line 105). Consider migrating these to useConfirm() for consistency and sandboxed iframe support."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration151_backup_restore_modes.py"
+  ],
+  "success_rate": {
+    "backend": "100% (9/9 tests passed)",
+    "frontend": "100% (all data-testid verified, restore dialog working)"
+  },
+  "seed_data_creation": "Test user created: user_backup_test_1772800494666, session_backup_1772800494666",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 151 verified: 1) POST /api/admin/backup/restore accepts mode='merge' (upsert) and mode='wipe' (delete+import), invalid mode returns 400; 2) Frontend restore mode dialog has correct data-testid attrs; 3) BackupTab and DeployTab use useConfirm() not window.confirm(); 4) FornitoriPage and ClientsPage handleOpenDialog fetch full client details via GET /api/clients/{id} to preserve payment conditions. Note: Other components still use window.confirm - not in scope for this iteration.",
+  "verified_features": [
+    "POST /api/admin/backup/restore with mode='merge' performs upsert",
+    "POST /api/admin/backup/restore with mode='wipe' deletes user data then imports",
+    "Invalid mode returns 400 Bad Request",
+    "Default mode is 'merge' when not specified",
+    "Restore response includes: message, mode, total_inserted, total_updated, total_errors, details",
+    "GET /api/admin/backup/stats returns collection counts",
+    "GET /api/admin/backup/last returns last backup info",
+    "GET /api/clients/{id} returns full data including payment_type_id, iban",
+    "Restore mode dialog visible with data-testid='restore-mode-dialog'",
+    "Merge button has data-testid='btn-restore-merge'",
+    "Wipe button has data-testid='btn-restore-wipe'",
+    "Cancel button has data-testid='btn-restore-cancel'",
+    "BackupTab uses useConfirm() hook (line 1096)",
+    "DeployTab uses useConfirm() hook (line 1383)",
+    "No window.confirm() in SettingsPage.js"
+  ]
+}

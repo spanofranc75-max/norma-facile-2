@@ -15,6 +15,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Save, Building2, CreditCard, FileText, ImageIcon, Upload, X, Plug, ShieldCheck, HardDrive, Download, Loader2, RefreshCw, UploadCloud, Users, UserPlus, Trash2, Shield } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import { useConfirm } from '../components/ConfirmProvider';
+import {
+    AlertDialog,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '../components/ui/alert-dialog';
 
 export default function SettingsPage() {
     const confirm = useConfirm();
@@ -1084,12 +1093,15 @@ function TeamTab() {
 
 
 function BackupTab() {
+    const confirm = useConfirm();
     const [lastBackup, setLastBackup] = useState(null);
     const [stats, setStats] = useState(null);
     const [loadingStats, setLoadingStats] = useState(true);
     const [exporting, setExporting] = useState(false);
     const [restoring, setRestoring] = useState(false);
     const [restoreResult, setRestoreResult] = useState(null);
+    const [pendingFile, setPendingFile] = useState(null);
+    const [showModeDialog, setShowModeDialog] = useState(false);
 
     const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -1124,25 +1136,40 @@ function BackupTab() {
             a.remove();
             window.URL.revokeObjectURL(url);
             toast.success('Backup scaricato con successo!');
-            // Refresh last backup info
             const lastRes = await apiRequest('/admin/backup/last');
             setLastBackup(lastRes.last_backup);
         } catch (e) { toast.error(e.message); }
         finally { setExporting(false); }
     };
 
-    const handleRestore = async (e) => {
+    const handleFileSelect = (e) => {
         const file = e.target.files?.[0];
+        e.target.value = '';
         if (!file) return;
-        if (!(await confirm('ATTENZIONE: Stai per importare dati dal file di backup. I record esistenti verranno AGGIORNATI con i dati del backup. Vuoi procedere?'))) {
-            e.target.value = '';
-            return;
+        setPendingFile(file);
+        setShowModeDialog(true);
+    };
+
+    const executeRestore = async (mode) => {
+        setShowModeDialog(false);
+        const file = pendingFile;
+        setPendingFile(null);
+        if (!file) return;
+
+        if (mode === 'wipe') {
+            const ok = await confirm(
+                'ATTENZIONE CRITICA: Scegliendo "Sostituzione Totale", TUTTI i dati attuali verranno CANCELLATI prima dell\'importazione.\n\nQuesta operazione è IRREVERSIBILE.\n\nSei assolutamente sicuro?',
+                'Conferma Sostituzione Totale'
+            );
+            if (!ok) return;
         }
+
         setRestoring(true);
         setRestoreResult(null);
         try {
             const formData = new FormData();
             formData.append('file', file);
+            formData.append('mode', mode);
             const res = await fetch(`${API}/api/admin/backup/restore`, {
                 method: 'POST',
                 credentials: 'include',
@@ -1152,19 +1179,31 @@ function BackupTab() {
             if (!res.ok) throw new Error(data.detail || 'Errore restore');
             setRestoreResult(data);
             toast.success(data.message);
+            // Refresh stats
+            const [lastRes, statsRes] = await Promise.all([
+                apiRequest('/admin/backup/last'),
+                apiRequest('/admin/backup/stats'),
+            ]);
+            setLastBackup(lastRes.last_backup);
+            setStats(statsRes);
         } catch (err) { toast.error(err.message); }
-        finally { setRestoring(false); e.target.value = ''; }
+        finally { setRestoring(false); }
+    };
+
+    const cancelRestore = () => {
+        setShowModeDialog(false);
+        setPendingFile(null);
     };
 
     const fmtSize = (bytes) => {
-        if (!bytes) return '—';
+        if (!bytes) return '\u2014';
         if (bytes < 1024) return `${bytes} B`;
         if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
         return `${(bytes / 1048576).toFixed(1)} MB`;
     };
 
     const fmtDate = (d) => {
-        if (!d) return '—';
+        if (!d) return '\u2014';
         try { return new Date(d).toLocaleString('it-IT', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
         catch { return d; }
     };
@@ -1181,6 +1220,7 @@ function BackupTab() {
     };
 
     return (
+        <>
         <Card className="border-gray-200">
             <CardHeader className="bg-slate-800 border-b border-gray-200 rounded-t-lg">
                 <CardTitle className="text-white flex items-center gap-2">
@@ -1204,7 +1244,6 @@ function BackupTab() {
                         </div>
                     </div>
 
-                    {/* Last backup info */}
                     {lastBackup && (
                         <div className="bg-white border border-emerald-200 rounded-lg p-3">
                             <p className="text-xs text-slate-500">Ultimo backup: <strong className="text-slate-700">{fmtDate(lastBackup.date)}</strong></p>
@@ -1214,7 +1253,6 @@ function BackupTab() {
                         </div>
                     )}
 
-                    {/* Current data stats */}
                     {!loadingStats && stats && (
                         <div>
                             <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Dati Attuali ({stats.total} record)</p>
@@ -1248,14 +1286,14 @@ function BackupTab() {
                             <UploadCloud className="h-4 w-4" /> Ripristina da Backup
                         </h3>
                         <p className="text-xs text-amber-600 mt-0.5">
-                            Importa dati da un file di backup precedente. I record esistenti verranno <strong>aggiornati</strong>, i nuovi verranno inseriti (upsert sicuro).
+                            Importa dati da un file di backup. Dopo aver selezionato il file, potrai scegliere la modalità di importazione.
                         </p>
                     </div>
 
                     <label className={`flex items-center justify-center w-full h-10 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
                         restoring ? 'border-amber-300 bg-amber-100' : 'border-amber-300 hover:border-amber-400 hover:bg-amber-50'
                     }`}>
-                        <input type="file" accept=".json" onChange={handleRestore} disabled={restoring} className="hidden" data-testid="input-restore-file" />
+                        <input type="file" accept=".json" onChange={handleFileSelect} disabled={restoring} className="hidden" data-testid="input-restore-file" />
                         {restoring ? (
                             <span className="flex items-center gap-2 text-xs text-amber-700"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Ripristino in corso...</span>
                         ) : (
@@ -1264,8 +1302,11 @@ function BackupTab() {
                     </label>
 
                     {restoreResult && (
-                        <div className="bg-white border border-amber-200 rounded-lg p-3 text-xs">
+                        <div className="bg-white border border-amber-200 rounded-lg p-3 text-xs" data-testid="restore-result">
                             <p className="font-semibold text-emerald-700">{restoreResult.message}</p>
+                            {restoreResult.mode === 'wipe' && restoreResult.total_deleted > 0 && (
+                                <p className="text-red-600 mt-1">Record eliminati prima dell'importazione: <strong>{restoreResult.total_deleted}</strong></p>
+                            )}
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 mt-2">
                                 {Object.entries(restoreResult.details || {}).filter(([, v]) => v.inserted > 0 || v.updated > 0 || v.errors > 0).map(([k, v]) => (
                                     <span key={k} className="text-slate-600">
@@ -1280,6 +1321,50 @@ function BackupTab() {
                 </div>
             </CardContent>
         </Card>
+
+        {/* Restore Mode Selection Dialog */}
+        <AlertDialog open={showModeDialog} onOpenChange={(v) => { if (!v) cancelRestore(); }}>
+            <AlertDialogContent className="max-w-lg" data-testid="restore-mode-dialog">
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Scegli Modalità di Ripristino</AlertDialogTitle>
+                    <AlertDialogDescription className="text-sm">
+                        File selezionato: <strong>{pendingFile?.name}</strong>
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="space-y-3 py-2">
+                    <button
+                        onClick={() => executeRestore('merge')}
+                        className="w-full text-left border-2 border-blue-200 hover:border-blue-400 bg-blue-50/50 hover:bg-blue-50 rounded-lg p-4 transition-colors"
+                        data-testid="btn-restore-merge"
+                    >
+                        <div className="flex items-center gap-2 mb-1">
+                            <RefreshCw className="h-4 w-4 text-blue-600" />
+                            <span className="font-semibold text-blue-800 text-sm">Unisci / Aggiorna (Consigliato)</span>
+                        </div>
+                        <p className="text-xs text-blue-600 leading-relaxed">
+                            I record esistenti vengono aggiornati, i nuovi vengono inseriti. Nessun dato viene cancellato. Ideale per sincronizzare o aggiornare i dati.
+                        </p>
+                    </button>
+                    <button
+                        onClick={() => executeRestore('wipe')}
+                        className="w-full text-left border-2 border-red-200 hover:border-red-400 bg-red-50/50 hover:bg-red-50 rounded-lg p-4 transition-colors"
+                        data-testid="btn-restore-wipe"
+                    >
+                        <div className="flex items-center gap-2 mb-1">
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                            <span className="font-semibold text-red-800 text-sm">Sostituzione Totale</span>
+                        </div>
+                        <p className="text-xs text-red-600 leading-relaxed">
+                            TUTTI i dati attuali vengono CANCELLATI e sostituiti con quelli del backup. Operazione irreversibile. Usare solo per ripristino completo.
+                        </p>
+                    </button>
+                </div>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={cancelRestore} data-testid="btn-restore-cancel">Annulla</AlertDialogCancel>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        </>
     );
 }
 
@@ -1295,6 +1380,7 @@ function StatBox({ label, value }) {
 
 
 function DeployTab() {
+    const confirm = useConfirm();
     const [preview, setPreview] = useState(null);
     const [loading, setLoading] = useState(true);
     const [cleaning, setCleaning] = useState(false);
