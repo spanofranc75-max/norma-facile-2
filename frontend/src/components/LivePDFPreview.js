@@ -30,8 +30,14 @@ export function LivePDFPreview({ formData, totals, onClose }) {
                 body: JSON.stringify(payload),
             });
             if (!res.ok) throw new Error(`Errore ${res.status}`);
-            const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
+            const buffer = await res.arrayBuffer();
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            const b64 = btoa(binary);
+            const url = `data:application/pdf;base64,${b64}`;
             if (prevBlobRef.current) URL.revokeObjectURL(prevBlobRef.current);
             prevBlobRef.current = url;
             setBlobUrl(url);
@@ -122,11 +128,11 @@ export function LivePDFPreview({ formData, totals, onClose }) {
                     </div>
                 )}
                 {blobUrl && (
-                    <iframe
+                    <embed
                         src={blobUrl}
+                        type="application/pdf"
                         data-testid="live-pdf-iframe"
                         className="w-full h-full border-0"
-                        title="Anteprima PDF Live"
                         style={{ minHeight: expanded ? '100vh' : '700px' }}
                     />
                 )}
