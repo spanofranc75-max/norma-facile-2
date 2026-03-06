@@ -72,8 +72,14 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **Fix**: Entrambe le funzioni ora generano un `totals` completo e coerente con `InvoiceTotals`. Corretta anche la fattura 19/2026 (Merighi Giancarlo) già nel DB.
 - Verificato via API e screenshot: pagina caricata correttamente con tutti i totali.
 
+### Bug Fix: Termini di Pagamento spariti in Fatturazione (6 Mar 2026)
+- **Causa**: Il model `PaymentTypeResponse` non aveva un campo `label`. Il frontend usava `pt.label` per il dropdown ma l'API restituiva solo `codice` e `descrizione` separati.
+- **Fix**: Aggiunto campo `label` computato (`{codice} - {descrizione}`) in `enrich_response()` + campo `label` nel model Pydantic.
+- Auto-fill dal profilo cliente verificato e funzionante.
+
 ### P0 (Completati)
 - ~~Crash pagina dettaglio fattura da preventivo~~ COMPLETATO (5 Mar 2026)
+- ~~Termini pagamento spariti in fatturazione~~ COMPLETATO (6 Mar 2026)
 - ~~Restyling PDF Perizia Pro con tachimetro Risk Score~~ COMPLETATO (5 Mar 2026)
 - ~~Preventivi accettati nella Planning Board~~ COMPLETATO
 - ~~Error handling SDI~~ COMPLETATO

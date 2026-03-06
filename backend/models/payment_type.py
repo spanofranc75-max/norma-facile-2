@@ -81,6 +81,7 @@ class PaymentTypeUpdate(BaseModel):
 
 class PaymentTypeResponse(PaymentTypeBase):
     payment_type_id: str
+    label: str = ""
     created_at: datetime
     updated_at: Optional[datetime] = None
 

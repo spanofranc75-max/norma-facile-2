@@ -43,6 +43,10 @@ def enrich_response(doc: dict) -> dict:
     doc.setdefault("divisione_automatica", True)
     doc.setdefault("richiedi_giorno_scadenza", False)
     doc.setdefault("giorno_scadenza", None)
+    # Computed label: "CODICE - Descrizione" (used by frontend dropdown)
+    codice = doc.get("codice", "")
+    descrizione = doc.get("descrizione", "")
+    doc["label"] = f"{codice} - {descrizione}" if codice else descrizione
     return doc
 
 
