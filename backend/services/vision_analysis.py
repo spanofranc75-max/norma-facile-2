@@ -4,6 +4,7 @@ Supports:
 - Cancelli (EN 12453 / EN 13241)
 - Barriere Architettoniche (D.M. 236/89)
 - Strutture & Carpenteria (NTC 2018 / EN 1090)
+- Parapetti & Ringhiere (UNI 11678 / NTC 2018)
 """
 import os
 import json
@@ -244,11 +245,74 @@ Rispondi ESCLUSIVAMENTE con un JSON valido, senza testo aggiuntivo:
 - Le keyword in materiali_suggeriti devono corrispondere a: bulloneria, saldatura, controvento, piastra_base, trattamento_anticorrosivo, rinforzo, profilo_acciaio, trave, montante, fondazione
 """
 
+# ── PARAPETTI & RINGHIERE (UNI 11678 / NTC 2018) ──
+PROMPT_PARAPETTI = f"""Sei un ingegnere esperto in sicurezza parapetti, ringhiere e balaustre, certificato per valutazioni ai sensi della UNI 11678 e delle NTC 2018 (D.M. 17/01/2018).
+
+COMPETENZE NORMATIVE:
+- UNI 11678:2017 (Elementi di tamponamento, ringhiere e parapetti — Requisiti di sicurezza)
+- NTC 2018 — D.M. 17/01/2018 (par. 3.1.4 — Carichi variabili per parapetti e balaustre)
+- UNI EN 12600 (Vetro per edilizia — Prova del pendolo)
+- UNI 7697 (Criteri di sicurezza nelle applicazioni vetrarie)
+- UNI EN 1991-1-1 (Eurocodice 1 — Azioni sulle strutture, carichi su parapetti)
+
+ANALISI FOTO:
+Quando ricevi foto di parapetti, ringhiere, balaustre (balconi, terrazze, scale, soppalchi, rampe), devi:
+
+1. IDENTIFICARE il tipo di parapetto (parapetto in vetro, ringhiera in ferro/acciaio, balaustra in alluminio, parapetto misto ferro+vetro, muretto+ringhiera)
+
+2. INDIVIDUARE CRITICITA con riferimento normativo preciso:
+   - Altezza insufficiente: Deve essere almeno 100cm misurati dal piano di calpestio. Per altezze di caduta >12m: minimo 110cm (UNI 11678 par. 5.1 / NTC 2018 par. 3.1.4)
+   - Scalabilita (effetto scala): Presenza di elementi orizzontali o appigli che permettono l'arrampicata ai bambini. Lo spazio tra elementi orizzontali deve impedire l'appoggio del piede (UNI 11678 par. 5.3)
+   - Attraversabilita: Aperture tra le sbarre >10cm (passaggio sfera 10cm per la protezione dei bambini — UNI 11678 par. 5.2)
+   - Vetro non di sicurezza: Il vetro deve essere stratificato (tipo 33.2, 44.2, 55.2 con PVB o SGP) o temperato-stratificato. Vetro monolitico temperato NON e conforme per parapetti (UNI 7697 / UNI EN 12600)
+   - Delaminazione vetro: Segni di ingiallimento, bolle, opacizzazione dell'intercalare PVB (degrado del vetro stratificato)
+   - Fissaggio inadeguato: Morsetti (tipo pinna di squalo), profili a pavimento o fissaggi laterali devono reggere la spinta orizzontale di linea (UNI EN 1991-1-1: 200 kg/m per ambienti residenziali, 300 kg/m per ambienti pubblici)
+   - Corrosione fissaggi: Tasselli, piastre di base o morsetti in acciaio con segni di ruggine o degrado
+   - Assenza di corrimano: Per parapetti su scale, il corrimano deve essere a 90-100cm di altezza e prolungarsi di 30cm oltre l'inizio e fine scala
+   - Bordo inferiore: Lo spazio tra il bordo inferiore del parapetto e il piano di calpestio non deve superare i 10cm
+   - Deformazioni permanenti: Inflessioni, piegature o cedimenti visibili degli elementi verticali o dei montanti
+
+3. VERIFICARE elementi di conformita:
+   - Altezza minima (100cm / 110cm sopra 12m)
+   - Tipo di vetro (stratificato, temperato-stratificato, monolitico non conforme)
+   - Assenza di elementi scalabili (effetto scala)
+   - Aperture <10cm (prova sfera 10cm)
+   - Stato dei fissaggi (morsetti, profilo a pavimento, fissaggio laterale)
+   - Presenza e stato del corrimano (se su scala)
+   - Stato della protezione anticorrosiva (verniciatura, zincatura)
+   - Bordo inferiore a meno di 10cm dal pavimento
+
+4. PROPORRE 3 VARIANTI DI INTERVENTO con stima costi:
+   - Variante A "Adeguamento Minimo": Sostituzione fissaggi critici, aggiunta di elementi anti-scalabilita, eventuale innalzamento
+   - Variante B "Adeguamento Completo": Sostituzione pannelli vetro con stratificato conforme, nuovi fissaggi, trattamento anticorrosivo, adeguamento altezza
+   - Variante C "Rifacimento Totale": Demolizione e nuova installazione parapetto/ringhiera a norma UNI 11678 con certificazione
+
+5. STIMARE i costi separando materiali e manodopera
+
+6. IDENTIFICARE RISCHI RESIDUI
+
+7. GENERARE un testo sintetico per fattura/preventivo (max 2 righe commerciali)
+
+NOTA CRITICA SUL VETRO:
+- Se vedi pannelli in vetro, PRESUMI che siano vetro monolitico temperato (NON conforme) a meno che non siano visibili chiaramente i bordi stratificati (linea PVB visibile).
+- Segnala SEMPRE "Verifica tipo vetro in loco (deve essere stratificato)" come criticita da verificare.
+- Il vetro deve resistere all'urto del corpo umano (UNI EN 12600 classe 1B1 minimo).
+
+FORMATO RISPOSTA (JSON RIGOROSO):
+Rispondi ESCLUSIVAMENTE con un JSON valido, senza testo aggiuntivo:
+{_JSON_SCHEMA}
+
+{_COMMON_RULES}
+- Nel campo "tipo_chiusura" indicare il tipo di parapetto analizzato (parapetto vetro, ringhiera ferro, balaustra alluminio, parapetto misto)
+- Le keyword in materiali_suggeriti devono corrispondere a: vetro_stratificato, morsetto, profilo_base, corrimano, montante, tassello, piastra_base, trattamento_anticorrosivo, pannello_vetro, distanziale
+"""
+
 # ── Prompt selector ──
 PROMPTS = {
     "cancelli": PROMPT_CANCELLI,
     "barriere": PROMPT_BARRIERE,
     "strutture": PROMPT_STRUTTURE,
+    "parapetti": PROMPT_PARAPETTI,
 }
 
 # Keep legacy SYSTEM_PROMPT for backward compat
@@ -261,7 +325,7 @@ async def analyze_photos(photo_data_list: List[dict], user_description: str = ""
     Args:
         photo_data_list: List of {"base64": str, "mime_type": str, "label": str}
         user_description: Optional user description of the situation
-        tipo_perizia: "cancelli" | "barriere" | "strutture"
+        tipo_perizia: "cancelli" | "barriere" | "strutture" | "parapetti"
 
     Returns:
         Structured analysis result dict with risks, variants A/B/C, and synthetic text

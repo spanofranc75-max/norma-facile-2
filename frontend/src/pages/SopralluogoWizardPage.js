@@ -13,7 +13,7 @@ import {
     ArrowLeft, ArrowRight, Camera, Upload, Trash2, Brain, FileText,
     AlertTriangle, CheckCircle2, ShieldAlert, Loader2, X, Eye,
     MapPin, User, Image as ImageIcon, ChevronRight, Wrench, Download, UserPlus, Mail,
-    Shield, Accessibility, HardHat
+    Shield, Accessibility, HardHat, Fence
 } from 'lucide-react';
 import { ClientQuickCreateModal } from '../components/ClientQuickCreateModal';
 
@@ -35,6 +35,8 @@ const FOTO_LABELS = [
     { value: 'ancoraggio', label: 'Ancoraggio / Base' },
     { value: 'scala', label: 'Scala / Rampa' },
     { value: 'corrimano', label: 'Corrimano / Parapetto' },
+    { value: 'vetro', label: 'Pannello Vetro' },
+    { value: 'morsetto', label: 'Morsetto / Fissaggio' },
     { value: 'struttura', label: 'Struttura Portante' },
     { value: 'saldatura', label: 'Saldatura / Giunzione' },
     { value: 'fondazione', label: 'Fondazione / Piastra' },
@@ -78,6 +80,16 @@ const TIPO_PERIZIA_OPTIONS = [
         color: 'from-amber-500 to-orange-700',
         borderColor: 'border-amber-400',
         bgColor: 'bg-amber-50',
+    },
+    {
+        value: 'parapetti',
+        label: 'Parapetti & Ringhiere',
+        norm: 'UNI 11678 / NTC 2018',
+        description: 'Parapetti vetro, ringhiere, balaustre, balconi',
+        icon: Fence,
+        color: 'from-cyan-500 to-blue-700',
+        borderColor: 'border-cyan-400',
+        bgColor: 'bg-cyan-50',
     },
 ];
 
@@ -537,7 +549,7 @@ Cordiali saluti`;
                         {/* Tipo Perizia Card Grid */}
                         <div>
                             <Label className="mb-2 block">Tipologia Perizia</Label>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" data-testid="tipo-perizia-grid">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" data-testid="tipo-perizia-grid">
                                 {TIPO_PERIZIA_OPTIONS.map(opt => {
                                     const Icon = opt.icon;
                                     const isSelected = formData.tipo_perizia === opt.value;
@@ -591,6 +603,8 @@ Cordiali saluti`;
                                         ? "Es: Scala condominiale senza corrimano, ingresso con gradino alto..."
                                         : formData.tipo_perizia === 'strutture'
                                         ? "Es: Tettoia in ferro con segni di corrosione, soppalco con bulloni allentati..."
+                                        : formData.tipo_perizia === 'parapetti'
+                                        ? "Es: Parapetto in vetro su balcone, ringhiera bassa con sbarre orizzontali..."
                                         : "Es: Cancello scorrevole vecchio, cliente lamenta rumori anomali..."
                                 }
                                 rows={3}
@@ -624,6 +638,8 @@ Cordiali saluti`;
                                     ? "Scatta o carica foto dell'accesso: scala, rampa, corrimano, porta, pavimentazione, spazi di manovra."
                                     : formData.tipo_perizia === 'strutture'
                                     ? "Scatta o carica foto della struttura: saldature, bulloneria, controventi, piastre di base, corrosione, panoramica."
+                                    : formData.tipo_perizia === 'parapetti'
+                                    ? "Scatta o carica foto del parapetto/ringhiera: panoramica, altezza, fissaggi/morsetti, pannelli vetro, bordo inferiore, dettaglio montanti."
                                     : "Scatta o carica foto del cancello: motore, guide, punto di chiusura, dispositivi di sicurezza, panoramica."
                                 }
                             </p>
@@ -717,6 +733,8 @@ Cordiali saluti`;
                                     ? "L'AI analizzerà le foto per identificare barriere architettoniche e non conformità secondo il D.M. 236/89."
                                     : formData.tipo_perizia === 'strutture'
                                     ? "L'AI analizzerà le foto per identificare criticità strutturali e non conformità secondo le NTC 2018 / EN 1090."
+                                    : formData.tipo_perizia === 'parapetti'
+                                    ? "L'AI analizzerà le foto per identificare criticità su parapetti e ringhiere secondo la UNI 11678 / NTC 2018: altezza, scalabilità, tipo vetro, fissaggi."
                                     : "L'AI analizzerà le foto per identificare rischi di sicurezza, dispositivi mancanti e interventi necessari secondo la normativa EN 12453."
                                 }
                             </p>

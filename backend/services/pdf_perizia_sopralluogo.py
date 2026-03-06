@@ -442,6 +442,32 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
                 "Rilascio Relazione di Valutazione Sicurezza Strutturale",
             ],
         },
+        "parapetti": {
+            "cover_title": "PERIZIA TECNICA<br/>PARAPETTI & RINGHIERE",
+            "cover_subtitle": "Analisi di conformita UNI 11678 / NTC 2018",
+            "content_header_title": "Relazione Tecnica Parapetti e Ringhiere",
+            "norms_badge": "UNI 11678 &bull; NTC 2018 &bull; UNI 7697 &bull; UNI EN 12600",
+            "footer_norm_text": "Norma Facile 2.0 — Perizia Parapetti & Ringhiere",
+            "legal_title": "Responsabilita del Proprietario / Amministratore",
+            "legal_text_1": "Ai sensi delle NTC 2018 (D.M. 17/01/2018, par. 3.1.4) e della UNI 11678:2017, il proprietario o l'amministratore dell'immobile e responsabile della sicurezza dei parapetti, ringhiere e balaustre presenti nell'edificio, inclusi balconi, terrazze, scale e soppalchi.",
+            "legal_text_2": "La presente perizia tecnica evidenzia le non conformita riscontrate. Il mancato adeguamento espone il proprietario a responsabilita civile e penale in caso di caduta dall'alto.",
+            "legal_highlight": "<strong>Attenzione:</strong> Parapetti non conformi alla UNI 11678 (altezza <100cm, elementi scalabili, aperture >10cm, vetro non di sicurezza) costituiscono pericolo grave di caduta dall'alto. In caso di infortunio, la responsabilita e diretta ai sensi dell'art. 2051 C.C. (custodia) e dell'art. 2053 C.C. (rovina di edificio).",
+            "legal_norms": """<p><strong>UNI 11678:2017</strong> — Elementi di tamponamento, ringhiere e parapetti — Requisiti e metodi di prova per la verifica della sicurezza in uso.</p>
+                <p><strong>NTC 2018 — D.M. 17/01/2018</strong> — Norme Tecniche per le Costruzioni (par. 3.1.4 — Carichi variabili per parapetti: 1,0-3,0 kN/m).</p>
+                <p><strong>UNI EN 1991-1-1 (Eurocodice 1)</strong> — Azioni sulle strutture — Carichi su parapetti e balaustre.</p>
+                <p><strong>UNI 7697:2015</strong> — Criteri di sicurezza nelle applicazioni vetrarie.</p>
+                <p><strong>UNI EN 12600</strong> — Vetro per edilizia — Prova del pendolo — Metodo di prova e classificazione.</p>""",
+            "checklist_items": [
+                "Misurazione altezza parapetto dal piano di calpestio (min 100cm, 110cm sopra 12m)",
+                "Verifica assenza elementi scalabili (test anti-arrampicata bambini)",
+                "Prova sfera 10cm (aperture tra sbarre e bordo inferiore)",
+                "Verifica tipo vetro: stratificato di sicurezza conforme UNI 7697 (ispezione bordi)",
+                "Controllo stato fissaggi: morsetti, profili base, tasselli (assenza corrosione)",
+                "Test resistenza spinta orizzontale (conformita UNI 11678 / NTC 2018 par. 3.1.4)",
+                "Verifica stato protezione anticorrosiva (verniciatura, zincatura montanti)",
+                "Rilascio Relazione di Conformita Parapetti e aggiornamento documentazione",
+            ],
+        },
     }
 
     cfg = PERIZIA_CONFIG.get(tipo_perizia, PERIZIA_CONFIG["cancelli"])
