@@ -78,6 +78,11 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **Backend (pdf_perizia_sopralluogo.py)**: Template PDF dinamico — titolo copertina, norme citate, note legali, checklist post-intervento si adattano al tipo di perizia.
 - **Model**: Aggiunto campo `tipo_perizia` a SopralluogoCreate/Update.
 
+### Bug Fix: Fattura da Preventivo Electric Style non trovata (6 Mar 2026)
+- **Causa**: Preventivo PRV-2026-0004 referenziava fattura inesistente — dati corrotti. Counter inconsistente tra convert-to-invoice e progressive-invoice
+- **Fix**: Reset dati preventivo + unificato counter e formato numerazione
+- 8/8 test passati (iteration_150)
+
 ### Riscrittura Prompt AI Parapetti — Rigore da Collaudatore (6 Mar 2026)
 - **Prompt completamente riscritto** con feedback ingegnere strutturista: eliminati EN 12453/Direttiva Macchine, aggiunti schema statico, fissaggio puntuale, ETA Opzione 1, guarnizioni EPDM, corrimano strutturale obbligatorio
 - **3 varianti intervento** con costi dettagliati: A) Messa in sicurezza urgente, B) Adeguamento UNI 11678 (consigliato), C) Rifacimento totale con collaudo
