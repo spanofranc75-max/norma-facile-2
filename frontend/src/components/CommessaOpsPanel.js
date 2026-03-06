@@ -2018,12 +2018,12 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                                     </Select>
                                                 </TableCell>
                                                 <TableCell className="p-1">
-                                                    <Select value={mat.ordine_id || ''} onValueChange={v => updateArrivoMat(idx, 'ordine_id', v)}>
+                                                    <Select value={mat.ordine_id || '__none__'} onValueChange={v => updateArrivoMat(idx, 'ordine_id', v === '__none__' ? '' : v)}>
                                                         <SelectTrigger className="h-8 text-xs">
                                                             <SelectValue placeholder="N/D" />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            <SelectItem value="">Nessuno</SelectItem>
+                                                            <SelectItem value="__none__">Nessuno</SelectItem>
                                                             {(approv?.ordini || []).map(o => (
                                                                 <SelectItem key={o.ordine_id} value={o.ordine_id}>
                                                                     {o.ordine_id.slice(-6)} - {o.fornitore_nome}
