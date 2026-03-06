@@ -83,6 +83,12 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **Fix Backend**: Logica granulare — metadati (termini pagamento, scadenza, note) aggiornabili su tutti gli status; modifiche strutturali (righe, impostazioni fiscali, numero, cliente) bloccate su non-bozza.
 - **Fix Frontend**: `handleSave` invia solo campi metadati per fatture non in bozza.
 
+### Chiusura Diretta Commessa (6 Mar 2026)
+- **Backend**: Nuovo endpoint `POST /api/commesse/{id}/complete-simple` — chiude una commessa direttamente saltando certificazione e produzione
+- **Frontend**: Bottone "Chiudi senza certificazione" nel CommessaHubPage, visibile per stati attivi (richiesta, bozza, rilievo_completato, firmato, in_produzione, fatturato)
+- **Dialog di conferma** con nota opzionale, evento `CHIUSURA_DIRETTA` registrato nella timeline
+- 14/14 test passati (iteration_146)
+
 ### P0 (Completati)
 - ~~Crash pagina dettaglio fattura da preventivo~~ COMPLETATO (5 Mar 2026)
 - ~~Termini pagamento spariti in fatturazione~~ COMPLETATO (6 Mar 2026)
@@ -91,6 +97,7 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - ~~Preventivi accettati nella Planning Board~~ COMPLETATO
 - ~~Error handling SDI~~ COMPLETATO
 - ~~Modulo Sopralluoghi & Perizie~~ COMPLETATO
+- ~~Chiusura diretta commessa senza certificazione~~ COMPLETATO (6 Mar 2026)
 
 ### P1
 - **Firma digitale su tablet** — Permettere al cliente di firmare il PDF perizia su tablet
