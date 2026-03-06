@@ -78,6 +78,13 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **Backend (pdf_perizia_sopralluogo.py)**: Template PDF dinamico — titolo copertina, norme citate, note legali, checklist post-intervento si adattano al tipo di perizia.
 - **Model**: Aggiunto campo `tipo_perizia` a SopralluogoCreate/Update.
 
+### Riscrittura Prompt AI Parapetti — Rigore da Collaudatore (6 Mar 2026)
+- **Prompt completamente riscritto** con feedback ingegnere strutturista: eliminati EN 12453/Direttiva Macchine, aggiunti schema statico, fissaggio puntuale, ETA Opzione 1, guarnizioni EPDM, corrimano strutturale obbligatorio
+- **3 varianti intervento** con costi dettagliati: A) Messa in sicurezza urgente, B) Adeguamento UNI 11678 (consigliato), C) Rifacimento totale con collaudo
+- **Checklist collaudo PDF**: 13 punti UNI 11678 (prova spinta 1.0 kN/m, deformazione elastica <=30mm, residua <=5%, urto 250J, integrita post-rottura)
+- **Norme legali aggiornate**: art. 2051/2053 C.C., ETA, UNI 11018
+- 32/32 test passati (iteration_149)
+
 ### Feature: Duplica Preventivo / Clone Quote (6 Mar 2026)
 - **Backend**: Endpoint `POST /api/preventivi/{id}/clone` — clona preventivo con nuovo ID, numero progressivo, data odierna, status `bozza`, reset `converted_commessa_id` e `total_invoiced`
 - **Frontend Editor**: Bottone "Crea Copia" nella toolbar (PreventivoEditorPage) — redirect automatico al nuovo preventivo
