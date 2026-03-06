@@ -78,9 +78,13 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **Backend (pdf_perizia_sopralluogo.py)**: Template PDF dinamico — titolo copertina, norme citate, note legali, checklist post-intervento si adattano al tipo di perizia.
 - **Model**: Aggiunto campo `tipo_perizia` a SopralluogoCreate/Update.
 
-### Bug Fix: Anteprima PDF e Emetti fattura (6 Mar 2026)
-- **PDF Preview**: Riscritto PDFPreviewModal — rimosso blob URL (causava ERR_ABORTED), ora usa iframe diretto con URL API same-origin + cookie. Cambiato Content-Disposition da `attachment` a `inline` su fatture, preventivi e DDT
-- **Emetti**: Il bottone funzionava correttamente dal backend (testato con curl e Playwright). Il problema era probabilmente causato da errori JS del vecchio PDF preview che corrompevano lo stato della pagina
+### Bug Fix DEFINITIVO: Anteprima PDF + Emetti fattura (6 Mar 2026)
+- **PDF Preview**: Installato `react-pdf` (PDF.js) — renderizza PDF su canvas JavaScript, zero dipendenza da plugin browser/iframe/embed/blob
+- **Worker PDF.js**: File locale `public/pdf.worker.min.mjs` per evitare problemi CDN
+- **PDFPreviewModal**: Riscritto con `Document` + `Page` da react-pdf, navigazione pagine, zoom, scarica
+- **LivePDFPreview**: Stesso approccio react-pdf applicato all'anteprima live
+- **Content-Disposition**: Cambiato da `attachment` a `inline` su fatture, preventivi e DDT
+- **Emetti**: Funzionava gia dal backend — il vecchio PDF preview causava errori JS che bloccavano l'interazione
 
 ### Bug Fix: Fattura da Preventivo Electric Style non trovata (6 Mar 2026)
 - **Causa**: Preventivo PRV-2026-0004 referenziava fattura inesistente — dati corrotti. Counter inconsistente tra convert-to-invoice e progressive-invoice
