@@ -102,7 +102,13 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **Fix Frontend**: Header ora mostra `total` dal DB (non `array.length`). Limite API aumentato da 50 a 500 per mostrare tutti i preventivi.
 - **10/10 test passati** (iteration_152)
 
+### Fix Scadenziario e Cruscotto Finanziario (7 Mar 2026)
+- **Causa**: Le fatture senza `scadenze_pagamento` erano invisibili allo scadenziario. Query `payment_status` mancavano valori null.
+- **Fix**: Sezione 5b nello scadenziario include fatture senza scadenze usando `due_date`. Query cambiate a `$nin:['pagata']`. Nuovo endpoint `POST /api/invoices/sync-scadenze`.
+- **13/13 test passati** (iteration_153)
+
 ### P0 (Completati)
+- ~~Scadenziario e Cruscotto Finanziario~~ COMPLETATO (7 Mar 2026)
 - ~~Ripristino Intelligente Backup~~ COMPLETATO (7 Mar 2026)
 - ~~Numerazione Preventivi Non Continua~~ COMPLETATO (7 Mar 2026)
 - ~~Crash pagina dettaglio fattura da preventivo~~ COMPLETATO (5 Mar 2026)
