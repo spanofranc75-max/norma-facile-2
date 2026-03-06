@@ -1,0 +1,88 @@
+{
+  "summary": "Iteration 148: Duplica Preventivo (Clone Quote) Feature - ALL BACKEND AND FRONTEND TESTS PASS. Backend POST /api/preventivi/{prev_id}/clone endpoint works correctly. Frontend 'Crea Copia' button in editor and Copy icon in list page both functional.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "backend_clone_endpoint": {
+      "tests": 20,
+      "passed": 20,
+      "details": [
+        "Clone returns 201 status code",
+        "Clone has new preventivo_id (prev_xxx format)",
+        "Clone has new auto-generated number (PRV-YYYY-NNNN)",
+        "Clone status is always 'bozza'",
+        "Clone has today's date in created_at",
+        "Clone preserves client_id, subject, normativa, notes",
+        "Clone preserves payment_type_label, IBAN, banca",
+        "Clone preserves all lines count",
+        "Clone lines have fresh line_ids (no overlap with source)",
+        "Clone lines preserve description, quantity, unit_price, vat_rate",
+        "Clone recalculates totals correctly",
+        "Clone resets converted_commessa_id to null",
+        "Clone resets total_invoiced to 0",
+        "Clone of non-existent preventivo returns 404",
+        "Cloned preventivo can be retrieved via GET",
+        "Clone of 'accettato' preventivo becomes 'bozza'"
+      ]
+    },
+    "frontend_editor_crea_copia_button": {
+      "status": "PASS",
+      "details": [
+        "'Crea Copia' button (data-testid='btn-clone-preventivo') visible in editor toolbar for existing preventivi",
+        "'Crea Copia' button correctly hidden for new preventivi (/preventivi/new)",
+        "Clicking 'Crea Copia' calls clone API and navigates to new preventivo",
+        "Toast notification shows 'Preventivo duplicato: PRV-YYYY-NNNN'"
+      ]
+    },
+    "frontend_list_copy_button": {
+      "status": "PASS",
+      "details": [
+        "Copy icon button (data-testid='btn-clone-{id}') visible in each row's actions",
+        "Clicking Copy icon clones and navigates to new preventivo editor",
+        "44 clone buttons found for 44 preventivo rows"
+      ]
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration148_clone_preventivo.py",
+    "/app/test_reports/pytest/iteration148_clone_preventivo_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Backend routes/preventivi.py lines 558-640: clone_preventivo endpoint properly implemented with atomic counter for new number",
+    "Backend correctly copies all fields except _id, preventivo_id, number, created_at, updated_at, status, total_invoiced, converted_commessa_id",
+    "Backend generates fresh line_ids for cloned lines (line 591)",
+    "Backend recalculates totals after cloning (line 595-599)",
+    "Frontend PreventivoEditorPage.js lines 362-370: handleClone function properly calls clone API and navigates",
+    "Frontend PreventivoEditorPage.js lines 542-547: 'Crea Copia' button with correct data-testid, only shown when !isNew",
+    "Frontend PreventiviPage.js lines 69-76: handleClone function for list page with e.stopPropagation()",
+    "Frontend PreventiviPage.js lines 155-157: Copy icon button with data-testid='btn-clone-{id}' in row actions"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration148_clone_preventivo.py"
+  ],
+  "success_rate": {
+    "backend": "100% (20/20 tests passed)",
+    "frontend": "100% (All UI verification tests passed)"
+  },
+  "test_credentials": {
+    "user_id": "user_97c773827822",
+    "email": "spano.franc75@gmail.com",
+    "session_token": "test_session_clone_* (dynamically created per test class)"
+  },
+  "seed_data_creation": "Test preventivi created and cleaned up during test execution",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 148 fully verified the 'Duplica Preventivo' (Clone Quote) feature. Backend: POST /api/preventivi/{prev_id}/clone endpoint creates cloned document with new ID, new number (PRV-YYYY-NNNN), status='bozza', today's date, all lines copied with fresh line_ids, totals recalculated, converted_commessa_id=null, total_invoiced=0. Frontend: 'Crea Copia' button in editor toolbar (data-testid='btn-clone-preventivo') for existing preventivi only. Copy icon button in list page (data-testid='btn-clone-{id}') in each row. Both entry points call clone API and navigate to new preventivo. Toast notification confirms duplication. All 20 backend tests pass. All frontend tests pass.",
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "note": "All tests use real API endpoints and MongoDB database"
+  }
+}

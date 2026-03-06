@@ -21,7 +21,7 @@ import {
     Plus, Trash2, Save, ArrowLeft, FileDown, CheckCircle2, XCircle,
     Thermometer, ShieldCheck, Settings2, ArrowRightLeft, Euro,
     CreditCard, MapPin, FileText, StickyNote, Mail, Shield, Receipt,
-    Briefcase, Loader2, AlertTriangle, ArrowRight, Wrench, DoorOpen, ChevronDown, Package,
+    Briefcase, Loader2, AlertTriangle, ArrowRight, Wrench, DoorOpen, ChevronDown, Package, Copy,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import { PDFPreviewButton } from '../components/PDFPreviewModal';
@@ -76,6 +76,7 @@ export default function PreventivoEditorPage() {
     const [linkedCommessa, setLinkedCommessa] = useState(null);
     const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
     const [creatingCommessa, setCreatingCommessa] = useState(false);
+    const [cloning, setCloning] = useState(false);
     const [bankAccounts, setBankAccounts] = useState([]);
     const [workflow, setWorkflow] = useState({ status: 'bozza', number: null, created_at: null, converted_to: null, linked_invoice: null, invoicing_progress: 0, linked_invoices: [] });
     const [showSplitDialog, setShowSplitDialog] = useState(false);
@@ -358,6 +359,16 @@ export default function PreventivoEditorPage() {
         } catch (e) { toast.error(e.message); }
     };
 
+    const handleClone = async () => {
+        if (isNew) return;
+        setCloning(true);
+        try {
+            const res = await apiRequest(`/preventivi/${prevId}/clone`, { method: 'POST' });
+            toast.success(`Preventivo duplicato: ${res.number}`);
+            navigate(`/preventivi/${res.preventivo_id}`);
+        } catch (e) { toast.error(e.message); } finally { setCloning(false); }
+    };
+
     const handleConvertToInvoice = async () => {
         if (isNew) return;
         if (!window.confirm('Convertire questo preventivo in Fattura?')) return;
@@ -527,6 +538,13 @@ export default function PreventivoEditorPage() {
                         {/* Always visible: technical tools */}
                         {!isNew && <Button data-testid="btn-download-pdf" variant="outline" onClick={handleDownloadPdf} className="border-[#0055FF] text-[#0055FF] hover:bg-blue-50 h-9 text-xs"><FileDown className="h-3.5 w-3.5 mr-1.5" /> PDF</Button>}
                         {!isNew && <PDFPreviewButton pdfUrl={`/preventivi/${prevId}/pdf`} title={`Anteprima Preventivo ${workflow.number || ''}`} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9" />}
+                        {!isNew && (
+                            <Button data-testid="btn-clone-preventivo" variant="outline" onClick={handleClone} disabled={cloning}
+                                className="border-amber-400 text-amber-700 hover:bg-amber-50 h-9 text-xs">
+                                {cloning ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Copy className="h-3.5 w-3.5 mr-1.5" />}
+                                Crea Copia
+                            </Button>
+                        )}
                         {!isNew && (
                             <Button type="button" variant="outline" data-testid="btn-send-email-prev"
                                 onClick={() => setEmailPreviewOpen(true)}

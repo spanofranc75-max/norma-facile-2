@@ -555,6 +555,91 @@ async def delete_preventivo(prev_id: str, user: dict = Depends(get_current_user)
     return {"message": "Preventivo eliminato"}
 
 
+# ── Clone Preventivo ─────────────────────────────────────────────
+
+@router.post("/{prev_id}/clone", status_code=201)
+async def clone_preventivo(prev_id: str, user: dict = Depends(get_current_user)):
+    """Clone a preventivo: copies all fields except ID, number, date, status.
+    New preventivo gets fresh numbering, today's date, and status 'bozza'.
+    """
+    uid = user["user_id"]
+    source = await db.preventivi.find_one(
+        {"preventivo_id": prev_id, "user_id": uid}, {"_id": 0}
+    )
+    if not source:
+        raise HTTPException(404, "Preventivo non trovato")
+
+    now = datetime.now(timezone.utc)
+    year = now.year
+    new_id = f"prev_{uuid.uuid4().hex[:10]}"
+
+    # Generate new number via atomic counter
+    counter_id = f"PRV-{uid}-{year}"
+    counter = await db.document_counters.find_one_and_update(
+        {"counter_id": counter_id},
+        {"$inc": {"counter": 1}},
+        upsert=True,
+        return_document=True,
+    )
+    seq = counter.get("counter", 1)
+    number = f"PRV-{year}-{seq:04d}"
+
+    # Clone lines with fresh line_ids
+    new_lines = []
+    for line in source.get("lines", []):
+        cloned = dict(line)
+        cloned["line_id"] = f"ln_{uuid.uuid4().hex[:8]}"
+        new_lines.append(cloned)
+
+    # Recalculate totals
+    totals = calc_totals(
+        new_lines,
+        float(source.get("sconto_globale", 0)),
+        float(source.get("acconto", 0)),
+    )
+
+    # Build new document — copy everything except system/workflow fields
+    new_doc = {
+        "preventivo_id": new_id,
+        "user_id": uid,
+        "number": number,
+        "client_id": source.get("client_id"),
+        "client_name": source.get("client_name", ""),
+        "subject": source.get("subject", ""),
+        "validity_days": source.get("validity_days", 30),
+        "payment_type_id": source.get("payment_type_id"),
+        "payment_type_label": source.get("payment_type_label"),
+        "destinazione_merce": source.get("destinazione_merce"),
+        "iban": source.get("iban"),
+        "banca": source.get("banca"),
+        "notes": source.get("notes"),
+        "note_pagamento": source.get("note_pagamento"),
+        "riferimento": source.get("riferimento"),
+        "acconto": source.get("acconto", 0),
+        "sconto_globale": source.get("sconto_globale", 0),
+        "normativa": source.get("normativa"),
+        "numero_disegno": source.get("numero_disegno"),
+        "ingegnere_disegno": source.get("ingegnere_disegno"),
+        "classe_esecuzione": source.get("classe_esecuzione"),
+        "giorni_consegna": source.get("giorni_consegna"),
+        "lines": new_lines,
+        "totals": totals,
+        "compliance_status": source.get("compliance_status"),
+        "compliance_detail": source.get("compliance_detail"),
+        # Reset workflow fields
+        "status": "bozza",
+        "total_invoiced": 0,
+        "converted_commessa_id": None,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    await db.preventivi.insert_one(new_doc)
+    created = await db.preventivi.find_one({"preventivo_id": new_id}, {"_id": 0})
+    logger.info(f"Preventivo cloned: {prev_id} → {new_id} ({number})")
+    return created
+
+
 # ── Compliance Check ─────────────────────────────────────────────
 
 @router.post("/{prev_id}/check-compliance")

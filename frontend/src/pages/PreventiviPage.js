@@ -11,7 +11,7 @@ import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../components/ui/table';
 import { toast } from 'sonner';
-import { Plus, FileText, Trash2, CheckCircle2, XCircle, Minus } from 'lucide-react';
+import { Plus, FileText, Trash2, CheckCircle2, XCircle, Minus, Copy } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import EmptyState from '../components/EmptyState';
 
@@ -66,6 +66,15 @@ export default function PreventiviPage() {
         } catch (e) { toast.error(e.message); }
     };
 
+    const handleClone = async (id, e) => {
+        e.stopPropagation();
+        try {
+            const res = await apiRequest(`/preventivi/${id}/clone`, { method: 'POST' });
+            toast.success(`Preventivo duplicato: ${res.number}`);
+            navigate(`/preventivi/${res.preventivo_id}`);
+        } catch (e) { toast.error(e.message); }
+    };
+
     const ComplianceBadge = ({ status, normativa }) => {
         if (status === true) return <Badge data-testid="compliance-ok" className="bg-emerald-100 text-emerald-800"><CheckCircle2 className="h-3 w-3 mr-1" />Ecobonus OK</Badge>;
         if (status === false) return <Badge data-testid="compliance-fail" className="bg-red-100 text-red-800"><XCircle className="h-3 w-3 mr-1" />Non conforme</Badge>;
@@ -117,7 +126,7 @@ export default function PreventiviPage() {
                                         <TableHead className="font-semibold text-[#1E293B]">Fatturato</TableHead>
                                         <TableHead className="font-semibold text-[#1E293B]">Compliance</TableHead>
                                         <TableHead className="font-semibold text-[#1E293B]">Stato</TableHead>
-                                        <TableHead className="w-16"></TableHead>
+                                        <TableHead className="w-20"></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -142,9 +151,14 @@ export default function PreventiviPage() {
                                                 <TableCell><ComplianceBadge status={p.compliance_status} normativa={p.normativa} /></TableCell>
                                                 <TableCell><Badge className={st.color + ' text-xs'}>{st.label}</Badge></TableCell>
                                                 <TableCell>
-                                                    <button onClick={(e) => { e.stopPropagation(); handleDelete(p.preventivo_id); }} className="p-1.5 text-slate-400 hover:text-red-500">
-                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                    </button>
+                                                    <div className="flex gap-1">
+                                                        <button data-testid={`btn-clone-${p.preventivo_id}`} onClick={(e) => handleClone(p.preventivo_id, e)} className="p-1.5 text-slate-400 hover:text-amber-600" title="Duplica">
+                                                            <Copy className="h-3.5 w-3.5" />
+                                                        </button>
+                                                        <button data-testid={`btn-delete-${p.preventivo_id}`} onClick={(e) => { e.stopPropagation(); handleDelete(p.preventivo_id); }} className="p-1.5 text-slate-400 hover:text-red-500" title="Elimina">
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </button>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         );
