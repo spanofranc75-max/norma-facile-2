@@ -472,7 +472,7 @@ async def send_ddt_email(ddt_id: str, payload: dict = None, user: dict = Depends
         custom_body = payload.get("custom_body") or ""
         success = await send_email_with_attachment(
             to_email=to_email, subject=custom_subject, body=custom_body,
-            pdf_bytes=pdf_bytes, filename=filename,
+            pdf_bytes=pdf_bytes, filename=filename, user_id=user["user_id"],
         )
     else:
         success = await _send(
@@ -482,6 +482,7 @@ async def send_ddt_email(ddt_id: str, payload: dict = None, user: dict = Depends
             ddt_type=doc.get("ddt_type", "vendita"),
             pdf_bytes=pdf_bytes,
             filename=filename,
+            user_id=user["user_id"],
         )
 
     if not success:

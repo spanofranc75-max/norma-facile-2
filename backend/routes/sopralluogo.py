@@ -634,6 +634,7 @@ async def invia_perizia_email(
         body=body,
         pdf_bytes=pdf_bytes,
         filename=filename,
+        user_id=user["user_id"],
     )
 
     if success:

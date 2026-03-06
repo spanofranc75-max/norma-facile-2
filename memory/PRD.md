@@ -88,6 +88,14 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 ## Backlog Prioritizzato
 
 ### Fix Numerazione Preventivi Non Continua (7 Mar 2026)
+
+### Rebranding Email — Da "NormaFacile" a Nome Azienda (7 Mar 2026)
+- **Mittente dinamico**: Email inviate come `Steel Project Design Srls <fatture@steelprojectdesign.it>` (legge `business_name` da `company_settings` DB, fallback su `SENDER_NAME` env)
+- **Oggetto professionale**: "Invio Fattura n. 15/2026 da Steel Project Design Srls" (prima: "Fattura n. 15/2026 - NormaFacile")
+- **Template HTML rebrandato**: Header con nome azienda su sfondo navy, footer "Questa email è stata inviata da [Azienda] tramite il sistema gestionale", testi più cordiali
+- **8 funzioni email aggiornate**: welcome, invoice, DDT, RdP, OdA, perizia, conto lavoro, generic
+- **Tutti i caller aggiornati**: `invoices.py`, `ddt.py`, `preventivi.py`, `sopralluogo.py`, `commessa_ops.py` passano `user_id` per lookup dinamico
+- **Zero riferimenti "NormaFacile" nel servizio email**
 - **Causa**: Il contatore atomico `document_counters` incrementava sempre, anche per preventivi poi cancellati. Risultato: PRV-0053 come max con solo 44 preventivi nel DB.
 - **Fix Backend (create/clone)**: Prima di generare un nuovo numero, il sistema ora confronta il contatore con il max numero reale nel DB. Se il contatore è "avanti" (per cancellazioni), lo resetta al max esistente prima di incrementare.
 - **Fix Backend (delete)**: Dopo l'eliminazione, ricalcola il contatore basandosi sul max numero reale via aggregazione MongoDB.

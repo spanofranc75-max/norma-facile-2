@@ -40,7 +40,7 @@ class Settings(BaseModel):
     # Email (Resend)
     resend_api_key: Optional[str] = os.environ.get('RESEND_API_KEY')
     sender_email: str = os.environ.get('SENDER_EMAIL', 'fatture@steelprojectdesign.it')
-    sender_name: str = os.environ.get('SENDER_NAME', 'NormaFacile')
+    sender_name: str = os.environ.get('SENDER_NAME', 'Steel Project Design Srls')
 
     # SDI (Aruba / FattureInCloud)
     sdi_api_key: Optional[str] = os.environ.get('SDI_API_KEY')

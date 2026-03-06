@@ -606,7 +606,7 @@ async def send_rdp_email_endpoint(cid: str, rdp_id: str, payload: dict = None, u
         custom_body = payload.get("custom_body") or ""
         success = await send_email_with_attachment(
             to_email=to_email, subject=custom_subject, body=custom_body,
-            pdf_bytes=pdf_bytes, filename=filename,
+            pdf_bytes=pdf_bytes, filename=filename, user_id=user["user_id"],
         )
     else:
         success = await send_rdp_email(
@@ -772,7 +772,7 @@ async def send_oda_email_endpoint(cid: str, ordine_id: str, payload: dict = None
         custom_body = payload.get("custom_body") or ""
         success = await send_email_with_attachment(
             to_email=to_email, subject=custom_subject, body=custom_body,
-            pdf_bytes=pdf_bytes, filename=filename,
+            pdf_bytes=pdf_bytes, filename=filename, user_id=user["user_id"],
         )
     else:
         success = await send_oda_email(
@@ -1351,6 +1351,7 @@ Cordiali saluti,
         body=body,
         pdf_bytes=pdf_bytes,
         filename=f"DDT_CL_{cl_id}.pdf",
+        user_id=user["user_id"],
     )
 
     # Update status

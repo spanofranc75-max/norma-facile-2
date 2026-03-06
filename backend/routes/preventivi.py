@@ -1293,7 +1293,7 @@ async def send_preventivo_email(prev_id: str, payload: dict = None, user: dict =
         custom_body = payload.get("custom_body") or ""
         success = await send_email_with_attachment(
             to_email=to_email, subject=custom_subject, body=custom_body,
-            pdf_bytes=pdf_bytes, filename=filename,
+            pdf_bytes=pdf_bytes, filename=filename, user_id=user["user_id"],
         )
     else:
         success = await _send(
@@ -1304,6 +1304,7 @@ async def send_preventivo_email(prev_id: str, payload: dict = None, user: dict =
             total=total,
             pdf_bytes=pdf_bytes,
             filename=filename,
+            user_id=user["user_id"],
         )
 
     if not success:
