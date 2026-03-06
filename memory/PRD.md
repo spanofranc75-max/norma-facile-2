@@ -78,6 +78,13 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **Backend (pdf_perizia_sopralluogo.py)**: Template PDF dinamico — titolo copertina, norme citate, note legali, checklist post-intervento si adattano al tipo di perizia.
 - **Model**: Aggiunto campo `tipo_perizia` a SopralluogoCreate/Update.
 
+### Feature: Perizia AI Parapetti & Ringhiere (6 Mar 2026)
+- **Nuova 4a categoria**: "Parapetti & Ringhiere" (UNI 11678 / NTC 2018) aggiunta al modulo AI Inspection
+- **Prompt AI specializzato**: Verifica altezza (100cm/110cm), scalabilita, tipo vetro (stratificato vs monolitico), fissaggi/morsetti, aperture >10cm (sfera), corrosione, bordo inferiore
+- **PDF configurato**: Titolo copertina, norme legali (UNI 11678, NTC 2018 par. 3.1.4, UNI 7697, UNI EN 12600), checklist post-intervento specifica
+- **Frontend**: 4a card nel selettore con icona Fence, placeholder e istruzioni contestuali per parapetti
+- 17/17 test passati (iteration_147)
+
 ### Bug Fix: Errore 400 salvataggio fattura emessa (6 Mar 2026)
 - **Causa**: Il backend bloccava QUALSIASI modifica su fatture non in bozza (riga 479 invoices.py). Il frontend inviava tutto il payload (incluse lines) anche per modifiche ai soli metadati.
 - **Fix Backend**: Logica granulare — metadati (termini pagamento, scadenza, note) aggiornabili su tutti gli status; modifiche strutturali (righe, impostazioni fiscali, numero, cliente) bloccate su non-bozza.
