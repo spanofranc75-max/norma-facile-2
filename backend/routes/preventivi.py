@@ -885,13 +885,18 @@ async def convert_to_invoice(prev_id: str, user: dict = Depends(get_current_user
 
 @router.get("/{prev_id}/invoicing-status")
 async def get_invoicing_status(prev_id: str, user: dict = Depends(get_current_user)):
-    """Get the invoicing progress for a preventivo — how much has been billed."""
+    """Get the invoicing progress for a preventivo — how much has been billed.
+    REGOLA: si lavora SEMPRE sull'imponibile (base senza IVA). L'IVA si aggiunge solo in fattura.
+    """
     uid = user["user_id"]
     doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": uid}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Preventivo non trovato")
 
-    total_prev = float(doc.get("totals", {}).get("total", doc.get("totals", {}).get("imponibile", 0)))
+    totals = doc.get("totals", {})
+    # SEMPRE usare imponibile (base senza IVA) come riferimento
+    imponibile_prev = float(totals.get("imponibile", totals.get("subtotal", 0)))
+    total_with_vat = float(totals.get("total", imponibile_prev))
 
     # Fetch all invoices linked to this preventivo
     linked = await db.invoices.find(
@@ -901,12 +906,13 @@ async def get_invoicing_status(prev_id: str, user: dict = Depends(get_current_us
     ).sort("created_at", 1).to_list(100)
 
     total_invoiced = sum(float(inv.get("progressive_amount", 0)) for inv in linked)
-    remaining = round(total_prev - total_invoiced, 2)
-    pct = round((total_invoiced / total_prev * 100), 1) if total_prev > 0 else 0
+    remaining = round(imponibile_prev - total_invoiced, 2)
+    pct = round((total_invoiced / imponibile_prev * 100), 1) if imponibile_prev > 0 else 0
 
     return {
         "preventivo_id": prev_id,
-        "total_preventivo": round(total_prev, 2),
+        "total_preventivo": round(imponibile_prev, 2),  # IMPONIBILE, non totale con IVA
+        "total_preventivo_ivato": round(total_with_vat, 2),  # Per display informativo
         "total_invoiced": round(total_invoiced, 2),
         "remaining": max(remaining, 0),
         "percentage_invoiced": min(pct, 100),
@@ -917,7 +923,10 @@ async def get_invoicing_status(prev_id: str, user: dict = Depends(get_current_us
 
 @router.post("/{prev_id}/progressive-invoice")
 async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceRequest, user: dict = Depends(get_current_user)):
-    """Create a progressive invoice (acconto, SAL, or saldo) from a preventivo."""
+    """Create a progressive invoice (acconto, SAL, or saldo) from a preventivo.
+    REGOLA FONDAMENTALE: percentuali e importi si calcolano SEMPRE sull'IMPONIBILE.
+    L'IVA viene aggiunta solo come riga di calcolo finale sulla fattura.
+    """
     uid = user["user_id"]
     doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": uid}, {"_id": 0})
     if not doc:
@@ -931,7 +940,9 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
     if not client:
         raise HTTPException(422, "Cliente non trovato")
 
-    total_prev = float(doc.get("totals", {}).get("total", doc.get("totals", {}).get("imponibile", 0)))
+    totals = doc.get("totals", {})
+    # SEMPRE usare IMPONIBILE (base senza IVA) come base per i calcoli
+    imponibile_prev = float(totals.get("imponibile", totals.get("subtotal", 0)))
     prev_number = doc.get("number", prev_id)
     prev_lines = doc.get("lines", [])
 
@@ -943,12 +954,13 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
     ).sort("created_at", 1).to_list(100)
 
     already_invoiced = sum(float(inv.get("progressive_amount", 0)) for inv in existing_invoices)
-    remaining = round(total_prev - already_invoiced, 2)
+    remaining = round(imponibile_prev - already_invoiced, 2)
 
     if remaining <= 0.01 and body.invoice_type != "saldo":
         raise HTTPException(400, "Preventivo gia' completamente fatturato.")
 
     # ── Determine invoice amount and lines ──
+    # REGOLA: progressive_amount è SEMPRE l'imponibile, MAI il totale con IVA
     invoice_lines = []
     progressive_amount = 0.0
     vat_rate = prev_lines[0].get("vat_rate", "22") if prev_lines else "22"
@@ -956,7 +968,8 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
     if body.invoice_type == "acconto":
         if not body.percentage or body.percentage <= 0 or body.percentage > 100:
             raise HTTPException(400, "Percentuale acconto non valida (1-100)")
-        progressive_amount = round(total_prev * body.percentage / 100, 2)
+        # Percentuale applicata ALL'IMPONIBILE, non al totale con IVA
+        progressive_amount = round(imponibile_prev * body.percentage / 100, 2)
         if progressive_amount > remaining + 0.01:
             raise HTTPException(400, f"Importo acconto ({progressive_amount:.2f}) supera il residuo ({remaining:.2f})")
         desc = body.description or f"Acconto {body.percentage:.0f}% su preventivo {prev_number}"
@@ -1125,7 +1138,7 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
         "updated_at": now,
     }
     # If saldo, mark as fully invoiced
-    if body.invoice_type == "saldo" or new_total_invoiced >= total_prev - 0.01:
+    if body.invoice_type == "saldo" or new_total_invoiced >= imponibile_prev - 0.01:
         prev_update["status"] = "accettato"
         prev_update["converted_to"] = invoice_id  # Last invoice
 
@@ -1159,7 +1172,7 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
         "progressive_type": body.invoice_type,
         "progressive_amount": round(progressive_amount, 2),
         "total_invoiced": new_total_invoiced,
-        "remaining": round(total_prev - new_total_invoiced, 2),
+        "remaining": round(imponibile_prev - new_total_invoiced, 2),
     }
 
 

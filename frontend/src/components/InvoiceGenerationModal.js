@@ -19,7 +19,7 @@ import {
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
 
 const MODES = [
-    { key: 'acconto', label: 'Acconto %', icon: Percent, desc: 'Fattura una percentuale del totale', color: 'bg-amber-500' },
+    { key: 'acconto', label: 'Acconto %', icon: Percent, desc: "Fattura una percentuale dell'imponibile", color: 'bg-amber-500' },
     { key: 'sal', label: 'SAL', icon: ListChecks, desc: 'Seleziona righe o importo personalizzato', color: 'bg-blue-500' },
     { key: 'saldo', label: 'Saldo Finale', icon: CheckCircle2, desc: 'Fattura il residuo (deduce gli acconti)', color: 'bg-emerald-500' },
 ];
@@ -141,7 +141,7 @@ export default function InvoiceGenerationModal({ open, onOpenChange, prevId, onC
                         {status && (
                             <div className="bg-slate-50 rounded-lg p-3 space-y-2" data-testid="invoicing-status-bar">
                                 <div className="flex justify-between text-xs text-slate-500">
-                                    <span>Fatturato: {fmtEur(status.total_invoiced)} di {fmtEur(status.total_preventivo)}</span>
+                                    <span>Fatturato: {fmtEur(status.total_invoiced)} di {fmtEur(status.total_preventivo)} <span className="text-slate-400">(imponibile)</span></span>
                                     <span className="font-semibold text-[#0055FF]">{status.percentage_invoiced}%</span>
                                 </div>
                                 <div className="w-full bg-slate-200 rounded-full h-2">
@@ -223,7 +223,7 @@ export default function InvoiceGenerationModal({ open, onOpenChange, prevId, onC
                                                         />
                                                         <span className="text-sm text-slate-500">%</span>
                                                         <span className="text-xs text-slate-400 ml-auto">
-                                                            di {fmtEur(totalPrev)}
+                                                            di {fmtEur(totalPrev)} (imponibile)
                                                         </span>
                                                     </div>
                                                     {/* Quick buttons */}

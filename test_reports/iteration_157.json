@@ -1,0 +1,93 @@
+{
+  "summary": "Iteration 157 - CRITICAL BUG FIX VERIFIED: Progressive invoicing now correctly calculates percentages on IMPONIBILE (without IVA) instead of TOTAL WITH IVA. All 7 backend tests passed. Frontend UI shows '(imponibile)' labels in the InvoiceGenerationModal. E2E test confirmed: 40% acconto on €9,432 imponibile correctly produces €3,772.80 invoice (not €4,602.82 which was the bug).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration157_progressive_invoicing_imponibile_fix.py",
+    "/app/test_reports/pytest/iteration157_progressive_invoicing_imponibile_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration157_progressive_invoicing_imponibile_fix.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100%"
+  },
+  "test_credentials": "Test sessions created and cleaned up after testing",
+  "seed_data_creation": "Test clients and preventivi created via API for UI testing - all cleaned up after tests",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 157 fixed a CRITICAL BUG in progressive invoicing. The bug was: percentage calculations (acconto, SAL, saldo) were based on TOTAL WITH IVA instead of IMPONIBILE. This caused DOUBLE IVA. Example: 40% on €9,432 imponibile (€11,507.04 with IVA) now correctly gives €3,772.80 acconto (not €4,602.82). Key changes: (1) Backend /api/preventivi/{id}/invoicing-status now returns total_preventivo as IMPONIBILE. (2) Backend /api/preventivi/{id}/progressive-invoice calculates progressive_amount based on imponibile. (3) Frontend InvoiceGenerationModal shows '(imponibile)' labels in status bar and acconto form.",
+  "features_tested": {
+    "backend_endpoints": {
+      "invoicing_status": {
+        "endpoint": "GET /api/preventivi/{id}/invoicing-status",
+        "status": "PASS",
+        "tests": [
+          "total_preventivo returns IMPONIBILE (not total with IVA)",
+          "total_preventivo_ivato returns full total for display",
+          "remaining is calculated based on imponibile"
+        ]
+      },
+      "acconto_invoice": {
+        "endpoint": "POST /api/preventivi/{id}/progressive-invoice (acconto)",
+        "status": "PASS",
+        "tests": [
+          "40% acconto on €9,432 imponibile = €3,772.80 (not €4,602.82)",
+          "40% acconto on €1,000 imponibile = €400 (not €488)",
+          "Invoice line has unit_price = acconto amount (imponibile)",
+          "VAT is calculated on top of the acconto amount"
+        ]
+      },
+      "sal_invoice": {
+        "endpoint": "POST /api/preventivi/{id}/progressive-invoice (sal)",
+        "status": "PASS",
+        "tests": [
+          "SAL by selected lines uses line_totals (imponibile per line)"
+        ]
+      },
+      "saldo_invoice": {
+        "endpoint": "POST /api/preventivi/{id}/progressive-invoice (saldo)",
+        "status": "PASS",
+        "tests": [
+          "Saldo after 40% acconto on €1,000 = €600 remaining (not €820)",
+          "Deductions are based on imponibile amounts"
+        ]
+      },
+      "total_invoiced_tracking": {
+        "endpoint": "GET /api/preventivi/{id}/invoicing-status (after invoices)",
+        "status": "PASS",
+        "tests": [
+          "total_invoiced correctly sums imponibile amounts",
+          "percentage_invoiced is based on imponibile"
+        ]
+      }
+    },
+    "frontend_components": {
+      "InvoiceGenerationModal": {
+        "status": "PASS",
+        "verified": [
+          "Status bar shows '(imponibile)' label next to total",
+          "Acconto form shows 'di €X (imponibile)' description",
+          "40% quick button correctly calculates €3,772.80 on €9,432",
+          "Created invoice has correct imponibile amount with IVA added on top"
+        ]
+      }
+    }
+  },
+  "bug_verification": {
+    "original_bug": "Acconto % calculated on TOTAL WITH IVA instead of IMPONIBILE, causing double IVA",
+    "example_wrong": "40% of €11,507.04 (total with IVA) = €4,602.82 as imponibile, then +22% IVA = €5,615.44",
+    "example_correct": "40% of €9,432 (imponibile) = €3,772.80 as imponibile, then +22% IVA = €4,602.82",
+    "fix_verified": true
+  }
+}
