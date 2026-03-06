@@ -1,7 +1,14 @@
 # Norma Facile 2.0 — PRD
 
 ## Problema Originale
-Sistema ERP per carpenteria metallica (Steel Project Design Srls). Gestione commesse, preventivi, fatturazione, certificazioni EN 1090, perizie AI con ispezione fotografica, e ora gestione avanzata materiali/magazzino.
+Sistema ERP per carpenteria metallica (Steel Project Design Srls). Gestione commesse, preventivi, fatturazione, certificazioni EN 1090, perizie AI con ispezione fotografica, gestione avanzata materiali/magazzino.
+
+## REGOLA FONDAMENTALE FATTURAZIONE
+**Si lavora SEMPRE sull'IMPONIBILE. L'IVA si aggiunge SOLO alla fine.**
+- Percentuali acconto: calcolate sull'imponibile
+- SAL: importi basati sulle righe (line_total = imponibile per riga)
+- Saldo: residuo calcolato sull'imponibile
+- Mai calcolare percentuali sul totale con IVA
 
 ## Architettura
 - **Backend**: FastAPI + MongoDB + Object Storage (Emergent)
@@ -17,9 +24,10 @@ Sistema ERP per carpenteria metallica (Steel Project Design Srls). Gestione comm
 - Gestione clienti e fornitori
 - Preventivi con numerazione sequenziale (riuso numeri eliminati)
 - Fatturazione attiva/passiva con scadenziario
+- Fatturazione progressiva (acconto %, SAL, saldo) — **FIX CRITICO Mar 2026: calcoli basati su imponibile**
 - Commesse con produzione, approvvigionamento, conto lavoro
 - Dashboard finanziaria
-- Catalogo articoli con storico prezzi
+- Catalogo articoli con storico prezzi e giacenza
 
 ### Modulo Ispezione AI
 - Perizia con foto + analisi AI (GPT-4o Vision)
@@ -31,13 +39,12 @@ Sistema ERP per carpenteria metallica (Steel Project Design Srls). Gestione comm
 - Servizio centralizzato aggregazione costi (margin_service.py)
 - Dashboard margini in tempo reale
 - Previsione AI margine finale per commesse in corso
-- Costi: materiali, manodopera, fatture imputate, conto lavoro, OdA
 
-### Gestione Avanzata Materiali (NUOVO - Mar 2026)
-- **Prelievo da Magazzino**: Assegnazione materiale da giacenza ad una commessa con calcolo costo automatico (POST /api/commesse/{cid}/preleva-da-magazzino)
-- **Annulla Imputazione Fattura**: Rimozione collegamento fattura→commessa con ripristino stato (POST /api/fatture-ricevute/{fr_id}/annulla-imputazione)
-- **Utilizzo Parziale Materiale**: Al registrare un arrivo, specificare quantità effettivamente usata; il resto torna in giacenza magazzino (quantita_utilizzata su POST arrivi)
-- **Colonna Giacenza**: Catalogo articoli mostra giacenza attuale
+### Gestione Avanzata Materiali (Mar 2026)
+- Prelievo da Magazzino → Commessa
+- Annulla Imputazione Fattura Ricevuta
+- Utilizzo Parziale Materiale con resto a magazzino
+- Colonna Giacenza nel catalogo articoli
 
 ### Altre Funzionalità
 - Backup intelligente con merge/upsert e wipe-and-replace
@@ -46,13 +53,8 @@ Sistema ERP per carpenteria metallica (Steel Project Design Srls). Gestione comm
 - Fascicolo tecnico CE
 - Notifiche e scadenziario pagamenti
 
-## Task Completati Ultima Sessione
-- [x] Prelievo da magazzino → commessa
-- [x] Annulla imputazione fattura ricevuta
-- [x] Utilizzo parziale materiale con resto a magazzino
-- [x] Colonna giacenza nella pagina articoli
-- [x] Badge "Imputata" sulle fatture ricevute
-- [x] Test automatici superati (backend 100%, frontend 95%)
+## Bug Fix Critici
+- **[Mar 2026] DOPPIA IVA su fattura progressiva**: Acconto % calcolava la percentuale sul totale CON IVA invece che sull'imponibile. Corretto in preventivi.py (backend) e InvoiceGenerationModal.js (frontend).
 
 ## Backlog Prioritizzato
 
@@ -68,9 +70,8 @@ Sistema ERP per carpenteria metallica (Steel Project Design Srls). Gestione comm
 - Sostituire immagini generiche nel PDF perizia con foto reali
 
 ### Refactoring
-- Scomporre MaterialiPage.js / CommessaOpsPanel.js (2700+ righe)
+- Scomporre CommessaOpsPanel.js (2800+ righe)
 - Centralizzare utility (fmtEur, formatDateIT) in shared utils
-- Ottimizzare gestione stato nei componenti complessi
 
 ## Vincoli Tecnici Critici
 - `window.confirm()` è BLOCCATO nel sandbox → usare `useConfirm()` hook
