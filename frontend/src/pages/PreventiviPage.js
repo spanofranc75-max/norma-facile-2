@@ -47,13 +47,15 @@ export default function PreventiviPage() {
     const confirm = useConfirm();
     const navigate = useNavigate();
     const [preventivi, setPreventivi] = useState([]);
+    const [totalCount, setTotalCount] = useState(0);
     const [loading, setLoading] = useState(true);
 
     const fetch_ = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await apiRequest('/preventivi/');
+            const data = await apiRequest('/preventivi/?limit=500');
             setPreventivi(data.preventivi || []);
+            setTotalCount(data.total || 0);
         } catch (e) { console.error(e); } finally { setLoading(false); }
     }, []);
 
@@ -93,7 +95,7 @@ export default function PreventiviPage() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="font-sans text-2xl font-bold text-[#1E293B]">Preventivi</h1>
-                        <p className="text-sm text-slate-500 mt-1">{preventivi.length} preventivi</p>
+                        <p className="text-sm text-slate-500 mt-1">{totalCount} preventivi</p>
                     </div>
                     <Button data-testid="btn-new-preventivo" onClick={() => navigate('/preventivi/new')} className="bg-[#0055FF] text-white hover:bg-[#0044CC]">
                         <Plus className="h-4 w-4 mr-2" /> Nuovo Preventivo
@@ -103,7 +105,7 @@ export default function PreventiviPage() {
                 <Card className="border-gray-200">
                     <CardHeader className="bg-[#1E293B] py-3 px-5 rounded-t-lg">
                         <CardTitle className="text-sm font-semibold text-white flex items-center gap-2">
-                            <FileText className="h-4 w-4" /> Preventivi ({preventivi.length})
+                            <FileText className="h-4 w-4" /> Preventivi ({totalCount})
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">

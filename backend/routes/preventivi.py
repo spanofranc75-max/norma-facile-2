@@ -345,7 +345,7 @@ async def list_preventivi(
     client_id: Optional[str] = None,
     status: Optional[str] = None,
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(500, ge=1, le=1000),
     user: dict = Depends(get_current_user),
 ):
     query = {"user_id": user["user_id"]}
@@ -414,29 +414,29 @@ async def create_preventivo(data: PreventivoCreate, user: dict = Depends(get_cur
     year = now.year
     uid = user["user_id"]
 
-    # Atomic counter — find max existing number to seed if needed
+    # Atomic counter — always sync with max existing number to avoid gaps
     counter_id = f"PRV-{uid}-{year}"
+    # Find current max number in database
+    pipeline = [
+        {"$match": {"user_id": uid, "number": {"$regex": f"^PRV-{year}-"}}},
+        {"$project": {"num": {"$toInt": {"$arrayElemAt": [{"$split": ["$number", "-"]}, 2]}}}},
+        {"$sort": {"num": -1}},
+        {"$limit": 1},
+    ]
+    max_doc = await db.preventivi.aggregate(pipeline).to_list(1)
+    max_existing = max_doc[0]["num"] if max_doc else 0
+
+    # Get current counter value
     existing_counter = await db.document_counters.find_one({"counter_id": counter_id})
-    if not existing_counter:
-        # Seed counter from max existing preventivo number for this year
-        max_num = 0
-        async for doc in db.preventivi.find(
-            {"user_id": uid, "number": {"$regex": f"^PRV-{year}-"}},
-            {"number": 1, "_id": 0}
-        ):
-            try:
-                num_str = doc["number"].split("-")[-1]
-                num = int(num_str)
-                if num > max_num:
-                    max_num = num
-            except (ValueError, IndexError, KeyError):
-                pass
-        if max_num > 0:
-            await db.document_counters.update_one(
-                {"counter_id": counter_id},
-                {"$set": {"counter": max_num}},
-                upsert=True,
-            )
+    current_counter = existing_counter.get("counter", 0) if existing_counter else 0
+
+    # If counter is ahead of reality (due to deletions), reset it
+    if current_counter > max_existing:
+        await db.document_counters.update_one(
+            {"counter_id": counter_id},
+            {"$set": {"counter": max_existing}},
+            upsert=True,
+        )
 
     counter = await db.document_counters.find_one_and_update(
         {"counter_id": counter_id},
@@ -549,9 +549,36 @@ async def update_preventivo(prev_id: str, data: PreventivoUpdate, user: dict = D
 
 @router.delete("/{prev_id}")
 async def delete_preventivo(prev_id: str, user: dict = Depends(get_current_user)):
-    result = await db.preventivi.delete_one({"preventivo_id": prev_id, "user_id": user["user_id"]})
+    uid = user["user_id"]
+    # Get the preventivo before deleting to know its year
+    doc = await db.preventivi.find_one(
+        {"preventivo_id": prev_id, "user_id": uid},
+        {"_id": 0, "number": 1}
+    )
+    result = await db.preventivi.delete_one({"preventivo_id": prev_id, "user_id": uid})
     if result.deleted_count == 0:
         raise HTTPException(404, "Preventivo non trovato")
+
+    # Recalculate counter based on max existing number
+    if doc and doc.get("number"):
+        try:
+            year = doc["number"].split("-")[1]  # PRV-2026-0053 → 2026
+            counter_id = f"PRV-{uid}-{year}"
+            pipeline = [
+                {"$match": {"user_id": uid, "number": {"$regex": f"^PRV-{year}-"}}},
+                {"$project": {"num": {"$toInt": {"$arrayElemAt": [{"$split": ["$number", "-"]}, 2]}}}},
+                {"$sort": {"num": -1}},
+                {"$limit": 1},
+            ]
+            max_doc = await db.preventivi.aggregate(pipeline).to_list(1)
+            max_num = max_doc[0]["num"] if max_doc else 0
+            await db.document_counters.update_one(
+                {"counter_id": counter_id},
+                {"$set": {"counter": max_num}},
+            )
+        except Exception as e:
+            logger.warning(f"Counter recalc after delete failed: {e}")
+
     return {"message": "Preventivo eliminato"}
 
 
@@ -573,8 +600,24 @@ async def clone_preventivo(prev_id: str, user: dict = Depends(get_current_user))
     year = now.year
     new_id = f"prev_{uuid.uuid4().hex[:10]}"
 
-    # Generate new number via atomic counter
+    # Generate new number — sync counter with max existing to avoid gaps
     counter_id = f"PRV-{uid}-{year}"
+    pipeline = [
+        {"$match": {"user_id": uid, "number": {"$regex": f"^PRV-{year}-"}}},
+        {"$project": {"num": {"$toInt": {"$arrayElemAt": [{"$split": ["$number", "-"]}, 2]}}}},
+        {"$sort": {"num": -1}},
+        {"$limit": 1},
+    ]
+    max_doc = await db.preventivi.aggregate(pipeline).to_list(1)
+    max_existing = max_doc[0]["num"] if max_doc else 0
+    existing_counter = await db.document_counters.find_one({"counter_id": counter_id})
+    current_counter = existing_counter.get("counter", 0) if existing_counter else 0
+    if current_counter > max_existing:
+        await db.document_counters.update_one(
+            {"counter_id": counter_id},
+            {"$set": {"counter": max_existing}},
+            upsert=True,
+        )
     counter = await db.document_counters.find_one_and_update(
         {"counter_id": counter_id},
         {"$inc": {"counter": 1}},
