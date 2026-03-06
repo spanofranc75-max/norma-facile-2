@@ -1151,7 +1151,7 @@ async def get_preventivo_pdf(prev_id: str, user: dict = Depends(get_current_user
     return StreamingResponse(
         pdf_buffer,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
     )
 
 

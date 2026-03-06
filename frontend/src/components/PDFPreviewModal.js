@@ -1,8 +1,8 @@
 /**
  * PDF Preview Modal — In-app PDF viewer
- * Fetches PDF with credentials and displays via blob URL.
+ * Loads PDF directly from API URL using same-origin cookies.
  */
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Button } from '../components/ui/button';
 import { Eye, Download, Loader2 } from 'lucide-react';
@@ -10,35 +10,12 @@ import { API_BASE } from '../lib/utils';
 
 export function PDFPreviewModal({ open, onClose, pdfUrl, title }) {
     const [loading, setLoading] = useState(true);
-    const [blobUrl, setBlobUrl] = useState(null);
-    const [error, setError] = useState(null);
 
-    useEffect(() => {
-        if (open && pdfUrl) {
-            setLoading(true);
-            setError(null);
-            setBlobUrl(null);
-            fetch(`${API_BASE}${pdfUrl}`, { credentials: 'include' })
-                .then(r => {
-                    if (!r.ok) throw new Error(`Errore ${r.status}`);
-                    return r.blob();
-                })
-                .then(blob => {
-                    const url = URL.createObjectURL(blob);
-                    setBlobUrl(url);
-                })
-                .catch(e => setError(e.message))
-                .finally(() => setLoading(false));
-        }
-        return () => {
-            if (blobUrl) URL.revokeObjectURL(blobUrl);
-        };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, pdfUrl]);
+    const fullUrl = `${API_BASE}${pdfUrl}`;
 
     const handleDownload = () => {
         const a = document.createElement('a');
-        a.href = `${API_BASE}${pdfUrl}`;
+        a.href = fullUrl;
         a.target = '_blank';
         a.rel = 'noopener';
         a.click();
@@ -63,17 +40,14 @@ export function PDFPreviewModal({ open, onClose, pdfUrl, title }) {
                             <Loader2 className="h-8 w-8 animate-spin text-[#0055FF]" />
                         </div>
                     )}
-                    {error && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <p className="text-red-500 text-sm">{error}</p>
-                        </div>
-                    )}
-                    {blobUrl && (
+                    {open && (
                         <iframe
-                            src={blobUrl}
+                            src={fullUrl}
                             data-testid="pdf-iframe"
                             className="w-full h-full min-h-[600px] border-0"
                             title="PDF Preview"
+                            onLoad={() => setLoading(false)}
+                            onError={() => setLoading(false)}
                         />
                     )}
                 </div>
