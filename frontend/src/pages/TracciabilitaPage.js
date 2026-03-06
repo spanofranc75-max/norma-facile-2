@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
 import { toast } from 'sonner';
 import { Package, Users, FolderOpen, Plus, Trash2, Edit, AlertTriangle, Download, Search, Shield } from 'lucide-react';
+import { useConfirm } from '../components/ConfirmProvider';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -69,7 +70,7 @@ function BatchesTab() {
   };
 
   const deleteBatch = async (id) => {
-    if (!window.confirm('Eliminare questo lotto?')) return;
+    if (!(await confirm('Eliminare questo lotto?'))) return;
     const r = await fetch(`${API}/api/fpc/batches/${id}`, fetchOpts('DELETE'));
     if (r.ok) { toast.success('Lotto eliminato'); load(); }
   };
@@ -183,7 +184,7 @@ function WeldersTab() {
   };
 
   const deleteWelder = async (id) => {
-    if (!window.confirm('Eliminare questo saldatore?')) return;
+    if (!(await confirm('Eliminare questo saldatore?'))) return;
     const r = await fetch(`${API}/api/fpc/welders/${id}`, fetchOpts('DELETE'));
     if (r.ok) { toast.success('Saldatore eliminato'); load(); }
   };
@@ -284,6 +285,7 @@ function ProjectsTab() {
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════
 export default function TracciabilitaPage() {
+    const confirm = useConfirm();
   return (
     <DashboardLayout>
       <div className="max-w-6xl mx-auto">

@@ -28,6 +28,7 @@ import {
     Thermometer, Wind, Droplets, GaugeCircle, FileDown, FolderArchive,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
+import { useConfirm } from '../components/ConfirmProvider';
 
 const formatNum = (v, d = 2) => (v ?? 0).toFixed(d);
 
@@ -51,6 +52,7 @@ const ZONE_LABELS = {
 };
 
 export default function CoreEnginePage() {
+    const confirm = useConfirm();
     const [tab, setTab] = useState('configurator');
     const [norme, setNorme] = useState([]);
     const [componenti, setComponenti] = useState([]);
@@ -231,7 +233,7 @@ export default function CoreEnginePage() {
         finally { setSavingComp(false); }
     };
     const deleteComp = async (c) => {
-        if (!window.confirm(`Eliminare ${c.codice}?`)) return;
+        if (!(await confirm(`Eliminare ${c.codice}?`))) return;
         try {
             await apiRequest(`/engine/componenti/${c.comp_id}`, { method: 'DELETE' });
             toast.success('Eliminato');

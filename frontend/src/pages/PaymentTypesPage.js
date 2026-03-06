@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, CreditCard, Wand2, Calculator, X } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import EmptyState from '../components/EmptyState';
+import { useConfirm } from '../components/ConfirmProvider';
 
 const TIPO_OPTIONS = [
     { value: 'BON', label: 'Bonifico', color: 'bg-blue-100 text-blue-800' },
@@ -76,6 +77,7 @@ function fmtEur(v) {
 }
 
 export default function PaymentTypesPage() {
+    const confirm = useConfirm();
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -145,7 +147,7 @@ export default function PaymentTypesPage() {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Eliminare questo tipo pagamento?')) return;
+        if (!(await confirm('Eliminare questo tipo pagamento?'))) return;
         try {
             await apiRequest(`/payment-types/${id}`, { method: 'DELETE' });
             toast.success('Eliminato');

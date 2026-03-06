@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { Plus, FileText, Trash2, CheckCircle2, XCircle, Minus, Copy } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import EmptyState from '../components/EmptyState';
+import { useConfirm } from '../components/ConfirmProvider';
 
 const STATUS_MAP = {
     bozza: { label: 'Bozza', color: 'bg-yellow-100 text-yellow-800', rowBg: '' },
@@ -43,6 +44,7 @@ function InvoicingProgressBar({ progress }) {
 }
 
 export default function PreventiviPage() {
+    const confirm = useConfirm();
     const navigate = useNavigate();
     const [preventivi, setPreventivi] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -58,7 +60,7 @@ export default function PreventiviPage() {
     useEffect(() => { fetch_(); }, [fetch_]);
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Eliminare questo preventivo?')) return;
+        if (!(await confirm('Eliminare questo preventivo?'))) return;
         try {
             await apiRequest(`/preventivi/${id}`, { method: 'DELETE' });
             toast.success('Preventivo eliminato');

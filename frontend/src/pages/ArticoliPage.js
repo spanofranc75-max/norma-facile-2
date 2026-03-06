@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import EmptyState from '../components/EmptyState';
+import { useConfirm } from '../components/ConfirmProvider';
 
 const CATEGORIE = [
     { value: 'materiale', label: 'Materiale' },
@@ -79,6 +80,7 @@ const emptyForm = {
 };
 
 export default function ArticoliPage() {
+    const confirm = useConfirm();
     const [articoli, setArticoli] = useState([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -176,7 +178,7 @@ export default function ArticoliPage() {
     };
 
     const handleDelete = async (art) => {
-        if (!window.confirm(`Eliminare l'articolo "${art.codice}"?`)) return;
+        if (!(await confirm(`Eliminare l'articolo "${art.codice}"?`))) return;
         try {
             await apiRequest(`/articoli/${art.articolo_id}`, { method: 'DELETE' });
             toast.success('Articolo eliminato');

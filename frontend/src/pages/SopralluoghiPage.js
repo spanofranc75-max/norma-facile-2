@@ -10,6 +10,7 @@ import {
     Plus, Search, MapPin, Eye, Trash2, Brain, FileText,
     Calendar, ChevronRight, Loader2, ShieldAlert
 } from 'lucide-react';
+import { useConfirm } from '../components/ConfirmProvider';
 
 const STATUS_MAP = {
     bozza: { label: 'Bozza', className: 'bg-gray-100 text-gray-700' },
@@ -18,6 +19,7 @@ const STATUS_MAP = {
 };
 
 export default function SopralluoghiPage() {
+    const confirm = useConfirm();
     const navigate = useNavigate();
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -37,7 +39,7 @@ export default function SopralluoghiPage() {
     useEffect(() => { fetchData(); }, [search]);
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Eliminare questo sopralluogo?')) return;
+        if (!(await confirm('Eliminare questo sopralluogo?'))) return;
         try {
             await apiRequest(`/sopralluoghi/${id}`, { method: 'DELETE' });
             setItems(prev => prev.filter(i => i.sopralluogo_id !== id));

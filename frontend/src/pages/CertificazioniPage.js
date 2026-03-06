@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner';
 import { Plus, Shield, MoreHorizontal, FileDown, Trash2, Edit } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
+import { useConfirm } from '../components/ConfirmProvider';
 
 const STATUS_MAP = {
     bozza: { label: 'Bozza', color: 'bg-yellow-100 text-yellow-800' },
@@ -27,6 +28,7 @@ const STATUS_MAP = {
 };
 
 export default function CertificazioniPage() {
+    const confirm = useConfirm();
     const navigate = useNavigate();
     const [certs, setCerts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -50,7 +52,7 @@ export default function CertificazioniPage() {
 
     const handleDelete = async (certId, e) => {
         e.stopPropagation();
-        if (!window.confirm('Eliminare questa certificazione?')) return;
+        if (!(await confirm('Eliminare questa certificazione?'))) return;
         try {
             await apiRequest(`/certificazioni/${certId}`, { method: 'DELETE' });
             toast.success('Certificazione eliminata');

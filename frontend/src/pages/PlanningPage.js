@@ -19,6 +19,7 @@ import {
     ChevronLeft,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
+import { useConfirm } from '../components/ConfirmProvider';
 
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
 
@@ -52,6 +53,7 @@ function formatDeadline(d) {
 // ── Main Page ────────────────────────────────────────────────────
 
 export default function PlanningPage() {
+    const confirm = useConfirm();
     const navigate = useNavigate();
     const [columns, setColumns] = useState([]);
     const [acceptedPrevs, setAcceptedPrevs] = useState([]);
@@ -183,7 +185,7 @@ export default function PlanningPage() {
     // ── Other handlers ───────────────────────────────────────────
 
     const handleDelete = async (commessaId) => {
-        if (!window.confirm('Eliminare questa commessa?\n\nLe fatture collegate NON verranno eliminate e resteranno valide nel sistema SDI.')) return;
+        if (!(await confirm('Eliminare questa commessa?\n\nLe fatture collegate NON verranno eliminate e resteranno valide nel sistema SDI.'))) return;
         try {
             await apiRequest(`/commesse/${commessaId}`, { method: 'DELETE' });
             toast.success('Commessa eliminata (fatture intatte)');

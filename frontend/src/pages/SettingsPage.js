@@ -14,8 +14,10 @@ import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Save, Building2, CreditCard, FileText, ImageIcon, Upload, X, Plug, ShieldCheck, HardDrive, Download, Loader2, RefreshCw, UploadCloud, Users, UserPlus, Trash2, Shield } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
+import { useConfirm } from '../components/ConfirmProvider';
 
 export default function SettingsPage() {
+    const confirm = useConfirm();
     const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -938,7 +940,7 @@ function TeamTab() {
     };
 
     const handleRemoveMember = async (userId) => {
-        if (!window.confirm('Sei sicuro di voler rimuovere questo membro?')) return;
+        if (!(await confirm('Sei sicuro di voler rimuovere questo membro?'))) return;
         try {
             await apiRequest(`/team/members/${userId}`, { method: 'DELETE' });
             toast.success('Membro rimosso');
@@ -1132,7 +1134,7 @@ function BackupTab() {
     const handleRestore = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        if (!window.confirm('ATTENZIONE: Stai per importare dati dal file di backup. I record esistenti verranno AGGIORNATI con i dati del backup. Vuoi procedere?')) {
+        if (!(await confirm('ATTENZIONE: Stai per importare dati dal file di backup. I record esistenti verranno AGGIORNATI con i dati del backup. Vuoi procedere?'))) {
             e.target.value = '';
             return;
         }
@@ -1311,8 +1313,8 @@ function DeployTab() {
     }, []);
 
     const handleCleanup = async () => {
-        if (!window.confirm('ATTENZIONE: Questa operazione cancella TUTTE le commesse, preventivi, fatture e altri dati operativi. Sei sicuro?')) return;
-        if (!window.confirm('ULTIMA CONFERMA: Hai fatto il backup? I dati verranno eliminati permanentemente.')) return;
+        if (!(await confirm('ATTENZIONE: Questa operazione cancella TUTTE le commesse, preventivi, fatture e altri dati operativi. Sei sicuro?'))) return;
+        if (!(await confirm('ULTIMA CONFERMA: Hai fatto il backup? I dati verranno eliminati permanentemente.'))) return;
 
         setCleaning(true);
         setResult(null);

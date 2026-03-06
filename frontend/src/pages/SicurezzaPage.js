@@ -16,6 +16,7 @@ import {
 import { toast } from 'sonner';
 import { Plus, HardHat, MoreHorizontal, FileDown, Trash2, Edit } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
+import { useConfirm } from '../components/ConfirmProvider';
 
 const STATUS_MAP = {
     bozza: { label: 'Bozza', color: 'bg-yellow-100 text-yellow-800' },
@@ -24,6 +25,7 @@ const STATUS_MAP = {
 };
 
 export default function SicurezzaPage() {
+    const confirm = useConfirm();
     const navigate = useNavigate();
     const [docs, setDocs] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -44,7 +46,7 @@ export default function SicurezzaPage() {
 
     const handleDelete = async (posId, e) => {
         e.stopPropagation();
-        if (!window.confirm('Eliminare questo POS?')) return;
+        if (!(await confirm('Eliminare questo POS?'))) return;
         try {
             await apiRequest(`/sicurezza/${posId}`, { method: 'DELETE' });
             toast.success('POS eliminato');

@@ -247,13 +247,17 @@ function AppRouter() {
     );
 }
 
+import { ConfirmProvider } from './components/ConfirmProvider';
+
 function App() {
     return (
         <BrowserRouter>
             <AuthProvider>
-                <ErrorBoundary>
-                    <AppRouter />
-                </ErrorBoundary>
+                <ConfirmProvider>
+                    <ErrorBoundary>
+                        <AppRouter />
+                    </ErrorBoundary>
+                </ConfirmProvider>
                 <Toaster position="top-right" />
             </AuthProvider>
         </BrowserRouter>

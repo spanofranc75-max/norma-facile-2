@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import { PDFPreviewModal } from '../components/PDFPreviewModal';
+import { useConfirm } from '../components/ConfirmProvider';
 import EmptyState from '../components/EmptyState';
 import EmailPreviewDialog from '../components/EmailPreviewDialog';
 
@@ -56,6 +57,7 @@ const formatCurrency = (value) =>
 
 export default function InvoicesPage() {
     const navigate = useNavigate();
+    const confirm = useConfirm();
     const [invoices, setInvoices] = useState([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -189,7 +191,7 @@ export default function InvoicesPage() {
     };
 
     const handleSendSDI = async (invoice) => {
-        if (!window.confirm('Confermi l\'invio al Sistema di Interscambio (SDI)?')) return;
+        if (!(await confirm('Confermi l\'invio al Sistema di Interscambio (SDI)?'))) return;
         try {
             const result = await apiRequest(`/invoices/${invoice.invoice_id}/send-sdi`, { method: 'POST' });
             toast.success(result.message);
@@ -202,7 +204,7 @@ export default function InvoicesPage() {
     const handleChangeStatus = async (invoice, newStatus) => {
         const labels = { emessa: 'Emetti', pagata: 'Segna come Pagata', annullata: 'Annulla' };
         const label = labels[newStatus] || newStatus;
-        if (!window.confirm(`Confermi: ${label} il documento ${invoice.document_number}?`)) return;
+        if (!(await confirm(`Confermi: ${label} il documento ${invoice.document_number}?`))) return;
         try {
             await apiRequest(`/invoices/${invoice.invoice_id}/status`, {
                 method: 'PATCH',
@@ -217,7 +219,7 @@ export default function InvoicesPage() {
 
 
     const handleDelete = async (invoice) => {
-        if (!window.confirm('Sei sicuro di voler eliminare questo documento?')) return;
+        if (!(await confirm('Sei sicuro di voler eliminare questo documento?'))) return;
         try {
             await apiRequest(`/invoices/${invoice.invoice_id}`, { method: 'DELETE' });
             toast.success('Documento eliminato');
@@ -246,7 +248,7 @@ export default function InvoicesPage() {
     };
 
     const handleCreateNC = async (invoice) => {
-        if (!window.confirm(`Creare una Nota di Credito per stornare la fattura ${invoice.document_number}?`)) return;
+        if (!(await confirm(`Creare una Nota di Credito per stornare la fattura ${invoice.document_number}?`))) return;
         try {
             const result = await apiRequest(`/invoices/${invoice.invoice_id}/create-nota-credito`, {
                 method: 'POST',

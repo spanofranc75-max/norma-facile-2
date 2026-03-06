@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import EmptyState from '../components/EmptyState';
+import { useConfirm } from '../components/ConfirmProvider';
 
 const STATUS_BADGES = {
     da_registrare: { label: 'Da Registrare', color: 'bg-yellow-100 text-yellow-800' },
@@ -55,6 +56,7 @@ const formatCurrency = (v) =>
     new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
 
 export default function FattureRicevutePage() {
+    const confirm = useConfirm();
     const [fatture, setFatture] = useState([]);
     const [total, setTotal] = useState(0);
     const [kpi, setKpi] = useState({ totale_fatture: 0, totale_pagato: 0, da_pagare: 0, count: 0 });
@@ -224,7 +226,7 @@ export default function FattureRicevutePage() {
 
     // Delete
     const handleDelete = async (fr) => {
-        if (!window.confirm(`Eliminare la fattura ${fr.numero_documento}?`)) return;
+        if (!(await confirm(`Eliminare la fattura ${fr.numero_documento}?`))) return;
         try {
             await apiRequest(`/fatture-ricevute/${fr.fr_id}`, { method: 'DELETE' });
             toast.success('Fattura eliminata');

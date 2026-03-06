@@ -24,6 +24,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import { PDFPreviewButton } from '../components/PDFPreviewModal';
 import { AutoExpandTextarea } from '../components/AutoExpandTextarea';
 import EmailPreviewDialog from '../components/EmailPreviewDialog';
+import { useConfirm } from '../components/ConfirmProvider';
 
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
 
@@ -52,6 +53,7 @@ const SIDEBAR_TABS = [
 ];
 
 export default function DDTEditorPage() {
+    const confirm = useConfirm();
     const navigate = useNavigate();
     const { ddtId } = useParams();
     const isNew = !ddtId || ddtId === 'new';
@@ -202,7 +204,7 @@ export default function DDTEditorPage() {
     };
 
     const handleConvertToInvoice = async () => {
-        if (!window.confirm('Convertire questo DDT in Fattura? Le righe, il cliente e i totali verranno importati automaticamente.')) return;
+        if (!(await confirm('Convertire questo DDT in Fattura? Le righe, il cliente e i totali verranno importati automaticamente.'))) return;
         setConverting(true);
         try {
             const res = await apiRequest(`/ddt/${ddtId}/convert-to-invoice`, { method: 'POST' });

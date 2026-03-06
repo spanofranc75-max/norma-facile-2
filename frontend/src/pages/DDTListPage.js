@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { Plus, Search, Truck, Pencil, Trash2, Package, FileCheck, BarChart3, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import EmptyState from '../components/EmptyState';
+import { useConfirm } from '../components/ConfirmProvider';
 
 const DDT_TYPES = [
     { value: '', label: 'Tutti' },
@@ -44,6 +45,7 @@ const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', curren
 const MONTHS = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
 
 export default function DDTListPage() {
+    const confirm = useConfirm();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const [items, setItems] = useState([]);
@@ -81,7 +83,7 @@ export default function DDTListPage() {
     useEffect(() => { fetchStats(); }, [fetchStats]);
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Eliminare questo DDT?')) return;
+        if (!(await confirm('Eliminare questo DDT?'))) return;
         try {
             await apiRequest(`/ddt/${id}`, { method: 'DELETE' });
             toast.success('DDT eliminato');

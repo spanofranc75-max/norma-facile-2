@@ -43,6 +43,7 @@ import {
 import DashboardLayout from '../components/DashboardLayout';
 import ArticleSearch from '../components/ArticleSearch';
 import { QuickFillModal } from '../components/QuickFillModal';
+import { useConfirm } from '../components/ConfirmProvider';
 import { PDFPreviewButton } from '../components/PDFPreviewModal';
 import { LivePDFPreview } from '../components/LivePDFPreview';
 import { AutoExpandTextarea } from '../components/AutoExpandTextarea';
@@ -104,6 +105,7 @@ export default function InvoiceEditorPage() {
     const navigate = useNavigate();
     const { invoiceId } = useParams();
     const isEditing = !!invoiceId;
+    const confirm = useConfirm();
 
     const [loading, setLoading] = useState(isEditing);
     const [saving, setSaving] = useState(false);
@@ -466,7 +468,7 @@ export default function InvoiceEditorPage() {
                                 variant="outline"
                                 data-testid="btn-emetti"
                                 onClick={async () => {
-                                    if (!window.confirm('Confermi l\'emissione del documento? Non sara piu modificabile.')) return;
+                                    if (!(await confirm('Confermi l\'emissione del documento? Non sara piu modificabile.'))) return;
                                     try {
                                         await apiRequest(`/invoices/${invoiceId}/status`, { method: 'PATCH', body: { status: 'emessa' } });
                                         toast.success('Documento emesso');
@@ -484,7 +486,7 @@ export default function InvoiceEditorPage() {
                                 variant="outline"
                                 data-testid="btn-send-sdi"
                                 onClick={async () => {
-                                    if (!window.confirm('Confermi l\'invio al SDI?')) return;
+                                    if (!(await confirm('Confermi l\'invio al SDI?'))) return;
                                     try {
                                         const r = await apiRequest(`/invoices/${invoiceId}/send-sdi`, { method: 'POST' });
                                         toast.success(r.message || 'Fattura inviata al SDI');

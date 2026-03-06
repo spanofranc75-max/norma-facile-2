@@ -16,8 +16,10 @@ import {
     Flame, Plus, Search, Save, Trash2, FileText, Users, ChevronDown, ChevronUp,
     AlertTriangle, CheckCircle, Shield, Thermometer, Droplets,
 } from 'lucide-react';
+import { useConfirm } from '../components/ConfirmProvider';
 
 export default function WPSPage({ user }) {
+    const confirm = useConfirm();
     const [refData, setRefData] = useState(null);
     const [wpsList, setWpsList] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -100,7 +102,7 @@ export default function WPSPage({ user }) {
     };
 
     const handleDelete = async (wpsId) => {
-        if (!window.confirm('Eliminare questa WPS?')) return;
+        if (!(await confirm('Eliminare questa WPS?'))) return;
         try {
             await apiRequest(`/wps/${wpsId}`, { method: 'DELETE' });
             toast.success('WPS eliminata');

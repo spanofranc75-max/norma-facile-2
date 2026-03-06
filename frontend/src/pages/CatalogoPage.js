@@ -23,6 +23,7 @@ import {
     Plus, Search, TrendingUp, Edit2, Trash2, Package, Warehouse,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
+import { useConfirm } from '../components/ConfirmProvider';
 
 const CATEGORIES = [
     { value: 'ferro', label: 'Ferro' },
@@ -41,6 +42,7 @@ const emptyProfile = {
 };
 
 export default function CatalogoPage() {
+    const confirm = useConfirm();
     const [profiles, setProfiles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -133,7 +135,7 @@ export default function CatalogoPage() {
     };
 
     const handleDelete = async (p) => {
-        if (!window.confirm(`Eliminare il profilo "${p.code}"?`)) return;
+        if (!(await confirm(`Eliminare il profilo "${p.code}"?`))) return;
         try {
             await apiRequest(`/catalogo/${p.profile_id}`, { method: 'DELETE' });
             toast.success('Profilo eliminato');

@@ -33,6 +33,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 const ZONES = ['A', 'B', 'C', 'D', 'E', 'F'];
 import { DisabledTooltip } from '../components/DisabledTooltip';
 import RdpPanel from '../components/RdpPanel';
+import { useConfirm } from '../components/ConfirmProvider';
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
 
 const emptyLine = () => ({
@@ -49,6 +50,7 @@ const SIDEBAR_TABS = [
 ];
 
 export default function PreventivoEditorPage() {
+    const confirm = useConfirm();
     const navigate = useNavigate();
     const { prevId } = useParams();
     const isNew = !prevId || prevId === 'new';
@@ -371,7 +373,7 @@ export default function PreventivoEditorPage() {
 
     const handleConvertToInvoice = async () => {
         if (isNew) return;
-        if (!window.confirm('Convertire questo preventivo in Fattura?')) return;
+        if (!(await confirm('Convertire questo preventivo in Fattura?'))) return;
         setConverting(true);
         try {
             const res = await apiRequest(`/preventivi/${prevId}/convert-to-invoice`, { method: 'POST' });
