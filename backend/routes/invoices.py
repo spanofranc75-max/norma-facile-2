@@ -475,20 +475,30 @@ async def update_invoice(
     if not existing:
         raise HTTPException(status_code=404, detail="Documento non trovato")
     
-    # Can only edit drafts
-    if existing.get("status") not in [InvoiceStatus.BOZZA.value, "bozza"]:
-        raise HTTPException(
-            status_code=400,
-            detail="Solo i documenti in bozza possono essere modificati"
+    is_draft = existing.get("status") in [InvoiceStatus.BOZZA.value, "bozza"]
+    
+    # Non-draft: block structural changes (lines, tax, number, client, issue_date)
+    if not is_draft:
+        has_structural = (
+            invoice_data.lines is not None
+            or invoice_data.tax_settings is not None
+            or invoice_data.document_number is not None
+            or invoice_data.client_id is not None
+            or invoice_data.issue_date is not None
         )
+        if has_structural:
+            raise HTTPException(
+                status_code=400,
+                detail="Solo i documenti in bozza possono essere modificati nelle righe, impostazioni fiscali, numero, cliente o data emissione."
+            )
     
     update_dict = {}
     
-    # Update document number if provided
+    # Update document number if provided (draft only — checked above)
     if invoice_data.document_number is not None:
         update_dict["document_number"] = invoice_data.document_number
     
-    # Update client if changed
+    # Update client if changed (draft only — checked above)
     if invoice_data.client_id:
         client = await db.clients.find_one(
             {"client_id": invoice_data.client_id, "user_id": user["user_id"]}
@@ -497,7 +507,7 @@ async def update_invoice(
             raise HTTPException(status_code=400, detail="Cliente non trovato")
         update_dict["client_id"] = invoice_data.client_id
     
-    # Update other fields
+    # Update other fields (allowed on all statuses)
     if invoice_data.issue_date:
         update_dict["issue_date"] = invoice_data.issue_date.isoformat()
     if invoice_data.due_date:
@@ -511,7 +521,7 @@ async def update_invoice(
     if invoice_data.internal_notes is not None:
         update_dict["internal_notes"] = invoice_data.internal_notes
     
-    # Recalculate if lines or tax settings changed
+    # Recalculate if lines or tax settings changed (draft only — checked above)
     if invoice_data.lines is not None or invoice_data.tax_settings is not None:
         lines = invoice_data.lines if invoice_data.lines else []
         tax_settings = invoice_data.tax_settings or existing.get("tax_settings", {})

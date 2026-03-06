@@ -359,18 +359,34 @@ export default function InvoiceEditorPage() {
 
         try {
             setSaving(true);
-            const payload = {
-                ...formData,
-                lines: formData.lines.filter(l => l.description.trim()),
-            };
 
             if (isEditing) {
+                let payload;
+                if (formData.status && formData.status !== 'bozza') {
+                    // Non-draft: only send metadata fields
+                    payload = {
+                        payment_method: formData.payment_method,
+                        payment_terms: formData.payment_terms,
+                        due_date: formData.due_date || undefined,
+                        notes: formData.notes,
+                        internal_notes: formData.internal_notes,
+                    };
+                } else {
+                    payload = {
+                        ...formData,
+                        lines: formData.lines.filter(l => l.description.trim()),
+                    };
+                }
                 await apiRequest(`/invoices/${invoiceId}`, {
                     method: 'PUT',
                     body: JSON.stringify(payload),
                 });
                 toast.success('Documento aggiornato');
             } else {
+                const payload = {
+                    ...formData,
+                    lines: formData.lines.filter(l => l.description.trim()),
+                };
                 const result = await apiRequest('/invoices/', {
                     method: 'POST',
                     body: JSON.stringify(payload),
