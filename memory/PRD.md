@@ -72,6 +72,12 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **Fix**: Entrambe le funzioni ora generano un `totals` completo e coerente con `InvoiceTotals`. Corretta anche la fattura 19/2026 (Merighi Giancarlo) già nel DB.
 - Verificato via API e screenshot: pagina caricata correttamente con tutti i totali.
 
+### Feature: Perizia AI Multi-Normativa (6 Mar 2026)
+- **Frontend**: Aggiunto selettore Card Grid per tipologia perizia nello Step 1 del Wizard (Cancelli EN 12453, Barriere D.M. 236/89, Strutture NTC 2018). Placeholder, istruzioni foto e testo AI dinamici.
+- **Backend (vision_analysis.py)**: 3 system prompt specializzati per GPT-4o con competenze normative specifiche e JSON output schema condiviso.
+- **Backend (pdf_perizia_sopralluogo.py)**: Template PDF dinamico — titolo copertina, norme citate, note legali, checklist post-intervento si adattano al tipo di perizia.
+- **Model**: Aggiunto campo `tipo_perizia` a SopralluogoCreate/Update.
+
 ### Bug Fix: Errore 400 salvataggio fattura emessa (6 Mar 2026)
 - **Causa**: Il backend bloccava QUALSIASI modifica su fatture non in bozza (riga 479 invoices.py). Il frontend inviava tutto il payload (incluse lines) anche per modifiche ai soli metadati.
 - **Fix Backend**: Logica granulare — metadati (termini pagamento, scadenza, note) aggiornabili su tutti gli status; modifiche strutturali (righe, impostazioni fiscali, numero, cliente) bloccate su non-bozza.

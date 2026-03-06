@@ -313,7 +313,8 @@ async def analizza_sopralluogo(sopralluogo_id: str, user: dict = Depends(get_cur
         raise HTTPException(500, "Impossibile recuperare le foto dallo storage")
 
     # Run analysis
-    result = await analyze_photos(photo_data, doc.get("descrizione_utente", ""))
+    tipo_perizia = doc.get("tipo_perizia", "cancelli")
+    result = await analyze_photos(photo_data, doc.get("descrizione_utente", ""), tipo_perizia=tipo_perizia)
 
     # Match materials to catalog articles
     articoli = await db[ARTICOLI_COLLECTION].find({"user_id": user["user_id"]}, {"_id": 0}).to_list(200)

@@ -51,6 +51,7 @@ class SopralluogoCreate(BaseModel):
     provincia: str = ""
     descrizione_utente: str = ""
     tipo_intervento: str = Field(default="messa_a_norma", description="messa_a_norma, manutenzione, nuova_installazione")
+    tipo_perizia: str = Field(default="cancelli", description="cancelli, barriere, strutture")
 
 
 class SopralluogoUpdate(BaseModel):
@@ -60,6 +61,7 @@ class SopralluogoUpdate(BaseModel):
     provincia: Optional[str] = None
     descrizione_utente: Optional[str] = None
     tipo_intervento: Optional[str] = None
+    tipo_perizia: Optional[str] = None
     analisi_ai: Optional[dict] = None
     note_tecnico: Optional[str] = None
     status: Optional[str] = None

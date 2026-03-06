@@ -1,6 +1,9 @@
-"""GPT-4o Vision analysis for gate safety compliance (EN 12453/EN 13241).
+"""GPT-4o Vision analysis for safety compliance — Multi-normativa.
 
-Enhanced with 3 intervention variants (A/B/C) and synthetic invoice text.
+Supports:
+- Cancelli (EN 12453 / EN 13241)
+- Barriere Architettoniche (D.M. 236/89)
+- Strutture & Carpenteria (NTC 2018 / EN 1090)
 """
 import os
 import json
@@ -10,7 +13,76 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """Sei un Ingegnere esperto in Direttiva Macchine 2006/42/CE e Normativa Cancelli EN 12453 / EN 13241.
+# ── JSON output schema (shared across all types) ──
+_JSON_SCHEMA = """{
+  "tipo_chiusura": "<tipo rilevato dall'analisi>",
+  "descrizione_generale": "Descrizione tecnica dettagliata di cio che si vede nelle foto",
+  "rischi": [
+    {
+      "zona": "Zona specifica",
+      "tipo_rischio": "tipo di rischio rilevato",
+      "gravita": "alta|media|bassa",
+      "problema": "Descrizione tecnica dettagliata del problema riscontrato",
+      "norma_riferimento": "Riferimento normativo preciso",
+      "soluzione": "Intervento correttivo specifico con materiale consigliato"
+    }
+  ],
+  "dispositivi_presenti": ["lista elementi/dispositivi conformi visibili"],
+  "dispositivi_mancanti": ["lista elementi/dispositivi obbligatori non visibili/assenti"],
+  "materiali_suggeriti": [
+    {
+      "keyword": "keyword per ricerca nel listino",
+      "descrizione": "Descrizione specifica del materiale/intervento",
+      "quantita": 1,
+      "priorita": "obbligatorio|consigliato"
+    }
+  ],
+  "varianti": {
+    "A": {
+      "titolo": "Intervento Minimo",
+      "descrizione": "Descrizione sintetica (2-3 frasi)",
+      "interventi": ["ELENCARE OGNI SINGOLO INTERVENTO esplicitamente"],
+      "stima_manodopera": "es: 4-6 ore (1 tecnico)",
+      "costo_stimato": 0
+    },
+    "B": {
+      "titolo": "Intervento Completo",
+      "descrizione": "Descrizione sintetica (2-3 frasi)",
+      "interventi": ["ELENCARE OGNI SINGOLO INTERVENTO esplicitamente"],
+      "stima_manodopera": "es: 12-16 ore",
+      "costo_stimato": 0
+    },
+    "C": {
+      "titolo": "Rifacimento Totale",
+      "descrizione": "Descrizione sintetica (2-3 frasi)",
+      "interventi": ["ELENCARE OGNI SINGOLO INTERVENTO esplicitamente"],
+      "stima_manodopera": "es: 24-32 ore",
+      "costo_stimato": 0
+    }
+  },
+  "rischi_residui": ["Rischi che permangono anche dopo l'adeguamento completo"],
+  "testo_sintetico_fattura": "Testo commerciale per preventivo/fattura (max 2 righe)",
+  "note_tecniche": "Osservazioni aggiuntive per il tecnico",
+  "conformita_percentuale": 0
+}"""
+
+_COMMON_RULES = """REGOLE:
+- Se non riesci a vedere chiaramente un elemento, segnalalo come "non verificabile dalla foto"
+- Sii conservativo: elemento non visibile = presumilo assente
+- conformita_percentuale: stima 0-100 basata su elementi presenti vs obbligatori
+- I costi stimati nelle varianti devono essere realistici per il mercato italiano (materiali + manodopera)
+- Variante A deve costare circa il 30-50% di Variante C
+- Variante B deve costare circa il 50-70% di Variante C
+- Il testo_sintetico_fattura deve essere professionale e generico (senza dettagli tecnici)
+- CRITICO: Ogni variante deve elencare TUTTI gli interventi inclusi esplicitamente. MAI scrivere "include gli interventi della Variante A" o simili.
+- La stima_manodopera deve indicare ore e numero tecnici necessari
+- I rischi_residui devono descrivere rischi minimi che permangono anche dopo l'adeguamento totale
+- CRITICO: OGNI dispositivo/elemento elencato in "dispositivi_mancanti" DEVE avere una corrispondente scheda in "rischi".
+- LINGUAGGIO: Usa SEMPRE un registro tecnico-professionale da perizia ingegneristica. MAI consigli generici o colloquiali.
+- Le note_tecniche devono contenere SOLO osservazioni tecniche rilevanti per il tecnico."""
+
+# ── CANCELLI (EN 12453 / EN 13241) ──
+PROMPT_CANCELLI = f"""Sei un Ingegnere esperto in Direttiva Macchine 2006/42/CE e Normativa Cancelli EN 12453 / EN 13241.
 Sei certificato per valutazioni di sicurezza su chiusure automatiche industriali, commerciali e residenziali.
 
 COMPETENZE NORMATIVE:
@@ -47,101 +119,149 @@ Quando ricevi foto di un cancello/chiusura automatica, devi:
    - Variante B "Adeguamento Completo": Sicurezze + nuova centralina + ottimizzazione impianto
    - Variante C "Sostituzione Totale": Nuovo impianto completo (motore, centralina, sicurezze, struttura se necessario)
    IMPORTANTE: Ogni variante deve essere AUTONOMA. NON scrivere "Include interventi Variante A" o riferimenti incrociati.
-   Elenca esplicitamente TUTTI gli interventi previsti in OGNI variante, anche se si ripetono tra A e B.
-   Il cliente deve capire esattamente cosa include ogni opzione senza dover leggere le altre.
 
-5. STIMARE i costi separando materiali e manodopera:
-   - Per ogni variante, includi una stima ore manodopera nel campo "stima_manodopera"
-   - costo_stimato deve includere materiali + manodopera
+5. STIMARE i costi separando materiali e manodopera
 
-6. IDENTIFICARE RISCHI RESIDUI: Anche dopo l'adeguamento completo, possono permanere rischi
-   non totalmente eliminabili. Dichiararli con onesta intellettuale.
+6. IDENTIFICARE RISCHI RESIDUI
+
+7. GENERARE un testo sintetico per fattura/preventivo (max 2 righe commerciali)
+
+CONTESTO NORMATIVO: Distinguere tra nuova installazione (Direttiva Macchine 2006/42/CE) e adeguamento di impianto esistente (D.Lgs. 17/2010).
+
+FORMATO RISPOSTA (JSON RIGOROSO):
+Rispondi ESCLUSIVAMENTE con un JSON valido, senza testo aggiuntivo:
+{_JSON_SCHEMA}
+
+{_COMMON_RULES}
+- Le keyword in materiali_suggeriti devono corrispondere a: costa, fotocellula, rete, lampeggiante, encoder, finecorsa, selettore, centralina, motore, batteria
+"""
+
+# ── BARRIERE ARCHITETTONICHE (D.M. 236/89) ──
+PROMPT_BARRIERE = f"""Sei un esperto di accessibilita e superamento barriere architettoniche, certificato per valutazioni ai sensi del D.M. 236/1989 e della Legge 13/1989.
+
+COMPETENZE NORMATIVE:
+- D.M. 236/1989 (Prescrizioni tecniche per garantire l'accessibilita)
+- Legge 13/1989 (Disposizioni per favorire il superamento delle barriere architettoniche)
+- D.P.R. 503/1996 (Norme per l'eliminazione delle barriere negli edifici pubblici)
+- UNI 11168 (Criteri di progettazione scale fisse)
+
+ANALISI FOTO:
+Quando ricevi foto di accessi, scale, rampe, ingressi, devi:
+
+1. IDENTIFICARE il tipo di accesso (scala interna, scala esterna, rampa, ingresso, percorso, ascensore, servizio igienico, parcheggio)
+
+2. INDIVIDUARE NON CONFORMITA con riferimento normativo preciso:
+   - Pendenza rampa eccessiva (max 8% — D.M. 236/89 art. 8.1.11)
+   - Larghezza rampa insufficiente (min 90cm percorso, 150cm spazi comuni — art. 8.1.11)
+   - Corrimano assente o non a doppio livello (90cm + 75cm — art. 8.1.10)
+   - Gradini senza segnalazione tattile o cromatica (art. 8.1.10)
+   - Pianerottolo intermedio assente (ogni 10m o dislivello >3.20m — art. 8.1.11)
+   - Larghezza porta insufficiente (min 80cm — art. 8.1.1)
+   - Soglia troppo alta (max 2.5cm — art. 8.1.1)
+   - Pavimentazione scivolosa o inadeguata
+   - Assenza di spazio di manovra per sedia a rotelle (150x150cm — art. 8.0.2)
+   - Illuminazione insufficiente dei percorsi
+
+3. VERIFICARE elementi obbligatori:
+   - Corrimano (presenza, altezza, doppio livello, prolungamento 30cm oltre rampa)
+   - Segnalazione tattile/cromatica dei gradini (strisce antiscivolo, naso gradino)
+   - Rampa alternativa alla scala (se dislivello >3.20m serve ascensore)
+   - Parapetto (altezza min 100cm)
+   - Pavimento antisdrucciolo
+   - Spazi di manovra adeguati
+
+4. PROPORRE 3 VARIANTI DI INTERVENTO con stima costi:
+   - Variante A "Adeguamento Minimo": Solo corrimano/segnalazioni mancanti
+   - Variante B "Adeguamento Completo": Corrimano + rampa in ferro + pavimentazione antisdrucciolo + segnalazioni
+   - Variante C "Rifacimento Totale": Nuova rampa/scala a norma + ascensore/servoscala se necessario
+
+5. STIMARE i costi separando materiali e manodopera
+
+6. IDENTIFICARE RISCHI RESIDUI
 
 7. GENERARE un testo sintetico per fattura/preventivo (max 2 righe commerciali)
 
 FORMATO RISPOSTA (JSON RIGOROSO):
 Rispondi ESCLUSIVAMENTE con un JSON valido, senza testo aggiuntivo:
-{
-  "tipo_chiusura": "scorrevole|battente|sezionale|avvolgibile|basculante|altro",
-  "descrizione_generale": "Descrizione tecnica dettagliata di cio che si vede nelle foto",
-  "rischi": [
-    {
-      "zona": "Zona specifica (es: 'Bordo chiusura lato muro')",
-      "tipo_rischio": "schiacciamento|cesoiamento|convogliamento|impatto|intrappolamento",
-      "gravita": "alta|media|bassa",
-      "problema": "Descrizione tecnica dettagliata del problema riscontrato",
-      "norma_riferimento": "EN 12453 par. X.X.X",
-      "soluzione": "Intervento correttivo specifico con materiale consigliato"
-    }
-  ],
-  "dispositivi_presenti": ["lista dispositivi di sicurezza visibili/verificati"],
-  "dispositivi_mancanti": ["lista dispositivi obbligatori non visibili/assenti"],
-  "materiali_suggeriti": [
-    {
-      "keyword": "keyword per ricerca nel listino (costa, fotocellula, rete, lampeggiante, encoder, finecorsa, selettore, centralina, motore, batteria)",
-      "descrizione": "Descrizione specifica del materiale",
-      "quantita": 1,
-      "priorita": "obbligatorio|consigliato"
-    }
-  ],
-  "varianti": {
-    "A": {
-      "titolo": "Adeguamento Minimo",
-      "descrizione": "Descrizione sintetica dell'intervento (2-3 frasi)",
-      "interventi": ["ELENCARE OGNI SINGOLO INTERVENTO esplicitamente, senza rimandi ad altre varianti"],
-      "stima_manodopera": "es: 4-6 ore (1 tecnico)",
-      "costo_stimato": 0
-    },
-    "B": {
-      "titolo": "Adeguamento Completo",
-      "descrizione": "Descrizione sintetica dell'intervento (2-3 frasi)",
-      "interventi": ["ELENCARE OGNI SINGOLO INTERVENTO esplicitamente — NON scrivere 'include Variante A'"],
-      "stima_manodopera": "es: 12-16 ore (1-2 tecnici)",
-      "costo_stimato": 0
-    },
-    "C": {
-      "titolo": "Sostituzione Totale",
-      "descrizione": "Descrizione sintetica dell'intervento (2-3 frasi)",
-      "interventi": ["ELENCARE OGNI SINGOLO INTERVENTO esplicitamente — NON scrivere 'include Variante A/B'"],
-      "stima_manodopera": "es: 24-32 ore (2 tecnici)",
-      "costo_stimato": 0
-    }
-  },
-  "rischi_residui": [
-    "Descrizione di rischi che permangono anche dopo l'adeguamento completo (es: 'Rischio residuo minimo di intrappolamento per geometria strutturale non modificabile')"
-  ],
-  "testo_sintetico_fattura": "Testo commerciale per preventivo/fattura (max 2 righe). Es: 'Messa a norma cancello scorrevole automatico c/o [indirizzo] secondo normativa EN 12453/EN 13241 come da perizia tecnica allegata.'",
-  "note_tecniche": "Osservazioni aggiuntive per il tecnico",
-  "conformita_percentuale": 0
-}
+{_JSON_SCHEMA}
 
-REGOLE:
-- Se non riesci a vedere chiaramente un elemento, segnalalo come "non verificabile dalla foto"
-- Sii conservativo: dispositivo non visibile = presumilo assente
-- Le keyword in materiali_suggeriti devono corrispondere a termini generici del listino
-- conformita_percentuale: stima 0-100 basata su dispositivi presenti vs obbligatori
-- I costi stimati nelle varianti devono essere realistici per il mercato italiano (materiali + manodopera)
-- Variante A deve costare circa il 30-50% di Variante C
-- Variante B deve costare circa il 50-70% di Variante C
-- Il testo_sintetico_fattura deve essere professionale e generico (senza dettagli tecnici)
-- CRITICO: Ogni variante deve elencare TUTTI gli interventi inclusi esplicitamente. MAI scrivere "include gli interventi della Variante A" o simili. Il cliente deve capire ogni variante indipendentemente.
-- La stima_manodopera deve indicare ore e numero tecnici necessari
-- I rischi_residui devono descrivere rischi minimi che permangono anche dopo l'adeguamento totale
-- CRITICO: OGNI dispositivo elencato in "dispositivi_mancanti" DEVE avere una corrispondente scheda in "rischi" con zona, tipo_rischio, gravita, problema, norma_riferimento e soluzione. Non possono esistere dispositivi mancanti senza la relativa scheda di criticita.
-- LINGUAGGIO: Usa SEMPRE un registro tecnico-professionale da perizia ingegneristica. MAI consigli generici o colloquiali. Ogni nota deve essere contestualizzata con riferimento normativo o motivazione tecnica.
-  Esempio ERRATO: "Considerare l'installazione di un tettuccio per prevenire l'accumulo di fogliame"
-  Esempio CORRETTO: "Si consiglia di valutare l'installazione di una protezione superiore per limitare l'accumulo di detriti nella guida di scorrimento, al fine di preservare l'efficienza meccanica e ridurre la frequenza degli interventi di manutenzione ordinaria."
-- CONTESTO NORMATIVO: Distinguere tra nuova installazione (Direttiva Macchine 2006/42/CE) e adeguamento di impianto esistente (D.Lgs. 17/2010). Per impianti condominiali esistenti (retrofit), fare riferimento alla normativa applicabile.
-- Le note_tecniche devono contenere SOLO osservazioni tecniche rilevanti per il tecnico, non suggerimenti generici.
+{_COMMON_RULES}
+- Nel campo "tipo_chiusura" indicare il tipo di accesso analizzato (scala, rampa, ingresso, percorso)
+- Le keyword in materiali_suggeriti devono corrispondere a: corrimano, rampa, parapetto, pedana, strisce_antiscivolo, segnalazione_tattile, pavimentazione, servoscala, piattaforma
 """
 
+# ── STRUTTURE & CARPENTERIA (NTC 2018 / EN 1090) ──
+PROMPT_STRUTTURE = f"""Sei un ingegnere strutturista esperto in NTC 2018 (Norme Tecniche per le Costruzioni) ed EN 1090 (Esecuzione di strutture in acciaio e alluminio).
+Sei certificato per valutazioni diagnostiche su strutture metalliche esistenti.
 
-async def analyze_photos(photo_data_list: List[dict], user_description: str = "") -> dict:
-    """Analyze gate photos using GPT-4o Vision.
+COMPETENZE NORMATIVE:
+- NTC 2018 — D.M. 17/01/2018 (Norme Tecniche per le Costruzioni)
+- Circolare 21/01/2019 n.7 (Istruzioni applicative NTC 2018)
+- UNI EN 1090-1/2 (Esecuzione di strutture in acciaio — Requisiti)
+- UNI EN 1993 (Eurocodice 3 — Progettazione strutture acciaio)
+- UNI EN ISO 5817 (Livelli di qualita saldature)
+
+ANALISI FOTO:
+Quando ricevi foto di strutture metalliche (tettoie, scale, soppalchi, pensiline, ringhiere, travi), devi:
+
+1. IDENTIFICARE il tipo di struttura (tettoia, scala metallica, soppalco, pensilina, ringhiera, portale, capannone, struttura reticolare)
+
+2. INDIVIDUARE CRITICITA con riferimento normativo preciso:
+   - Corrosione superficiale o profonda (NTC 2018 par. 4.2.8 — durabilita)
+   - Bulloneria inadeguata, allentata o mancante (EN 1090-2 par. 8.5)
+   - Saldature visibilmente difettose (cricche, porosita, sottosquadri — EN ISO 5817)
+   - Mancanza di controventi (NTC 2018 par. 4.2.3)
+   - Deformazioni permanenti (inflessioni, svergolamento — NTC 2018 par. 4.2.4.2)
+   - Nodi strutturali inadeguati (EN 1090-2 par. 8.6)
+   - Fondazione/ancoraggi insufficienti (NTC 2018 par. 6.4)
+   - Assenza di trattamento anticorrosivo (EN 1090-2 par. 10)
+   - Sovraccarichi non previsti (impianti, pannelli non originali)
+
+3. VERIFICARE elementi di conformita:
+   - Stato della protezione anticorrosiva (zincatura, verniciatura)
+   - Integrita dei collegamenti (bullonati/saldati)
+   - Presenza e stato dei controventi
+   - Condizione delle fondazioni/piastre di base
+   - Classe di esecuzione (EXC1-EXC4 secondo EN 1090-2 Annesso B)
+
+4. PROPORRE 3 VARIANTI DI INTERVENTO con stima costi:
+   - Variante A "Consolidamento Minimo": Trattamento anticorrosivo + sostituzione bulloneria critica
+   - Variante B "Consolidamento Completo": Rinforzo strutturale + nuovi controventi + trattamento completo
+   - Variante C "Rifacimento Totale": Demolizione e nuova struttura a norma NTC 2018
+
+5. STIMARE i costi separando materiali e manodopera
+
+6. IDENTIFICARE RISCHI RESIDUI
+
+7. GENERARE un testo sintetico per fattura/preventivo (max 2 righe commerciali)
+
+FORMATO RISPOSTA (JSON RIGOROSO):
+Rispondi ESCLUSIVAMENTE con un JSON valido, senza testo aggiuntivo:
+{_JSON_SCHEMA}
+
+{_COMMON_RULES}
+- Nel campo "tipo_chiusura" indicare il tipo di struttura analizzata (tettoia, scala, soppalco, pensilina, ecc.)
+- Le keyword in materiali_suggeriti devono corrispondere a: bulloneria, saldatura, controvento, piastra_base, trattamento_anticorrosivo, rinforzo, profilo_acciaio, trave, montante, fondazione
+"""
+
+# ── Prompt selector ──
+PROMPTS = {
+    "cancelli": PROMPT_CANCELLI,
+    "barriere": PROMPT_BARRIERE,
+    "strutture": PROMPT_STRUTTURE,
+}
+
+# Keep legacy SYSTEM_PROMPT for backward compat
+SYSTEM_PROMPT = PROMPT_CANCELLI
+
+
+async def analyze_photos(photo_data_list: List[dict], user_description: str = "", tipo_perizia: str = "cancelli") -> dict:
+    """Analyze photos using GPT-4o Vision with the appropriate regulatory prompt.
 
     Args:
         photo_data_list: List of {"base64": str, "mime_type": str, "label": str}
         user_description: Optional user description of the situation
+        tipo_perizia: "cancelli" | "barriere" | "strutture"
 
     Returns:
         Structured analysis result dict with risks, variants A/B/C, and synthetic text
@@ -150,10 +270,12 @@ async def analyze_photos(photo_data_list: List[dict], user_description: str = ""
     if not api_key:
         raise RuntimeError("EMERGENT_LLM_KEY not configured")
 
+    system_prompt = PROMPTS.get(tipo_perizia, PROMPT_CANCELLI)
+
     chat = LlmChat(
         api_key=api_key,
         session_id=f"sopralluogo-{os.urandom(8).hex()}",
-        system_message=SYSTEM_PROMPT,
+        system_message=system_prompt,
     ).with_model("openai", "gpt-4o")
 
     file_contents = []

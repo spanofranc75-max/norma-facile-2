@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import {
     ArrowLeft, ArrowRight, Camera, Upload, Trash2, Brain, FileText,
     AlertTriangle, CheckCircle2, ShieldAlert, Loader2, X, Eye,
-    MapPin, User, Image as ImageIcon, ChevronRight, Wrench, Download, UserPlus, Mail
+    MapPin, User, Image as ImageIcon, ChevronRight, Wrench, Download, UserPlus, Mail,
+    Shield, Accessibility, HardHat
 } from 'lucide-react';
 import { ClientQuickCreateModal } from '../components/ClientQuickCreateModal';
 
@@ -25,12 +26,19 @@ const STEPS = [
 
 const FOTO_LABELS = [
     { value: 'panoramica', label: 'Vista Panoramica' },
+    { value: 'dettaglio', label: 'Dettaglio Critico' },
     { value: 'motore', label: 'Motore / Automazione' },
     { value: 'guide', label: 'Guide / Binari' },
     { value: 'chiusura', label: 'Punto di Chiusura' },
     { value: 'sicurezza', label: 'Dispositivi Sicurezza' },
     { value: 'rete', label: 'Rete / Tamponamento' },
     { value: 'ancoraggio', label: 'Ancoraggio / Base' },
+    { value: 'scala', label: 'Scala / Rampa' },
+    { value: 'corrimano', label: 'Corrimano / Parapetto' },
+    { value: 'struttura', label: 'Struttura Portante' },
+    { value: 'saldatura', label: 'Saldatura / Giunzione' },
+    { value: 'fondazione', label: 'Fondazione / Piastra' },
+    { value: 'corrosione', label: 'Corrosione / Degrado' },
     { value: 'altro', label: 'Altro' },
 ];
 
@@ -39,6 +47,39 @@ const GRAVITA_COLORS = {
     media: 'bg-amber-100 text-amber-800 border-amber-200',
     bassa: 'bg-blue-100 text-blue-800 border-blue-200',
 };
+
+const TIPO_PERIZIA_OPTIONS = [
+    {
+        value: 'cancelli',
+        label: 'Cancelli & Automazioni',
+        norm: 'EN 12453 / EN 13241',
+        description: 'Cancelli scorrevoli, battenti, sezionali, avvolgibili',
+        icon: Shield,
+        color: 'from-blue-500 to-blue-700',
+        borderColor: 'border-blue-400',
+        bgColor: 'bg-blue-50',
+    },
+    {
+        value: 'barriere',
+        label: 'Barriere Architettoniche',
+        norm: 'D.M. 236/89',
+        description: 'Scale, rampe, accessi, percorsi accessibilita',
+        icon: Accessibility,
+        color: 'from-emerald-500 to-teal-700',
+        borderColor: 'border-emerald-400',
+        bgColor: 'bg-emerald-50',
+    },
+    {
+        value: 'strutture',
+        label: 'Strutture & Carpenteria',
+        norm: 'NTC 2018 / EN 1090',
+        description: 'Tettoie, scale metalliche, soppalchi, pensiline',
+        icon: HardHat,
+        color: 'from-amber-500 to-orange-700',
+        borderColor: 'border-amber-400',
+        bgColor: 'bg-amber-50',
+    },
+];
 
 export default function SopralluogoWizardPage() {
     const navigate = useNavigate();
@@ -68,6 +109,7 @@ export default function SopralluogoWizardPage() {
         provincia: '',
         descrizione_utente: '',
         tipo_intervento: 'messa_a_norma',
+        tipo_perizia: 'cancelli',
     });
 
     // Load clients
@@ -87,6 +129,7 @@ export default function SopralluogoWizardPage() {
                 provincia: data.provincia || '',
                 descrizione_utente: data.descrizione_utente || '',
                 tipo_intervento: data.tipo_intervento || 'messa_a_norma',
+                tipo_perizia: data.tipo_perizia || 'cancelli',
             });
             if (data.analisi_ai) setStep(3);
             else if (data.foto?.length > 0) setStep(1);
@@ -491,6 +534,41 @@ Cordiali saluti`;
                                 </div>
                             </div>
                         </div>
+                        {/* Tipo Perizia Card Grid */}
+                        <div>
+                            <Label className="mb-2 block">Tipologia Perizia</Label>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" data-testid="tipo-perizia-grid">
+                                {TIPO_PERIZIA_OPTIONS.map(opt => {
+                                    const Icon = opt.icon;
+                                    const isSelected = formData.tipo_perizia === opt.value;
+                                    return (
+                                        <button
+                                            key={opt.value}
+                                            type="button"
+                                            onClick={() => setFormData(p => ({ ...p, tipo_perizia: opt.value }))}
+                                            data-testid={`tipo-perizia-${opt.value}`}
+                                            className={`relative text-left rounded-xl border-2 p-4 transition-all ${
+                                                isSelected
+                                                    ? `${opt.borderColor} ${opt.bgColor} shadow-md ring-2 ring-offset-1 ring-blue-200`
+                                                    : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                                            }`}
+                                        >
+                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 bg-gradient-to-br ${opt.color} text-white`}>
+                                                <Icon className="h-5 w-5" />
+                                            </div>
+                                            <div className="font-semibold text-sm text-gray-900">{opt.label}</div>
+                                            <div className="text-[11px] font-mono text-gray-500 mt-0.5">{opt.norm}</div>
+                                            <div className="text-xs text-gray-400 mt-1">{opt.description}</div>
+                                            {isSelected && (
+                                                <div className="absolute top-2 right-2">
+                                                    <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
                         <div>
                             <Label>Tipo Intervento</Label>
                             <Select value={formData.tipo_intervento} onValueChange={v => setFormData(p => ({ ...p, tipo_intervento: v }))}>
@@ -508,7 +586,13 @@ Cordiali saluti`;
                                 data-testid="input-descrizione"
                                 value={formData.descrizione_utente}
                                 onChange={e => setFormData(p => ({ ...p, descrizione_utente: e.target.value }))}
-                                placeholder="Es: Cancello scorrevole vecchio, cliente lamenta rumori anomali..."
+                                placeholder={
+                                    formData.tipo_perizia === 'barriere'
+                                        ? "Es: Scala condominiale senza corrimano, ingresso con gradino alto..."
+                                        : formData.tipo_perizia === 'strutture'
+                                        ? "Es: Tettoia in ferro con segni di corrosione, soppalco con bulloni allentati..."
+                                        : "Es: Cancello scorrevole vecchio, cliente lamenta rumori anomali..."
+                                }
                                 rows={3}
                             />
                         </div>
@@ -536,7 +620,12 @@ Cordiali saluti`;
                         </CardHeader>
                         <CardContent className="p-6">
                             <p className="text-sm text-gray-600 mb-4">
-                                Scatta o carica foto del cancello: motore, guide, punto di chiusura, dispositivi di sicurezza, panoramica.
+                                {formData.tipo_perizia === 'barriere'
+                                    ? "Scatta o carica foto dell'accesso: scala, rampa, corrimano, porta, pavimentazione, spazi di manovra."
+                                    : formData.tipo_perizia === 'strutture'
+                                    ? "Scatta o carica foto della struttura: saldature, bulloneria, controventi, piastre di base, corrosione, panoramica."
+                                    : "Scatta o carica foto del cancello: motore, guide, punto di chiusura, dispositivi di sicurezza, panoramica."
+                                }
                             </p>
                             <div className="flex gap-3 flex-wrap">
                                 <label className="cursor-pointer">
@@ -624,7 +713,12 @@ Cordiali saluti`;
                                 <strong>{foto.length} foto</strong> pronte per l'analisi
                             </p>
                             <p className="text-sm text-gray-500 mb-6">
-                                L'AI analizzerà le foto per identificare rischi di sicurezza, dispositivi mancanti e interventi necessari secondo la normativa EN 12453.
+                                {formData.tipo_perizia === 'barriere'
+                                    ? "L'AI analizzerà le foto per identificare barriere architettoniche e non conformità secondo il D.M. 236/89."
+                                    : formData.tipo_perizia === 'strutture'
+                                    ? "L'AI analizzerà le foto per identificare criticità strutturali e non conformità secondo le NTC 2018 / EN 1090."
+                                    : "L'AI analizzerà le foto per identificare rischi di sicurezza, dispositivi mancanti e interventi necessari secondo la normativa EN 12453."
+                                }
                             </p>
                             {analyzing ? (
                                 <div className="py-8">

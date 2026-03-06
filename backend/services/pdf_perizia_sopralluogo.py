@@ -154,7 +154,7 @@ CSS = f"""
         font-size: 7pt; color: #999;
     }}
     @bottom-left {{
-        content: "Norma Facile 2.0 — Perizia Tecnica Professionale";
+        content: "__FOOTER_NORM_TEXT__";
         font-size: 6.5pt; color: #bbb;
     }}
 }}
@@ -357,11 +357,94 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
 
     photos_b64 = photos_b64 or []
     analisi = sopralluogo.get("analisi_ai") or {}
+    tipo_perizia = sopralluogo.get("tipo_perizia", "cancelli")
     conformita = analisi.get("conformita_percentuale", 0)
     c_status_color = RED_RISK if conformita < 35 else AMBER_RISK if conformita < 65 else GREEN_OK
     c_status = ("NON CONFORME — Intervento urgente" if conformita < 35
                 else "PARZIALMENTE CONFORME — Intervento consigliato" if conformita < 65
                 else "CONFORME — Manutenzione ordinaria")
+
+    # Dynamic titles and norms based on tipo_perizia
+    PERIZIA_CONFIG = {
+        "cancelli": {
+            "cover_title": "PERIZIA TECNICA<br/>MESSA A NORMA",
+            "cover_subtitle": "Analisi di conformita UNI EN 12453 / EN 13241",
+            "content_header_title": "Relazione Tecnica di Sopralluogo",
+            "norms_badge": "EN 12453 &bull; EN 13241 &bull; Dir. 2006/42/CE",
+            "footer_norm_text": "Norma Facile 2.0 — Perizia Tecnica Professionale",
+            "legal_title": "Responsabilita del Proprietario / Amministratore",
+            "legal_text_1": "Ai sensi della Direttiva Macchine 2006/42/CE e del D.Lgs. 17/2010, il proprietario o l'amministratore dell'immobile in cui e installata la chiusura automatica e responsabile della sicurezza dell'impianto e del suo mantenimento in conformita alle norme vigenti.",
+            "legal_text_2": "La presente perizia tecnica evidenzia le non conformita riscontrate durante il sopralluogo. Il mancato adeguamento espone il proprietario a responsabilita civile e penale in caso di infortunio.",
+            "legal_highlight": "<strong>Attenzione:</strong> In caso di incidente, l'assenza dei dispositivi di sicurezza obbligatori previsti dalla norma EN 12453 costituisce elemento di colpa grave ai sensi dell'art. 2051 C.C. (responsabilita per cose in custodia).",
+            "legal_norms": """<p><strong>UNI EN 12453:2017</strong> — Porte e cancelli industriali, commerciali e da garage. Sicurezza in uso di porte motorizzate.</p>
+                <p><strong>UNI EN 13241:2003+A2:2016</strong> — Porte e cancelli industriali, commerciali e da garage. Norma di prodotto.</p>
+                <p><strong>Direttiva Macchine 2006/42/CE</strong> — Requisiti essenziali di sicurezza per la progettazione di macchine.</p>
+                <p><strong>UNI EN 12978</strong> — Dispositivi di protezione per porte motorizzate.</p>""",
+            "checklist_items": [
+                "Misurazione forze d'impatto con strumento certificato (EN 12453 Allegato A)",
+                "Verifica funzionamento coste sensibili (test pressione e rilascio)",
+                "Test fotocellule (interruzione fascio e risposta impianto)",
+                "Verifica finecorsa apertura e chiusura",
+                "Test arresto di emergenza e inversione marcia",
+                "Verifica limitazione forza motore / encoder",
+                "Controllo visivo e funzionale segnalazione ottica (lampeggiante)",
+                "Rilascio Dichiarazione di Adeguamento e aggiornamento Libretto Impianto",
+            ],
+        },
+        "barriere": {
+            "cover_title": "RELAZIONE<br/>ACCESSIBILITA",
+            "cover_subtitle": "Analisi di conformita D.M. 236/1989 — Barriere Architettoniche",
+            "content_header_title": "Relazione Tecnica Accessibilita",
+            "norms_badge": "D.M. 236/89 &bull; L. 13/89 &bull; D.P.R. 503/96",
+            "footer_norm_text": "Norma Facile 2.0 — Relazione Accessibilita",
+            "legal_title": "Responsabilita del Proprietario / Amministratore",
+            "legal_text_1": "Ai sensi della Legge 13/1989 e del D.M. 236/1989, il proprietario o l'amministratore dell'immobile e responsabile della garanzia dell'accessibilita e dell'eliminazione delle barriere architettoniche negli spazi comuni e negli accessi.",
+            "legal_text_2": "La presente relazione tecnica evidenzia le non conformita riscontrate. Il mancato adeguamento puo costituire violazione della normativa vigente in materia di accessibilita.",
+            "legal_highlight": "<strong>Attenzione:</strong> La mancata eliminazione delle barriere architettoniche negli edifici privati aperti al pubblico e negli spazi condominiali comuni puo comportare sanzioni amministrative e responsabilita civile ai sensi della L. 13/89 e del D.P.R. 503/96.",
+            "legal_norms": """<p><strong>D.M. 236/1989</strong> — Prescrizioni tecniche necessarie a garantire l'accessibilita, l'adattabilita e la visitabilita degli edifici.</p>
+                <p><strong>Legge 13/1989</strong> — Disposizioni per favorire il superamento e l'eliminazione delle barriere architettoniche.</p>
+                <p><strong>D.P.R. 503/1996</strong> — Regolamento per l'eliminazione delle barriere architettoniche negli edifici, spazi e servizi pubblici.</p>
+                <p><strong>UNI 11168</strong> — Criteri di progettazione per l'accessibilita delle scale fisse.</p>""",
+            "checklist_items": [
+                "Verifica pendenza rampe (max 8%)",
+                "Misurazione larghezze percorsi e porte (min 80/90/150cm)",
+                "Controllo altezza e doppio livello corrimano (90cm + 75cm)",
+                "Verifica segnalazione tattile/cromatica gradini",
+                "Controllo soglie (max 2.5cm)",
+                "Verifica spazi di manovra per sedia a rotelle (150x150cm)",
+                "Test antiscivolosita pavimentazione",
+                "Rilascio Relazione di Conformita Accessibilita",
+            ],
+        },
+        "strutture": {
+            "cover_title": "DIAGNOSTICA<br/>STRUTTURALE",
+            "cover_subtitle": "Analisi di conformita NTC 2018 / EN 1090",
+            "content_header_title": "Relazione Diagnostica Strutturale",
+            "norms_badge": "NTC 2018 &bull; EN 1090 &bull; EN 1993",
+            "footer_norm_text": "Norma Facile 2.0 — Diagnostica Strutturale",
+            "legal_title": "Responsabilita del Proprietario / Committente",
+            "legal_text_1": "Ai sensi delle NTC 2018 (D.M. 17/01/2018, cap. 8), il proprietario o il committente e responsabile della sicurezza strutturale e della manutenzione delle opere in acciaio e delle strutture metalliche presenti nell'immobile.",
+            "legal_text_2": "La presente relazione diagnostica evidenzia le criticita riscontrate. Il mancato intervento di consolidamento espone il proprietario a responsabilita civile e penale in caso di cedimento strutturale.",
+            "legal_highlight": "<strong>Attenzione:</strong> Strutture metalliche esistenti non conformi alle NTC 2018 devono essere sottoposte a valutazione della sicurezza (cap. 8.3). L'omissione degli interventi di adeguamento necessari costituisce rischio per l'incolumita pubblica.",
+            "legal_norms": """<p><strong>NTC 2018 — D.M. 17/01/2018</strong> — Norme Tecniche per le Costruzioni (cap. 4.2 — Costruzioni in acciaio, cap. 8 — Costruzioni esistenti).</p>
+                <p><strong>Circolare 21/01/2019 n.7</strong> — Istruzioni per l'applicazione delle NTC 2018.</p>
+                <p><strong>UNI EN 1090-1/2</strong> — Esecuzione di strutture in acciaio e alluminio — Requisiti per la valutazione di conformita.</p>
+                <p><strong>UNI EN 1993 (Eurocodice 3)</strong> — Progettazione delle strutture in acciaio.</p>
+                <p><strong>UNI EN ISO 5817</strong> — Saldatura — Livelli di qualita delle imperfezioni.</p>""",
+            "checklist_items": [
+                "Ispezione visiva stato corrosione e trattamento protettivo",
+                "Verifica serraggio bulloneria critica (chiave dinamometrica)",
+                "Controllo visivo saldature (cricche, porosita, sottosquadri)",
+                "Verifica allineamento e verticalita elementi strutturali",
+                "Controllo stato controventi e collegamenti",
+                "Verifica piastre di base e ancoraggi",
+                "Misura spessori residui (ultrasuoni se necessario)",
+                "Rilascio Relazione di Valutazione Sicurezza Strutturale",
+            ],
+        },
+    }
+
+    cfg = PERIZIA_CONFIG.get(tipo_perizia, PERIZIA_CONFIG["cancelli"])
 
     # Company info
     c_name = _esc(company.get("company_name", ""))
@@ -417,8 +500,8 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             <div class="cover-divider"></div>
 
             <div class="cover-doc-badge">{doc_num}</div>
-            <div class="cover-title">PERIZIA TECNICA<br/>MESSA A NORMA</div>
-            <div class="cover-subtitle">Analisi di conformita UNI EN 12453 / EN 13241</div>
+            <div class="cover-title">{cfg["cover_title"]}</div>
+            <div class="cover-subtitle">{cfg["cover_subtitle"]}</div>
 
             <div class="cover-info-grid">
                 <div class="cover-info-row"><div class="cover-info-label">Cliente</div><div class="cover-info-value">{client_name}</div></div>
@@ -436,7 +519,7 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
 
         <div class="cover-footer">
             <div class="cover-footer-left">
-                <div class="cover-norms">EN 12453 &bull; EN 13241 &bull; Dir. 2006/42/CE</div>
+                <div class="cover-norms">{cfg["norms_badge"]}</div>
             </div>
             <div class="cover-footer-right">
                 <div class="cover-footer-text">Generato il {now_str} — Norma Facile 2.0</div>
@@ -621,7 +704,7 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
     content_header = f"""
     <div class="content-header">
         <div class="content-header-logo">{content_logo}</div>
-        <div class="content-header-title">Relazione Tecnica di Sopralluogo</div>
+        <div class="content-header-title">{cfg["content_header_title"]}</div>
         <div class="content-header-doc">{doc_num}</div>
     </div>"""
 
@@ -700,29 +783,27 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
 
     # ═══════════════ LEGAL NOTES PAGE ═══════════════
     sec_legal = "06" if variants_html and notes_html else "05" if variants_html or notes_html else "04"
+    checklist_items_html = "".join(f'<div class="checklist-item">&#9745; {_esc(item)}</div>' for item in cfg["checklist_items"])
     legal_html = f"""
     <div style="page-break-before:always;">
         <div class="section-header"><div class="section-header-num">{sec_legal}</div><div class="section-header-text">NOTE LEGALI E RESPONSABILITA</div></div>
 
         <div class="legal-section">
-            <div class="legal-title">Responsabilita del Proprietario / Amministratore</div>
+            <div class="legal-title">{cfg["legal_title"]}</div>
             <div class="legal-text">
-                <p>Ai sensi della Direttiva Macchine 2006/42/CE e del D.Lgs. 17/2010, il proprietario o l'amministratore dell'immobile in cui e installata la chiusura automatica e responsabile della sicurezza dell'impianto e del suo mantenimento in conformita alle norme vigenti.</p>
-                <p>La presente perizia tecnica evidenzia le non conformita riscontrate durante il sopralluogo. Il mancato adeguamento espone il proprietario a responsabilita civile e penale in caso di infortunio.</p>
+                <p>{cfg["legal_text_1"]}</p>
+                <p>{cfg["legal_text_2"]}</p>
             </div>
         </div>
 
         <div class="legal-highlight">
-            <strong>Attenzione:</strong> In caso di incidente, l'assenza dei dispositivi di sicurezza obbligatori previsti dalla norma EN 12453 costituisce elemento di colpa grave ai sensi dell'art. 2051 C.C. (responsabilita per cose in custodia).
+            {cfg["legal_highlight"]}
         </div>
 
         <div class="legal-section">
             <div class="legal-title">Riferimenti Normativi</div>
             <div class="legal-text">
-                <p><strong>UNI EN 12453:2017</strong> — Porte e cancelli industriali, commerciali e da garage. Sicurezza in uso di porte motorizzate. Requisiti e metodi di prova.</p>
-                <p><strong>UNI EN 13241:2003+A2:2016</strong> — Porte e cancelli industriali, commerciali e da garage. Norma di prodotto. Requisiti prestazionali.</p>
-                <p><strong>Direttiva Macchine 2006/42/CE</strong> — Requisiti essenziali di sicurezza e salute per la progettazione e costruzione di macchine.</p>
-                <p><strong>UNI EN 12978</strong> — Porte e cancelli. Dispositivi di protezione per porte motorizzate. Requisiti e metodi di prova.</p>
+                {cfg["legal_norms"]}
             </div>
         </div>
 
@@ -730,38 +811,15 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             <div class="legal-title">Limitazioni della Perizia</div>
             <div class="legal-text">
                 <p>La presente relazione tecnica si basa sull'ispezione visiva e fotografica effettuata in data {created}. Le valutazioni sono limitate a quanto osservabile al momento del sopralluogo.</p>
-                <p>Non sostituisce una verifica strumentale completa delle forze d'impatto (EN 12453 All. A) ne un collaudo finale post-intervento. Si raccomanda di eseguire tali verifiche a completamento dei lavori di adeguamento.</p>
+                <p>Non sostituisce una verifica strumentale completa ne un collaudo finale post-intervento. Si raccomanda di eseguire tali verifiche a completamento dei lavori di adeguamento.</p>
             </div>
-        </div>
-
-        <div class="legal-section">
-            <div class="legal-title">Obbligo Registro di Manutenzione (Libretto Impianto)</div>
-            <div class="legal-text">
-                <p>Si ricorda che, ai sensi della normativa vigente, ogni chiusura automatica deve essere dotata di un <strong>Libretto dell'Impianto</strong> (Registro di Manutenzione) costantemente aggiornato.</p>
-                <p>Il libretto deve riportare:</p>
-                <p>&bull; Dati identificativi dell'impianto (marca, modello, anno installazione, numero serie)</p>
-                <p>&bull; Registro degli interventi di manutenzione ordinaria e straordinaria</p>
-                <p>&bull; Esiti delle verifiche periodiche delle forze d'impatto</p>
-                <p>&bull; Dichiarazione di conformita CE o dichiarazione di adeguamento</p>
-            </div>
-        </div>
-
-        <div class="legal-highlight">
-            <strong>Manutenzione Periodica Obbligatoria:</strong> La norma UNI EN 12453 prevede verifiche e manutenzioni <strong>almeno semestrali</strong> da parte di personale qualificato, con annotazione sul Libretto dell'Impianto. Il mancato rispetto della periodicita puo invalidare le garanzie e la copertura assicurativa.
         </div>
 
         <div class="legal-section">
             <div class="legal-title">Check-list Verifiche Post-Intervento</div>
             <div class="checklist-box">
-                <div class="checklist-title">Al completamento dei lavori di adeguamento, verranno eseguiti i seguenti test:</div>
-                <div class="checklist-item">&#9745; Misurazione forze d'impatto con strumento certificato (EN 12453 Allegato A)</div>
-                <div class="checklist-item">&#9745; Verifica funzionamento coste sensibili (test pressione e rilascio)</div>
-                <div class="checklist-item">&#9745; Test fotocellule (interruzione fascio e risposta impianto)</div>
-                <div class="checklist-item">&#9745; Verifica finecorsa apertura e chiusura</div>
-                <div class="checklist-item">&#9745; Test arresto di emergenza e inversione marcia</div>
-                <div class="checklist-item">&#9745; Verifica limitazione forza motore / encoder</div>
-                <div class="checklist-item">&#9745; Controllo visivo e funzionale segnalazione ottica (lampeggiante)</div>
-                <div class="checklist-item">&#9745; Rilascio Dichiarazione di Adeguamento e aggiornamento Libretto Impianto</div>
+                <div class="checklist-title">Al completamento dei lavori, verranno eseguiti i seguenti test:</div>
+                {checklist_items_html}
             </div>
         </div>
 
@@ -779,7 +837,8 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
     </div>"""
 
     # ═══════════════ ASSEMBLE ═══════════════
-    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{CSS}</style></head><body>
+    final_css = CSS.replace("__FOOTER_NORM_TEXT__", cfg["footer_norm_text"])
+    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{final_css}</style></head><body>
     {cover}
     <div class="content-page">
         {content_header}
