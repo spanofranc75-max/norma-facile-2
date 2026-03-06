@@ -78,6 +78,12 @@ Costruire un ERP completo per un'azienda di carpenteria metallica, "Norma Facile
 - **Backend (pdf_perizia_sopralluogo.py)**: Template PDF dinamico — titolo copertina, norme citate, note legali, checklist post-intervento si adattano al tipo di perizia.
 - **Model**: Aggiunto campo `tipo_perizia` a SopralluogoCreate/Update.
 
+### Feature: Duplica Preventivo / Clone Quote (6 Mar 2026)
+- **Backend**: Endpoint `POST /api/preventivi/{id}/clone` — clona preventivo con nuovo ID, numero progressivo, data odierna, status `bozza`, reset `converted_commessa_id` e `total_invoiced`
+- **Frontend Editor**: Bottone "Crea Copia" nella toolbar (PreventivoEditorPage) — redirect automatico al nuovo preventivo
+- **Frontend Lista**: Icona Copy in ogni riga (PreventiviPage) — clone rapido dalla lista
+- 20/20 test backend + tutti i test UI passati (iteration_148)
+
 ### Feature: Perizia AI Parapetti & Ringhiere (6 Mar 2026)
 - **Nuova 4a categoria**: "Parapetti & Ringhiere" (UNI 11678 / NTC 2018) aggiunta al modulo AI Inspection
 - **Prompt AI specializzato**: Verifica altezza (100cm/110cm), scalabilita, tipo vetro (stratificato vs monolitico), fissaggi/morsetti, aperture >10cm (sfera), corrosione, bordo inferiore
