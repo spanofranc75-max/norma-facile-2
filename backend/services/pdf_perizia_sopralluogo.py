@@ -451,21 +451,28 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             "legal_title": "Responsabilita del Proprietario / Amministratore",
             "legal_text_1": "Ai sensi delle NTC 2018 (D.M. 17/01/2018, par. 3.1.4) e della UNI 11678:2017, il proprietario o l'amministratore dell'immobile e responsabile della sicurezza dei parapetti, ringhiere e balaustre presenti nell'edificio, inclusi balconi, terrazze, scale e soppalchi.",
             "legal_text_2": "La presente perizia tecnica evidenzia le non conformita riscontrate. Il mancato adeguamento espone il proprietario a responsabilita civile e penale in caso di caduta dall'alto.",
-            "legal_highlight": "<strong>Attenzione:</strong> Parapetti non conformi alla UNI 11678 (altezza <100cm, elementi scalabili, aperture >10cm, vetro non di sicurezza) costituiscono pericolo grave di caduta dall'alto. In caso di infortunio, la responsabilita e diretta ai sensi dell'art. 2051 C.C. (custodia) e dell'art. 2053 C.C. (rovina di edificio).",
-            "legal_norms": """<p><strong>UNI 11678:2017</strong> — Elementi di tamponamento, ringhiere e parapetti — Requisiti e metodi di prova per la verifica della sicurezza in uso.</p>
-                <p><strong>NTC 2018 — D.M. 17/01/2018</strong> — Norme Tecniche per le Costruzioni (par. 3.1.4 — Carichi variabili per parapetti: 1,0-3,0 kN/m).</p>
+            "legal_highlight": "<strong>Attenzione:</strong> L'assenza di un corrimano solidale nel sistema attuale configura un rischio di caduta nel vuoto non accettabile. Un parapetto in vetro non certificato e un rischio di responsabilita diretta per il tecnico firmatario e per il proprietario (art. 2051 C.C. custodia, art. 2053 C.C. rovina di edificio).",
+            "legal_norms": """<p><strong>UNI 11678:2017</strong> — Caduta nel vuoto — Elementi di protezione — Requisiti e metodi di prova per la verifica della sicurezza in uso.</p>
+                <p><strong>NTC 2018 — D.M. 17/01/2018</strong> — par. 3.1.4: Carichi variabili per parapetti (1,0 kN/m Cat. A residenziale, fino a 3,0 kN/m Cat. C/D pubblico).</p>
                 <p><strong>UNI EN 1991-1-1 (Eurocodice 1)</strong> — Azioni sulle strutture — Carichi su parapetti e balaustre.</p>
-                <p><strong>UNI 7697:2015</strong> — Criteri di sicurezza nelle applicazioni vetrarie.</p>
-                <p><strong>UNI EN 12600</strong> — Vetro per edilizia — Prova del pendolo — Metodo di prova e classificazione.</p>""",
+                <p><strong>UNI 7697:2015</strong> — Criteri di sicurezza nelle applicazioni vetrarie (vetro stratificato obbligatorio per parapetti).</p>
+                <p><strong>UNI EN 12600</strong> — Vetro per edilizia — Prova del pendolo — Classe minima 1B1 per parapetti.</p>
+                <p><strong>UNI 11018</strong> — Rivestimenti e sistemi di ancoraggio per facciate ventilate (se applicabile).</p>
+                <p><strong>ETA (European Technical Assessment)</strong> — Opzione 1 per ancoranti chimici in calcestruzzo fessurato (bordo soletta).</p>""",
             "checklist_items": [
-                "Misurazione altezza parapetto dal piano di calpestio (min 100cm, 110cm sopra 12m)",
-                "Verifica assenza elementi scalabili (test anti-arrampicata bambini)",
-                "Prova sfera 10cm (aperture tra sbarre e bordo inferiore)",
-                "Verifica tipo vetro: stratificato di sicurezza conforme UNI 7697 (ispezione bordi)",
-                "Controllo stato fissaggi: morsetti, profili base, tasselli (assenza corrosione)",
-                "Test resistenza spinta orizzontale (conformita UNI 11678 / NTC 2018 par. 3.1.4)",
-                "Verifica stato protezione anticorrosiva (verniciatura, zincatura montanti)",
-                "Rilascio Relazione di Conformita Parapetti e aggiornamento documentazione",
+                "PROVA DI SPINTA: Applicazione carico lineare H a 1m di altezza — 1,0 kN/m (Cat. A) con martinetto idraulico e dinamometro",
+                "DEFORMAZIONE ELASTICA: Freccia massima sotto carico <= 30mm (o H/30 della quota di altezza) — comparatore centesimale su stativo esterno",
+                "DEFORMAZIONE RESIDUA: Freccia dopo 15 min dalla rimozione carico <= 5% della deformazione elastica misurata",
+                "PROVA D'URTO DINAMICA: Corpo semimorbido (sacco) — energia d'impatto 250 Joule (UNI EN 12600 classe 1B1 minimo)",
+                "INTEGRITA POST-ROTTURA: Verifica che il parapetto mantenga capacita portante residua dopo rottura simulata di una lastra",
+                "SERRAGGIO BULLONERIA: Chiave dinamometrica tarata secondo specifica ancorante chimico (es. 40-60 Nm)",
+                "DISTANZA DAI BORDI: Interasse fori e distanza bordo soletta (C-min) conforme a scheda tecnica ancorante ETA Opzione 1",
+                "GIUNTI DILATAZIONE: Spazio 5-8mm tra lastre vetro per dilatazioni termiche senza tensioni parassite sulle staffe",
+                "SIGILLATURA BASE: Fori soffiati e puliti prima dell'iniezione resina — verifica tenuta strutturale",
+                "VERIFICA TIPO VETRO: Stratificato di sicurezza (8+8.2 o 10+10.4 con PVB/SGP) — ispezione bordi per conferma stratigrafia",
+                "VERIFICA CORRIMANO: Presenza corrimano strutturale continuo solidarizzato a tutte le lastre — ridondanza in caso di rottura",
+                "VERIFICA GUARNIZIONI: Distanziatori EPDM tra staffa e vetro — assenza contatto diretto acciaio-vetro",
+                "RILASCIO CERTIFICATO DI COLLAUDO STRUTTURALE con parametri misurati e verbale di prova UNI 11678",
             ],
         },
     }

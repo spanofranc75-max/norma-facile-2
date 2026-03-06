@@ -1,0 +1,54 @@
+{
+  "summary": "Verified complete rewrite of PROMPT_PARAPETTI and PDF PERIZIA_CONFIG['parapetti'] with engineering-grade rigor. All 32 tests passed validating: correct norms (UNI 11678, NTC 2018, ETA Opzione 1), explicit prohibition of wrong norms (EN 12453, Direttiva Macchine), structural analysis requirements (schema statico, corrimano strutturale), and expanded PDF checklist (13 items with UNI 11678 test parameters).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration149_parapetti_prompt_rewrite.py",
+    "/app/test_reports/pytest/iteration149_parapetti_prompt_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration149_parapetti_prompt_rewrite.py"
+  ],
+  "success_rate": {
+    "backend": "100% (32/32 tests passed)",
+    "frontend": "N/A - backend only test"
+  },
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 149 verified the PROMPT_PARAPETTI rewrite. Key validations: 1) Correct norms: UNI 11678:2017, NTC 2018 par. 3.1.4, UNI 7697, UNI EN 12600, ETA Opzione 1; 2) Explicit prohibition of EN 12453 and Direttiva Macchine in REGOLE ASSOLUTE; 3) Structural analysis: schema statico inadeguato flagged as critical, corrimano strutturale mandated; 4) Technical details: ETA Opzione 1 chemical anchors, EPDM gaskets, load categories (1.0/3.0 kN/m); 5) PDF checklist expanded to 13 items including PROVA DI SPINTA, DEFORMAZIONE ELASTICA <=30mm, DEFORMAZIONE RESIDUA <=5%, PROVA D'URTO 250J, INTEGRITA POST-ROTTURA; 6) Legal references include art. 2051 and 2053 C.C.",
+  "verified_features": [
+    "PROMPT_PARAPETTI does NOT reference EN 12453 as applicable norm (correctly prohibits it)",
+    "PROMPT_PARAPETTI does NOT reference Direttiva Macchine as applicable norm (correctly prohibits it)",
+    "PROMPT_PARAPETTI references UNI 11678:2017",
+    "PROMPT_PARAPETTI references NTC 2018 par. 3.1.4",
+    "PROMPT_PARAPETTI references UNI 7697",
+    "PROMPT_PARAPETTI references UNI EN 12600",
+    "PROMPT_PARAPETTI references ETA Opzione 1",
+    "PROMPT_PARAPETTI mentions 'schema statico inadeguato' as critical check",
+    "PROMPT_PARAPETTI mandates corrimano strutturale continuo for punto fisso systems",
+    "PROMPT_PARAPETTI includes REGOLE ASSOLUTE section explicitly forbidding EN 12453 and Direttiva Macchine",
+    "PROMPT_PARAPETTI specifies ancoranti chimici ETA Opzione 1 (not generic bulloneria)",
+    "PROMPT_PARAPETTI includes EPDM gasket check for steel-glass contact",
+    "PROMPT_PARAPETTI differentiates Cat. A (1.0 kN/m) vs Cat. C/D (3.0 kN/m)",
+    "PROMPT_PARAPETTI presumes monolithic glass as non-conforming",
+    "PDF parapetti checklist includes 'PROVA DI SPINTA' with martinetto idraulico",
+    "PDF parapetti checklist includes 'DEFORMAZIONE ELASTICA' <= 30mm",
+    "PDF parapetti checklist includes 'DEFORMAZIONE RESIDUA' <= 5%",
+    "PDF parapetti checklist includes 'PROVA D'URTO DINAMICA' 250 Joule",
+    "PDF parapetti checklist includes 'INTEGRITA POST-ROTTURA'",
+    "PDF parapetti checklist has 13 items (expanded from 8)",
+    "PDF legal_highlight mentions art. 2051 C.C. and art. 2053 C.C.",
+    "PDF legal_norms includes ETA European Technical Assessment",
+    "PROMPTS dict still has all 4 keys: cancelli, barriere, strutture, parapetti"
+  ]
+}
