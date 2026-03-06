@@ -697,3 +697,32 @@ async def margin_analysis(user: dict = Depends(get_current_user)):
         })
 
     return {"commesse": results, "total": len(results), "costo_orario_pieno": costo_orario}
+
+
+# ── Full Margin Analysis (v2 — all cost sources) ─────────────────
+
+@router.get("/margin-full")
+async def margin_analysis_full(user: dict = Depends(get_current_user)):
+    """Full margin analysis for ALL commesse, aggregating all cost sources."""
+    from services.margin_service import get_all_margins
+    return await get_all_margins(user["user_id"])
+
+
+@router.get("/commessa/{commessa_id}/margin-full")
+async def commessa_margin_full(commessa_id: str, user: dict = Depends(get_current_user)):
+    """Full margin detail for a single commessa."""
+    from services.margin_service import get_commessa_margin_full
+    result = await get_commessa_margin_full(commessa_id, user["user_id"])
+    if not result:
+        raise HTTPException(404, "Commessa non trovata")
+    return result
+
+
+@router.get("/commessa/{commessa_id}/predict")
+async def commessa_predict(commessa_id: str, user: dict = Depends(get_current_user)):
+    """Predictive margin analysis for a commessa based on historical data."""
+    from services.margin_service import predict_margin
+    result = await predict_margin(commessa_id, user["user_id"])
+    if not result:
+        raise HTTPException(404, "Commessa non trovata")
+    return result

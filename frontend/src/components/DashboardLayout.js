@@ -107,6 +107,7 @@ const NAV_GROUPS = [
         children: [
             { path: '/fatture-ricevute', label: 'Fatture Ricevute', icon: FileInput },
             { path: '/controllo-costi', label: 'Controllo Costi', icon: CircleDollarSign },
+            { path: '/analisi-margini', label: 'Analisi Margini', icon: BarChart3 },
             { path: '/configurazione-finanziaria', label: 'Costo Aziendale', icon: Calculator },
             { path: '/scadenziario', label: 'Scadenziario', icon: Calendar },
             { path: '/fornitori', label: 'Fornitori', icon: Factory },

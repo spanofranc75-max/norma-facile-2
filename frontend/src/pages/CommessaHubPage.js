@@ -106,7 +106,7 @@ export default function CommessaHubPage() {
         if (!commessaId) return;
         (async () => {
             try {
-                const data = await apiRequest(`/costs/commessa/${commessaId}`);
+                const data = await apiRequest(`/costs/commessa/${commessaId}/margin-full`);
                 setCostAnalysis(data);
             } catch { /* silent — no costs yet */ }
         })();
@@ -418,52 +418,65 @@ export default function CommessaHubPage() {
                         )}
 
                         {/* Cost Analysis / Margine Reale */}
-                        {costAnalysis && costAnalysis.num_voci > 0 && (
+                        {costAnalysis && (costAnalysis.costo_totale > 0 || costAnalysis.ricavo > 0) && (
                             <Card className="border-gray-200" data-testid="cost-analysis">
                                 <CardHeader className="py-2 px-4">
                                     <CardTitle className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
-                                        <CircleDollarSign className="h-3.5 w-3.5" /> Analisi Finanziaria
+                                        <CircleDollarSign className="h-3.5 w-3.5" /> Analisi Margine Completa
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="px-4 pb-3 space-y-3">
                                     {/* KPIs */}
                                     <div className="grid grid-cols-3 gap-3">
                                         <div className="text-center p-2 bg-blue-50 rounded-lg">
-                                            <p className="text-[10px] text-slate-500">Preventivo</p>
-                                            <p className="text-sm font-bold text-[#0055FF]">{fmtEur(costAnalysis.valore_preventivo)}</p>
+                                            <p className="text-[10px] text-slate-500">Ricavo</p>
+                                            <p className="text-sm font-bold text-[#0055FF]">{fmtEur(costAnalysis.ricavo)}</p>
                                         </div>
                                         <div className="text-center p-2 bg-red-50 rounded-lg">
-                                            <p className="text-[10px] text-slate-500">Costi Reali</p>
-                                            <p className="text-sm font-bold text-red-600">{fmtEur(costAnalysis.totale_costi)}</p>
+                                            <p className="text-[10px] text-slate-500">Costi Totali</p>
+                                            <p className="text-sm font-bold text-red-600">{fmtEur(costAnalysis.costo_totale)}</p>
                                         </div>
                                         <div className={`text-center p-2 rounded-lg ${costAnalysis.margine >= 0 ? 'bg-emerald-50' : 'bg-red-50'}`}>
                                             <p className="text-[10px] text-slate-500">Margine</p>
                                             <p className={`text-sm font-bold ${costAnalysis.margine >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                                {fmtEur(costAnalysis.margine)} <span className="text-[10px] font-normal">({costAnalysis.margine_percentuale}%)</span>
+                                                {fmtEur(costAnalysis.margine)} <span className="text-[10px] font-normal">({costAnalysis.margine_pct}%)</span>
                                             </p>
                                         </div>
                                     </div>
 
-                                    {/* Costs by category */}
-                                    {Object.entries(costAnalysis.costi_per_categoria).map(([cat, info]) => (
-                                        <div key={cat} className="flex items-center justify-between text-xs py-1 border-b border-dashed border-slate-200 last:border-0">
-                                            <span className="flex items-center gap-1.5 text-slate-600 capitalize">
-                                                {cat === 'materiale' || cat === 'materiali' ? <Tag className="h-3 w-3 text-blue-500" /> :
-                                                 cat === 'lavorazioni_esterne' ? <WrenchIcon className="h-3 w-3 text-amber-500" /> :
-                                                 cat === 'consumabili' ? <Tag className="h-3 w-3 text-violet-500" /> :
-                                                 <TrendingUp className="h-3 w-3 text-slate-400" />}
-                                                {cat.replace(/_/g, ' ')}
-                                                <Badge variant="outline" className="text-[8px] ml-1">{info.voci?.length || 0}</Badge>
-                                            </span>
-                                            <span className="font-mono font-semibold text-slate-700">{fmtEur(info.totale)}</span>
-                                        </div>
-                                    ))}
+                                    {/* Cost Breakdown */}
+                                    <div className="space-y-1.5 text-xs">
+                                        {costAnalysis.costo_materiali_totale > 0 && (
+                                            <div className="flex justify-between py-1 border-b border-dashed">
+                                                <span className="text-slate-500 flex items-center gap-1"><Tag className="h-3 w-3 text-blue-500" /> Materiali</span>
+                                                <span className="font-mono text-slate-700">{fmtEur(costAnalysis.costo_materiali_totale)}</span>
+                                            </div>
+                                        )}
+                                        {costAnalysis.costi_fatture_imputate > 0 && (
+                                            <div className="flex justify-between py-1 border-b border-dashed">
+                                                <span className="text-slate-500 flex items-center gap-1"><Tag className="h-3 w-3 text-violet-500" /> Fatt. Imputate</span>
+                                                <span className="font-mono text-slate-700">{fmtEur(costAnalysis.costi_fatture_imputate)}</span>
+                                            </div>
+                                        )}
+                                        {costAnalysis.costi_esterni > 0 && (
+                                            <div className="flex justify-between py-1 border-b border-dashed">
+                                                <span className="text-slate-500 flex items-center gap-1"><WrenchIcon className="h-3 w-3 text-amber-500" /> Lav. Esterne</span>
+                                                <span className="font-mono text-slate-700">{fmtEur(costAnalysis.costi_esterni)}</span>
+                                            </div>
+                                        )}
+                                        {costAnalysis.costo_personale > 0 && (
+                                            <div className="flex justify-between py-1 border-b border-dashed">
+                                                <span className="text-slate-500 flex items-center gap-1"><TrendingUp className="h-3 w-3 text-slate-400" /> Manodopera ({costAnalysis.ore_lavorate}h)</span>
+                                                <span className="font-mono text-slate-700">{fmtEur(costAnalysis.costo_personale)}</span>
+                                            </div>
+                                        )}
+                                    </div>
 
                                     {/* Margin bar */}
                                     <div className="w-full bg-slate-200 rounded-full h-2">
                                         <div
-                                            className={`h-2 rounded-full transition-all ${costAnalysis.margine_percentuale > 20 ? 'bg-emerald-500' : costAnalysis.margine_percentuale > 0 ? 'bg-amber-500' : 'bg-red-500'}`}
-                                            style={{ width: `${Math.max(0, Math.min(100, 100 - (costAnalysis.totale_costi / Math.max(costAnalysis.valore_preventivo, 1) * 100)))}%` }}
+                                            className={`h-2 rounded-full transition-all ${costAnalysis.margine_pct > 20 ? 'bg-emerald-500' : costAnalysis.margine_pct > 0 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                            style={{ width: `${Math.max(0, Math.min(100, costAnalysis.margine_pct))}%` }}
                                         />
                                     </div>
                                 </CardContent>
