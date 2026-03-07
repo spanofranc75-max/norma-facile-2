@@ -49,10 +49,10 @@ const NORMATIVA_CONFIG = {
         text: 'text-blue-800',
         icon: Shield,
         checklist: [
-            'Piano di Controllo Qualita',
-            'WPS/WPQR (Procedure di saldatura)',
-            'Certificati materiali (3.1)',
-            'Dichiarazione di Prestazione (DoP)',
+            { key: 'piano_qc', label: 'Piano di Controllo Qualita' },
+            { key: 'wps_wpqr', label: 'WPS/WPQR (Procedure di saldatura)' },
+            { key: 'certificati_31', label: 'Certificati materiali (3.1)' },
+            { key: 'dop', label: 'Dichiarazione di Prestazione (DoP)' },
         ],
     },
     EN_13241: {
@@ -61,10 +61,10 @@ const NORMATIVA_CONFIG = {
         text: 'text-amber-800',
         icon: Award,
         checklist: [
-            'Scheda tecnica prodotto',
-            'Test carichi / resistenza vento',
-            'Dichiarazione di Prestazione (DoP)',
-            'Marcatura CE',
+            { key: 'scheda_tecnica', label: 'Scheda tecnica prodotto' },
+            { key: 'test_carichi', label: 'Test carichi / resistenza vento' },
+            { key: 'dop_13241', label: 'Dichiarazione di Prestazione (DoP)' },
+            { key: 'marcatura_ce', label: 'Marcatura CE' },
         ],
     },
 };
@@ -114,11 +114,13 @@ export default function CommessaHubPage() {
     const [closeSimpleOpen, setCloseSimpleOpen] = useState(false);
     const [closeSimpleNote, setCloseSimpleNote] = useState('');
     const [closingSimple, setClosingSimple] = useState(false);
+    const [checklistStato, setChecklistStato] = useState({});
 
     const fetchHub = useCallback(async () => {
         try {
             const data = await apiRequest(`/commesse/${commessaId}/hub`);
             setHub(data);
+            setChecklistStato(data?.commessa?.checklist_stato || {});
         } catch (e) {
             toast.error('Errore caricamento commessa');
         } finally {
@@ -127,6 +129,28 @@ export default function CommessaHubPage() {
     }, [commessaId]);
 
     useEffect(() => { fetchHub(); }, [fetchHub]);
+
+    const handleChecklistToggle = async (itemKey, currentChecked) => {
+        const newVal = !currentChecked;
+        // Aggiornamento ottimistico
+        setChecklistStato(prev => ({
+            ...prev,
+            [itemKey]: { ...prev[itemKey], checked: newVal },
+        }));
+        try {
+            await apiRequest(`/commesse/${commessaId}/checklist/${itemKey}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ checked: newVal }),
+            });
+        } catch (e) {
+            // Ripristina stato precedente
+            setChecklistStato(prev => ({
+                ...prev,
+                [itemKey]: { ...prev[itemKey], checked: currentChecked },
+            }));
+            toast.error(e.message);
+        }
+    };
 
     // Fetch cost analysis
     useEffect(() => {
@@ -305,20 +329,30 @@ export default function CommessaHubPage() {
                 {c.normativa_tipo && NORMATIVA_CONFIG[c.normativa_tipo] && (() => {
                     const nc = NORMATIVA_CONFIG[c.normativa_tipo];
                     const NIcon = nc.icon;
+                    const completed = nc.checklist.filter(item => checklistStato[item.key]?.checked).length;
+                    const total = nc.checklist.length;
+                    const allDone = completed === total;
                     return (
                         <Card className={`border ${nc.bg}`} data-testid="normativa-banner">
                             <CardContent className="py-3 px-5">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <NIcon className={`h-4 w-4 ${nc.text}`} />
-                                    <span className={`font-semibold text-sm ${nc.text}`}>{nc.label}</span>
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <NIcon className={`h-4 w-4 ${nc.text}`} />
+                                        <span className={`font-semibold text-sm ${nc.text}`}>{nc.label}</span>
+                                        {allDone && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                                    </div>
+                                    <span className={`text-xs font-mono ${allDone ? 'text-emerald-600 font-semibold' : 'text-slate-500'}`} data-testid="checklist-progress">{completed} / {total} completati</span>
                                 </div>
                                 <div className="grid grid-cols-2 gap-1.5">
-                                    {nc.checklist.map((item, i) => (
-                                        <label key={i} className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
-                                            <input type="checkbox" className="rounded border-slate-300" data-testid={`checklist-${i}`} />
-                                            {item}
-                                        </label>
-                                    ))}
+                                    {nc.checklist.map((item) => {
+                                        const isChecked = !!checklistStato[item.key]?.checked;
+                                        return (
+                                            <label key={item.key} className={`flex items-center gap-2 text-xs cursor-pointer rounded p-1 transition-colors ${isChecked ? 'text-emerald-700 bg-emerald-50/50' : 'text-slate-600 hover:bg-white/50'}`}>
+                                                <input type="checkbox" className="rounded border-slate-300" checked={isChecked} onChange={() => handleChecklistToggle(item.key, isChecked)} data-testid={`checklist-${item.key}`} />
+                                                <span className={isChecked ? 'line-through opacity-70' : ''}>{item.label}</span>
+                                            </label>
+                                        );
+                                    })}
                                 </div>
                             </CardContent>
                         </Card>

@@ -437,6 +437,40 @@ async def update_commessa_status(
 
 # ── Event Sourcing: Emit Event ───────────────────────────────────
 
+class ChecklistToggle(BaseModel):
+    checked: bool = False
+
+@router.patch("/{commessa_id}/checklist/{item_key}")
+async def toggle_checklist_item(
+    commessa_id: str, item_key: str,
+    body: ChecklistToggle,
+    user: dict = Depends(get_current_user)
+):
+    """Toggle a single checklist item. Uses $set puntuale."""
+    uid = user["user_id"]
+    doc = await db[COLLECTION].find_one(
+        {"commessa_id": commessa_id, "user_id": uid},
+        {"_id": 0, "commessa_id": 1}
+    )
+    if not doc:
+        raise HTTPException(404, "Commessa non trovata")
+
+    now = datetime.now(timezone.utc).isoformat()
+    await db[COLLECTION].update_one(
+        {"commessa_id": commessa_id},
+        {"$set": {
+            f"checklist_stato.{item_key}": {
+                "checked": body.checked,
+                "data": now,
+                "utente": user.get("name", uid),
+                "documento_id": None,
+            },
+            "updated_at": now,
+        }}
+    )
+    return {"item_key": item_key, "checked": body.checked}
+
+
 @router.post("/{commessa_id}/eventi")
 async def emit_event(commessa_id: str, req: EventoRequest, user: dict = Depends(get_current_user)):
     """Emit a lifecycle event. Validates state transition rules."""
@@ -679,6 +713,9 @@ async def get_commessa_hub(commessa_id: str, user: dict = Depends(get_current_us
         raise HTTPException(404, "Commessa non trovata")
 
     ensure_moduli(doc)
+    # Garantisci che checklist_stato sia sempre un oggetto
+    if "checklist_stato" not in doc:
+        doc["checklist_stato"] = {}
     moduli = doc.get("moduli", {})
 
     hub = {
