@@ -158,6 +158,12 @@ class InvoiceUpdate(BaseModel):
     tax_settings: Optional[TaxSettings] = None
     notes: Optional[str] = None
     internal_notes: Optional[str] = None
+
+    @validator('due_date', pre=True)
+    def parse_due_date(cls, v):
+        if v is None or v == '' or v == 'null':
+            return None
+        return v
     lines: Optional[List[InvoiceLineCreate]] = None
 
 

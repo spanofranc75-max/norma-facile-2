@@ -512,6 +512,8 @@ async def update_invoice(
         update_dict["issue_date"] = invoice_data.issue_date.isoformat()
     if invoice_data.due_date:
         update_dict["due_date"] = invoice_data.due_date.isoformat()
+    elif 'due_date' in (invoice_data.model_fields_set or set()):
+        update_dict["due_date"] = None
     if invoice_data.payment_method:
         update_dict["payment_method"] = invoice_data.payment_method.value
     if invoice_data.payment_terms:
