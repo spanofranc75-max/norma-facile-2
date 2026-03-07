@@ -2308,6 +2308,302 @@ async def _match_profili_to_commesse(
     return risultati
 
 
+# ══════════════════════════════════════════════════════════════════
+#  AI OCR: Parse DDT Fornitore
+# ══════════════════════════════════════════════════════════════════
+
+@router.post("/{cid}/documenti/{doc_id}/parse-ddt")
+async def parse_ddt_fornitore(cid: str, doc_id: str, user: dict = Depends(get_current_user)):
+    """Use Claude Sonnet 4 Vision to extract structured data from a supplier DDT.
+    Returns extracted metadata + dry-run OdA matching per materiale.
+    """
+    import os
+    import base64 as b64mod
+    from io import BytesIO
+
+    LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
+    if not LLM_KEY:
+        raise HTTPException(500, "Chiave AI non configurata")
+
+    doc = await db[DOC_COLL].find_one({"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"]})
+    if not doc:
+        raise HTTPException(404, "Documento non trovato")
+    if not doc.get("file_base64"):
+        raise HTTPException(400, "Documento senza contenuto")
+
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+
+        file_b64 = doc["file_base64"]
+        content_type = doc.get("content_type", "")
+
+        # PDF → PNG conversion (same logic as parse-certificato)
+        if content_type == "application/pdf" or doc.get("nome_file", "").lower().endswith(".pdf"):
+            from pdf2image import convert_from_bytes
+            pdf_bytes = b64mod.b64decode(file_b64)
+            images = convert_from_bytes(pdf_bytes, first_page=1, last_page=3, dpi=300)
+            if not images:
+                raise HTTPException(400, "Impossibile convertire il PDF in immagine")
+            file_contents = []
+            for i, img in enumerate(images):
+                buf = BytesIO()
+                img.save(buf, format='PNG', optimize=True)
+                buf.seek(0)
+                page_b64 = b64mod.b64encode(buf.read()).decode('utf-8')
+                file_contents.append(ImageContent(image_base64=page_b64))
+                logger.info(f"DDT PDF page {i+1} → PNG for AI: {doc_id}")
+        else:
+            file_contents = [ImageContent(image_base64=file_b64)]
+
+        prompt = """Analizza questo DDT (Documento di Trasporto) di un fornitore siderurgico italiano. Estrai TUTTI i campi in JSON strutturato.
+
+IMPORTANTE: nel DDT possono esserci righe "ORDI" o "RIF. VS ORDINE" che separano materiali appartenenti a ordini diversi. Ogni riga ORDI introduce una nuova sezione: tutti i materiali successivi appartengono a quell'ordine fino al prossimo ORDI.
+
+Restituisci JSON con questa struttura ESATTA (senza markdown, senza ```):
+{
+  "numero_ddt": "765",
+  "data_ddt": "2026-02-03",
+  "fornitore_nome": "Siderimport 3 Srl",
+  "fornitore_partita_iva": "00768560492",
+  "totale_peso_kg": 1584.0,
+  "riferimenti_ordini": ["N.5 del 02/02/2026", "N.6 del 02/02/2026"],
+  "materiali": [
+    {
+      "codice_articolo": "TRIPE100MT12",
+      "descrizione": "TRAVI IPE 100 MT 6",
+      "profilo_normalizzato": "IPE 100",
+      "quantita": 0.240,
+      "unita_misura": "T",
+      "riferimento_ordine": "N.5 del 02/02/2026",
+      "richiede_certificato": true
+    }
+  ],
+  "num_certificati_allegati": 2
+}
+
+REGOLE per profilo_normalizzato:
+- "TRAVI IPE 100" → "IPE 100"
+- "TRAVI UNP 100" → "UNP 100"
+- "TUBOLARE 100X100X3" → "TUB 100X100X3"
+- "LAMIERE DEC 1.5X1500X3000" → "LAMIERA 1.5X1500X3000"
+- "HEB 120" → "HEB 120"
+richiede_certificato: true se il materiale è acciaio strutturale (IPE/HEB/HEA/UNP/piatto/lamiera), false per bulloni/vernici/accessori.
+
+Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
+
+        chat = LlmChat(
+            api_key=LLM_KEY,
+            session_id=f"ddt-{doc_id}",
+            system_message="Sei un tecnico esperto di logistica siderurgica italiana. Estrai con precisione tutti i dati da DDT (Documenti di Trasporto) fornitori. Leggi ogni riga della tabella materiali senza saltarne nessuna."
+        ).with_model("anthropic", "claude-sonnet-4-20250514")
+
+        response = await chat.send_message(UserMessage(
+            text=prompt,
+            file_contents=file_contents,
+        ))
+
+        import json as json_mod
+        response_text = response if isinstance(response, str) else getattr(response, 'text', str(response))
+        response_text = response_text.strip()
+        if response_text.startswith("```"):
+            response_text = response_text.split("\n", 1)[1] if "\n" in response_text else response_text[3:]
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]
+        response_text = response_text.strip()
+
+        try:
+            metadata = json_mod.loads(response_text)
+        except json_mod.JSONDecodeError:
+            metadata = {"raw_response": response_text, "parse_error": True}
+
+        # Ensure materiali array
+        materiali = metadata.get("materiali", [])
+        metadata["materiali"] = materiali
+
+        # Save extracted metadata
+        await db[DOC_COLL].update_one(
+            {"doc_id": doc_id},
+            {"$set": {"metadata_estratti": metadata, "ddt_parsed": True}},
+        )
+
+        # ── DRY-RUN: match materiali DDT → OdA della commessa corrente ──
+        comm = await get_commessa_or_404(cid, user["user_id"])
+        ordini = comm.get("approvvigionamento", {}).get("ordini", [])
+
+        # Build OdA lookup: profile_base → ordine_id
+        oda_base_lookup = {}  # "IPE100" → { ordine_id, descrizione, fornitore }
+        for oda in ordini:
+            oda_id = oda.get("ordine_id", "")
+            for riga in oda.get("righe", []):
+                base = _extract_profile_base(riga.get("descrizione", ""))
+                if base and base not in oda_base_lookup:
+                    oda_base_lookup[base] = {
+                        "ordine_id": oda_id,
+                        "descrizione_oda": riga.get("descrizione", ""),
+                        "fornitore_oda": oda.get("fornitore_nome", ""),
+                        "stato_oda": oda.get("stato", ""),
+                    }
+
+        match_results = []
+        for mat in materiali:
+            profilo_norm = mat.get("profilo_normalizzato", "") or mat.get("descrizione", "")
+            cert_base = _extract_profile_base(profilo_norm)
+
+            matched_oda = None
+            match_source = "nessuno"
+
+            if cert_base and cert_base in oda_base_lookup:
+                matched_oda = oda_base_lookup[cert_base]
+                match_source = f"profilo base {cert_base}"
+
+            match_results.append({
+                "descrizione": mat.get("descrizione", ""),
+                "profilo_normalizzato": profilo_norm,
+                "profile_base": cert_base,
+                "quantita": mat.get("quantita"),
+                "unita_misura": mat.get("unita_misura", ""),
+                "riferimento_ordine": mat.get("riferimento_ordine", ""),
+                "richiede_certificato": mat.get("richiede_certificato", False),
+                "codice_articolo": mat.get("codice_articolo", ""),
+                "match_oda": matched_oda,
+                "match_source": match_source,
+            })
+
+        # Store match results for confirm step
+        await db[DOC_COLL].update_one(
+            {"doc_id": doc_id},
+            {"$set": {"ddt_match_results": match_results, "ddt_pending_confirm": True}},
+        )
+
+        matched_count = sum(1 for r in match_results if r["match_oda"])
+        await db[COLL].update_one({"commessa_id": cid}, push_event(
+            cid, "DDT_ANALIZZATO", user,
+            f"DDT {metadata.get('numero_ddt', '?')}: {len(materiali)} materiali, {matched_count} con OdA",
+            {"doc_id": doc_id, "numero_ddt": metadata.get("numero_ddt")}
+        ))
+
+        return {
+            "message": f"DDT analizzato: {len(materiali)} materiali trovati, {matched_count} corrispondono a OdA.",
+            "metadata_estratti": metadata,
+            "match_results": match_results,
+            "doc_id": doc_id,
+            "pending_confirm": True,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"DDT parsing error: {e}")
+        raise HTTPException(500, f"Errore analisi DDT: {str(e)}")
+
+
+class ConfirmDDTRequest(BaseModel):
+    """Request body for confirming DDT materials to create an arrival."""
+    materiali_confermati: List[int] = []  # Indices of materials to import
+    crea_arrivo: bool = True
+
+
+@router.post("/{cid}/documenti/{doc_id}/confirm-ddt")
+async def confirm_ddt(cid: str, doc_id: str, data: ConfirmDDTRequest, user: dict = Depends(get_current_user)):
+    """
+    Step 2 of DDT analysis: User confirms which materials to register.
+    Creates an arrival record in the commessa with OdA linking.
+    """
+    comm = await get_commessa_or_404(cid, user["user_id"])
+    await ensure_ops_fields(cid)
+
+    doc = await db[DOC_COLL].find_one(
+        {"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"]},
+        {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "Documento non trovato")
+
+    metadata = doc.get("metadata_estratti", {})
+    match_results = doc.get("ddt_match_results", [])
+    if not metadata or not match_results:
+        raise HTTPException(400, "DDT non ancora analizzato. Usa prima 'Analizza DDT'.")
+
+    # Build materiali for the arrivo
+    materiali_arrivo = []
+    oda_ids_to_update = set()
+    selected_indices = set(data.materiali_confermati) if data.materiali_confermati else set(range(len(match_results)))
+
+    for i, mr in enumerate(match_results):
+        if i not in selected_indices:
+            continue
+
+        mat_dict = {
+            "descrizione": mr.get("descrizione", ""),
+            "quantita": float(mr.get("quantita", 0) or 0),
+            "unita_misura": mr.get("unita_misura", "kg"),
+            "richiede_cert_31": mr.get("richiede_certificato", False),
+            "commessa_id": cid,
+            "ordine_id": "",
+            "codice_articolo": mr.get("codice_articolo", ""),
+        }
+
+        # Link to OdA if matched
+        if mr.get("match_oda"):
+            oda_id = mr["match_oda"]["ordine_id"]
+            mat_dict["ordine_id"] = oda_id
+            oda_ids_to_update.add(oda_id)
+
+        materiali_arrivo.append(mat_dict)
+
+    if not materiali_arrivo:
+        raise HTTPException(400, "Nessun materiale selezionato.")
+
+    # Create the arrivo record
+    arrivo_id = new_id("arr_")
+    arrivo = {
+        "arrivo_id": arrivo_id,
+        "ddt_fornitore": metadata.get("numero_ddt", ""),
+        "data_ddt": metadata.get("data_ddt", ts().isoformat()[:10]),
+        "fornitore_nome": metadata.get("fornitore_nome", ""),
+        "fornitore_id": "",
+        "ddt_document_id": doc_id,
+        "materiali": materiali_arrivo,
+        "ordine_id": "",
+        "note": f"Creato da analisi AI DDT - Doc {doc_id}",
+        "stato": "da_verificare",
+        "data_arrivo": ts().isoformat(),
+        "data_verifica": None,
+    }
+
+    await db[COLL].update_one(
+        {"commessa_id": cid},
+        build_update_with_event(
+            push_items={"approvvigionamento.arrivi": arrivo},
+            tipo="MATERIALE_ARRIVATO", user=user,
+            note=f"DDT {metadata.get('numero_ddt', '?')} (AI) — {len(materiali_arrivo)} materiali"
+        ),
+    )
+
+    # Mark matched OdA as "in_consegna"
+    oda_aggiornati = []
+    for oda_id in oda_ids_to_update:
+        await db[COLL].update_one(
+            {"commessa_id": cid},
+            {"$set": {"approvvigionamento.ordini.$[elem].stato": "in_consegna"}},
+            array_filters=[{"elem.ordine_id": oda_id}],
+        )
+        oda_aggiornati.append(oda_id)
+
+    # Mark DDT doc as confirmed
+    await db[DOC_COLL].update_one(
+        {"doc_id": doc_id},
+        {"$set": {"ddt_pending_confirm": False, "ddt_arrivo_id": arrivo_id}},
+    )
+
+    logger.info(f"[CONFIRM-DDT] doc {doc_id}: arrivo {arrivo_id}, {len(materiali_arrivo)} mat, {len(oda_aggiornati)} OdA aggiornati")
+    return {
+        "arrivo_id": arrivo_id,
+        "materiali_creati": len(materiali_arrivo),
+        "oda_aggiornati": oda_aggiornati,
+        "message": f"Arrivo creato (DDT {metadata.get('numero_ddt', '?')}): {len(materiali_arrivo)} materiali, {len(oda_aggiornati)} OdA aggiornati",
+    }
+
 
 # ══════════════════════════════════════════════════════════════════
 #  GET ALL OPS DATA (for hub enrichment)
