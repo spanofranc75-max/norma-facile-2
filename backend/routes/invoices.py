@@ -1500,7 +1500,7 @@ async def delete_invoice(
     uid = user["user_id"]
     inv = await db.invoices.find_one(
         {"invoice_id": invoice_id, "user_id": uid},
-        {"_id": 0, "status": 1, "document_number": 1, "document_type": 1}
+        {"_id": 0, "status": 1, "document_number": 1, "document_type": 1, "sdi_id": 1, "protocollo_sdi": 1}
     )
     if not inv:
         raise HTTPException(404, "Fattura non trovata")
@@ -1516,12 +1516,20 @@ async def delete_invoice(
             f"preservando la numerazione progressiva."
         )
 
-    # Fatture già annullate non si toccano
+    # Fatture già annullate: eliminazione fisica consentita
+    # solo se non sono state inviate a SDI (nessun protocollo fiscale)
     if status == "annullata":
-        raise HTTPException(
-            409,
-            "Fattura già annullata. Nessuna azione possibile."
+        sdi = inv.get("sdi_id") or inv.get("protocollo_sdi")
+        if sdi:
+            raise HTTPException(
+                409,
+                "Fattura annullata ma già inviata a SDI. Non eliminabile."
+            )
+        await db.invoices.delete_one(
+            {"invoice_id": invoice_id, "user_id": uid}
         )
+        logger.info(f"Deleted annullata invoice {inv.get('document_number')} (no SDI)")
+        return {"message": f"Fattura annullata {inv.get('document_number')} eliminata fisicamente."}
 
     # Solo bozze si possono eliminare
     await db.invoices.delete_one(
