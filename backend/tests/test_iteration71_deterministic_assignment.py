@@ -22,7 +22,7 @@ import subprocess
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://inventory-norma.preview.emergentagent.com"
+    BASE_URL = "https://metalwork-hub-2.preview.emergentagent.com"
 
 # Test data identifiers
 TEST_PREFIX = f"TEST_ITER71_{uuid.uuid4().hex[:6]}"
