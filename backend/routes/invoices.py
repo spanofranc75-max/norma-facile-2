@@ -625,8 +625,38 @@ async def create_nota_credito(
     # Copy lines from original
     nc_lines = []
     for line in original.get("lines", []):
-        nc_line = {**line}
-        nc_line["line_id"] = f"line_{uuid.uuid4().hex[:8]}"
+        # Normalizza i campi per garantire
+        # che la NC abbia tutti i valori corretti
+        qty = float(line.get("quantity") or 1)
+        price = float(
+            line.get("unit_price")
+            or line.get("prezzo_netto")
+            or 0
+        )
+        discount = float(line.get("discount_percent") or 0)
+        vat = line.get("vat_rate", "22")
+
+        # Ricalcola line_total normalizzato
+        net = price * (1 - discount / 100)
+        lt = round(qty * net, 2)
+        vat_rate_num = 0
+        try:
+            vat_rate_num = float(vat)
+        except (ValueError, TypeError):
+            vat_rate_num = 0
+        vat_amt = round(lt * vat_rate_num / 100, 2)
+
+        nc_line = {
+            **line,  # Mantieni tutti i campi originali
+            "line_id": f"line_{uuid.uuid4().hex[:8]}",
+            # Sovrascrivi con valori normalizzati
+            "quantity": qty,
+            "unit_price": price,
+            "discount_percent": discount,
+            "vat_rate": vat,
+            "line_total": lt,
+            "vat_amount": vat_amt,
+        }
         nc_lines.append(nc_line)
 
     nc_doc = {
