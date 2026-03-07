@@ -23,6 +23,7 @@ const STATUS_MAP = {
     in_lavorazione: { label: 'In Lavorazione', color: 'bg-sky-200 text-sky-900 border-sky-300', rowBg: 'bg-sky-100/80 border-l-4 border-l-sky-500' },
     chiuso: { label: 'Chiuso', color: 'bg-emerald-200 text-emerald-900 border-emerald-300', rowBg: 'bg-emerald-100/80 border-l-4 border-l-emerald-500' },
     rifiutato: { label: 'Rifiutato', color: 'bg-red-100 text-red-800', rowBg: '' },
+    eliminato: { label: 'Eliminato', color: 'bg-gray-200 text-gray-500 border-gray-300 line-through', rowBg: 'bg-gray-50 opacity-60' },
 };
 
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
@@ -62,7 +63,7 @@ export default function PreventiviPage() {
     useEffect(() => { fetch_(); }, [fetch_]);
 
     const handleDelete = async (id) => {
-        if (!(await confirm('Eliminare questo preventivo?'))) return;
+        if (!(await confirm('Eliminare questo preventivo? Rimarrà visibile in lista con stato "Eliminato".'))) return;
         try {
             await apiRequest(`/preventivi/${id}`, { method: 'DELETE' });
             toast.success('Preventivo eliminato');

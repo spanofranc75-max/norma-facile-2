@@ -348,7 +348,7 @@ async def list_preventivi(
     limit: int = Query(500, ge=1, le=1000),
     user: dict = Depends(get_current_user),
 ):
-    query = {"user_id": user["user_id"], "status": {"$ne": "eliminato"}}
+    query = {"user_id": user["user_id"]}
     if client_id:
         query["client_id"] = client_id
     if status:
@@ -568,36 +568,29 @@ async def update_preventivo(prev_id: str, data: PreventivoUpdate, user: dict = D
 
 @router.delete("/{prev_id}")
 async def delete_preventivo(prev_id: str, user: dict = Depends(get_current_user)):
+    """
+    Soft-delete: cambia stato in 'eliminato' invece di rimuovere.
+    Il numero progressivo rimane visibile nella lista (come fatture annullate).
+    """
     uid = user["user_id"]
-    # Get the preventivo before deleting to know its year
     doc = await db.preventivi.find_one(
         {"preventivo_id": prev_id, "user_id": uid},
-        {"_id": 0, "number": 1}
+        {"_id": 0, "status": 1}
     )
-    result = await db.preventivi.delete_one({"preventivo_id": prev_id, "user_id": uid})
-    if result.deleted_count == 0:
+    if not doc:
         raise HTTPException(404, "Preventivo non trovato")
 
-    # Recalculate counter based on max existing number
-    if doc and doc.get("number"):
-        try:
-            year = doc["number"].split("-")[1]  # PRV-2026-0053 → 2026
-            counter_id = f"PRV-{uid}-{year}"
-            pipeline = [
-                {"$match": {"user_id": uid, "number": {"$regex": f"^PRV-{year}-"}}},
-                {"$project": {"num": {"$toInt": {"$arrayElemAt": [{"$split": ["$number", "-"]}, 2]}}}},
-                {"$sort": {"num": -1}},
-                {"$limit": 1},
-            ]
-            max_doc = await db.preventivi.aggregate(pipeline).to_list(1)
-            max_num = max_doc[0]["num"] if max_doc else 0
-            await db.document_counters.update_one(
-                {"counter_id": counter_id},
-                {"$set": {"counter": max_num}},
-            )
-        except Exception as e:
-            logger.warning(f"Counter recalc after delete failed: {e}")
+    if doc.get("status") == "eliminato":
+        raise HTTPException(409, "Preventivo già eliminato")
 
+    await db.preventivi.update_one(
+        {"preventivo_id": prev_id, "user_id": uid},
+        {"$set": {
+            "status": "eliminato",
+            "eliminato_at": datetime.now(timezone.utc).isoformat(),
+        }}
+    )
+    logger.info(f"Preventivo {prev_id} soft-deleted by {uid}")
     return {"message": "Preventivo eliminato"}
 
 
