@@ -872,15 +872,20 @@ async def _create_single_commessa(preventivo, user, normativa_override=None, ite
         s2 = float(l.get("sconto_2", 0) or 0) / 100
         value += qty * price * (1 - s1) * (1 - s2)
 
-    # Detect normativa if not overridden
-    if normativa_override:
+    # Detect normativa: fonte primaria = campo esplicito del preventivo
+    # Fallback = keyword matching solo se il campo non è presente
+    prev_normativa = prev.get("normativa") or None
+    if prev_normativa and prev_normativa != "NESSUNA":
+        # Campo esplicito scelto dall'utente — fonte più affidabile
+        detected_normativa = normativa_override or prev_normativa
+    elif normativa_override:
         detected_normativa = normativa_override
     else:
+        # Fallback: keyword matching sul testo delle righe
         full_text = " ".join([(prev.get("subject") or ""), (prev.get("notes") or "")] +
                              [(l.get("description") or "") for l in lines]).lower()
         score_13241 = sum(1 for kw in KW_13241 if kw in full_text)
         score_1090 = sum(1 for kw in KW_1090 if kw in full_text)
-        is_motorizzato = any(kw in full_text for kw in KW_MOTOR)
         if score_13241 > score_1090 and score_13241 > 0:
             detected_normativa = "EN_13241"
         elif score_1090 > score_13241 and score_1090 > 0:
@@ -940,6 +945,15 @@ async def _create_single_commessa(preventivo, user, normativa_override=None, ite
         "created_at": now,
         "updated_at": now,
     }
+
+    # Copia campi aggiuntivi dal preventivo se presenti
+    compliance = prev.get("compliance_detail") or {}
+    if prev.get("classe_exc") or compliance.get("classe_exc"):
+        doc["classe_exc"] = prev.get("classe_exc") or compliance.get("classe_exc", "")
+    if prev.get("redatto_da") or prev.get("ingegnere"):
+        doc["riferimento_ingegnere"] = prev.get("redatto_da") or prev.get("ingegnere", "")
+    if prev.get("numero_disegno") or prev.get("n_disegno"):
+        doc["numero_disegno"] = prev.get("numero_disegno") or prev.get("n_disegno", "")
 
     if detected_normativa:
         doc["normativa_tipo"] = detected_normativa
