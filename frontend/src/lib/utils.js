@@ -45,36 +45,26 @@ export async function apiRequest(endpoint, options = {}) {
     
     if (!response.ok) {
         let detail = `Errore ${response.status}`;
-        let rawBody = '';
         try {
-            rawBody = await response.clone().text();
-            console.error(`[apiRequest] ${response.status} response body:`, rawBody);
-        } catch (readErr) {
-            try {
-                rawBody = await response.text();
-            } catch {
-                console.error('[apiRequest] Failed to read response body:', readErr);
-            }
-        }
-        if (rawBody) {
-            try {
-                const err = JSON.parse(rawBody);
-                if (err.detail) {
-                    if (typeof err.detail === 'string') {
-                        detail = err.detail;
-                    } else if (Array.isArray(err.detail)) {
-                        const messages = err.detail.map(e => {
-                            const field = (e.loc || []).filter(l => l !== 'body').join('.');
-                            return field ? `${field}: ${e.msg}` : e.msg;
-                        });
-                        detail = messages.join('; ');
-                    } else {
-                        detail = JSON.stringify(err.detail);
+            // Leggi il body UNA SOLA VOLTA
+            // senza clone() per evitare "body already used"
+            const rawBody = await response.text();
+            if (rawBody) {
+                try {
+                    const json = JSON.parse(rawBody);
+                    detail = json.detail
+                        || json.message
+                        || json.error
+                        || detail;
+                } catch {
+                    // Body non è JSON — usa testo grezzo
+                    if (rawBody.length < 200) {
+                        detail = rawBody;
                     }
                 }
-            } catch {
-                detail = rawBody.substring(0, 500);
             }
+        } catch {
+            // Impossibile leggere body — usa messaggio generico
         }
         throw new Error(detail);
     }
