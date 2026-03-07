@@ -108,32 +108,64 @@ class InvoiceService:
         )
     
     @staticmethod
-    async def get_next_number(user_id: str, doc_type: DocumentType, year: int) -> str:
+    async def get_next_number(user_id: str, doc_type, year: int) -> str:
+        """Get next document number using atomic MongoDB counters.
+
+        FT and NC have SEPARATE numbering sequences (obbligo fiscale).
+        Format:
+            FT → "{num}/{year}"       (es. 1/2026, 2/2026)
+            NC → "NC-{num}/{year}"    (es. NC-1/2026, NC-2/2026)
+
+        On first call the counter is seeded from the real max found
+        in the invoices collection, so it survives deletions and gaps.
         """
-        Get next document number in format N/YEAR (e.g. 13/2026).
-        Always scans existing invoices to find the real max (ignores deleted ones).
-        """
-        max_num = 0
-        async for inv_doc in db.invoices.find(
-            {"user_id": user_id},
-            {"document_number": 1, "_id": 0}
-        ):
-            dn = inv_doc.get("document_number", "")
-            try:
-                if "/" in dn:
-                    parts = dn.split("/")
-                    num = int(parts[0])
-                    inv_year = int(parts[1]) if len(parts) > 1 else 0
-                    if inv_year == year and num > max_num:
-                        max_num = num
-                elif dn.startswith("FT-"):
-                    num = int(dn.split("-")[-1])
-                    if str(year) in dn and num > max_num:
-                        max_num = num
-            except (ValueError, IndexError):
-                pass
-        
-        next_num = max_num + 1
+        # Normalize doc_type to string
+        type_str = doc_type.value if hasattr(doc_type, "value") else str(doc_type)
+        is_nc = type_str == "NC"
+
+        counter_id = f"{user_id}_{'NC' if is_nc else 'FT'}_{year}"
+
+        # --- Seed the counter if it doesn't exist yet ---
+        existing_counter = await db.document_counters.find_one({"counter_id": counter_id})
+        if not existing_counter:
+            max_num = 0
+            async for inv_doc in db.invoices.find(
+                {"user_id": user_id, "document_type": type_str},
+                {"document_number": 1, "_id": 0},
+            ):
+                dn = inv_doc.get("document_number", "")
+                try:
+                    # NC-3/2026 → 3  |  7/2026 → 7  |  FT-2026-004 → 4
+                    raw = dn.replace("NC-", "") if is_nc else dn
+                    if "/" in raw:
+                        num = int(raw.split("/")[0])
+                        inv_year = int(raw.split("/")[1])
+                        if inv_year == year and num > max_num:
+                            max_num = num
+                    elif raw.startswith("FT-"):
+                        num = int(raw.split("-")[-1])
+                        if str(year) in raw and num > max_num:
+                            max_num = num
+                except (ValueError, IndexError):
+                    pass
+            if max_num > 0:
+                await db.document_counters.update_one(
+                    {"counter_id": counter_id},
+                    {"$set": {"counter": max_num}},
+                    upsert=True,
+                )
+
+        # --- Atomic increment ---
+        result = await db.document_counters.find_one_and_update(
+            {"counter_id": counter_id},
+            {"$inc": {"counter": 1}},
+            upsert=True,
+            return_document=True,
+        )
+        next_num = result.get("counter", 1)
+
+        if is_nc:
+            return f"NC-{next_num}/{year}"
         return f"{next_num}/{year}"
     
     @staticmethod
