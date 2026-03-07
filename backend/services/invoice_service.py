@@ -130,7 +130,11 @@ class InvoiceService:
         if not existing_counter:
             max_num = 0
             async for inv_doc in db.invoices.find(
-                {"user_id": user_id, "document_type": type_str},
+                {
+                    "user_id": user_id,
+                    "document_type": type_str,
+                    "status": {"$nin": ["annullata", "cancellata"]},
+                },
                 {"document_number": 1, "_id": 0},
             ):
                 dn = inv_doc.get("document_number", "")

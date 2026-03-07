@@ -348,7 +348,7 @@ async def list_preventivi(
     limit: int = Query(500, ge=1, le=1000),
     user: dict = Depends(get_current_user),
 ):
-    query = {"user_id": user["user_id"]}
+    query = {"user_id": user["user_id"], "status": {"$ne": "eliminato"}}
     if client_id:
         query["client_id"] = client_id
     if status:
