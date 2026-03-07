@@ -221,10 +221,17 @@ export default function InvoicesPage() {
     const handleDelete = async (invoice) => {
         const status = invoice.status || 'bozza';
 
-        // Fatture emesse/pagate non si eliminano
+        // GUARD: fatture annullate → nessuna azione
+        if (status === 'annullata') {
+            toast.info('Fattura già annullata');
+            return;
+        }
+
+        // GUARD: fatture emesse/pagate → solo annullamento
         if (status === 'emessa' || status === 'pagata') {
             if (!(await confirm(
-                `La fattura ${invoice.document_number} è già emessa e non può essere eliminata.\n\nVuoi ANNULLARLA? Il numero rimarrà nella lista con stato "Annullata" (obbligo fiscale).`
+                `La fattura ${invoice.document_number} è già emessa e non può essere eliminata.\n\nVuoi ANNULLARLA? Il numero rimarrà visibile in lista con stato "Annullata" (obbligo fiscale italiano).`,
+                'Annulla Fattura'
             ))) return;
             try {
                 await apiRequest(`/invoices/${invoice.invoice_id}/annulla`, { method: 'PATCH' });
@@ -236,14 +243,11 @@ export default function InvoicesPage() {
             return;
         }
 
-        // Fatture annullate: nessuna azione
-        if (status === 'annullata') {
-            toast.info('Fattura già annullata');
-            return;
-        }
-
-        // Bozze: eliminazione normale
-        if (!(await confirm('Eliminare definitivamente la bozza? Questa azione è irreversibile.'))) return;
+        // Solo bozze arrivano qui → eliminazione normale
+        if (!(await confirm(
+            'Eliminare definitivamente la bozza? Questa azione è irreversibile.',
+            'Elimina Bozza'
+        ))) return;
         try {
             await apiRequest(`/invoices/${invoice.invoice_id}`, { method: 'DELETE' });
             toast.success('Bozza eliminata');
