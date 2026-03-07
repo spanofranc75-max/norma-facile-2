@@ -74,15 +74,21 @@ export default function FascicoloTecnicoSection({ commessaId }) {
     const handleDownload = async (doc) => {
         setDownloading(doc.key);
         try {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
             const res = await fetch(`${API}/api/fascicolo-tecnico/${commessaId}/${doc.endpoint}`, {
                 credentials: 'include',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
             });
-            if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Errore');
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = `${doc.label.replace(/\s/g, '_')}_${commessaId}.pdf`; a.click();
-            URL.revokeObjectURL(url);
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = `${doc.label.replace(/\s/g, '_')}_${commessaId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
             toast.success(`${doc.label} scaricato`);
         } catch (e) { toast.error(e.message); }
         finally { setDownloading(null); }
@@ -93,15 +99,21 @@ export default function FascicoloTecnicoSection({ commessaId }) {
         if (!sel) { toast.error('Seleziona almeno un documento'); return; }
         setCompletoLoading(true);
         try {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
             const res = await fetch(`${API}/api/fascicolo-tecnico/${commessaId}/fascicolo-completo-pdf?docs=${sel}`, {
                 credentials: 'include',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
             });
-            if (!res.ok) throw new Error('Errore generazione');
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = `Fascicolo_Tecnico_Completo_${commessaId}.pdf`; a.click();
-            URL.revokeObjectURL(url);
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = `Fascicolo_Tecnico_Completo_${commessaId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
             toast.success('Fascicolo Tecnico Completo scaricato');
             setCompletoOpen(false);
         } catch (e) { toast.error(e.message); }
@@ -111,15 +123,21 @@ export default function FascicoloTecnicoSection({ commessaId }) {
     const handleDownloadSuperFascicolo = async () => {
         setSuperLoading(true);
         try {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
             const res = await fetch(`${API}/api/commesse/${commessaId}/fascicolo-tecnico-completo`, {
                 credentials: 'include',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
             });
-            if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'Errore generazione fascicolo');
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = `Fascicolo_Tecnico_Unico_${commessaId}.pdf`; a.click();
-            URL.revokeObjectURL(url);
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = `Fascicolo_Tecnico_Unico_${commessaId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
             toast.success('Fascicolo Tecnico Unico scaricato con successo');
         } catch (e) { toast.error(e.message); }
         finally { setSuperLoading(false); }
