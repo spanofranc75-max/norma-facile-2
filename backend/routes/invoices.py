@@ -1787,3 +1787,53 @@ async def duplicate_invoice(
 
     logger.info(f"Invoice duplicated: {invoice_id} -> {new_id}")
     return InvoiceResponse(**created)
+
+
+
+# ══════════════════════════════════════════════════════════════════
+#  One-shot admin cleanup: remove bogus invoice 9908/2026
+#  CALL ONCE then remove this endpoint
+# ══════════════════════════════════════════════════════════════════
+@router.delete("/admin/cleanup-9908")
+async def cleanup_bogus_invoice(user: dict = Depends(get_current_user)):
+    """
+    Removes the bogus invoice 9908/2026 (status annullata, never sent to SDI).
+    This is a one-time cleanup endpoint. Remove after use.
+    """
+    # Step 1: Find the invoice
+    inv = await db.invoices.find_one(
+        {"document_number": "9908/2026", "user_id": user["user_id"]},
+        {"_id": 0, "invoice_id": 1, "status": 1, "document_number": 1, "client_id": 1}
+    )
+    if not inv:
+        # Try alternative field names
+        inv = await db.invoices.find_one(
+            {"invoice_number": "9908/2026", "user_id": user["user_id"]},
+            {"_id": 0, "invoice_id": 1, "status": 1, "invoice_number": 1, "client_id": 1}
+        )
+    if not inv:
+        return {"message": "Fattura 9908/2026 non trovata. Probabilmente già eliminata.", "deleted": False}
+
+    if inv.get("status") != "annullata":
+        raise HTTPException(400, f"La fattura 9908/2026 ha status '{inv.get('status')}', non 'annullata'. Annullala prima.")
+
+    # Step 2: Delete physically
+    result = await db.invoices.delete_one(
+        {"document_number": "9908/2026", "user_id": user["user_id"], "status": "annullata"}
+    )
+    if result.deleted_count == 0:
+        result = await db.invoices.delete_one(
+            {"invoice_number": "9908/2026", "user_id": user["user_id"], "status": "annullata"}
+        )
+
+    # Step 3: Verify counter is NOT touched
+    counter_id = f"{user['user_id']}_FT_2026"
+    counter = await db.document_counters.find_one({"counter_id": counter_id}, {"_id": 0})
+
+    logger.info(f"[CLEANUP] Deleted bogus invoice 9908/2026 for user {user['user_id']}. Counter untouched: {counter}")
+    return {
+        "message": f"Fattura 9908/2026 eliminata fisicamente. Contatore FT 2026 invariato: {counter.get('counter', '?') if counter else 'N/A'}",
+        "deleted": True,
+        "counter_current": counter.get("counter") if counter else None,
+        "remaining_invoices": await db.invoices.count_documents({"user_id": user["user_id"]}),
+    }
