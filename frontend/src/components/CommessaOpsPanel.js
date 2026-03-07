@@ -513,14 +513,16 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
 
     const handleDownloadPacchetto = async (consegnaId) => {
         try {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
             const res = await fetch(`${API}/api/commesse/${commessaId}/consegne/${consegnaId}/pacchetto-pdf`, {
-                credentials: 'include',
+                credentials: 'include', headers: token ? { 'Authorization': `Bearer ${token}` } : {},
             });
             if (!res.ok) throw new Error('Errore generazione pacchetto');
             const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = `Pacchetto_Consegna_${consegnaId}.pdf`; a.click();
-            URL.revokeObjectURL(url);
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a'); link.href = blobUrl; link.download = `Pacchetto_Consegna_${consegnaId}.pdf`;
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
             toast.success('Pacchetto DDT + DoP + CE scaricato');
         } catch (e) { toast.error(e.message); }
     };
@@ -630,14 +632,16 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
 
     const handleDownloadNCR = async (clId) => {
         try {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
             const res = await fetch(`${API}/api/commesse/${commessaId}/conto-lavoro/${clId}/ncr-pdf`, {
-                credentials: 'include',
+                credentials: 'include', headers: token ? { 'Authorization': `Bearer ${token}` } : {},
             });
             if (!res.ok) throw new Error('Errore generazione NCR');
             const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = `NCR_${clId}.pdf`; a.click();
-            URL.revokeObjectURL(url);
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a'); link.href = blobUrl; link.download = `NCR_${clId}.pdf`;
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
         } catch (e) { toast.error(e.message); }
     };
 
@@ -708,15 +712,16 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
 
     const handleDownloadDoc = async (docId, nome) => {
         try {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
             const res = await fetch(`${API}/api/commesse/${commessaId}/documenti/${docId}/download`, {
-                credentials: 'include',
+                credentials: 'include', headers: token ? { 'Authorization': `Bearer ${token}` } : {},
             });
             if (!res.ok) throw new Error('Errore download');
             const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = nome; a.click();
-            URL.revokeObjectURL(url);
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a'); link.href = blobUrl; link.download = nome;
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
         } catch (e) { toast.error(e.message); }
     };
 
@@ -898,34 +903,34 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
 
     const handleDownloadCamPdf = async () => {
         try {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
             const res = await fetch(`${API}/api/cam/dichiarazione-pdf/${commessaId}`, {
-                credentials: 'include',
+                credentials: 'include', headers: token ? { 'Authorization': `Bearer ${token}` } : {},
             });
             if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Errore generazione PDF'); }
             const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Dichiarazione_CAM_${commessaNumero || commessaId}.pdf`;
-            a.click();
-            URL.revokeObjectURL(url);
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a'); link.href = blobUrl;
+            link.download = `Dichiarazione_CAM_${commessaNumero || commessaId}.pdf`;
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
             toast.success('Dichiarazione CAM generata');
         } catch (e) { toast.error(e.message); }
     };
 
     const handleDownloadGreenCert = async () => {
         try {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
             const res = await fetch(`${API}/api/cam/green-certificate/${commessaId}`, {
-                credentials: 'include',
+                credentials: 'include', headers: token ? { 'Authorization': `Bearer ${token}` } : {},
             });
             if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.detail || 'Errore'); }
             const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Green_Certificate_${commessaNumero || commessaId}.pdf`;
-            a.click();
-            URL.revokeObjectURL(url);
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a'); link.href = blobUrl;
+            link.download = `Green_Certificate_${commessaNumero || commessaId}.pdf`;
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
             toast.success('Green Certificate generato');
         } catch (e) { toast.error(e.message); }
     };
@@ -1299,14 +1304,16 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                             className="text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                             onClick={async () => {
                                 try {
+                                    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
                                     const res = await fetch(`${API}/api/commesse/${commessaId}/scheda-rintracciabilita-pdf`, {
-                                        credentials: 'include',
+                                        credentials: 'include', headers: token ? { 'Authorization': `Bearer ${token}` } : {},
                                     });
                                     if (!res.ok) throw new Error('Errore generazione PDF');
                                     const blob = await res.blob();
-                                    const url = URL.createObjectURL(blob);
-                                    const a = document.createElement('a'); a.href = url; a.download = `Scheda_Rintracciabilita_${commessaId}.pdf`; a.click();
-                                    URL.revokeObjectURL(url);
+                                    const blobUrl = window.URL.createObjectURL(blob);
+                                    const link = document.createElement('a'); link.href = blobUrl; link.download = `Scheda_Rintracciabilita_${commessaId}.pdf`;
+                                    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                                    window.URL.revokeObjectURL(blobUrl);
                                     toast.success('Scheda Rintracciabilità scaricata');
                                 } catch (e) { toast.error(e.message); }
                             }}

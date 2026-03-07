@@ -212,17 +212,21 @@ export default function CommessaHubPage() {
 
     const handleDownloadDossier = async () => {
         try {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
             const res = await fetch(`${API}/api/commesse/${commessaId}/dossier`, {
                 credentials: 'include',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
             });
-            if (!res.ok) throw new Error('Errore generazione dossier');
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Dossier_${hub?.commessa?.numero || commessaId}.pdf`;
-            a.click();
-            URL.revokeObjectURL(url);
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = `Dossier_${hub?.commessa?.numero || commessaId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(blobUrl);
             toast.success('Dossier generato');
         } catch (e) {
             toast.error(e.message);
@@ -737,11 +741,24 @@ export default function CommessaHubPage() {
                                 variant="outline"
                                 size="sm"
                                 data-testid="btn-download-qr"
-                                onClick={() => {
-                                    const a = document.createElement('a');
-                                    a.href = `${API}/api/qrcode/commessa/${commessaId}`;
-                                    a.download = `qr_commessa_${c.numero || commessaId}.png`;
-                                    a.click();
+                                onClick={async () => {
+                                    try {
+                                        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                                        const res = await fetch(`${API}/api/qrcode/commessa/${commessaId}`, {
+                                            credentials: 'include',
+                                            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                                        });
+                                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                                        const blob = await res.blob();
+                                        const blobUrl = window.URL.createObjectURL(blob);
+                                        const link = document.createElement('a');
+                                        link.href = blobUrl;
+                                        link.download = `qr_commessa_${c.numero || commessaId}.png`;
+                                        document.body.appendChild(link);
+                                        link.click();
+                                        document.body.removeChild(link);
+                                        window.URL.revokeObjectURL(blobUrl);
+                                    } catch (e) { toast.error(e.message); }
                                 }}
                             >
                                 <Download className="h-3.5 w-3.5 mr-1.5" /> Scarica QR
