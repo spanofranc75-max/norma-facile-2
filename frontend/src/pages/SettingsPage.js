@@ -1126,27 +1126,24 @@ function BackupTab() {
             if (!res.ok) throw new Error(`Errore ${res.status}`);
             const blob = await res.blob();
             const blobUrl = URL.createObjectURL(blob);
-
-            // Usa window.top per uscire dall'iframe sandboxed
-            const targetDoc = (window.top || window).document;
-            const link = targetDoc.createElement('a');
-            link.href = blobUrl;
-
-            // Nome file dalla response header o default
+            // USA document corrente — NON window.top
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = blobUrl;
             const disposition = res.headers.get('Content-Disposition') || '';
             const match = disposition.match(/filename="?(.+?)"?$/);
-            link.download = match ? match[1] : `backup_normafacile_${new Date().toISOString().slice(0, 10)}.json`;
-
-            targetDoc.body.appendChild(link);
-            link.click();
-            targetDoc.body.removeChild(link);
-            URL.revokeObjectURL(blobUrl);
-
+            a.download = match ? match[1] : `backup_normafacile_${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(blobUrl);
+            }, 1000);
             toast.success('Backup scaricato con successo!');
             const lastRes = await apiRequest('/admin/backup/last');
             setLastBackup(lastRes.last_backup);
         } catch (e) {
-            // Fallback: apri in nuovo tab
+            console.error('Download backup error:', e.name, e.message);
             try {
                 window.open(`${API}/api/admin/backup/export`, '_blank');
                 toast.info('Download aperto in nuovo tab');

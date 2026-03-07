@@ -125,20 +125,24 @@ export default function InvoicesPage() {
                 `${backendUrl}/api/invoices/${invoice.invoice_id}/pdf`,
                 { credentials: 'include' }
             );
-            if (!response.ok) throw new Error('Errore download');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const blob = await response.blob();
             const blobUrl = URL.createObjectURL(blob);
-            const win = window.top || window;
-            const a = win.document.createElement('a');
+            // USA document corrente — NON window.top
+            const a = document.createElement('a');
+            a.style.display = 'none';
             a.href = blobUrl;
             a.download = `${invoice.document_number}.pdf`;
-            win.document.body.appendChild(a);
+            document.body.appendChild(a);
             a.click();
-            win.document.body.removeChild(a);
-            URL.revokeObjectURL(blobUrl);
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(blobUrl);
+            }, 1000);
             toast.success('PDF scaricato');
-        } catch {
-            toast.info('Apertura PDF in nuovo tab...');
+        } catch (e) {
+            console.error('Download PDF error:', e.name, e.message);
+            toast.error(`Errore download: ${e.message}`);
             const backendUrl = process.env.REACT_APP_BACKEND_URL || window.location.origin;
             window.open(`${backendUrl}/api/invoices/${invoice.invoice_id}/pdf`, '_blank');
         }
@@ -157,17 +161,20 @@ export default function InvoicesPage() {
             }
             const blob = await response.blob();
             const blobUrl = URL.createObjectURL(blob);
-            const win = window.top || window;
-            const a = win.document.createElement('a');
+            const a = document.createElement('a');
+            a.style.display = 'none';
             a.href = blobUrl;
             a.download = `${invoice.document_number}.xml`;
-            win.document.body.appendChild(a);
+            document.body.appendChild(a);
             a.click();
-            win.document.body.removeChild(a);
-            URL.revokeObjectURL(blobUrl);
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(blobUrl);
+            }, 1000);
             toast.success('XML scaricato');
         } catch (error) {
-            toast.info('Apertura XML in nuovo tab...');
+            console.error('Download XML error:', error.name, error.message);
+            toast.error(`Errore download: ${error.message}`);
             const backendUrl = process.env.REACT_APP_BACKEND_URL || window.location.origin;
             window.open(`${backendUrl}/api/invoices/${invoice.invoice_id}/xml`, '_blank');
         }
