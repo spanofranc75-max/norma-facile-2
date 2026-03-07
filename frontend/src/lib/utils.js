@@ -15,6 +15,25 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API_BASE = `${BACKEND_URL}/api`;
 
 /**
+ * Download PDF blob escaping the iframe sandbox.
+ * Apre il blob URL in una nuova tab tramite window.top per uscire dall'iframe.
+ */
+export async function downloadPdfBlob(endpoint, filename) {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error(`Errore download: ${response.status}`);
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    try {
+        (window.top || window).open(blobUrl, '_blank');
+    } finally {
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+    }
+}
+
+/**
  * Make authenticated API request
  */
 export async function apiRequest(endpoint, options = {}) {
