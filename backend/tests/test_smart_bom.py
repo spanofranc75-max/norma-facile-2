@@ -9,7 +9,7 @@ import time
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://metalwork-hub-2.preview.emergentagent.com"
+    BASE_URL = "https://fiscal-invoice-hub.preview.emergentagent.com"
 
 # Test data constants
 TEST_SESSION_TOKEN = None
