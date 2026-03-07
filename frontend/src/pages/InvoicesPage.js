@@ -120,15 +120,17 @@ export default function InvoicesPage() {
 
     const handleDownloadPDF = async (invoice) => {
         try {
-            const backendUrl = process.env.REACT_APP_BACKEND_URL || window.location.origin;
+            const token = localStorage.getItem('token')
+                || sessionStorage.getItem('token') || '';
+            const backendUrl = process.env.REACT_APP_BACKEND_URL
+                || window.location.origin;
             const response = await fetch(
                 `${backendUrl}/api/invoices/${invoice.invoice_id}/pdf`,
-                { credentials: 'include' }
+                { headers: { 'Authorization': `Bearer ${token}` } }
             );
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const blob = await response.blob();
             const blobUrl = URL.createObjectURL(blob);
-            // USA document corrente — NON window.top
             const a = document.createElement('a');
             a.style.display = 'none';
             a.href = blobUrl;
@@ -143,8 +145,12 @@ export default function InvoicesPage() {
         } catch (e) {
             console.error('Download PDF error:', e.name, e.message);
             toast.error(`Errore download: ${e.message}`);
-            const backendUrl = process.env.REACT_APP_BACKEND_URL || window.location.origin;
-            window.open(`${backendUrl}/api/invoices/${invoice.invoice_id}/pdf`, '_blank');
+            const backendUrl = process.env.REACT_APP_BACKEND_URL
+                || window.location.origin;
+            window.open(
+                `${backendUrl}/api/invoices/${invoice.invoice_id}/pdf`,
+                '_blank'
+            );
         }
     };
 
