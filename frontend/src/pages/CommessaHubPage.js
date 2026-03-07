@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { apiRequest, formatDateIT, downloadFile } from '../lib/utils';
+import { apiRequest, formatDateIT, downloadPdfBlob } from '../lib/utils';
 import DashboardLayout from '../components/DashboardLayout';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -212,7 +212,7 @@ export default function CommessaHubPage() {
 
     const handleDownloadDossier = async () => {
         try {
-            await downloadFile(`${API}/api/commesse/${commessaId}/dossier`, `Dossier_${hub?.commessa?.numero || commessaId}.pdf`);
+            await downloadPdfBlob(`/commesse/${commessaId}/dossier`, `Dossier_${hub?.commessa?.numero || commessaId}.pdf`);
             toast.success('Dossier generato');
         } catch (e) { toast.error(e.message); }
     };
@@ -727,7 +727,7 @@ export default function CommessaHubPage() {
                                 data-testid="btn-download-qr"
                                 onClick={async () => {
                                     try {
-                                        await downloadFile(`${API}/api/qrcode/commessa/${commessaId}`, `qr_commessa_${c.numero || commessaId}.png`);
+                                        await downloadPdfBlob(`/qrcode/commessa/${commessaId}`, `qr_commessa_${c.numero || commessaId}.png`);
                                     } catch (e) { toast.error(e.message); }
                                 }}
                             >

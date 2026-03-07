@@ -3,7 +3,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiRequest, formatDateIT, downloadFile } from '../lib/utils';
+import { apiRequest, formatDateIT, downloadPdfBlob } from '../lib/utils';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -120,7 +120,7 @@ export default function InvoicesPage() {
 
     const handleDownloadPDF = async (invoice) => {
         try {
-            await downloadFile(`${API}/api/invoices/${invoice.invoice_id}/pdf`, `${invoice.document_number}.pdf`);
+            await downloadPdfBlob(`/invoices/${invoice.invoice_id}/pdf`, `${invoice.document_number}.pdf`);
             toast.success('PDF scaricato');
         } catch (e) {
             console.error('Download PDF error:', e.name, e.message);
@@ -130,7 +130,7 @@ export default function InvoicesPage() {
 
     const handleDownloadXML = async (invoice) => {
         try {
-            await downloadFile(`${API}/api/invoices/${invoice.invoice_id}/xml`, `${invoice.document_number}.xml`);
+            await downloadPdfBlob(`/invoices/${invoice.invoice_id}/xml`, `${invoice.document_number}.xml`);
             toast.success('XML scaricato');
         } catch (e) {
             console.error('Download XML error:', e.name, e.message);

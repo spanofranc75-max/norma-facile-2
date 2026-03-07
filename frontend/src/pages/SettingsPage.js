@@ -2,7 +2,7 @@
  * Settings Page - Company Settings
  */
 import { useState, useEffect, useCallback } from 'react';
-import { apiRequest, downloadFile } from '../lib/utils';
+import { apiRequest, downloadPdfBlob } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -1123,7 +1123,7 @@ function BackupTab() {
         setExporting(true);
         try {
             const filename = `backup_normafacile_${new Date().toISOString().slice(0, 10)}.json`;
-            await downloadFile(`${API}/api/admin/backup/export`, filename);
+            await downloadPdfBlob(`/admin/backup/export`, filename);
             toast.success('Backup scaricato con successo!');
             const lastRes = await apiRequest('/admin/backup/last');
             setLastBackup(lastRes.last_backup);
