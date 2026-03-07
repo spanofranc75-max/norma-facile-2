@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
+const round2 = (v) => Math.round((v + Number.EPSILON) * 100) / 100;
 
 const MODES = [
     { key: 'acconto', label: 'Acconto %', icon: Percent, desc: "Fattura una percentuale dell'imponibile", color: 'bg-amber-500' },
@@ -98,14 +99,22 @@ export default function InvoiceGenerationModal({ open, onOpenChange, prevId, onC
     };
 
     // Calculated preview amounts
-    const totalPrev = status?.total_preventivo || 0;
+    // Usa sempre imponibile_base per i calcoli percentuali
+    // mai il totale IVA inclusa
+    const totalPrev = status?.imponibile_base
+        || status?.total_preventivo
+        || 0;
     const remaining = status?.remaining ?? 0;
     // ?? invece di || per gestire correttamente remaining = 0
     const lines = prevData?.lines || [];
 
     let previewAmount = 0;
     if (mode === 'acconto') {
-        previewAmount = totalPrev * (parseFloat(percentage) || 0) / 100;
+        // Preview calcolato sull'imponibile puro
+        // coerente con il calcolo backend
+        previewAmount = round2(
+            totalPrev * (parseFloat(percentage) || 0) / 100
+        );
     } else if (mode === 'sal') {
         if (salMode === 'lines') {
             previewAmount = selectedLines.reduce((s, idx) => s + (lines[idx] ? parseFloat(lines[idx].line_total || 0) : 0), 0);
