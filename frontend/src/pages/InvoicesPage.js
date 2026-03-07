@@ -120,28 +120,35 @@ export default function InvoicesPage() {
 
     const handleDownloadPDF = async (invoice) => {
         try {
+            const backendUrl = process.env.REACT_APP_BACKEND_URL || window.location.origin;
             const response = await fetch(
-                `${process.env.REACT_APP_BACKEND_URL}/api/invoices/${invoice.invoice_id}/pdf`,
+                `${backendUrl}/api/invoices/${invoice.invoice_id}/pdf`,
                 { credentials: 'include' }
             );
             if (!response.ok) throw new Error('Errore download');
             const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
+            const blobUrl = URL.createObjectURL(blob);
+            const win = window.top || window;
+            const a = win.document.createElement('a');
+            a.href = blobUrl;
             a.download = `${invoice.document_number}.pdf`;
+            win.document.body.appendChild(a);
             a.click();
-            window.URL.revokeObjectURL(url);
+            win.document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
             toast.success('PDF scaricato');
         } catch {
-            toast.error('Errore nel download del PDF');
+            toast.info('Apertura PDF in nuovo tab...');
+            const backendUrl = process.env.REACT_APP_BACKEND_URL || window.location.origin;
+            window.open(`${backendUrl}/api/invoices/${invoice.invoice_id}/pdf`, '_blank');
         }
     };
 
     const handleDownloadXML = async (invoice) => {
         try {
+            const backendUrl = process.env.REACT_APP_BACKEND_URL || window.location.origin;
             const response = await fetch(
-                `${process.env.REACT_APP_BACKEND_URL}/api/invoices/${invoice.invoice_id}/xml`,
+                `${backendUrl}/api/invoices/${invoice.invoice_id}/xml`,
                 { credentials: 'include' }
             );
             if (!response.ok) {
@@ -149,15 +156,20 @@ export default function InvoicesPage() {
                 throw new Error(err.detail || 'Errore download');
             }
             const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
+            const blobUrl = URL.createObjectURL(blob);
+            const win = window.top || window;
+            const a = win.document.createElement('a');
+            a.href = blobUrl;
             a.download = `${invoice.document_number}.xml`;
+            win.document.body.appendChild(a);
             a.click();
-            window.URL.revokeObjectURL(url);
+            win.document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
             toast.success('XML scaricato');
         } catch (error) {
-            toast.error(error.message);
+            toast.info('Apertura XML in nuovo tab...');
+            const backendUrl = process.env.REACT_APP_BACKEND_URL || window.location.origin;
+            window.open(`${backendUrl}/api/invoices/${invoice.invoice_id}/xml`, '_blank');
         }
     };
 
