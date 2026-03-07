@@ -894,8 +894,15 @@ async def get_invoicing_status(prev_id: str, user: dict = Depends(get_current_us
         raise HTTPException(404, "Preventivo non trovato")
 
     totals = doc.get("totals", {})
-    # SEMPRE usare imponibile (base senza IVA) come riferimento
-    imponibile_prev = float(totals.get("imponibile", totals.get("subtotal", 0)))
+    # Usa subtotal (prima degli sconti) come base di riferimento
+    # per garantire coerenza con progressive_amount delle fatture
+    # che viene calcolato dalle righe senza sconto globale
+    subtotal_prev = float(totals.get("subtotal", 0))
+    sconto_val = float(totals.get("sconto_val", 0))
+    imponibile_prev = float(totals.get("imponibile", subtotal_prev - sconto_val))
+    # Protezione: imponibile non può essere negativo
+    if imponibile_prev <= 0:
+        imponibile_prev = subtotal_prev
     total_with_vat = float(totals.get("total", imponibile_prev))
 
     # Fetch all invoices linked to this preventivo
@@ -922,6 +929,7 @@ async def get_invoicing_status(prev_id: str, user: dict = Depends(get_current_us
         "preventivo_id": prev_id,
         "total_preventivo": round(imponibile_prev, 2),  # IMPONIBILE, non totale con IVA
         "total_preventivo_ivato": round(total_with_vat, 2),  # Per display informativo
+        "imponibile_base": round(imponibile_prev, 2),
         "total_invoiced": round(total_invoiced, 2),
         "remaining": max(remaining, 0),
         "percentage_invoiced": min(pct, 100),
@@ -950,8 +958,15 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
         raise HTTPException(422, "Cliente non trovato")
 
     totals = doc.get("totals", {})
-    # SEMPRE usare IMPONIBILE (base senza IVA) come base per i calcoli
-    imponibile_prev = float(totals.get("imponibile", totals.get("subtotal", 0)))
+    # Usa subtotal (prima degli sconti) come base di riferimento
+    # per garantire coerenza con progressive_amount delle fatture
+    # che viene calcolato dalle righe senza sconto globale
+    subtotal_prev = float(totals.get("subtotal", 0))
+    sconto_val = float(totals.get("sconto_val", 0))
+    imponibile_prev = float(totals.get("imponibile", subtotal_prev - sconto_val))
+    # Protezione: imponibile non può essere negativo
+    if imponibile_prev <= 0:
+        imponibile_prev = subtotal_prev
     prev_number = doc.get("number", prev_id)
     prev_lines = doc.get("lines", [])
 

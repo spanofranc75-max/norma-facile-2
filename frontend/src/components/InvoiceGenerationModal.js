@@ -99,7 +99,8 @@ export default function InvoiceGenerationModal({ open, onOpenChange, prevId, onC
 
     // Calculated preview amounts
     const totalPrev = status?.total_preventivo || 0;
-    const remaining = status?.remaining || 0;
+    const remaining = status?.remaining ?? 0;
+    // ?? invece di || per gestire correttamente remaining = 0
     const lines = prevData?.lines || [];
 
     let previewAmount = 0;
@@ -118,7 +119,7 @@ export default function InvoiceGenerationModal({ open, onOpenChange, prevId, onC
     const isValid = mode && (
         (mode === 'acconto' && percentage > 0 && percentage <= 100 && previewAmount <= remaining + 0.01) ||
         (mode === 'sal' && ((salMode === 'lines' && selectedLines.length > 0) || (salMode === 'amount' && previewAmount > 0)) && previewAmount <= remaining + 0.01) ||
-        (mode === 'saldo' && remaining > 0)
+        (mode === 'saldo' && remaining >= -0.01)
     );
 
     return (
