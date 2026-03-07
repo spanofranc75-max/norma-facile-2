@@ -38,6 +38,7 @@ BACKUP_COLLECTIONS = [
     "company_settings",
     "catalogo_profili",
     "articoli",
+    "document_counters",
 ]
 
 
@@ -72,19 +73,19 @@ async def export_backup(user: dict = Depends(get_current_user)):
     for coll_name in BACKUP_COLLECTIONS:
         try:
             coll = db[coll_name]
-            # Filter by user_id where applicable
-            docs = await coll.find({"user_id": uid}, {"_id": 0}).to_list(None)
-            if not docs:
-                # Try without user_id filter (for shared collections like catalogo)
-                docs = await coll.find({}, {"_id": 0}).to_list(None)
-                # Only include if reasonable size (< 10k docs)
-                if len(docs) > 10000:
-                    docs = []
+            # Sempre filtra per user_id — mai esportare
+            # dati di altri utenti
+            docs = await coll.find(
+                {"user_id": uid},
+                {"_id": 0}
+            ).to_list(None)
             backup["data"][coll_name] = docs
             backup["stats"][coll_name] = len(docs)
             total_records += len(docs)
         except Exception as e:
-            logger.warning(f"Backup collection {coll_name} failed: {e}")
+            logger.warning(
+                f"Backup collection {coll_name} failed: {e}"
+            )
             backup["data"][coll_name] = []
             backup["stats"][coll_name] = 0
 
@@ -143,8 +144,6 @@ async def get_backup_stats(user: dict = Depends(get_current_user)):
     for coll_name in BACKUP_COLLECTIONS:
         try:
             count = await db[coll_name].count_documents({"user_id": uid})
-            if count == 0:
-                count = await db[coll_name].count_documents({})
             stats[coll_name] = count
             total += count
         except Exception:
@@ -208,27 +207,52 @@ async def restore_backup(
         pk_field = _get_pk_field(coll_name)
 
         for doc in docs:
+            # Forza sempre user_id dell'utente corrente
+            # (gestisce migrazione preview → deploy)
             doc["user_id"] = uid
             doc.pop("_id", None)
 
             try:
                 if pk_field and doc.get(pk_field):
+                    # Upsert basato SOLO sul pk_field
+                    # NON su user_id → evita duplicati
+                    # quando user_id cambia tra ambienti
                     result = await coll.update_one(
-                        {pk_field: doc[pk_field], "user_id": uid},
+                        {pk_field: doc[pk_field]},
                         {"$set": doc},
                         upsert=True,
                     )
                     if result.upserted_id:
                         inserted += 1
-                    elif result.modified_count > 0:
-                        updated += 1
                     else:
                         updated += 1
                 else:
-                    await coll.insert_one(doc)
-                    inserted += 1
+                    # Documenti senza PK: verifica duplicati
+                    # con hash del contenuto prima di inserire
+                    import hashlib, json as _json
+                    doc_hash = hashlib.md5(
+                        _json.dumps(
+                            {k: v for k, v in doc.items()
+                             if k != "user_id"},
+                            sort_keys=True,
+                            default=str
+                        ).encode()
+                    ).hexdigest()
+
+                    existing = await coll.find_one(
+                        {"_content_hash": doc_hash,
+                         "user_id": uid}
+                    )
+                    if not existing:
+                        doc["_content_hash"] = doc_hash
+                        await coll.insert_one(doc)
+                        inserted += 1
+                    else:
+                        updated += 1
             except Exception as e:
-                logger.warning(f"Restore error in {coll_name}: {e}")
+                logger.warning(
+                    f"Restore error in {coll_name}: {e}"
+                )
                 errors += 1
 
         results[coll_name] = {"inserted": inserted, "updated": updated, "errors": errors}
@@ -276,5 +300,6 @@ def _get_pk_field(coll_name: str) -> str:
         "articoli": "articolo_id",
         "company_settings": "user_id",
         "catalogo_profili": "codice",
+        "document_counters": "counter_id",
     }
     return pk_map.get(coll_name, "")
