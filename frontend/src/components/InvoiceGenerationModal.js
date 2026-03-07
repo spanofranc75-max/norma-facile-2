@@ -117,7 +117,22 @@ export default function InvoiceGenerationModal({ open, onOpenChange, prevId, onC
         );
     } else if (mode === 'sal') {
         if (salMode === 'lines') {
-            previewAmount = selectedLines.reduce((s, idx) => s + (lines[idx] ? parseFloat(lines[idx].line_total || 0) : 0), 0);
+            previewAmount = round2(selectedLines.reduce((s, idx) => {
+                if (!lines[idx]) return s;
+                const ln = lines[idx];
+                // Prova tutti i possibili nomi del campo totale riga
+                const lt = parseFloat(
+                    ln.line_total
+                    || ln.lineTotal
+                    || ln.importo
+                    || (parseFloat(ln.unit_price || ln.prezzo_netto || 0) *
+                        parseFloat(ln.quantity || 1) *
+                        (1 - parseFloat(ln.sconto_1 || ln.discount_percent || 0) / 100) *
+                        (1 - parseFloat(ln.sconto_2 || 0) / 100))
+                    || 0
+                );
+                return s + lt;
+            }, 0));
         } else {
             previewAmount = parseFloat(customAmount) || 0;
         }
@@ -133,7 +148,7 @@ export default function InvoiceGenerationModal({ open, onOpenChange, prevId, onC
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto" data-testid="invoice-generation-modal">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="invoice-generation-modal">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-[#1E293B]">
                         <Receipt className="h-5 w-5 text-[#0055FF]" />
@@ -272,7 +287,7 @@ export default function InvoiceGenerationModal({ open, onOpenChange, prevId, onC
                                                     </button>
                                                 </div>
                                                 {salMode === 'lines' ? (
-                                                    <div className="space-y-1 max-h-48 overflow-y-auto border rounded-lg p-2" data-testid="sal-lines-list">
+                                                    <div className="space-y-1 max-h-64 overflow-y-auto border rounded-lg p-2" data-testid="sal-lines-list">
                                                         {lines.map((ln, idx) => {
                                                             const sel = selectedLines.includes(idx);
                                                             return (
@@ -285,7 +300,7 @@ export default function InvoiceGenerationModal({ open, onOpenChange, prevId, onC
                                                                     <div className={`w-4 h-4 rounded border flex items-center justify-center ${sel ? 'bg-[#0055FF] border-[#0055FF]' : 'border-slate-300'}`}>
                                                                         {sel && <CheckCircle2 className="h-3 w-3 text-white" />}
                                                                     </div>
-                                                                    <span className="text-xs text-slate-700 truncate flex-1">{ln.description || `Riga ${idx + 1}`}</span>
+                                                                    <span className="text-xs text-slate-700 truncate flex-1">{(ln.description || ln.descrizione || `Riga ${idx + 1}`).slice(0, 60)}{(ln.description || ln.descrizione || '').length > 60 ? '...' : ''}</span>
                                                                     <span className="text-xs font-mono font-semibold text-[#0055FF]">{fmtEur(ln.line_total)}</span>
                                                                 </button>
                                                             );
