@@ -42,6 +42,33 @@ const STATO_STYLES = {
 
 const LIFECYCLE_ORDER = ['richiesta', 'bozza', 'rilievo_completato', 'firmato', 'in_produzione', 'fatturato', 'chiuso'];
 
+const NORMATIVA_CONFIG = {
+    EN_1090: {
+        label: 'Commessa EN 1090 — Strutture metalliche',
+        bg: 'bg-blue-50 border-blue-300',
+        text: 'text-blue-800',
+        icon: Shield,
+        checklist: [
+            'Piano di Controllo Qualita',
+            'WPS/WPQR (Procedure di saldatura)',
+            'Certificati materiali (3.1)',
+            'Dichiarazione di Prestazione (DoP)',
+        ],
+    },
+    EN_13241: {
+        label: 'Commessa EN 13241 — Chiusure industriali',
+        bg: 'bg-amber-50 border-amber-300',
+        text: 'text-amber-800',
+        icon: Award,
+        checklist: [
+            'Scheda tecnica prodotto',
+            'Test carichi / resistenza vento',
+            'Dichiarazione di Prestazione (DoP)',
+            'Marcatura CE',
+        ],
+    },
+};
+
 // Events the user can trigger manually from the hub
 const AVAILABLE_EVENTS = {
     richiesta:          [{ tipo: 'RILIEVO_COMPLETATO', label: 'Rilievo Completato', icon: Ruler }, { tipo: 'PREVENTIVO_ACCETTATO', label: 'Preventivo Accettato', icon: CheckCircle2 }],
@@ -273,6 +300,30 @@ export default function CommessaHubPage() {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Banner Normativa + Checklist documentale */}
+                {c.normativa_tipo && NORMATIVA_CONFIG[c.normativa_tipo] && (() => {
+                    const nc = NORMATIVA_CONFIG[c.normativa_tipo];
+                    const NIcon = nc.icon;
+                    return (
+                        <Card className={`border ${nc.bg}`} data-testid="normativa-banner">
+                            <CardContent className="py-3 px-5">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <NIcon className={`h-4 w-4 ${nc.text}`} />
+                                    <span className={`font-semibold text-sm ${nc.text}`}>{nc.label}</span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-1.5">
+                                    {nc.checklist.map((item, i) => (
+                                        <label key={i} className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+                                            <input type="checkbox" className="rounded border-slate-300" data-testid={`checklist-${i}`} />
+                                            {item}
+                                        </label>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    );
+                })()}
 
                 {/* Lifecycle State Machine Bar */}
                 <Card className="border-gray-200" data-testid="lifecycle-bar">

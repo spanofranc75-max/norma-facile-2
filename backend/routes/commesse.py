@@ -117,6 +117,7 @@ class CommessaCreate(BaseModel):
     # Normativa fields
     classe_exc: Optional[str] = ""          # EXC1, EXC2, EXC3, EXC4
     tipologia_chiusura: Optional[str] = ""  # cancello, ringhiera, porta, scala, struttura, altro
+    normativa_tipo: Optional[str] = ""      # EN_1090, EN_13241, NESSUNA
     # Shortcut — pre-link a module at creation
     linked_preventivo_id: Optional[str] = None
     linked_distinta_id: Optional[str] = None
@@ -273,6 +274,7 @@ async def create_commessa(data: CommessaCreate, user: dict = Depends(get_current
         "notes": data.notes or "",
         "classe_exc": data.classe_exc or "",
         "tipologia_chiusura": data.tipologia_chiusura or "",
+        "normativa_tipo": data.normativa_tipo or "",
         "status_history": [{"status": initial_kanban, "date": now.isoformat(), "note": "Creazione"}],
         # Keep old fields for backward compat
         "linked_preventivo_id": data.linked_preventivo_id,
