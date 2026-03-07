@@ -1187,7 +1187,14 @@ function BackupTab() {
                 credentials: 'include',
                 body: formData,
             });
-            const data = await res.json();
+            // Read body as text first to avoid "body stream already read"
+            const rawText = await res.text();
+            let data;
+            try {
+                data = JSON.parse(rawText);
+            } catch {
+                throw new Error(res.ok ? 'Risposta non valida dal server' : `Errore ${res.status}: ${rawText.substring(0, 200)}`);
+            }
             if (!res.ok) throw new Error(data.detail || 'Errore restore');
             setRestoreResult(data);
             toast.success(data.message);
