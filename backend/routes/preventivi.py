@@ -902,10 +902,19 @@ async def get_invoicing_status(prev_id: str, user: dict = Depends(get_current_us
     linked = await db.invoices.find(
         {"progressive_from_preventivo": prev_id, "user_id": uid, "status": {"$ne": "annullata"}},
         {"_id": 0, "invoice_id": 1, "document_number": 1, "progressive_type": 1,
-         "progressive_amount": 1, "issue_date": 1, "status": 1, "totals": 1}
+         "progressive_amount": 1, "document_type": 1, "issue_date": 1, "status": 1, "totals": 1}
     ).sort("created_at", 1).to_list(100)
 
-    total_invoiced = sum(float(inv.get("progressive_amount", 0)) for inv in linked)
+    # Le FT aumentano il fatturato, le NC lo riducono
+    total_invoiced = 0.0
+    for inv in linked:
+        amount = float(inv.get("progressive_amount", 0))
+        doc_type = inv.get("document_type", "FT")
+        if doc_type == "NC":
+            total_invoiced -= amount
+        else:
+            total_invoiced += amount
+    total_invoiced = round(total_invoiced, 2)
     remaining = round(imponibile_prev - total_invoiced, 2)
     pct = round((total_invoiced / imponibile_prev * 100), 1) if imponibile_prev > 0 else 0
 
@@ -950,10 +959,19 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
     existing_invoices = await db.invoices.find(
         {"progressive_from_preventivo": prev_id, "user_id": uid, "status": {"$ne": "annullata"}},
         {"_id": 0, "invoice_id": 1, "document_number": 1, "progressive_amount": 1,
-         "progressive_type": 1, "issue_date": 1}
+         "progressive_type": 1, "document_type": 1, "issue_date": 1}
     ).sort("created_at", 1).to_list(100)
 
-    already_invoiced = sum(float(inv.get("progressive_amount", 0)) for inv in existing_invoices)
+    # Le FT aumentano il fatturato, le NC lo riducono
+    already_invoiced = 0.0
+    for inv in existing_invoices:
+        amount = float(inv.get("progressive_amount", 0))
+        doc_type = inv.get("document_type", "FT")
+        if doc_type == "NC":
+            already_invoiced -= amount
+        else:
+            already_invoiced += amount
+    already_invoiced = round(already_invoiced, 2)
     remaining = round(imponibile_prev - already_invoiced, 2)
 
     if remaining <= 0.01 and body.invoice_type != "saldo":

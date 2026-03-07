@@ -653,6 +653,30 @@ async def create_nota_credito(
     }
 
     await db.invoices.insert_one(nc_doc)
+
+    # Se la NC è collegata a una fattura progressiva,
+    # aggiorna il tracking sul preventivo
+    original_prev_id = original.get("progressive_from_preventivo")
+    original_prog_amount = float(original.get("progressive_amount", 0))
+
+    if original_prev_id and original_prog_amount > 0:
+        # La NC eredita il collegamento al preventivo
+        # con progressive_amount per segnalare lo storno
+        await db.invoices.update_one(
+            {"invoice_id": nc_id},
+            {"$set": {
+                "progressive_from_preventivo": original_prev_id,
+                "progressive_amount": original_prog_amount,
+                "progressive_type": "storno",
+                "document_type": "NC",
+            }}
+        )
+        logger.info(
+            f"NC {nc_id} collegata al preventivo "
+            f"{original_prev_id} come storno di "
+            f"{original_prog_amount}"
+        )
+
     logger.info(f"Credit note {nc_number} created from invoice {original.get('document_number')} by user {user['user_id']}")
 
     return {
