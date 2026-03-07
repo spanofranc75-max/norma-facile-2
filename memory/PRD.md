@@ -52,10 +52,14 @@ Sistema ERP per carpenteria metallica (Steel Project Design Srls). Gestione comm
 - Qualifica saldatori e WPS
 - Fascicolo tecnico CE
 - Notifiche e scadenziario pagamenti
+- Analisi AI DDT fornitori con matching automatico OdA e creazione arrivi
 
 ## Bug Fix Critici
 - **[Mar 2026] DOPPIA IVA su fattura progressiva**: Acconto % calcolava la percentuale sul totale CON IVA invece che sull'imponibile. Corretto in preventivi.py (backend) e InvoiceGenerationModal.js (frontend).
 - **[Feb 2026] Download file in iframe**: PDF, XML e Backup fallivano silenziosamente per restrizioni cross-origin (`window.top`). Fix: pattern `document.createElement('a')` in InvoicesPage.js e SettingsPage.js. **Verificato con test automatici (iteration 158).**
+
+## Feature Nuove (Mar 2026)
+- **Analisi AI DDT Fornitori**: Route `parse-ddt` e `confirm-ddt` in `commessa_ops.py`. Claude Sonnet 4 Vision estrae materiali dal DDT PDF, matching automatico con OdA, creazione arrivo con un click. Frontend: bottone "Analizza DDT" e modale conferma in `CommessaOpsPanel.js`.
 
 ## Backlog Prioritizzato
 
