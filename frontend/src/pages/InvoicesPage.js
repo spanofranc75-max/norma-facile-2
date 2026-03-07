@@ -219,13 +219,37 @@ export default function InvoicesPage() {
 
 
     const handleDelete = async (invoice) => {
-        if (!(await confirm('Sei sicuro di voler eliminare questo documento?'))) return;
+        const status = invoice.status || 'bozza';
+
+        // Fatture emesse/pagate non si eliminano
+        if (status === 'emessa' || status === 'pagata') {
+            if (!(await confirm(
+                `La fattura ${invoice.document_number} è già emessa e non può essere eliminata.\n\nVuoi ANNULLARLA? Il numero rimarrà nella lista con stato "Annullata" (obbligo fiscale).`
+            ))) return;
+            try {
+                await apiRequest(`/invoices/${invoice.invoice_id}/annulla`, { method: 'PATCH' });
+                toast.success(`Fattura ${invoice.document_number} annullata`);
+                fetchInvoices();
+            } catch (e) {
+                toast.error(e.message);
+            }
+            return;
+        }
+
+        // Fatture annullate: nessuna azione
+        if (status === 'annullata') {
+            toast.info('Fattura già annullata');
+            return;
+        }
+
+        // Bozze: eliminazione normale
+        if (!(await confirm('Eliminare definitivamente la bozza? Questa azione è irreversibile.'))) return;
         try {
             await apiRequest(`/invoices/${invoice.invoice_id}`, { method: 'DELETE' });
-            toast.success('Documento eliminato');
+            toast.success('Bozza eliminata');
             fetchInvoices();
-        } catch (error) {
-            toast.error(error.message);
+        } catch (e) {
+            toast.error(e.message);
         }
     };
 
@@ -587,8 +611,8 @@ export default function InvoicesPage() {
                                                                 </DropdownMenuItem>
                                                             )}
                                                             <DropdownMenuSeparator />
-                                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(inv); }} className="text-red-600">
-                                                                <Trash2 className="mr-2 h-4 w-4" />Elimina
+                                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDelete(inv); }} className={inv.status === 'annullata' ? 'text-gray-400' : 'text-red-600'} disabled={inv.status === 'annullata'}>
+                                                                <Trash2 className="mr-2 h-4 w-4" />{inv.status === 'bozza' ? 'Elimina' : inv.status === 'annullata' ? 'Annullata' : 'Annulla'}
                                                             </DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>

@@ -1489,18 +1489,86 @@ async def delete_invoice(
     invoice_id: str,
     user: dict = Depends(get_current_user)
 ):
-    """Delete an invoice."""
-    existing = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]},
-        {"_id": 0}
+    """
+    Elimina una fattura SOLO se in stato bozza.
+    Le fatture emesse non possono essere eliminate —
+    devono essere annullate per preservare la
+    numerazione progressiva (obbligo fiscale IT).
+    """
+    uid = user["user_id"]
+    inv = await db.invoices.find_one(
+        {"invoice_id": invoice_id, "user_id": uid},
+        {"_id": 0, "status": 1, "document_number": 1, "document_type": 1}
     )
-    if not existing:
-        raise HTTPException(status_code=404, detail="Documento non trovato")
-    
-    await db.invoices.delete_one({"invoice_id": invoice_id})
-    
-    logger.info(f"Invoice deleted: {invoice_id}")
-    return {"message": "Documento eliminato con successo"}
+    if not inv:
+        raise HTTPException(404, "Fattura non trovata")
+
+    status = inv.get("status", "bozza")
+
+    # Fatture emesse o pagate non si eliminano mai
+    if status in ("emessa", "pagata"):
+        raise HTTPException(
+            409,
+            f"Impossibile eliminare una fattura {status}. "
+            f"Usa 'Annulla' per invalidare il documento "
+            f"preservando la numerazione progressiva."
+        )
+
+    # Fatture già annullate non si toccano
+    if status == "annullata":
+        raise HTTPException(
+            409,
+            "Fattura già annullata. Nessuna azione possibile."
+        )
+
+    # Solo bozze si possono eliminare
+    await db.invoices.delete_one(
+        {"invoice_id": invoice_id, "user_id": uid}
+    )
+    logger.info(
+        f"Fattura bozza {invoice_id} eliminata da {uid}"
+    )
+    return {"message": "Fattura eliminata"}
+
+
+@router.patch("/{invoice_id}/annulla")
+async def annulla_invoice(
+    invoice_id: str,
+    user: dict = Depends(get_current_user)
+):
+    """
+    Annulla una fattura emessa.
+    Non la elimina — cambia stato in 'annullata'.
+    Il numero progressivo rimane visibile nella lista.
+    """
+    uid = user["user_id"]
+    inv = await db.invoices.find_one(
+        {"invoice_id": invoice_id, "user_id": uid},
+        {"_id": 0, "status": 1, "document_number": 1}
+    )
+    if not inv:
+        raise HTTPException(404, "Fattura non trovata")
+
+    status = inv.get("status", "bozza")
+
+    if status == "annullata":
+        raise HTTPException(409, "Fattura già annullata")
+
+    await db.invoices.update_one(
+        {"invoice_id": invoice_id, "user_id": uid},
+        {"$set": {
+            "status": "annullata",
+            "annullata_at": datetime.now(timezone.utc).isoformat(),
+            "annullata_note": "Annullata manualmente",
+        }}
+    )
+    logger.info(
+        f"Fattura {invoice_id} annullata da {uid}"
+    )
+    return {
+        "message": f"Fattura {inv.get('document_number')} annullata",
+        "status": "annullata",
+    }
 
 
 # ── Scadenze / Payment Tracking ─────────────────────────────────
