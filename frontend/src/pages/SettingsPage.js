@@ -1123,22 +1123,37 @@ function BackupTab() {
         setExporting(true);
         try {
             const res = await fetch(`${API}/api/admin/backup/export`, { credentials: 'include' });
-            if (!res.ok) throw new Error('Errore durante il backup');
+            if (!res.ok) throw new Error(`Errore ${res.status}`);
             const blob = await res.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            const disposition = res.headers.get('content-disposition') || '';
-            const match = disposition.match(/filename="(.+)"/);
-            a.href = url;
-            a.download = match ? match[1] : `backup_normafacile_${new Date().toISOString().slice(0,10)}.json`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
+            const blobUrl = URL.createObjectURL(blob);
+
+            // Usa window.top per uscire dall'iframe sandboxed
+            const targetDoc = (window.top || window).document;
+            const link = targetDoc.createElement('a');
+            link.href = blobUrl;
+
+            // Nome file dalla response header o default
+            const disposition = res.headers.get('Content-Disposition') || '';
+            const match = disposition.match(/filename="?(.+?)"?$/);
+            link.download = match ? match[1] : `backup_normafacile_${new Date().toISOString().slice(0, 10)}.json`;
+
+            targetDoc.body.appendChild(link);
+            link.click();
+            targetDoc.body.removeChild(link);
+            URL.revokeObjectURL(blobUrl);
+
             toast.success('Backup scaricato con successo!');
             const lastRes = await apiRequest('/admin/backup/last');
             setLastBackup(lastRes.last_backup);
-        } catch (e) { toast.error(e.message); }
+        } catch (e) {
+            // Fallback: apri in nuovo tab
+            try {
+                window.open(`${API}/api/admin/backup/export`, '_blank');
+                toast.info('Download aperto in nuovo tab');
+            } catch {
+                toast.error(e.message);
+            }
+        }
         finally { setExporting(false); }
     };
 
