@@ -11,7 +11,7 @@ import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../components/ui/table';
 import { toast } from 'sonner';
-import { Plus, FileText, Trash2, CheckCircle2, XCircle, Minus, Copy } from 'lucide-react';
+import { Plus, FileText, Trash2, CheckCircle2, XCircle, Minus, Copy, FolderOpen, ExternalLink } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import EmptyState from '../components/EmptyState';
 import { useConfirm } from '../components/ConfirmProvider';
@@ -78,6 +78,19 @@ export default function PreventiviPage() {
             toast.success(`Preventivo duplicato: ${res.number}`);
             navigate(`/preventivi/${res.preventivo_id}`);
         } catch (e) { toast.error(e.message); }
+    };
+
+    const handleApriCommessa = async (p, e) => {
+        e.stopPropagation();
+        if (p.commessa_id) {
+            navigate(`/commesse/${p.commessa_id}`);
+            return;
+        }
+        try {
+            const res = await apiRequest(`/commesse/from-preventivo/${p.preventivo_id}`, { method: 'POST' });
+            toast.success(`Commessa ${res.numero} creata`);
+            navigate(`/commesse/${res.commessa_id}`);
+        } catch (err) { toast.error(err.message); }
     };
 
     const ComplianceBadge = ({ status, normativa }) => {
@@ -157,6 +170,11 @@ export default function PreventiviPage() {
                                                 <TableCell><Badge className={st.color + ' text-xs'}>{st.label}</Badge></TableCell>
                                                 <TableCell>
                                                     <div className="flex gap-1">
+                                                        {p.status === 'accettato' && (
+                                                            <button data-testid={`btn-commessa-${p.preventivo_id}`} onClick={(e) => handleApriCommessa(p, e)} className={`p-1.5 ${p.commessa_id ? 'text-emerald-500 hover:text-emerald-700' : 'text-amber-500 hover:text-amber-700'}`} title={p.commessa_id ? 'Vai alla Commessa' : 'Apri Commessa'}>
+                                                                {p.commessa_id ? <ExternalLink className="h-3.5 w-3.5" /> : <FolderOpen className="h-3.5 w-3.5" />}
+                                                            </button>
+                                                        )}
                                                         <button data-testid={`btn-clone-${p.preventivo_id}`} onClick={(e) => handleClone(p.preventivo_id, e)} className="p-1.5 text-slate-400 hover:text-amber-600" title="Duplica">
                                                             <Copy className="h-3.5 w-3.5" />
                                                         </button>
