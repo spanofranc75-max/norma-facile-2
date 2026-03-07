@@ -363,9 +363,20 @@ async def list_preventivi(
         elif d.get("_migrated_client_name"):
             d["client_name"] = d["_migrated_client_name"]
         # Compute invoicing progress
-        tot = float(d.get("totals", {}).get("total", 0))
-        invoiced = float(d.get("total_invoiced", 0))
-        d["invoicing_progress"] = round((invoiced / tot * 100), 1) if tot > 0 else 0
+        # Usa imponibile come base (coerente con progressive_amount)
+        # NON il totale IVA inclusa
+        totals_d = d.get("totals", {})
+        tot = float(
+            totals_d.get("imponibile")
+            or totals_d.get("subtotal")
+            or totals_d.get("total")
+            or 0
+        )
+        invoiced = max(float(d.get("total_invoiced", 0)), 0)
+        # max(..., 0) protegge da valori negativi corrotti
+        d["invoicing_progress"] = round(
+            (invoiced / tot * 100), 1
+        ) if tot > 0 else 0
         # Lookup linked commessa stato for row coloring
         linked_comm = await db.commesse.find_one(
             {"user_id": user["user_id"], "$or": [
@@ -401,9 +412,17 @@ async def get_preventivo(prev_id: str, user: dict = Depends(get_current_user)):
                 "status": inv["status"],
             }
     # Compute invoicing progress
-    tot = float(doc.get("totals", {}).get("total", 0))
-    invoiced = float(doc.get("total_invoiced", 0))
-    doc["invoicing_progress"] = round((invoiced / tot * 100), 1) if tot > 0 else 0
+    totals_d = doc.get("totals", {})
+    tot = float(
+        totals_d.get("imponibile")
+        or totals_d.get("subtotal")
+        or totals_d.get("total")
+        or 0
+    )
+    invoiced = max(float(doc.get("total_invoiced", 0)), 0)
+    doc["invoicing_progress"] = round(
+        (invoiced / tot * 100), 1
+    ) if tot > 0 else 0
     return doc
 
 
