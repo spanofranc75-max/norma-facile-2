@@ -94,7 +94,7 @@ async def check_instrument_expirations() -> list[dict]:
 
 def _build_alert_email_html(welder_alerts: list, instrument_alerts: list) -> str:
     """Build a professional HTML email for expiration alerts."""
-    now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+    now_str = datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M")
     total = len(welder_alerts) + len(instrument_alerts)
 
     rows_welders = ""
@@ -218,7 +218,10 @@ async def run_expiration_check(manual: bool = False) -> dict:
             sort=[("checked_at", -1)],
         )
         if last_log and last_log.get("checked_at"):
-            hours_ago = (datetime.now(timezone.utc) - last_log["checked_at"]).total_seconds() / 3600
+            checked_at = last_log["checked_at"]
+            if isinstance(checked_at, datetime) and checked_at.tzinfo is None:
+                checked_at = checked_at.replace(tzinfo=timezone.utc)
+            hours_ago = (datetime.now(timezone.utc) - checked_at).total_seconds() / 3600
             if hours_ago < MIN_HOURS_BETWEEN_EMAILS:
                 logger.info(f"[WATCHDOG] Skip: ultima email inviata {hours_ago:.1f}h fa (min {MIN_HOURS_BETWEEN_EMAILS}h)")
                 return {"skipped": True, "hours_since_last": round(hours_ago, 1)}
