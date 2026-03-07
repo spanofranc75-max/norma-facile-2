@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { apiRequest, formatDateIT } from '../lib/utils';
+import { apiRequest, formatDateIT, downloadFile } from '../lib/utils';
 import DashboardLayout from '../components/DashboardLayout';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -212,25 +212,9 @@ export default function CommessaHubPage() {
 
     const handleDownloadDossier = async () => {
         try {
-            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-            const res = await fetch(`${API}/api/commesse/${commessaId}/dossier`, {
-                credentials: 'include',
-                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-            });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const blob = await res.blob();
-            const blobUrl = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = blobUrl;
-            link.download = `Dossier_${hub?.commessa?.numero || commessaId}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(blobUrl);
+            await downloadFile(`${API}/api/commesse/${commessaId}/dossier`, `Dossier_${hub?.commessa?.numero || commessaId}.pdf`);
             toast.success('Dossier generato');
-        } catch (e) {
-            toast.error(e.message);
-        }
+        } catch (e) { toast.error(e.message); }
     };
 
     const handleCloseSimple = async () => {
@@ -743,21 +727,7 @@ export default function CommessaHubPage() {
                                 data-testid="btn-download-qr"
                                 onClick={async () => {
                                     try {
-                                        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-                                        const res = await fetch(`${API}/api/qrcode/commessa/${commessaId}`, {
-                                            credentials: 'include',
-                                            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-                                        });
-                                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                                        const blob = await res.blob();
-                                        const blobUrl = window.URL.createObjectURL(blob);
-                                        const link = document.createElement('a');
-                                        link.href = blobUrl;
-                                        link.download = `qr_commessa_${c.numero || commessaId}.png`;
-                                        document.body.appendChild(link);
-                                        link.click();
-                                        document.body.removeChild(link);
-                                        window.URL.revokeObjectURL(blobUrl);
+                                        await downloadFile(`${API}/api/qrcode/commessa/${commessaId}`, `qr_commessa_${c.numero || commessaId}.png`);
                                     } catch (e) { toast.error(e.message); }
                                 }}
                             >

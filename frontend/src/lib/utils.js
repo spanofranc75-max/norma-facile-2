@@ -110,3 +110,42 @@ export function truncateText(text, maxLength = 100) {
     if (!text || text.length <= maxLength) return text;
     return text.substring(0, maxLength).trim() + '...';
 }
+
+/**
+ * Download a file from an API endpoint — iframe-safe.
+ * Handles sandbox restrictions by trying multiple strategies.
+ * @param {string} url - Full URL to fetch
+ * @param {string} filename - Suggested filename for download
+ */
+export async function downloadFile(url, filename) {
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(url, { credentials: 'include', headers });
+    if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        let detail = `HTTP ${response.status}`;
+        try { detail = JSON.parse(errText).detail || detail; } catch {}
+        throw new Error(detail);
+    }
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+
+    // Strategy 1: hidden <a> with download attribute + delayed cleanup
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = blobUrl;
+    a.download = filename;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+
+    // Strategy 2 (fallback): if iframe blocks <a> download, open in new tab
+    // The timeout lets strategy 1 attempt first
+    setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+    }, 2000);
+}

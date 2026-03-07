@@ -2,7 +2,7 @@
  * Settings Page - Company Settings
  */
 import { useState, useEffect, useCallback } from 'react';
-import { apiRequest } from '../lib/utils';
+import { apiRequest, downloadFile } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -1122,34 +1122,14 @@ function BackupTab() {
     const handleExport = async () => {
         setExporting(true);
         try {
-            const res = await fetch(`${API}/api/admin/backup/export`, { credentials: 'include' });
-            if (!res.ok) throw new Error(`Errore ${res.status}`);
-            const blob = await res.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            // USA document corrente — NON window.top
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = blobUrl;
-            const disposition = res.headers.get('Content-Disposition') || '';
-            const match = disposition.match(/filename="?(.+?)"?$/);
-            a.download = match ? match[1] : `backup_normafacile_${new Date().toISOString().slice(0, 10)}.json`;
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => {
-                document.body.removeChild(a);
-                URL.revokeObjectURL(blobUrl);
-            }, 1000);
+            const filename = `backup_normafacile_${new Date().toISOString().slice(0, 10)}.json`;
+            await downloadFile(`${API}/api/admin/backup/export`, filename);
             toast.success('Backup scaricato con successo!');
             const lastRes = await apiRequest('/admin/backup/last');
             setLastBackup(lastRes.last_backup);
         } catch (e) {
             console.error('Download backup error:', e.name, e.message);
-            try {
-                window.open(`${API}/api/admin/backup/export`, '_blank');
-                toast.info('Download aperto in nuovo tab');
-            } catch {
-                toast.error(e.message);
-            }
+            toast.error(e.message);
         }
         finally { setExporting(false); }
     };
