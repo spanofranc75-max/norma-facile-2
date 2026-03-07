@@ -1789,6 +1789,51 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
             dry_run=True,  # DON'T create batches — user must confirm first
         )
 
+        # ── VINCOLO DDT: verifica che ogni profilo abbia un arrivo registrato ──
+        comm = await get_commessa_or_404(cid, user["user_id"])
+        arrivi = comm.get("approvvigionamento", {}).get("arrivi", []) or []
+        # Pre-build arrivo lookup: profile_base → (arrivo_id, data_arrivo)
+        arrivo_lookup = {}  # "IPE100" → {"arrivo_id": ..., "data": ...}
+        for arrivo in arrivi:
+            a_id = arrivo.get("arrivo_id", "")
+            a_data_raw = arrivo.get("data_ddt") or arrivo.get("data_arrivo") or ""
+            # Format date as dd/mm/yyyy
+            a_data = ""
+            if a_data_raw:
+                try:
+                    from datetime import datetime as _dt
+                    if "T" in str(a_data_raw):
+                        dt_obj = _dt.fromisoformat(str(a_data_raw).replace("Z", "+00:00"))
+                    else:
+                        dt_obj = _dt.strptime(str(a_data_raw)[:10], "%Y-%m-%d")
+                    a_data = dt_obj.strftime("%d/%m/%Y")
+                except Exception:
+                    a_data = str(a_data_raw)[:10]
+            for mat in arrivo.get("materiali", []):
+                mat_desc = mat.get("descrizione", "")
+                mat_base = _extract_profile_base(mat_desc)
+                if mat_base and mat_base not in arrivo_lookup:
+                    arrivo_lookup[mat_base] = {"arrivo_id": a_id, "data": a_data}
+
+        profili_collegati = 0
+        profili_bolla_mancante = 0
+        for r in risultati_match:
+            dim = r.get("dimensioni", "")
+            cert_base = _extract_profile_base(dim)
+            matched_arrivo = arrivo_lookup.get(cert_base) if cert_base else None
+            if matched_arrivo:
+                r["stato_ddt"] = "ok"
+                r["ddt_arrivo_id"] = matched_arrivo["arrivo_id"]
+                r["ddt_data"] = matched_arrivo["data"]
+                profili_collegati += 1
+            else:
+                r["stato_ddt"] = "bolla_mancante"
+                r["ddt_arrivo_id"] = None
+                r["ddt_data"] = None
+                profili_bolla_mancante += 1
+
+        logger.info(f"[DDT-CHECK] doc {doc_id}: {profili_collegati} con DDT, {profili_bolla_mancante} senza bolla")
+
         # Store match results in document for later confirmation
         await db[DOC_COLL].update_one(
             {"doc_id": doc_id},
@@ -1804,17 +1849,22 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
             metadata["peso_kg"] = first_matched.get("peso_kg")
 
         matched_count = sum(1 for r in risultati_match if r['tipo'] == 'commessa_corrente')
+        msg_parts = [f"{len(profili)} profili trovati", f"{matched_count} corrispondenti all'OdA"]
+        if profili_bolla_mancante:
+            msg_parts.append(f"{profili_bolla_mancante} in attesa di bolla")
         await db[COLL].update_one({"commessa_id": cid}, push_event(
             cid, "CERTIFICATO_ANALIZZATO", user,
-            f"{len(profili)} profili trovati — {matched_count} corrispondenti all'OdA (da confermare)",
+            " — ".join(msg_parts),
             {"doc_id": doc_id, "risultati_match": risultati_match, "metadata": metadata}
         ))
 
         return {
-            "message": f"Certificato analizzato: {matched_count} profili corrispondono all'OdA. Conferma quali importare.",
+            "message": f"Certificato analizzato: {profili_collegati} profili collegati, {profili_bolla_mancante} in attesa di bolla.",
             "metadata": metadata,
             "profili_trovati": len(profili),
             "risultati_match": risultati_match,
+            "profili_collegati": profili_collegati,
+            "profili_bolla_mancante": profili_bolla_mancante,
             "pending_confirm": True,
         }
 
@@ -1871,8 +1921,8 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
         peso = r.get("peso_kg", 0)
         target_cid = r.get("commessa_id", "")
 
-        if i in data.selected_indices and target_cid:
-            # USER SELECTED: create material_batch + CAM lotto
+        if i in data.selected_indices and target_cid and r.get("stato_ddt") != "bolla_mancante":
+            # USER SELECTED + DDT OK: create material_batch + CAM lotto
             batch_id = f"bat_{uuid.uuid4().hex[:10]}"
             await db.material_batches.insert_one({
                 "batch_id": batch_id, "user_id": user["user_id"],
@@ -1913,7 +1963,12 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
             imported_count += 1
             logger.info(f"[CONFIRM] Imported profile '{dim}' colata={colata} to commessa {target_cid}")
         else:
-            # NOT SELECTED or NO MATCH: archive
+            # NOT SELECTED or NO MATCH or BOLLA MANCANTE: archive
+            is_bolla_mancante = r.get("stato_ddt") == "bolla_mancante"
+            note_archivio = (
+                "Nessun arrivo DDT registrato per questo profilo" if is_bolla_mancante
+                else ("Non selezionato dall'utente" if target_cid else "Nessun match OdA")
+            )
             await db.archivio_certificati.update_one(
                 {"heat_number": colata, "source_doc_id": doc_id, "user_id": user["user_id"]},
                 {"$set": {
@@ -1922,7 +1977,9 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
                     "supplier_name": fornitore, "dimensions": dim,
                     "source_doc_id": doc_id, "numero_certificato": n_cert,
                     "peso_kg": float(peso or 0),
-                    "note": "Non selezionato dall'utente" if target_cid else "Nessun match OdA",
+                    "note": note_archivio,
+                    "motivo_archivio": note_archivio if is_bolla_mancante else None,
+                    "stato_tracciabilita": "bolla_mancante" if is_bolla_mancante else None,
                     "created_at": ts(),
                 }},
                 upsert=True,

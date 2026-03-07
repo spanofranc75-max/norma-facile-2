@@ -676,13 +676,17 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
             // Show confirmation dialog with extracted profiles
             setPendingProfiles(matches);
             setPendingDocId(docId);
-            // Pre-select only profiles that match this commessa's OdA
+            // Pre-select only profiles that match this commessa's OdA AND have DDT
             const autoSelected = matches
-                .map((r, i) => r.tipo === 'commessa_corrente' ? i : -1)
+                .map((r, i) => r.tipo === 'commessa_corrente' && r.stato_ddt !== 'bolla_mancante' ? i : -1)
                 .filter(i => i >= 0);
             setSelectedProfileIndices(autoSelected);
             setProfileConfirmOpen(true);
-            toast.info(`${nProfili} profili trovati — seleziona quali importare`, { duration: 4000 });
+            const nBolla = res.profili_bolla_mancante || 0;
+            const msg = nBolla > 0
+                ? `${nProfili} profili trovati — ${nBolla} in attesa di bolla`
+                : `${nProfili} profili trovati — seleziona quali importare`;
+            toast.info(msg, { duration: 4000 });
         } catch (e) { toast.error(e.message); } finally { setParsing(null); }
     };
 
@@ -2967,13 +2971,19 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                     <div className="space-y-1.5 max-h-60 overflow-y-auto">
                         {pendingProfiles.map((p, idx) => {
                             const isMatch = p.tipo === 'commessa_corrente';
+                            const isBollaMancante = p.stato_ddt === 'bolla_mancante';
                             const isSelected = selectedProfileIndices.includes(idx);
+                            const bgClass = isBollaMancante
+                                ? 'bg-amber-50 border-amber-300 opacity-80'
+                                : isSelected ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200 opacity-60';
                             return (
-                                <label key={idx} className={`flex items-start gap-2 text-xs cursor-pointer p-2 rounded border transition-colors ${isSelected ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200 opacity-60'}`}
+                                <label key={idx} className={`flex items-start gap-2 text-xs p-2 rounded border transition-colors ${isBollaMancante ? '' : 'cursor-pointer'} ${bgClass}`}
                                     data-testid={`confirm-profile-${idx}`}>
                                     <Checkbox
-                                        checked={isSelected}
+                                        checked={isSelected && !isBollaMancante}
+                                        disabled={isBollaMancante}
                                         onCheckedChange={(checked) => {
+                                            if (isBollaMancante) return;
                                             setSelectedProfileIndices(prev =>
                                                 checked ? [...prev, idx] : prev.filter(i => i !== idx)
                                             );
@@ -2988,8 +2998,10 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                         </div>
                                         <div className="text-[10px] mt-0.5">
                                             <span className="text-slate-500">{p.qualita_acciaio || ''}</span>
-                                            {isMatch && <span className="ml-2 text-emerald-600 font-medium">Corrisponde all'OdA</span>}
-                                            {p.tipo === 'archivio' && <span className="ml-2 text-amber-600">Non in OdA</span>}
+                                            {p.stato_ddt === 'ok' && <span className="ml-2 text-emerald-600 font-medium">DDT del {p.ddt_data}</span>}
+                                            {isBollaMancante && <span className="ml-2 text-amber-600 font-medium">Nessuna bolla — archivio</span>}
+                                            {isMatch && !isBollaMancante && <span className="ml-2 text-emerald-600 font-medium">Corrisponde all'OdA</span>}
+                                            {p.tipo === 'archivio' && !isBollaMancante && <span className="ml-2 text-amber-600">Non in OdA</span>}
                                             {p.tipo === 'altra_commessa' && <span className="ml-2 text-blue-600">Altra commessa: {p.commessa_numero}</span>}
                                         </div>
                                     </div>
@@ -2998,14 +3010,12 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                         })}
                     </div>
                     <div className="flex gap-2 mt-1">
-                        <button className="text-[10px] text-blue-600 hover:underline" onClick={() => setSelectedProfileIndices(pendingProfiles.map((_, i) => i))}>Seleziona tutti</button>
-                        <button className="text-[10px] text-blue-600 hover:underline" onClick={() => setSelectedProfileIndices(pendingProfiles.filter(p => p.tipo === 'commessa_corrente').map((_, i) => {
-                            // Find the original indices of commessa_corrente profiles
-                            let idx = 0; let count = 0;
+                        <button className="text-[10px] text-blue-600 hover:underline" onClick={() => setSelectedProfileIndices(pendingProfiles.map((p, i) => p.stato_ddt !== 'bolla_mancante' ? i : -1).filter(i => i >= 0))}>Seleziona tutti</button>
+                        <button className="text-[10px] text-blue-600 hover:underline" onClick={() => {
                             const indices = [];
-                            pendingProfiles.forEach((pp, ii) => { if (pp.tipo === 'commessa_corrente') indices.push(ii); });
-                            return indices;
-                        }).flat())}>Solo corrispondenti OdA</button>
+                            pendingProfiles.forEach((pp, ii) => { if (pp.tipo === 'commessa_corrente' && pp.stato_ddt !== 'bolla_mancante') indices.push(ii); });
+                            setSelectedProfileIndices(indices);
+                        }}>Solo con DDT + OdA</button>
                         <button className="text-[10px] text-blue-600 hover:underline" onClick={() => setSelectedProfileIndices([])}>Deseleziona tutti</button>
                     </div>
                     <DialogFooter className="mt-3">
