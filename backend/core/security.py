@@ -168,14 +168,43 @@ async def get_current_user(request: Request) -> dict:
         if auth_header and auth_header.startswith("Bearer "):
             session_token = auth_header[7:]
     
-    # Fallback to query param (for iframe download links)
+    # Fallback to query param — short-lived download token
     if not session_token:
-        session_token = request.query_params.get("token")
+        dl_token = request.query_params.get("token")
+        if dl_token:
+            dl_doc = await db.download_tokens.find_one({"token": dl_token}, {"_id": 0})
+            if dl_doc:
+                # Consume token (one-time use)
+                await db.download_tokens.delete_one({"token": dl_token})
+                expires = dl_doc.get("expires_at")
+                if isinstance(expires, str):
+                    expires = datetime.fromisoformat(expires)
+                if expires and expires.tzinfo is None:
+                    expires = expires.replace(tzinfo=timezone.utc)
+                if expires and expires > datetime.now(timezone.utc):
+                    user = await db.users.find_one(
+                        {"user_id": dl_doc["user_id"]}, {"_id": 0}
+                    )
+                    if user:
+                        return user
+            raise HTTPException(status_code=401, detail="Token di download non valido o scaduto")
     
     if not session_token:
         raise HTTPException(status_code=401, detail="Non autenticato")
     
     return await verify_session(session_token)
+
+
+async def create_download_token(user_id: str) -> str:
+    """Create a short-lived one-time download token (60 seconds)."""
+    token = uuid.uuid4().hex
+    await db.download_tokens.insert_one({
+        "token": token,
+        "user_id": user_id,
+        "expires_at": datetime.now(timezone.utc) + timedelta(seconds=60),
+        "created_at": datetime.now(timezone.utc),
+    })
+    return token
 
 
 async def delete_session(request: Request, response: Response) -> bool:

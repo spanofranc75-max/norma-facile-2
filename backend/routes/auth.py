@@ -58,3 +58,11 @@ async def logout(request: Request, response: Response):
     """
     await delete_session(request, response)
     return {"message": "Logout effettuato con successo"}
+
+
+@router.post("/download-token")
+async def get_download_token(user: dict = Depends(get_current_user)):
+    """Generate a short-lived one-time token for iframe file downloads."""
+    from core.security import create_download_token
+    token = await create_download_token(user["user_id"])
+    return {"token": token}
