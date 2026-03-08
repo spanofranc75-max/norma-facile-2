@@ -2095,6 +2095,23 @@ def _extract_profile_base(text: str) -> str:
         return f"PIATTO{prodcode.group(1)}X{prodcode.group(2)}"
 
     # Normalize compound descriptions → family names
+    # Long compound synonyms first (order matters: longer patterns before shorter)
+    t = re.sub(r'\bBARRA\s+FERRO\s+TOND[AO]?\b', 'TONDO', t)
+    t = re.sub(r'\bBARRA\s+TOND[AO]?\b', 'TONDO', t)
+    t = re.sub(r'\bBARRA\s+FERRO\s+ANGOLARE\b', 'ANGOLARE', t)
+    t = re.sub(r'\bTUBO\s+FERRO\s+QUADRO\b', 'TUBOQ', t)
+    t = re.sub(r'\bTUBO\s+FERRO\s+RETT\.?\w*\b', 'TUBOR', t)
+    t = re.sub(r'\bTUBO\s+QUADRO\b', 'TUBOQ', t)
+    t = re.sub(r'\bTUBO\s+RETT\.?\w*\b', 'TUBOR', t)
+    t = re.sub(r'\bTRAVE\s+HEB\b', 'HEB', t)
+    t = re.sub(r'\bPROFILO\s+HEB\b', 'HEB', t)
+    t = re.sub(r'\bTRAVE\s+HEA\b', 'HEA', t)
+    t = re.sub(r'\bPROFILO\s+HEA\b', 'HEA', t)
+    t = re.sub(r'\bTRAVE\s+IPE\b', 'IPE', t)
+    t = re.sub(r'\bPROFILO\s+IPE\b', 'IPE', t)
+    t = re.sub(r'\bPROFILO\s+UPN\b', 'UPN', t)
+    t = re.sub(r'\bU\s+UPN\b', 'UPN', t)
+    t = re.sub(r'\bPROFILO\s+T\b', 'T', t)
     t = re.sub(r'\bFLAT\b', 'PIATTO', t)
     t = re.sub(r'\bBARRA\s+FERRO\s+PIATT[AO]?\b', 'PIATTO', t)
     t = re.sub(r'\bBARRA\s+PIATT[AO]?\b', 'PIATTO', t)
@@ -2115,7 +2132,7 @@ def _extract_profile_base(text: str) -> str:
     t = re.sub(r'\s+', ' ', t).strip()
 
     # Profiles that need FULL dimensions (width x thickness or width x height x thickness)
-    full_dim_families = r'(PIATTO|TUBO|ANGOLARE|L)'
+    full_dim_families = r'(PIATTO|TUBOQ|TUBOR|TUBO|ANGOLARE|L)'
     match_full = re.search(full_dim_families + r'\s*(\d+X\d+(?:X\d+)?)', t)
     if match_full:
         return f"{match_full.group(1)}{match_full.group(2)}"
