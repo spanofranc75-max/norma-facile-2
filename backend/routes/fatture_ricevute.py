@@ -1442,10 +1442,22 @@ async def sync_fatture_from_fic(
 
             for doc_fic in data_list:
                 fic_id = str(doc_fic.get("id", ""))
-                # Skip if already imported
+                # Skip if already imported (by fic_id OR by fingerprint)
                 existing = await db.fatture_ricevute.find_one(
                     {"user_id": user["user_id"], "fic_id": fic_id}, {"_id": 0, "fr_id": 1}
                 )
+                if not existing:
+                    # Also check by fingerprint: piva + date + total
+                    doc_date = str(doc_fic.get("date", ""))
+                    doc_total = round(float(doc_fic.get("amount_gross", 0)), 2)
+                    entity_piva = (doc_fic.get("entity") or {}).get("vat_number", "")
+                    if entity_piva and doc_date:
+                        existing = await db.fatture_ricevute.find_one({
+                            "user_id": user["user_id"],
+                            "fornitore_piva": entity_piva,
+                            "data_documento": doc_date,
+                            "totale_documento": doc_total,
+                        }, {"_id": 0, "fr_id": 1})
                 if existing:
                     skipped += 1
                     continue
@@ -1491,10 +1503,18 @@ async def sync_fatture_from_fic(
                         if not data_scadenza:
                             data_scadenza = pay_date
                         fic_scadenze.append({
+                            "scadenza_id": f"scd_{uuid.uuid4().hex[:8]}",
+                            "numero_rata": pidx + 1,
+                            "totale_rate": len(payments_list),
                             "rata": pidx + 1,
                             "data_scadenza": pay_date,
                             "importo": round(pay_amount, 2) if pay_amount else 0,
+                            "importo_residuo": 0 if pay_paid else round(pay_amount, 2),
+                            "importo_pagato": round(pay_amount, 2) if pay_paid else 0,
+                            "modalita_pagamento": "",
+                            "stato": "pagata" if pay_paid else "aperta",
                             "pagata": pay_paid,
+                            "origine": "fic",
                         })
                 if not data_scadenza and payments_list:
                     data_scadenza = payments_list[0].get("due_date", "")
@@ -1553,8 +1573,27 @@ async def sync_fatture_from_fic(
                         round(amount_gross, 2)
                     )
                     if scadenze_calc:
-                        fr_doc["scadenze_pagamento"] = scadenze_calc
+                        fr_doc["scadenze_pagamento"] = _enrich_scadenze(scadenze_calc, "fornitore")
                         fr_doc["data_scadenza_pagamento"] = scadenze_calc[-1]["data_scadenza"]
+                # Level 3: Default 30 days
+                if not fr_doc["scadenze_pagamento"] and not fr_doc["data_scadenza_pagamento"]:
+                    doc_date_str = str(doc_fic.get("date", ""))
+                    if doc_date_str and amount_gross > 0:
+                        try:
+                            d0 = date.fromisoformat(doc_date_str)
+                            default_scad = (d0 + timedelta(days=30)).isoformat()
+                            fr_doc["scadenze_pagamento"] = [{
+                                "scadenza_id": f"scd_{uuid.uuid4().hex[:8]}",
+                                "numero_rata": 1, "totale_rate": 1, "rata": 1,
+                                "data_scadenza": default_scad,
+                                "importo": round(amount_gross, 2),
+                                "importo_residuo": round(amount_gross, 2),
+                                "importo_pagato": 0.0, "modalita_pagamento": "",
+                                "stato": "aperta", "pagata": False, "origine": "default_30gg",
+                            }]
+                            fr_doc["data_scadenza_pagamento"] = default_scad
+                        except (ValueError, TypeError):
+                            pass
 
                 try:
                     await db.fatture_ricevute.insert_one(fr_doc)
