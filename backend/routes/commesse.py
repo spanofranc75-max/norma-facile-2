@@ -220,6 +220,8 @@ async def list_commesse(
     status: Optional[str] = Query(None),
     stato: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
     user: dict = Depends(get_current_user),
 ):
     q = {"user_id": user["user_id"]}
@@ -233,10 +235,18 @@ async def list_commesse(
             {"client_name": {"$regex": search, "$options": "i"}},
             {"numero": {"$regex": search, "$options": "i"}},
         ]
-    items = await db[COLLECTION].find(q, {"_id": 0, "eventi": 0}).sort("created_at", -1).to_list(500)
+    total = await db[COLLECTION].count_documents(q)
+    skip = (page - 1) * per_page
+    items = await db[COLLECTION].find(q, {"_id": 0, "eventi": 0}).sort("created_at", -1).skip(skip).limit(per_page).to_list(per_page)
     for item in items:
         ensure_moduli(item)
-    return {"items": items, "total": len(items)}
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": (total + per_page - 1) // per_page,
+    }
 
 
 @router.post("/", status_code=201)

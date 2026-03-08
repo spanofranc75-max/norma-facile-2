@@ -28,7 +28,7 @@ DOC_COLL = "commessa_documents"
 # ── Helpers ──────────────────────────────────────────────────────
 
 async def get_commessa_or_404(commessa_id, uid):
-    doc = await db[COLL].find_one({"commessa_id": commessa_id, "user_id": uid})
+    doc = await db[COLL].find_one({"commessa_id": commessa_id, "user_id": uid}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Commessa non trovata")
     return doc

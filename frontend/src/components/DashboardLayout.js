@@ -16,6 +16,7 @@ import {
     DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
 import { LegalFooter } from './LegalFooter';
+import GlobalSearchBar from './GlobalSearchBar';
 import {
     Sparkles, Receipt, Users, Settings, Ruler, Package, Shield,
     HardHat, Warehouse, ClipboardList, Truck, Factory, ShieldAlert,
@@ -309,7 +310,13 @@ export default function DashboardLayout({ children }) {
             </aside>
 
             {/* Main Content */}
-            <main className="ml-64 p-8 pb-16">{children}</main>
+            <main className="ml-64 min-h-screen">
+                {/* Top bar with search */}
+                <div className="sticky top-0 z-40 bg-slate-50/80 backdrop-blur-sm border-b border-slate-200/60 px-8 py-3 flex items-center justify-end">
+                    <GlobalSearchBar />
+                </div>
+                <div className="p-8 pb-16">{children}</div>
+            </main>
             <div className="ml-64"><LegalFooter /></div>
         </div>
     );

@@ -239,14 +239,31 @@ async def create_preventivo_from_distinta(
     prev_id = f"prev_{uuid.uuid4().hex[:12]}"
     year = now.year
 
-    # Counter
+    # Atomic counter — sync with max existing to avoid gaps/duplicates
+    counter_id = f"PRV-{uid}-{year}"
+    pipeline = [
+        {"$match": {"user_id": uid, "number": {"$regex": f"^PRV-{year}-"}}},
+        {"$project": {"num": {"$toInt": {"$arrayElemAt": [{"$split": ["$number", "-"]}, 2]}}}},
+        {"$sort": {"num": -1}},
+        {"$limit": 1},
+    ]
+    max_doc = await db.preventivi.aggregate(pipeline).to_list(1)
+    max_existing = max_doc[0]["num"] if max_doc else 0
+    existing_counter = await db.document_counters.find_one({"counter_id": counter_id})
+    current_counter = existing_counter.get("counter", 0) if existing_counter else 0
+    if current_counter > max_existing:
+        await db.document_counters.update_one(
+            {"counter_id": counter_id},
+            {"$set": {"counter": max_existing}},
+            upsert=True,
+        )
     counter = await db.document_counters.find_one_and_update(
-        {"counter_id": f"PRV-{uid}-{year}"},
+        {"counter_id": counter_id},
         {"$inc": {"counter": 1}},
         upsert=True,
         return_document=True,
     )
-    seq = counter.get("counter", 1) if counter else 1
+    seq = counter.get("counter", 1)
     number = f"PRV-{year}-{seq:04d}"
 
     # Build lines from distinta items
@@ -344,8 +361,8 @@ async def create_preventivo_from_distinta(
 async def list_preventivi(
     client_id: Optional[str] = None,
     status: Optional[str] = None,
-    skip: int = Query(0, ge=0),
-    limit: int = Query(500, ge=1, le=1000),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
     user: dict = Depends(get_current_user),
 ):
     query = {"user_id": user["user_id"]}
@@ -354,8 +371,9 @@ async def list_preventivi(
     if status:
         query["status"] = status
     total = await db.preventivi.count_documents(query)
-    cursor = db.preventivi.find(query, {"_id": 0}).skip(skip).limit(limit).sort("number", -1)
-    docs = await cursor.to_list(limit)
+    skip = (page - 1) * per_page
+    cursor = db.preventivi.find(query, {"_id": 0}).skip(skip).limit(per_page).sort("number", -1)
+    docs = await cursor.to_list(per_page)
     for d in docs:
         if d.get("client_id"):
             c = await db.clients.find_one({"client_id": d["client_id"]}, {"_id": 0, "business_name": 1})
@@ -389,7 +407,13 @@ async def list_preventivi(
             d["commessa_id"] = linked_comm.get("commessa_id")
             d["commessa_stato"] = linked_comm.get("stato", linked_comm.get("status", ""))
             d["commessa_numero"] = linked_comm.get("numero", "")
-    return {"preventivi": docs, "total": total}
+    return {
+        "preventivi": docs,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": (total + per_page - 1) // per_page,
+    }
 
 
 @router.get("/{prev_id}")

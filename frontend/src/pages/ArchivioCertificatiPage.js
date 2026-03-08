@@ -29,7 +29,7 @@ export default function ArchivioCertificatiPage() {
                 apiRequest('/commesse').catch(() => ({ commesse: [] })),
             ]);
             setArchivio(archRes.archivio || []);
-            setCommesse((commRes.commesse || commRes || []).filter(c => c.stato !== 'completata'));
+            setCommesse((commRes.items || commRes.commesse || commRes || []).filter(c => c.stato !== 'completata'));
         } catch (e) {
             toast.error('Errore caricamento archivio');
         } finally {

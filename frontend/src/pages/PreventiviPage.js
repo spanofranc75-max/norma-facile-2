@@ -54,7 +54,7 @@ export default function PreventiviPage() {
     const fetch_ = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await apiRequest('/preventivi/?limit=500');
+            const data = await apiRequest('/preventivi/?per_page=200');
             setPreventivi(data.preventivi || []);
             setTotalCount(data.total || 0);
         } catch (e) { console.error(e); } finally { setLoading(false); }

@@ -15,6 +15,7 @@ import {
 import {
     Scale, HardHat, FileText, Euro, ArrowRight,
     Calendar, Package, Receipt, TrendingUp, AlertTriangle, CheckCircle, Clock,
+    CircleAlert, Users, Truck, ClipboardCheck,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import QuickActionFAB from '../components/QuickActionFAB';
@@ -49,18 +50,21 @@ export default function Dashboard() {
     const [stats, setStats] = useState(null);
     const [loadingStats, setLoadingStats] = useState(true);
     const [semaforo, setSemaforo] = useState(null);
+    const [briefing, setBriefing] = useState(null);
     const currentUser = user || location.state?.user;
 
     useEffect(() => {
         if (!currentUser) return;
         const fetchStats = async () => {
             try {
-                const [data, sem] = await Promise.all([
+                const [data, sem, brief] = await Promise.all([
                     apiRequest('/dashboard/stats'),
                     apiRequest('/dashboard/semaforo').catch(() => null),
+                    apiRequest('/dashboard/morning-briefing').catch(() => null),
                 ]);
                 setStats(data);
                 setSemaforo(sem);
+                setBriefing(brief);
             } catch (e) {
                 console.error('Dashboard stats error:', e);
             } finally {
@@ -127,6 +131,9 @@ export default function Dashboard() {
                     </h1>
                     <p className="text-sm text-slate-500 mt-1">Cruscotto Officina</p>
                 </div>
+
+                {/* Morning Briefing */}
+                {briefing && <MorningBriefing data={briefing} navigate={navigate} />}
 
                 {/* KPI Cards — Gradient */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -383,5 +390,144 @@ export default function Dashboard() {
             {/* FAB */}
             <QuickActionFAB />
         </DashboardLayout>
+    );
+}
+
+
+const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
+
+function MorningBriefing({ data, navigate }) {
+    const { scadenze_oggi_domani, totale_scadenze_oggi, totale_scadenze_domani,
+            pagamenti_ritardo, totale_importo_ritardo, commesse_allarme, da_fare } = data;
+
+    const hasSomething = scadenze_oggi_domani?.length > 0 || pagamenti_ritardo?.length > 0 ||
+        commesse_allarme?.length > 0 || da_fare?.preventivi_da_convertire > 0 ||
+        da_fare?.ddt_non_fatturati > 0 || da_fare?.fatture_scadute > 0;
+
+    if (!hasSomething) return null;
+
+    return (
+        <div data-testid="morning-briefing" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {/* Card 1: Scadenze oggi/domani */}
+            <Card className="border-slate-200 overflow-hidden" data-testid="briefing-scadenze">
+                <CardHeader className="py-3 px-4 bg-gradient-to-r from-red-50 to-orange-50 border-b">
+                    <CardTitle className="text-xs font-semibold text-slate-700 flex items-center gap-2">
+                        <Calendar className="h-3.5 w-3.5 text-red-500" />
+                        Scadenze Oggi/Domani
+                        {(totale_scadenze_oggi > 0 || totale_scadenze_domani > 0) && (
+                            <span className="ml-auto flex gap-1">
+                                {totale_scadenze_oggi > 0 && <Badge className="bg-red-500 text-white text-[10px] px-1.5">{totale_scadenze_oggi} oggi</Badge>}
+                                {totale_scadenze_domani > 0 && <Badge className="bg-orange-400 text-white text-[10px] px-1.5">{totale_scadenze_domani} domani</Badge>}
+                            </span>
+                        )}
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0 max-h-44 overflow-y-auto">
+                    {scadenze_oggi_domani?.length > 0 ? scadenze_oggi_domani.map((s, i) => (
+                        <div key={i} className={`flex items-center justify-between px-4 py-2 text-xs border-b border-slate-50 ${s.is_oggi ? 'bg-red-50/50' : ''}`}>
+                            <div className="min-w-0">
+                                <p className="font-medium text-slate-700 truncate">{s.fornitore_cliente}</p>
+                                <p className="text-slate-400">{s.numero} ({s.tipo})</p>
+                            </div>
+                            <span className="font-mono font-semibold text-slate-800 shrink-0 ml-2">{fmtEur(s.importo)}</span>
+                        </div>
+                    )) : (
+                        <p className="text-xs text-slate-400 text-center py-6">Nessuna scadenza oggi/domani</p>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Card 2: Pagamenti in ritardo */}
+            <Card className="border-slate-200 overflow-hidden" data-testid="briefing-ritardi">
+                <CardHeader className="py-3 px-4 bg-gradient-to-r from-amber-50 to-yellow-50 border-b">
+                    <CardTitle className="text-xs font-semibold text-slate-700 flex items-center gap-2">
+                        <CircleAlert className="h-3.5 w-3.5 text-amber-500" />
+                        Clienti in Ritardo
+                        {pagamenti_ritardo?.length > 0 && (
+                            <Badge className="ml-auto bg-amber-500 text-white text-[10px] px-1.5">{fmtEur(totale_importo_ritardo)}</Badge>
+                        )}
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0 max-h-44 overflow-y-auto">
+                    {pagamenti_ritardo?.length > 0 ? pagamenti_ritardo.map((p, i) => (
+                        <div key={i} className="flex items-center justify-between px-4 py-2 text-xs border-b border-slate-50">
+                            <div className="min-w-0">
+                                <p className="font-medium text-slate-700 truncate">{p.cliente}</p>
+                                <p className="text-slate-400">{p.numero}</p>
+                            </div>
+                            <div className="text-right shrink-0 ml-2">
+                                <p className="font-mono font-semibold text-slate-800">{fmtEur(p.importo)}</p>
+                                <p className="text-red-500 font-medium">{p.giorni_ritardo}gg</p>
+                            </div>
+                        </div>
+                    )) : (
+                        <p className="text-xs text-emerald-500 text-center py-6">Tutti i pagamenti in regola</p>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Card 3: Commesse in allarme */}
+            <Card className="border-slate-200 overflow-hidden" data-testid="briefing-allarme">
+                <CardHeader className="py-3 px-4 bg-gradient-to-r from-slate-50 to-blue-50 border-b">
+                    <CardTitle className="text-xs font-semibold text-slate-700 flex items-center gap-2">
+                        <AlertTriangle className="h-3.5 w-3.5 text-blue-500" />
+                        Commesse Ferme
+                        {commesse_allarme?.length > 0 && (
+                            <Badge className="ml-auto bg-blue-500 text-white text-[10px] px-1.5">{commesse_allarme.length}</Badge>
+                        )}
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0 max-h-44 overflow-y-auto">
+                    {commesse_allarme?.length > 0 ? commesse_allarme.map((c, i) => (
+                        <div key={i} className="flex items-center justify-between px-4 py-2 text-xs border-b border-slate-50 hover:bg-slate-50 cursor-pointer"
+                            onClick={() => navigate(`/commesse/${c.commessa_id}`)}>
+                            <div className="min-w-0">
+                                <p className="font-medium text-slate-700 truncate">{c.numero} {c.title}</p>
+                                <p className="text-slate-400 truncate">{c.client_name}</p>
+                            </div>
+                            <Badge className="bg-slate-200 text-slate-600 text-[10px] shrink-0 ml-2">{c.giorni_fermo}gg fermo</Badge>
+                        </div>
+                    )) : (
+                        <p className="text-xs text-emerald-500 text-center py-6">Tutte le commesse aggiornate</p>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Card 4: Da fare oggi */}
+            <Card className="border-slate-200 overflow-hidden" data-testid="briefing-dafere">
+                <CardHeader className="py-3 px-4 bg-gradient-to-r from-emerald-50 to-teal-50 border-b">
+                    <CardTitle className="text-xs font-semibold text-slate-700 flex items-center gap-2">
+                        <ClipboardCheck className="h-3.5 w-3.5 text-emerald-500" />
+                        Da Fare Oggi
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="p-3 space-y-2">
+                    {da_fare?.preventivi_da_convertire > 0 && (
+                        <div className="flex items-center gap-2 text-xs cursor-pointer hover:bg-slate-50 rounded p-1.5"
+                            onClick={() => navigate('/preventivi')}>
+                            <span className="w-5 h-5 rounded bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-[10px]">{da_fare.preventivi_da_convertire}</span>
+                            <span className="text-slate-600">Preventivi accettati da convertire</span>
+                        </div>
+                    )}
+                    {da_fare?.ddt_non_fatturati > 0 && (
+                        <div className="flex items-center gap-2 text-xs cursor-pointer hover:bg-slate-50 rounded p-1.5"
+                            onClick={() => navigate('/ddt')}>
+                            <span className="w-5 h-5 rounded bg-violet-100 text-violet-600 flex items-center justify-center font-bold text-[10px]">{da_fare.ddt_non_fatturati}</span>
+                            <span className="text-slate-600">DDT non fatturati (&gt;30gg)</span>
+                        </div>
+                    )}
+                    {da_fare?.fatture_scadute > 0 && (
+                        <div className="flex items-center gap-2 text-xs cursor-pointer hover:bg-slate-50 rounded p-1.5"
+                            onClick={() => navigate('/scadenziario')}>
+                            <span className="w-5 h-5 rounded bg-red-100 text-red-600 flex items-center justify-center font-bold text-[10px]">{da_fare.fatture_scadute}</span>
+                            <span className="text-slate-600">Fatture passive scadute non pagate</span>
+                        </div>
+                    )}
+                    {!da_fare?.preventivi_da_convertire && !da_fare?.ddt_non_fatturati && !da_fare?.fatture_scadute && (
+                        <p className="text-xs text-emerald-500 text-center py-4">Tutto in ordine!</p>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
     );
 }

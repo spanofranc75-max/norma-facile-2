@@ -985,3 +985,189 @@ async def get_cruscotto_finanziario(
         "fatturato_per_cliente": fatturato_per_cliente,
         "fatturato_per_tipologia": fatturato_per_tipologia,
     }
+
+
+
+@router.get("/morning-briefing")
+async def morning_briefing(user: dict = Depends(get_current_user)):
+    """Morning Briefing: scadenze oggi/domani, pagamenti in ritardo, commesse in allarme, azioni da fare."""
+    uid = user["user_id"]
+    now = datetime.now(timezone.utc)
+    today = now.strftime("%Y-%m-%d")
+    tomorrow = (now + timedelta(days=1)).strftime("%Y-%m-%d")
+
+    # ── Card 1: Scadenze oggi e domani ──
+    scadenze_oggi_domani = []
+
+    # Fatture passive (ricevute) con scadenze pagamento
+    fatture_passive = await db.fatture_ricevute.find(
+        {"user_id": uid, "payment_status": {"$nin": ["pagata"]}},
+        {"_id": 0, "fr_id": 1, "fornitore_nome": 1, "numero_documento": 1,
+         "scadenze_pagamento": 1, "data_scadenza_pagamento": 1, "totale_documento": 1}
+    ).to_list(500)
+
+    for f in fatture_passive:
+        scadenze = f.get("scadenze_pagamento") or []
+        if scadenze:
+            for s in scadenze:
+                if s.get("pagata"):
+                    continue
+                ds = str(s.get("data_scadenza", ""))[:10]
+                if ds in (today, tomorrow):
+                    scadenze_oggi_domani.append({
+                        "tipo": "passiva",
+                        "fornitore_cliente": f.get("fornitore_nome", ""),
+                        "numero": f.get("numero_documento", ""),
+                        "importo": s.get("importo", 0),
+                        "data": ds,
+                        "is_oggi": ds == today,
+                    })
+        else:
+            ds = str(f.get("data_scadenza_pagamento", ""))[:10]
+            if ds in (today, tomorrow):
+                scadenze_oggi_domani.append({
+                    "tipo": "passiva",
+                    "fornitore_cliente": f.get("fornitore_nome", ""),
+                    "numero": f.get("numero_documento", ""),
+                    "importo": f.get("totale_documento", 0),
+                    "data": ds,
+                    "is_oggi": ds == today,
+                })
+
+    # Fatture attive con scadenze
+    fatture_attive = await db.invoices.find(
+        {"user_id": uid, "payment_status": {"$nin": ["pagata", "paid"]}},
+        {"_id": 0, "invoice_id": 1, "client_name": 1, "document_number": 1,
+         "scadenze_pagamento": 1, "totals": 1}
+    ).to_list(500)
+
+    for inv in fatture_attive:
+        scadenze = inv.get("scadenze_pagamento") or []
+        for s in scadenze:
+            if s.get("pagata"):
+                continue
+            ds = str(s.get("data_scadenza", ""))[:10]
+            if ds in (today, tomorrow):
+                scadenze_oggi_domani.append({
+                    "tipo": "attiva",
+                    "fornitore_cliente": inv.get("client_name", ""),
+                    "numero": inv.get("document_number", ""),
+                    "importo": s.get("importo", 0),
+                    "data": ds,
+                    "is_oggi": ds == today,
+                })
+
+    scadenze_oggi_domani.sort(key=lambda x: (0 if x["is_oggi"] else 1, x["data"]))
+
+    # ── Card 2: Pagamenti in ritardo (clienti) ──
+    pagamenti_ritardo = []
+    for inv in fatture_attive:
+        scadenze = inv.get("scadenze_pagamento") or []
+        for s in scadenze:
+            if s.get("pagata"):
+                continue
+            ds = str(s.get("data_scadenza", ""))[:10]
+            if ds and ds < today:
+                try:
+                    days_late = (now - datetime.fromisoformat(ds).replace(tzinfo=timezone.utc)).days
+                except Exception:
+                    days_late = 0
+                pagamenti_ritardo.append({
+                    "cliente": inv.get("client_name", ""),
+                    "numero": inv.get("document_number", ""),
+                    "importo": s.get("importo", 0),
+                    "data_scadenza": ds,
+                    "giorni_ritardo": days_late,
+                })
+
+    pagamenti_ritardo.sort(key=lambda x: -x["giorni_ritardo"])
+
+    # ── Card 3: Commesse in allarme (>7gg senza aggiornamenti) ──
+    commesse_allarme = []
+    seven_days_ago = now - timedelta(days=7)
+    commesse_attive = await db.commesse.find(
+        {"user_id": uid, "stato": {"$in": ["in_lavorazione", "lavorazione"]}},
+        {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "client_name": 1,
+         "updated_at": 1, "deadline": 1}
+    ).to_list(200)
+
+    for c in commesse_attive:
+        updated = c.get("updated_at")
+        if isinstance(updated, str):
+            try:
+                updated = datetime.fromisoformat(updated.replace("Z", "+00:00"))
+            except Exception:
+                updated = None
+        if updated and updated.tzinfo is None:
+            updated = updated.replace(tzinfo=timezone.utc)
+        if updated and updated < seven_days_ago:
+            days_stale = (now - updated).days
+            commesse_allarme.append({
+                "commessa_id": c["commessa_id"],
+                "numero": c.get("numero", ""),
+                "title": c.get("title", ""),
+                "client_name": c.get("client_name", ""),
+                "giorni_fermo": days_stale,
+                "deadline": c.get("deadline"),
+            })
+
+    commesse_allarme.sort(key=lambda x: -x["giorni_fermo"])
+
+    # ── Card 4: Da fare oggi ──
+    # Preventivi accettati senza commessa
+    preventivi_da_convertire = await db.preventivi.count_documents({
+        "user_id": uid,
+        "status": "accettato",
+        "hidden_from_planning": {"$ne": True},
+    })
+    # Check if they already have a linked commessa
+    prev_accettati = await db.preventivi.find(
+        {"user_id": uid, "status": "accettato", "hidden_from_planning": {"$ne": True}},
+        {"_id": 0, "preventivo_id": 1}
+    ).to_list(200)
+    prev_ids = [p["preventivo_id"] for p in prev_accettati]
+    linked_count = 0
+    if prev_ids:
+        linked_count = await db.commesse.count_documents({
+            "user_id": uid,
+            "$or": [
+                {"moduli.preventivo_id": {"$in": prev_ids}},
+                {"linked_preventivo_id": {"$in": prev_ids}},
+            ]
+        })
+    preventivi_senza_commessa = max(0, len(prev_ids) - linked_count)
+
+    # DDT non fatturati da >30gg
+    thirty_days_ago = now - timedelta(days=30)
+    ddt_non_fatturati = await db.ddt_documents.count_documents({
+        "user_id": uid,
+        "status": {"$ne": "fatturato"},
+        "created_at": {"$lt": thirty_days_ago},
+    })
+
+    # Fatture passive scadute non pagate
+    fatture_scadute_count = 0
+    for f in fatture_passive:
+        scadenze = f.get("scadenze_pagamento") or []
+        if scadenze:
+            for s in scadenze:
+                if not s.get("pagata") and str(s.get("data_scadenza", ""))[:10] < today:
+                    fatture_scadute_count += 1
+        else:
+            ds = str(f.get("data_scadenza_pagamento", ""))[:10]
+            if ds and ds < today:
+                fatture_scadute_count += 1
+
+    return {
+        "scadenze_oggi_domani": scadenze_oggi_domani[:15],
+        "totale_scadenze_oggi": sum(1 for s in scadenze_oggi_domani if s["is_oggi"]),
+        "totale_scadenze_domani": sum(1 for s in scadenze_oggi_domani if not s["is_oggi"]),
+        "pagamenti_ritardo": pagamenti_ritardo[:15],
+        "totale_importo_ritardo": round(sum(p["importo"] for p in pagamenti_ritardo), 2),
+        "commesse_allarme": commesse_allarme[:10],
+        "da_fare": {
+            "preventivi_da_convertire": preventivi_senza_commessa,
+            "ddt_non_fatturati": ddt_non_fatturati,
+            "fatture_scadute": fatture_scadute_count,
+        },
+    }

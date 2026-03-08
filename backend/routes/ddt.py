@@ -150,6 +150,8 @@ async def list_ddt(
     search: Optional[str] = Query(None),
     date_from: Optional[str] = Query(None),
     date_to: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=200),
     user: dict = Depends(get_current_user),
 ):
     q = {"user_id": user["user_id"]}
@@ -171,7 +173,8 @@ async def list_ddt(
             date_filter["$lte"] = datetime.fromisoformat(date_to).replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
         q["created_at"] = date_filter
     total = await db[COLLECTION].count_documents(q)
-    items = await db[COLLECTION].find(q, {"_id": 0}).sort("created_at", -1).to_list(200)
+    skip = (page - 1) * per_page
+    items = await db[COLLECTION].find(q, {"_id": 0}).sort("created_at", -1).skip(skip).limit(per_page).to_list(per_page)
 
     # Enrich items that have commessa_id with commessa info
     commessa_ids = [d["commessa_id"] for d in items if d.get("commessa_id")]
@@ -191,7 +194,13 @@ async def list_ddt(
         cid = d.get("commessa_id")
         d["commessa_info"] = commessa_map.get(cid) if cid else None
 
-    return {"items": items, "total": total}
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "pages": (total + per_page - 1) // per_page,
+    }
 
 
 # ── Get One ──
