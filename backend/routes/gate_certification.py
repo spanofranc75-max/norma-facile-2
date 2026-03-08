@@ -190,9 +190,9 @@ async def generate_dop_pdf(commessa_id: str, user: dict = Depends(get_current_us
             <tr><td class="lbl">Azionamento:</td><td>{cert.get("azionamento", "").title()}</td></tr>
             <tr><td class="lbl">Norma armonizzata:</td><td>EN 13241:2003+A2:2016</td></tr>
             <tr><td class="lbl">Commessa:</td><td>{num} — {commessa.get("title", "") if commessa else ""}</td></tr>
-            <tr><td class="lbl">Cliente:</td><td>{client_name}</td></tr>
-            <tr><td class="lbl">Dimensioni:</td><td>{cert.get("larghezza_mm", "—")} x {cert.get("altezza_mm", "—")} mm</td></tr>
-            <tr><td class="lbl">Peso:</td><td>{cert.get("peso_kg", "—")} kg</td></tr>
+            <tr><td class="lbl">Cliente:</td><td>{client_name or "—"}</td></tr>
+            <tr><td class="lbl">Dimensioni:</td><td>{cert.get("larghezza_mm") or "—"} x {cert.get("altezza_mm") or "—"} mm</td></tr>
+            <tr><td class="lbl">Peso:</td><td>{cert.get("peso_kg") or "—"} kg</td></tr>
         </table>
 
         <h2>2. Fabbricante</h2>
@@ -261,7 +261,7 @@ async def generate_ce_label_pdf(commessa_id: str, user: dict = Depends(get_curre
             <table style="width:90%;margin:0 auto;font-size:8pt;border:none;">
                 <tr><td style="border:none;text-align:right;width:50%;font-weight:700;padding:1mm;">Tipo:</td><td style="border:none;text-align:left;padding:1mm;">{tipo_label}</td></tr>
                 <tr><td style="border:none;text-align:right;font-weight:700;padding:1mm;">Norma:</td><td style="border:none;text-align:left;padding:1mm;">EN 13241:2003+A2:2016</td></tr>
-                <tr><td style="border:none;text-align:right;font-weight:700;padding:1mm;">Dimensioni:</td><td style="border:none;text-align:left;padding:1mm;">{cert.get("larghezza_mm", "—")} x {cert.get("altezza_mm", "—")} mm</td></tr>
+                <tr><td style="border:none;text-align:right;font-weight:700;padding:1mm;">Dimensioni:</td><td style="border:none;text-align:left;padding:1mm;">{cert.get("larghezza_mm") or "—"} x {cert.get("altezza_mm") or "—"} mm</td></tr>
                 <tr><td style="border:none;text-align:right;font-weight:700;padding:1mm;">Vento:</td><td style="border:none;text-align:left;padding:1mm;">{cert.get("resistenza_vento", "NPD")}</td></tr>
                 <tr><td style="border:none;text-align:right;font-weight:700;padding:1mm;">Commessa:</td><td style="border:none;text-align:left;padding:1mm;">{num}</td></tr>
                 <tr><td style="border:none;text-align:right;font-weight:700;padding:1mm;">Anno:</td><td style="border:none;text-align:left;padding:1mm;">{datetime.now().year}</td></tr>
@@ -310,7 +310,7 @@ async def generate_maintenance_register_pdf(commessa_id: str, user: dict = Depen
         <table class="info">
             <tr><td class="lbl">Tipo:</td><td>{tipo_label} — {cert.get("azionamento", "").title()}</td></tr>
             <tr><td class="lbl">Commessa:</td><td>{num} — {commessa.get("title", "") if commessa else ""}</td></tr>
-            <tr><td class="lbl">Cliente:</td><td>{client_name}</td></tr>
+            <tr><td class="lbl">Cliente:</td><td>{client_name or "—"}</td></tr>
             <tr><td class="lbl">Installatore:</td><td>{company.get("business_name", "")}</td></tr>
             <tr><td class="lbl">Motore:</td><td>{cert.get("motore_marca", "")} {cert.get("motore_modello", "")} — Matr. {cert.get("motore_matricola", "")}</td></tr>
             <tr><td class="lbl">Fotocellule:</td><td>{cert.get("fotocellule", "")}</td></tr>
@@ -389,9 +389,9 @@ async def generate_ce_declaration_pdf(commessa_id: str, user: dict = Depends(get
         <table class="info">
             <tr><td class="lbl">Tipo:</td><td>{tipo_label}</td></tr>
             <tr><td class="lbl">Azionamento:</td><td>{cert.get("azionamento", "").title()}</td></tr>
-            <tr><td class="lbl">Dimensioni:</td><td>{cert.get("larghezza_mm", "—")} x {cert.get("altezza_mm", "—")} mm — Peso: {cert.get("peso_kg", "—")} kg</td></tr>
+            <tr><td class="lbl">Dimensioni:</td><td>{cert.get("larghezza_mm") or "—"} x {cert.get("altezza_mm") or "—"} mm — Peso: {cert.get("peso_kg") or "—"} kg</td></tr>
             <tr><td class="lbl">Commessa:</td><td>{num} — {commessa.get("title", "") if commessa else ""}</td></tr>
-            <tr><td class="lbl">Cliente:</td><td>{client_name}</td></tr>
+            <tr><td class="lbl">Cliente:</td><td>{client_name or "—"}</td></tr>
         </table>
 
         <h2>2. Fabbricante / Installatore</h2>
