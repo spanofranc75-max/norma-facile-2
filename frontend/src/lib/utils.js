@@ -18,19 +18,10 @@ export const API_BASE = `${BACKEND_URL}/api`;
  * Download PDF blob escaping the iframe sandbox.
  * Apre il blob URL in una nuova tab tramite window.top per uscire dall'iframe.
  */
-export async function downloadPdfBlob(endpoint, filename) {
+export function downloadPdfBlob(endpoint, filename) {
     const token = localStorage.getItem('token');
-    const response = await fetch(`${API_BASE}${endpoint}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (!response.ok) throw new Error(`Errore download: ${response.status}`);
-    const blob = await response.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    try {
-        (window.top || window).open(blobUrl, '_blank');
-    } finally {
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
-    }
+    const url = `${API_BASE}${endpoint}${endpoint.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}&download=1`;
+    (window.top || window).open(url, '_blank');
 }
 
 /**
