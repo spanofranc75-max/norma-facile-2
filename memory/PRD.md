@@ -32,13 +32,20 @@ Italiano
 - IVA trimestrale
 - Riconciliazione bancaria (import CSV, matching transazioni)
 
-### Correzioni e miglioramenti
+### Stabilizzazione codebase (2026-03-08)
+1. **Atomic counter preventivi** — Tutti e 3 i path di creazione (create, from-distinta, clone) ora usano find_one_and_update con sync al max esistente
+2. **Serializer MongoDB** — Helper centralizzato in core/serializer.py + fix _id:0 su get_commessa_or_404
+3. **Indici MongoDB** — 18 indici creati su commesse, preventivi, fatture_ricevute, invoices, movimenti_bancari, clients, ddt_documents, material_batches, document_counters
+4. **Paginazione** — GET /api/commesse/, /api/preventivi/, /api/ddt/ ora supportano page/per_page con metadata paginazione
+5. **Search globale** — GET /api/search/?q= cerca in commesse, preventivi, clienti, DDT. Frontend: GlobalSearchBar con debounce, keyboard nav (Ctrl+K)
+6. **Morning Briefing** — GET /api/dashboard/morning-briefing con 4 card: scadenze oggi/domani, pagamenti in ritardo, commesse ferme, azioni da fare
+
+### Correzioni precedenti
 - Counter atomico commesse (find_one_and_update su counters)
 - Fix "preventivi riapparenti" su planning board (hidden_from_planning)
 - Schema material_batches unificato + migrazione dati
 - Fix crea_consegna -> push ddt_id su commessa
 - Fix download DDT iframe (downloadPdfBlob)
-- Alert email scadenze: skeleton backend implementato (IN PROGRESS)
 
 ## Backlog prioritizzato
 
@@ -47,7 +54,6 @@ Italiano
 
 ### P1 — Alta priorità
 - Completare alert email giornalieri scadenze (template HTML, test invio Resend)
-- Fix numerazione preventivi duplicati (atomic counter come commesse)
 
 ### P2 — Media priorità
 - Impostazioni utente per alert email (opt-in, indirizzo, giorni preavviso)
@@ -60,3 +66,13 @@ Italiano
 - PWA per accesso offline
 - Migrazione immagini Base64 -> object storage
 - Refactoring CommessaOpsPanel.js
+
+## File chiave
+- `/app/backend/routes/sdi_import.py` — Parser SDI XML (da fixare)
+- `/app/backend/services/notification_scheduler.py` — Alert email (in progress)
+- `/app/backend/core/serializer.py` — Serializer MongoDB
+- `/app/backend/routes/search.py` — Search globale
+- `/app/backend/scripts/create_indexes.py` — Script indici
+- `/app/frontend/src/components/GlobalSearchBar.js` — Barra ricerca
+- `/app/frontend/src/components/DashboardLayout.js` — Layout con search
+- `/app/frontend/src/pages/Dashboard.js` — Morning Briefing
