@@ -132,29 +132,48 @@ def generate_perizia_pdf(doc: dict, company: dict = None) -> BytesIO:
                 f"{float(v.get('totale', 0)):.2f}",
             ])
 
-        # Total row
-        total_perizia = doc.get("total_perizia", sum(v.get("totale", 0) for v in voci))
+        # Total row — breakdown with subtotal, maggiorazioni, sconto
+        # Separate normal voci from adjustment voci
+        voci_lavoro = [v for v in voci if v.get("codice", "") not in ("ACC.01", "SCO.01")]
+        voce_accesso = next((v for v in voci if v.get("codice") == "ACC.01"), None)
+        voce_sconto = next((v for v in voci if v.get("codice") == "SCO.01"), None)
+
+        subtotale_lavori = sum(v.get("totale", 0) for v in voci_lavoro)
+        total_perizia = sum(v.get("totale", 0) for v in voci)
+
+        # Subtotale lavori
+        cost_data.append(["", "", "", "", "Subtotale lavori:", f"{subtotale_lavori:.2f}"])
+        if voce_accesso:
+            cost_data.append(["", "", "", "", "Magg. accesso difficile (+15%):", f"{voce_accesso['totale']:.2f}"])
+        if voce_sconto:
+            cost_data.append(["", "", "", "", "Sconto cortesia:", f"{voce_sconto['totale']:.2f}"])
         cost_data.append(["", "", "", "", "TOTALE PERIZIA:", f"{total_perizia:.2f} EUR"])
 
+        # Calculate row styling offsets
+        num_summary_rows = 2 + (1 if voce_accesso else 0) + (1 if voce_sconto else 0)
+
         ct = Table(cost_data, colWidths=[12 * mm, usable_w - 88 * mm, 14 * mm, 14 * mm, 24 * mm, 24 * mm])
-        ct.setStyle(TableStyle([
+        style_cmds = [
             ("BACKGROUND", (0, 0), (-1, 0), DARK),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
             ("FONTSIZE", (0, 0), (-1, -1), 8),
             ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
-            ("GRID", (0, 0), (-1, -2), 0.4, colors.Color(0.85, 0.85, 0.85)),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -2), [colors.white, LIGHT]),
+            ("GRID", (0, 0), (-1, -(num_summary_rows + 1)), 0.4, colors.Color(0.85, 0.85, 0.85)),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -(num_summary_rows + 1)), [colors.white, LIGHT]),
             ("TOPPADDING", (0, 0), (-1, -1), 2),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            # Total row
-            ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+            # Summary rows
+            ("LINEABOVE", (0, -num_summary_rows), (-1, -num_summary_rows), 0.8, colors.Color(0.7, 0.7, 0.7)),
+            ("FONTNAME", (4, -num_summary_rows), (5, -1), "Helvetica-Bold"),
+            # Grand total row
             ("FONTSIZE", (0, -1), (-1, -1), 10),
             ("TEXTCOLOR", (5, -1), (5, -1), BLUE),
             ("LINEABOVE", (0, -1), (-1, -1), 1.5, DARK),
             ("TOPPADDING", (0, -1), (-1, -1), 4),
-        ]))
+        ]
+        ct.setStyle(TableStyle(style_cmds))
         elements.append(ct)
     else:
         elements.append(Paragraph("(Nessuna voce di costo inserita)", small_style))

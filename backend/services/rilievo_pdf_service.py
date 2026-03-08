@@ -91,25 +91,62 @@ class RilievoPDFService:
                 base64_string = base64_string.split(',')[1]
             
             image_data = base64.b64decode(base64_string)
-            image_buffer = BytesIO(image_data)
-            
-            img = Image(image_buffer)
-            
-            # Calculate aspect ratio and resize
-            aspect = img.imageWidth / img.imageHeight
-            
-            if img.imageWidth > max_width:
-                img.drawWidth = max_width
-                img.drawHeight = max_width / aspect
-            
-            if img.drawHeight > max_height:
-                img.drawHeight = max_height
-                img.drawWidth = max_height * aspect
-            
-            return img
+            return RilievoPDFService._bytes_to_image(image_data, max_width, max_height)
         except Exception as e:
             logger.error(f"Error converting base64 to image: {e}")
             return None
+
+    @staticmethod
+    def _bytes_to_image(image_data: bytes, max_width: float = 160*mm, max_height: float = 120*mm):
+        """Convert raw bytes to ReportLab Image with scaling."""
+        try:
+            image_buffer = BytesIO(image_data)
+            img = Image(image_buffer)
+            aspect = img.imageWidth / img.imageHeight
+            if img.imageWidth > max_width:
+                img.drawWidth = max_width
+                img.drawHeight = max_width / aspect
+            if img.drawHeight > max_height:
+                img.drawHeight = max_height
+                img.drawWidth = max_height * aspect
+            return img
+        except Exception as e:
+            logger.error(f"Error creating image from bytes: {e}")
+            return None
+
+    @staticmethod
+    def _load_photo_image(photo: dict, max_width: float = 80*mm, max_height: float = 60*mm):
+        """Load a photo image from object storage or legacy base64."""
+        # New format: object storage
+        if isinstance(photo, dict) and photo.get('storage_path'):
+            try:
+                from services.object_storage import get_object
+                data, _ = get_object(photo['storage_path'])
+                return RilievoPDFService._bytes_to_image(data, max_width, max_height)
+            except Exception as e:
+                logger.warning(f"Failed to load photo from storage: {e}")
+                return None
+        # Legacy format: base64 in image_data
+        if isinstance(photo, dict) and photo.get('image_data'):
+            return RilievoPDFService.base64_to_image(photo['image_data'], max_width, max_height)
+        return None
+
+    @staticmethod
+    def _load_sketch_bg(sketch: dict, max_width: float = 160*mm, max_height: float = 120*mm):
+        """Load sketch background from object storage or legacy base64."""
+        # New format: object storage
+        if sketch.get('background_storage_path'):
+            try:
+                from services.object_storage import get_object
+                data, _ = get_object(sketch['background_storage_path'])
+                return RilievoPDFService._bytes_to_image(data, max_width, max_height)
+            except Exception as e:
+                logger.warning(f"Failed to load sketch bg from storage: {e}")
+                return None
+        # Legacy format: base64
+        if sketch.get('background_image'):
+            return RilievoPDFService.base64_to_image(sketch['background_image'], max_width, max_height)
+        return None
     
     @staticmethod
     def generate_rilievo_pdf(rilievo: dict, client: dict, company: dict) -> bytes:
@@ -177,12 +214,9 @@ class RilievoPDFService:
                 elements.append(Paragraph(f"<b>{sketch_name}</b>", styles['SmallText']))
                 
                 # Try to render background image with drawing overlay
-                # For now, we'll render the background image if available
-                bg_image = sketch.get('background_image')
-                if bg_image:
-                    img = RilievoPDFService.base64_to_image(bg_image)
-                    if img:
-                        elements.append(img)
+                bg_img = RilievoPDFService._load_sketch_bg(sketch)
+                if bg_img:
+                    elements.append(bg_img)
                 
                 # Show dimensions if available
                 dimensions = sketch.get('dimensions', {})
@@ -204,15 +238,9 @@ class RilievoPDFService:
             
             for i, photo in enumerate(photos):
                 photo_name = photo.get('name') or photo.get('caption') or f"Foto {i + 1}"
-                image_data = photo.get('image_data')
                 
-                if image_data:
-                    img = RilievoPDFService.base64_to_image(
-                        image_data, 
-                        max_width=80*mm, 
-                        max_height=60*mm
-                    )
-                    if img:
+                img = RilievoPDFService._load_photo_image(photo, max_width=80*mm, max_height=60*mm)
+                if img:
                         # Create a vertical layout with image and caption
                         cell_content = Table([[img], [Paragraph(photo_name, styles['SmallText'])]])
                         cell_content.setStyle(TableStyle([
