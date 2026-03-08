@@ -6,7 +6,7 @@ from datetime import datetime
 
 class DDTLine(BaseModel):
     line_id: Optional[str] = None
-    codice_articolo: str = ""
+    codice_articolo: Optional[str] = ""
     description: str = ""
     unit: str = "pz"
     quantity: float = 0
