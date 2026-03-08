@@ -2992,9 +2992,10 @@ async def crea_consegna(cid: str, data: ConsegnaCreate, user: dict = Depends(get
     # Build DDT lines from PREVENTIVO descriptions (not material batches)
     lines = []
     preventivo = None
-    if comm.get("preventivo_id"):
+    prev_id = comm.get("preventivo_id") or (comm.get("moduli") or {}).get("preventivo_id") or comm.get("linked_preventivo_id")
+    if prev_id:
         preventivo = await db.preventivi.find_one(
-            {"preventivo_id": comm["preventivo_id"]}, {"_id": 0}
+            {"preventivo_id": prev_id}, {"_id": 0}
         )
 
     if preventivo and preventivo.get("lines"):
