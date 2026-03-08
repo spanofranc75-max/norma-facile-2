@@ -23,25 +23,30 @@ Italiano
 - AI parsing certificati (OCR + analisi)
 
 ### Modulo contabile/finanziario
-- **Import fatture SDI con rate multiple (FIXED 2026-03-08):**
-  - Parsing completo di tutti i `<DettaglioPagamento>` con schema arricchito (scadenza_id, numero_rata, totale_rate, importo_residuo, stato, modalita_pagamento, origine)
-  - Fallback Level 1: scadenze da XML
-  - Fallback Level 2: condizioni pagamento fornitore (ricerca per P.IVA e CF)
-  - Fallback Level 3: default 30gg dalla data fattura
+- **Import fatture SDI (FIXED 2026-03-08):**
+  - Parsing completo di tutti i `<DettaglioPagamento>` con schema arricchito
+  - Fallback 3 livelli: XML → condizioni fornitore → default 30gg
   - Preview XML con scadenze calcolate + banner origine + duplicate detection
-- Scadenziario unificato attive+passive con aging (0-30, 31-60, 61-90, >90gg)
+  - **Deduplicazione robusta**: $or (numero+piva+data | piva+data+totale) + indice unique su fr_id
+  - Response batch con `dettaglio_saltate` e riepilogo
+  - Fix applicato a: import-xml, import-xml-batch, preview-xml, sync-fic
+- Scadenziario unificato attive+passive con aging
 - Cruscotto finanziario con DSO/DPO, fatturato per cliente/tipologia
-- Export scadenziario XLSX (openpyxl) e PDF (WeasyPrint)
-- Cash flow previsionale e consuntivo
+- Export scadenziario XLSX/PDF
 - Riconciliazione bancaria (import CSV, matching transazioni)
 
 ### Stabilizzazione codebase (2026-03-08)
-1. Atomic counter preventivi (tutti e 3 i path: create, from-distinta, clone)
-2. Serializer MongoDB centralizzato (core/serializer.py) + fix _id:0 su get_commessa_or_404
-3. 18 indici MongoDB su collection critiche
-4. Paginazione su commesse, preventivi, DDT (page/per_page con metadata)
-5. Search globale (endpoint + componente React con debounce, Ctrl+K, keyboard nav)
-6. Morning Briefing dashboard (4 card: scadenze oggi/domani, ritardi, commesse ferme, azioni)
+1. Atomic counter preventivi (3 path: create, from-distinta, clone)
+2. Serializer MongoDB centralizzato + fix _id:0 su get_commessa_or_404
+3. 18+ indici MongoDB su collection critiche + unique index fr_id
+4. Paginazione su commesse, preventivi, DDT
+5. Search globale (endpoint + componente React con debounce, Ctrl+K)
+6. Morning Briefing dashboard (4 card)
+
+### Data cleanup (2026-03-08)
+- Rimossi 144+37 duplicati fatture ricevute (da 218 → 54 uniche)
+- Migrato 21 scadenze dal vecchio al nuovo schema
+- Fix dedup sync FIC con fingerprint robusto
 
 ## Backlog prioritizzato
 
@@ -59,12 +64,3 @@ Italiano
 - PWA per accesso offline
 - Migrazione immagini Base64 -> object storage
 - Refactoring CommessaOpsPanel.js
-
-## File chiave
-- `/app/backend/routes/fatture_ricevute.py` — Parser SDI XML (FIXED), import, preview, CRUD
-- `/app/backend/services/payment_calculator.py` — Calcolo scadenze da condizioni pagamento
-- `/app/backend/routes/search.py` — Search globale
-- `/app/backend/routes/dashboard.py` — Morning Briefing + KPI
-- `/app/backend/core/serializer.py` — Serializer MongoDB
-- `/app/frontend/src/pages/FattureRicevutePage.js` — UI fatture ricevute con preview import
-- `/app/frontend/src/components/GlobalSearchBar.js` — Barra ricerca globale
