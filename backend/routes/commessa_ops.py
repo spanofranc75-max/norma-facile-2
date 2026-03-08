@@ -1949,11 +1949,11 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
                 "source_doc_id": doc_id, "commessa_id": target_cid,
                 "numero_certificato": n_cert,
                 "peso_kg": float(peso or 0),
-                "notes": f"Confermato da utente - cert {n_cert}", "created_at": ts(),
+                "notes": f"Confermato da utente - cert {n_cert}",
             }
             await db.material_batches.update_one(
                 {"commessa_id": target_cid, "heat_number": colata, "dimensions": dim},
-                {"$set": batch_data, "$setOnInsert": {"batch_id": batch_id}},
+                {"$set": batch_data, "$setOnInsert": {"batch_id": batch_id, "created_at": ts()}},
                 upsert=True,
             )
 
@@ -1997,11 +1997,11 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
                 "peso_kg": float(peso or 0),
                 "ddt_presente": False,
                 "stato_tracciabilita": "archivio",
-                "notes": f"Importato senza DDT - cert {n_cert}", "created_at": ts(),
+                "notes": f"Importato senza DDT - cert {n_cert}",
             }
             await db.material_batches.update_one(
                 {"commessa_id": target_cid or cid, "heat_number": colata, "dimensions": dim},
-                {"$set": batch_data_bm, "$setOnInsert": {"batch_id": batch_id}},
+                {"$set": batch_data_bm, "$setOnInsert": {"batch_id": batch_id, "created_at": ts()}},
                 upsert=True,
             )
             await db.archivio_certificati.update_one(
