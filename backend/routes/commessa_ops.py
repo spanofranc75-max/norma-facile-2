@@ -1921,7 +1921,7 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
     await db.archivio_certificati.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"]})
 
     # Process only selected profiles
-    metadata = doc.get("metadata", {})
+    metadata = doc.get("metadata_estratti") or doc.get("metadata") or {}
     n_cert = metadata.get("numero_certificato", "")
     fornitore = metadata.get("fornitore", "")
     acciaieria = metadata.get("acciaieria", "")
