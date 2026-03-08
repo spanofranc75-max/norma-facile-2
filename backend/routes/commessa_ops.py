@@ -419,6 +419,14 @@ async def register_arrivo_materiale(cid: str, data: ArrivoMateriale, user: dict 
                         "note": f"Creato automaticamente da resto arrivo DDT {data.ddt_fornitore}",
                         "created_at": now_stock,
                         "updated_at": now_stock,
+                        "numero_colata": None,
+                        "heat_number": None,
+                        "acciaieria": None,
+                        "qualita_acciaio": None,
+                        "normativa_riferimento": None,
+                        "source_cert_id": None,
+                        "metodo_produttivo": None,
+                        "percentuale_riciclato": None,
                     }
                     await db.articoli.insert_one(art_doc)
                     stock_updates.append(f"{qty_remainder} {um} di {desc[:40]} → nuovo articolo magazzino")
