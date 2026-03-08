@@ -70,6 +70,7 @@ export default function EBITDAPage() {
         { id: 'iva', label: 'IVA Trimestrale' },
         { id: 'scadenzario', label: 'Scadenzario' },
         { id: 'margini', label: 'Margini Commesse' },
+        { id: 'analisi', label: 'Analisi' },
     ];
 
     return (
@@ -121,6 +122,7 @@ export default function EBITDAPage() {
                         {activeTab === 'iva' && <IvaTab iva={iva} ivaAnnuale={data?.iva_annuale} year={year} />}
                         {activeTab === 'scadenzario' && <ScadenzarioTab clienti={data?.scadenzario_clienti} fornitori={data?.scadenzario_fornitori} totaleCrediti={data?.totale_crediti} totaleDebiti={data?.totale_debiti} fornitoriScaduti={data?.fornitori_scaduti} />}
                         {activeTab === 'margini' && <MarginiTab top={data?.top_margin} bottom={data?.bottom_margin} />}
+                        {activeTab === 'analisi' && <AnalisiTab data={data} />}
                     </>
                 )}
             </div>
@@ -630,6 +632,115 @@ function MarginRow({ item, rank, negative }) {
                     {fmt(item.margine)} <span className="text-xs">({item.margine_pct}%)</span>
                 </p>
             </div>
+        </div>
+    );
+}
+
+
+/* ───────── Analisi Tab: DSO/DPO, Fatturato per cliente, Fatturato per tipologia ───────── */
+function AnalisiTab({ data }) {
+    const dso = data?.dso ?? 0;
+    const dpo = data?.dpo ?? 0;
+    const fatCliente = data?.fatturato_per_cliente || [];
+    const fatTipo = data?.fatturato_per_tipologia || [];
+    const totCrediti = data?.totale_crediti || 0;
+    const totDebiti = data?.totale_debiti || 0;
+
+    const fmt = (v) => v == null ? '—' : new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v);
+    const maxCliente = fatCliente.length > 0 ? Math.max(...fatCliente.map(c => c.totale)) : 1;
+    const maxTipo = fatTipo.length > 0 ? Math.max(...fatTipo.map(t => t.totale)) : 1;
+
+    return (
+        <div className="space-y-5">
+            {/* DSO / DPO + Posizione debitoria/creditoria */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <Card className="border-gray-200" data-testid="dso-card">
+                    <CardContent className="p-4 text-center">
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">DSO</p>
+                        <p className="text-2xl font-bold text-slate-800 font-mono">{dso}<span className="text-sm text-slate-400 ml-1">gg</span></p>
+                        <p className="text-[10px] text-slate-500 mt-1">Giorni medi incasso</p>
+                    </CardContent>
+                </Card>
+                <Card className="border-gray-200" data-testid="dpo-card">
+                    <CardContent className="p-4 text-center">
+                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">DPO</p>
+                        <p className="text-2xl font-bold text-slate-800 font-mono">{dpo}<span className="text-sm text-slate-400 ml-1">gg</span></p>
+                        <p className="text-[10px] text-slate-500 mt-1">Giorni medi pagamento</p>
+                    </CardContent>
+                </Card>
+                <Card className="border-gray-200" data-testid="crediti-card">
+                    <CardContent className="p-4 text-center">
+                        <p className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider mb-1">Crediti Aperti</p>
+                        <p className="text-xl font-bold text-emerald-700 font-mono">{fmt(totCrediti)}</p>
+                        <p className="text-[10px] text-slate-500 mt-1">Da incassare</p>
+                    </CardContent>
+                </Card>
+                <Card className="border-gray-200" data-testid="debiti-card">
+                    <CardContent className="p-4 text-center">
+                        <p className="text-[10px] font-semibold text-red-600 uppercase tracking-wider mb-1">Debiti Aperti</p>
+                        <p className="text-xl font-bold text-red-700 font-mono">{fmt(totDebiti)}</p>
+                        <p className="text-[10px] text-slate-500 mt-1">Da pagare</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Fatturato per Cliente */}
+            <Card className="border-gray-200" data-testid="fatturato-cliente">
+                <CardContent className="p-4">
+                    <h3 className="text-sm font-semibold text-slate-700 mb-3">Fatturato per Cliente (Top 10)</h3>
+                    {fatCliente.length === 0 ? (
+                        <p className="text-xs text-slate-400 text-center py-4">Nessun dato disponibile</p>
+                    ) : (
+                        <div className="space-y-2">
+                            {fatCliente.map((c, i) => (
+                                <div key={c.client_id || i} className="flex items-center gap-3">
+                                    <span className="text-xs text-slate-500 w-5 text-right font-mono">{i + 1}.</span>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-baseline mb-0.5">
+                                            <span className="text-xs font-medium text-slate-700 truncate">{c.nome}</span>
+                                            <span className="text-xs font-mono font-semibold text-slate-800 ml-2 shrink-0">{fmt(c.totale)}</span>
+                                        </div>
+                                        <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                                            <div className="h-full rounded-full bg-blue-500" style={{ width: `${(c.totale / maxCliente) * 100}%` }} />
+                                        </div>
+                                    </div>
+                                    <span className="text-[10px] text-slate-400 shrink-0">{c.n_fatture} fatt.</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Fatturato per Tipologia */}
+            <Card className="border-gray-200" data-testid="fatturato-tipologia">
+                <CardContent className="p-4">
+                    <h3 className="text-sm font-semibold text-slate-700 mb-3">Valore Commesse per Tipologia</h3>
+                    {fatTipo.length === 0 ? (
+                        <p className="text-xs text-slate-400 text-center py-4">Nessun dato disponibile</p>
+                    ) : (
+                        <div className="space-y-2">
+                            {fatTipo.map((t, i) => {
+                                const label = { EN_1090: 'EN 1090', EN_13241: 'EN 13241', NESSUNA: 'Senza normativa' }[t.tipologia] || t.tipologia;
+                                const colors = { EN_1090: 'bg-sky-500', EN_13241: 'bg-amber-500', NESSUNA: 'bg-slate-400' }[t.tipologia] || 'bg-purple-500';
+                                return (
+                                    <div key={t.tipologia} className="flex items-center gap-3">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex justify-between items-baseline mb-0.5">
+                                                <span className="text-xs font-medium text-slate-700">{label}</span>
+                                                <span className="text-xs font-mono font-semibold text-slate-800 ml-2">{fmt(t.totale)} — {t.n_commesse} commesse</span>
+                                            </div>
+                                            <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                                                <div className={`h-full rounded-full ${colors}`} style={{ width: `${(t.totale / maxTipo) * 100}%` }} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     );
 }

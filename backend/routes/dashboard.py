@@ -916,6 +916,49 @@ async def get_cruscotto_finanziario(
     top_margin = commesse_margin[:5]
     bottom_margin = sorted(commesse_margin, key=lambda x: x["margine"])[:5] if len(commesse_margin) > 5 else []
 
+    # ─── 8. DSO / DPO ────────────────────────────────────────────
+    year_start = f"{year}-01-01"
+    year_end = f"{year + 1}-01-01"
+
+    # DSO = (Crediti aperti / Fatturato attivo annuale) * 365
+    fatturato_attivo_anno = sum(q["fatturato_attivo"] for q in iva_trimestri)
+    dso = round((receivables["total"] / fatturato_attivo_anno) * 365, 1) if fatturato_attivo_anno > 0 else 0
+
+    # DPO = (Debiti aperti / Acquisti passivi annuali) * 365
+    fatturato_passivo_anno = sum(q["fatturato_passivo"] for q in iva_trimestri)
+    dpo = round((payables["total"] / fatturato_passivo_anno) * 365, 1) if fatturato_passivo_anno > 0 else 0
+
+    # ─── 9. FATTURATO PER CLIENTE (top 10) ────────────────────────
+    pipeline_client = [
+        {"$match": {"user_id": uid, "issue_date": {"$gte": year_start, "$lt": year_end},
+                     "status": {"$nin": ["bozza", "annullata"]}}},
+        {"$group": {"_id": "$client_id", "totale": {"$sum": "$totals.total_document"}, "n": {"$sum": 1}}},
+        {"$sort": {"totale": -1}},
+        {"$limit": 10},
+    ]
+    client_fat = await db.invoices.aggregate(pipeline_client).to_list(10)
+    fatturato_per_cliente = []
+    for cf in client_fat:
+        cl = await db.clients.find_one({"client_id": cf["_id"]}, {"_id": 0, "business_name": 1}) if cf["_id"] else None
+        fatturato_per_cliente.append({
+            "client_id": cf["_id"] or "",
+            "nome": cl.get("business_name", "N/D") if cl else "N/D",
+            "totale": round(cf["totale"] or 0, 2),
+            "n_fatture": cf["n"],
+        })
+
+    # ─── 10. FATTURATO PER TIPOLOGIA COMMESSA ─────────────────────
+    pipeline_tipo = [
+        {"$match": {"user_id": uid}},
+        {"$group": {"_id": "$normativa_tipo", "totale": {"$sum": "$value"}, "n": {"$sum": 1}}},
+        {"$sort": {"totale": -1}},
+    ]
+    tipo_fat = await db.commesse.aggregate(pipeline_tipo).to_list(20)
+    fatturato_per_tipologia = [
+        {"tipologia": t["_id"] or "Non specificata", "totale": round(t["totale"] or 0, 2), "n_commesse": t["n"]}
+        for t in tipo_fat
+    ]
+
     return {
         "year": year,
         "iva_trimestri": iva_trimestri,
@@ -937,4 +980,8 @@ async def get_cruscotto_finanziario(
             "totale_credito": round(sum(q["iva_credito"] for q in iva_trimestri), 2),
             "totale_versare": round(sum(q["iva_da_versare"] for q in iva_trimestri), 2),
         },
+        "dso": dso,
+        "dpo": dpo,
+        "fatturato_per_cliente": fatturato_per_cliente,
+        "fatturato_per_tipologia": fatturato_per_tipologia,
     }

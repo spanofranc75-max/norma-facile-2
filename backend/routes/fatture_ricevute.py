@@ -1861,6 +1861,22 @@ async def get_scadenziario_dashboard(
     pagamenti_scaduti = sum(s.get("importo", 0) or 0 for s in scadute if s["tipo"] == "pagamento")
     pagamenti_mese = sum(s.get("importo", 0) or 0 for s in in_scadenza if s["tipo"] == "pagamento")
 
+    # Aging buckets (solo scadenze finanziarie: pagamento + incasso)
+    today_date = date.today()
+    aging = {"0_30": 0, "31_60": 0, "61_90": 0, "over_90": 0}
+    aging_incassi = {"0_30": 0, "31_60": 0, "61_90": 0, "over_90": 0}
+    for s in scadenze:
+        if s.get("stato") != "scaduto" or not s.get("importo"):
+            continue
+        try:
+            scad_date = date.fromisoformat(s["data_scadenza"])
+            days = (today_date - scad_date).days
+        except (ValueError, TypeError):
+            continue
+        bucket = "0_30" if days <= 30 else ("31_60" if days <= 60 else ("61_90" if days <= 90 else "over_90"))
+        target = aging_incassi if s["tipo"] == "incasso" else aging
+        target[bucket] = round(target[bucket] + s["importo"], 2)
+
     # Fatture da processare (inbox)
     inbox_count = await db.fatture_ricevute.count_documents(
         {"user_id": uid, "imputazione": {"$exists": False}, "status": {"$ne": "pagata"}}
@@ -1887,5 +1903,7 @@ async def get_scadenziario_dashboard(
             "scadute": len(scadute),
             "in_scadenza": len(in_scadenza),
             "inbox_da_processare": inbox_count,
+            "aging_pagamenti": aging,
+            "aging_incassi": aging_incassi,
         }
     }
