@@ -1750,9 +1750,18 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
         metadata["profili"] = profili
 
         # Save extracted metadata to the document
+        colate_estratte = list({
+            p.get("colata", "").strip()
+            for p in metadata.get("profili", [])
+            if p.get("colata", "").strip()
+        })
         await db[DOC_COLL].update_one(
             {"doc_id": doc_id},
-            {"$set": {"metadata_estratti": metadata, "tipo": "certificato_31"}},
+            {"$set": {
+                "metadata_estratti": metadata,
+                "tipo": "certificato_31",
+                "heat_numbers": colate_estratte
+            }},
         )
 
         # ── SMART MATCHING: Match profiles to commesse via OdA, RdP, DDT ──

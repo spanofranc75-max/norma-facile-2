@@ -315,9 +315,10 @@ def _build_cap3_materials(ctx: dict) -> bytes:
     hdr = _header(co.get("logo_url",""), co.get("business_name",""), comm.get("numero",""), "Cap. 3 — Tracciabilita' Materiali")
 
     all_cert_heats = {
-        (d.get("heat_number") or "").strip()
+        h.strip()
         for d in ctx.get("cert_documents", [])
-        if d.get("heat_number")
+        for h in (d.get("heat_numbers") or [])
+        if h.strip()
     } | {
         (b.get("heat_number") or "").strip()
         for b in batches
