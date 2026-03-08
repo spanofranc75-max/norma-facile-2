@@ -18,7 +18,7 @@ import requests
 import os
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://fiscal-invoice-hub.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://ddt-parser-ai.preview.emergentagent.com').rstrip('/')
 
 # Test session token created via mongosh
 TEST_SESSION_TOKEN = None

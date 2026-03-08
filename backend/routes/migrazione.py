@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/migrazione", tags=["Migrazione"])
 
-EXPORT_URL = "https://fiscal-invoice-hub.preview.emergentagent.com/api/export/migrazione-completa"
+EXPORT_URL = "https://ddt-parser-ai.preview.emergentagent.com/api/export/migrazione-completa"
 
 
 @router.post("/importa")
