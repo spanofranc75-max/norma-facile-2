@@ -1823,7 +1823,11 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
                 mat_desc = mat.get("descrizione", "")
                 mat_base = _extract_profile_base(mat_desc)
                 if mat_base and mat_base not in arrivo_lookup:
-                    arrivo_lookup[mat_base] = {"arrivo_id": a_id, "data": a_data}
+                    arrivo_lookup[mat_base] = {
+                        "arrivo_id": a_id,
+                        "data": a_data,
+                        "fornitore": arrivo.get("fornitore_nome", "") or arrivo.get("ddt_fornitore", ""),
+                    }
 
         profili_collegati = 0
         profili_bolla_mancante = 0
@@ -1835,6 +1839,7 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
                 r["stato_ddt"] = "ok"
                 r["ddt_arrivo_id"] = matched_arrivo["arrivo_id"]
                 r["ddt_data"] = matched_arrivo["data"]
+                r["fornitore_ddt"] = matched_arrivo.get("fornitore", "")
                 profili_collegati += 1
             else:
                 r["stato_ddt"] = "bolla_mancante"
@@ -1944,7 +1949,7 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
             batch_data = {
                 "user_id": user["user_id"],
                 "heat_number": colata, "material_type": qualita,
-                "supplier_name": fornitore, "acciaieria": acciaieria, "dimensions": dim,
+                "supplier_name": r.get("fornitore_ddt", "") or fornitore, "acciaieria": acciaieria, "dimensions": dim,
                 "normativa": metadata.get("normativa_riferimento", ""),
                 "source_doc_id": doc_id, "commessa_id": target_cid,
                 "numero_certificato": n_cert,
