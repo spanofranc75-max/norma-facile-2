@@ -38,6 +38,7 @@ from routes.perizia import router as perizia_router
 from routes.articoli import router as articoli_router
 from routes.fatture_ricevute import router as fatture_ricevute_router
 from routes.sopralluogo import router as sopralluogo_router
+from routes.movimenti import router as movimenti_router
 from routes.engine import router as engine_router
 from routes.commesse import router as commesse_router
 from routes.commessa_ops import router as commessa_ops_router
@@ -166,6 +167,7 @@ app.include_router(cleanup_router, prefix="/api")
 app.include_router(wps_router, prefix="/api")
 app.include_router(rdp_router, prefix="/api")
 app.include_router(sopralluogo_router, prefix="/api")
+app.include_router(movimenti_router, prefix="/api")
 
 
 @app.on_event("startup")

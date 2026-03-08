@@ -35,6 +35,7 @@ import ArchivioSinistriPage from './pages/ArchivioSinistriPage';
 import ArticoliPage from './pages/ArticoliPage';
 import FattureRicevutePage from './pages/FattureRicevutePage';
 import ScadenziarioPage from './pages/ScadenziarioPage';
+import MovimentiBancariPage from './pages/MovimentiBancariPage';
 import CostControlPage from './pages/CostControlPage';
 import MarginAnalysisPage from './pages/MarginAnalysisPage';
 import FinancialSettingsPage from './pages/FinancialSettingsPage';
@@ -218,6 +219,7 @@ function AppRouter() {
             {/* Fatture Ricevute */}
             <Route path="/fatture-ricevute" element={<ProtectedRoute><FattureRicevutePage /></ProtectedRoute>} />
             <Route path="/scadenziario" element={<ProtectedRoute><ScadenziarioPage /></ProtectedRoute>} />
+            <Route path="/movimenti-bancari" element={<ProtectedRoute><MovimentiBancariPage /></ProtectedRoute>} />
             <Route path="/controllo-costi" element={<ProtectedRoute><CostControlPage /></ProtectedRoute>} />
             <Route path="/analisi-margini" element={<ProtectedRoute><MarginAnalysisPage /></ProtectedRoute>} />
             <Route path="/configurazione-finanziaria" element={<ProtectedRoute><FinancialSettingsPage /></ProtectedRoute>} />

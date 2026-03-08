@@ -110,6 +110,7 @@ const NAV_GROUPS = [
             { path: '/analisi-margini', label: 'Analisi Margini', icon: BarChart3 },
             { path: '/configurazione-finanziaria', label: 'Costo Aziendale', icon: Calculator },
             { path: '/scadenziario', label: 'Scadenziario', icon: Calendar },
+            { path: '/movimenti-bancari', label: 'Movimenti Bancari', icon: CreditCard },
             { path: '/fornitori', label: 'Fornitori', icon: Factory },
             { path: '/catalogo', label: 'Catalogo Profili', icon: Warehouse },
             { path: '/articoli', label: 'Catalogo Articoli', icon: BoxIcon },
