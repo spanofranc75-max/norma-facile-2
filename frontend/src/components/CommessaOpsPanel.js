@@ -680,11 +680,16 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         if (!pendingDocId) return;
         setConfirmLoading(true);
         try {
+            const nBollaMancante = selectedProfileIndices.filter(i => pendingProfiles[i]?.stato_ddt === 'bolla_mancante').length;
             const res = await apiRequest(`/commesse/${commessaId}/documenti/${pendingDocId}/confirm-profili`, {
                 method: 'POST',
                 body: { selected_indices: selectedProfileIndices },
             });
-            toast.success(res.message || 'Profili importati');
+            if (nBollaMancante > 0) {
+                toast.warning(`${nBollaMancante} profil${nBollaMancante === 1 ? 'o importato' : 'i importati'} senza DDT — andranno in archivio certificati`);
+            } else {
+                toast.success(res.message || 'Profili importati');
+            }
             setProfileConfirmOpen(false);
             setPendingProfiles([]);
             fetchData(); fetchCamData(); onRefresh?.();
@@ -2928,13 +2933,11 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                 ? 'bg-amber-50 border-amber-300 opacity-80'
                                 : isSelected ? 'bg-emerald-50 border-emerald-300' : 'bg-slate-50 border-slate-200 opacity-60';
                             return (
-                                <label key={idx} className={`flex items-start gap-2 text-xs p-2 rounded border transition-colors ${isBollaMancante ? '' : 'cursor-pointer'} ${bgClass}`}
+                                <label key={idx} className={`flex items-start gap-2 text-xs p-2 rounded border transition-colors cursor-pointer ${bgClass}`}
                                     data-testid={`confirm-profile-${idx}`}>
                                     <Checkbox
-                                        checked={isSelected && !isBollaMancante}
-                                        disabled={isBollaMancante}
+                                        checked={isSelected}
                                         onCheckedChange={(checked) => {
-                                            if (isBollaMancante) return;
                                             setSelectedProfileIndices(prev =>
                                                 checked ? [...prev, idx] : prev.filter(i => i !== idx)
                                             );
@@ -2961,7 +2964,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                         })}
                     </div>
                     <div className="flex gap-2 mt-1">
-                        <button className="text-[10px] text-blue-600 hover:underline" onClick={() => setSelectedProfileIndices(pendingProfiles.map((p, i) => p.stato_ddt !== 'bolla_mancante' ? i : -1).filter(i => i >= 0))}>Seleziona tutti</button>
+                        <button className="text-[10px] text-blue-600 hover:underline" onClick={() => setSelectedProfileIndices(pendingProfiles.map((_, i) => i))}>Seleziona tutti</button>
                         <button className="text-[10px] text-blue-600 hover:underline" onClick={() => {
                             const indices = [];
                             pendingProfiles.forEach((pp, ii) => { if (pp.tipo === 'commessa_corrente' && pp.stato_ddt !== 'bolla_mancante') indices.push(ii); });
