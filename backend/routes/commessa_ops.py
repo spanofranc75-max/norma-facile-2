@@ -1935,7 +1935,7 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
         if i in data.selected_indices and target_cid and r.get("stato_ddt") != "bolla_mancante":
             # USER SELECTED + DDT OK: create material_batch + CAM lotto
             batch_id = f"bat_{uuid.uuid4().hex[:10]}"
-            await db.material_batches.insert_one({
+            batch_data = {
                 "batch_id": batch_id, "user_id": user["user_id"],
                 "heat_number": colata, "material_type": qualita,
                 "supplier_name": fornitore, "acciaieria": acciaieria, "dimensions": dim,
@@ -1944,7 +1944,12 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
                 "numero_certificato": n_cert,
                 "peso_kg": float(peso or 0),
                 "notes": f"Confermato da utente - cert {n_cert}", "created_at": ts(),
-            })
+            }
+            await db.material_batches.update_one(
+                {"commessa_id": target_cid, "heat_number": colata, "dimensions": dim},
+                {"$set": batch_data, "$setOnInsert": {"batch_id": batch_id}},
+                upsert=True,
+            )
 
             # CAM lotto
             metodo = r.get("metodo_produttivo", metadata.get("metodo_produttivo", "forno_elettrico_non_legato"))
@@ -1976,7 +1981,7 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
         elif i in data.selected_indices and r.get("stato_ddt") == "bolla_mancante":
             # USER SELECTED + BOLLA MANCANTE: create material_batch (tracciabilità) + archive
             batch_id = f"bat_{uuid.uuid4().hex[:10]}"
-            await db.material_batches.insert_one({
+            batch_data_bm = {
                 "batch_id": batch_id, "user_id": user["user_id"],
                 "heat_number": colata, "material_type": qualita,
                 "supplier_name": fornitore, "acciaieria": acciaieria, "dimensions": dim,
@@ -1987,7 +1992,12 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
                 "ddt_presente": False,
                 "stato_tracciabilita": "archivio",
                 "notes": f"Importato senza DDT - cert {n_cert}", "created_at": ts(),
-            })
+            }
+            await db.material_batches.update_one(
+                {"commessa_id": target_cid or cid, "heat_number": colata, "dimensions": dim},
+                {"$set": batch_data_bm, "$setOnInsert": {"batch_id": batch_id}},
+                upsert=True,
+            )
             await db.archivio_certificati.update_one(
                 {"heat_number": colata, "source_doc_id": doc_id, "user_id": user["user_id"]},
                 {"$set": {
