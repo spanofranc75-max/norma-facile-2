@@ -1275,11 +1275,15 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                 <div className="space-y-2">
                     {/* From material_batches collection */}
                     {materialBatches.map(b => (
-                        <div key={b.batch_id} className="p-2 bg-emerald-50 rounded border border-emerald-200 text-xs" data-testid={`batch-${b.batch_id}`}>
+                        <div key={b.batch_id} className={`p-2 rounded border text-xs ${b.ddt_presente === false ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`} data-testid={`batch-${b.batch_id}`}>
                             <div className="flex items-center gap-2 mb-1">
-                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                                <span className="font-semibold text-emerald-800">{b.dimensions || b.material_type || 'Materiale'}</span>
+                                {b.ddt_presente === false
+                                    ? <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                                    : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                                }
+                                <span className={`font-semibold ${b.ddt_presente === false ? 'text-amber-800' : 'text-emerald-800'}`}>{b.dimensions || b.material_type || 'Materiale'}</span>
                                 <Badge className="bg-emerald-100 text-emerald-700 text-[9px]">EN 1090</Badge>
+                                {b.ddt_presente === false && <Badge className="bg-amber-100 text-amber-700 text-[9px]">Senza DDT</Badge>}
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[10px]">
                                 <div>
