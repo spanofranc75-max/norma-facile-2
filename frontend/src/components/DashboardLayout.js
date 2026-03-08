@@ -23,7 +23,7 @@ import {
     BarChart3, BoxIcon, FileInput, Camera, ChevronDown,
     Briefcase, Wrench, Award, ShoppingCart, FileText, LayoutGrid,
     CreditCard, TrendingUp, ClipboardCheck, Calendar, CircleDollarSign,
-    User, LogOut, Bell, Flame, Calculator,
+    User, LogOut, Bell, Flame, Calculator, ScrollText,
 } from 'lucide-react';
 
 // ── Navigation Structure ────────────────────────────────────────
@@ -139,6 +139,7 @@ const NAV_GROUPS = [
         children: [
             { path: '/settings', label: 'Dati Azienda', icon: Settings },
             { path: '/impostazioni/pagamenti', label: 'Tipi Pagamento', icon: CreditCard },
+            { path: '/registro-attivita', label: 'Registro Attivita', icon: ScrollText },
         ],
     },
 ];

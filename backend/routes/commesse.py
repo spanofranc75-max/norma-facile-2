@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 
 from core.database import db
 from core.security import get_current_user
+from services.audit_trail import log_activity
 
 router = APIRouter(prefix="/commesse", tags=["commesse"])
 logger = logging.getLogger(__name__)
@@ -306,6 +307,7 @@ async def create_commessa(data: CommessaCreate, user: dict = Depends(get_current
     }
     await db[COLLECTION].insert_one(doc)
     created = await db[COLLECTION].find_one({"commessa_id": cid}, {"_id": 0})
+    await log_activity(user, "create", "commessa", cid, label=numero, details={"title": data.title})
     return created
 
 
@@ -409,12 +411,13 @@ async def update_commessa(commessa_id: str, data: CommessaUpdate, user: dict = D
     await db[COLLECTION].update_one({"commessa_id": commessa_id}, {"$set": updates})
     updated = await db[COLLECTION].find_one({"commessa_id": commessa_id}, {"_id": 0})
     ensure_moduli(updated)
+    await log_activity(user, "update", "commessa", commessa_id, label=updated.get("numero", ""))
     return updated
 
 
 @router.delete("/{commessa_id}")
 async def delete_commessa(commessa_id: str, user: dict = Depends(get_current_user)):
-    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": user["user_id"]}, {"_id": 0, "moduli": 1})
+    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": user["user_id"]}, {"_id": 0, "moduli": 1, "numero": 1})
     if not doc:
         raise HTTPException(404, "Commessa non trovata")
     result = await db[COLLECTION].delete_one({"commessa_id": commessa_id, "user_id": user["user_id"]})
@@ -427,6 +430,7 @@ async def delete_commessa(commessa_id: str, user: dict = Depends(get_current_use
             {"preventivo_id": prev_id, "user_id": user["user_id"]},
             {"$set": {"hidden_from_planning": True}}
         )
+    await log_activity(user, "delete", "commessa", commessa_id, label=doc.get("numero", ""))
     return {"message": "Commessa eliminata"}
 
 
@@ -552,6 +556,9 @@ async def emit_event(commessa_id: str, req: EventoRequest, user: dict = Depends(
         )
 
         logger.info(f"Commessa {commessa_id}: {tipo} → {new_stato}")
+        await log_activity(user, "status_change", "commessa", commessa_id,
+                           label=doc.get("numero", ""),
+                           details={"from": current_stato, "to": new_stato, "event": tipo})
         return {
             "message": f"Evento {tipo} emesso. Stato: {STATO_META.get(new_stato, {}).get('label', new_stato)}",
             "stato": new_stato,

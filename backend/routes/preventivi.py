@@ -12,6 +12,7 @@ from core.security import get_current_user
 from core.database import db
 from core.engine.thermal import ThermalValidator, ThermalInput
 from core.engine.climate_zones import ClimateZone, ZONE_LIMITS
+from services.audit_trail import log_activity
 import logging
 
 logger = logging.getLogger(__name__)
@@ -533,6 +534,7 @@ async def create_preventivo(data: PreventivoCreate, user: dict = Depends(get_cur
     await db.preventivi.insert_one(doc)
     created = await db.preventivi.find_one({"preventivo_id": prev_id}, {"_id": 0})
     logger.info(f"Preventivo created: {prev_id} ({number})")
+    await log_activity(user, "create", "preventivo", prev_id, label=number)
     return created
 
 
@@ -587,6 +589,7 @@ async def update_preventivo(prev_id: str, data: PreventivoUpdate, user: dict = D
 
     await db.preventivi.update_one({"preventivo_id": prev_id}, {"$set": upd})
     updated = await db.preventivi.find_one({"preventivo_id": prev_id}, {"_id": 0})
+    await log_activity(user, "update", "preventivo", prev_id, label=updated.get("number", ""))
     return updated
 
 
@@ -615,6 +618,7 @@ async def delete_preventivo(prev_id: str, user: dict = Depends(get_current_user)
         }}
     )
     logger.info(f"Preventivo {prev_id} soft-deleted by {uid}")
+    await log_activity(user, "delete", "preventivo", prev_id)
     return {"message": "Preventivo eliminato"}
 
 

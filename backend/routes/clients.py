@@ -8,6 +8,7 @@ from core.database import db
 from models.client import (
     ClientCreate, ClientUpdate, ClientResponse, ClientListResponse
 )
+from services.audit_trail import log_activity
 import logging
 
 logger = logging.getLogger(__name__)
@@ -139,6 +140,7 @@ async def create_client(
     created = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
 
     logger.info(f"Client created: {client_id} by user {user['user_id']}")
+    await log_activity(user, "create", "cliente", client_id, label=raw.get("business_name", ""))
 
     return _build_client_response(created)
 
@@ -190,6 +192,7 @@ async def update_client(
     updated = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
     
     logger.info(f"Client updated: {client_id}")
+    await log_activity(user, "update", "cliente", client_id, label=updated.get("business_name", ""))
     return _build_client_response(updated)
 
 
@@ -230,6 +233,7 @@ async def delete_client(
         raise HTTPException(status_code=404, detail="Cliente non trovato")
     
     logger.info(f"Client deleted: {client_id}")
+    await log_activity(user, "delete", "cliente", client_id)
     return {"message": "Cliente eliminato con successo"}
 
 

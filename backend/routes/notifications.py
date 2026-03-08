@@ -1,12 +1,55 @@
-"""Notification & Watchdog API — manual triggers, history, status."""
+"""Notification & Watchdog API — manual triggers, history, status, preferences."""
 import logging
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+from typing import Optional
 from core.database import db
 from core.security import get_current_user
 from services.notification_scheduler import run_expiration_check, check_welder_expirations, check_instrument_expirations, send_payment_alert, check_payment_expirations
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 logger = logging.getLogger(__name__)
+
+
+# ── Notification Preferences ─────────────────────────────────────
+
+class NotificationPreferences(BaseModel):
+    email_alerts_enabled: bool = True
+    alert_email: Optional[str] = None
+    preavviso_giorni: int = 7
+    alert_scadenze_pagamento: bool = True
+    alert_qualita: bool = True
+
+DEFAULT_PREFS = {
+    "email_alerts_enabled": True,
+    "alert_email": None,
+    "preavviso_giorni": 7,
+    "alert_scadenze_pagamento": True,
+    "alert_qualita": True,
+}
+
+
+@router.get("/preferences")
+async def get_notification_preferences(user: dict = Depends(get_current_user)):
+    """Get current user's notification preferences."""
+    prefs = user.get("notification_preferences") or {}
+    merged = {**DEFAULT_PREFS, **prefs}
+    merged["user_email"] = user.get("email", "")
+    return merged
+
+
+@router.put("/preferences")
+async def update_notification_preferences(
+    data: NotificationPreferences,
+    user: dict = Depends(get_current_user),
+):
+    """Update current user's notification preferences."""
+    prefs = data.model_dump()
+    await db.users.update_one(
+        {"user_id": user["user_id"]},
+        {"$set": {"notification_preferences": prefs}},
+    )
+    return {"message": "Preferenze salvate", "preferences": prefs}
 
 
 @router.get("/status")

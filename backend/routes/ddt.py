@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from core.security import get_current_user
 from core.database import db
 from models.ddt import DDTCreate, DDTUpdate, DDTLine
+from services.audit_trail import log_activity
 import logging
 
 logger = logging.getLogger(__name__)
@@ -292,6 +293,7 @@ async def create_ddt(data: DDTCreate, user: dict = Depends(get_current_user)):
     await db[COLLECTION].insert_one(doc)
     created = await db[COLLECTION].find_one({"ddt_id": ddt_id}, {"_id": 0})
     logger.info(f"DDT created: {ddt_id} ({number})")
+    await log_activity(user, "create", "ddt", ddt_id, label=number)
     return created
 
 
@@ -361,6 +363,7 @@ async def update_ddt(ddt_id: str, data: DDTUpdate, user: dict = Depends(get_curr
 
     await db[COLLECTION].update_one({"ddt_id": ddt_id}, {"$set": upd})
     updated = await db[COLLECTION].find_one({"ddt_id": ddt_id}, {"_id": 0})
+    await log_activity(user, "update", "ddt", ddt_id, label=updated.get("number", ""))
     return updated
 
 
@@ -389,6 +392,7 @@ async def delete_ddt(ddt_id: str, user: dict = Depends(get_current_user)):
             {"$pull": {"consegne": {"ddt_id": ddt_id}}}
         )
 
+    await log_activity(user, "delete", "ddt", ddt_id, label=ddt_doc.get("number", ""))
     return {"message": "DDT eliminato"}
 
 

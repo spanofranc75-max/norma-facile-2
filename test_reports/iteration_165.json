@@ -1,0 +1,108 @@
+{
+  "iteration": 165,
+  "date": "2026-03-08",
+  "test_type": "both",
+  "summary": "Verified Activity Audit Trail and Notification Preferences features. All 8 backend tests passed. Frontend verification successful: Activity Log page (/registro-attivita) shows stats, filters, table with audit entries. Settings page (/settings) Notifiche tab shows email toggle, email input, preavviso select, alert type toggles, and save button.",
+  "results": {
+    "total": 8,
+    "passed": 8,
+    "failed": 0
+  },
+  "test_cases_verified": {
+    "activity_log_stats_endpoint": {
+      "status": "PASS",
+      "description": "GET /api/activity-log/stats returns stats with today, this_week, total, top_users, top_entities, action_labels, entity_labels"
+    },
+    "activity_log_list_endpoint": {
+      "status": "PASS",
+      "description": "GET /api/activity-log returns paginated list with items, total, skip, limit"
+    },
+    "activity_log_filters": {
+      "status": "PASS",
+      "description": "Filters work: entity_type=cliente, action=create, search=test, date_from all return 200"
+    },
+    "get_notification_preferences": {
+      "status": "PASS",
+      "description": "GET /api/notifications/preferences returns email_alerts_enabled, alert_email, preavviso_giorni, alert_scadenze_pagamento, alert_qualita, user_email"
+    },
+    "update_notification_preferences": {
+      "status": "PASS",
+      "description": "PUT /api/notifications/preferences saves and returns updated preferences; verified with GET"
+    },
+    "client_create_logs_activity": {
+      "status": "PASS",
+      "description": "Creating a client via POST /api/clients/ logs an activity entry in /api/activity-log"
+    },
+    "preventivo_create_logs_activity": {
+      "status": "PASS",
+      "description": "Creating a preventivo via POST /api/preventivi/ logs an activity entry in /api/activity-log"
+    },
+    "activity_log_entry_structure": {
+      "status": "PASS",
+      "description": "Activity log entries have correct fields: user_id, user_name, user_email, action, entity_type, entity_id, label, details, timestamp"
+    }
+  },
+  "frontend_verification": {
+    "activity_log_page": {
+      "route": "/registro-attivita",
+      "status": "PASS",
+      "elements_verified": [
+        "Title: Registro Attivita with subtitle Audit trail completo di tutte le operazioni",
+        "Stats cards: Oggi, Ultima settimana, Totale registri, Utenti attivi (7gg)",
+        "Filters: search, entity type dropdown, action dropdown, date pickers",
+        "Table with columns: Data/Ora, Utente, Azione, Tipo, Etichetta/ID, Dettagli",
+        "All data-testids present: activity-log-title, activity-stats, activity-filters, activity-table-container"
+      ]
+    },
+    "notifiche_tab": {
+      "route": "/settings (Notifiche tab)",
+      "status": "PASS",
+      "elements_verified": [
+        "Header: Preferenze Notifiche Email",
+        "Master toggle: Abilita notifiche email (data-testid=notif-master-toggle, notif-enabled-checkbox)",
+        "Email input: Email per le notifiche (data-testid=notif-email-input)",
+        "Preavviso select: Giorni di preavviso scadenze with options 3/5/7/14/30 (data-testid=notif-preavviso-select)",
+        "Scadenze pagamento toggle (data-testid=notif-scadenze-toggle, notif-scadenze-checkbox)",
+        "Scadenze qualita toggle (data-testid=notif-qualita-toggle, notif-qualita-checkbox)",
+        "Save button: Salva Preferenze (data-testid=save-notif-prefs-btn)"
+      ]
+    }
+  },
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "/settings",
+        "issue": "Console warning: `value` prop on input should not be null - minor React warning, no functional impact"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_audit_notifications.py",
+    "/app/test_reports/pytest/iteration165_audit_notifications_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_audit_notifications.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100%"
+  },
+  "seed_data_creation": "Created test user with admin role and session for API testing",
+  "test_credentials": {
+    "admin_session_token": "0urNkos478BzSaOHd49sFYF_lmqHn4n6PLLHbVjUaGE",
+    "admin_user_id": "user_97c773827822",
+    "admin_email": "spano.franc75@gmail.com",
+    "api_url": "https://accounting-revamp-1.preview.emergentagent.com"
+  },
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Activity Audit Trail and Notification Preferences features fully verified. Activity log page at /registro-attivita shows audit entries (create/update/delete) for clients, preventivi, commesse, invoices, DDT. Settings page at /settings has a Notifiche tab with email notification preferences (master toggle, email input, preavviso days, alert type toggles). All backend APIs working: GET /api/activity-log, GET /api/activity-log/stats, GET/PUT /api/notifications/preferences. Note: Settings route is /settings NOT /impostazioni."
+}

@@ -23,12 +23,23 @@ _scheduler_task = None
 
 
 async def _get_notification_recipients() -> list[str]:
-    """Get email addresses of users who should receive notifications (admin + ufficio_tecnico)."""
+    """Get email addresses of users who should receive notifications.
+    Respects per-user notification_preferences (opt-out, custom email).
+    """
     users = await db.users.find(
         {"role": {"$in": ["admin", "ufficio_tecnico"]}},
-        {"_id": 0, "email": 1, "name": 1},
+        {"_id": 0, "email": 1, "name": 1, "notification_preferences": 1},
     ).to_list(50)
-    return [u["email"] for u in users if u.get("email")]
+    recipients = []
+    for u in users:
+        prefs = u.get("notification_preferences") or {}
+        # Default is enabled
+        if not prefs.get("email_alerts_enabled", True):
+            continue
+        email = prefs.get("alert_email") or u.get("email")
+        if email:
+            recipients.append(email)
+    return recipients
 
 
 async def check_welder_expirations() -> list[dict]:

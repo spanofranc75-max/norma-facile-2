@@ -59,6 +59,7 @@ import AuditPage from './pages/AuditPage';
 import QualityHubPage from './pages/QualityHubPage';
 import NotificationsPage from './pages/NotificationsPage';
 import SettingsPage from './pages/SettingsPage';
+import ActivityLogPage from './pages/ActivityLogPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './App.css';
@@ -247,6 +248,7 @@ function AppRouter() {
             <Route path="/audit" element={<ProtectedRoute><AuditPage /></ProtectedRoute>} />
             <Route path="/quality-hub" element={<ProtectedRoute><QualityHubPage /></ProtectedRoute>} />
             <Route path="/notifiche" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+            <Route path="/registro-attivita" element={<ProtectedRoute><ActivityLogPage /></ProtectedRoute>} />
         </Routes>
     );
 }

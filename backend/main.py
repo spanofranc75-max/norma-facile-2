@@ -63,6 +63,7 @@ from routes.db_cleanup import router as cleanup_router
 from routes.wps import router as wps_router
 from routes.rdp import router as rdp_router
 from routes.search import router as search_router
+from routes.activity_log import router as activity_log_router
 
 # Configure logging
 logging.basicConfig(
@@ -170,6 +171,7 @@ app.include_router(rdp_router, prefix="/api")
 app.include_router(sopralluogo_router, prefix="/api")
 app.include_router(movimenti_router, prefix="/api")
 app.include_router(search_router, prefix="/api")
+app.include_router(activity_log_router, prefix="/api")
 
 
 @app.on_event("startup")

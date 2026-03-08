@@ -11,6 +11,7 @@ from core.security import get_current_user
 from core.database import db
 from core.config import settings
 from services.payment_calculator import calculate_due_dates, calc_scadenze_from_supplier
+from services.audit_trail import log_activity
 import logging
 import re
 
@@ -741,6 +742,7 @@ async def import_xml_batch(
     user: dict = Depends(get_current_user)
 ):
     """Import multiple FatturaPA XML files at once."""
+    await log_activity(user, "import", "fattura_ricevuta", "", label=f"Batch import {len(files)} file XML")
     results = {"imported": 0, "skipped": 0, "errors": [], "fatture": [], "dettaglio_saltate": []}
 
     for f in files:

@@ -16,6 +16,7 @@ from models.invoice import (
 from services.invoice_service import invoice_service
 from services.pdf_service import pdf_service
 from services.xml_service import xml_service
+from services.audit_trail import log_activity
 import logging
 
 logger = logging.getLogger(__name__)
@@ -458,6 +459,7 @@ async def create_invoice(
     created["client_name"] = client.get("business_name")
     
     logger.info(f"Invoice created: {document_number} by user {user['user_id']}")
+    await log_activity(user, "create", "fattura", invoice_id, label=document_number)
     return InvoiceResponse(**created)
 
 
@@ -1529,6 +1531,7 @@ async def delete_invoice(
             {"invoice_id": invoice_id, "user_id": uid}
         )
         logger.info(f"Deleted annullata invoice {inv.get('document_number')} (no SDI)")
+        await log_activity(user, "delete", "fattura", invoice_id, label=inv.get("document_number", ""))
         return {"message": f"Fattura annullata {inv.get('document_number')} eliminata fisicamente."}
 
     # Solo bozze si possono eliminare
@@ -1538,6 +1541,7 @@ async def delete_invoice(
     logger.info(
         f"Fattura bozza {invoice_id} eliminata da {uid}"
     )
+    await log_activity(user, "delete", "fattura", invoice_id, label=inv.get("document_number", ""))
     return {"message": "Fattura eliminata"}
 
 
