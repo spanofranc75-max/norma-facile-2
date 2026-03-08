@@ -32,8 +32,12 @@ from models.cam import calcola_co2_risparmiata
 # ══════════════════════════════════════════════════════════════
 PAGE_CSS = """
 @page {
-    size: A4; margin: 14mm 16mm 25mm 16mm;
-    @bottom-center {
+    size: A4; margin: 14mm 16mm 20mm 16mm;
+    @bottom-left {
+        content: string(footer-text);
+        font-size: 8pt; color: #999;
+    }
+    @bottom-right {
         content: counter(page);
         font-size: 8pt; color: #777;
     }
@@ -196,9 +200,7 @@ def _build_cover_fallback(ctx: dict) -> bytes:
         <div style="font-size:11pt; color:#444; margin-top:12px;">{_s(comm.get('title',''))}</div>
         <div style="font-size:10pt; color:#555; margin-top:6px;">Cliente: <strong>{_s(ctx.get('client_name',''))}</strong></div>
     </div>
-    <div style="position:fixed; bottom:25px; left:0; right:0; text-align:center; font-size:8pt; color:#999; height:1.2cm; line-height:1.2cm;">
-        Generato il {now.strftime('%d/%m/%Y')} — Conforme EN 1090-1:2009+A1:2011
-    </div>
+    <div style="string-set: footer-text 'Generato il {now.strftime('%d/%m/%Y')} — Conforme EN 1090-1:2009+A1:2011'; display:none;"></div>
     """
     return _render(html)
 
