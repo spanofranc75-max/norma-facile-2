@@ -30,6 +30,7 @@ BASE_CSS = """
         font-size: 8pt; color: #999;
     }
 }
+@page cover { margin: 0; }
 * { box-sizing: border-box; }
 body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 10pt; color: #000; line-height: 1.4; margin: 0; padding: 0; }
 .header-table { width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 0; }
