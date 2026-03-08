@@ -125,6 +125,9 @@ class PeriziaCreate(BaseModel):
     voci_costo: List[VoceCosto] = []
     lettera_accompagnamento: str = ""
     notes: str = ""
+    smaltimento: bool = True
+    accesso_difficile: bool = False
+    sconto_cortesia: float = 0
 
 
 class PeriziaUpdate(BaseModel):
@@ -144,3 +147,6 @@ class PeriziaUpdate(BaseModel):
     lettera_accompagnamento: Optional[str] = None
     notes: Optional[str] = None
     status: Optional[str] = None
+    smaltimento: Optional[bool] = None
+    accesso_difficile: Optional[bool] = None
+    sconto_cortesia: Optional[float] = None

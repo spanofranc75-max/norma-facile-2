@@ -145,6 +145,9 @@ export default function PeriziaEditorPage() {
             setVociCosto(data.voci_costo || []);
             setLetteraAccompagnamento(data.lettera_accompagnamento || '');
             setNotes(data.notes || '');
+            if (data.smaltimento !== undefined) setNeedsSmaltimento(data.smaltimento);
+            if (data.accesso_difficile !== undefined) setAccessoDifficile(data.accesso_difficile);
+            if (data.sconto_cortesia !== undefined) setScontoCortesia(data.sconto_cortesia);
             const loc = data.localizzazione || {};
             if (loc.lat && loc.lng) {
                 setMapPos({ lat: loc.lat, lng: loc.lng });
@@ -249,6 +252,9 @@ export default function PeriziaEditorPage() {
             ai_analysis: aiAnalysis, stato_di_fatto: statoDiFatto,
             nota_tecnica: notaTecnica, voci_costo: vociCosto,
             lettera_accompagnamento: letteraAccompagnamento, notes,
+            smaltimento: needsSmaltimento,
+            accesso_difficile: accessoDifficile,
+            sconto_cortesia: scontoCortesia,
         };
         try {
             if (isNew) {

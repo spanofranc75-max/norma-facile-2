@@ -233,19 +233,50 @@ def calc_voci_costo(data: dict) -> list:
             "tooltip": "Molti artigiani dimenticano di farsi pagare la burocrazia. Se sostituisci un pezzo di un cancello certificato EN 13241, DEVI aggiornare i documenti. L'assicurazione e' tenuta a coprire questo costo.",
         })
 
-    # ── 8. SMALTIMENTO (€90 fisso) ──
-    voci.append({
-        "codice": "SMA.01",
-        "categoria_costo": "logistica",
-        "descrizione": (
-            "Smaltimento materiali rimossi presso discarica autorizzata (codice CER 170405 — "
-            "ferro e acciaio). Comprensivo di trasporto, oneri di conferimento e compilazione "
-            "formulario identificazione rifiuti (FIR)."
-        ),
-        "unita": "corpo", "quantita": 1,
-        "prezzo_unitario": 90.0, "totale": 90.0,
-        "tooltip": "Lo smaltimento in discarica autorizzata e' obbligatorio per legge. Il formulario FIR deve essere conservato per 5 anni.",
-    })
+    # ── 8. SMALTIMENTO (€150 fisso — condizionato) ──
+    if data.get("smaltimento", True):
+        voci.append({
+            "codice": "SMA.01",
+            "categoria_costo": "logistica",
+            "descrizione": (
+                "Smaltimento materiali rimossi presso discarica autorizzata (codice CER 170405 — "
+                "ferro e acciaio). Comprensivo di trasporto, oneri di conferimento e compilazione "
+                "formulario identificazione rifiuti (FIR)."
+            ),
+            "unita": "corpo", "quantita": 1,
+            "prezzo_unitario": 150.0, "totale": 150.0,
+            "tooltip": "Lo smaltimento in discarica autorizzata e' obbligatorio per legge. Il formulario FIR deve essere conservato per 5 anni.",
+        })
+
+    # ── 9. MAGGIORAZIONE ACCESSO DIFFICILE (+15% sul subtotale) ──
+    if data.get("accesso_difficile", False):
+        subtotale_pre = sum(v.get("totale", 0) for v in voci)
+        maggiorazione = round(subtotale_pre * 0.15, 2)
+        voci.append({
+            "codice": "ACC.01",
+            "categoria_costo": "logistica",
+            "descrizione": (
+                "Maggiorazione per accesso cantiere difficoltoso (+15%). "
+                "Comprensivo di trasporto speciale, attrezzature aggiuntive e tempo operativo extra."
+            ),
+            "unita": "corpo", "quantita": 1,
+            "prezzo_unitario": maggiorazione, "totale": maggiorazione,
+            "tooltip": "L'accesso difficile (strade strette, salite, assenza di area di manovra) richiede mezzi speciali e tempi di lavorazione maggiori.",
+        })
+
+    # ── 10. SCONTO DI CORTESIA (% sul totale, dopo maggiorazioni) ──
+    sconto_pct = float(data.get("sconto_cortesia", 0))
+    if sconto_pct > 0:
+        subtotale_post = sum(v.get("totale", 0) for v in voci)
+        sconto_val = round(subtotale_post * sconto_pct / 100, 2)
+        voci.append({
+            "codice": "SCO.01",
+            "categoria_costo": "sconto",
+            "descrizione": f"Sconto di cortesia ({sconto_pct:.0f}%)",
+            "unita": "corpo", "quantita": 1,
+            "prezzo_unitario": -sconto_val, "totale": -sconto_val,
+            "tooltip": "Sconto commerciale applicato a discrezione del perito.",
+        })
 
     return voci
 
@@ -784,6 +815,9 @@ async def recalculate_costs(perizia_id: str, user: dict = Depends(get_current_us
         "coefficiente_maggiorazione": doc.get("coefficiente_maggiorazione", 20),
         "moduli": doc.get("moduli", []),
         "codici_danno": doc.get("codici_danno", []),
+        "smaltimento": doc.get("smaltimento", True),
+        "accesso_difficile": doc.get("accesso_difficile", False),
+        "sconto_cortesia": doc.get("sconto_cortesia", 0),
     })
     total_perizia = round(sum(v.get("totale", 0) for v in voci), 2)
 
