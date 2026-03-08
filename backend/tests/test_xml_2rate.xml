@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<p:FatturaElettronica xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" versione="FPR12">
+  <FatturaElettronicaHeader>
+    <CedentePrestatore>
+      <DatiAnagrafici>
+        <IdFiscaleIVA>
+          <IdPaese>IT</IdPaese>
+          <IdCodice>12345678901</IdCodice>
+        </IdFiscaleIVA>
+        <CodiceFiscale>12345678901</CodiceFiscale>
+        <Anagrafica>
+          <Denominazione>Lasametalli SpA</Denominazione>
+        </Anagrafica>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>Via Test 1</Indirizzo>
+        <CAP>40100</CAP>
+        <Comune>Bologna</Comune>
+        <Provincia>BO</Provincia>
+        <Nazione>IT</Nazione>
+      </Sede>
+    </CedentePrestatore>
+    <CessionarioCommittente>
+      <DatiAnagrafici>
+        <IdFiscaleIVA>
+          <IdPaese>IT</IdPaese>
+          <IdCodice>98765432109</IdCodice>
+        </IdFiscaleIVA>
+        <Anagrafica>
+          <Denominazione>Norma Facile Srl</Denominazione>
+        </Anagrafica>
+      </DatiAnagrafici>
+    </CessionarioCommittente>
+  </FatturaElettronicaHeader>
+  <FatturaElettronicaBody>
+    <DatiGenerali>
+      <DatiGeneraliDocumento>
+        <TipoDocumento>TD01</TipoDocumento>
+        <Data>2026-03-08</Data>
+        <Numero>TEST-2RATE-001</Numero>
+        <ImportoTotaleDocumento>1000.00</ImportoTotaleDocumento>
+      </DatiGeneraliDocumento>
+    </DatiGenerali>
+    <DatiBeniServizi>
+      <DettaglioLinee>
+        <NumeroLinea>1</NumeroLinea>
+        <Descrizione>Acciaio S235 profilo IPE 200</Descrizione>
+        <Quantita>10.000</Quantita>
+        <PrezzoUnitario>81.97</PrezzoUnitario>
+        <PrezzoTotale>819.67</PrezzoTotale>
+        <AliquotaIVA>22.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DatiRiepilogo>
+        <AliquotaIVA>22.00</AliquotaIVA>
+        <ImponibileImporto>819.67</ImponibileImporto>
+        <Imposta>180.33</Imposta>
+      </DatiRiepilogo>
+    </DatiBeniServizi>
+    <DatiPagamento>
+      <CondizioniPagamento>TP01</CondizioniPagamento>
+      <DettaglioPagamento>
+        <ModalitaPagamento>MP05</ModalitaPagamento>
+        <DataScadenzaPagamento>2026-04-08</DataScadenzaPagamento>
+        <ImportoPagamento>500.00</ImportoPagamento>
+      </DettaglioPagamento>
+      <DettaglioPagamento>
+        <ModalitaPagamento>MP05</ModalitaPagamento>
+        <DataScadenzaPagamento>2026-05-08</DataScadenzaPagamento>
+        <ImportoPagamento>500.00</ImportoPagamento>
+      </DettaglioPagamento>
+    </DatiPagamento>
+  </FatturaElettronicaBody>
+</p:FatturaElettronica>

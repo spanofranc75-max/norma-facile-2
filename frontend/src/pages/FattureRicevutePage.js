@@ -74,6 +74,9 @@ export default function FattureRicevutePage() {
     const [extracting, setExtracting] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [syncing, setSyncing] = useState(false);
+    const [previewDialog, setPreviewDialog] = useState(false);
+    const [previewData, setPreviewData] = useState(null);
+    const [previewFile, setPreviewFile] = useState(null);
 
     const fileInputRef = useRef(null);
 
@@ -107,7 +110,7 @@ export default function FattureRicevutePage() {
         const files = Array.from(e.target.files || []);
         if (!files.length) return;
 
-        // Single file → use single endpoint, Multiple → batch
+        // Single file → preview first, then confirm
         if (files.length === 1) {
             const file = files[0];
             const fname = file.name.toLowerCase();
@@ -119,7 +122,7 @@ export default function FattureRicevutePage() {
             try {
                 const formData = new FormData();
                 formData.append('file', file);
-                const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/fatture-ricevute/import-xml`, {
+                const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/fatture-ricevute/preview-xml`, {
                     method: 'POST',
                     credentials: 'include',
                     body: formData,
@@ -130,11 +133,13 @@ export default function FattureRicevutePage() {
                     throw new Error(detail);
                 }
                 const result = await res.json();
-                toast.success(result.message);
-                if (!result.fornitore_trovato) {
-                    toast.info('Fornitore non trovato in anagrafica — puoi aggiungerlo dalla pagina Fornitori');
+                if (result.duplicata) {
+                    toast.warning('Fattura gia importata (duplicato rilevato)');
+                    return;
                 }
-                fetchFatture();
+                setPreviewData(result);
+                setPreviewFile(file);
+                setPreviewDialog(true);
             } catch (err) {
                 toast.error(err.message);
             } finally {
@@ -169,6 +174,39 @@ export default function FattureRicevutePage() {
                 setUploading(false);
                 if (fileInputRef.current) fileInputRef.current.value = '';
             }
+        }
+    };
+
+    // Confirm import after preview
+    const handleConfirmImport = async () => {
+        if (!previewFile) return;
+        setUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', previewFile);
+            const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/fatture-ricevute/import-xml`, {
+                method: 'POST',
+                credentials: 'include',
+                body: formData,
+            });
+            if (!res.ok) {
+                let detail = `Errore ${res.status}`;
+                try { const err = await res.json(); detail = err.detail || detail; } catch {}
+                throw new Error(detail);
+            }
+            const result = await res.json();
+            toast.success(result.message);
+            if (!result.fornitore_trovato) {
+                toast.info('Fornitore non trovato in anagrafica');
+            }
+            setPreviewDialog(false);
+            setPreviewData(null);
+            setPreviewFile(null);
+            fetchFatture();
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -806,6 +844,89 @@ export default function FattureRicevutePage() {
                             <div className="w-6 h-6 loading-spinner" />
                         </div>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Preview XML Import Dialog */}
+            <Dialog open={previewDialog} onOpenChange={(open) => { if (!open) { setPreviewDialog(false); setPreviewData(null); setPreviewFile(null); } }}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle data-testid="preview-import-title">Preview Importazione XML</DialogTitle>
+                    </DialogHeader>
+                    {previewData && (
+                        <div className="space-y-4" data-testid="preview-import-content">
+                            {/* Invoice summary */}
+                            <div className="bg-slate-50 rounded-lg p-4 space-y-1">
+                                <div className="flex justify-between">
+                                    <span className="text-sm font-medium text-slate-700">Fattura</span>
+                                    <span className="text-sm font-mono">{previewData.preview?.numero_documento}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-slate-500">Fornitore</span>
+                                    <span className="text-sm">{previewData.preview?.fornitore_nome}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-slate-500">Data</span>
+                                    <span className="text-sm">{previewData.preview?.data_documento}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-slate-500">Totale</span>
+                                    <span className="text-sm font-bold">{formatCurrency(previewData.preview?.totale_documento)}</span>
+                                </div>
+                            </div>
+
+                            {/* Origin banner */}
+                            {previewData.scadenze_origine === 'fornitore' && (
+                                <div className="bg-amber-50 border border-amber-200 rounded-md px-3 py-2 text-xs text-amber-700 flex items-center gap-2" data-testid="banner-fallback-fornitore">
+                                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                    Scadenze calcolate da condizioni fornitore (non presenti nell'XML)
+                                </div>
+                            )}
+                            {previewData.scadenze_origine === 'default_30gg' && (
+                                <div className="bg-orange-50 border border-orange-200 rounded-md px-3 py-2 text-xs text-orange-700 flex items-center gap-2" data-testid="banner-fallback-default">
+                                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                    Scadenze calcolate con default 30gg (nessuna info nell'XML ne in anagrafica)
+                                </div>
+                            )}
+
+                            {/* Payment schedule preview */}
+                            <div>
+                                <h4 className="text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">
+                                    Scadenze ({previewData.scadenze_origine === 'xml' ? 'da XML' : previewData.scadenze_origine === 'fornitore' ? 'da anagrafica' : 'default 30gg'})
+                                </h4>
+                                <div className="border rounded-md overflow-hidden">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="text-xs py-2">Rata</TableHead>
+                                                <TableHead className="text-xs py-2">Scadenza</TableHead>
+                                                <TableHead className="text-xs py-2 text-right">Importo</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {(previewData.scadenze_calcolate || []).map((s, i) => (
+                                                <TableRow key={i} data-testid={`preview-scadenza-${i}`}>
+                                                    <TableCell className="text-xs py-2">{s.numero_rata}/{s.totale_rate}</TableCell>
+                                                    <TableCell className="text-xs py-2">{s.data_scadenza}</TableCell>
+                                                    <TableCell className="text-xs py-2 text-right font-mono font-medium">{formatCurrency(s.importo)}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" onClick={() => { setPreviewDialog(false); setPreviewData(null); setPreviewFile(null); }}
+                            data-testid="btn-cancel-import">
+                            Annulla
+                        </Button>
+                        <Button onClick={handleConfirmImport} disabled={uploading}
+                            data-testid="btn-confirm-import">
+                            {uploading ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Importazione...</> : 'Conferma Importazione'}
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </DashboardLayout>

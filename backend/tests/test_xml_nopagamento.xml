@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<p:FatturaElettronica xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" versione="FPR12">
+  <FatturaElettronicaHeader>
+    <CedentePrestatore>
+      <DatiAnagrafici>
+        <IdFiscaleIVA>
+          <IdPaese>IT</IdPaese>
+          <IdCodice>11111111111</IdCodice>
+        </IdFiscaleIVA>
+        <CodiceFiscale>RSSMRA80A01H501Z</CodiceFiscale>
+        <Anagrafica>
+          <Denominazione>Ferramenta Rossi</Denominazione>
+        </Anagrafica>
+      </DatiAnagrafici>
+      <Sede>
+        <Indirizzo>Via Test 2</Indirizzo>
+        <CAP>40100</CAP>
+        <Comune>Bologna</Comune>
+        <Provincia>BO</Provincia>
+        <Nazione>IT</Nazione>
+      </Sede>
+    </CedentePrestatore>
+    <CessionarioCommittente>
+      <DatiAnagrafici>
+        <IdFiscaleIVA>
+          <IdPaese>IT</IdPaese>
+          <IdCodice>98765432109</IdCodice>
+        </IdFiscaleIVA>
+        <Anagrafica>
+          <Denominazione>Norma Facile Srl</Denominazione>
+        </Anagrafica>
+      </DatiAnagrafici>
+    </CessionarioCommittente>
+  </FatturaElettronicaHeader>
+  <FatturaElettronicaBody>
+    <DatiGenerali>
+      <DatiGeneraliDocumento>
+        <TipoDocumento>TD01</TipoDocumento>
+        <Data>2026-03-01</Data>
+        <Numero>TEST-NOPAG-001</Numero>
+        <ImportoTotaleDocumento>2000.00</ImportoTotaleDocumento>
+      </DatiGeneraliDocumento>
+    </DatiGenerali>
+    <DatiBeniServizi>
+      <DettaglioLinee>
+        <NumeroLinea>1</NumeroLinea>
+        <Descrizione>Tubi acciaio quadri 60x60x3</Descrizione>
+        <Quantita>50.000</Quantita>
+        <PrezzoUnitario>32.79</PrezzoUnitario>
+        <PrezzoTotale>1639.34</PrezzoTotale>
+        <AliquotaIVA>22.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DatiRiepilogo>
+        <AliquotaIVA>22.00</AliquotaIVA>
+        <ImponibileImporto>1639.34</ImponibileImporto>
+        <Imposta>360.66</Imposta>
+      </DatiRiepilogo>
+    </DatiBeniServizi>
+    <!-- NO DatiPagamento section — should trigger fallback -->
+  </FatturaElettronicaBody>
+</p:FatturaElettronica>

@@ -1,0 +1,82 @@
+{
+  "iteration": 162,
+  "date": "2026-01-09",
+  "test_type": "backend_only",
+  "summary": "Verified SDI XML parser fix: multiple DettaglioPagamento handling, fallback logic (Level 1: XML, Level 2: supplier, Level 3: default_30gg), and preview with calculated scadenze",
+  "results": {
+    "total": 8,
+    "passed": 8,
+    "failed": 0
+  },
+  "test_cases_verified": {
+    "CASO1_preview_2rate": {
+      "status": "PASS",
+      "description": "POST /api/fatture-ricevute/preview-xml with XML with 2 DettaglioPagamento returns scadenze_origine='xml', 2 scadenze with complete schema",
+      "verified_fields": ["scadenza_id", "numero_rata", "totale_rate", "importo", "importo_residuo", "stato", "origine"]
+    },
+    "CASO2_preview_default_30gg": {
+      "status": "PASS",
+      "description": "POST /api/fatture-ricevute/preview-xml with XML without DatiPagamento + unknown supplier returns scadenze_origine='default_30gg', 1 scadenza with data = data_documento + 30 days"
+    },
+    "CASO3_import_2rate": {
+      "status": "PASS",
+      "description": "POST /api/fatture-ricevute/import-xml with XML 2 rate saves to DB with 2 scadenze, response includes scadenze_origine='xml' and scadenze_count=2"
+    },
+    "CASO4_import_default_30gg": {
+      "status": "PASS",
+      "description": "POST /api/fatture-ricevute/import-xml with XML without payment saves with default_30gg, scadenze_origine='default_30gg', scadenze_count=1"
+    },
+    "CASO5_batch_import": {
+      "status": "PASS",
+      "description": "POST /api/fatture-ricevute/import-xml-batch with 2 XML files imports both with correct scadenze"
+    },
+    "CASO6_schema_verification": {
+      "status": "PASS",
+      "description": "Verified fattura with 2 rate has complete scadenze_pagamento schema: scadenza_id, numero_rata, totale_rate, importo, importo_residuo, importo_pagato, stato, modalita_pagamento, origine"
+    },
+    "CASO7_duplicate_detection": {
+      "status": "PASS",
+      "description": "POST /api/fatture-ricevute/preview-xml with already imported fattura returns duplicata=true"
+    },
+    "cleanup": {
+      "status": "PASS",
+      "description": "Test invoices (TEST-2RATE-001, TEST-NOPAG-001) cleaned up after tests"
+    }
+  },
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_sdi_xml_parser.py",
+    "/app/test_reports/pytest/iteration162_sdi_xml_parser_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Code verified: _enrich_scadenze helper (lines 106-125) correctly enriches payment_calculator output with full schema",
+    "Code verified: parse_fattura_xml (lines 318-376) correctly extracts ALL DettaglioPagamento entries with enriched schema",
+    "Code verified: import-xml endpoint (lines 655-702) implements Level 1/2/3 fallback logic correctly",
+    "Code verified: preview-xml endpoint (lines 871-959) calculates scadenze with fallback and detects duplicates"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_sdi_xml_parser.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "N/A (skipped per request)"
+  },
+  "seed_data_creation": "Used test XML files /app/backend/tests/test_xml_2rate.xml and /app/backend/tests/test_xml_nopagamento.xml",
+  "test_credentials": {
+    "session_token": "e2Sh0HIDOg2kyY8fq-R9a3s9FfrxWvFBqKGhyPQM4XA",
+    "user_id": "user_97c773827822",
+    "api_url": "https://payment-tracking-12.preview.emergentagent.com"
+  },
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "SDI XML parser fix verified. All 7 cases pass: XML with 2 rate, XML without payment (default 30gg fallback), batch import, duplicate detection, and complete scadenze schema. Test files cleaned up after tests."
+}

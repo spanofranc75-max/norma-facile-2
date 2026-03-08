@@ -102,6 +102,29 @@ class FRResponse(BaseModel):
 
 # ── FatturaPA XML Parser ────────────────────────────────────────
 
+
+def _enrich_scadenze(scadenze_calc: list, origine: str) -> list:
+    """Enrich payment_calculator output with full schema fields."""
+    totale_rate = len(scadenze_calc)
+    enriched = []
+    for i, s in enumerate(scadenze_calc):
+        enriched.append({
+            "scadenza_id": f"scd_{uuid.uuid4().hex[:8]}",
+            "numero_rata": i + 1,
+            "totale_rate": totale_rate,
+            "rata": s.get("rata", i + 1),
+            "data_scadenza": s.get("data_scadenza", ""),
+            "importo": s.get("importo", 0),
+            "importo_residuo": s.get("importo", 0),
+            "importo_pagato": 0.0,
+            "modalita_pagamento": "",
+            "stato": "aperta",
+            "pagata": False,
+            "origine": origine,
+        })
+    return enriched
+
+
 NS_MAP = {
     'p': 'http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2',
 }
@@ -302,6 +325,7 @@ def parse_fattura_xml(xml_content: str) -> dict:
         condizioni = find_text(dati_pagamento, 'CondizioniPagamento')
         # Find all DettaglioPagamento elements
         all_dettagli = find_all(dati_pagamento, 'DettaglioPagamento')
+        totale_rate = len(all_dettagli)
         for idx, det in enumerate(all_dettagli):
             det_modalita = find_text(det, 'ModalitaPagamento') or ""
             det_scadenza = find_text(det, 'DataScadenzaPagamento') or ""
@@ -316,10 +340,18 @@ def parse_fattura_xml(xml_content: str) -> dict:
                 det_importo = 0
             if det_scadenza:
                 scadenze_xml.append({
+                    "scadenza_id": f"scd_{uuid.uuid4().hex[:8]}",
+                    "numero_rata": idx + 1,
+                    "totale_rate": totale_rate,
                     "rata": idx + 1,
                     "data_scadenza": det_scadenza,
                     "importo": det_importo,
+                    "importo_residuo": det_importo,
+                    "importo_pagato": 0.0,
+                    "modalita_pagamento": det_modalita,
+                    "stato": "aperta",
                     "pagata": False,
+                    "origine": "xml",
                 })
 
     totale = float(importo_totale) if importo_totale else round(imponibile_tot + imposta_tot, 2)
@@ -571,11 +603,18 @@ async def import_xml_fattura(
             f"Fattura già importata: n. {parsed.get('numero_documento', '')} del {parsed.get('data_documento', '')} da {parsed.get('fornitore_nome', '')}"
         )
 
-    # Try to match supplier
+    # Try to match supplier by P.IVA or Codice Fiscale
     fornitore_id = None
     if parsed.get("fornitore_piva"):
         supplier = await db.clients.find_one(
             {"user_id": user["user_id"], "partita_iva": parsed["fornitore_piva"]},
+            {"_id": 0, "client_id": 1}
+        )
+        if supplier:
+            fornitore_id = supplier["client_id"]
+    if not fornitore_id and parsed.get("fornitore_cf"):
+        supplier = await db.clients.find_one(
+            {"user_id": user["user_id"], "fiscal_code": parsed["fornitore_cf"]},
             {"_id": 0, "client_id": 1}
         )
         if supplier:
@@ -615,9 +654,11 @@ async def import_xml_fattura(
 
     # Level 1: Use XML payment schedule if available
     xml_scadenze = parsed.get("scadenze_xml", [])
+    scadenze_origine = "nessuna"
     if xml_scadenze:
         doc["scadenze_pagamento"] = xml_scadenze
         doc["data_scadenza_pagamento"] = xml_scadenze[-1]["data_scadenza"]
+        scadenze_origine = "xml"
         logger.info(f"Level 1: {len(xml_scadenze)} scadenze from XML for FR {fr_id}")
     # Level 2: Fallback - calculate from supplier payment terms
     elif fornitore_id:
@@ -627,9 +668,38 @@ async def import_xml_fattura(
             parsed.get("totale_documento", 0)
         )
         if scadenze_calc:
-            doc["scadenze_pagamento"] = scadenze_calc
+            doc["scadenze_pagamento"] = _enrich_scadenze(scadenze_calc, "fornitore")
             doc["data_scadenza_pagamento"] = scadenze_calc[-1]["data_scadenza"]
+            scadenze_origine = "fornitore"
             logger.info(f"Level 2: {len(scadenze_calc)} scadenze from supplier for FR {fr_id}")
+    # Level 3: Default 30 days from invoice date
+    if not doc["scadenze_pagamento"]:
+        data_doc = parsed.get("data_documento", "")
+        totale = parsed.get("totale_documento", 0)
+        if data_doc and totale > 0:
+            try:
+                d0 = date.fromisoformat(data_doc)
+                default_scad = (d0 + timedelta(days=30)).isoformat()
+            except (ValueError, TypeError):
+                default_scad = ""
+            if default_scad:
+                doc["scadenze_pagamento"] = [{
+                    "scadenza_id": f"scd_{uuid.uuid4().hex[:8]}",
+                    "numero_rata": 1,
+                    "totale_rate": 1,
+                    "rata": 1,
+                    "data_scadenza": default_scad,
+                    "importo": round(totale, 2),
+                    "importo_residuo": round(totale, 2),
+                    "importo_pagato": 0.0,
+                    "modalita_pagamento": "",
+                    "stato": "aperta",
+                    "pagata": False,
+                    "origine": "default_30gg",
+                }]
+                doc["data_scadenza_pagamento"] = default_scad
+                scadenze_origine = "default_30gg"
+                logger.info(f"Level 3: default 30gg scadenza for FR {fr_id}")
 
     await db.fatture_ricevute.insert_one(doc)
     created = await db.fatture_ricevute.find_one({"fr_id": fr_id}, {"_id": 0, "xml_raw": 0})
@@ -648,6 +718,8 @@ async def import_xml_fattura(
         "message": f"Fattura importata: {parsed.get('numero_documento', 'N/A')} da {parsed.get('fornitore_nome', 'N/A')} — {parsed.get('totale_documento', 0):.2f}€",
         "fattura": created,
         "fornitore_trovato": fornitore_id is not None,
+        "scadenze_origine": scadenze_origine,
+        "scadenze_count": len(doc.get("scadenze_pagamento", [])),
     }
 
 
@@ -703,6 +775,13 @@ async def import_xml_batch(
             )
             if supplier:
                 fornitore_id = supplier["client_id"]
+        if not fornitore_id and parsed.get("fornitore_cf"):
+            supplier = await db.clients.find_one(
+                {"user_id": user["user_id"], "fiscal_code": parsed["fornitore_cf"]},
+                {"_id": 0, "client_id": 1}
+            )
+            if supplier:
+                fornitore_id = supplier["client_id"]
 
         doc = {
             "fr_id": fr_id,
@@ -749,8 +828,28 @@ async def import_xml_batch(
                 parsed.get("totale_documento", 0)
             )
             if scadenze_calc:
-                doc["scadenze_pagamento"] = scadenze_calc
+                doc["scadenze_pagamento"] = _enrich_scadenze(scadenze_calc, "fornitore")
                 doc["data_scadenza_pagamento"] = scadenze_calc[-1]["data_scadenza"]
+        # Level 3: Default 30 days
+        if not doc["scadenze_pagamento"]:
+            data_doc = parsed.get("data_documento", "")
+            totale = parsed.get("totale_documento", 0)
+            if data_doc and totale > 0:
+                try:
+                    d0 = date.fromisoformat(data_doc)
+                    default_scad = (d0 + timedelta(days=30)).isoformat()
+                except (ValueError, TypeError):
+                    default_scad = ""
+                if default_scad:
+                    doc["scadenze_pagamento"] = [{
+                        "scadenza_id": f"scd_{uuid.uuid4().hex[:8]}",
+                        "numero_rata": 1, "totale_rate": 1, "rata": 1,
+                        "data_scadenza": default_scad,
+                        "importo": round(totale, 2), "importo_residuo": round(totale, 2),
+                        "importo_pagato": 0.0, "modalita_pagamento": "",
+                        "stato": "aperta", "pagata": False, "origine": "default_30gg",
+                    }]
+                    doc["data_scadenza_pagamento"] = default_scad
 
         await db.fatture_ricevute.insert_one(doc)
         results["imported"] += 1
@@ -774,16 +873,90 @@ async def preview_xml_fattura(
     file: UploadFile = File(...),
     user: dict = Depends(get_current_user)
 ):
-    """Parse a FatturaPA XML file and return preview without saving."""
+    """Parse a FatturaPA XML file and return preview with payment schedule."""
+    fname = file.filename.lower()
     content = await file.read()
-    xml_str = content.decode('utf-8', errors='replace')
+
+    if fname.endswith('.p7m'):
+        xml_str = _extract_xml_from_p7m(content)
+        if not xml_str:
+            raise HTTPException(400, "Impossibile estrarre XML dal file .p7m")
+    else:
+        xml_str = content.decode('utf-8', errors='replace')
 
     try:
         parsed = parse_fattura_xml(xml_str)
     except ValueError as e:
         raise HTTPException(400, str(e))
 
-    return {"preview": parsed}
+    # Calculate payment schedule with fallback
+    scadenze_preview = parsed.get("scadenze_xml", [])
+    scadenze_origine = "xml" if scadenze_preview else "nessuna"
+
+    if not scadenze_preview:
+        # Try supplier fallback
+        fornitore_id = None
+        if parsed.get("fornitore_piva"):
+            supplier = await db.clients.find_one(
+                {"user_id": user["user_id"], "partita_iva": parsed["fornitore_piva"]},
+                {"_id": 0, "client_id": 1, "business_name": 1}
+            )
+            if supplier:
+                fornitore_id = supplier["client_id"]
+        if not fornitore_id and parsed.get("fornitore_cf"):
+            supplier = await db.clients.find_one(
+                {"user_id": user["user_id"], "fiscal_code": parsed["fornitore_cf"]},
+                {"_id": 0, "client_id": 1, "business_name": 1}
+            )
+            if supplier:
+                fornitore_id = supplier["client_id"]
+
+        if fornitore_id:
+            scadenze_calc = await calc_scadenze_from_supplier(
+                db, fornitore_id, user["user_id"],
+                parsed.get("data_documento", ""),
+                parsed.get("totale_documento", 0)
+            )
+            if scadenze_calc:
+                scadenze_preview = _enrich_scadenze(scadenze_calc, "fornitore")
+                scadenze_origine = "fornitore"
+
+        if not scadenze_preview:
+            data_doc = parsed.get("data_documento", "")
+            totale = parsed.get("totale_documento", 0)
+            if data_doc and totale > 0:
+                try:
+                    d0 = date.fromisoformat(data_doc)
+                    default_scad = (d0 + timedelta(days=30)).isoformat()
+                    scadenze_preview = [{
+                        "scadenza_id": "preview",
+                        "numero_rata": 1, "totale_rate": 1, "rata": 1,
+                        "data_scadenza": default_scad,
+                        "importo": round(totale, 2), "importo_residuo": round(totale, 2),
+                        "importo_pagato": 0.0, "modalita_pagamento": "",
+                        "stato": "aperta", "pagata": False, "origine": "default_30gg",
+                    }]
+                    scadenze_origine = "default_30gg"
+                except (ValueError, TypeError):
+                    pass
+
+    # Check for existing duplicate
+    existing = None
+    if parsed.get("numero_documento") and parsed.get("fornitore_piva"):
+        existing = await db.fatture_ricevute.find_one({
+            "user_id": user["user_id"],
+            "numero_documento": parsed["numero_documento"],
+            "fornitore_piva": parsed["fornitore_piva"],
+            "data_documento": parsed.get("data_documento", ""),
+        }, {"_id": 0, "fr_id": 1})
+
+    return {
+        "preview": parsed,
+        "scadenze_calcolate": scadenze_preview,
+        "scadenze_origine": scadenze_origine,
+        "fornitore_trovato": fornitore_id is not None if not scadenze_preview else None,
+        "duplicata": existing is not None,
+    }
 
 
 # ── Extract Articles to Catalog ─────────────────────────────────
