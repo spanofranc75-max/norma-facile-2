@@ -16,10 +16,10 @@ import {
 } from '../components/ui/select';
 import {
     RefreshCw, Filter, Check, ExternalLink, ChevronDown, ChevronUp,
-    AlertTriangle, Clock, TrendingDown, TrendingUp,
+    AlertTriangle, Clock, TrendingDown, TrendingUp, FileSpreadsheet, FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { apiRequest } from '../lib/utils';
+import { apiRequest, downloadPdfBlob } from '../lib/utils';
 import DashboardLayout from '../components/DashboardLayout';
 
 function fmtCur(v) {
@@ -92,6 +92,28 @@ export default function ScadenziarioPage() {
         } finally {
             setSyncing(false);
         }
+    };
+
+    const buildExportQuery = () => {
+        const params = [];
+        if (vista === 'fornitori') params.push('tipo=pagamento');
+        if (vista === 'clienti') params.push('tipo=incasso');
+        if (statoFiltro !== '__none__') params.push(`stato=${statoFiltro}`);
+        if (dataScadDal) params.push(`data_dal=${dataScadDal}`);
+        if (dataScadAl) params.push(`data_al=${dataScadAl}`);
+        return params.length > 0 ? '?' + params.join('&') : '';
+    };
+
+    const handleExportXlsx = () => {
+        const qs = buildExportQuery();
+        downloadPdfBlob(`/fatture-ricevute/scadenziario/export/xlsx${qs}`, `Scadenziario_${new Date().toISOString().slice(0,10)}.xlsx`)
+            .catch(e => toast.error(e.message));
+    };
+
+    const handleExportPdf = () => {
+        const qs = buildExportQuery();
+        downloadPdfBlob(`/fatture-ricevute/scadenziario/export/pdf${qs}`, `Scadenziario_${new Date().toISOString().slice(0,10)}.pdf`)
+            .catch(e => toast.error(e.message));
     };
 
     const handleMarkPaid = async (item) => {
@@ -210,6 +232,12 @@ export default function ScadenziarioPage() {
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Scadenziario</h1>
                     <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={handleExportXlsx} data-testid="export-xlsx-btn" className="border-slate-200 text-slate-600">
+                            <FileSpreadsheet className="h-4 w-4 mr-1.5" />Excel
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={handleExportPdf} data-testid="export-pdf-btn" className="border-slate-200 text-slate-600">
+                            <FileText className="h-4 w-4 mr-1.5" />PDF
+                        </Button>
                         <Button variant="outline" size="sm" onClick={() => setShowFilters(f => !f)} className="border-slate-200 text-slate-600">
                             <Filter className="h-4 w-4 mr-1.5" />Filtri
                         </Button>

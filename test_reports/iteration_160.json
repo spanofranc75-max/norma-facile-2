@@ -1,0 +1,65 @@
+{
+  "iteration": 160,
+  "date": "2026-03-08",
+  "test_type": "self_test_backend_and_frontend",
+  "summary": "Tested scadenziario enhancements, financial analysis, hide-from-planning, delete cascade, and frontend compilation",
+  "results": {
+    "total": 10,
+    "passed": 10,
+    "failed": 0
+  },
+  "tests": [
+    {
+      "name": "Scadenziario dashboard returns aging_pagamenti/aging_incassi",
+      "status": "PASS",
+      "details": "aging_pagamenti = {0_30: 1511.89, 31_60: 0, 61_90: 0, over_90: 0}, aging_incassi = {0_30: 8274.65, 31_60: 0, 61_90: 0, over_90: 0}"
+    },
+    {
+      "name": "Scadenziario returns correct scadenze with tipo pagamento/incasso",
+      "status": "PASS",
+      "details": "27 scadenze, tipi = {pagamento, incasso}"
+    },
+    {
+      "name": "Cruscotto finanziario returns DSO/DPO",
+      "status": "PASS",
+      "details": "DSO = 206.1 giorni, DPO = 237.4 giorni"
+    },
+    {
+      "name": "Cruscotto finanziario returns fatturato_per_cliente (top 10)",
+      "status": "PASS",
+      "details": "10 clienti, top: N/D 11169.1, Stanzani 7320.0, Galotti 7033.3"
+    },
+    {
+      "name": "Cruscotto finanziario returns fatturato_per_tipologia",
+      "status": "PASS",
+      "details": "3 tipologie: EN_1090 25975.0, Non specificata 19932.0, EN_13241 10650.9"
+    },
+    {
+      "name": "hide-from-planning excludes preventivo from board",
+      "status": "PASS",
+      "details": "prev_14791105544e hidden and excluded from board view query"
+    },
+    {
+      "name": "delete_commessa cascade logic",
+      "status": "PASS",
+      "details": "delete cascade reads moduli.preventivo_id correctly for hide propagation"
+    },
+    {
+      "name": "ScadenziarioPage.js lint and structure",
+      "status": "PASS",
+      "details": "No lint issues. Has: aging section, unified vista (tutti/fornitori/clienti), stato filter, color badges"
+    },
+    {
+      "name": "EBITDAPage.js lint and AnalisiTab",
+      "status": "PASS",
+      "details": "No lint issues. Has: AnalisiTab with DSO/DPO/fatturato per cliente/tipologia"
+    },
+    {
+      "name": "DDTEditorPage.js downloadPdfBlob + CommessaOpsPanel normativaTipo guard",
+      "status": "PASS",
+      "details": "downloadPdfBlob imported and used. normativaTipo === EN_13241 guard present"
+    }
+  ],
+  "issues": [],
+  "notes": "N/D in fatturato_per_cliente = invoices with null client_id. Should be investigated if it affects real data."
+}

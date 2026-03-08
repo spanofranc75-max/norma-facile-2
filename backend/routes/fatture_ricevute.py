@@ -1907,3 +1907,236 @@ async def get_scadenziario_dashboard(
             "aging_incassi": aging_incassi,
         }
     }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EXPORT SCADENZIARIO — XLSX + PDF
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/scadenziario/export/xlsx")
+async def export_scadenziario_xlsx(
+    tipo: Optional[str] = Query(None, description="pagamento | incasso"),
+    stato: Optional[str] = Query(None, description="scaduto | in_scadenza | ok"),
+    data_dal: Optional[str] = Query(None),
+    data_al: Optional[str] = Query(None),
+    user: dict = Depends(get_current_user),
+):
+    """Export scadenziario filtrato in formato Excel."""
+    from fastapi.responses import StreamingResponse
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from io import BytesIO
+
+    # Re-use dashboard data
+    dashboard = await get_scadenziario_dashboard(user=user)
+    scadenze = dashboard.get("scadenze", [])
+
+    # Apply filters
+    items = _filter_scadenze(scadenze, tipo, stato, data_dal, data_al)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Scadenziario"
+
+    # Header style
+    hfont = Font(bold=True, color="FFFFFF", size=10)
+    hfill = PatternFill(start_color="334155", end_color="334155", fill_type="solid")
+    halign = Alignment(horizontal="center", vertical="center")
+    thin = Side(style="thin", color="D1D5DB")
+    border = Border(top=thin, bottom=thin, left=thin, right=thin)
+
+    headers = ["#", "Tipo", "Scadenza", "Importo", "Documento", "Data Doc.", "Soggetto", "Stato"]
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font = hfont
+        cell.fill = hfill
+        cell.alignment = halign
+        cell.border = border
+
+    # Column widths
+    widths = [5, 10, 14, 14, 30, 14, 30, 16]
+    for i, w in enumerate(widths, 1):
+        ws.column_dimensions[chr(64 + i)].width = w
+
+    today_d = date.today()
+    scaduto_fill = PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid")
+    warn_fill = PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid")
+    ok_fill = PatternFill(start_color="ECFDF5", end_color="ECFDF5", fill_type="solid")
+    eur_fmt = '#,##0.00 €'
+
+    for idx, item in enumerate(items, 1):
+        row = idx + 1
+        ws.cell(row=row, column=1, value=idx).border = border
+        ws.cell(row=row, column=2, value="Uscita" if item["tipo"] == "pagamento" else "Entrata").border = border
+
+        scad = item.get("data_scadenza", "")
+        ws.cell(row=row, column=3, value=scad).border = border
+        c4 = ws.cell(row=row, column=4, value=item.get("importo") or 0)
+        c4.number_format = eur_fmt
+        c4.border = border
+        ws.cell(row=row, column=5, value=item.get("titolo", "")).border = border
+        ws.cell(row=row, column=6, value=item.get("data_documento", "")).border = border
+        ws.cell(row=row, column=7, value=item.get("sottotitolo", "")).border = border
+
+        # Stato with color
+        try:
+            scad_date = date.fromisoformat(scad) if scad else None
+        except ValueError:
+            scad_date = None
+        if scad_date:
+            days = (today_d - scad_date).days
+            if days > 0:
+                stato_label = f"Scaduto {days}gg"
+                fill = scaduto_fill
+            elif days >= -7:
+                stato_label = f"In scadenza {abs(days)}gg"
+                fill = warn_fill
+            else:
+                stato_label = f"OK ({abs(days)}gg)"
+                fill = ok_fill
+        else:
+            stato_label = "—"
+            fill = None
+
+        c8 = ws.cell(row=row, column=8, value=stato_label)
+        c8.border = border
+        if fill:
+            for c in range(1, 9):
+                ws.cell(row=row, column=c).fill = fill
+
+    # Totale row
+    tot_row = len(items) + 2
+    ws.cell(row=tot_row, column=3, value="TOTALE").font = Font(bold=True)
+    c_tot = ws.cell(row=tot_row, column=4, value=sum(i.get("importo", 0) or 0 for i in items))
+    c_tot.font = Font(bold=True)
+    c_tot.number_format = eur_fmt
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    filename = f"Scadenziario_{date.today().isoformat()}.xlsx"
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/scadenziario/export/pdf")
+async def export_scadenziario_pdf(
+    tipo: Optional[str] = Query(None),
+    stato: Optional[str] = Query(None),
+    data_dal: Optional[str] = Query(None),
+    data_al: Optional[str] = Query(None),
+    user: dict = Depends(get_current_user),
+):
+    """Export scadenziario filtrato in formato PDF (WeasyPrint)."""
+    from fastapi.responses import StreamingResponse
+    from weasyprint import HTML
+    from io import BytesIO
+
+    dashboard = await get_scadenziario_dashboard(user=user)
+    scadenze = dashboard.get("scadenze", [])
+    items = _filter_scadenze(scadenze, tipo, stato, data_dal, data_al)
+
+    today_d = date.today()
+    totale = sum(i.get("importo", 0) or 0 for i in items)
+
+    def fmt_eur(v):
+        if not v: return "—"
+        return f"{v:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    def fmt_date(d):
+        if not d: return ""
+        p = d.split("-")
+        return f"{p[2]}/{p[1]}/{p[0]}" if len(p) == 3 else d
+
+    rows_html = ""
+    for idx, item in enumerate(items, 1):
+        scad = item.get("data_scadenza", "")
+        try:
+            scad_date = date.fromisoformat(scad) if scad else None
+        except ValueError:
+            scad_date = None
+
+        if scad_date:
+            days = (today_d - scad_date).days
+            if days > 0:
+                bg = "#FEE2E2"
+                stato_label = f"Scaduto {days}gg"
+            elif days >= -7:
+                bg = "#FEF3C7"
+                stato_label = f"{abs(days)}gg"
+            else:
+                bg = "#ECFDF5"
+                stato_label = f"{abs(days)}gg"
+        else:
+            bg = "#FFFFFF"
+            stato_label = "—"
+
+        tipo_label = "Uscita" if item["tipo"] == "pagamento" else "Entrata"
+        rows_html += f"""<tr style="background:{bg}">
+            <td style="text-align:center">{idx}</td>
+            <td>{tipo_label}</td>
+            <td>{fmt_date(scad)}</td>
+            <td style="text-align:right;font-family:monospace">{fmt_eur(item.get('importo'))}</td>
+            <td>{item.get('titolo', '')}</td>
+            <td>{fmt_date(item.get('data_documento', ''))}</td>
+            <td>{item.get('sottotitolo', '')}</td>
+            <td>{stato_label}</td>
+        </tr>"""
+
+    # Fetch company info
+    company = await db.company_profiles.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+
+    html = f"""<!DOCTYPE html>
+    <html><head><meta charset="UTF-8">
+    <style>
+        @page {{ size: A4 landscape; margin: 12mm; }}
+        body {{ font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 9px; color: #1E293B; }}
+        h1 {{ font-size: 16px; margin-bottom: 4px; }}
+        .meta {{ font-size: 8px; color: #64748B; margin-bottom: 10px; }}
+        table {{ width: 100%; border-collapse: collapse; }}
+        th {{ background: #334155; color: white; font-size: 8px; padding: 4px 6px; text-align: left; }}
+        td {{ padding: 3px 6px; border-bottom: 1px solid #E2E8F0; font-size: 8px; }}
+        .totale {{ font-weight: bold; font-size: 9px; margin-top: 8px; text-align: right; }}
+    </style></head><body>
+    <h1>Scadenziario — {company.get('business_name', 'Azienda')}</h1>
+    <div class="meta">Generato il {fmt_date(today_d.isoformat())} | {len(items)} scadenze | Totale: {fmt_eur(totale)}</div>
+    <table>
+        <tr><th>#</th><th>Tipo</th><th>Scadenza</th><th>Importo</th><th>Documento</th><th>Data Doc.</th><th>Soggetto</th><th>Stato</th></tr>
+        {rows_html}
+    </table>
+    <p class="totale">Totale: {fmt_eur(totale)}</p>
+    </body></html>"""
+
+    pdf_bytes = HTML(string=html).write_pdf()
+    buf = BytesIO(pdf_bytes)
+    buf.seek(0)
+
+    filename = f"Scadenziario_{today_d.isoformat()}.pdf"
+    return StreamingResponse(
+        buf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _filter_scadenze(scadenze, tipo, stato, data_dal, data_al):
+    """Filter scadenze based on query params."""
+    items = []
+    for s in scadenze:
+        if s.get("tipo") not in ("pagamento", "incasso"):
+            continue
+        if tipo and s["tipo"] != tipo:
+            continue
+        if stato and s.get("stato") != stato:
+            continue
+        scad = s.get("data_scadenza", "")
+        if data_dal and scad and scad < data_dal:
+            continue
+        if data_al and scad and scad > data_al:
+            continue
+        items.append(s)
+    return items
