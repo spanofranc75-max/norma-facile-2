@@ -404,22 +404,17 @@ async def update_commessa(commessa_id: str, data: CommessaUpdate, user: dict = D
 
 @router.delete("/{commessa_id}")
 async def delete_commessa(commessa_id: str, user: dict = Depends(get_current_user)):
-    uid = user["user_id"]
-    # Recupera preventivo collegato prima di eliminare
-    comm = await db[COLLECTION].find_one(
-        {"commessa_id": commessa_id, "user_id": uid},
-        {"_id": 0, "moduli.preventivo_id": 1, "linked_preventivo_id": 1}
-    )
-    if not comm:
+    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": user["user_id"]}, {"_id": 0, "moduli": 1})
+    if not doc:
         raise HTTPException(404, "Commessa non trovata")
-    result = await db[COLLECTION].delete_one({"commessa_id": commessa_id, "user_id": uid})
+    result = await db[COLLECTION].delete_one({"commessa_id": commessa_id, "user_id": user["user_id"]})
     if result.deleted_count == 0:
         raise HTTPException(404, "Commessa non trovata")
-    # Nascondi il preventivo collegato dal planning
-    prev_id = (comm.get("moduli") or {}).get("preventivo_id") or comm.get("linked_preventivo_id")
+    # Nascondi il preventivo collegato dal planning per evitare che riappaia
+    prev_id = (doc.get("moduli") or {}).get("preventivo_id")
     if prev_id:
         await db.preventivi.update_one(
-            {"preventivo_id": prev_id, "user_id": uid},
+            {"preventivo_id": prev_id, "user_id": user["user_id"]},
             {"$set": {"hidden_from_planning": True}}
         )
     return {"message": "Commessa eliminata"}
