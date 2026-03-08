@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { apiRequest } from '../lib/utils';
+import { apiRequest, downloadPdfBlob } from '../lib/utils';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -200,7 +200,7 @@ export default function DDTEditorPage() {
 
     const handleDownloadPdf = () => {
         if (isNew) return;
-        window.open(`${process.env.REACT_APP_BACKEND_URL}/api/ddt/${ddtId}/pdf`, '_blank');
+        downloadPdfBlob(`/ddt/${ddtId}/pdf`, `DDT_${ddtInfo.number || ddtId}.pdf`).catch(e => toast.error(e.message));
     };
 
     const handleConvertToInvoice = async () => {

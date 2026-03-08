@@ -1,53 +1,58 @@
 <analysis>**original_problem_statement**:
-The user is building a comprehensive ERP system, Norma Facile 2.0, for their metalworking business, which must adhere to strict industry regulations like EN 1090 and EN 13241.
+The user is building a comprehensive ERP system, Norma Facile 2.0, for their metalworking business.
 
-The primary goals of this session were to:
-1.  **Implement AI-Powered DDT Parsing:** Create a new feature to automatically parse supplier Delivery Notes (DDTs) using an AI model (Claude Sonnet) to pre-fill material arrival forms, significantly speeding up data entry.
-2.  **Enforce Business Logic:** Add a critical compliance check requiring a registered DDT (material arrival) before a material certificate (Cert 3.1) can be linked to the project's traceability records.
-3.  **Fix Critical Bugs:**
-    *   Resolve a persistent, application-wide bug that prevented all file downloads (PDFs, backups) from working in the deployed production environment due to iframe sandboxing.
-    *   Address an erroneous test invoice (9908/2026) present in the production database that needed to be deleted, bypassing standard API restrictions.
-    *   Fix a body stream already read error occurring during backup restoration.
+The primary goals for this session were to resolve a series of bugs and inconsistencies primarily focused on the generation of the Super Fascicolo PDF and the material traceability workflow. The user provided highly specific, surgical instructions to fix issues related to:
+1.  **PDF Data Integrity:** Correcting missing or incorrect data in the main technical dossier PDF (), including missing welders, incorrect certificate statuses, and empty date/DDT fields in the Declaration of Performance (DoP).
+2.  **PDF Layout:** Fixing a recurring issue where the PDF footer would overlap with the page content, requiring a deep dive into WeasyPrint's CSS handling ( margin boxes vs. ).
+3.  **Traceability Workflow:**
+    *   Fixing the UI () to allow users to import certificate profiles even if they lack a corresponding delivery note (DDT), which was previously a blocker.
+    *   Modifying the backend () to correctly handle these missing DDT profiles by creating traceable records () flagged appropriately, instead of just archiving them.
+    *   Enhancing the AI certificate parser to extract the acciaieria (steel mill) as a distinct field.
+    *   Improving the matching logic between DDTs and certificates by normalizing profile names (e.g., BARRA FERRO PIATTA -> FLAT).
+    *   Preventing the creation of duplicate  and  records by replacing  operations with  + .
+4.  **Data Consistency & Bug Fixes:**
+    *   Ensuring the correct supplier name and material weight are used, prioritizing data from the DDT over the certificate.
+    *   Fixing a bug where creating a delivery note (DDT) from a job order did not copy the item prices from the original quote.
+    *   Implementing a cascading delete so that when a DDT is deleted, the corresponding entry in the job's  array is also removed.
+    *   Resolving a  caused by a model mismatch.
 
 **User's preferred language**: Italian. The next agent **MUST** respond in Italian.
 
 **what currently exists?**
-The agent has successfully implemented all requested features and bug fixes for this session.
+The agent has successfully implemented a large number of surgical modifications across the backend and frontend, resolving the user's specified issues.
 
--   **AI-Powered DDT Workflow:** A complete end-to-end workflow for parsing supplier Delivery Notes (DDTs) is now in place. Users can upload a DDT PDF, click an Analizza DDT button, and an AI model extracts all relevant data (supplier, date, materials, quantities), which is then used to pre-fill a material arrival registration form for user confirmation.
--   **Certificate-DDT Linking:** A crucial business rule has been implemented. When parsing a material certificate (Cert 3.1), the system now cross-references the job's registered material arrivals. If a corresponding arrival (DDT) for a given material is not found, that material from the certificate is marked as bolla_mancante (missing delivery note) and is held in a pending state, preventing it from being added to the official traceability log until the delivery is registered.
--   **Universal Download Fix:** A persistent bug preventing all file downloads within the production iframe has been resolved. A new, robust, two-step download mechanism has been implemented application-wide. The frontend now requests a short-lived, single-use download token from the backend and uses it to open the file URL in a new tab, successfully bypassing browser and iframe sandbox restrictions.
--   **Database and Bug Fixes:** A secure backend modification was made to allow the deletion of a specific annullata invoice from the production database. The body stream already read error during backup restore was also fixed.
+-   **PDF Generation Fixed:**  and related services have been extensively patched. The Super Fascicolo now correctly includes welder data, certificate statuses (by matching ), and populates the DoP with the correct date and DDT reference. The footer overlap issue has been definitively solved by removing all  footers and using WeasyPrint's native  margin boxes (, , ) for all generated PDFs.
+-   **Traceability Workflow Enhanced:** The certificate import process is now more flexible. The UI allows users to select and import profiles even without a matching DDT. The backend now creates a corresponding  record for these profiles with , making them visible in the traceability section, distinguished by an orange badge.
+-   **Data Deduplication:** Critical  operations for  and  have been replaced with  + , preventing the creation of duplicate records when a certificate is re-analyzed.
+-   **Data Integrity Improved:** The system now correctly prioritizes the supplier name and material weight from the delivery note (DDT) over the data extracted from the certificate. The AI prompt for certificate analysis has been enhanced to extract the acciaieria (steel mill), and this data is now saved to the .
+-   **General Bug Fixes:** Bugs related to incorrect pricing on delivery notes, orphaned records after DDT deletion, and model validation errors have been resolved.
 
 **Last working item**:
--   **Last item agent was working:** The agent's final task was implementing a definitive, application-wide fix for file downloads, which were failing silently in the deployed production environment. The solution involves the frontend requesting a temporary, single-use download token from the backend, and then using that token in a query parameter to open the file URL in a new browser tab, successfully bypassing iframe sandbox restrictions. This pattern was centralized in a  utility and applied to all ~15 download handlers across the app.
--   **Status:** USER VERIFICATION PENDING
--   **Agent Testing Done:** Y
--   **Which testing method agent to use?** Manual testing by the user in the **deployed environment**. The user should be instructed to test various download buttons (e.g., from the Fascicolo Tecnico, Dossier, Invoices) to confirm they now correctly open the PDF in a new tab.
+-   **Last item agent was working:** The agent was laying the groundwork for full traceability of materials picked from stock. This involved two steps:
+    1.  Extending the  (stock items) database schema to include placeholder fields for certificate metadata (e.g., , , ).
+    2.  Modifying the  function in  to propagate this metadata from a linked certificate to the corresponding stock item in the  collection.
+-   **Status:** IN PROGRESS
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** backend testing agent. The agent should write a python test script to verify the end-to-end flow: 1. Create a material arrival (DDT). 2. Confirm the DDT, ensuring a remainder goes to stock (creating an ). 3. Link a certificate to that material arrival. 4. Query the  collection to confirm the previously created stock item was correctly updated with the certificate's metadata.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Verify Universal Download Fix (P0)**
-    -   **Description:** The user reported that file downloads were failing in the deployed application. A new, robust fix using temporary download tokens has been implemented across the entire application. This needs to be verified by the user in their deployed environment.
-    -   **Attempted fixes:** Several previous attempts (, ) failed due to browser/iframe sandbox security policies. The current approach with a temporary token is the definitive solution.
-    -   **Next debug checklist:** User needs to perform a  and then test multiple download buttons (Fascicolo, Dossier, Invoice PDF, Backup) to confirm they work as expected.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a critical user-facing function. Fixing it allows users to export essential documents and backups.
-    -   **Status:** USER VERIFICATION PENDING
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Frontend (user manual testing).
-    -   **Blocked on other issue:** No.
-
--   **Issue 2: Delete Erroneous Invoice 9908/2026 from Production DB (P0)**
-    -   **Description:** The user has a test invoice in the production database that cannot be deleted via the UI due to its annullata status. The agent has already modified the backend  endpoint to permit the deletion of  invoices that have not been sent to the tax authority (SDI).
-    -   **Next debug checklist:** The user needs to **deploy the latest code**. After deployment, they can simply use the delete button in the UI for invoice , or run the provided  command to trigger the deletion.
-    -   **Why fix this issue and what will be achieved with the fix?** To clean up incorrect test data from the user's production environment.
-    -   **Status:** USER VERIFICATION PENDING
+-   **Issue 1: Complete Traceability for Stock-Picked Materials (P0)**
+    -   **Description:** The system needs to create  and  records automatically when a user picks a traceable item from stock for a job. The first part (propagating certificate data to stock items) is done. The second part is pending.
+    -   **Attempted fixes:** None.
+    -   **Next debug checklist:**
+        1.  Modify the  endpoint in .
+        2.  Inside the function, after verifying stock, retrieve the selected  document from the database.
+        3.  Check if the article has certificate metadata (e.g.,  or  is not None).
+        4.  If it does, construct and insert a new  and a  document using the article's metadata and the quantity being picked ().
+    -   **Why fix this issue and what will be achieved with the fix?** This will complete a critical EN 1090 compliance workflow, enabling full traceability for materials that are purchased in bulk, stored, and then used across multiple jobs.
+    -   **Status:** IN PROGRESS
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Backend (user action required).
-    -   **Blocked on other issue:** No.
+    -   **Should Test frontend/backend/both after fix?** Backend.
+    -   **Blocked on other issue:** None.
 
 **In progress Task List**:
--   None.
+-   None apart from the issue above.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
@@ -62,106 +67,163 @@ The agent has successfully implemented all requested features and bug fixes for 
 *   Replace generic solution images in the AI-generated PDF report with real installation photos.
 
 **Completed work in this session**
--   **AI-Powered DDT Parsing:**
-    -   Created  to analyze a DDT PDF with Claude Sonnet and match extracted materials to existing purchase orders ().
-    -   Created  to create a new material arrival record from the parsed DDT data ().
-    -   Implemented the corresponding frontend UI in  with a new Analizza DDT button and a confirmation modal.
--   **Certificate-to-DDT Validation Logic:**
-    -   Modified  in  to check for a corresponding material arrival (DDT) before allowing a certificate profile to be confirmed for traceability.
-    -   Modified  to enforce this rule, automatically archiving profiles that lack a DDT.
-    -   Updated the certificate confirmation modal in  to visually distinguish between profiles with and without a matching DDT (green/orange highlighting, disabled checkboxes).
--   **Universal Download Fix:**
-    -   Created a new endpoint  to generate secure, temporary, single-use download tokens ().
-    -   Modified the core authentication dependency  to accept these tokens from a query parameter as a fallback ().
-    -   Created a new centralized  utility function in  that orchestrates the token request and opens the file URL in a new tab.
-    -   Refactored all (~15) download handlers across the entire frontend (, , , , ) to use this new robust utility.
--   **Bug Fixes:**
-    -   Modified  to allow physical deletion of annullata invoices that were never sent to SDI ().
-    -   Fixed a body stream already read error during backup restore in .
+-   **PDF Generation (, ):**
+    -   Fixed missing Cert 3.1 status by cross-referencing  from all available certificate documents.
+    -   Fixed missing welder data by adding a fallback to read operators from .
+    -   Fixed DoP generation to include the current date and conditionally show the DDT reference.
+    -   Fixed PDF footer overlap by removing all  CSS and implementing a standard WeasyPrint footer using  margin boxes (, ).
+    -   Added defensive coding to prevent  errors on optional fields.
+-   **Traceability Workflow (, ):**
+    -   Enabled UI checkboxes in  for certificate profiles with  (missing DDT).
+    -   Modified  to create  records (with ) for these profiles, making them visible in the UI.
+    -   Added UI badges and conditional styling in  to visually distinguish materials with and without a DDT.
+    -   Enhanced the AI certificate parsing prompt to extract  (steel mill).
+    -   Enabled  saving for the acciaieria input field.
+    -   Improved material profile name normalization in  to match more synonyms (e.g., BARRA FERRO PIATTA -> FLAT).
+    -   Replaced  with  for  and  to prevent duplicates.
+    -   Fixed a bug where the backend was reading from  instead of the correct .
+    -   Prioritized  and  from the DDT over the certificate data when creating batches.
+-   **Data Consistency & Bug Fixes (, ):**
+    -   Fixed a bug where creating a delivery note (DDT) did not copy the  from the associated quote.
+    -   Implemented a cascading delete for DDTs to remove the corresponding entry from the job's  array.
+    -   Fixed a 422  on DDT updates by making  an optional field in the  model.
+    -   Fixed a CSS  override that was preventing a PDF border from being hidden.
+-   **Stock Traceability Foundation ():**
+    -   Added certificate metadata fields (e.g., , ) to the  (stock item) schema.
+    -   Implemented logic in  to propagate this metadata to the corresponding stock item.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1: Replace Generic PDF Images**
     -   **Description:** The AI-generated PDF report for proposed solutions uses static placeholder images. The user has requested these be replaced with real examples of installations.
-    -   **Debug checklist:** Investigate the PDF generation logic (likely in a service like ). A potential solution involves creating a new collection of example installation images tagged by work type for the AI to select from.
+    -   **Debug checklist:** Investigate the PDF generation logic. A potential solution involves creating a new collection of example installation images tagged by work type for the AI to select from.
     -   **Why to solve this issue and what will be achieved with this?** This would make the AI-generated sales documents more professional and compelling.
     -   **Should Test frontend/backend/both after fix:** Backend (PDF generation) and Frontend (to trigger and view the PDF).
     -   **Is recurring issue?** N.
+-   **Issue 2: Non-Standard Download in DDT Editor**
+    -   **Description:** In , the Download PDF button inside the  function (line ~203) uses  directly. This will likely fail in the production iframe.
+    -   **Debug checklist:**
+        1.  Import the  utility from .
+        2.  Replace the  call with a call to . The endpoint URL and document name are already available in the context.
+    -   **Why to solve this issue and what will be achieved with this?** To ensure all file downloads across the application work reliably in the production environment, adhering to the universal token-based download pattern.
+    -   **Should Test frontend/backend/both after fix:** Frontend.
+    -   **Is recurring issue?** Y.
 
 **Known issue recurrence from previous fork**
--   **File Downloads in Iframe:** This was a major recurring blocker. The initial session fixed it with a  pattern, which worked in preview but failed silently in the production deploy. The new temporary-token-based solution is designed to be a definitive fix for all iframe sandboxing issues.
+-   **File Downloads in Iframe:** The previous session implemented a universal fix for downloads using a temporary token system. However, the agent's investigation in this session revealed one instance in  that was missed and still uses the old, non-functional  method. This should be refactored.
 
 **Code Architecture**
-downloadPdfBlob
+
 
 **Key Technical Concepts**
--   **Secure Iframe-Safe Downloads:** A new core pattern was established. Since  cookies aren't accessible to JS, and  URLs are blocked, the solution is: (1) Frontend uses its valid session cookie to request a temporary, single-use token from a dedicated endpoint. (2) Frontend opens a new tab with the file URL, passing the temporary token in the query string. (3) Backend auth logic validates this token as a fallback.
--   **AI-Driven Data Entry & Validation:** Using a vision model (Claude Sonnet via ) to parse unstructured documents (DDTs) and pre-fill structured forms.
--   **Conditional Business Logic:** Implemented a key compliance workflow by linking digital records (certificates) to physical events (material arrivals documented by DDTs), preventing traceability records from being created without proof of delivery.
+-   **WeasyPrint PDF Generation:** Advanced usage of CSS for PDF layout, including  margin boxes (, ) and  to create footers that do not overlap with content.
+-   **MongoDB Upsert:** Using  with  and  as a robust pattern for data deduplication, preventing the creation of duplicate records on re-analysis or repeated operations.
+-   **Defensive Programming:** Proactively handling potential  values in data processing pipelines (e.g., ) to prevent  errors and improve robustness.
+-   **Surgical Code Modification:** The user's preferred development style, involving highly specific, targeted changes to fix bugs without altering surrounding logic.
+-   **Cascading Deletes:** Manually implementing logic to maintain relational integrity in a NoSQL database (e.g., removing a  from a  when the associated  is deleted).
 
 **key DB schema**
--   **commesse**: The  array now contains a new optional field  to link a material arrival record directly to its corresponding uploaded document in the  collection.
--   **commessa_documents**: The  and  fields are now used for parsed DDTs. The  for certificates now includes a  field for profiles that fail the delivery verification.
--   **download_tokens**: A new temporary collection (using TTL index for auto-expiry) to store single-use download tokens.
+-   **articoli**: This collection now has new optional fields to store certificate metadata: , , , , , , , .
+-   **material_batches**: This collection now contains documents with  and  for profiles imported without a matching DDT. The schema also has inconsistencies between entries created from  and  that may need alignment.
+-   **commesse**: The  array is now correctly cleaned up via  when a linked DDT is deleted.
 
 **changes in tech stack**
--   None.
+-   **** was installed via apt 2.6.1 (arm64)
+Usage: apt-get [options] command
+       apt-get [options] install|remove pkg1 [pkg2 ...]
+       apt-get [options] source pkg1 [pkg2 ...]
+
+apt-get is a command line interface for retrieval of packages
+and information about them from authenticated sources and
+for installation, upgrade and removal of packages together
+with their dependencies.
+
+Most used commands:
+  update - Retrieve new lists of packages
+  upgrade - Perform an upgrade
+  install - Install new packages (pkg is libc6 not libc6.deb)
+  reinstall - Reinstall packages (pkg is libc6 not libc6.deb)
+  remove - Remove packages
+  purge - Remove packages and config files
+  autoremove - Remove automatically all unused packages
+  dist-upgrade - Distribution upgrade, see apt-get(8)
+  dselect-upgrade - Follow dselect selections
+  build-dep - Configure build-dependencies for source packages
+  satisfy - Satisfy dependency strings
+  clean - Erase downloaded archive files
+  autoclean - Erase old downloaded archive files
+  check - Verify that there are no broken dependencies
+  source - Download source archives
+  download - Download the binary package into the current directory
+  changelog - Download and display the changelog for the given package
+
+See apt-get(8) for more information about the available commands.
+Configuration options and syntax is detailed in apt.conf(5).
+Information about how to configure sources can be found in sources.list(5).
+Package and version choices can be expressed via apt_preferences(5).
+Security details are available in apt-secure(8).
+                                        This APT has Super Cow Powers. to support the  library, which is used for AI-based document parsing.
 
 **All files of reference**
--   : Core logic for DDT parsing and certificate validation.
--   : Core authentication dependency, updated for download tokens.
--   : New endpoint for generating download tokens.
--   : New home of the universal  function.
--   : Frontend implementation for DDT parsing and the updated certificate modal.
--   All files with download buttons, now refactored: , , , .
+-   : The central hub for most business logic modifications in this session.
+-   : The main file for the Super Fascicolo PDF generation, which received numerous fixes.
+-   : The main frontend component for job operations, where UI logic for certificate import and delivery creation was fixed.
+-   : A supporting PDF service that also required layout and data fixes.
+-   : The route file for DDT management, where cascading delete was implemented.
 
 **Areas that need refactoring**:
--    continues to grow and is becoming very large and complex. It now manages the logic for document repository, certificate parsing, DDT parsing, and various other operational panels. It remains a strong candidate for being broken down into smaller, more focused components.
+-    remains a very large monolithic component that handles many distinct user operations. It is a prime candidate for being broken down into smaller, more focused components.
+-   The  collection is populated from two different code paths ( and ) which use slightly different field names (e.g.,  vs ,  vs ). These schemas should be unified for consistency.
 
 **key api endpoints**
--   **NEW** : Triggers AI parsing of an uploaded DDT document.
--   **NEW** : Creates a material arrival record from parsed DDT data.
--   **NEW** : Generates a short-lived, single-use token for file downloads.
--   **MODIFIED** : Now includes a check for a corresponding material arrival (DDT).
--   **MODIFIED** : Now allows deletion of  invoices that haven't been sent to SDI.
--   All PDF download endpoints (e.g., ) now implicitly support the  query parameter for authentication.
+-   **MODIFIED **: Heavily modified to handle profiles without DDTs, use upserts to prevent duplicates, and create CAM lots for all profiles.
+-   **MODIFIED **: Fixed a bug to correctly find the linked  from the  sub-document.
+-   **MODIFIED **: Implemented a cascading delete to remove the corresponding delivery record from the parent .
+-   **MODIFIED **: Fixed a 422 validation error by making  an optional field in the model.
+-   **MODIFIED **: Now uses upsert and propagates certificate metadata to the corresponding stock item ().
 
 **Critical Info for New Agent**
 -   You **MUST** respond in Italian.
--   **Highest priority is guiding the user through verification.** First, instruct them to  the latest code. Then, ask them to test a few download buttons and to delete the 9908/2026 invoice from the UI.
--   **The new download pattern is critical.** The application now uses a temporary token system for ALL file downloads to work within the production iframe. Do not revert to older patterns. The logic is centralized in .
--   **The app uses  cookies for session management.**  is not used for tokens, so any JS code trying to read a token from it will fail. This is why the temporary download token mechanism was necessary.
+-   The user prefers a surgical modification approach. When they provide specific instructions with line numbers and code snippets, follow them precisely.
+-   **Highest Priority:** The immediate next step is to complete the traceability workflow for materials picked from stock. You need to modify the  endpoint in  to create  and  records using the metadata now available on  documents.
+-   Be aware of the  bug in  and propose a fix.
+-   Note the schema inconsistencies in the  collection. While not a blocker, it's a good candidate for a future cleanup task.
 
 **documents and test reports created in this job**
 -   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Requests diagnosis on why certificate generation () seems to be missing data for welders/certificates.
-2.  **User:** Asks to view the specific code that builds the context for the Super Fascicolo.
-3.  **User:** After deploying, reports that downloads still fail, saying file downloaded but nothing appears.
-4.  **User:** Asks why a new deploy is needed for every fix and if there's a faster way.
-5.  **User:** Reports that the Dossier and Fascicolo Tecnico Completo buttons are unresponsive.
-6.  **User:** Asks for the corrected logic for deleting an annullata invoice to be deployed so they can remove invoice 9908/2026.
-7.  **User:** Reports being unable to restore a backup, sharing a screen recording showing a body stream already read error.
-8.  **User:** After a new deploy, is still unable to delete the invoice from the production environment, receiving a 401 Unauthorized error from the browser console.
-9.  **User:** Asks for a direct MongoDB command to delete the test invoice from the database.
-10. **User:** Reports that the 9908/2026 invoice is visible in their deployed app, even though the agent can't see it in the preview DB.
+1.  **User:** Requests to delete an orphaned delivery note () from a specific job. **(Done)**
+2.  **User:** Provides a screen recording showing that the fix for delivery note prices is not working. The created DDT still has a unit price of 0. **(Pending fix)**
+3.  **Agent:** Identifies the root cause: the backend  function has the same bug as the frontend (reading  from the wrong location).
+4.  **Agent:** Fixes the backend  function to look for  in . **(Done)**
+5.  **User:** Provides surgical instructions to fix the backend  bug again (confirming the agent's fix). **(Done)**
+6.  **Agent:** Investigates a  error happening on DDT updates. **(Pending fix)**
+7.  **Agent:** Identifies the cause ( being sent for a required  field) and fixes the Pydantic model () to allow . **(Done)**
+8.  **User:** Provides surgical instructions to fix a CSS issue causing an unwanted border on the DDT PDF. **(Done)**
+9.  **User:** Asks to physically delete a quote with status eliminato from the database. **(Done)**
+10. **User:** Describes a complex traceability flow desired for materials picked from stock, initiating the final series of modifications. **(Pending completion)**
 
 **Project Health Check:**
--   **Broken:** All file download functionalities were broken in the production environment. A comprehensive fix has been implemented across the entire application but is **pending user verification after deployment**.
+-   **Broken:** None.
 -   **Mocked:** None.
+-   **Incomplete:** The end-to-end traceability workflow for materials picked from stock is partially implemented and needs to be completed.
 
 **3rd Party Integrations**
--   **Claude Sonnet 4 (via ):** Used for the new DDT parsing feature.
--   The existing integrations remain unchanged: OpenAI GPT-4o Vision, Emergent Object Storage, Resend, FattureInCloud, Emergent-managed Google Auth, react-pdf.
+-   Claude Sonnet 4 (via )
+-   OpenAI GPT-4o Vision
+-   Emergent Object Storage
+-   Resend
+-   FattureInCloud
+-   Emergent-managed Google Auth
+-   react-pdf
 
 **Testing status**
--   **Testing agent used after significant changes:** NO.
--   **Troubleshoot agent used after agent stuck in loop:** NO.
--   **Test files created:** None.
--   **Known regressions:** The file download functionality was a major regression in the deployed environment, which has now been addressed with a new, robust solution pending verification.
+-   **Testing agent used after significant changes:** NO
+-   **Troubleshoot agent used after agent stuck in loop:** NO
+-   **Test files created:** None. Testing was performed via direct database queries and manual inspection of logs and application behavior.
 
 **Credentials to test flow:**
--   The application uses Emergent-managed Google Auth. Direct testing of UI flows that require login is best handled by the user or a testing agent capable of handling Google OAuth. Backend APIs can be tested with  using a valid session token/cookie.
+-   The application uses Emergent-managed Google Auth. UI testing requiring login should be handled by the user.
 
 **What agent forgot to execute**
--   The agent successfully addressed all user requests from this session.</analysis>
+-   The agent did not refactor the PDF download logic in  to use the universal  utility. It still uses a  call that is likely to fail in the production iframe.</analysis>

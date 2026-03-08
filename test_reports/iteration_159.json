@@ -1,0 +1,111 @@
+{
+  "summary": "Iteration 159 - Warehouse Pickup Traceability & DDT PDF Download Fix Verified. All 6 backend tests passed for the preleva-da-magazzino endpoint. Frontend code review confirms downloadPdfBlob replaces window.open in DDTEditorPage.js.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration159_preleva_magazzino_traceability.py",
+    "/app/test_reports/pytest/iteration159_preleva_traceability_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration159_preleva_magazzino_traceability.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100%"
+  },
+  "test_credentials": "Test sessions created and cleaned up dynamically during tests",
+  "seed_data_creation": "Test data (user, session, commessa, articoli with/without certificate metadata) created via mongosh fixtures - all cleaned up after tests",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 159 verified two features: (1) POST /api/commesse/{cid}/preleva-da-magazzino now creates material_batch and lotto_cam records when the articolo has numero_colata or heat_number metadata - this enables EN 1090 traceability for materials from warehouse stock. (2) DDTEditorPage.js correctly imports downloadPdfBlob from utils.js and uses it in handleDownloadPdf function (line 201-204) instead of window.open - this fixes PDF download in iframe sandbox.",
+  "features_tested": {
+    "preleva_da_magazzino_traceability": {
+      "endpoint": "POST /api/commesse/{cid}/preleva-da-magazzino",
+      "status": "PASS",
+      "tests": [
+        {
+          "name": "test_preleva_with_certificate_creates_traceability",
+          "status": "PASS",
+          "description": "When picking stock with numero_colata/heat_number, material_batch and lotto_cam records are created"
+        },
+        {
+          "name": "test_preleva_without_certificate_no_traceability",
+          "status": "PASS", 
+          "description": "When picking stock WITHOUT certificate metadata, NO traceability records are created (backward compat)"
+        },
+        {
+          "name": "test_preleva_decrements_stock_correctly",
+          "status": "PASS",
+          "description": "Stock quantity (giacenza) is correctly decremented after prelievo"
+        },
+        {
+          "name": "test_preleva_adds_cost_entry_to_commessa",
+          "status": "PASS",
+          "description": "Cost entry is added to commessa.costi_reali with correct importo, tipo, quantita"
+        },
+        {
+          "name": "test_preleva_insufficient_stock_returns_error",
+          "status": "PASS",
+          "description": "Returns 400 error when trying to pick more than available stock"
+        },
+        {
+          "name": "test_preleva_nonexistent_article_returns_404",
+          "status": "PASS",
+          "description": "Returns 404 when trying to pick nonexistent article"
+        }
+      ]
+    },
+    "ddt_pdf_download_fix": {
+      "component": "DDTEditorPage.js",
+      "status": "PASS",
+      "code_review_verified": true,
+      "details": {
+        "import_statement": "Line 7: import { apiRequest, downloadPdfBlob } from '../lib/utils'",
+        "function_usage": "Lines 201-204: handleDownloadPdf uses downloadPdfBlob instead of window.open",
+        "no_window_open": "Verified: No window.open calls found in DDTEditorPage.js"
+      }
+    },
+    "frontend_ui": {
+      "ddt_editor_page": {
+        "status": "PASS",
+        "verified": [
+          "DDT list page loads correctly",
+          "Nuovo DDT button works",
+          "DDT editor loads with all components",
+          "Type selector, client selector, save button present"
+        ]
+      }
+    }
+  },
+  "traceability_logic_summary": {
+    "trigger_condition": "articolo.numero_colata or articolo.heat_number is not empty",
+    "material_batch_fields": {
+      "user_id": "from auth",
+      "commessa_id": "from route param",
+      "heat_number": "from articolo.numero_colata or heat_number",
+      "material_type": "from articolo.qualita_acciaio",
+      "supplier_name": "from articolo.fornitore_nome",
+      "acciaieria": "from articolo.acciaieria",
+      "dimensions": "from articolo.descrizione",
+      "origine": "prelievo_magazzino"
+    },
+    "lotto_cam_fields": {
+      "user_id": "from auth",
+      "commessa_id": "from route param",
+      "numero_colata": "from articolo colata",
+      "qualita_acciaio": "from articolo",
+      "percentuale_riciclato": "from articolo or calculated from metodo_produttivo",
+      "conforme_cam": "calculated: percentuale >= soglia_minima_cam"
+    },
+    "upsert_behavior": "Uses update_one with upsert=True to avoid duplicates"
+  }
+}
