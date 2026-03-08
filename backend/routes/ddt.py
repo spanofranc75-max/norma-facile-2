@@ -359,11 +359,27 @@ async def update_ddt(ddt_id: str, data: DDTUpdate, user: dict = Depends(get_curr
 
 @router.delete("/{ddt_id}")
 async def delete_ddt(ddt_id: str, user: dict = Depends(get_current_user)):
+    # Prima leggi il documento per trovare commessa collegata
+    ddt_doc = await db[COLLECTION].find_one(
+        {"ddt_id": ddt_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not ddt_doc:
+        raise HTTPException(404, "DDT non trovato")
+
     result = await db[COLLECTION].delete_one(
         {"ddt_id": ddt_id, "user_id": user["user_id"]}
     )
     if result.deleted_count == 0:
         raise HTTPException(404, "DDT non trovato")
+
+    # Cleanup cascata: rimuovi consegna dalla commessa se collegata
+    commessa_id = ddt_doc.get("commessa_id")
+    if commessa_id:
+        await db.commesse.update_one(
+            {"commessa_id": commessa_id, "user_id": user["user_id"]},
+            {"$pull": {"consegne": {"ddt_id": ddt_id}}}
+        )
+
     return {"message": "DDT eliminato"}
 
 
