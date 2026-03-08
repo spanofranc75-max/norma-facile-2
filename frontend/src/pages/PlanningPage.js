@@ -192,10 +192,9 @@ export default function PlanningPage() {
         if (!(await confirm(msg))) return;
         try {
             if (isPreventivo) {
-                // Preventivi accettati senza commessa: non eliminabili dal planning,
-                // rimuovi solo localmente dalla vista
-                setAcceptedPrevs(old => old.filter(p => p.preventivo_id !== commessaId));
+                await apiRequest(`/preventivi/${commessaId}/hide-from-planning`, { method: 'PATCH' });
                 toast.success('Preventivo nascosto dal planning');
+                fetchBoard();
             } else {
                 await apiRequest(`/commesse/${commessaId}`, { method: 'DELETE' });
                 toast.success('Commessa eliminata (fatture intatte)');
