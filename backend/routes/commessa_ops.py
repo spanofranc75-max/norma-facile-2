@@ -1926,11 +1926,17 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
     archived_count = 0
 
     for i, r in enumerate(risultati_match):
-        colata = r.get("numero_colata", "")
-        dim = r.get("dimensioni", "")
-        qualita = r.get("qualita_acciaio", "")
+        colata = (r.get("numero_colata") or "").strip()
+        dim = (r.get("dimensioni") or "").strip()
+        qualita = (r.get("qualita_acciaio") or "").strip()
         peso = r.get("peso_kg", 0)
-        target_cid = r.get("commessa_id", "")
+        target_cid = (r.get("commessa_id") or "").strip()
+
+        # Skip profiles with missing key fields to avoid upsert crash
+        if i in data.selected_indices and (not colata or not dim):
+            logger.warning(f"[CONFIRM] Skipping profile index {i}: missing colata={colata!r} or dim={dim!r}")
+            archived_count += 1
+            continue
 
         if i in data.selected_indices and target_cid and r.get("stato_ddt") != "bolla_mancante":
             # USER SELECTED + DDT OK: create material_batch + CAM lotto
