@@ -92,6 +92,294 @@ async def check_instrument_expirations() -> list[dict]:
     return alerts
 
 
+
+async def check_payment_expirations() -> dict:
+    """Find upcoming and overdue payment deadlines for all users."""
+    from datetime import timedelta
+    today_d = date.today()
+    today_iso = today_d.isoformat()
+    week_ahead = (today_d + timedelta(days=7)).isoformat()
+
+    result = {"in_scadenza": [], "scadute_fornitori": [], "clienti_ritardo": []}
+
+    # --- Fatture passive: scadenze prossimi 7gg + scadute ---
+    fatture_p = await db.fatture_ricevute.find(
+        {"payment_status": {"$nin": ["pagata"]}},
+        {"_id": 0, "fr_id": 1, "user_id": 1, "numero_documento": 1, "fornitore_nome": 1,
+         "totale_documento": 1, "residuo": 1, "scadenze_pagamento": 1, "data_scadenza_pagamento": 1}
+    ).to_list(5000)
+
+    for f in fatture_p:
+        scadenze = f.get("scadenze_pagamento") or []
+        if scadenze:
+            for s in scadenze:
+                if s.get("pagata"):
+                    continue
+                scad = s.get("data_scadenza", "")
+                imp = s.get("importo", 0)
+                if not scad or not imp:
+                    continue
+                try:
+                    days = (today_d - date.fromisoformat(scad)).days
+                except ValueError:
+                    continue
+                entry = {
+                    "user_id": f.get("user_id"), "fornitore": f.get("fornitore_nome", ""),
+                    "numero": f.get("numero_documento", ""), "importo": imp,
+                    "data_scadenza": scad, "giorni": abs(days),
+                }
+                if days > 0:
+                    result["scadute_fornitori"].append(entry)
+                elif scad <= week_ahead:
+                    result["in_scadenza"].append(entry)
+        else:
+            scad = f.get("data_scadenza_pagamento", "")
+            imp = f.get("residuo") or f.get("totale_documento", 0)
+            if not scad or not imp:
+                continue
+            try:
+                days = (today_d - date.fromisoformat(scad)).days
+            except ValueError:
+                continue
+            entry = {
+                "user_id": f.get("user_id"), "fornitore": f.get("fornitore_nome", ""),
+                "numero": f.get("numero_documento", ""), "importo": imp,
+                "data_scadenza": scad, "giorni": abs(days),
+            }
+            if days > 0:
+                result["scadute_fornitori"].append(entry)
+            elif scad <= week_ahead:
+                result["in_scadenza"].append(entry)
+
+    # --- Fatture attive: clienti in ritardo >30gg ---
+    invoices = await db.invoices.find(
+        {"payment_status": {"$nin": ["pagata", "paid"]}},
+        {"_id": 0, "invoice_id": 1, "user_id": 1, "number": 1, "client_name": 1,
+         "totals": 1, "scadenze_pagamento": 1, "due_date": 1}
+    ).to_list(5000)
+
+    for inv in invoices:
+        scadenze = inv.get("scadenze_pagamento") or []
+        if scadenze:
+            for s in scadenze:
+                if s.get("pagata"):
+                    continue
+                scad = s.get("data_scadenza", "")
+                imp = s.get("importo", 0)
+                if not scad:
+                    continue
+                try:
+                    days = (today_d - date.fromisoformat(scad)).days
+                except ValueError:
+                    continue
+                if days > 30:
+                    result["clienti_ritardo"].append({
+                        "user_id": inv.get("user_id"), "cliente": inv.get("client_name", ""),
+                        "numero": inv.get("number", ""), "importo": imp,
+                        "data_scadenza": scad, "giorni": days,
+                    })
+        else:
+            scad = inv.get("due_date", "")
+            tot = (inv.get("totals") or {}).get("total_document", 0)
+            if not scad or not tot:
+                continue
+            try:
+                days = (today_d - date.fromisoformat(scad)).days
+            except ValueError:
+                continue
+            if days > 30:
+                result["clienti_ritardo"].append({
+                    "user_id": inv.get("user_id"), "cliente": inv.get("client_name", ""),
+                    "numero": inv.get("number", ""), "importo": tot,
+                    "data_scadenza": scad, "giorni": days,
+                })
+
+    return result
+
+
+def _build_payment_alert_html(payment_data: dict) -> str:
+    """Build HTML email for payment deadline alerts."""
+    now_str = datetime.now(timezone.utc).strftime("%d/%m/%Y")
+    in_scadenza = payment_data["in_scadenza"]
+    scadute = payment_data["scadute_fornitori"]
+    clienti = payment_data["clienti_ritardo"]
+
+    def fmt_eur(v):
+        return f"{v:,.2f} EUR".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    def fmt_date(d):
+        p = d.split("-")
+        return f"{p[2]}/{p[1]}/{p[0]}" if len(p) == 3 else d
+
+    def make_table(rows, cols, color_bg):
+        if not rows:
+            return ""
+        header = "".join(f'<th style="padding:6px 10px;text-align:left;font-size:12px;">{c}</th>' for c in cols)
+        body = ""
+        for r in rows:
+            cells = "".join(f'<td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;">{v}</td>' for v in r)
+            body += f"<tr>{cells}</tr>"
+        total = sum(row_data.get("importo", 0) for row_data in [])  # computed outside
+        return f"""
+        <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+            <thead><tr style="background:{color_bg};">{header}</tr></thead>
+            <tbody>{body}</tbody>
+        </table>"""
+
+    sections = ""
+
+    if in_scadenza:
+        tot = sum(s["importo"] for s in in_scadenza)
+        rows_html = ""
+        for s in sorted(in_scadenza, key=lambda x: x["data_scadenza"]):
+            rows_html += f"""<tr>
+                <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;">{s['fornitore']}</td>
+                <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;">{s['numero']}</td>
+                <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;text-align:right;font-family:monospace;">{fmt_eur(s['importo'])}</td>
+                <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;">{fmt_date(s['data_scadenza'])}</td>
+                <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;color:#d97706;font-weight:600;">{s['giorni']}gg</td>
+            </tr>"""
+        sections += f"""
+        <div style="margin-bottom:20px;">
+            <h3 style="color:#92400e;font-size:14px;margin:0 0 8px;">IN SCADENZA ENTRO 7 GIORNI ({len(in_scadenza)})</h3>
+            <table style="width:100%;border-collapse:collapse;">
+                <thead><tr style="background:#fef3c7;">
+                    <th style="padding:6px 10px;text-align:left;font-size:11px;">Fornitore</th>
+                    <th style="padding:6px 10px;text-align:left;font-size:11px;">Fattura</th>
+                    <th style="padding:6px 10px;text-align:right;font-size:11px;">Importo</th>
+                    <th style="padding:6px 10px;text-align:left;font-size:11px;">Scadenza</th>
+                    <th style="padding:6px 10px;text-align:left;font-size:11px;">Giorni</th>
+                </tr></thead>
+                <tbody>{rows_html}</tbody>
+            </table>
+            <p style="text-align:right;font-size:13px;font-weight:700;color:#92400e;margin:4px 0;">Totale: {fmt_eur(tot)}</p>
+        </div>"""
+
+    if scadute:
+        tot = sum(s["importo"] for s in scadute)
+        rows_html = ""
+        for s in sorted(scadute, key=lambda x: -x["giorni"]):
+            rows_html += f"""<tr>
+                <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;">{s['fornitore']}</td>
+                <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;">{s['numero']}</td>
+                <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;text-align:right;font-family:monospace;">{fmt_eur(s['importo'])}</td>
+                <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;">{fmt_date(s['data_scadenza'])}</td>
+                <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;color:#dc2626;font-weight:600;">{s['giorni']}gg ritardo</td>
+            </tr>"""
+        sections += f"""
+        <div style="margin-bottom:20px;">
+            <h3 style="color:#dc2626;font-size:14px;margin:0 0 8px;">SCADUTE NON PAGATE — FORNITORI ({len(scadute)})</h3>
+            <table style="width:100%;border-collapse:collapse;">
+                <thead><tr style="background:#fee2e2;">
+                    <th style="padding:6px 10px;text-align:left;font-size:11px;">Fornitore</th>
+                    <th style="padding:6px 10px;text-align:left;font-size:11px;">Fattura</th>
+                    <th style="padding:6px 10px;text-align:right;font-size:11px;">Importo</th>
+                    <th style="padding:6px 10px;text-align:left;font-size:11px;">Scadenza</th>
+                    <th style="padding:6px 10px;text-align:left;font-size:11px;">Ritardo</th>
+                </tr></thead>
+                <tbody>{rows_html}</tbody>
+            </table>
+            <p style="text-align:right;font-size:13px;font-weight:700;color:#dc2626;margin:4px 0;">Totale: {fmt_eur(tot)}</p>
+        </div>"""
+
+    if clienti:
+        tot = sum(s["importo"] for s in clienti)
+        rows_html = ""
+        for s in sorted(clienti, key=lambda x: -x["giorni"]):
+            rows_html += f"""<tr>
+                <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;">{s['cliente']}</td>
+                <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;">{s['numero']}</td>
+                <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;text-align:right;font-family:monospace;">{fmt_eur(s['importo'])}</td>
+                <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;">{fmt_date(s['data_scadenza'])}</td>
+                <td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:12px;color:#ca8a04;font-weight:600;">{s['giorni']}gg ritardo</td>
+            </tr>"""
+        sections += f"""
+        <div style="margin-bottom:20px;">
+            <h3 style="color:#ca8a04;font-size:14px;margin:0 0 8px;">CLIENTI IN RITARDO &gt;30gg ({len(clienti)})</h3>
+            <table style="width:100%;border-collapse:collapse;">
+                <thead><tr style="background:#fef9c3;">
+                    <th style="padding:6px 10px;text-align:left;font-size:11px;">Cliente</th>
+                    <th style="padding:6px 10px;text-align:left;font-size:11px;">Fattura</th>
+                    <th style="padding:6px 10px;text-align:right;font-size:11px;">Importo</th>
+                    <th style="padding:6px 10px;text-align:left;font-size:11px;">Scadenza</th>
+                    <th style="padding:6px 10px;text-align:left;font-size:11px;">Ritardo</th>
+                </tr></thead>
+                <tbody>{rows_html}</tbody>
+            </table>
+            <p style="text-align:right;font-size:13px;font-weight:700;color:#ca8a04;margin:4px 0;">Totale: {fmt_eur(tot)}</p>
+        </div>"""
+
+    total = len(in_scadenza) + len(scadute) + len(clienti)
+    html = f"""
+    <div style="font-family:'Segoe UI',sans-serif;max-width:700px;margin:0 auto;background:#f8fafc;padding:30px 16px;">
+        <div style="background:white;border-radius:12px;padding:28px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+            <h1 style="color:#1e293b;font-size:20px;margin:0 0 4px;">Scadenziario — Riepilogo del {now_str}</h1>
+            <p style="color:#64748b;font-size:12px;margin:0 0 20px;">Norma Facile 2.0 — Alert automatico pagamenti</p>
+            <div style="background:#f1f5f9;border-radius:8px;padding:12px;text-align:center;margin-bottom:20px;">
+                <span style="font-size:16px;font-weight:700;color:#334155;">{total} scadenz{'a' if total == 1 else 'e'} che richied{'e' if total == 1 else 'ono'} attenzione</span>
+            </div>
+            {sections}
+            <div style="text-align:center;margin-top:20px;">
+                <a href="{settings.domain_url}/scadenziario"
+                   style="display:inline-block;background:#0055FF;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;">
+                    Apri Scadenziario
+                </a>
+            </div>
+        </div>
+        <p style="text-align:center;color:#94a3b8;font-size:11px;margin-top:16px;">
+            Steel Project Design Srls — Notifica automatica
+        </p>
+    </div>"""
+    return html
+
+
+async def send_payment_alert(manual: bool = False) -> dict:
+    """Check payment expirations and send alert email if needed."""
+    payment_data = await check_payment_expirations()
+    total = len(payment_data["in_scadenza"]) + len(payment_data["scadute_fornitori"]) + len(payment_data["clienti_ritardo"])
+
+    result = {
+        "in_scadenza": len(payment_data["in_scadenza"]),
+        "scadute_fornitori": len(payment_data["scadute_fornitori"]),
+        "clienti_ritardo": len(payment_data["clienti_ritardo"]),
+        "total": total,
+        "email_sent": False,
+    }
+
+    if total == 0:
+        logger.info("[WATCHDOG] Nessuna scadenza pagamento urgente, skip email")
+        return result
+
+    recipients = await _get_notification_recipients()
+    if not recipients:
+        logger.warning("[WATCHDOG] No recipients for payment alert")
+        return result
+
+    try:
+        import resend
+        if not settings.resend_api_key:
+            logger.warning("[WATCHDOG] Resend not configured, skip payment alert")
+            return result
+        resend.api_key = settings.resend_api_key
+
+        html = _build_payment_alert_html(payment_data)
+        params = {
+            "from": f"{settings.sender_name} <{settings.sender_email}>",
+            "to": recipients,
+            "subject": f"Scadenziario Norma Facile — {total} scadenz{'a' if total == 1 else 'e'} [{datetime.now(timezone.utc).strftime('%d/%m/%Y')}]",
+            "html": html,
+        }
+        resend.Emails.send(params)
+        result["email_sent"] = True
+        result["recipients"] = recipients
+        logger.info(f"[WATCHDOG] Payment alert sent to {recipients}: {total} scadenze")
+    except Exception as e:
+        logger.error(f"[WATCHDOG] Failed to send payment alert: {e}")
+
+    return result
+
+
+
 def _build_alert_email_html(welder_alerts: list, instrument_alerts: list) -> str:
     """Build a professional HTML email for expiration alerts."""
     now_str = datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M")

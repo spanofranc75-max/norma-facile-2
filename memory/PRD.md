@@ -30,41 +30,33 @@ Italiano
 - Cash flow previsionale e consuntivo
 - Posizione debitoria/creditoria
 - IVA trimestrale
+- Riconciliazione bancaria (import CSV, matching transazioni)
 
-## Completato in questa sessione (2026-03-08)
-
-### Tracciabilità e correzioni
-1. Tracciabilità magazzino EN 1090 nel `preleva-da-magazzino`
-2. Fix `normativa_tipo` in `link_certificato_to_materiale` (riga 488)
-3. Counter atomico commesse (`find_one_and_update` su `counters`)
-4. `$push moduli.ddt_ids` alla creazione consegna
-5. Guard EN_13241 condizionale su `CommessaOpsPanel`
-6. Auth Bearer su `GateCertificationPanel` downloads
-7. `hide-from-planning` per preventivi + cascade su delete commessa
-8. Fix download DDT iframe (`downloadPdfBlob`)
-9. Fix `cert.get()` fallback con `or "—"` su gate_certification
-10. Fix `handleDelete` Planning distingue preventivi da commesse
-
-### Modulo contabile
-11. Backend aging buckets (pagamenti + incassi) nel scadenziario/dashboard
-12. Frontend ScadenziarioPage: vista unificata, filtri stato/tipo/periodo, aging colori, mark paid
-13. Backend DSO/DPO + fatturato per cliente + fatturato per tipologia nel cruscotto
-14. Frontend EBITDAPage: tab "Analisi" con DSO/DPO/fatturato/posizione debitoria
-15. Export scadenziario XLSX con stili colori e totali
-16. Export scadenziario PDF landscape con WeasyPrint
+### Correzioni e miglioramenti
+- Counter atomico commesse (find_one_and_update su counters)
+- Fix "preventivi riapparenti" su planning board (hidden_from_planning)
+- Schema material_batches unificato + migrazione dati
+- Fix crea_consegna -> push ddt_id su commessa
+- Fix download DDT iframe (downloadPdfBlob)
+- Alert email scadenze: skeleton backend implementato (IN PROGRESS)
 
 ## Backlog prioritizzato
 
-### P1
-- Allineamento schema `material_batches` (unificare campi tra confirm-profili e link_certificato_to_materiale)
-- Firma digitale su PDF Perizia (tablet)
-- Riconciliazione bancaria → scadenza
+### P0 — Critici
+- Fix parser SDI XML per rate multiple (DettaglioPagamento multipli) e fallback condizioni pagamento fornitore
 
-### P2
+### P1 — Alta priorità
+- Completare alert email giornalieri scadenze (template HTML, test invio Resend)
+- Fix numerazione preventivi duplicati (atomic counter come commesse)
+
+### P2 — Media priorità
+- Impostazioni utente per alert email (opt-in, indirizzo, giorni preavviso)
+- Firma digitale su PDF Perizia (tablet)
 - Portale cliente read-only
-- Sostituzione immagini generiche PDF AI con foto reali
+
+### P3 — Bassa priorità / Futuro
 - Analisi predittiva margini per preventivi
 - Report PDF mensili automatizzati
 - PWA per accesso offline
-- Migrazione immagini Base64 → object storage
-- Refactoring CommessaOpsPanel.js (componente monolitico)
+- Migrazione immagini Base64 -> object storage
+- Refactoring CommessaOpsPanel.js
