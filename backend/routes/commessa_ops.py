@@ -1971,6 +1971,39 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
             })
             imported_count += 1
             logger.info(f"[CONFIRM] Imported profile '{dim}' colata={colata} to commessa {target_cid}")
+        elif i in data.selected_indices and r.get("stato_ddt") == "bolla_mancante":
+            # USER SELECTED + BOLLA MANCANTE: create material_batch (tracciabilità) + archive
+            batch_id = f"bat_{uuid.uuid4().hex[:10]}"
+            await db.material_batches.insert_one({
+                "batch_id": batch_id, "user_id": user["user_id"],
+                "heat_number": colata, "material_type": qualita,
+                "supplier_name": fornitore, "dimensions": dim,
+                "normativa": metadata.get("normativa_riferimento", ""),
+                "source_doc_id": doc_id, "commessa_id": target_cid or cid,
+                "numero_certificato": n_cert,
+                "peso_kg": float(peso or 0),
+                "ddt_presente": False,
+                "stato_tracciabilita": "archivio",
+                "notes": f"Importato senza DDT - cert {n_cert}", "created_at": ts(),
+            })
+            await db.archivio_certificati.update_one(
+                {"heat_number": colata, "source_doc_id": doc_id, "user_id": user["user_id"]},
+                {"$set": {
+                    "user_id": user["user_id"],
+                    "heat_number": colata, "material_type": qualita,
+                    "supplier_name": fornitore, "dimensions": dim,
+                    "source_doc_id": doc_id, "numero_certificato": n_cert,
+                    "peso_kg": float(peso or 0),
+                    "note": "Nessun arrivo DDT registrato per questo profilo",
+                    "motivo_archivio": "Nessun arrivo DDT registrato per questo profilo",
+                    "stato_tracciabilita": "bolla_mancante",
+                    "created_at": ts(),
+                }},
+                upsert=True,
+            )
+            imported_count += 1
+            archived_count += 1
+            logger.info(f"[CONFIRM] Imported bolla_mancante profile '{dim}' colata={colata} to commessa {target_cid or cid}")
         else:
             # NOT SELECTED or NO MATCH or BOLLA MANCANTE: archive
             is_bolla_mancante = r.get("stato_ddt") == "bolla_mancante"
