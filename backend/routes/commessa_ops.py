@@ -2036,6 +2036,42 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
             imported_count += 1
             archived_count += 1
             logger.info(f"[CONFIRM] Imported bolla_mancante profile '{dim}' colata={colata} to commessa {target_cid or cid}")
+
+            # CAM lotto per bolla_mancante
+            metodo = r.get("metodo_produttivo", metadata.get("metodo_produttivo", "forno_elettrico_non_legato"))
+            perc = r.get("percentuale_riciclato")
+            if perc is None:
+                perc = {"forno_elettrico_non_legato": 80, "forno_elettrico_legato": 65, "ciclo_integrale": 10}.get(metodo, 75)
+            perc = float(perc)
+            soglie = {"forno_elettrico_non_legato": 75, "forno_elettrico_legato": 60, "ciclo_integrale": 12}
+            soglia = soglie.get(metodo, 75)
+            cert_amb = metadata.get("certificazione_ambientale", "")
+            ente_cert_bm = metadata.get("ente_certificatore_ambientale", "")
+            cert_type = "dichiarazione_produttore"
+            if cert_amb and "epd" in cert_amb.lower():
+                cert_type = "epd"
+            elif cert_amb and "remade" in cert_amb.lower():
+                cert_type = "remade_in_italy"
+            cam_id_bm = f"cam_{uuid.uuid4().hex[:10]}"
+            cam_data_bm = {
+                "user_id": user["user_id"],
+                "commessa_id": target_cid or cid,
+                "descrizione": dim or qualita or "Materiale da certificato",
+                "fornitore": fornitore, "numero_colata": colata,
+                "peso_kg": float(peso or 0), "qualita_acciaio": qualita,
+                "percentuale_riciclato": perc, "metodo_produttivo": metodo,
+                "tipo_certificazione": cert_type,
+                "numero_certificazione": n_cert,
+                "ente_certificatore": ente_cert_bm,
+                "uso_strutturale": True, "soglia_minima_cam": soglia,
+                "conforme_cam": perc >= soglia, "source_doc_id": doc_id,
+                "note": f"Importato senza DDT - cert {n_cert}",
+            }
+            await db.lotti_cam.update_one(
+                {"commessa_id": target_cid or cid, "numero_colata": colata, "descrizione": dim},
+                {"$set": cam_data_bm, "$setOnInsert": {"lotto_id": cam_id_bm, "created_at": ts()}},
+                upsert=True,
+            )
         else:
             # NOT SELECTED or NO MATCH or BOLLA MANCANTE: archive
             is_bolla_mancante = r.get("stato_ddt") == "bolla_mancante"
