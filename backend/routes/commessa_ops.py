@@ -1828,6 +1828,7 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
                         "data": a_data,
                         "fornitore": arrivo.get("fornitore_nome", "") or arrivo.get("ddt_fornitore", ""),
                         "numero_ddt": arrivo.get("numero_ddt", "") or arrivo.get("ddt_numero", "") or arrivo.get("ddt_fornitore", ""),
+                        "quantita_kg": float(mat.get("quantita", 0) or 0) if (mat.get("unita_misura", "kg") or "kg").lower() == "kg" else None,
                     }
 
         profili_collegati = 0
@@ -1842,6 +1843,7 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
                 r["ddt_data"] = matched_arrivo["data"]
                 r["fornitore_ddt"] = matched_arrivo.get("fornitore", "")
                 r["ddt_numero"] = matched_arrivo.get("numero_ddt", "")
+                r["peso_ddt_kg"] = matched_arrivo.get("quantita_kg")
                 profili_collegati += 1
             else:
                 r["stato_ddt"] = "bolla_mancante"
@@ -1956,7 +1958,7 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
                 "source_doc_id": doc_id, "commessa_id": target_cid,
                 "numero_certificato": n_cert,
                 "ddt_numero": r.get("ddt_numero", ""),
-                "peso_kg": float(peso or 0),
+                "peso_kg": r.get("peso_ddt_kg") if r.get("peso_ddt_kg") else float(peso or 0),
                 "notes": f"Confermato da utente - cert {n_cert}",
             }
             await db.material_batches.update_one(
@@ -1980,7 +1982,7 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
                 "commessa_id": target_cid,
                 "descrizione": dim or qualita or "Materiale da certificato",
                 "fornitore": fornitore, "numero_colata": colata,
-                "peso_kg": float(peso or 0), "qualita_acciaio": qualita,
+                "peso_kg": r.get("peso_ddt_kg") if r.get("peso_ddt_kg") else float(peso or 0), "qualita_acciaio": qualita,
                 "percentuale_riciclato": perc, "metodo_produttivo": metodo,
                 "tipo_certificazione": "dichiarazione_produttore",
                 "numero_certificazione": n_cert,
