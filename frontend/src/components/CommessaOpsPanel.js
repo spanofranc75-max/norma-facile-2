@@ -479,8 +479,9 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
         // Fetch preventivo lines if commessa has a linked preventivo
         try {
             const commData = await apiRequest(`/commesse/${commessaId}`);
-            if (commData?.preventivo_id) {
-                const prev = await apiRequest(`/preventivi/${commData.preventivo_id}`);
+            const prevId = commData?.preventivo_id || commData?.moduli?.preventivo_id || commData?.linked_preventivo_id;
+            if (prevId) {
+                const prev = await apiRequest(`/preventivi/${prevId}`);
                 const lines = prev?.lines || [];
                 setPreventivoLines(lines);
                 setSelectedLineIndices(lines.map((_, i) => i)); // Select all by default
