@@ -3348,83 +3348,53 @@ async def preleva_da_magazzino(cid: str, data: PrelievoMagazzinoRequest, user: d
         ),
     )
     
-    # 3. Tracciabilità EN 1090: se l'articolo ha metadati certificato, crea material_batch + lotto_cam
-    traceability_created = False
-    colata = (articolo.get("numero_colata") or articolo.get("heat_number") or "").strip()
-    if colata:
-        desc = articolo.get("descrizione", "")
-        qualita = articolo.get("qualita_acciaio", "")
-        fornitore = articolo.get("fornitore_nome", "")
-        acciaieria = articolo.get("acciaieria", "")
-        source_cert_id = articolo.get("source_cert_id", "")
-
-        batch_id = new_id("bat_")
+    # EN 1090: crea material_batch se articolo ha metadati certificato
+    normativa_tipo = comm.get("normativa_tipo") or (comm.get("moduli") or {}).get("normativa_tipo")
+    numero_colata = articolo.get("numero_colata") or articolo.get("heat_number")
+    if normativa_tipo == "EN_1090" and numero_colata:
         batch_data = {
             "user_id": user["user_id"],
             "commessa_id": cid,
-            "heat_number": colata,
-            "material_type": qualita,
-            "supplier_name": fornitore,
-            "acciaieria": acciaieria,
-            "dimensions": desc,
-            "normativa": articolo.get("normativa_riferimento", ""),
-            "source_doc_id": source_cert_id,
-            "numero_certificato": "",
-            "ddt_numero": "",
+            "fornitore": articolo.get("fornitore_nome", ""),
+            "tipo_materiale": articolo.get("descrizione", ""),
+            "numero_colata": numero_colata,
+            "heat_number": articolo.get("heat_number") or numero_colata,
+            "qualita": articolo.get("qualita_acciaio", ""),
+            "acciaieria": articolo.get("acciaieria", ""),
+            "normativa_riferimento": articolo.get("normativa_riferimento", ""),
             "peso_kg": data.quantita,
-            "notes": f"Prelievo da magazzino art. {articolo.get('codice', '')}",
-            "origine": "prelievo_magazzino",
+            "source": "magazzino",
             "articolo_id": data.articolo_id,
+            "source_cert_id": articolo.get("source_cert_id", ""),
+            "data_registrazione": now.isoformat(),
+            "note": f"Prelievo da magazzino — {data.note or ''}".strip(" —"),
         }
         await db.material_batches.update_one(
-            {"commessa_id": cid, "heat_number": colata, "dimensions": desc, "origine": "prelievo_magazzino", "articolo_id": data.articolo_id},
-            {"$set": batch_data, "$setOnInsert": {"batch_id": batch_id, "created_at": now}},
+            {"commessa_id": cid, "numero_colata": numero_colata, "tipo_materiale": articolo.get("descrizione", "")},
+            {"$set": batch_data, "$setOnInsert": {"batch_id": new_id("batch_")}},
             upsert=True,
         )
-
-        # CAM lotto
-        metodo = articolo.get("metodo_produttivo", "forno_elettrico_non_legato")
-        perc = articolo.get("percentuale_riciclato")
-        if perc is None:
-            perc = {"forno_elettrico_non_legato": 80, "forno_elettrico_legato": 65, "ciclo_integrale": 10}.get(metodo, 75)
-        perc = float(perc)
-        soglie = {"forno_elettrico_non_legato": 75, "forno_elettrico_legato": 60, "ciclo_integrale": 12}
-        soglia = soglie.get(metodo, 75)
-
-        cam_id = new_id("cam_")
-        cam_data = {
+        # lotto_cam
+        lotto_cam = {
             "user_id": user["user_id"],
             "commessa_id": cid,
-            "descrizione": desc or qualita or "Materiale da magazzino",
-            "fornitore": fornitore,
-            "numero_colata": colata,
+            "numero_colata": numero_colata,
+            "descrizione": articolo.get("descrizione", ""),
             "peso_kg": data.quantita,
-            "qualita_acciaio": qualita,
-            "percentuale_riciclato": perc,
-            "metodo_produttivo": metodo,
-            "tipo_certificazione": "dichiarazione_produttore",
-            "numero_certificazione": "",
-            "ente_certificatore": "",
-            "uso_strutturale": True,
-            "soglia_minima_cam": soglia,
-            "conforme_cam": perc >= soglia,
-            "source_doc_id": source_cert_id,
-            "note": f"Prelievo da magazzino art. {articolo.get('codice', '')}",
+            "fornitore": articolo.get("fornitore_nome", ""),
+            "percentuale_riciclato": articolo.get("percentuale_riciclato"),
+            "metodo_produttivo": articolo.get("metodo_produttivo"),
+            "source": "magazzino",
+            "data_registrazione": now.isoformat(),
         }
         await db.lotti_cam.update_one(
-            {"commessa_id": cid, "numero_colata": colata, "descrizione": desc, "articolo_id": data.articolo_id},
-            {"$set": cam_data, "$setOnInsert": {"lotto_id": cam_id, "created_at": now}},
+            {"commessa_id": cid, "numero_colata": numero_colata, "descrizione": articolo.get("descrizione", "")},
+            {"$set": lotto_cam, "$setOnInsert": {"lotto_id": new_id("lotto_")}},
             upsert=True,
         )
-        traceability_created = True
-        logger.info(f"[PRELIEVO] Tracciabilità creata per art. {data.articolo_id} colata={colata} -> commessa {cid}")
-    
-    result = {
+
+    return {
         "message": f"Prelevati {data.quantita} {articolo.get('unita_misura', 'pz')} di {articolo.get('codice', '')} — {importo_totale:.2f}€ imputati alla commessa {comm.get('numero', cid)}",
         "cost_entry": cost_entry,
         "giacenza_residua": new_giacenza,
-        "tracciabilita_creata": traceability_created,
     }
-    if traceability_created:
-        result["message"] += f" (tracciabilità EN 1090: colata {colata})"
-    return result
