@@ -1,86 +1,47 @@
 # Norma Facile 2.0 — PRD
 
-## Problema Originale
-Sistema ERP per carpenteria metallica (Steel Project Design Srls). Gestione commesse, preventivi, fatturazione, certificazioni EN 1090, perizie AI con ispezione fotografica, gestione avanzata materiali/magazzino.
+## Problema originale
+Sistema ERP completo per azienda di carpenteria metallica. Gestione commesse, preventivi, fatture, DDT, approvvigionamento, produzione, conto lavoro, tracciabilità materiali EN 1090, generazione PDF (Super Fascicolo, Fascicolo Tecnico, DoP), integrazione FattureInCloud, portale AI.
 
-## REGOLA FONDAMENTALE FATTURAZIONE
-**Si lavora SEMPRE sull'IMPONIBILE. L'IVA si aggiunge SOLO alla fine.**
-- Percentuali acconto: calcolate sull'imponibile
-- SAL: importi basati sulle righe (line_total = imponibile per riga)
-- Saldo: residuo calcolato sull'imponibile
-- Mai calcolare percentuali sul totale con IVA
+## Lingua utente
+Italiano
 
 ## Architettura
-- **Backend**: FastAPI + MongoDB + Object Storage (Emergent)
-- **Frontend**: React + Shadcn UI + TailwindCSS
-- **Auth**: Emergent-managed Google OAuth
-- **AI**: OpenAI GPT-4o Vision (Emergent LLM Key)
-- **Email**: Resend
-- **Fatturazione Elettronica**: FattureInCloud
+- **Frontend:** React + Shadcn/UI + TailwindCSS (porta 3000)
+- **Backend:** FastAPI + MongoDB (porta 8001)
+- **Integrazioni:** Claude Sonnet 4, OpenAI GPT-4o Vision, Emergent Object Storage, Resend, FattureInCloud, Google Auth, react-pdf
 
-## Funzionalità Implementate
+## Funzionalità implementate
+- Gestione completa commesse, preventivi, fatture, DDT
+- Approvvigionamento (RdP, OdA, arrivi materiale)
+- Produzione (fasi, operatori, timeline)
+- Conto lavoro (invio, rientro, verifica QC, NCR)
+- Tracciabilità materiali EN 1090 (material_batches, lotti_cam)
+- Generazione PDF: Super Fascicolo, Fascicolo Tecnico, DoP, DDT, NCR
+- AI parsing certificati (OCR + analisi)
+- Download PDF iframe-safe (downloadPdfBlob con token temporaneo)
+- Prelievo da magazzino con tracciabilità automatica
+- Sistema notifiche, dashboard cruscotto, gestione clienti/fornitori
 
-### Core ERP
-- Gestione clienti e fornitori
-- Preventivi con numerazione sequenziale (riuso numeri eliminati)
-- Fatturazione attiva/passiva con scadenziario
-- Fatturazione progressiva (acconto %, SAL, saldo) — **FIX CRITICO Mar 2026: calcoli basati su imponibile**
-- Commesse con produzione, approvvigionamento, conto lavoro
-- Dashboard finanziaria
-- Catalogo articoli con storico prezzi e giacenza
+## Completato in questa sessione (2026-03-08)
+1. **Tracciabilità materiali da magazzino (P0)** — Endpoint `preleva-da-magazzino` ora crea automaticamente `material_batch` e `lotto_cam` quando l'articolo prelevato ha metadati certificato (numero_colata/heat_number).
+2. **Fix download PDF DDTEditorPage (Bug ricorrente)** — Sostituito `window.open` con `downloadPdfBlob` per compatibilità iframe.
 
-### Modulo Ispezione AI
-- Perizia con foto + analisi AI (GPT-4o Vision)
-- Generazione PDF professionale
-- Proposte soluzioni AI
-- Object Storage per immagini
+## Backlog prioritizzato
 
-### Analisi Margini Predittiva
-- Servizio centralizzato aggregazione costi (margin_service.py)
-- Dashboard margini in tempo reale
-- Previsione AI margine finale per commesse in corso
+### P0 (Completati)
+- ~~Tracciabilità materiali da magazzino~~
+- ~~Fix download PDF DDTEditorPage~~
 
-### Gestione Avanzata Materiali (Mar 2026)
-- Prelievo da Magazzino → Commessa
-- Annulla Imputazione Fattura Ricevuta
-- Utilizzo Parziale Materiale con resto a magazzino
-- Colonna Giacenza nel catalogo articoli
-
-### Altre Funzionalità
-- Backup intelligente con merge/upsert e wipe-and-replace
-- Email rebrandate (Steel Project Design Srls)
-- Qualifica saldatori e WPS
-- Fascicolo tecnico CE
-- Notifiche e scadenziario pagamenti
-- Analisi AI DDT fornitori con matching automatico OdA e creazione arrivi
-
-## Bug Fix Critici
-- **[Mar 2026] DOPPIA IVA su fattura progressiva**: Acconto % calcolava la percentuale sul totale CON IVA invece che sull'imponibile. Corretto in preventivi.py (backend) e InvoiceGenerationModal.js (frontend).
-- **[Feb 2026] Download file in iframe**: PDF, XML e Backup fallivano silenziosamente per restrizioni cross-origin (`window.top`). Fix: pattern `document.createElement('a')` in InvoicesPage.js e SettingsPage.js. **Verificato con test automatici (iteration 158).**
-
-## Feature Nuove (Mar 2026)
-- **Analisi AI DDT Fornitori**: Route `parse-ddt` e `confirm-ddt` in `commessa_ops.py`. Claude Sonnet 4 Vision estrae materiali dal DDT PDF, matching automatico con OdA, creazione arrivo con un click. Frontend: bottone "Analizza DDT" e modale conferma in `CommessaOpsPanel.js`.
-
-## Backlog Prioritizzato
-
-### P1 - Prossimi
+### P1
+- Allineamento schema `material_batches` (unificare campi tra confirm-profili e link_certificato_to_materiale)
 - Firma digitale su PDF Perizia (tablet)
-- Portale cliente read-only per tracking commesse
+- Sostituzione immagini generiche PDF AI con foto reali installazioni
 
-### P2 - Futuri
-- Analisi margini predittiva per nuovi preventivi
-- Report PDF mensili automatici
+### P2
+- Portale cliente read-only
+- Analisi predittiva margini per preventivi
+- Report PDF mensili automatizzati
 - PWA per accesso offline
-- Migrare immagini Base64 a Object Storage
-- Sostituire immagini generiche nel PDF perizia con foto reali
-
-### Refactoring
-- Scomporre CommessaOpsPanel.js (2800+ righe)
-- Centralizzare utility (fmtEur, formatDateIT) in shared utils
-
-## Vincoli Tecnici Critici
-- `window.confirm()` è BLOCCATO nel sandbox → usare `useConfirm()` hook
-- PDF preview: solo `react-pdf`, NO iframe/embed/blob/data URLs
-- Select Radix UI: NO `value=""`, usare sentinella `__none__`
-- Tutti i backend routes con prefisso `/api`
-- MongoDB: sempre escludere `_id` nelle risposte
+- Migrazione immagini Base64 → object storage
+- Refactoring CommessaOpsPanel.js (componente monolitico)
