@@ -413,6 +413,9 @@ async def create_perizia(data: PeriziaCreate, user: dict = Depends(get_current_u
         "coefficiente_maggiorazione": data.coefficiente_maggiorazione,
         "moduli": moduli_dicts,
         "codici_danno": data.codici_danno,
+        "smaltimento": data.smaltimento,
+        "accesso_difficile": data.accesso_difficile,
+        "sconto_cortesia": data.sconto_cortesia,
     })
 
     total_perizia = sum(v.get("totale", 0) for v in voci)
@@ -440,6 +443,10 @@ async def create_perizia(data: PeriziaCreate, user: dict = Depends(get_current_u
         "total_perizia": round(total_perizia, 2),
         "notes": data.notes,
         "status": "bozza",
+        "smaltimento": data.smaltimento,
+        "accesso_difficile": data.accesso_difficile,
+        "sconto_cortesia": data.sconto_cortesia,
+        "commessa_id": data.commessa_id,
         "created_at": now,
         "updated_at": now,
     }
@@ -466,11 +473,21 @@ async def update_perizia(perizia_id: str, data: PeriziaUpdate, user: dict = Depe
         "client_id", "tipo_danno", "descrizione_utente", "prezzo_ml_originale",
         "coefficiente_maggiorazione", "ai_analysis", "stato_di_fatto",
         "nota_tecnica", "lettera_accompagnamento", "notes", "status",
+        "commessa_id",
     ]
     for field in simple_fields:
         val = getattr(data, field, None)
         if val is not None:
             upd[field] = val
+
+    # Boolean fields — need to check explicitly as False is a valid value
+    if data.smaltimento is not None:
+        upd["smaltimento"] = data.smaltimento
+    if data.accesso_difficile is not None:
+        upd["accesso_difficile"] = data.accesso_difficile
+    # Float field that can be 0
+    if data.sconto_cortesia is not None:
+        upd["sconto_cortesia"] = data.sconto_cortesia
 
     if data.codici_danno is not None:
         upd["codici_danno"] = data.codici_danno

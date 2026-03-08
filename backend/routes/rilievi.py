@@ -124,6 +124,7 @@ async def create_rilievo(
         "sketches": sketches,
         "photos": photos,
         "notes": rilievo_data.notes,
+        "commessa_id": rilievo_data.commessa_id,
         "created_at": now,
         "updated_at": now
     }
@@ -175,6 +176,8 @@ async def update_rilievo(
         update_dict["notes"] = rilievo_data.notes
     if rilievo_data.status is not None:
         update_dict["status"] = rilievo_data.status.value
+    if rilievo_data.commessa_id is not None:
+        update_dict["commessa_id"] = rilievo_data.commessa_id
     
     # Update sketches
     if rilievo_data.sketches is not None:

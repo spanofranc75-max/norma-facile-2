@@ -1,0 +1,75 @@
+{
+  "summary": "Iteration 167: Tested and fixed Perizia/Rilievo photo upload, recalc with accesso_difficile/smaltimento/sconto_cortesia, commessa linking, sidebar navigation. All 26 backend tests pass.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [],
+    "fixed_by_testing_agent": [
+      {
+        "file": "/app/backend/routes/perizia.py",
+        "issue": "create_perizia() was not saving smaltimento, accesso_difficile, sconto_cortesia, commessa_id fields",
+        "fix": "Added these fields to both calc_voci_costo() call and doc dict"
+      },
+      {
+        "file": "/app/backend/routes/perizia.py",
+        "issue": "update_perizia() was not handling boolean/float fields properly (False values were skipped)",
+        "fix": "Added explicit handling for smaltimento, accesso_difficile, sconto_cortesia with is not None checks"
+      },
+      {
+        "file": "/app/backend/models/rilievo.py",
+        "issue": "RilievoResponse model missing commessa_id field",
+        "fix": "Added commessa_id: Optional[str] = None to RilievoResponse"
+      },
+      {
+        "file": "/app/backend/routes/rilievi.py",
+        "issue": "create_rilievo() was not saving commessa_id field",
+        "fix": "Added commessa_id to rilievo_doc"
+      },
+      {
+        "file": "/app/backend/routes/rilievi.py",
+        "issue": "update_rilievo() was not handling commessa_id updates",
+        "fix": "Added commessa_id update handling"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "notes": "Frontend requires Google Auth for testing. Code review confirms implementation is correct: PeriziaEditorPage and RilievoEditorPage have FormData photo upload, getPhotoSrc with proxy URL, commessa linking buttons with data-testids, DashboardLayout has Rilievi under 'Sopralluoghi & Perizie' group."
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration167_perizia_rilievo.py",
+    "/app/test_reports/pytest/iteration167_perizia_rilievo_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "All requested BUGs (1-4) and GAPs (1-3) are implemented correctly after fixes",
+    "PDF services (rilievo_pdf_service.py, perizia_pdf_service.py) correctly handle both storage_path and legacy base64 formats",
+    "Sopralluogo audit trail correctly uses entity_type='sopralluogo'"
+  ],
+  "updated_files": [
+    "/app/backend/routes/perizia.py",
+    "/app/backend/routes/rilievi.py",
+    "/app/backend/models/rilievo.py",
+    "/app/backend/tests/test_iteration167_perizia_rilievo.py"
+  ],
+  "success_rate": {
+    "backend": "100% (26/26 tests passed)",
+    "frontend": "N/A - requires Google Auth"
+  },
+  "seed_data_creation": "Created test user session_iter167_1772998028952, client_test167, com_test167 for backend testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend tests cover: Perizia create/update with smaltimento/accesso_difficile/sconto_cortesia, recalc generating ACC.01/SMA.01/SCO.01 voci, photo upload/delete/proxy, commessa linking. Rilievo tests cover: photo upload/delete/proxy, sketch upload/delete, commessa linking. Frontend requires Google Auth login - code review shows correct implementation of FormData uploads, proxy URLs, commessa linking dialogs.",
+  "test_features_verified": {
+    "BUG_1": "PASSED - PUT /api/perizie/{id} accepts smaltimento/accesso_difficile/sconto_cortesia, POST /api/perizie/{id}/recalc generates ACC.01/SMA.01/SCO.01 voci",
+    "BUG_2": "PASSED - Audit trail in sopralluogo.py uses entity_type='sopralluogo'",
+    "BUG_3": "PASSED - Perizia photo upload/delete/proxy endpoints working",
+    "BUG_4": "PASSED - Rilievo photo/sketch upload/delete/proxy endpoints working",
+    "GAP_1": "PASSED - PATCH /api/rilievi/{id}/collega-commessa bidirectional linking",
+    "GAP_2": "PASSED - PATCH /api/perizie/{id}/collega-commessa bidirectional linking",
+    "GAP_3": "VERIFIED via code review - DashboardLayout has Rilievi under 'Sopralluoghi & Perizie' group",
+    "PDF_Rilievo": "VERIFIED via code review - _load_photo_image() and _load_sketch_bg() handle storage_path and legacy base64",
+    "PDF_Perizia": "VERIFIED via code review - cost table shows Subtotale lavori, Magg. accesso difficile (+15%), Sconto cortesia, TOTALE PERIZIA"
+  }
+}

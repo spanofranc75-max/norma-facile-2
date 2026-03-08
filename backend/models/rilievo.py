@@ -87,6 +87,7 @@ class RilievoResponse(BaseModel):
     sketches: List[SketchData] = []
     photos: List[PhotoData] = []
     notes: Optional[str] = None
+    commessa_id: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 
