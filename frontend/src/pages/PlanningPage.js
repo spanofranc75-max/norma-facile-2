@@ -185,11 +185,22 @@ export default function PlanningPage() {
     // ── Other handlers ───────────────────────────────────────────
 
     const handleDelete = async (commessaId) => {
-        if (!(await confirm('Eliminare questa commessa?\n\nLe fatture collegate NON verranno eliminate e resteranno valide nel sistema SDI.'))) return;
+        const isPreventivo = commessaId.startsWith('prev_');
+        const msg = isPreventivo
+            ? 'Rimuovere questo preventivo dal planning?\n\nIl preventivo NON verrà eliminato, tornerà disponibile se ancora in stato Accettato.'
+            : 'Eliminare questa commessa?\n\nLe fatture collegate NON verranno eliminate e resteranno valide nel sistema SDI.';
+        if (!(await confirm(msg))) return;
         try {
-            await apiRequest(`/commesse/${commessaId}`, { method: 'DELETE' });
-            toast.success('Commessa eliminata (fatture intatte)');
-            fetchBoard();
+            if (isPreventivo) {
+                // Preventivi accettati senza commessa: non eliminabili dal planning,
+                // rimuovi solo localmente dalla vista
+                setAcceptedPrevs(old => old.filter(p => p.preventivo_id !== commessaId));
+                toast.success('Preventivo nascosto dal planning');
+            } else {
+                await apiRequest(`/commesse/${commessaId}`, { method: 'DELETE' });
+                toast.success('Commessa eliminata (fatture intatte)');
+                fetchBoard();
+            }
         } catch (e) { toast.error(e.message); }
     };
 
