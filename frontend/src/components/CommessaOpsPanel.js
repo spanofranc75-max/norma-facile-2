@@ -1323,7 +1323,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                     <input
                                         defaultValue={b.acciaieria || ''}
                                         placeholder="es. AFV Beltrame"
-                                        className="font-mono text-[10px] w-full border border-slate-200 rounded px-1 h-5 bg-white focus:border-emerald-400 focus:outline-none"
+                                        className="font-mono text-[10px] w-full border border-slate-200 rounded px-1 h-5 bg-white focus:border-emerald-400 focus:outline-none transition-colors"
                                         data-testid={`acciaieria-${b.batch_id}`}
                                         onBlur={async (e) => {
                                             const val = e.target.value.trim();
@@ -1335,9 +1335,15 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
                                                     credentials: 'include',
                                                     body: JSON.stringify({ acciaieria: val })
                                                 });
+                                                e.target.style.borderColor = '#059669';
                                                 toast.success('Acciaieria salvata');
-                                                loadData();
-                                            } catch { toast.error('Errore salvataggio'); }
+                                                setTimeout(() => { e.target.style.borderColor = ''; }, 2000);
+                                                fetchData();
+                                            } catch {
+                                                e.target.style.borderColor = '#dc2626';
+                                                toast.error('Errore salvataggio');
+                                                setTimeout(() => { e.target.style.borderColor = ''; }, 2000);
+                                            }
                                         }}
                                     />
                                 </div>
