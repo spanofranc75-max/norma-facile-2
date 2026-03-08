@@ -200,10 +200,17 @@ def build_event(tipo, user, note="", payload=None):
 
 
 async def generate_commessa_number(uid):
-    """Generate sequential commessa number: NF-YYYY-NNNNNN."""
+    """Generate sequential commessa number: NF-YYYY-NNNNNN — atomic counter."""
     year = datetime.now(timezone.utc).year
-    count = await db[COLLECTION].count_documents({"user_id": uid})
-    return f"NF-{year}-{count + 1:06d}"
+    counter_id = f"commessa_{uid}_{year}"
+    result = await db.counters.find_one_and_update(
+        {"_id": counter_id},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=True,
+    )
+    seq = result["seq"]
+    return f"NF-{year}-{seq:06d}"
 
 
 # ── CRUD ─────────────────────────────────────────────────────────
