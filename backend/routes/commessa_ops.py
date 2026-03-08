@@ -1673,6 +1673,7 @@ REGOLE FONDAMENTALI:
 Rispondi in formato JSON PURO (senza markdown, senza ```):
 {
   "fornitore": "nome del produttore/acciaieria",
+  "acciaieria": "nome commerciale dell'acciaieria produttrice — è il testo più grande e prominente nell'intestazione del documento, spesso con logo (es. 'AFV Beltrame', 'NLMK', 'Riva Acciai', 'Arvedi', 'Marcegaglia', 'Feralpi', 'Duferco'). Se non identificabile, null",
   "n_certificato": "numero del certificato (campo A03)",
   "data_certificato": "data se presente",
   "normativa_riferimento": "norma di riferimento (es. EN 10025-2)",
@@ -1918,6 +1919,7 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
     metadata = doc.get("metadata", {})
     n_cert = metadata.get("numero_certificato", "")
     fornitore = metadata.get("fornitore", "")
+    acciaieria = metadata.get("acciaieria", "")
     ente_cert = metadata.get("ente_certificatore", "")
 
     imported_count = 0
@@ -1936,7 +1938,7 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
             await db.material_batches.insert_one({
                 "batch_id": batch_id, "user_id": user["user_id"],
                 "heat_number": colata, "material_type": qualita,
-                "supplier_name": fornitore, "dimensions": dim,
+                "supplier_name": fornitore, "acciaieria": acciaieria, "dimensions": dim,
                 "normativa": metadata.get("normativa_riferimento", ""),
                 "source_doc_id": doc_id, "commessa_id": target_cid,
                 "numero_certificato": n_cert,
@@ -1977,7 +1979,7 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
             await db.material_batches.insert_one({
                 "batch_id": batch_id, "user_id": user["user_id"],
                 "heat_number": colata, "material_type": qualita,
-                "supplier_name": fornitore, "dimensions": dim,
+                "supplier_name": fornitore, "acciaieria": acciaieria, "dimensions": dim,
                 "normativa": metadata.get("normativa_riferimento", ""),
                 "source_doc_id": doc_id, "commessa_id": target_cid or cid,
                 "numero_certificato": n_cert,
