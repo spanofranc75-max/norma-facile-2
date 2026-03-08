@@ -21,48 +21,52 @@ Italiano
 - Tracciabilita materiali EN 1090 (material_batches, lotti_cam)
 - Generazione PDF: Super Fascicolo, Fascicolo Tecnico, DoP, DDT, NCR
 - AI parsing certificati (OCR + analisi)
+- Sopralluoghi AI con report e foto
+- Rilievi misure con sketch pad e PDF
+- Perizie sinistro con codici danno e report
 
-### Modulo contabile/finanziario (COMPLETATO 2026-03-08)
-- Import fatture SDI: parsing multipli DettaglioPagamento, fallback 3 livelli, preview con scadenze
-- Deduplicazione robusta: $or fingerprint + indice unique fr_id + lock anti-doppio-click
+### Modulo contabile/finanziario
+- Import fatture SDI con deduplicazione robusta
 - Scadenziario unificato attive+passive con aging
-- Cruscotto finanziario con DSO/DPO, fatturato per cliente/tipologia
-- Export scadenziario XLSX/PDF
-- Riconciliazione bancaria (import CSV, matching transazioni)
-- Alert email scadenze (COMPLETATO): job schedulato 24h, template HTML, invio Resend, endpoint test manuale + preview
+- Cruscotto finanziario con DSO/DPO
+- Export XLSX/PDF
+- Riconciliazione bancaria
+- Alert email scadenze (job schedulato 24h)
 
-### Stabilizzazione codebase (2026-03-08)
-1. Atomic counter preventivi (3 path: create, from-distinta, clone)
-2. Serializer MongoDB centralizzato + fix _id:0
+### Stabilizzazione codebase
+1. Atomic counter preventivi
+2. Serializer MongoDB centralizzato
 3. 18+ indici MongoDB + unique index fr_id
 4. Paginazione su commesse, preventivi, DDT
-5. Search globale (endpoint + componente React con debounce, Ctrl+K)
-6. Morning Briefing dashboard (4 card)
-7. Pulizia DB: duplicati rimossi, scadenze migrate, dati test eliminati
-8. Backup DB per deploy produzione
+5. Search globale (Ctrl+K)
+6. Morning Briefing dashboard
+7. Pulizia DB e backup produzione
 
 ### Audit Trail & Preferenze Notifiche (2026-03-08)
-1. **Activity Audit Trail (P0)** - Sistema di logging per operazioni CRUD critiche
-   - Servizio `services/audit_trail.py` con funzione `log_activity()` fire-and-forget
-   - API `GET /api/activity-log` con paginazione e filtri (entity_type, action, user, date range, search)
-   - API `GET /api/activity-log/stats` con statistiche (oggi, settimana, top users, top entities)
-   - Pagina frontend `/registro-attivita` con tabella, filtri, statistiche
-   - Integrato in: clienti, commesse, preventivi, fatture, DDT, fatture ricevute
-   - Indici MongoDB su timestamp, entity_type, user_id, action
-   - Voce sidebar sotto "Impostazioni > Registro Attivita"
+1. **Activity Audit Trail (P0)** — Sistema di logging per operazioni CRUD critiche
+   - Servizio `services/audit_trail.py` con `log_activity()` fire-and-forget
+   - API `GET /api/activity-log` con paginazione e filtri
+   - API `GET /api/activity-log/stats` con statistiche
+   - Pagina frontend `/registro-attivita`
+   - Integrato in: clienti, commesse, preventivi, fatture, DDT, fatture ricevute, sopralluoghi, rilievi, perizie
+   - 4 indici MongoDB per performance
 
-2. **Preferenze Notifiche Email (P2)** - Configurazione utente per alert email
-   - API `GET/PUT /api/notifications/preferences` per preferenze per-utente
-   - Campi: email_alerts_enabled, alert_email, preavviso_giorni, alert_scadenze_pagamento, alert_qualita
+2. **Preferenze Notifiche Email (P2)** — Configurazione utente per alert email
+   - API `GET/PUT /api/notifications/preferences`
    - Tab "Notifiche" nella pagina Impostazioni
    - Scheduler aggiornato per rispettare opt-out e email personalizzata
+
+3. **Backup Automatico Giornaliero (P2)** — Strategia backup automatizzata
+   - Job schedulato nel loop scheduler (24h)
+   - Conserva ultimi 7 backup automatici con cleanup
+   - API `GET /api/admin/backup/history` per storico
+   - UI nella tab Backup con sezione storico e badge Auto/Manuale
 
 ## Backlog prioritizzato
 
 ### P2 — Media priorita
 - Firma digitale su PDF Perizia (tablet)
 - Portale cliente read-only
-- Strategia backup automatico DB
 
 ### P3 — Bassa priorita / Futuro
 - Analisi predittiva margini per preventivi
@@ -72,4 +76,4 @@ Italiano
 - Refactoring CommessaOpsPanel.js
 - AI Copilot per preventivi
 - Gantt Chart per pianificazione produzione
-- Webhook per SDI (sostituzione upload manuale XML)
+- Webhook per SDI
