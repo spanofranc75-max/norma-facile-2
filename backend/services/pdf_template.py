@@ -62,7 +62,6 @@ body {
 }
 .client-cell {
     width: 45%;
-    border: 1px solid #999 !important;
     padding: 8px 10px !important;
     font-size: 8.5pt;
 }
