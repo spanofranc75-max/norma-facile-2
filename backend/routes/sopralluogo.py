@@ -143,7 +143,7 @@ async def create_sopralluogo(data: SopralluogoCreate, user: dict = Depends(get_c
     }
     await db[COLLECTION].insert_one(doc)
     doc.pop("_id", None)
-    await log_activity(user, "create", "rilievo", doc["sopralluogo_id"], label=doc_number)
+    await log_activity(user, "create", "sopralluogo", doc["sopralluogo_id"], label=doc_number)
     return doc
 
 
@@ -219,7 +219,7 @@ async def delete_sopralluogo(sopralluogo_id: str, user: dict = Depends(get_curre
     result = await db[COLLECTION].delete_one({"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"]})
     if result.deleted_count == 0:
         raise HTTPException(404, "Sopralluogo non trovato")
-    await log_activity(user, "delete", "rilievo", sopralluogo_id)
+    await log_activity(user, "delete", "sopralluogo", sopralluogo_id)
     return {"deleted": True}
 
 
