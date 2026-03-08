@@ -331,7 +331,7 @@ async def get_board_view(user: dict = Depends(get_current_user)):
 
     # Fetch accepted preventivi without a linked commessa
     accepted_prevs = await db.preventivi.find(
-        {"user_id": uid, "status": "accettato"},
+        {"user_id": uid, "status": "accettato", "hidden_from_planning": {"$ne": True}},
         {"_id": 0, "preventivo_id": 1, "number": 1, "subject": 1,
          "client_id": 1, "client_name": 1, "_migrated_client_name": 1,
          "totals": 1, "created_at": 1, "updated_at": 1}
