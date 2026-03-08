@@ -485,8 +485,8 @@ async def link_certificato_to_materiale(
         )
     
     # If this is an EN 1090 project, also register in material_batches
-    normativa = doc.get("normativa") or doc.get("moduli", {}).get("normativa")
-    if normativa == "EN_1090" and numero_colata:
+    normativa_tipo = doc.get("normativa_tipo") or (doc.get("moduli") or {}).get("normativa_tipo")
+    if normativa_tipo == "EN_1090" and numero_colata:
         materiale = materiali[mat_idx]
         batch_data = {
             "user_id": user["user_id"],
