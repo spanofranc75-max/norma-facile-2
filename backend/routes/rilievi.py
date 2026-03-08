@@ -1,6 +1,6 @@
 """Rilievo (On-Site Survey) routes."""
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
+from fastapi.responses import StreamingResponse, Response
 from typing import Optional
 from io import BytesIO
 import uuid
@@ -14,6 +14,7 @@ from models.rilievo import (
 )
 from services.rilievo_pdf_service import rilievo_pdf_service
 from services.audit_trail import log_activity
+from services.object_storage import upload_photo, get_object, put_object
 import logging
 
 logger = logging.getLogger(__name__)
@@ -234,6 +235,144 @@ async def delete_rilievo(
     logger.info(f"Rilievo deleted: {rilievo_id}")
     await log_activity(user, "delete", "rilievo", rilievo_id)
     return {"message": "Rilievo eliminato con successo"}
+
+
+# ── Photo Upload (Object Storage) ──
+
+def _upload_rilievo_file(user_id: str, file_data: bytes, filename: str, content_type: str, subdir: str = "photos") -> dict:
+    """Upload a rilievo file to object storage."""
+    ext = filename.rsplit(".", 1)[-1] if "." in filename else "jpg"
+    storage_path = f"norma_facile/rilievi/{user_id}/{subdir}/{uuid.uuid4()}.{ext}"
+    result = put_object(storage_path, file_data, content_type)
+    return {
+        "storage_path": result["path"],
+        "original_filename": filename,
+        "content_type": content_type,
+        "size": result.get("size", len(file_data)),
+    }
+
+
+@router.post("/{rilievo_id}/upload-foto")
+async def upload_foto_rilievo(
+    rilievo_id: str,
+    file: UploadFile = File(...),
+    caption: str = Form(""),
+    user: dict = Depends(get_current_user),
+):
+    """Upload a photo to object storage and add to rilievo."""
+    doc = await db.rilievi.find_one(
+        {"rilievo_id": rilievo_id, "user_id": user["user_id"]}
+    )
+    if not doc:
+        raise HTTPException(404, "Rilievo non trovato")
+
+    allowed = {"image/jpeg", "image/png", "image/webp"}
+    if file.content_type not in allowed:
+        raise HTTPException(400, f"Formato non supportato: {file.content_type}")
+
+    file_data = await file.read()
+    if len(file_data) > 10 * 1024 * 1024:
+        raise HTTPException(400, "File troppo grande (max 10MB)")
+
+    storage_info = _upload_rilievo_file(user["user_id"], file_data, file.filename, file.content_type)
+    photo_entry = {
+        "photo_id": f"ph_{uuid.uuid4().hex[:8]}",
+        "name": file.filename,
+        "caption": caption,
+        **storage_info,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    await db.rilievi.update_one(
+        {"rilievo_id": rilievo_id},
+        {
+            "$push": {"photos": photo_entry},
+            "$set": {"updated_at": datetime.now(timezone.utc)},
+        },
+    )
+    return photo_entry
+
+
+@router.delete("/{rilievo_id}/foto/{photo_id}")
+async def delete_foto_rilievo(rilievo_id: str, photo_id: str, user: dict = Depends(get_current_user)):
+    """Remove a photo from the rilievo."""
+    result = await db.rilievi.update_one(
+        {"rilievo_id": rilievo_id, "user_id": user["user_id"]},
+        {"$pull": {"photos": {"photo_id": photo_id}}},
+    )
+    if result.modified_count == 0:
+        raise HTTPException(404, "Foto non trovata")
+    return {"deleted": True}
+
+
+@router.post("/{rilievo_id}/upload-sketch")
+async def upload_sketch_rilievo(
+    rilievo_id: str,
+    drawing_data: str = Form(""),
+    name: str = Form("Schizzo"),
+    dimensions: str = Form("{}"),
+    background: Optional[UploadFile] = File(None),
+    user: dict = Depends(get_current_user),
+):
+    """Upload a sketch with optional background image to object storage."""
+    doc = await db.rilievi.find_one(
+        {"rilievo_id": rilievo_id, "user_id": user["user_id"]}
+    )
+    if not doc:
+        raise HTTPException(404, "Rilievo non trovato")
+
+    sketch_entry = {
+        "sketch_id": f"sk_{uuid.uuid4().hex[:8]}",
+        "name": name,
+        "drawing_data": drawing_data,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    # Parse dimensions
+    try:
+        import json
+        sketch_entry["dimensions"] = json.loads(dimensions)
+    except Exception:
+        sketch_entry["dimensions"] = {}
+
+    # Upload background image to object storage if provided
+    if background and background.size:
+        bg_data = await background.read()
+        if len(bg_data) > 10 * 1024 * 1024:
+            raise HTTPException(400, "Background troppo grande (max 10MB)")
+        bg_info = _upload_rilievo_file(user["user_id"], bg_data, background.filename, background.content_type, "sketches")
+        sketch_entry["background_storage_path"] = bg_info["storage_path"]
+
+    await db.rilievi.update_one(
+        {"rilievo_id": rilievo_id},
+        {
+            "$push": {"sketches": sketch_entry},
+            "$set": {"updated_at": datetime.now(timezone.utc)},
+        },
+    )
+    return sketch_entry
+
+
+@router.delete("/{rilievo_id}/sketch/{sketch_id}")
+async def delete_sketch_rilievo(rilievo_id: str, sketch_id: str, user: dict = Depends(get_current_user)):
+    """Remove a sketch from the rilievo."""
+    result = await db.rilievi.update_one(
+        {"rilievo_id": rilievo_id, "user_id": user["user_id"]},
+        {"$pull": {"sketches": {"sketch_id": sketch_id}}},
+    )
+    if result.modified_count == 0:
+        raise HTTPException(404, "Schizzo non trovato")
+    return {"deleted": True}
+
+
+@router.get("/foto-proxy/{path:path}")
+async def proxy_foto_rilievo(path: str, user: dict = Depends(get_current_user)):
+    """Proxy a photo/sketch-background from object storage."""
+    try:
+        data, content_type = get_object(path)
+        return Response(content=data, media_type=content_type)
+    except Exception as e:
+        raise HTTPException(404, f"File non trovato: {str(e)[:100]}")
 
 
 @router.post("/{rilievo_id}/sketch", response_model=RilievoResponse)

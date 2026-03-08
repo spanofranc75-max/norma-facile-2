@@ -342,40 +342,71 @@ export default function RilievoEditorPage() {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
-    const handlePhotoUpload = (e) => {
+    const API = process.env.REACT_APP_BACKEND_URL;
+
+    const handlePhotoUpload = async (e) => {
         const files = Array.from(e.target.files);
         if (files.length === 0) return;
-
-        files.forEach(file => {
-            const reader = new FileReader();
-            reader.onload = (event) => {
+        if (!rilievoId || !isEditing) {
+            toast.error('Salva il rilievo prima di caricare foto');
+            return;
+        }
+        for (const file of files) {
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('caption', '');
+                const res = await fetch(`${API}/api/rilievi/${rilievoId}/upload-foto`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData,
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || 'Upload fallito');
+                }
+                const photoEntry = await res.json();
                 setFormData(prev => ({
                     ...prev,
-                    photos: [
-                        ...prev.photos,
-                        {
-                            photo_id: `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-                            name: file.name,
-                            image_data: event.target.result,
-                            caption: '',
-                        }
-                    ]
+                    photos: [...prev.photos, photoEntry]
                 }));
-            };
-            reader.readAsDataURL(file);
-        });
+            } catch (err) { toast.error(err.message); }
+        }
+        e.target.value = '';
     };
 
-    const removePhoto = (photoId) => {
-        setFormData(prev => ({
-            ...prev,
-            photos: prev.photos.filter(p => p.photo_id !== photoId)
-        }));
+    const removePhoto = async (photo) => {
+        // Object storage photo (new format)
+        if (photo.storage_path && rilievoId) {
+            try {
+                await apiRequest(`/rilievi/${rilievoId}/foto/${photo.photo_id}`, { method: 'DELETE' });
+                setFormData(prev => ({
+                    ...prev,
+                    photos: prev.photos.filter(p => p.photo_id !== photo.photo_id)
+                }));
+            } catch { toast.error('Errore eliminazione foto'); }
+        } else {
+            // Legacy base64 — just remove from local state
+            setFormData(prev => ({
+                ...prev,
+                photos: prev.photos.filter(p => p.photo_id !== photo.photo_id)
+            }));
+        }
     };
 
-    const handleSketchSave = (sketchData) => {
-        if (editingSketch?.sketch_id) {
-            // Update existing
+    const getPhotoSrc = (photo) => {
+        if (photo.storage_path) {
+            return `${API}/api/rilievi/foto-proxy/${photo.storage_path}`;
+        }
+        if (photo.image_data) {
+            return photo.image_data;
+        }
+        return '';
+    };
+
+    const handleSketchSave = async (sketchData) => {
+        if (editingSketch?.sketch_id && !editingSketch.sketch_id.startsWith('temp_')) {
+            // Update existing sketch in local state (drawing_data update)
             setFormData(prev => ({
                 ...prev,
                 sketches: prev.sketches.map(s =>
@@ -384,8 +415,33 @@ export default function RilievoEditorPage() {
                         : s
                 )
             }));
+        } else if (rilievoId && isEditing) {
+            // Upload new sketch via endpoint
+            try {
+                const fd = new FormData();
+                fd.append('name', sketchData.name || 'Schizzo');
+                fd.append('drawing_data', sketchData.drawing_data || '');
+                fd.append('dimensions', JSON.stringify(sketchData.dimensions || {}));
+                // If background_image is a base64 data URI, convert to blob
+                if (sketchData.background_image && sketchData.background_image.startsWith('data:')) {
+                    const resp = await fetch(sketchData.background_image);
+                    const blob = await resp.blob();
+                    fd.append('background', blob, 'background.jpg');
+                }
+                const res = await fetch(`${API}/api/rilievi/${rilievoId}/upload-sketch`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: fd,
+                });
+                if (!res.ok) throw new Error('Upload schizzo fallito');
+                const sketchEntry = await res.json();
+                setFormData(prev => ({
+                    ...prev,
+                    sketches: [...prev.sketches, sketchEntry]
+                }));
+            } catch (err) { toast.error(err.message); }
         } else {
-            // Add new
+            // Fallback: add to local state (will be saved with the form)
             setFormData(prev => ({
                 ...prev,
                 sketches: [
@@ -401,10 +457,15 @@ export default function RilievoEditorPage() {
         setEditingSketch(null);
     };
 
-    const removeSketch = (sketchId) => {
+    const removeSketch = async (sketch) => {
+        if (sketch.storage_path || (sketch.sketch_id && !sketch.sketch_id.startsWith('temp_') && rilievoId)) {
+            try {
+                await apiRequest(`/rilievi/${rilievoId}/sketch/${sketch.sketch_id}`, { method: 'DELETE' });
+            } catch { /* ignore */ }
+        }
         setFormData(prev => ({
             ...prev,
-            sketches: prev.sketches.filter(s => s.sketch_id !== sketchId)
+            sketches: prev.sketches.filter(s => s.sketch_id !== sketch.sketch_id)
         }));
     };
 
@@ -439,17 +500,21 @@ export default function RilievoEditorPage() {
             setSaving(true);
             
             if (isEditing) {
+                // Photos and sketches are managed via dedicated upload endpoints
+                const { photos: _p, sketches: _s, ...metadataOnly } = formData;
                 await apiRequest(`/rilievi/${rilievoId}`, {
                     method: 'PUT',
-                    body: JSON.stringify(formData),
+                    body: JSON.stringify(metadataOnly),
                 });
                 toast.success('Rilievo aggiornato');
             } else {
+                // On create, send metadata only (no photos/sketches yet)
+                const { photos: _p, sketches: _s, ...metadataOnly } = formData;
                 const result = await apiRequest('/rilievi/', {
                     method: 'POST',
-                    body: JSON.stringify(formData),
+                    body: JSON.stringify(metadataOnly),
                 });
-                toast.success('Rilievo creato');
+                toast.success('Rilievo creato — ora puoi aggiungere foto e schizzi');
                 navigate(`/rilievi/${result.rilievo_id}`);
             }
         } catch (error) {
@@ -722,7 +787,7 @@ export default function RilievoEditorPage() {
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
-                                                            onClick={() => removeSketch(sketch.sketch_id)}
+                                                            onClick={() => removeSketch(sketch)}
                                                             className="text-red-600 hover:text-red-700"
                                                         >
                                                             <Trash2 className="h-4 w-4" />
@@ -790,7 +855,7 @@ export default function RilievoEditorPage() {
                                                 className="relative group rounded-lg overflow-hidden border border-gray-200"
                                             >
                                                 <img
-                                                    src={photo.image_data}
+                                                    src={getPhotoSrc(photo)}
                                                     alt={photo.name || `Foto ${index + 1}`}
                                                     className="w-full h-48 object-cover"
                                                 />
@@ -798,7 +863,7 @@ export default function RilievoEditorPage() {
                                                     <Button
                                                         variant="destructive"
                                                         size="sm"
-                                                        onClick={() => removePhoto(photo.photo_id)}
+                                                        onClick={() => removePhoto(photo)}
                                                     >
                                                         <Trash2 className="h-4 w-4 mr-1" />
                                                         Rimuovi
