@@ -19,18 +19,7 @@ except ImportError:
 # SHARED CSS — Stile fedele ai documenti originali
 # ══════════════════════════════════════════════════════════════
 BASE_CSS = """
-@page {
-    size: A4; margin: 12mm 15mm 20mm 15mm;
-    @bottom-left {
-        content: string(footer-text);
-        font-size: 8pt; color: #999;
-    }
-    @bottom-right {
-        content: counter(page);
-        font-size: 8pt; color: #999;
-    }
-}
-@page cover { margin: 0; }
+@page { size: A4; margin: 12mm 15mm; }
 * { box-sizing: border-box; }
 body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 10pt; color: #000; line-height: 1.4; margin: 0; padding: 0; }
 .header-table { width: 100%; border-collapse: collapse; border: 2px solid #000; margin-bottom: 0; }
@@ -187,11 +176,7 @@ def generate_dop_pdf(company: dict, commessa: dict, client_name: str, dop_data: 
     ]
     rows = "".join(f'<tr><td style="text-align:center;width:18%;">{r}</td><td style="width:45%;">{c}</td><td style="text-align:center;width:37%;">{p}</td></tr>' for r, c, p in chars)
 
-    from datetime import datetime as _dt_ft
-    _oggi_ft = _dt_ft.now().strftime("%d/%m/%Y")
-
     html = f"""<!DOCTYPE html><html><head><style>{BASE_CSS}</style></head><body>
-    <div style="string-set: footer-text 'Generato il {_oggi_ft} — Conforme EN 1090-1:2009+A1:2011'; display:none;"></div>
     {_header_html(biz, addr, piva, phone, email, 'Dichiarazione di Prestazione', 'All. 4 Rev. 0', logo)}
     <p style="text-align:center;font-size:9pt;margin:6px 0;">(Secondo Regolamento UE 574/2014)</p>
     <table class="info-table">
