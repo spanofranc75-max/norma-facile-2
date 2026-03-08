@@ -74,7 +74,6 @@ const NAV_GROUPS = [
         roles: ['admin', 'ufficio_tecnico', 'officina'],
         children: [
             { path: '/planning', label: 'Planning Cantieri', icon: LayoutGrid },
-            { path: '/rilievi', label: 'Rilievi', icon: Ruler },
             { path: '/distinte', label: 'Distinte', icon: Package },
             { path: '/tracciabilita', label: 'Tracciabilit\u00e0 EN 1090', icon: Shield },
             { path: '/sicurezza', label: 'Sicurezza POS', icon: HardHat },
@@ -126,6 +125,7 @@ const NAV_GROUPS = [
         roles: ['admin', 'ufficio_tecnico'],
         children: [
             { path: '/sopralluoghi', label: 'Sopralluoghi AI', icon: ShieldAlert },
+            { path: '/rilievi', label: 'Rilievi', icon: Ruler },
             { path: '/perizie', label: 'Perizie Sinistro', icon: ShieldAlert },
             { path: '/archivio-sinistri', label: 'Archivio Sinistri', icon: BarChart3 },
         ],
