@@ -63,7 +63,7 @@ function Section({ title, icon: Icon, count, defaultOpen, children }) {
     );
 }
 
-export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh }) {
+export default function CommessaOpsPanel({ commessaId, commessaNumero, normativaTipo, onRefresh }) {
     const confirm = useConfirm();
     const [ops, setOps] = useState(null);
     const [docs, setDocs] = useState([]);
@@ -1547,9 +1547,11 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
             </Section>
 
             {/* ── CERTIFICAZIONE CANCELLI EN 13241 ── */}
+            {normativaTipo === 'EN_13241' && (
             <Section title="Certificazione Cancello EN 13241" icon={Shield} count={0}>
                 <GateCertificationPanel commessaId={commessaId} commessa={{ numero: commessaNumero }} />
             </Section>
+            )}
 
             {/* ── REPOSITORY DOCUMENTI ── */}
             <Section title="Repository Documenti" icon={FileUp} count={docs.length} defaultOpen>

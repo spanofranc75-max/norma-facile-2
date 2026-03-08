@@ -110,8 +110,10 @@ export default function GateCertificationPanel({ commessaId, commessa }) {
             dichiarazione: 'dichiarazione-ce-pdf',
         };
         try {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
             const res = await fetch(`${API}/api/gate-cert/${commessaId}/${endpoints[type]}`, {
                 credentials: 'include',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
             });
             if (!res.ok) throw new Error('Errore generazione PDF');
             const blob = await res.blob();

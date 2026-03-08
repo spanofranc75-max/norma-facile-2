@@ -563,7 +563,7 @@ export default function CommessaHubPage() {
                         )}
 
                         {/* Operational Panels: Approvvigionamento, Produzione, C/L, Repository */}
-                        <CommessaOpsPanel commessaId={commessaId} commessaNumero={c?.numero} onRefresh={fetchHub} />
+                        <CommessaOpsPanel commessaId={commessaId} commessaNumero={c?.numero} normativaTipo={c?.normativa_tipo} onRefresh={fetchHub} />
                     </div>
 
                     {/* Right: Timeline */}
