@@ -23,8 +23,10 @@ import {
     Save, ArrowLeft, ArrowRight, Camera, Brain, MapPin, ShieldAlert,
     Wrench, Zap, PaintBucket, X, FileText, FileDown, Send, Ruler,
     Plus, Trash2, RefreshCw, Check, Locate, ImagePlus, Focus, Info, Percent,
+    Link, Building2,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -112,6 +114,12 @@ export default function PeriziaEditorPage() {
     const [scontoCortesia, setScontoCortesia] = useState(0);
     const [openTooltip, setOpenTooltip] = useState(null);
 
+    // Commessa linking
+    const [showLinkDialog, setShowLinkDialog] = useState(false);
+    const [commesseList, setCommesseList] = useState([]);
+    const [linkedCommessa, setLinkedCommessa] = useState(null);
+    const [commessaId, setCommessaId] = useState(null);
+
     // Geo
     const [mapPos, setMapPos] = useState(null);
     const [indirizzo, setIndirizzo] = useState('');
@@ -148,6 +156,10 @@ export default function PeriziaEditorPage() {
             if (data.smaltimento !== undefined) setNeedsSmaltimento(data.smaltimento);
             if (data.accesso_difficile !== undefined) setAccessoDifficile(data.accesso_difficile);
             if (data.sconto_cortesia !== undefined) setScontoCortesia(data.sconto_cortesia);
+            if (data.commessa_id) {
+                setCommessaId(data.commessa_id);
+                apiRequest(`/commesse/${data.commessa_id}`).then(c => setLinkedCommessa(c)).catch(() => {});
+            }
             const loc = data.localizzazione || {};
             if (loc.lat && loc.lng) {
                 setMapPos({ lat: loc.lat, lng: loc.lng });
@@ -380,6 +392,41 @@ export default function PeriziaEditorPage() {
         if (step === 2) return codiciDanno.length > 0;
         if (step === 3) return totalMl > 0;
         return true;
+    };
+
+    // ── Commessa linking ──
+    const handleCreaCommessaPerizia = () => {
+        const params = new URLSearchParams();
+        params.set('title', `Ripristino sinistro - ${indirizzo || 'Perizia'}`);
+        if (clientId) params.set('client_id', clientId);
+        if (indirizzo) params.set('cantiere', indirizzo);
+        const tot = vociCosto.reduce((s, v) => s + (v.totale || 0), 0);
+        if (tot > 0) params.set('budget', tot.toFixed(2));
+        params.set('linked_perizia_id', periziaId);
+        navigate(`/commesse/nuova?${params.toString()}`);
+    };
+
+    const handleOpenLinkDialogPerizia = async () => {
+        try {
+            const data = await apiRequest('/commesse?limit=100');
+            const list = data?.items || data || [];
+            setCommesseList(list.filter(c => c.client_id === clientId || !clientId));
+        } catch { setCommesseList([]); }
+        setShowLinkDialog(true);
+    };
+
+    const handleLinkCommessaPerizia = async (cId) => {
+        try {
+            await apiRequest(`/perizie/${periziaId}/collega-commessa`, {
+                method: 'PATCH',
+                body: JSON.stringify({ commessa_id: cId }),
+            });
+            setCommessaId(cId);
+            const c = commesseList.find(x => x.commessa_id === cId);
+            setLinkedCommessa(c);
+            setShowLinkDialog(false);
+            toast.success('Perizia collegata alla commessa');
+        } catch (err) { toast.error(err.message); }
     };
 
     const goNext = async () => {
@@ -882,6 +929,33 @@ export default function PeriziaEditorPage() {
                                     <Send className="h-5 w-5 mr-2" /> Invia via WhatsApp / Email
                                 </Button>
                             )}
+
+                            {/* Commessa linking */}
+                            {periziaId && !commessaId ? (
+                                <div className="flex gap-2">
+                                    <Button
+                                        data-testid="btn-crea-commessa-perizia"
+                                        onClick={handleCreaCommessaPerizia}
+                                        variant="outline"
+                                        className="flex-1 h-14 text-base border-emerald-400 text-emerald-700 hover:bg-emerald-50 rounded-xl"
+                                    >
+                                        <Building2 className="h-5 w-5 mr-2" /> Crea Commessa
+                                    </Button>
+                                    <Button
+                                        data-testid="btn-collega-commessa-perizia"
+                                        onClick={handleOpenLinkDialogPerizia}
+                                        variant="outline"
+                                        className="flex-1 h-14 text-base border-blue-400 text-blue-700 hover:bg-blue-50 rounded-xl"
+                                    >
+                                        <Link className="h-5 w-5 mr-2" /> Collega a Commessa
+                                    </Button>
+                                </div>
+                            ) : linkedCommessa && (
+                                <Badge variant="outline" className="h-12 px-4 text-sm border-emerald-200 bg-emerald-50 text-emerald-700 flex items-center gap-2 justify-center rounded-xl">
+                                    <Building2 className="h-4 w-4" />
+                                    Commessa {linkedCommessa.numero}
+                                </Badge>
+                            )}
                         </div>
                     </div>
                 )}
@@ -906,6 +980,37 @@ export default function PeriziaEditorPage() {
                     </div>
                 )}
             </div>
+
+            {/* Dialog collegamento commessa */}
+            <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Collega a Commessa Esistente</DialogTitle>
+                        <DialogDescription>Seleziona la commessa a cui collegare questa perizia</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto" data-testid="perizia-commesse-link-list">
+                        {commesseList.length === 0 ? (
+                            <p className="text-sm text-slate-400 text-center py-4">Nessuna commessa trovata</p>
+                        ) : commesseList.map(c => (
+                            <button
+                                key={c.commessa_id}
+                                onClick={() => handleLinkCommessaPerizia(c.commessa_id)}
+                                className="w-full text-left p-3 border rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <span className="font-medium text-sm">{c.numero}</span>
+                                        <span className="text-slate-400 mx-2">-</span>
+                                        <span className="text-sm text-slate-600">{c.title}</span>
+                                    </div>
+                                    <Badge variant="outline" className="text-[10px]">{c.stato || c.status}</Badge>
+                                </div>
+                                {c.client_name && <p className="text-xs text-slate-400 mt-1">{c.client_name}</p>}
+                            </button>
+                        ))}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </DashboardLayout>
     );
 }

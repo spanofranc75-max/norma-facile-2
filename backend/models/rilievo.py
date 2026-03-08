@@ -38,6 +38,7 @@ class RilievoBase(BaseModel):
     survey_date: date = Field(default_factory=date.today)
     location: Optional[str] = None  # Address or location description
     notes: Optional[str] = None  # Technical notes
+    commessa_id: Optional[str] = None
 
 
 class RilievoCreate(RilievoBase):
@@ -56,6 +57,7 @@ class RilievoUpdate(BaseModel):
     sketches: Optional[List[SketchData]] = None
     photos: Optional[List[PhotoData]] = None
     status: Optional[RilievoStatus] = None
+    commessa_id: Optional[str] = None
 
 
 class Rilievo(RilievoBase):

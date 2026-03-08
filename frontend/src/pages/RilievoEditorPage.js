@@ -48,6 +48,8 @@ import {
     RotateCcw,
     Check,
     HardHat,
+    Link,
+    Building2,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import CanvasDraw from 'react-canvas-draw';
@@ -548,6 +550,50 @@ export default function RilievoEditorPage() {
 
     const selectedClient = clients.find(c => c.client_id === formData.client_id);
 
+    // ── Commessa linking ──
+    const [showLinkDialog, setShowLinkDialog] = useState(false);
+    const [commesseList, setCommesseList] = useState([]);
+    const [linkedCommessa, setLinkedCommessa] = useState(null);
+
+    useEffect(() => {
+        if (formData.commessa_id) {
+            apiRequest(`/commesse/${formData.commessa_id}`).then(c => setLinkedCommessa(c)).catch(() => {});
+        }
+    }, [formData.commessa_id]);
+
+    const handleCreaCommessa = () => {
+        const params = new URLSearchParams();
+        params.set('title', formData.project_name || 'Rilievo');
+        if (formData.client_id) params.set('client_id', formData.client_id);
+        if (formData.location) params.set('cantiere', formData.location);
+        if (formData.notes) params.set('notes', formData.notes);
+        params.set('linked_rilievo_id', rilievoId);
+        navigate(`/commesse/nuova?${params.toString()}`);
+    };
+
+    const handleOpenLinkDialog = async () => {
+        try {
+            const data = await apiRequest('/commesse?limit=100');
+            const list = data?.items || data || [];
+            setCommesseList(list.filter(c => c.client_id === formData.client_id || !formData.client_id));
+        } catch { setCommesseList([]); }
+        setShowLinkDialog(true);
+    };
+
+    const handleLinkCommessa = async (commessaId) => {
+        try {
+            await apiRequest(`/rilievi/${rilievoId}/collega-commessa`, {
+                method: 'PATCH',
+                body: JSON.stringify({ commessa_id: commessaId }),
+            });
+            setFormData(prev => ({ ...prev, commessa_id: commessaId }));
+            const c = commesseList.find(x => x.commessa_id === commessaId);
+            setLinkedCommessa(c);
+            setShowLinkDialog(false);
+            toast.success('Rilievo collegato alla commessa');
+        } catch (err) { toast.error(err.message); }
+    };
+
     if (loading) {
         return (
             <DashboardLayout>
@@ -600,6 +646,33 @@ export default function RilievoEditorPage() {
                                     <Download className="h-5 w-5 mr-2" />
                                     PDF
                                 </Button>
+                                {!formData.commessa_id ? (
+                                    <>
+                                        <Button
+                                            data-testid="btn-crea-commessa-rilievo"
+                                            variant="outline"
+                                            onClick={handleCreaCommessa}
+                                            className="h-12 px-4 border-emerald-500 text-emerald-600 hover:bg-emerald-50"
+                                        >
+                                            <Building2 className="h-5 w-5 mr-2" />
+                                            Crea Commessa
+                                        </Button>
+                                        <Button
+                                            data-testid="btn-collega-commessa-rilievo"
+                                            variant="outline"
+                                            onClick={handleOpenLinkDialog}
+                                            className="h-12 px-4 border-blue-500 text-blue-600 hover:bg-blue-50"
+                                        >
+                                            <Link className="h-5 w-5 mr-2" />
+                                            Collega
+                                        </Button>
+                                    </>
+                                ) : linkedCommessa && (
+                                    <Badge variant="outline" className="h-12 px-4 text-sm border-emerald-200 bg-emerald-50 text-emerald-700 flex items-center gap-2">
+                                        <Building2 className="h-4 w-4" />
+                                        {linkedCommessa.numero}
+                                    </Badge>
+                                )}
                             </>
                         )}
                         <Button
@@ -903,6 +976,38 @@ export default function RilievoEditorPage() {
                             setEditingSketch(null);
                         }}
                     />
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog collegamento commessa */}
+            <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Collega a Commessa Esistente</DialogTitle>
+                        <DialogDescription>Seleziona la commessa a cui collegare questo rilievo</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto" data-testid="commesse-link-list">
+                        {commesseList.length === 0 ? (
+                            <p className="text-sm text-slate-400 text-center py-4">Nessuna commessa trovata</p>
+                        ) : commesseList.map(c => (
+                            <button
+                                key={c.commessa_id}
+                                onClick={() => handleLinkCommessa(c.commessa_id)}
+                                className="w-full text-left p-3 border rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                                data-testid={`link-commessa-${c.commessa_id}`}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <span className="font-medium text-sm">{c.numero}</span>
+                                        <span className="text-slate-400 mx-2">-</span>
+                                        <span className="text-sm text-slate-600">{c.title}</span>
+                                    </div>
+                                    <Badge variant="outline" className="text-[10px]">{c.stato || c.status}</Badge>
+                                </div>
+                                {c.client_name && <p className="text-xs text-slate-400 mt-1">{c.client_name}</p>}
+                            </button>
+                        ))}
+                    </div>
                 </DialogContent>
             </Dialog>
         </DashboardLayout>

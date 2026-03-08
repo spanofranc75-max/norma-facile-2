@@ -597,6 +597,39 @@ async def proxy_foto_perizia(path: str, user: dict = Depends(get_current_user)):
         raise HTTPException(404, f"Foto non trovata: {str(e)[:100]}")
 
 
+@router.patch("/{perizia_id}/collega-commessa")
+async def collega_perizia_a_commessa(
+    perizia_id: str,
+    payload: dict,
+    user: dict = Depends(get_current_user),
+):
+    """Link a perizia to an existing commessa (bidirectional)."""
+    uid = user["user_id"]
+    commessa_id = payload.get("commessa_id")
+    if not commessa_id:
+        raise HTTPException(400, "commessa_id richiesto")
+
+    perizia = await db[COLLECTION].find_one({"perizia_id": perizia_id, "user_id": uid})
+    if not perizia:
+        raise HTTPException(404, "Perizia non trovata")
+    commessa = await db.commesse.find_one({"commessa_id": commessa_id, "user_id": uid})
+    if not commessa:
+        raise HTTPException(404, "Commessa non trovata")
+
+    await db[COLLECTION].update_one(
+        {"perizia_id": perizia_id},
+        {"$set": {"commessa_id": commessa_id}},
+    )
+    await db.commesse.update_one(
+        {"commessa_id": commessa_id},
+        {"$set": {"moduli.perizia_id": perizia_id, "linked_perizia_id": perizia_id}},
+    )
+    await log_activity(user, "update", "perizia", perizia_id,
+                       label=perizia.get("number", ""),
+                       details={"collegato_a_commessa": commessa.get("numero", commessa_id)})
+    return {"message": "Perizia collegata alla commessa", "commessa_id": commessa_id}
+
+
 # ── AI Photo Analysis ──
 
 @router.post("/{perizia_id}/analyze-photos")

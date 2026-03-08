@@ -128,6 +128,7 @@ class PeriziaCreate(BaseModel):
     smaltimento: bool = True
     accesso_difficile: bool = False
     sconto_cortesia: float = 0
+    commessa_id: Optional[str] = None
 
 
 class PeriziaUpdate(BaseModel):
@@ -150,3 +151,4 @@ class PeriziaUpdate(BaseModel):
     smaltimento: Optional[bool] = None
     accesso_difficile: Optional[bool] = None
     sconto_cortesia: Optional[float] = None
+    commessa_id: Optional[str] = None

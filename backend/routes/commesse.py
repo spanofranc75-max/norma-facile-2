@@ -123,6 +123,7 @@ class CommessaCreate(BaseModel):
     linked_preventivo_id: Optional[str] = None
     linked_distinta_id: Optional[str] = None
     linked_rilievo_id: Optional[str] = None
+    linked_perizia_id: Optional[str] = None
     # If True, start as "richiesta" (no survey)
     is_richiesta: Optional[bool] = False
 
@@ -157,6 +158,7 @@ def make_empty_moduli():
         "rilievo_id": None,
         "distinta_id": None,
         "preventivo_id": None,
+        "perizia_id": None,
         "fatture_ids": [],
         "ddt_ids": [],
         "fpc_project_id": None,
@@ -270,6 +272,7 @@ async def create_commessa(data: CommessaCreate, user: dict = Depends(get_current
     moduli["preventivo_id"] = data.linked_preventivo_id
     moduli["distinta_id"] = data.linked_distinta_id
     moduli["rilievo_id"] = data.linked_rilievo_id
+    moduli["perizia_id"] = data.linked_perizia_id
 
     doc = {
         "commessa_id": cid,
@@ -298,6 +301,7 @@ async def create_commessa(data: CommessaCreate, user: dict = Depends(get_current
         "linked_preventivo_id": data.linked_preventivo_id,
         "linked_distinta_id": data.linked_distinta_id,
         "linked_rilievo_id": data.linked_rilievo_id,
+        "linked_perizia_id": data.linked_perizia_id,
         # Operational fields for commessa_ops routes
         "approvvigionamento": {"richieste": [], "ordini": [], "arrivi": []},
         "fasi_produzione": [],
@@ -584,6 +588,7 @@ MODULE_FIELDS = {
     "rilievo":        "rilievo_id",
     "distinta":       "distinta_id",
     "preventivo":     "preventivo_id",
+    "perizia":        "perizia_id",
     "fattura":        "fatture_ids",
     "ddt":            "ddt_ids",
     "fpc_project":    "fpc_project_id",
@@ -690,7 +695,7 @@ async def link_module(commessa_id: str, req: LinkModuleRequest, user: dict = Dep
         )
 
     # Also keep backward-compat fields
-    compat_map = {"preventivo_id": "linked_preventivo_id", "distinta_id": "linked_distinta_id", "rilievo_id": "linked_rilievo_id"}
+    compat_map = {"preventivo_id": "linked_preventivo_id", "distinta_id": "linked_distinta_id", "rilievo_id": "linked_rilievo_id", "perizia_id": "linked_perizia_id"}
     if field in compat_map:
         await db[COLLECTION].update_one(
             {"commessa_id": commessa_id},

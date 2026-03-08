@@ -375,7 +375,39 @@ async def proxy_foto_rilievo(path: str, user: dict = Depends(get_current_user)):
         raise HTTPException(404, f"File non trovato: {str(e)[:100]}")
 
 
-@router.post("/{rilievo_id}/sketch", response_model=RilievoResponse)
+@router.patch("/{rilievo_id}/collega-commessa")
+async def collega_rilievo_a_commessa(
+    rilievo_id: str,
+    payload: dict,
+    user: dict = Depends(get_current_user),
+):
+    """Link a rilievo to an existing commessa (bidirectional)."""
+    uid = user["user_id"]
+    commessa_id = payload.get("commessa_id")
+    if not commessa_id:
+        raise HTTPException(400, "commessa_id richiesto")
+
+    rilievo = await db.rilievi.find_one({"rilievo_id": rilievo_id, "user_id": uid})
+    if not rilievo:
+        raise HTTPException(404, "Rilievo non trovato")
+    commessa = await db.commesse.find_one({"commessa_id": commessa_id, "user_id": uid})
+    if not commessa:
+        raise HTTPException(404, "Commessa non trovata")
+
+    # Update rilievo → commessa
+    await db.rilievi.update_one(
+        {"rilievo_id": rilievo_id},
+        {"$set": {"commessa_id": commessa_id}},
+    )
+    # Update commessa → rilievo (moduli.rilievo_id)
+    await db.commesse.update_one(
+        {"commessa_id": commessa_id},
+        {"$set": {"moduli.rilievo_id": rilievo_id, "linked_rilievo_id": rilievo_id}},
+    )
+    await log_activity(user, "update", "rilievo", rilievo_id,
+                       label=rilievo.get("project_name", ""),
+                       details={"collegato_a_commessa": commessa.get("numero", commessa_id)})
+    return {"message": "Rilievo collegato alla commessa", "commessa_id": commessa_id}
 async def add_sketch(
     rilievo_id: str,
     sketch: SketchData,
