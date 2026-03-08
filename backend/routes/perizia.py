@@ -1,15 +1,17 @@
 """Perizia Sinistro (Damage Assessment) routes — CRUD + AI Analysis + PDF."""
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
+from fastapi.responses import StreamingResponse, Response
 from typing import Optional
 import os
 import uuid
+import base64
 import logging
 from datetime import datetime, timezone
 from core.security import get_current_user
 from core.database import db
 from models.perizia import PeriziaCreate, PeriziaUpdate, CODICI_DANNO, CODICI_DANNO_MAP
 from services.audit_trail import log_activity
+from services.object_storage import upload_photo, get_object
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/perizie", tags=["perizie"])
@@ -514,6 +516,87 @@ async def delete_perizia(perizia_id: str, user: dict = Depends(get_current_user)
     return {"message": "Perizia eliminata"}
 
 
+# ── Photo Upload (Object Storage) ──
+
+def _upload_perizia_photo(user_id: str, file_data: bytes, filename: str, content_type: str) -> dict:
+    """Upload a perizia photo to object storage."""
+    ext = filename.rsplit(".", 1)[-1] if "." in filename else "jpg"
+    storage_path = f"norma_facile/perizie/{user_id}/{uuid.uuid4()}.{ext}"
+    from services.object_storage import put_object
+    result = put_object(storage_path, file_data, content_type)
+    return {
+        "storage_path": result["path"],
+        "original_filename": filename,
+        "content_type": content_type,
+        "size": result.get("size", len(file_data)),
+    }
+
+
+@router.post("/{perizia_id}/upload-foto")
+async def upload_foto_perizia(
+    perizia_id: str,
+    file: UploadFile = File(...),
+    user: dict = Depends(get_current_user),
+):
+    """Upload a single photo to object storage and add to perizia."""
+    doc = await db[COLLECTION].find_one(
+        {"perizia_id": perizia_id, "user_id": user["user_id"]}
+    )
+    if not doc:
+        raise HTTPException(404, "Perizia non trovata")
+
+    current_photos = doc.get("foto", [])
+    # Count only object-storage photos (dicts), not legacy base64 strings
+    obj_count = sum(1 for p in current_photos if isinstance(p, dict))
+    if obj_count >= 5:
+        raise HTTPException(400, "Massimo 5 foto per perizia")
+
+    allowed = {"image/jpeg", "image/png", "image/webp"}
+    if file.content_type not in allowed:
+        raise HTTPException(400, f"Formato non supportato: {file.content_type}. Usa JPEG, PNG o WebP.")
+
+    file_data = await file.read()
+    if len(file_data) > 10 * 1024 * 1024:
+        raise HTTPException(400, "File troppo grande (max 10MB)")
+
+    storage_info = _upload_perizia_photo(user["user_id"], file_data, file.filename, file.content_type)
+    foto_entry = {
+        "foto_id": f"foto_{uuid.uuid4().hex[:8]}",
+        **storage_info,
+    }
+
+    await db[COLLECTION].update_one(
+        {"perizia_id": perizia_id},
+        {
+            "$push": {"foto": foto_entry},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
+        },
+    )
+    return foto_entry
+
+
+@router.delete("/{perizia_id}/foto/{foto_id}")
+async def delete_foto_perizia(perizia_id: str, foto_id: str, user: dict = Depends(get_current_user)):
+    """Remove a photo from the perizia (object storage reference)."""
+    result = await db[COLLECTION].update_one(
+        {"perizia_id": perizia_id, "user_id": user["user_id"]},
+        {"$pull": {"foto": {"foto_id": foto_id}}},
+    )
+    if result.modified_count == 0:
+        raise HTTPException(404, "Foto non trovata")
+    return {"deleted": True}
+
+
+@router.get("/foto-proxy/{path:path}")
+async def proxy_foto_perizia(path: str, user: dict = Depends(get_current_user)):
+    """Proxy a photo from object storage."""
+    try:
+        data, content_type = get_object(path)
+        return Response(content=data, media_type=content_type)
+    except Exception as e:
+        raise HTTPException(404, f"Foto non trovata: {str(e)[:100]}")
+
+
 # ── AI Photo Analysis ──
 
 @router.post("/{perizia_id}/analyze-photos")
@@ -575,11 +658,21 @@ Scrivi in italiano formale, tono professionale e tecnico. Non usare markdown."""
         from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 
         file_contents = []
-        for photo_b64 in photos[:5]:
-            # Remove data URI prefix if present
-            if "," in photo_b64:
-                photo_b64 = photo_b64.split(",", 1)[1]
-            file_contents.append(ImageContent(image_base64=photo_b64))
+        for photo in photos[:5]:
+            # New format: dict with storage_path (object storage)
+            if isinstance(photo, dict) and photo.get("storage_path"):
+                try:
+                    data, ct = get_object(photo["storage_path"])
+                    b64 = base64.b64encode(data).decode("utf-8")
+                    file_contents.append(ImageContent(image_base64=b64))
+                except Exception as e:
+                    logger.warning(f"Failed to load photo from storage: {e}")
+            # Legacy format: raw base64 string
+            elif isinstance(photo, str) and photo:
+                photo_b64 = photo
+                if "," in photo_b64:
+                    photo_b64 = photo_b64.split(",", 1)[1]
+                file_contents.append(ImageContent(image_base64=photo_b64))
 
         chat = LlmChat(
             api_key=LLM_KEY,

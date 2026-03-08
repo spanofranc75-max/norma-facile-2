@@ -204,15 +204,58 @@ export default function PeriziaEditorPage() {
     };
 
     // Photo upload
-    const handlePhotoUpload = (e) => {
+    const handlePhotoUpload = async (e) => {
         const files = Array.from(e.target.files);
-        if (photos.length + files.length > 5) { toast.error('Massimo 5 foto'); return; }
-        files.forEach(file => {
-            const reader = new FileReader();
-            reader.onload = () => setPhotos(prev => [...prev, reader.result]);
-            reader.readAsDataURL(file);
-        });
         e.target.value = '';
+        if (!periziaId || isNew) {
+            // For new perizie, save first then upload
+            toast.error('Salva la perizia prima di caricare foto');
+            return;
+        }
+        const currentObjCount = photos.filter(p => typeof p === 'object').length;
+        if (currentObjCount + files.length > 5) { toast.error('Massimo 5 foto'); return; }
+        for (const file of files) {
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                const res = await fetch(`${API}/api/perizie/${periziaId}/upload-foto`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData,
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || 'Upload fallito');
+                }
+                const fotoEntry = await res.json();
+                setPhotos(prev => [...prev, fotoEntry]);
+            } catch (err) { toast.error(err.message); }
+        }
+    };
+
+    const handleDeletePhoto = async (photo, idx) => {
+        // Object storage photo (new format)
+        if (typeof photo === 'object' && photo.foto_id) {
+            try {
+                await apiRequest(`/perizie/${periziaId}/foto/${photo.foto_id}`, { method: 'DELETE' });
+                setPhotos(prev => prev.filter((_, i) => i !== idx));
+            } catch { toast.error('Errore eliminazione foto'); }
+        } else {
+            // Legacy base64 — just remove from array
+            setPhotos(prev => prev.filter((_, i) => i !== idx));
+        }
+    };
+
+    const getPhotoSrc = (photo) => {
+        // Object storage photo (new format) — use proxy
+        if (typeof photo === 'object' && photo.storage_path) {
+            return `${API}/api/perizie/foto-proxy/${photo.storage_path}`;
+        }
+        // Legacy base64 string
+        if (typeof photo === 'string' && photo.startsWith('data:')) {
+            return photo;
+        }
+        return '';
     };
 
     // Module management
@@ -248,7 +291,7 @@ export default function PeriziaEditorPage() {
             codici_danno: codiciDanno,
             prezzo_ml_originale: parseFloat(prezzoMl) || 0,
             coefficiente_maggiorazione: parseFloat(coeffMagg) || 20,
-            moduli, foto: photos,
+            moduli,
             ai_analysis: aiAnalysis, stato_di_fatto: statoDiFatto,
             nota_tecnica: notaTecnica, voci_costo: vociCosto,
             lettera_accompagnamento: letteraAccompagnamento, notes,
@@ -276,7 +319,8 @@ export default function PeriziaEditorPage() {
         if (photos.length === 0) { toast.error('Carica almeno una foto'); return; }
         setAnalyzing(true);
         try {
-            await apiRequest(`/perizie/${periziaId}`, { method: 'PUT', body: { foto: photos, descrizione_utente: descrizione, tipo_danno: tipoDanno, codici_danno: codiciDanno } });
+            // Save metadata before analysis (photos are already on object storage)
+            await apiRequest(`/perizie/${periziaId}`, { method: 'PUT', body: { descrizione_utente: descrizione, tipo_danno: tipoDanno, codici_danno: codiciDanno } });
             const res = await apiRequest(`/perizie/${periziaId}/analyze-photos`, { method: 'POST' });
             setAiAnalysis(res.ai_analysis || '');
             setStatoDiFatto(res.stato_di_fatto || '');
@@ -302,7 +346,7 @@ export default function PeriziaEditorPage() {
         if (isNew) { toast.error('Salva prima la perizia'); return; }
         setRecalcing(true);
         try {
-            await apiRequest(`/perizie/${periziaId}`, { method: 'PUT', body: { tipo_danno: tipoDanno, prezzo_ml_originale: parseFloat(prezzoMl) || 0, coefficiente_maggiorazione: parseFloat(coeffMagg) || 20, moduli, codici_danno: codiciDanno } });
+            await apiRequest(`/perizie/${periziaId}`, { method: 'PUT', body: { tipo_danno: tipoDanno, prezzo_ml_originale: parseFloat(prezzoMl) || 0, coefficiente_maggiorazione: parseFloat(coeffMagg) || 20, moduli, codici_danno: codiciDanno, smaltimento: needsSmaltimento, accesso_difficile: accessoDifficile, sconto_cortesia: scontoCortesia } });
             const res = await apiRequest(`/perizie/${periziaId}/recalc`, { method: 'POST' });
             setVociCosto(res.voci_costo || []);
             toast.success(`Totale: ${res.total_perizia?.toFixed(2)} EUR`);
@@ -489,8 +533,8 @@ export default function PeriziaEditorPage() {
                             <div className="grid grid-cols-3 gap-2">
                                 {photos.map((p, i) => (
                                     <div key={i} className="relative group rounded-xl overflow-hidden">
-                                        <img src={p} alt={`Foto ${i + 1}`} className="w-full h-28 object-cover" />
-                                        <button onClick={() => setPhotos(prev => prev.filter((_, idx) => idx !== i))} className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <img src={getPhotoSrc(p)} alt={`Foto ${i + 1}`} className="w-full h-28 object-cover" />
+                                        <button onClick={() => handleDeletePhoto(p, i)} className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <X className="h-3.5 w-3.5" />
                                         </button>
                                         <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-[10px] text-center py-0.5">{i + 1}/{photos.length}</div>
