@@ -15,6 +15,9 @@ import logging
 import re
 
 logger = logging.getLogger(__name__)
+
+# In-memory lock to prevent concurrent imports per user
+_import_locks: set = set()
 router = APIRouter(prefix="/fatture-ricevute", tags=["fatture_ricevute"])
 
 
@@ -1444,6 +1447,17 @@ async def sync_fatture_from_fic(
     user: dict = Depends(get_current_user)
 ):
     """Sync received invoices from FattureInCloud API."""
+    uid = user["user_id"]
+    if uid in _import_locks:
+        raise HTTPException(429, "Import già in corso, attendi il completamento")
+    _import_locks.add(uid)
+    try:
+        return await _sync_fatture_from_fic_impl(user)
+    finally:
+        _import_locks.discard(uid)
+
+
+async def _sync_fatture_from_fic_impl(user: dict):
     from services.fattureincloud_api import get_fic_client
 
     # Get user's FIC credentials from settings or user profile

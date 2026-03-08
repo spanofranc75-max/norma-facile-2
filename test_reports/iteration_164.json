@@ -1,0 +1,113 @@
+{
+  "iteration": 164,
+  "date": "2026-03-08",
+  "test_type": "backend_only",
+  "summary": "Verified SDI guard (anti-doppio-click) and Alert email scadenze features. All 13 tests passed: GUARD 1 (in-memory lock mechanism verified via code review), GUARD 2 (unique index on fr_id exists), ALERT 1-5 (notification endpoints working, scheduler running, email successfully sent)",
+  "results": {
+    "total": 13,
+    "passed": 13,
+    "failed": 0
+  },
+  "test_cases_verified": {
+    "GUARD1_lock_set_exists": {
+      "status": "PASS",
+      "description": "Line 19: _import_locks: set = set() exists in fatture_ricevute.py"
+    },
+    "GUARD1_sync_fic_uses_lock": {
+      "status": "PASS",
+      "description": "Lines 1445-1457: sync-fic checks if uid in _import_locks, raises 429, adds/removes from lock set"
+    },
+    "GUARD1_429_message": {
+      "status": "PASS",
+      "description": "429 error message 'Import già in corso, attendi il completamento' found in code"
+    },
+    "GUARD2_unique_index": {
+      "status": "PASS",
+      "description": "MongoDB index 'unique_fr_id' exists with unique=True on fr_id field"
+    },
+    "ALERT1_scadenze_preview": {
+      "status": "PASS",
+      "description": "GET /api/notifications/scadenze-preview returns in_scadenza (0), scadute_fornitori (3), clienti_ritardo (1), totale (4), invierebbe_email (true)"
+    },
+    "ALERT2_test_scadenze_endpoint": {
+      "status": "PASS",
+      "description": "POST /api/notifications/test-scadenze endpoint exists and calls send_payment_alert(manual=True)"
+    },
+    "ALERT2_send_payment_alert_structure": {
+      "status": "PASS",
+      "description": "send_payment_alert returns email_sent, total, recipients fields"
+    },
+    "ALERT3_notification_logs": {
+      "status": "PASS",
+      "description": "GET /api/notifications/history returns array of 20 notification logs"
+    },
+    "ALERT4_scheduler_calls_payment_alert": {
+      "status": "PASS",
+      "description": "run_expiration_check correctly calls send_payment_alert and includes payment_result in response"
+    },
+    "ALERT5_watchdog_logs": {
+      "status": "PASS",
+      "description": "142 WATCHDOG log entries found in backend logs"
+    },
+    "ALERT5_scheduler_started": {
+      "status": "PASS",
+      "description": "[WATCHDOG] Scheduler avviato (intervallo: 24h, 1 volta al giorno)"
+    },
+    "ALERT5_payment_alert_sent": {
+      "status": "PASS",
+      "description": "[WATCHDOG] Payment alert sent to ['spano.franc75@gmail.com']: 10 scadenze at 18:08:18"
+    },
+    "notification_status": {
+      "status": "PASS",
+      "description": "GET /api/notifications/status returns active=true, current_alerts structure"
+    }
+  },
+  "code_review_findings": {
+    "GUARD1_mechanism": {
+      "file": "/app/backend/routes/fatture_ricevute.py",
+      "lines": "19, 1445-1457",
+      "implementation": "In-memory set _import_locks prevents concurrent sync-fic calls per user. Returns HTTP 429 if lock exists."
+    },
+    "GUARD2_index": {
+      "collection": "fatture_ricevute",
+      "index_name": "unique_fr_id",
+      "index_spec": {"key": [["fr_id", 1]], "unique": true}
+    },
+    "payment_alert_flow": {
+      "trigger_manual": "POST /api/notifications/test-scadenze → send_payment_alert(manual=True)",
+      "trigger_auto": "run_expiration_check → send_payment_alert(manual=False)",
+      "scheduler": "_scheduler_loop runs every 24h, waits 5min after startup to avoid flood"
+    }
+  },
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_sdi_guard_alert_email.py",
+    "/app/test_reports/pytest/iteration164_sdi_guard_alert_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_sdi_guard_alert_email.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "N/A (skipped per request)"
+  },
+  "seed_data_creation": "N/A",
+  "test_credentials": {
+    "session_token": "0urNkos478BzSaOHd49sFYF_lmqHn4n6PLLHbVjUaGE",
+    "user_id": "user_97c773827822",
+    "api_url": "https://payment-tracking-12.preview.emergentagent.com"
+  },
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "SDI guard anti-doppio-click verified via code review (can't truly test concurrent calls). Unique index unique_fr_id exists on fr_id. Alert email scadenze fully working: scadenze-preview returns correct structure (3 scadute_fornitori + 1 clienti_ritardo), test-scadenze endpoint exists, scheduler runs in background (24h interval), payment alert email was successfully sent to spano.franc75@gmail.com with 10 scadenze."
+}

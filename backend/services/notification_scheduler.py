@@ -518,6 +518,7 @@ async def run_expiration_check(manual: bool = False) -> dict:
 
     welder_alerts = await check_welder_expirations()
     instrument_alerts = await check_instrument_expirations()
+    payment_result = await send_payment_alert(manual=manual)
     total = len(welder_alerts) + len(instrument_alerts)
 
     result = {
@@ -525,7 +526,8 @@ async def run_expiration_check(manual: bool = False) -> dict:
         "source": source,
         "welder_alerts": welder_alerts,
         "instrument_alerts": instrument_alerts,
-        "total_alerts": total,
+        "payment_alerts": payment_result,
+        "total_alerts": total + payment_result.get("total", 0),
         "email_sent": False,
     }
 
@@ -541,14 +543,16 @@ async def run_expiration_check(manual: bool = False) -> dict:
     await db.notification_logs.insert_one({
         "checked_at": datetime.now(timezone.utc),
         "source": source,
-        "total_alerts": total,
+        "total_alerts": result["total_alerts"],
         "welder_count": len(welder_alerts),
         "instrument_count": len(instrument_alerts),
-        "email_sent": result["email_sent"],
+        "payment_count": payment_result.get("total", 0),
+        "email_sent": result["email_sent"] or payment_result.get("email_sent", False),
+        "payment_email_sent": payment_result.get("email_sent", False),
         "recipients": result.get("recipients", []),
     })
 
-    logger.info(f"[WATCHDOG] Controllo completato: {total} alert trovati, email_sent={result['email_sent']}")
+    logger.info(f"[WATCHDOG] Controllo completato: {result['total_alerts']} alert, welder_email={result['email_sent']}, payment_email={payment_result.get('email_sent', False)}")
     return result
 
 
