@@ -895,6 +895,26 @@ async def generate_super_fascicolo(commessa_id: str, user_id: str) -> BytesIO:
                 "qualifications": enriched_quals,
             })
 
+    # Fallback: estrai operatori da fasi_produzione con nome non vuoto
+    fasi = commessa.get("fasi_produzione", [])
+    nomi_fasi = set()
+    for fase in fasi:
+        op = fase.get("operatore", "").strip()
+        if op:
+            nomi_fasi.add(op)
+
+    # Se non abbiamo trovato saldatori via welder_id,
+    # aggiungi operatori come saldatori senza patentino
+    if not seen_welder_ids and nomi_fasi:
+        for nome in sorted(nomi_fasi):
+            assigned_welders.append({
+                "welder_id": None,
+                "name": nome,
+                "stamp_id": "",
+                "overall_status": "no_qual",
+                "qualifications": [],
+            })
+
     # Conto Lavoro items (for certificates from subcontractors)
     conto_lavoro = commessa.get("conto_lavoro", [])
 
