@@ -1827,6 +1827,7 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
                         "arrivo_id": a_id,
                         "data": a_data,
                         "fornitore": arrivo.get("fornitore_nome", "") or arrivo.get("ddt_fornitore", ""),
+                        "numero_ddt": arrivo.get("numero_ddt", "") or arrivo.get("ddt_numero", "") or arrivo.get("ddt_fornitore", ""),
                     }
 
         profili_collegati = 0
@@ -1840,6 +1841,7 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
                 r["ddt_arrivo_id"] = matched_arrivo["arrivo_id"]
                 r["ddt_data"] = matched_arrivo["data"]
                 r["fornitore_ddt"] = matched_arrivo.get("fornitore", "")
+                r["ddt_numero"] = matched_arrivo.get("numero_ddt", "")
                 profili_collegati += 1
             else:
                 r["stato_ddt"] = "bolla_mancante"
@@ -1953,6 +1955,7 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
                 "normativa": metadata.get("normativa_riferimento", ""),
                 "source_doc_id": doc_id, "commessa_id": target_cid,
                 "numero_certificato": n_cert,
+                "ddt_numero": r.get("ddt_numero", ""),
                 "peso_kg": float(peso or 0),
                 "notes": f"Confermato da utente - cert {n_cert}",
             }
@@ -1972,8 +1975,8 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
             soglia = soglie.get(metodo, 75)
 
             cam_id = f"cam_{uuid.uuid4().hex[:10]}"
-            await db.lotti_cam.insert_one({
-                "lotto_id": cam_id, "user_id": user["user_id"],
+            cam_data = {
+                "user_id": user["user_id"],
                 "commessa_id": target_cid,
                 "descrizione": dim or qualita or "Materiale da certificato",
                 "fornitore": fornitore, "numero_colata": colata,
@@ -1985,8 +1988,12 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
                 "uso_strutturale": True, "soglia_minima_cam": soglia,
                 "conforme_cam": perc >= soglia, "source_doc_id": doc_id,
                 "note": f"Confermato da utente - {r.get('match_source', '')}",
-                "created_at": ts(),
-            })
+            }
+            await db.lotti_cam.update_one(
+                {"commessa_id": target_cid, "numero_colata": colata, "descrizione": dim},
+                {"$set": cam_data, "$setOnInsert": {"lotto_id": cam_id, "created_at": ts()}},
+                upsert=True,
+            )
             imported_count += 1
             logger.info(f"[CONFIRM] Imported profile '{dim}' colata={colata} to commessa {target_cid}")
         elif i in data.selected_indices and r.get("stato_ddt") == "bolla_mancante":
