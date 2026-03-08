@@ -1942,7 +1942,7 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
             # USER SELECTED + DDT OK: create material_batch + CAM lotto
             batch_id = f"bat_{uuid.uuid4().hex[:10]}"
             batch_data = {
-                "batch_id": batch_id, "user_id": user["user_id"],
+                "user_id": user["user_id"],
                 "heat_number": colata, "material_type": qualita,
                 "supplier_name": fornitore, "acciaieria": acciaieria, "dimensions": dim,
                 "normativa": metadata.get("normativa_riferimento", ""),
@@ -1988,7 +1988,7 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
             # USER SELECTED + BOLLA MANCANTE: create material_batch (tracciabilità) + archive
             batch_id = f"bat_{uuid.uuid4().hex[:10]}"
             batch_data_bm = {
-                "batch_id": batch_id, "user_id": user["user_id"],
+                "user_id": user["user_id"],
                 "heat_number": colata, "material_type": qualita,
                 "supplier_name": fornitore, "acciaieria": acciaieria, "dimensions": dim,
                 "normativa": metadata.get("normativa_riferimento", ""),
