@@ -13,6 +13,7 @@ from models.rilievo import (
     RilievoStatus, SketchData, PhotoData
 )
 from services.rilievo_pdf_service import rilievo_pdf_service
+from services.audit_trail import log_activity
 import logging
 
 logger = logging.getLogger(__name__)
@@ -132,6 +133,7 @@ async def create_rilievo(
     created["client_name"] = client.get("business_name")
     
     logger.info(f"Rilievo created: {rilievo_id} by user {user['user_id']}")
+    await log_activity(user, "create", "rilievo", rilievo_id, label=rilievo_data.project_name)
     return RilievoResponse(**created)
 
 
@@ -211,6 +213,7 @@ async def update_rilievo(
     updated["client_name"] = client.get("business_name") if client else "N/A"
     
     logger.info(f"Rilievo updated: {rilievo_id}")
+    await log_activity(user, "update", "rilievo", rilievo_id, label=updated.get("project_name", ""))
     return RilievoResponse(**updated)
 
 
@@ -229,6 +232,7 @@ async def delete_rilievo(
         raise HTTPException(status_code=404, detail="Rilievo non trovato")
     
     logger.info(f"Rilievo deleted: {rilievo_id}")
+    await log_activity(user, "delete", "rilievo", rilievo_id)
     return {"message": "Rilievo eliminato con successo"}
 
 

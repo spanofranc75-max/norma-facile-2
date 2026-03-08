@@ -568,7 +568,7 @@ async def run_expiration_check(manual: bool = False) -> dict:
 
 
 async def _scheduler_loop():
-    """Background loop that periodically checks expirations."""
+    """Background loop that periodically checks expirations and performs auto-backups."""
     logger.info("[WATCHDOG] Scheduler avviato (intervallo: 24h, 1 volta al giorno)")
     # Wait 5 min after startup before first check (avoids flood on hot-reload)
     await asyncio.sleep(300)
@@ -577,7 +577,88 @@ async def _scheduler_loop():
             await run_expiration_check(manual=False)
         except Exception as e:
             logger.error(f"[WATCHDOG] Errore nel controllo programmato: {e}")
+        # Auto-backup (runs after expiration check)
+        try:
+            await _run_auto_backup()
+        except Exception as e:
+            logger.error(f"[WATCHDOG] Errore nel backup automatico: {e}")
         await asyncio.sleep(CHECK_INTERVAL_SECONDS)
+
+
+async def _run_auto_backup():
+    """Perform automatic backup for all admin users, keeping last 7 backups."""
+    import json as _json
+
+    admins = await db.users.find(
+        {"role": {"$in": ["admin"]}},
+        {"_id": 0, "user_id": 1, "email": 1},
+    ).to_list(10)
+
+    for admin in admins:
+        uid = admin["user_id"]
+        # Check last backup date — skip if already done today
+        last = await db.backup_log.find_one(
+            {"user_id": uid, "auto": True},
+            sort=[("date", -1)],
+        )
+        if last:
+            last_date = last.get("date")
+            if isinstance(last_date, datetime):
+                if last_date.date() == datetime.now(timezone.utc).date():
+                    continue
+
+        # Perform backup
+        from routes.backup import BACKUP_COLLECTIONS, _serialize
+        now = datetime.now(timezone.utc)
+        backup_data = {}
+        total_records = 0
+        stats = {}
+        for coll_name in BACKUP_COLLECTIONS:
+            try:
+                docs = await db[coll_name].find({"user_id": uid}, {"_id": 0}).to_list(None)
+                backup_data[coll_name] = docs
+                stats[coll_name] = len(docs)
+                total_records += len(docs)
+            except Exception:
+                backup_data[coll_name] = []
+                stats[coll_name] = 0
+
+        backup = {
+            "metadata": {
+                "date": now.isoformat(),
+                "version": "2.0",
+                "app": "Norma Facile 2.0",
+                "user_id": uid,
+                "auto": True,
+            },
+            "data": backup_data,
+            "stats": stats,
+        }
+
+        json_bytes = _json.dumps(backup, default=_serialize, ensure_ascii=False).encode("utf-8")
+        date_str = now.strftime("%Y%m%d_%H%M")
+        filename = f"auto_backup_{date_str}.json"
+
+        await db.backup_log.insert_one({
+            "user_id": uid,
+            "date": now,
+            "filename": filename,
+            "total_records": total_records,
+            "stats": stats,
+            "size_bytes": len(json_bytes),
+            "auto": True,
+        })
+
+        # Cleanup: keep only last 7 auto-backups
+        old_backups = await db.backup_log.find(
+            {"user_id": uid, "auto": True},
+            sort=[("date", -1)],
+        ).skip(7).to_list(100)
+        if old_backups:
+            old_ids = [b["_id"] for b in old_backups]
+            await db.backup_log.delete_many({"_id": {"$in": old_ids}})
+
+        logger.info(f"[BACKUP] Auto-backup completato per {uid}: {total_records} record, {len(json_bytes)} bytes")
 
 
 def start_scheduler():

@@ -1109,18 +1109,21 @@ function BackupTab() {
     const [restoreResult, setRestoreResult] = useState(null);
     const [pendingFile, setPendingFile] = useState(null);
     const [showModeDialog, setShowModeDialog] = useState(false);
+    const [history, setHistory] = useState([]);
 
     const API = process.env.REACT_APP_BACKEND_URL;
 
     useEffect(() => {
         (async () => {
             try {
-                const [lastRes, statsRes] = await Promise.all([
+                const [lastRes, statsRes, histRes] = await Promise.all([
                     apiRequest('/admin/backup/last'),
                     apiRequest('/admin/backup/stats'),
+                    apiRequest('/admin/backup/history'),
                 ]);
                 setLastBackup(lastRes.last_backup);
                 setStats(statsRes);
+                setHistory(histRes?.history || []);
             } catch { /* silent */ }
             finally { setLoadingStats(false); }
         })();
@@ -1323,6 +1326,41 @@ function BackupTab() {
                                 ))}
                             </div>
                         </div>
+                    )}
+                </div>
+
+                {/* Auto-Backup & History */}
+                <div className="border border-blue-200 bg-blue-50/30 rounded-lg p-4 space-y-3">
+                    <div>
+                        <h3 className="text-sm font-bold text-blue-800 flex items-center gap-1.5">
+                            <RefreshCw className="h-4 w-4" /> Backup Automatico
+                        </h3>
+                        <p className="text-xs text-blue-600 mt-0.5">
+                            Il sistema esegue un backup automatico giornaliero. Vengono conservati gli ultimi 7 backup automatici.
+                        </p>
+                    </div>
+                    {history.length > 0 ? (
+                        <div className="space-y-1.5" data-testid="backup-history">
+                            <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Storico Backup ({history.length})</p>
+                            {history.map((h, i) => (
+                                <div key={i} className="flex items-center justify-between bg-white border rounded px-3 py-2 text-xs">
+                                    <div className="flex items-center gap-2">
+                                        {h.auto ? (
+                                            <Badge variant="outline" className="text-[9px] bg-blue-50 text-blue-600 border-blue-200">Auto</Badge>
+                                        ) : (
+                                            <Badge variant="outline" className="text-[9px] bg-emerald-50 text-emerald-600 border-emerald-200">Manuale</Badge>
+                                        )}
+                                        <span className="text-slate-700 font-medium">{fmtDate(h.date)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-slate-500">
+                                        <span>{h.total_records} record</span>
+                                        <span>{fmtSize(h.size_bytes)}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-xs text-slate-400">Nessun backup nello storico</p>
                     )}
                 </div>
             </CardContent>

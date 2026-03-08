@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from core.security import get_current_user
 from core.database import db
 from models.perizia import PeriziaCreate, PeriziaUpdate, CODICI_DANNO, CODICI_DANNO_MAP
+from services.audit_trail import log_activity
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/perizie", tags=["perizie"])
@@ -412,6 +413,7 @@ async def create_perizia(data: PeriziaCreate, user: dict = Depends(get_current_u
     await db[COLLECTION].insert_one(doc)
     created = await db[COLLECTION].find_one({"perizia_id": perizia_id}, {"_id": 0})
     logger.info(f"Perizia created: {perizia_id} ({number})")
+    await log_activity(user, "create", "perizia", perizia_id, label=number)
     return created
 
 
@@ -464,6 +466,7 @@ async def update_perizia(perizia_id: str, data: PeriziaUpdate, user: dict = Depe
 
     await db[COLLECTION].update_one({"perizia_id": perizia_id}, {"$set": upd})
     updated = await db[COLLECTION].find_one({"perizia_id": perizia_id}, {"_id": 0})
+    await log_activity(user, "update", "perizia", perizia_id, label=updated.get("number", ""))
     return updated
 
 
@@ -476,6 +479,7 @@ async def delete_perizia(perizia_id: str, user: dict = Depends(get_current_user)
     )
     if result.deleted_count == 0:
         raise HTTPException(404, "Perizia non trovata")
+    await log_activity(user, "delete", "perizia", perizia_id)
     return {"message": "Perizia eliminata"}
 
 

@@ -1,0 +1,126 @@
+{
+  "iteration": 166,
+  "date": "2026-03-08",
+  "test_type": "both",
+  "summary": "Verified Backup History with Auto-Backup and Extended Audit Trail features. All 10 backend tests passed. Frontend verification successful: Activity Log page (/registro-attivita) shows stats, filters, table with audit entries. Settings page Backup tab shows auto-backup section with daily backup info (keeps last 7). Settings page Notifiche tab has all notification preference controls.",
+  "results": {
+    "total": 10,
+    "passed": 10,
+    "failed": 0
+  },
+  "test_cases_verified": {
+    "backup_history_endpoint": {
+      "status": "PASS",
+      "description": "GET /api/admin/backup/history returns history array with 'auto' boolean flag for each entry"
+    },
+    "backup_last_endpoint": {
+      "status": "PASS",
+      "description": "GET /api/admin/backup/last returns last_backup object with date, filename, total_records, size_bytes, stats"
+    },
+    "backup_stats_endpoint": {
+      "status": "PASS",
+      "description": "GET /api/admin/backup/stats returns per-collection stats dict and total count"
+    },
+    "rilievo_entity_in_audit": {
+      "status": "PASS",
+      "description": "'rilievo' is in entity_types list from /api/activity-log/stats"
+    },
+    "perizia_entity_in_audit": {
+      "status": "PASS",
+      "description": "'perizia' is in entity_types list from /api/activity-log/stats"
+    },
+    "audit_filter_by_rilievo": {
+      "status": "PASS",
+      "description": "GET /api/activity-log?entity_type=rilievo returns 200 with items/total"
+    },
+    "audit_filter_by_perizia": {
+      "status": "PASS",
+      "description": "GET /api/activity-log?entity_type=perizia returns 200 with items/total"
+    },
+    "entity_labels_rilievo_perizia": {
+      "status": "PASS",
+      "description": "entity_labels includes 'Rilievo' and 'Perizia' Italian translations"
+    },
+    "notification_preavviso_giorni": {
+      "status": "PASS",
+      "description": "PUT /api/notifications/preferences correctly persists preavviso_giorni value"
+    },
+    "stats_action_labels": {
+      "status": "PASS",
+      "description": "action_labels includes Italian translations: Creazione, Modifica, Eliminazione"
+    }
+  },
+  "frontend_verification": {
+    "activity_log_page": {
+      "route": "/registro-attivita",
+      "status": "PASS",
+      "elements_verified": [
+        "Title: Registro Attivita",
+        "Stats cards: Oggi (4), Ultima settimana (4), Totale registri (4), Utenti attivi (1)",
+        "Filters: search, Tipo entita dropdown, Azione dropdown, date pickers",
+        "Table with entries showing Eliminazione/Creazione badges for Preventivo and Cliente",
+        "All data-testids present: activity-log-title, activity-stats, activity-filters, activity-table-container"
+      ]
+    },
+    "notifiche_tab": {
+      "route": "/settings (Notifiche tab)",
+      "status": "PASS",
+      "elements_verified": [
+        "Header: Preferenze Notifiche Email",
+        "Master toggle: Abilita notifiche email (data-testid=notif-master-toggle)",
+        "Email input with user's email (data-testid=notif-email-input)",
+        "Preavviso select: 7 giorni default (data-testid=notif-preavviso-select)",
+        "Scadenze pagamento toggle",
+        "Scadenze qualita toggle",
+        "Save button: Salva Preferenze (data-testid=save-notif-prefs-btn)"
+      ]
+    },
+    "backup_tab": {
+      "route": "/settings (Backup tab)",
+      "status": "PASS",
+      "elements_verified": [
+        "Header: Backup & Restore Dati",
+        "Esporta Backup section with Esegui Backup Ora green button",
+        "Ripristina da Backup section with file selector",
+        "Backup Automatico section showing: Il sistema esegue un backup automatico giornaliero. Vengono conservati gli ultimi 7 backup automatici.",
+        "Shows Nessun backup nello storico for new users"
+      ]
+    }
+  },
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "/settings",
+        "issue": "Console warning: value prop on input should not be null - minor React warning, no functional impact"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration166_backup_audit_extended.py",
+    "/app/test_reports/pytest/iteration166_backup_audit_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration166_backup_audit_extended.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100%"
+  },
+  "seed_data_creation": "Created test user with admin role and session for API testing",
+  "test_credentials": {
+    "admin_session_token": "audit_session_1772995719136",
+    "admin_user_id": "test-audit-1772995719136",
+    "api_url": "https://accounting-revamp-1.preview.emergentagent.com"
+  },
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backup History with Auto-Backup and Extended Audit Trail features verified. Backup tab at /settings shows auto-backup section with daily backup info (keeps last 7 backups). GET /api/admin/backup/history returns entries with 'auto' boolean flag. Activity log now supports rilievo and perizia entity types. Notification preferences fully working with preavviso_giorni persistence."
+}

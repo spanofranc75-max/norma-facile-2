@@ -151,6 +151,28 @@ async def get_backup_stats(user: dict = Depends(get_current_user)):
     return {"stats": stats, "total": total}
 
 
+@router.get("/history")
+async def get_backup_history(user: dict = Depends(get_current_user)):
+    """Get list of all backup logs for the current user."""
+    uid = user["user_id"]
+    logs = await db.backup_log.find(
+        {"user_id": uid},
+        {"_id": 0},
+    ).sort("date", -1).to_list(20)
+
+    items = []
+    for log in logs:
+        d = log.get("date")
+        items.append({
+            "date": d.isoformat() if isinstance(d, datetime) else str(d),
+            "filename": log.get("filename", ""),
+            "total_records": log.get("total_records", 0),
+            "size_bytes": log.get("size_bytes", 0),
+            "auto": log.get("auto", False),
+        })
+    return {"history": items}
+
+
 @router.post("/restore")
 async def restore_backup(
     file: UploadFile = File(...),
@@ -229,7 +251,8 @@ async def restore_backup(
                 else:
                     # Documenti senza PK: verifica duplicati
                     # con hash del contenuto prima di inserire
-                    import hashlib, json as _json
+                    import hashlib
+                    import json as _json
                     doc_hash = hashlib.md5(
                         _json.dumps(
                             {k: v for k, v in doc.items()
