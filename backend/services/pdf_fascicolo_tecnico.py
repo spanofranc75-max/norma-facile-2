@@ -149,6 +149,8 @@ def generate_dop_pdf(company: dict, commessa: dict, client_name: str, dop_data: 
     classe_exec = commessa.get("classe_esecuzione", "EXC2")
     ddt_ref = dop_data.get("ddt_riferimento", "")
     ddt_data = dop_data.get("ddt_data", "")
+    if ddt_ref == "__SKIP__":
+        ddt_ref = ""
     mandatario = dop_data.get("mandatario", client_name)
     firmatario = dop_data.get("firmatario", "") or company.get("responsabile_nome", "")
     ruolo = dop_data.get("ruolo_firmatario", "") or company.get("ruolo_firmatario", "Legale Rappresentante")
@@ -179,7 +181,7 @@ def generate_dop_pdf(company: dict, commessa: dict, client_name: str, dop_data: 
     <p style="text-align:center;font-size:9pt;margin:6px 0;">(Secondo Regolamento UE 574/2014)</p>
     <table class="info-table">
         <tr><td class="info-lbl">1. Codice prodotto-tipo:</td><td>{comm_num}</td></tr>
-        <tr><td class="info-lbl">2. Usi previsti:</td><td>{comm_title} — Rif. DDT n. {ddt_ref} del {ddt_data}</td></tr>
+        <tr><td class="info-lbl">2. Usi previsti:</td><td>{comm_title + (' — Rif. DDT n. ' + ddt_ref + ' del ' + ddt_data if ddt_ref else '')}</td></tr>
         <tr><td class="info-lbl">3. Fabbricante:</td><td>{biz} — {addr}</td></tr>
         <tr><td class="info-lbl">4. Mandatario:</td><td>{mandatario}</td></tr>
         <tr><td class="info-lbl">5. Sistema valutazione:</td><td>Sistema 2+ — {ente}</td></tr>

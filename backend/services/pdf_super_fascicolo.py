@@ -715,6 +715,20 @@ def _build_cap5_dop(ctx: dict) -> bytes:
     else:
         ft_enriched.setdefault("durabilita", mat_props.get("durabilita", "NPD"))
 
+    # FIX 1: Luogo e data automatica se vuoto
+    if not ft_enriched.get("luogo_data_firma"):
+        from datetime import datetime as _dt
+        oggi = _dt.now().strftime("%d/%m/%Y")
+        ft_enriched["luogo_data_firma"] = f"Sala Bolognese, {oggi}"
+
+    # FIX 2: DDT riferimento pulito — evita "Rif. DDT n. del" incompleto
+    ddt_ref = comm.get("ddt_riferimento", "").strip()
+    if not ddt_ref:
+        ft_enriched["ddt_riferimento"] = "__SKIP__"
+        ft_enriched["_usi_previsti_override"] = comm.get("oggetto", "")
+    else:
+        ft_enriched["ddt_riferimento"] = ddt_ref
+
     buf = generate_dop_pdf(co, comm, ctx.get("client_name",""), ft_enriched)
     return buf.getvalue()
 
