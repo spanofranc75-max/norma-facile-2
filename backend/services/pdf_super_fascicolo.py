@@ -312,6 +312,17 @@ def _build_cap3_materials(ctx: dict) -> bytes:
     batches = ctx.get("batches", [])
     hdr = _header(co.get("logo_url",""), co.get("business_name",""), comm.get("numero",""), "Cap. 3 — Tracciabilita' Materiali")
 
+    cert_heat_numbers = {
+        d.get("heat_number","").strip()
+        for d in ctx.get("cert_documents", [])
+    }
+    batch_with_cert = {
+        b.get("heat_number","").strip()
+        for b in batches
+        if b.get("has_certificate") or b.get("certificate_base64")
+    }
+    all_cert_heats = cert_heat_numbers | batch_with_cert
+
     rows = ""
     for i, b in enumerate(batches, 1):
         rows += f"""<tr>
@@ -321,7 +332,7 @@ def _build_cap3_materials(ctx: dict) -> bytes:
             <td>{_s(b.get('dimensions',''))}</td>
             <td>{_s(b.get('supplier_name',''))}</td>
             <td>{_s(b.get('acciaieria',''))}</td>
-            <td style="text-align:center;">{'Si' if b.get('has_certificate') or b.get('certificate_base64') else 'No'}</td>
+            <td style="text-align:center;">{'Si' if b.get('heat_number','').strip() in all_cert_heats or b.get('has_certificate') or b.get('certificate_base64') else 'No'}</td>
         </tr>"""
     if not batches:
         rows = '<tr><td colspan="7" style="text-align:center;color:#999;padding:8px;">Nessun lotto materiale registrato</td></tr>'
