@@ -3013,7 +3013,7 @@ async def crea_consegna(cid: str, data: ConsegnaCreate, user: dict = Depends(get
                 "unit": pl.get("unit", "pz"),
                 "quantity": float(pl.get("quantity", 1) or 1),
                 "qta_fatturata": 0,
-                "unit_price": 0,
+                "unit_price": float(pl.get("unit_price") or pl.get("prezzo_unitario") or 0),
                 "sconto_1": 0, "sconto_2": 0,
                 "vat_rate": pl.get("vat_rate", "22"),
                 "notes": "",
