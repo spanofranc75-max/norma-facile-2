@@ -3122,7 +3122,7 @@ async def crea_consegna(cid: str, data: ConsegnaCreate, user: dict = Depends(get
     }
     await db[COLL].update_one(
         {"commessa_id": cid},
-        {"$push": {"consegne": consegna}},
+        {"$push": {"consegne": consegna, "moduli.ddt_ids": ddt_id}},
     )
     await db[COLL].update_one({"commessa_id": cid}, push_event(cid, "CONSEGNA_CREATA", user, f"Consegna {suffix} — DDT {ddt_number}"))
 
