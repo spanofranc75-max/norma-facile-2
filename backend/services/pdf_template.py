@@ -386,7 +386,7 @@ def build_header_html(company: dict, client: dict, no_client_border: bool = Fals
     cl_pec = safe(cl.get("pec"))
     cl_email = safe(cl.get("email"))
 
-    cl_border = "" if no_client_border else "border: 1px solid #999 !important; padding: 8px 10px !important;"
+    cl_border = ""
     return f"""
     <table class="header-table">
         <tr>
