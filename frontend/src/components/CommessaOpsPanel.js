@@ -662,9 +662,9 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, onRefresh
             // Show confirmation dialog with extracted profiles
             setPendingProfiles(matches);
             setPendingDocId(docId);
-            // Pre-select only profiles that match this commessa's OdA AND have DDT
+            // Pre-select all profiles that match this commessa's OdA (including bolla_mancante)
             const autoSelected = matches
-                .map((r, i) => r.tipo === 'commessa_corrente' && r.stato_ddt !== 'bolla_mancante' ? i : -1)
+                .map((r, i) => r.tipo === 'commessa_corrente' ? i : -1)
                 .filter(i => i >= 0);
             setSelectedProfileIndices(autoSelected);
             setProfileConfirmOpen(true);
