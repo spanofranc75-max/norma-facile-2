@@ -163,9 +163,14 @@ export default function FattureRicevutePage() {
                     throw new Error(detail);
                 }
                 const result = await res.json();
-                toast.success(result.message);
-                if (result.errors?.length) {
-                    result.errors.forEach(e => toast.warning(e));
+                const msg = `${result.imported} importate` + 
+                    (result.skipped > 0 ? ` — ${result.skipped} già presenti (saltate)` : '');
+                if (result.imported > 0) toast.success(msg);
+                else if (result.skipped > 0) toast.info(msg);
+                if (result.dettaglio_saltate?.length) {
+                    result.dettaglio_saltate.forEach(s => 
+                        toast.info(`Saltata: ${s.numero} — ${s.fornitore} (${s.motivo})`, { duration: 5000 })
+                    );
                 }
                 fetchFatture();
             } catch (err) {

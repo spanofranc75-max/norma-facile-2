@@ -590,17 +590,26 @@ async def import_xml_fattura(
     now = datetime.now(timezone.utc)
     fr_id = f"fr_{uuid.uuid4().hex[:12]}"
 
-    # Check for duplicate (same number + supplier + date)
-    existing = await db.fatture_ricevute.find_one({
-        "user_id": user["user_id"],
-        "numero_documento": parsed.get("numero_documento", ""),
-        "fornitore_piva": parsed.get("fornitore_piva", ""),
-        "data_documento": parsed.get("data_documento", ""),
-    }, {"_id": 0, "fr_id": 1})
+    # Check for duplicate — robust: by (numero+piva+data) OR (piva+data+totale)
+    dedup_or = []
+    num_doc = parsed.get("numero_documento", "")
+    piva = parsed.get("fornitore_piva", "")
+    data_doc = parsed.get("data_documento", "")
+    totale_doc = parsed.get("totale_documento", 0)
+    if num_doc and piva:
+        dedup_or.append({"numero_documento": num_doc, "fornitore_piva": piva, "data_documento": data_doc})
+    if piva and data_doc and totale_doc:
+        dedup_or.append({"fornitore_piva": piva, "data_documento": data_doc, "totale_documento": round(totale_doc, 2)})
+    existing = None
+    if dedup_or:
+        existing = await db.fatture_ricevute.find_one(
+            {"user_id": user["user_id"], "$or": dedup_or},
+            {"_id": 0, "fr_id": 1, "numero_documento": 1}
+        )
     if existing:
         raise HTTPException(
             409,
-            f"Fattura già importata: n. {parsed.get('numero_documento', '')} del {parsed.get('data_documento', '')} da {parsed.get('fornitore_nome', '')}"
+            f"Fattura già importata: n. {parsed.get('numero_documento', '') or existing.get('numero_documento', '')} del {data_doc} da {parsed.get('fornitore_nome', '')}"
         )
 
     # Try to match supplier by P.IVA or Codice Fiscale
@@ -729,7 +738,7 @@ async def import_xml_batch(
     user: dict = Depends(get_current_user)
 ):
     """Import multiple FatturaPA XML files at once."""
-    results = {"imported": 0, "skipped": 0, "errors": [], "fatture": []}
+    results = {"imported": 0, "skipped": 0, "errors": [], "fatture": [], "dettaglio_saltate": []}
 
     for f in files:
         fname = f.filename.lower()
@@ -752,16 +761,30 @@ async def import_xml_batch(
             results["errors"].append(f"{f.filename}: {str(e)}")
             continue
 
-        # Check duplicate
-        existing = await db.fatture_ricevute.find_one({
-            "user_id": user["user_id"],
-            "numero_documento": parsed.get("numero_documento", ""),
-            "fornitore_piva": parsed.get("fornitore_piva", ""),
-            "data_documento": parsed.get("data_documento", ""),
-        }, {"_id": 0})
+        # Check duplicate — robust: by (numero+piva+data) OR (piva+data+totale)
+        dedup_or = []
+        num_doc = parsed.get("numero_documento", "")
+        b_piva = parsed.get("fornitore_piva", "")
+        b_data = parsed.get("data_documento", "")
+        b_totale = parsed.get("totale_documento", 0)
+        if num_doc and b_piva:
+            dedup_or.append({"numero_documento": num_doc, "fornitore_piva": b_piva, "data_documento": b_data})
+        if b_piva and b_data and b_totale:
+            dedup_or.append({"fornitore_piva": b_piva, "data_documento": b_data, "totale_documento": round(b_totale, 2)})
+        existing = None
+        if dedup_or:
+            existing = await db.fatture_ricevute.find_one(
+                {"user_id": user["user_id"], "$or": dedup_or}, {"_id": 0}
+            )
         if existing:
             results["skipped"] += 1
-            results["errors"].append(f"{f.filename}: già importata (n. {parsed.get('numero_documento', '')})")
+            results["dettaglio_saltate"].append({
+                "numero": num_doc or "N/A",
+                "fornitore": parsed.get("fornitore_nome", ""),
+                "data": b_data,
+                "motivo": "già presente",
+            })
+            results["errors"].append(f"{f.filename}: già importata (n. {num_doc or 'N/A'} del {b_data})")
             continue
 
         now = datetime.now(timezone.utc)
@@ -940,15 +963,22 @@ async def preview_xml_fattura(
                 except (ValueError, TypeError):
                     pass
 
-    # Check for existing duplicate
+    # Check for existing duplicate — robust
     existing = None
-    if parsed.get("numero_documento") and parsed.get("fornitore_piva"):
-        existing = await db.fatture_ricevute.find_one({
-            "user_id": user["user_id"],
-            "numero_documento": parsed["numero_documento"],
-            "fornitore_piva": parsed["fornitore_piva"],
-            "data_documento": parsed.get("data_documento", ""),
-        }, {"_id": 0, "fr_id": 1})
+    dedup_or = []
+    p_num = parsed.get("numero_documento", "")
+    p_piva = parsed.get("fornitore_piva", "")
+    p_data = parsed.get("data_documento", "")
+    p_totale = parsed.get("totale_documento", 0)
+    if p_num and p_piva:
+        dedup_or.append({"numero_documento": p_num, "fornitore_piva": p_piva, "data_documento": p_data})
+    if p_piva and p_data and p_totale:
+        dedup_or.append({"fornitore_piva": p_piva, "data_documento": p_data, "totale_documento": round(p_totale, 2)})
+    if dedup_or:
+        existing = await db.fatture_ricevute.find_one(
+            {"user_id": user["user_id"], "$or": dedup_or},
+            {"_id": 0, "fr_id": 1}
+        )
 
     return {
         "preview": parsed,

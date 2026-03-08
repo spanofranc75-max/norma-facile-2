@@ -1,0 +1,90 @@
+{
+  "iteration": 163,
+  "date": "2026-03-08",
+  "test_type": "backend_only",
+  "summary": "Verified SDI Fatture Ricevute deduplication fix: all 7 tests passed. import-xml returns 409 on duplicate, import-xml-batch skips duplicates with dettaglio_saltate, preview-xml shows duplicata=true, unique index on fr_id exists",
+  "results": {
+    "total": 7,
+    "passed": 7,
+    "failed": 0
+  },
+  "test_cases_verified": {
+    "TEST1_first_import": {
+      "status": "PASS",
+      "description": "POST /api/fatture-ricevute/import-xml with test_xml_2rate.xml",
+      "result": "HTTP 200 - Successfully imported TEST-2RATE-001 from Lasametalli SpA (€1000)"
+    },
+    "TEST2_reimport_blocked": {
+      "status": "PASS",
+      "description": "POST /api/fatture-ricevute/import-xml with SAME file",
+      "result": "HTTP 409 - 'Fattura già importata: n. TEST-2RATE-001 del 2026-03-08 da Lasametalli SpA'"
+    },
+    "TEST3_preview_duplicata_true": {
+      "status": "PASS",
+      "description": "POST /api/fatture-ricevute/preview-xml with already imported file",
+      "result": "HTTP 200 - duplicata=true"
+    },
+    "TEST4_batch_1_new_1_existing": {
+      "status": "PASS",
+      "description": "POST /api/fatture-ricevute/import-xml-batch with test_xml_2rate.xml + test_xml_nopagamento.xml",
+      "result": "imported=1, skipped=1, dettaglio_saltate=[{numero: 'TEST-2RATE-001', motivo: 'già presente'}]"
+    },
+    "TEST5_batch_both_existing": {
+      "status": "PASS",
+      "description": "POST /api/fatture-ricevute/import-xml-batch with both files already imported",
+      "result": "imported=0, skipped=2, dettaglio_saltate has 2 entries"
+    },
+    "TEST6_no_duplicate_fr_ids": {
+      "status": "PASS",
+      "description": "MongoDB check: no duplicate fr_ids in fatture_ricevute collection",
+      "result": "0 duplicates found"
+    },
+    "TEST7_unique_index_exists": {
+      "status": "PASS",
+      "description": "MongoDB check: unique index on fatture_ricevute.fr_id",
+      "result": "Index 'unique_fr_id' exists with unique=true"
+    }
+  },
+  "dedup_logic_verified": {
+    "description": "Deduplication uses $or with two conditions for robustness",
+    "condition1": "(numero_documento + fornitore_piva + data_documento)",
+    "condition2": "(fornitore_piva + data_documento + totale_documento)",
+    "purpose": "Catches both named invoices from XML and unnamed from FIC sync"
+  },
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_fatture_deduplication.py",
+    "/app/test_reports/pytest/iteration163_deduplication_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Code verified: import-xml (lines 593-606) correctly returns HTTP 409 with 'Fattura già importata' message",
+    "Code verified: import-xml-batch (lines 764-783) correctly populates dettaglio_saltate array with skipped invoices",
+    "Code verified: preview-xml (lines 960-974) correctly sets duplicata=true for existing invoices",
+    "Code verified: Unique index 'unique_fr_id' on fr_id provides DB-level duplicate prevention"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_fatture_deduplication.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "N/A (skipped per request)"
+  },
+  "seed_data_creation": "Used test XML files: /app/backend/tests/test_xml_2rate.xml (Lasametalli SpA, €1000, 2 rate) and /app/backend/tests/test_xml_nopagamento.xml (Ferramenta Rossi, €2000, no payment)",
+  "test_credentials": {
+    "session_token": "test_dedup_1772991921856",
+    "user_id": "user_97c773827822",
+    "api_url": "https://payment-tracking-12.preview.emergentagent.com"
+  },
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "SDI deduplication fix verified. All 7 tests pass: first import OK, reimport returns 409, preview shows duplicata=true, batch import skips duplicates with dettaglio_saltate, no duplicate fr_ids in DB, unique index exists. Test documents cleaned up after tests."
+}
