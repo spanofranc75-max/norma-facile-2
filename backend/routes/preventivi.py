@@ -594,6 +594,21 @@ async def delete_preventivo(prev_id: str, user: dict = Depends(get_current_user)
     return {"message": "Preventivo eliminato"}
 
 
+@router.patch("/{prev_id}/hide-from-planning")
+async def hide_preventivo_from_planning(prev_id: str, user: dict = Depends(get_current_user)):
+    """Nasconde il preventivo dal Planning Cantieri per questo utente."""
+    uid = user["user_id"]
+    doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": uid}, {"_id": 0, "status": 1})
+    if not doc:
+        raise HTTPException(404, "Preventivo non trovato")
+    await db.preventivi.update_one(
+        {"preventivo_id": prev_id, "user_id": uid},
+        {"$set": {"hidden_from_planning": True}}
+    )
+    return {"message": "Preventivo nascosto dal planning"}
+
+
+
 # ── Clone Preventivo ─────────────────────────────────────────────
 
 @router.post("/{prev_id}/clone", status_code=201)
