@@ -913,7 +913,7 @@ async def generate_super_fascicolo(commessa_id: str, user_id: str) -> BytesIO:
     fasi = commessa.get("fasi_produzione", [])
     nomi_fasi = set()
     for fase in fasi:
-        op = fase.get("operatore", "").strip()
+        op = (fase.get("operatore") or "").strip()
         if op:
             nomi_fasi.add(op)
 
