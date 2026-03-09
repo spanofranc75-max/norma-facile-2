@@ -50,6 +50,13 @@ import {
     HardHat,
     Link,
     Building2,
+    Grid3X3,
+    DoorOpen,
+    Footprints,
+    TrendingUp,
+    Fence,
+    Grip,
+    SlidersHorizontal,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import CanvasDraw from 'react-canvas-draw';
@@ -272,6 +279,78 @@ function SketchEditor({ sketch, onSave, onCancel }) {
     );
 }
 
+// ── Tipologia Selector ──
+const TIPOLOGIE = [
+    { id: 'inferriata_fissa', label: 'Inferriata Fissa', icon: Grid3X3, color: 'from-slate-600 to-slate-800', desc: 'Grate, protezioni finestre' },
+    { id: 'cancello_carrabile', label: 'Cancello Carrabile', icon: DoorOpen, color: 'from-blue-600 to-blue-800', desc: 'Ingresso veicoli, scorrevole/battente' },
+    { id: 'cancello_pedonale', label: 'Cancello Pedonale', icon: Footprints, color: 'from-emerald-600 to-emerald-800', desc: 'Ingresso pedonale, serratura' },
+    { id: 'scala', label: 'Scala', icon: TrendingUp, color: 'from-amber-600 to-amber-800', desc: 'Scale interne/esterne, gradini' },
+    { id: 'recinzione', label: 'Recinzione', icon: Fence, color: 'from-green-700 to-green-900', desc: 'Recinzioni perimetrali, campate' },
+    { id: 'ringhiera', label: 'Ringhiera', icon: Grip, color: 'from-violet-600 to-violet-800', desc: 'Ringhiere balconi, terrazze' },
+];
+
+function TipologiaSelector({ value, onChange }) {
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+                <SlidersHorizontal className="h-5 w-5 text-slate-500" />
+                <span className="text-sm font-medium text-slate-600">Seleziona la tipologia del manufatto</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4" data-testid="tipologia-selector">
+                {TIPOLOGIE.map(t => {
+                    const Icon = t.icon;
+                    const selected = value === t.id;
+                    return (
+                        <button
+                            key={t.id}
+                            type="button"
+                            data-testid={`tipologia-${t.id}`}
+                            onClick={() => onChange(t.id)}
+                            className={`relative group rounded-xl p-5 text-left transition-all duration-200 border-2 min-h-[120px] ${
+                                selected
+                                    ? 'border-[#0055FF] bg-blue-50 shadow-md ring-2 ring-blue-200'
+                                    : 'border-slate-200 bg-white hover:border-slate-400 hover:shadow-sm'
+                            }`}
+                        >
+                            <div className={`inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br ${t.color} mb-3`}>
+                                <Icon className="h-6 w-6 text-white" />
+                            </div>
+                            <div className="font-semibold text-sm text-slate-900">{t.label}</div>
+                            <div className="text-xs text-slate-500 mt-1 leading-relaxed">{t.desc}</div>
+                            {selected && (
+                                <div className="absolute top-3 right-3">
+                                    <div className="w-6 h-6 rounded-full bg-[#0055FF] flex items-center justify-center">
+                                        <Check className="h-4 w-4 text-white" />
+                                    </div>
+                                </div>
+                            )}
+                        </button>
+                    );
+                })}
+            </div>
+            {value && (
+                <div className="flex items-center gap-2 pt-2">
+                    <Badge variant="outline" className="text-sm border-blue-200 bg-blue-50 text-blue-700">
+                        {TIPOLOGIE.find(t => t.id === value)?.label}
+                    </Badge>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onChange('')}
+                        className="text-slate-400 hover:text-red-500 h-7 px-2"
+                    >
+                        <X className="h-3 w-3 mr-1" />
+                        Rimuovi
+                    </Button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+
+
 export default function RilievoEditorPage() {
     const navigate = useNavigate();
     const { rilievoId } = useParams();
@@ -294,6 +373,10 @@ export default function RilievoEditorPage() {
         status: 'bozza',
         sketches: [],
         photos: [],
+        tipologia: '',
+        misure: {},
+        elementi: [],
+        vista_3d_config: {},
     });
 
     const [sketchDialogOpen, setSketchDialogOpen] = useState(false);
@@ -329,6 +412,10 @@ export default function RilievoEditorPage() {
                     status: data.status,
                     sketches: data.sketches || [],
                     photos: data.photos || [],
+                    tipologia: data.tipologia || '',
+                    misure: data.misure || {},
+                    elementi: data.elementi || [],
+                    vista_3d_config: data.vista_3d_config || {},
                 });
             } catch (error) {
                 toast.error('Rilievo non trovato');
@@ -694,6 +781,11 @@ export default function RilievoEditorPage() {
                             <Pencil className="h-5 w-5" />
                             Info
                         </TabsTrigger>
+                        <TabsTrigger value="misure" className="h-12 px-6 text-base gap-2" data-testid="tab-misure">
+                            <SlidersHorizontal className="h-5 w-5" />
+                            Misure
+                            {formData.tipologia && <span className="ml-1 w-2 h-2 rounded-full bg-[#0055FF] inline-block" />}
+                        </TabsTrigger>
                         <TabsTrigger value="sketches" className="h-12 px-6 text-base gap-2">
                             <Ruler className="h-5 w-5" />
                             Schizzi ({formData.sketches.length})
@@ -787,6 +879,31 @@ export default function RilievoEditorPage() {
                                         />
                                     </div>
                                 </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* Misure Tab */}
+                    <TabsContent value="misure">
+                        <Card className="border-gray-200">
+                            <CardContent className="pt-6">
+                                <TipologiaSelector
+                                    value={formData.tipologia}
+                                    onChange={(tip) => {
+                                        updateField('tipologia', tip);
+                                        if (tip && tip !== formData.tipologia) {
+                                            updateField('misure', {});
+                                            updateField('elementi', []);
+                                        }
+                                    }}
+                                />
+                                {formData.tipologia && (
+                                    <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                                        <p className="text-sm text-slate-500">
+                                            Il form misure per <strong>{TIPOLOGIE.find(t => t.id === formData.tipologia)?.label}</strong> sara disponibile nello Step 3.
+                                        </p>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     </TabsContent>
