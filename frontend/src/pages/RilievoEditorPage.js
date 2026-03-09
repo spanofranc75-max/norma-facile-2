@@ -369,13 +369,19 @@ const TIPI_PANNELLO = ['piatto','dogato','lamiera','rete'];
 const TIPI_ATTACCO = ['a_pavimento','laterale','a_muro'];
 
 // ── Helper components ──
-function NumField({ label, unit, value, onChange, min, step, testId }) {
+function NumField({ label, unit, value, onChange, min, max, step, hint, testId }) {
+    const hasValue = value !== undefined && value !== '' && value !== null;
+    const isValid = !hasValue || ((!min || Number(value) >= min) && (!max || Number(value) <= max));
     return (
         <div className="space-y-1">
-            <Label className="text-xs text-slate-600">{label}{unit && <span className="text-slate-400 ml-1">({unit})</span>}</Label>
-            <Input type="number" data-testid={testId} min={min || 0} step={step || 1}
-                value={value ?? ''} onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))}
-                className="h-10 touch-manipulation" />
+            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</label>
+            <div className={`flex items-center rounded-lg border-2 overflow-hidden transition-colors ${!isValid ? 'border-red-400' : hasValue ? 'border-emerald-300 bg-emerald-50/30' : 'border-slate-200'}`}>
+                <Input type="number" data-testid={testId} min={min || 0} step={step || 1}
+                    value={value ?? ''} onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="h-10 touch-manipulation border-0 shadow-none focus-visible:ring-0 bg-transparent" />
+                {unit && <span className="px-3 text-xs font-medium text-slate-500 bg-slate-100 border-l border-slate-200 h-10 flex items-center whitespace-nowrap">{unit}</span>}
+            </div>
+            {hint && <p className="text-[11px] text-slate-400 mt-0.5">{hint}</p>}
         </div>
     );
 }
@@ -402,6 +408,17 @@ function BoolField({ label, value, onChange, testId }) {
 }
 
 // ── Form Misure per tipologia ──
+function riepilogoMisure(tip, m) {
+    if (!tip || !m) return '';
+    const fmt = (v, u) => v ? `${v}${u}` : '';
+    if (tip === 'inferriata_fissa') return `Inferriata ${fmt(m.luce_larghezza,'x')}${fmt(m.luce_altezza,'mm')} | montante ${m.profilo_montante || '?'} int.${fmt(m.interasse_montanti,'mm')} | ${m.numero_traversi || 0} traversi`;
+    if (tip.startsWith('cancello')) return `Cancello ${fmt(m.luce_netta,'x')}${fmt(m.altezza,'mm')} | telaio ${m.profilo_telaio || '?'} | ${m.tipo_apertura || '?'} ${m.motorizzazione ? '+ motore' : ''}`;
+    if (tip === 'scala') return `Scala ${m.numero_gradini || '?'} gradini | ${fmt(m.larghezza,'mm')} larg. | alzata ${fmt(m.alzata,'mm')} pedata ${fmt(m.pedata,'mm')} | ${m.profilo_struttura || '?'}`;
+    if (tip === 'recinzione') return `Recinzione ${fmt(m.lunghezza_totale,'mm')} | h.${fmt(m.altezza,'mm')} | pali ${m.profilo_palo || '?'} int.${fmt(m.interasse_pali,'mm')}`;
+    if (tip === 'ringhiera') return `Ringhiera ${fmt(m.lunghezza,'mm')} | h.${fmt(m.altezza,'mm')} | corrente ${m.profilo_corrente || '?'} | montante ${m.profilo_montante || '?'}`;
+    return '';
+}
+
 function FormMisure({ tipologia, misure, onChange }) {
     const m = misure || {};
     const set = (k, v) => onChange({ ...m, [k]: v });
@@ -1140,9 +1157,24 @@ export default function RilievoEditorPage() {
                                 />
                                 {formData.tipologia && (
                                     <div className="mt-6 pt-6 border-t border-slate-200">
-                                        <h3 className="text-sm font-semibold text-slate-700 mb-4">
-                                            Misure — {TIPOLOGIE.find(t => t.id === formData.tipologia)?.label}
-                                        </h3>
+                                        {(() => {
+                                            const tip = TIPOLOGIE.find(t => t.id === formData.tipologia);
+                                            const TipIcon = tip?.icon;
+                                            return (
+                                                <div className="rounded-lg mb-5 p-4 border border-slate-200" style={{
+                                                    background: 'linear-gradient(135deg, rgba(0,85,255,0.06), rgba(0,85,255,0.02))',
+                                                    borderLeft: '4px solid #0055FF'
+                                                }}>
+                                                    <div className="flex items-center gap-3">
+                                                        {TipIcon && <div className="w-10 h-10 rounded-lg bg-[#0055FF] flex items-center justify-center"><TipIcon className="h-5 w-5 text-white" /></div>}
+                                                        <div>
+                                                            <h3 className="text-base font-bold text-slate-900 m-0">{tip?.label || formData.tipologia}</h3>
+                                                            <p className="text-xs text-slate-500 m-0 mt-0.5">Inserisci le misure rilevate in cantiere</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                             <div>
                                                 <FormMisure
@@ -1150,6 +1182,11 @@ export default function RilievoEditorPage() {
                                                     misure={formData.misure}
                                                     onChange={(newMisure) => updateField('misure', newMisure)}
                                                 />
+                                                {riepilogoMisure(formData.tipologia, formData.misure) && (
+                                                    <div className="mt-4 rounded-lg px-4 py-3 font-mono text-xs text-slate-300 bg-[#1a1a2e] leading-relaxed" data-testid="riepilogo-misure">
+                                                        {riepilogoMisure(formData.tipologia, formData.misure)}
+                                                    </div>
+                                                )}
                                             </div>
                                             <div>
                                                 <div className="text-xs font-medium text-slate-500 mb-2 uppercase tracking-wide">Vista 3D</div>
