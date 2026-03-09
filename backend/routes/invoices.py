@@ -1275,7 +1275,19 @@ async def send_invoice_email(invoice_id: str, payload: dict = None, user: dict =
 
 @router.post("/{invoice_id}/send-sdi")
 async def send_invoice_to_sdi(invoice_id: str, user: dict = Depends(get_current_user)):
-    """Sync invoice to Fatture in Cloud and send to SDI.
+    """Sync invoice to Fatture in Cloud and send to SDI."""
+    import traceback as tb_mod
+    try:
+        return await _send_sdi_impl(invoice_id, user)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"SEND_SDI_ERROR: {tb_mod.format_exc()}")
+        raise HTTPException(500, f"Errore interno SDI: {str(e)}")
+
+
+async def _send_sdi_impl(invoice_id: str, user: dict):
+    """Actual send-sdi implementation.
     
     Flow:
     1. Validate ALL required fields BEFORE calling FIC
