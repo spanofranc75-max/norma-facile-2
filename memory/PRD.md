@@ -1,79 +1,63 @@
 # Norma Facile 2.0 — PRD
 
-## Problema originale
-Sistema ERP completo per azienda di carpenteria metallica. Gestione commesse, preventivi, fatture, DDT, approvvigionamento, produzione, conto lavoro, tracciabilita materiali EN 1090/EN 13241, generazione PDF, integrazione FattureInCloud, modulo contabile/finanziario.
-
-## Lingua utente
-Italiano
+## Problema Originale
+Applicazione gestionale per carpenteria metallica: gestione commesse, fatturazione, perizie, rilievi, preventivi, con integrazione FattureInCloud per fatturazione elettronica e SDI.
 
 ## Architettura
-- **Frontend:** React + Shadcn/UI + TailwindCSS + Recharts (porta 3000)
-- **Backend:** FastAPI + MongoDB + WeasyPrint + openpyxl (porta 8001)
-- **Integrazioni:** Claude Sonnet 4, OpenAI GPT-4o Vision, Emergent Object Storage, Resend, FattureInCloud, Google Auth, react-pdf
+- **Frontend:** React + Tailwind + Shadcn/UI
+- **Backend:** FastAPI + MongoDB (Motor)
+- **Auth:** Emergent-managed Google Auth (cookie-based)
+- **Storage:** S3-compatible Object Storage
+- **Integrazioni:** FattureInCloud API v2, Resend, GPT-4o Vision
 
-## Funzionalita implementate
+## Core Requirements
+- Gestione completa ciclo commessa (preventivo → fattura → SDI)
+- Rilievo Guidato con 6 tipologie, misure parametriche, 3D viewer, calcolo materiali, PDF
+- Fatturazione elettronica con invio SDI via FattureInCloud
+- Perizie con AI Vision analysis
+- Dashboard cruscotto operativo
 
-### Moduli core
-- Gestione completa commesse, preventivi, fatture, DDT
-- Approvvigionamento (RdP, OdA, arrivi materiale)
-- Produzione (fasi, operatori, timeline)
-- Conto lavoro (invio, rientro, verifica QC, NCR)
-- Tracciabilita materiali EN 1090 (material_batches, lotti_cam)
-- Generazione PDF: Super Fascicolo, Fascicolo Tecnico, DoP, DDT, NCR
-- AI parsing certificati (OCR + analisi)
-- Sopralluoghi AI con report e foto
-- Rilievi misure con sketch pad e PDF
-- Perizie sinistro con codici danno e report
+## Cosa è stato implementato
 
-### Modulo contabile/finanziario
-- Import fatture SDI con deduplicazione robusta
-- Scadenziario unificato attive+passive con aging
-- Cruscotto finanziario con DSO/DPO
-- Export XLSX/PDF
-- Riconciliazione bancaria
-- Alert email scadenze (job schedulato 24h)
+### Rilievo Guidato (Steps 1-8) — COMPLETATO 09/03/2026
+- Backend: modello esteso (tipologia, misure, elementi, vista_3d_config)
+- Endpoint `POST /api/rilievi/{id}/calcola-materiali` per 6 tipologie
+- Frontend: TipologiaSelector, FormMisure dinamico, RilievoViewer3D (Three.js)
+- Screenshot 3D → upload come foto
+- **PDF aggiornato**: sezioni Tipologia, Misure Rilevate, Vista 3D, Lista Materiali Calcolata
+- Test e2e per tutte 6 tipologie: PASSATO
 
-### Stabilizzazione codebase
-1. Atomic counter preventivi
-2. Serializer MongoDB centralizzato
-3. 18+ indici MongoDB + unique index fr_id
-4. Paginazione su commesse, preventivi, DDT
-5. Search globale (Ctrl+K)
-6. Morning Briefing dashboard
-7. Pulizia DB e backup produzione
+### Fix Critico SDI — 09/03/2026
+- `default=str` aggiunto a `json.dumps` in `fattureincloud_api.py` (riga 67)
+- Risolve crash su tipi non JSON-serializzabili
 
-### Audit Trail & Preferenze Notifiche (2026-03-08)
-1. **Activity Audit Trail (P0)** — Sistema di logging per operazioni CRUD critiche
-   - Servizio `services/audit_trail.py` con `log_activity()` fire-and-forget
-   - API `GET /api/activity-log` con paginazione e filtri
-   - API `GET /api/activity-log/stats` con statistiche
-   - Pagina frontend `/registro-attivita`
-   - Integrato in: clienti, commesse, preventivi, fatture, DDT, fatture ricevute, sopralluoghi, rilievi, perizie
-   - 4 indici MongoDB per performance
+### Altre Feature Completate (sessioni precedenti)
+- Fatturazione completa (FT, NC, proforma)
+- Validazione pre-invio SDI
+- PDF worker fix (CDN path)
+- Object Storage integration
+- Gestione clienti/fornitori
+- Preventivi con varianti
+- DDT e consegne
+- Modulo saldatori/certificazioni
+- Super Fascicolo
+- Magazzino con tracciabilità
 
-2. **Preferenze Notifiche Email (P2)** — Configurazione utente per alert email
-   - API `GET/PUT /api/notifications/preferences`
-   - Tab "Notifiche" nella pagina Impostazioni
-   - Scheduler aggiornato per rispettare opt-out e email personalizzata
+## Backlog Prioritizzato
 
-3. **Backup Automatico Giornaliero (P2)** — Strategia backup automatizzata
-   - Job schedulato nel loop scheduler (24h)
-   - Conserva ultimi 7 backup automatici con cleanup
-   - API `GET /api/admin/backup/history` per storico
-   - UI nella tab Backup con sezione storico e badge Auto/Manuale
+### P0 — Nessuno attivo
 
-## Backlog prioritizzato
+### P1
+- Conferma fix SDI in produzione
+- Rimuovere logging diagnostico in `routes/invoices.py`
 
-### P2 — Media priorita
-- Firma digitale su PDF Perizia (tablet)
+### P2
+- Permessi/Ruoli Granulari (RBAC)
+- Script migrazione Base64 → Object Storage
+
+### P3
+- Firma digitale PDF Perizia
 - Portale cliente read-only
-
-### P3 — Bassa priorita / Futuro
-- Analisi predittiva margini per preventivi
-- Report PDF mensili automatizzati
-- PWA per accesso offline
-- Migrazione immagini Base64 -> object storage
-- Refactoring CommessaOpsPanel.js
 - AI Copilot per preventivi
-- Gantt Chart per pianificazione produzione
-- Webhook per SDI
+- Refactoring CommessaOpsPanel.js (monolite)
+- Refactoring RilievoEditorPage.js (1200+ righe)
