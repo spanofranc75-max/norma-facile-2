@@ -10,7 +10,7 @@ from core.security import get_current_user
 from core.database import db
 from models.rilievo import (
     RilievoCreate, RilievoUpdate, RilievoResponse, RilievoListResponse,
-    RilievoStatus, SketchData, PhotoData
+    RilievoStatus, SketchData, PhotoData, TipologiaManufatto
 )
 from services.rilievo_pdf_service import rilievo_pdf_service
 from services.audit_trail import log_activity
@@ -18,6 +18,8 @@ from services.object_storage import upload_photo, get_object, put_object
 import logging
 
 logger = logging.getLogger(__name__)
+import math
+
 router = APIRouter(prefix="/rilievi", tags=["rilievi"])
 
 
@@ -125,6 +127,10 @@ async def create_rilievo(
         "photos": photos,
         "notes": rilievo_data.notes,
         "commessa_id": rilievo_data.commessa_id,
+        "tipologia": rilievo_data.tipologia,
+        "misure": rilievo_data.misure,
+        "elementi": [e.model_dump() for e in rilievo_data.elementi],
+        "vista_3d_config": rilievo_data.vista_3d_config,
         "created_at": now,
         "updated_at": now
     }
@@ -178,6 +184,14 @@ async def update_rilievo(
         update_dict["status"] = rilievo_data.status.value
     if rilievo_data.commessa_id is not None:
         update_dict["commessa_id"] = rilievo_data.commessa_id
+    if rilievo_data.tipologia is not None:
+        update_dict["tipologia"] = rilievo_data.tipologia
+    if rilievo_data.misure is not None:
+        update_dict["misure"] = rilievo_data.misure
+    if rilievo_data.elementi is not None:
+        update_dict["elementi"] = [e.model_dump() for e in rilievo_data.elementi]
+    if rilievo_data.vista_3d_config is not None:
+        update_dict["vista_3d_config"] = rilievo_data.vista_3d_config
     
     # Update sketches
     if rilievo_data.sketches is not None:
@@ -376,6 +390,197 @@ async def proxy_foto_rilievo(path: str, user: dict = Depends(get_current_user)):
         return Response(content=data, media_type=content_type)
     except Exception as e:
         raise HTTPException(404, f"File non trovato: {str(e)[:100]}")
+
+
+# ── Profili standard: peso kg/m ──
+PROFILI_PESO = {
+    "20x20": 1.15, "25x25": 1.45, "30x20": 1.45, "30x30": 2.15,
+    "40x20": 1.74, "40x40": 3.72, "50x30": 2.93, "60x40": 4.66,
+    "60x60": 6.71, "80x40": 5.59, "tondo_40": 1.21,
+    "quadro_20x20": 1.15, "UPN100": 10.6, "mandorlato_4mm": 32.0,
+}
+
+
+def _parse_profilo_dim(profilo: str):
+    """Parse '60x40' → (60, 40) mm."""
+    parts = profilo.lower().replace("x", " ").split()
+    nums = [float(p) for p in parts if p.replace(".", "").isdigit()]
+    return (nums[0], nums[1]) if len(nums) >= 2 else (nums[0], nums[0]) if nums else (30, 30)
+
+
+def _calcola_inferriata(m: dict) -> dict:
+    L = float(m.get("luce_larghezza", 0))
+    H = float(m.get("luce_altezza", 0))
+    interasse_m = float(m.get("interasse_montanti", 120))
+    n_traversi = int(m.get("numero_traversi", 2))
+    n_montanti = math.ceil(L / interasse_m) + 1 if interasse_m > 0 else 2
+    ml_montanti = n_montanti * H / 1000
+    ml_traversi = n_traversi * L / 1000
+    profilo_m = m.get("profilo_montante", "30x30")
+    profilo_t = m.get("profilo_traverso", "20x20")
+    peso_montanti = ml_montanti * PROFILI_PESO.get(profilo_m, 2.0)
+    peso_traversi = ml_traversi * PROFILI_PESO.get(profilo_t, 1.5)
+    sup = (L * H * 2) / 1_000_000  # m² entrambi i lati
+    return {
+        "materiali": [
+            {"descrizione": f"Montante {profilo_m}", "quantita": n_montanti, "ml": round(ml_montanti, 2), "peso_kg": round(peso_montanti, 2)},
+            {"descrizione": f"Traverso {profilo_t}", "quantita": n_traversi, "ml": round(ml_traversi, 2), "peso_kg": round(peso_traversi, 2)},
+        ],
+        "peso_totale_kg": round(peso_montanti + peso_traversi, 2),
+        "superficie_verniciatura_m2": round(sup, 2),
+    }
+
+
+def _calcola_cancello(m: dict, pedonale: bool = False) -> dict:
+    L = float(m.get("luce_netta", 0))
+    H = float(m.get("altezza", 0))
+    profilo_t = m.get("profilo_telaio", "60x40" if not pedonale else "40x40")
+    profilo_i = m.get("profilo_infisso", "40x20" if not pedonale else "25x25")
+    interasse_i = float(m.get("interasse_infissi", 100))
+    ml_telaio = 2 * (L + H) / 1000
+    n_infissi = math.ceil(L / interasse_i) + 1 if interasse_i > 0 else 2
+    ml_infissi = n_infissi * H / 1000
+    peso_t = ml_telaio * PROFILI_PESO.get(profilo_t, 4.0)
+    peso_i = ml_infissi * PROFILI_PESO.get(profilo_i, 1.5)
+    sup = (L * H * 2) / 1_000_000
+    materiali = [
+        {"descrizione": f"Telaio {profilo_t}", "quantita": 1, "ml": round(ml_telaio, 2), "peso_kg": round(peso_t, 2)},
+        {"descrizione": f"Infisso {profilo_i}", "quantita": n_infissi, "ml": round(ml_infissi, 2), "peso_kg": round(peso_i, 2)},
+    ]
+    peso_tot = peso_t + peso_i
+    if not pedonale and m.get("motorizzazione"):
+        materiali.append({"descrizione": f"Motore {m.get('tipo_motore', 'FAAC')}", "quantita": 1, "ml": 0, "peso_kg": 15.0})
+        peso_tot += 15.0
+    return {"materiali": materiali, "peso_totale_kg": round(peso_tot, 2), "superficie_verniciatura_m2": round(sup, 2)}
+
+
+def _calcola_scala(m: dict) -> dict:
+    n_gradini = int(m.get("numero_gradini", 0))
+    alzata = float(m.get("alzata", 175))
+    pedata = float(m.get("pedata", 280))
+    larghezza = float(m.get("larghezza", 900))
+    diag_gradino = math.sqrt(alzata**2 + pedata**2)
+    diag_totale = n_gradini * diag_gradino / 1000
+    profilo_s = m.get("profilo_struttura", "UPN100")
+    ml_struttura = diag_totale * 2  # 2 longheroni
+    peso_struttura = ml_struttura * PROFILI_PESO.get(profilo_s, 10.0)
+    tipo_gradino = m.get("tipo_gradino", "mandorlato")
+    spessore = float(m.get("spessore_gradino", 4))
+    area_gradino = (pedata * larghezza) / 1_000_000
+    peso_gradini = n_gradini * area_gradino * spessore * 7.85  # acciaio kg/dm3 approx
+    materiali = [
+        {"descrizione": f"Struttura {profilo_s}", "quantita": 2, "ml": round(ml_struttura, 2), "peso_kg": round(peso_struttura, 2)},
+        {"descrizione": f"Gradino {tipo_gradino} sp.{spessore}mm", "quantita": n_gradini, "ml": 0, "peso_kg": round(peso_gradini, 2)},
+    ]
+    peso_tot = peso_struttura + peso_gradini
+    if m.get("corrimano"):
+        profilo_c = m.get("profilo_corrimano", "tondo_40")
+        ml_corr = diag_totale
+        peso_c = ml_corr * PROFILI_PESO.get(profilo_c, 1.2)
+        interasse_mc = float(m.get("interasse_montanti", 150))
+        n_mc = math.ceil(diag_totale * 1000 / interasse_mc) + 1 if interasse_mc > 0 else 2
+        profilo_mc = m.get("montanti_corrimano", "quadro_20x20")
+        H_corrimano = 1000  # mm standard
+        ml_mc = n_mc * H_corrimano / 1000
+        peso_mc = ml_mc * PROFILI_PESO.get(profilo_mc, 1.15)
+        materiali.append({"descrizione": f"Corrimano {profilo_c}", "quantita": 1, "ml": round(ml_corr, 2), "peso_kg": round(peso_c, 2)})
+        materiali.append({"descrizione": f"Montante corrimano {profilo_mc}", "quantita": n_mc, "ml": round(ml_mc, 2), "peso_kg": round(peso_mc, 2)})
+        peso_tot += peso_c + peso_mc
+    sup = (diag_totale * larghezza / 1000 * 2) + (n_gradini * area_gradino * 2)
+    return {"materiali": materiali, "peso_totale_kg": round(peso_tot, 2), "superficie_verniciatura_m2": round(sup, 2)}
+
+
+def _calcola_recinzione(m: dict) -> dict:
+    lung_tot = float(m.get("lunghezza_totale", 0))
+    H = float(m.get("altezza", 0))
+    interasse_pali = float(m.get("interasse_pali", 2500))
+    n_pali = math.ceil(lung_tot / interasse_pali) + 1 if interasse_pali > 0 else 2
+    profilo_p = m.get("profilo_palo", "60x60")
+    ml_pali = n_pali * (H + 400) / 1000  # +400mm interrato
+    peso_pali = ml_pali * PROFILI_PESO.get(profilo_p, 6.0)
+    n_campate = n_pali - 1
+    lung_campata = float(m.get("lunghezza_campata", interasse_pali))
+    n_orizz = int(m.get("numero_orizzontali", 3))
+    profilo_o = m.get("profilo_orizzontale", "30x20")
+    ml_orizz = n_campate * n_orizz * lung_campata / 1000
+    peso_orizz = ml_orizz * PROFILI_PESO.get(profilo_o, 1.45)
+    interasse_v = float(m.get("interasse_verticali", 120))
+    profilo_v = m.get("profilo_verticale", "20x20")
+    n_vert_per_campata = math.ceil(lung_campata / interasse_v) + 1 if interasse_v > 0 else 2
+    ml_vert = n_campate * n_vert_per_campata * H / 1000
+    peso_vert = ml_vert * PROFILI_PESO.get(profilo_v, 1.15)
+    materiali = [
+        {"descrizione": f"Palo {profilo_p}", "quantita": n_pali, "ml": round(ml_pali, 2), "peso_kg": round(peso_pali, 2)},
+        {"descrizione": f"Orizzontale {profilo_o}", "quantita": n_campate * n_orizz, "ml": round(ml_orizz, 2), "peso_kg": round(peso_orizz, 2)},
+        {"descrizione": f"Verticale {profilo_v}", "quantita": n_campate * n_vert_per_campata, "ml": round(ml_vert, 2), "peso_kg": round(peso_vert, 2)},
+    ]
+    peso_tot = peso_pali + peso_orizz + peso_vert
+    sup = (lung_tot * H * 2) / 1_000_000
+    return {"materiali": materiali, "peso_totale_kg": round(peso_tot, 2), "superficie_verniciatura_m2": round(sup, 2)}
+
+
+def _calcola_ringhiera(m: dict) -> dict:
+    L = float(m.get("lunghezza", 0))
+    H = float(m.get("altezza", 900))
+    profilo_c = m.get("profilo_corrente", "40x40")
+    ml_corrente = L / 1000 * 2  # sup + inf
+    peso_corrente = ml_corrente * PROFILI_PESO.get(profilo_c, 3.72)
+    profilo_m = m.get("profilo_montante", "40x40")
+    interasse_m = float(m.get("interasse_montanti", 1000))
+    n_mont = math.ceil(L / interasse_m) + 1 if interasse_m > 0 else 2
+    ml_mont = n_mont * H / 1000
+    peso_mont = ml_mont * PROFILI_PESO.get(profilo_m, 3.72)
+    tipo_inf = m.get("tipo_infisso", "quadro_20x20")
+    interasse_i = float(m.get("interasse_infissi", 100))
+    n_infissi = math.ceil(L / interasse_i) + 1 if interasse_i > 0 else 2
+    ml_infissi = n_infissi * H / 1000
+    peso_infissi = ml_infissi * PROFILI_PESO.get(tipo_inf, 1.15)
+    corrimano_p = m.get("corrimano", "tondo_40")
+    ml_corr = L / 1000
+    peso_corr = ml_corr * PROFILI_PESO.get(corrimano_p, 1.21)
+    materiali = [
+        {"descrizione": f"Corrente {profilo_c}", "quantita": 2, "ml": round(ml_corrente, 2), "peso_kg": round(peso_corrente, 2)},
+        {"descrizione": f"Montante {profilo_m}", "quantita": n_mont, "ml": round(ml_mont, 2), "peso_kg": round(peso_mont, 2)},
+        {"descrizione": f"Infisso {tipo_inf}", "quantita": n_infissi, "ml": round(ml_infissi, 2), "peso_kg": round(peso_infissi, 2)},
+        {"descrizione": f"Corrimano {corrimano_p}", "quantita": 1, "ml": round(ml_corr, 2), "peso_kg": round(peso_corr, 2)},
+    ]
+    peso_tot = peso_corrente + peso_mont + peso_infissi + peso_corr
+    sup = (L * H * 2) / 1_000_000
+    return {"materiali": materiali, "peso_totale_kg": round(peso_tot, 2), "superficie_verniciatura_m2": round(sup, 2)}
+
+
+CALCOLA_FN = {
+    "inferriata_fissa": _calcola_inferriata,
+    "cancello_carrabile": lambda m: _calcola_cancello(m, False),
+    "cancello_pedonale": lambda m: _calcola_cancello(m, True),
+    "scala": _calcola_scala,
+    "recinzione": _calcola_recinzione,
+    "ringhiera": _calcola_ringhiera,
+}
+
+
+@router.post("/{rilievo_id}/calcola-materiali")
+async def calcola_materiali(rilievo_id: str, user: dict = Depends(get_current_user)):
+    """Dalla tipologia e misure, calcola lista materiali, peso e superficie."""
+    doc = await db.rilievi.find_one(
+        {"rilievo_id": rilievo_id, "user_id": user["user_id"]},
+        {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "Rilievo non trovato")
+
+    tipologia = doc.get("tipologia", "")
+    misure = doc.get("misure", {})
+
+    if not tipologia or tipologia not in CALCOLA_FN:
+        raise HTTPException(400, f"Tipologia non supportata: {tipologia}")
+
+    risultato = CALCOLA_FN[tipologia](misure)
+    risultato["tipologia"] = tipologia
+    risultato["rilievo_id"] = rilievo_id
+    return risultato
+
+
 
 
 @router.patch("/{rilievo_id}/collega-commessa")

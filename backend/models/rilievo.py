@@ -12,6 +12,24 @@ class RilievoStatus(str, Enum):
     ARCHIVIATO = "archiviato"
 
 
+class TipologiaManufatto(str, Enum):
+    """Tipologia del manufatto da rilevare."""
+    INFERRIATA_FISSA = "inferriata_fissa"
+    CANCELLO_CARRABILE = "cancello_carrabile"
+    CANCELLO_PEDONALE = "cancello_pedonale"
+    SCALA = "scala"
+    RECINZIONE = "recinzione"
+    RINGHIERA = "ringhiera"
+
+
+class ElementoRipetuto(BaseModel):
+    """Elemento ripetuto (campata, specchiatura, ecc.)."""
+    elemento_id: Optional[str] = None
+    nome: str = ""
+    misure: dict = {}
+    note: str = ""
+
+
 class SketchData(BaseModel):
     """Data for a sketch/drawing."""
     sketch_id: Optional[str] = None
@@ -36,9 +54,13 @@ class RilievoBase(BaseModel):
     client_id: str
     project_name: str
     survey_date: date = Field(default_factory=date.today)
-    location: Optional[str] = None  # Address or location description
-    notes: Optional[str] = None  # Technical notes
+    location: Optional[str] = None
+    notes: Optional[str] = None
     commessa_id: Optional[str] = None
+    tipologia: str = ""
+    misure: dict = {}
+    elementi: List[ElementoRipetuto] = []
+    vista_3d_config: dict = {}
 
 
 class RilievoCreate(RilievoBase):
@@ -58,6 +80,10 @@ class RilievoUpdate(BaseModel):
     photos: Optional[List[PhotoData]] = None
     status: Optional[RilievoStatus] = None
     commessa_id: Optional[str] = None
+    tipologia: Optional[str] = None
+    misure: Optional[dict] = None
+    elementi: Optional[List[ElementoRipetuto]] = None
+    vista_3d_config: Optional[dict] = None
 
 
 class Rilievo(RilievoBase):
@@ -88,6 +114,10 @@ class RilievoResponse(BaseModel):
     photos: List[PhotoData] = []
     notes: Optional[str] = None
     commessa_id: Optional[str] = None
+    tipologia: str = ""
+    misure: dict = {}
+    elementi: List[ElementoRipetuto] = []
+    vista_3d_config: dict = {}
     created_at: datetime
     updated_at: Optional[datetime] = None
 
