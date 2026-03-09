@@ -1329,11 +1329,17 @@ async def preview_preventivo_email(prev_id: str, user: dict = Depends(get_curren
     totals = doc.get("totals", {})
     total = totals.get("total_document") or totals.get("total", 0)
 
+    company = await db.company_settings.find_one(
+        {"user_id": user["user_id"]}, {"_id": 0}
+    ) or {}
+    company_name = company.get("business_name") or company.get("name") or ""
+
     preview = build_invoice_email(
         client_name=client_name,
         document_number=prev_number,
         document_type="PRV",
         total=total,
+        company_name=company_name,
     )
     return {
         "to_email": to_email,

@@ -40,12 +40,12 @@ def _wrap_body(inner_html: str, accent_color: str = "#1e3a5f") -> str:
 
 # ── Invoice / Preventivo ──────────────────────────────────────
 
-def build_invoice_email(client_name: str, document_number: str, document_type: str, total: float) -> dict:
-    company = _company()
+def build_invoice_email(client_name: str, document_number: str, document_type: str, total: float, company_name: str = None) -> dict:
+    display_name = company_name or _company()
     type_labels = {"FT": "Fattura", "NC": "Nota di Credito", "PRV": "Preventivo"}
     doc_label = type_labels.get(document_type, "Documento")
     total_fmt = _fmt_eur(total)
-    subject = f"Invio {doc_label} n. {document_number} da {company}"
+    subject = f"Invio {doc_label} n. {document_number} da {display_name}"
     inner = f"""
         <p style="color: #1e293b; font-size: 15px; line-height: 1.7; margin-top: 0;">
             Gentile <strong>{client_name}</strong>,
@@ -60,7 +60,7 @@ def build_invoice_email(client_name: str, document_number: str, document_type: s
         <p style="color: #475569; font-size: 14px; line-height: 1.7;">
             Restiamo a disposizione per qualsiasi chiarimento.
         </p>
-        <p style="color: #475569; font-size: 14px; margin-bottom: 0;">Cordiali saluti,<br/><strong>{company}</strong></p>
+        <p style="color: #475569; font-size: 14px; margin-bottom: 0;">Cordiali saluti,<br/><strong>{display_name}</strong></p>
     """
     return {"subject": subject, "html_body": _wrap_body(inner)}
 
