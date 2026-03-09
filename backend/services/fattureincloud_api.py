@@ -213,11 +213,18 @@ def validate_invoice_for_sdi(invoice: dict, client: dict, company: dict) -> list
     return errors
 
 
+def _sanitize(text: str) -> str:
+    """Remove non-ASCII characters that FIC API rejects."""
+    if not text:
+        return ""
+    return text.encode('ascii', errors='ignore').decode('ascii').strip()
+
+
 def map_fattura_to_fic(invoice: dict, client: dict) -> Dict[str, Any]:
     """Map internal invoice format to FattureInCloud format."""
     items = []
     for line in invoice.get("lines", []):
-        desc = line.get("description", "").strip()
+        desc = _sanitize(line.get("description", ""))
         if not desc:
             continue
         vat_val = line.get("vat_rate", 22)
@@ -227,7 +234,7 @@ def map_fattura_to_fic(invoice: dict, client: dict) -> Dict[str, Any]:
             vat_val = 22
         items.append({
             "product_id": None,
-            "code": line.get("code", ""),
+            "code": _sanitize(line.get("code", "")),
             "name": desc,
             "net_price": float(line.get("unit_price") or 0),
             "qty": float(line.get("quantity") or 1),
