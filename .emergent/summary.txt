@@ -1,93 +1,96 @@
 <analysis>**original_problem_statement**:
-The user's initial request was to complete and fix three core modules:  (AI-powered site survey),  (Insurance claim estimate), and  (On-site measurements). This involved a deep analysis of their functionality, followed by a multi-part task to address critical bugs, functional gaps, and PDF generation issues.
+The user initiated this session with a major feature request to build a Rilievo Guidato (Guided Survey) module. This feature aims to transform the existing  section into a professional tool for on-site tablet use, allowing technicians to select a project type, input guided measurements, and see a real-time parametric 3D view of the artifact.
 
-The key problems identified and addressed were:
-1.  **Critical Bugs:**
-    *   Fields in the  module were not being saved to the database.
-    *   Audit logs for  had an incorrect entity type.
-    *   The most critical issue: Both  and  modules were storing user-uploaded images and sketches as large Base64 strings directly in MongoDB, creating a high risk of hitting the 16MB document size limit and crashing the database.
-2.  **Functional Gaps:**
-    *   The  and  modules were functional dead-ends. They needed to be connected to the  (Jobs) module to create a cohesive workflow.
-    *   The main navigation sidebar was logically disorganized, with  located away from the other related modules.
-3.  **Urgent Backup System Failure:** After fixing the modules, the user reported that the database backup page was crashing the application and the generated backup file was not portable to a production environment. The agent then re-architected the entire backup system to be asynchronous and robust.
+During the implementation of this feature, the user reported several critical bugs in the production environment:
+1.  **BUG A (PDF Worker):** PDFs were not loading in the production app due to an incorrect path for the PDF worker script.
+2.  **BUG B (Search 422):** A transient 422 error on the global search, which was later ignored.
+3.  **BUG C (SDI Sending):** A critical  was occurring when trying to send a  (Credit Note) to the Italian tax authority's SDI system via the FattureInCloud API. This blocked a core business function. The agent spent significant effort diagnosing this, tracing it from a misreported 422 to a 500, then to a Unicode encoding error, and finally to a missing HTTP header in the last attempted fix.
+
+The session focused on simultaneously implementing the new Rilievo Guidato feature and debugging the critical production bugs.
 
 **User's preferred language**: Italian. The next agent **MUST** respond in Italian.
 
 **what currently exists?**
-The agent has successfully completed a major refactoring and bug-fixing effort across several core modules and the backup system.
+The agent has partially implemented the Rilievo Guidato feature and has identified the final fix for the critical Invia SDI bug.
 
--   **Module Completion (, , ):**
-    -   **Object Storage Migration:** The critical bug of storing images as Base64 strings in the database has been fixed for both  and . New uploads now go to a dedicated object storage service, and the system maintains backward compatibility to render legacy Base64 data.
-    -   **Workflow Integration:** Both the  and  modules can now be used to create a new  (Job) or be linked to an existing one, closing a major functional gap.
-    -   **Bug Fixes:** All identified bugs, including unsaved fields and incorrect audit logs, have been resolved.
-    -   **UI/UX Improvements:** The sidebar navigation has been reorganized for better logical grouping.
-    -   **PDF Enhancements:** The PDF generation services for  and  have been updated to handle images from object storage and to display newly added cost-breakdown fields.
+-   **Rilievo Guidato Feature (In Progress):**
+    -   **Backend:** The  data model and routes have been extended to support different  (types of work) and their specific  (measurements). A new endpoint, , has been created to process these measurements.
+    -   **Frontend ():** The page has been significantly enhanced with a new Misure tab. It includes a  to choose the work type and a dynamic  component that displays the correct input fields.
+    -   **3D Viewer ():** A new component using Three.js renders a live, parametric 3D model based on the user's input. It supports manual touch-based rotation and zoom.
+    -   **Functionality:** Users can capture a screenshot of the 3D model and save it as a photo, and they can trigger the backend calculation for materials.
 
--   **Asynchronous & Portable Backup System:**
-    -   The backup functionality in  no longer crashes the app. It has been re-engineered to be fully asynchronous using a // pattern.
-    -   The frontend now polls for backup progress without freezing, providing a stable user experience.
-    -   The backup format is now a portable  file containing JSON data for each collection and a  file, making it independent of the database name and suitable for production environments.
-    -   The system now strips large, legacy Base64 strings from backups to keep file sizes manageable.
+-   **Bug Fixes:**
+    -   **PDF Worker (Resolved):** The issue was fixed by updating  and  to use a CDN URL for the pdf.js worker.
+    -   **Invia SDI (Partially Fixed):** The complex  was traced to how  handles JSON encoding. The agent implemented a fix in  to manually control JSON serialization. However, this fix introduced a new bug.
 
 **Last working item**:
--   **Last item agent was working:** Fixing the urgent backup system bug. The agent completed a full re-architecture of the backup functionality, making it asynchronous, stable, and portable.
--   **Status:** USER VERIFICATION PENDING
--   **Agent Testing Done:** Y
--   **Which testing method agent to use?** Frontend testing agent to verify the complete UI flow: starting a backup, observing the progress indicators, and successfully downloading the generated file.
+-   **Last item agent was working:** Fixing the critical Invia SDI production bug. The agent's last action was to change the  request to use the  parameter instead of  to ensure ASCII-safe encoding. However, this change inadvertently removed the  header from the request, causing the API call to fail. The agent identified this mistake just as the session ended.
+-   **Status:** BLOCKED
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** backend testing agent. The agent should modify the  function in  and then create a test that calls the  endpoint for an invoice to verify a 200 OK response.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-There are no pending or in-progress issues. All requested tasks and bugs from the session have been addressed. The final task is awaiting user verification.
+-   **Issue 1:** Invia SDI fails due to a missing  header (P0)
+
+**Issues Detail**:
+-   **Issue 1:**
+    -   **Attempted fixes:** A series of fixes were applied to  to handle  values, correctly map credit notes, and sanitize Unicode characters. The final fix attempt changed the  call from  to . This solved the encoding issue but created a new problem.
+    -   **Next debug checklist:**
+        1.  Open .
+        2.  Locate the  method.
+        3.  Find the line .
+        4.  Manually add the  header to the  dictionary being passed to the request. The  library does not add this automatically when using the  parameter.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a critical production bug preventing the company from sending invoices and credit notes to the tax authority, which is a legal requirement.
+    -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Backend
+    -   **Blocked on other issue:** None
 
 **In progress Task List**:
-There are no in-progress tasks.
+-   **Task 1:** Complete Rilievo Guidato Feature (P1)
+    -   **Where to resume:** The feature is implemented up to Step 6 of the user's plan. The next step is **Step 7: PDF Update**. This involves modifying  to add a new page to the PDF containing the captured 3D screenshot and a structured table with the specific measurements for the chosen .
+    -   **What will be achieved with this?** The feature will be functionally complete, generating professional, detailed survey reports.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** Backend
+    -   **Blocked on something:** The Invia SDI bug (Issue 1) has higher priority.
 
 **Upcoming and Future Tasks**
-
 **Upcoming Tasks:**
-*   (P0) **User Verification:** Confirm with the user that the new asynchronous backup system works as expected.
-*   (P1) **Granular Permissions/Roles:** Implement a role-based access control (RBAC) system with roles like , , , , declare -r BASHOPTS="checkwinsize:cmdhist:complete_fullquote:extquote:force_fignore:globasciiranges:globskipdots:hostcomplete:interactive_comments:patsub_replacement:progcomp:promptvars:sourcepath"
-declare -ar BASH_VERSINFO=([0]="5" [1]="2" [2]="15" [3]="1" [4]="release" [5]="aarch64-unknown-linux-gnu")
-declare -ir EUID="0"
-declare -ir PPID="21"
-declare -r SHELLOPTS="braceexpand:hashall:interactive-comments"
-declare -ir UID="0". This was mentioned in the previous handoff and is a high-priority enterprise feature.
-*   (P2) **Data Migration Script:** Create a one-time script to migrate all remaining legacy Base64 images from the  and  collections to object storage. This will complete the data transition and reduce database size permanently.
-*   (P3) **Digital Signature on Perizia PDF:** Integrate digital signature capabilities for Perizia documents.
-*   (P3) **Read-Only Customer Portal:** Develop a portal for customers to view the status of their orders.
+*   (P0) **Fix Invia SDI Bug:** (Covered in All Pending/In progress Issue list).
+*   (P1) **Complete Rilievo Guidato - Step 7 (PDF Update):** Modify  to include the 3D screenshot and structured measurements table.
+*   (P1) **Complete Rilievo Guidato - Step 8 (Testing):** Perform a full end-to-end test of the Rilievo Guidato feature for all 6 .
+*   (P2) **Granular Permissions/Roles:** Implement a role-based access control (RBAC) system.
+*   (P3) **Data Migration Script:** Create a one-time script to migrate all remaining legacy Base64 images from the database to object storage.
 
 **Future Tasks:**
-*   **AI-Powered Features:**
-    *   AI Copilot for quotes, anomaly detection on supplier invoices, and automatic technical dossier generation.
-*   **Product Enhancements:**
-    *   Mobile PWA for the workshop, a Gantt chart for production planning, and a webhook for SDI invoice imports.
-*   **Technical Debt:**
-    *   Refactor the monolithic  frontend component.
+*   Digital Signature on Perizia PDF.
+*   Read-Only Customer Portal.
+*   AI Copilot for quotes and analysis.
+*   Refactor the monolithic  frontend component.
 
 **Completed work in this session**
--   **Module Completion (, , ):**
-    -   Migrated photo and file storage from DB (Base64) to Object Storage for  and .
-    -   Fixed a bug preventing , , and  fields from being saved in the  module.
-    -   Integrated  and  modules into the main  workflow.
-    -   Updated PDF generation services to support object storage URLs and new cost fields.
-    -   Reorganized the main navigation sidebar for better usability.
--   **Backup System Overhaul:**
-    -   Re-architected the entire backup system to be asynchronous, fixing a critical frontend crash.
-    -   Implemented a , ,  API pattern.
-    -   Updated the frontend to use polling for a non-blocking UI.
-    -   Ensured the backup format is a portable JSON-based  archive.
--   **Testing and Verification:**
-    -   Successfully used the testing agent to validate all backend fixes for the modules and the new backup system. The agent automatically found and corrected 5 minor bugs during this process.
+-   **Feature: Rilievo Guidato (Steps 1-6 of 8)**
+    -   Extended backend model and routes for  (, ).
+    -   Created new endpoint .
+    -   Overhauled  with new components for type selection () and dynamic measurement forms ().
+    -   Created a parametric 3D viewer component using Three.js ().
+    -   Implemented 3D screenshot capture and upload functionality.
+    -   Integrated the materials calculation endpoint into the frontend.
+-   **Bug Fixes:**
+    -   Resolved PDF loading failure by updating worker path to CDN in  and .
+    -   Diagnosed the Invia SDI 500 error and applied several layers of fixes in .
+    -   Added temporary diagnostic  logging to  to get a full traceback from production.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1: Base64 Data Migration**
-    -   **Debug checklist:** While new uploads are fixed, a migration for *existing* Base64 data has not been created. A script is needed to find all documents in  and  with Base64 data, upload that data to object storage, and update the document with the new URL.
-    -   **Why to solve this issue and what will be achieved with this?** To permanently reduce database size, improve query performance, and eliminate the risk of hitting MongoDB's 16MB document size limit from legacy data.
-    -   **Should Test frontend/backend/both after fix:** Backend (for the script) and Frontend (to ensure legacy data is still viewable after migration).
+    -   **Debug checklist:** A script is needed to find all documents in  and  with Base64 data, upload that data to object storage, and update the document with the new URL.
+    -   **Why to solve this issue and what will be achieved with this?** To permanently reduce database size and improve performance.
+    -   **Should Test frontend/backend/both after fix:** Backend and Frontend.
     -   **Is recurring issue?** N
 -   **Issue 2: Large Monolithic Frontend Components**
-    -   **Debug checklist:** The user and previous agent analysis identified  as being too large and complex. It needs to be broken down into smaller, focused components.
-    -   **Why to solve this issue and what will be achieved with this?** Refactoring will improve maintainability, reduce bugs, and make it easier to add new features to the job management panel.
+    -   **Debug checklist:** The  component needs to be broken down into smaller, focused components.
+    -   **Why to solve this issue and what will be achieved with this?** To improve maintainability and performance.
     -   **Should Test frontend/backend/both after fix:** Frontend.
     -   **Is recurring issue?** N
 
@@ -98,167 +101,83 @@ declare -ir UID="0". This was mentioned in the previous handoff and is a high-pr
 
 
 **Key Technical Concepts**
--   **Asynchronous Background Tasks:** Using FastAPI's  to handle long-running operations like database backups without blocking HTTP responses.
--   **Frontend Polling:** Implementing a  loop in React to poll a status endpoint and update the UI based on the progress of a backend job.
--   **Object Storage Integration:** Migrating file storage from database-embedded Base64 strings to an S3-compatible object storage service, which is a best practice for scalability.
--   **Backward Compatibility:** Designing APIs and data models to support both the new (object storage URL) and legacy (Base64 string) data formats simultaneously during a transition period.
--   **Portable Data Archives:** Creating database backups as format-agnostic JSON files packaged in a  archive with a , ensuring they can be restored on any environment regardless of the database name.
+-   **Parametric 3D Rendering:** Using Three.js in React to generate and manipulate 3D geometry in real-time based on form inputs.
+-   **Advanced API Debugging:** Diagnosing a complex production bug involving Unicode encoding ( vs. ), third-party API behavior (), and low-level HTTP client details (,  headers).
+-   **Dynamic UI Generation:** Creating dynamic forms in React that change based on user selection, managing their complex state.
+-   **Canvas to File Upload:** Capturing a Three.js canvas as a data URL, converting it to a Blob, and uploading it using  and .
+-   **Environment Discrepancy:** Managing differences between a preview environment (with new code and test data) and a production environment (with old code and real data).
 
 **key DB schema**
--   **rilievi**: The  and  arrays now store objects containing a  and  for object storage. A  has been added.
--   **perizie**: The  array now stores objects with a  and . The model now includes , , , and .
--   **commesse**: The model now includes a  to create a bidirectional link with the  module.
+-   **rilievi**:
+    -    (Enum: inferriata_fissa, cancello_carrabile, etc.)
+    -    (Stores measurements specific to the )
+    -    (For repeated elements like fence sections)
+    -    (Parameters for the 3D renderer)
+
+**changes in tech stack**
+-   **three.js** was added as a dependency and used to create a major new feature.
 
 **All files of reference**
--    & : The new asynchronous backup system.
--    & : The refactored  module.
--    & : The refactored  module.
--   : The  module, updated for linking.
--    & : PDF generation logic.
+-   : Contains the bug for the highest priority issue.
+-   : Contains the main implementation of the in-progress Rilievo Guidato feature.
+-   : The new 3D rendering component.
+-   : The file to be modified for the next step of the Rilievo Guidato feature.
+-   : Contains temporary diagnostic logging that should be cleaned up later.
 
 **Areas that need refactoring**:
--   A one-time data migration script is needed to move all existing Base64-encoded files in the database to object storage.
--   The  frontend component remains monolithic and is a candidate for being broken down into smaller, reusable components.
+-   The temporary  block with detailed logging in  should be removed after the SDI bug is confirmed as fixed.
+-   The user's original feature request for Rilievo Guidato was very large.  is now over 1200 lines and could be broken down further.
 
 **key api endpoints**
--   : Initiates an asynchronous backup process and returns a .
--   : Polls the status of an ongoing backup job.
--   : Downloads the completed backup  file.
--   : Uploads a photo for a  to object storage.
--   : Uploads a photo for a  to object storage.
--   : Links a  to a .
--   : Links a  to a .
+-   : Critical endpoint currently broken in production.
+-   : New endpoint for the Rilievo Guidato feature.
+-   : Used for uploading the 3D screenshot.
+-   : Used to save measurement data.
 
 **Critical Info for New Agent**
+-   **Your first priority is to fix the Invia SDI production bug.** The root cause is a missing  header in  within the  method. Apply this fix, then coordinate with the user to deploy and test it in production.
 -   You **MUST** respond in Italian.
--   The user is highly technical and provides detailed, structured plans. Adhere to their instructions closely.
--   The backup system has been completely overhauled to be asynchronous. Any future modifications must follow this  pattern.
--   The application is in a transitional state regarding file storage. All new file uploads use object storage, but you must maintain backward compatibility for legacy Base64 data until a full migration is performed.
--   Your first action should be to confirm with the user if the new backup system meets their expectations. After that, proposing the data migration script would be a logical next step to address remaining technical debt.
+-   After the production bug is resolved, the next task is to continue with **Step 7** of the Rilievo Guidato feature: updating the PDF generation service.
+-   The user is technical and will provide very specific instructions. Follow them carefully. The user is also actively testing in production and may report issues directly from that environment.
+-   The temporary diagnostic logging in  should be removed once the SDI bug is fully resolved and verified by the user.
 
 **documents and test reports created in this job**
--   
--   
--   
+-   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Requests the agent to run the testing agent to verify the fix for the backup system.
-2.  **User:** Reports an urgent bug: the backup page crashes and the backup file is not portable. The user provides a detailed, multi-step plan to fix it by implementing an asynchronous, portable JSON-based backup system.
-3.  **Agent:** Completes all bug fixes and gap fulfillments for the , , and  modules. Asks user for confirmation to run the testing agent.
-4.  **User:** Confirms to proceed with Part 3 (PDF updates).
-5.  **User:** Confirms to proceed with GAP 3 (sidebar reorganization).
-6.  **User:** Confirms to proceed with GAP 1 & 2 (linking modules to commesse).
-7.  **User:** Confirms to proceed with BUG 4 (migrating Rilievo files to object storage).
-8.  **User:** Confirms to proceed with BUG 3 (migrating Perizia photos to object storage).
-9.  **User:** Confirms to proceed with BUG 1 (fixing unsaved fields in Perizia).
-10. **Agent:** Asks for confirmation to proceed with BUG 1 after fixing BUG 2.
+1.  **User:** Confirms the agent is working on Norma Facile 2.0. (Status: Acknowledged)
+2.  **User:** Asks how to get the updated code from the preview environment to the production environment, as their last deploy didn't seem to work. (Status: Addressed)
+3.  **User:** States that they deployed from the current environment, but the fix for the SDI bug is not working in production, while it does work in preview. (Status: Investigated)
+4.  **User:** Provides a screenshot showing the credit note sent successfully from the preview environment. (Status: Acknowledged)
+5.  **User:** States the credit note in preview was an exact copy of the one in production. (Status: Investigated)
+6.  **User:** Reports the issue is not resolved, even after the fix. Asks how to migrate code. (Status: Investigated)
+7.  **User:** Provides a screenshot showing a  and a  error in the production environment's network tab when trying to send the SDI. (Status: Investigated)
+8.  **User:** Provides a video showing that the company data in the UI is filled out, but it's not saving correctly, which was the suspected cause of the SDI validation failure. (Status: Investigated)
+9.  **User:** Asks for the SDI credentials, thinking they are missing. (Status: Addressed)
+10. **User:** Provides a screenshot of the  error for the SDI sending, which was the initial (and incorrect) diagnosis. (Status: Investigated)
 
 **Project Health Check:**
--   **Broken:** None.
+-   **Broken:** The Invia SDI functionality is critical and not working in production.
 -   **Mocked:** None.
--   **Incomplete:** User verification for the new asynchronous backup system is pending.
+-   **Incomplete:** The Rilievo Guidato feature is in progress (approx. 75% complete).
 
 **3rd Party Integrations**
+-   **FattureInCloud:** The integration being actively debugged. It's a direct  implementation, not a formal SDK.
 -   **Resend:** Used for sending transactional emails.
 -   **Emergent-managed Google Auth:** Used for user authentication.
--   **GPT-4o Vision:** Used for AI-powered analysis in the  and  modules.
+-   **GPT-4o Vision:** Used for AI-powered analysis in other modules.
 -   **Object Storage (S3-compatible):** Used for all new file and image uploads.
--   **openpyxl:** Used for XLSX generation.
--   **WeasyPrint:** Used for PDF generation.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES. The testing agent was used multiple times to validate:
-    -   The Audit Trail and Notification Preferences features.
-    -   All fixes related to the , , and  modules.
-    -   The backend logic of the new asynchronous backup system.
+-   **Testing agent used after significant changes:** NO
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** No persistent ============================= test session starts ==============================
-platform linux -- Python 3.11.14, pytest-9.0.2, pluggy-1.6.0
-rootdir: /app
-plugins: asyncio-1.3.0, anyio-4.12.1
-asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
-collected 2327 items / 6 errors
-
-==================================== ERRORS ====================================
-_______ ERROR collecting backend/tests/test_atomic_counters_scadenze.py ________
-backend/tests/test_atomic_counters_scadenze.py:15: in <module>
-    BASE_URL = os.environ.get('REACT_APP_BACKEND_URL').rstrip('/')
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-E   AttributeError: 'NoneType' object has no attribute 'rstrip'
-_____ ERROR collecting backend/tests/test_iteration83_tempi_produzione.py ______
-backend/tests/test_iteration83_tempi_produzione.py:26: in <module>
-    assert BASE_URL, "REACT_APP_BACKEND_URL must be set for tests"
-E   AssertionError: REACT_APP_BACKEND_URL must be set for tests
-E   assert ''
-________ ERROR collecting backend/tests/test_norma_router_vendor_api.py ________
-backend/tests/test_norma_router_vendor_api.py:19: in <module>
-    BASE_URL = os.environ.get('REACT_APP_BACKEND_URL').rstrip('/')
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-E   AttributeError: 'NoneType' object has no attribute 'rstrip'
-_________ ERROR collecting backend/tests/test_payment_types_clients.py _________
-backend/tests/test_payment_types_clients.py:17: in <module>
-    raise ValueError("REACT_APP_BACKEND_URL environment variable is required")
-E   ValueError: REACT_APP_BACKEND_URL environment variable is required
-________ ERROR collecting backend/tests/test_payment_types_invoicex.py _________
-backend/tests/test_payment_types_invoicex.py:19: in <module>
-    raise ValueError("REACT_APP_BACKEND_URL environment variable is required")
-E   ValueError: REACT_APP_BACKEND_URL environment variable is required
-_______ ERROR collecting backend/tests/test_preventivo_pdf_generation.py _______
-ImportError while importing test module '/app/backend/tests/test_preventivo_pdf_generation.py'.
-Hint: make sure your test modules/packages have valid Python names.
-Traceback:
-/usr/local/lib/python3.11/importlib/__init__.py:126: in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-backend/tests/test_preventivo_pdf_generation.py:22: in <module>
-    from routes.preventivi import generate_preventivo_pdf, _fmt_it
-E   ImportError: cannot import name '_fmt_it' from 'routes.preventivi' (/app/backend/tests/../routes/preventivi.py)
-=============================== warnings summary ===============================
-backend/core/config.py:16
-  /app/backend/core/config.py:16: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
-    class Settings(BaseModel):
-
-../root/.venv/lib/python3.11/site-packages/starlette/formparsers.py:12
-  /root/.venv/lib/python3.11/site-packages/starlette/formparsers.py:12: PendingDeprecationWarning: Please use `import python_multipart` instead.
-    import multipart
-
-backend/models/invoice.py:76
-  /app/backend/models/invoice.py:76: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
-    @validator("quantity", "unit_price", "discount_percent", pre=True)
-
-backend/models/invoice.py:162
-  /app/backend/models/invoice.py:162: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
-    @validator('due_date', pre=True)
-
-backend/models/company.py:129
-  /app/backend/models/company.py:129: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
-    @validator("email", "pec", pre=True)
-
-backend/routes/preventivi.py:48
-  /app/backend/tests/../routes/preventivi.py:48: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
-    @validator("sconto_1", "sconto_2", "unit_price", "quantity", pre=True)
-
-backend/routes/preventivi.py:83
-  /app/backend/tests/../routes/preventivi.py:83: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
-    @validator("giorni_consegna", pre=True)
-
-backend/routes/preventivi.py:117
-  /app/backend/tests/../routes/preventivi.py:117: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
-    @validator("giorni_consegna", pre=True)
-
--- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-=========================== short test summary info ============================
-ERROR backend/tests/test_atomic_counters_scadenze.py - AttributeError: 'NoneT...
-ERROR backend/tests/test_iteration83_tempi_produzione.py - AssertionError: RE...
-ERROR backend/tests/test_norma_router_vendor_api.py - AttributeError: 'NoneTy...
-ERROR backend/tests/test_payment_types_clients.py - ValueError: REACT_APP_BAC...
-ERROR backend/tests/test_payment_types_invoicex.py - ValueError: REACT_APP_BA...
-ERROR backend/tests/test_preventivo_pdf_generation.py
-!!!!!!!!!!!!!!!!!!! Interrupted: 6 errors during collection !!!!!!!!!!!!!!!!!!!!
-======================== 8 warnings, 6 errors in 21.44s ======================== files were created by the main agent. Test results are in .
+-   **Test files created:** None
+-   **Known regressions:** The last fix for the SDI bug regressed the functionality by removing a necessary HTTP header.
 
 **Credentials to test flow:**
--   The application uses Emergent-managed Google Auth. UI testing that requires a login must be handled by the user or a testing agent capable of logging in.
+-   The application uses Emergent-managed Google Auth.
+-   FattureInCloud credentials are set as environment variables in  and are used as a fallback.
 
 **What agent forgot to execute**
--   The agent followed all user instructions diligently. The only remaining piece of the Base64-to-object-storage task is to create a one-time migration script for existing data, which was not explicitly requested in the prompt but is a necessary follow-up to fully resolve the technical debt.</analysis>
+-   The agent did not add the  header back into the  request in  after changing the call to use the  parameter. This is the root cause of the current critical bug.
+-   The agent has not yet implemented Step 7 (PDF Update) and Step 8 (Testing) for the Rilievo Guidato feature as per the user's original request.</analysis>

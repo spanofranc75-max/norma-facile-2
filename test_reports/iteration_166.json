@@ -118,7 +118,7 @@
   "test_credentials": {
     "admin_session_token": "audit_session_1772995719136",
     "admin_user_id": "test-audit-1772995719136",
-    "api_url": "https://backup-async-system.preview.emergentagent.com"
+    "api_url": "https://guided-survey.preview.emergentagent.com"
   },
   "retest_needed": false,
   "should_main_agent_self_test": false,
