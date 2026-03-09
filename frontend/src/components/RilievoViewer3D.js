@@ -1,21 +1,22 @@
 /**
  * RilievoViewer3D — Parametric 3D viewer for Rilievo measurements.
- * Manual touch/mouse rotation (no OrbitControls).
+ * Professional CAD-style rendering: orthographic camera, wireframe edges,
+ * 3-point lighting, RAL metal materials. All units in mm.
  */
 import { useRef, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
 import * as THREE from 'three';
 
-// ── RAL color map (approximate hex) ──
-const RAL_HEX = {
-    'RAL 9005': 0x0a0a0a, 'RAL 9010': 0xf5f0e8, 'RAL 7016': 0x383e42,
-    'RAL 7035': 0xc5c7c4, 'RAL 6005': 0x1e3a2b, 'RAL 3000': 0xa52019,
-    'RAL 5010': 0x004f7c, 'RAL 8017': 0x3e2b23,
+// ── RAL color map (carpenteria più comuni) ──
+const RAL_COLORS = {
+    'RAL 9005': 0x0a0a0a,  'RAL 9010': 0xffffff,
+    'RAL 7016': 0x383e42,  'RAL 7035': 0xcbcfcf,
+    'RAL 6005': 0x114232,  'RAL 3000': 0xaa2b1d,
+    'RAL 8017': 0x442f24,  'RAL 1021': 0xf6a800,
+    'RAL 5010': 0x0e4c96,
 };
 const DEFAULT_COLOR = 0x383e42;
 
-function getColor(m) {
-    return RAL_HEX[m?.colore] ?? DEFAULT_COLOR;
-}
+function getColor(m) { return RAL_COLORS[m?.colore] ?? DEFAULT_COLOR; }
 
 function parseDim(profilo) {
     if (!profilo) return [30, 30];
@@ -23,66 +24,75 @@ function parseDim(profilo) {
     return nums.length >= 2 ? nums : nums.length === 1 ? [nums[0], nums[0]] : [30, 30];
 }
 
-// ── Box helper (centered at origin, use position to place) ──
-function box(w, h, d, color) {
-    const g = new THREE.BoxGeometry(w, h, d);
-    const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.3 });
-    return new THREE.Mesh(g, mat);
+// ── Professional materials ──
+function getMat(color) {
+    const c = typeof color === 'string' ? (RAL_COLORS[color] ?? DEFAULT_COLOR) : color;
+    return new THREE.MeshPhongMaterial({ color: c, specular: 0x333333, shininess: 60 });
+}
+const WIRE_MAT = new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true, transparent: true, opacity: 0.12 });
+
+function profMesh(geo, color) {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(geo, getMat(color)));
+    g.add(new THREE.Mesh(geo.clone(), WIRE_MAT));
+    return g;
 }
 
-function cylinder(radius, height, color) {
-    const g = new THREE.CylinderGeometry(radius, radius, height, 16);
-    const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.4 });
-    return new THREE.Mesh(g, mat);
+function addBox(group, w, h, d, x, y, z, color) {
+    const m = profMesh(new THREE.BoxGeometry(w, h, d), color);
+    m.position.set(x, y, z);
+    group.add(m);
+}
+
+function addCyl(group, r, len, x, y, z, color, rot) {
+    const m = profMesh(new THREE.CylinderGeometry(r, r, len, 16), color);
+    m.position.set(x, y, z);
+    if (rot) { m.rotation.x = rot.x || 0; m.rotation.y = rot.y || 0; m.rotation.z = rot.z || 0; }
+    group.add(m);
 }
 
 // ══════════════════════════════════════════
-// RENDERERS
+// RENDERERS (all dimensions in mm)
 // ══════════════════════════════════════════
 
 function renderInferriata(m) {
     const group = new THREE.Group();
-    const L = (m.luce_larghezza || 1500) / 1000;
-    const H = (m.luce_altezza || 1200) / 1000;
-    const interasse = (m.interasse_montanti || 120) / 1000;
+    const L = m.luce_larghezza || 1200;
+    const H = m.luce_altezza || 1500;
+    const interasse = m.interasse_montanti || 120;
     const nTraversi = m.numero_traversi || 2;
-    const [mw, md] = parseDim(m.profilo_montante).map(v => v / 1000);
-    const [tw, td] = parseDim(m.profilo_traverso).map(v => v / 1000);
+    const [mw, md] = parseDim(m.profilo_montante);
+    const [tw, td] = parseDim(m.profilo_traverso);
     const col = getColor(m);
 
-    // Montanti
-    const nMont = Math.max(2, Math.ceil(L / interasse) + 1);
-    for (let i = 0; i < nMont; i++) {
-        const x = -L / 2 + (i * L) / (nMont - 1);
-        const b = box(mw, H, md, col);
-        b.position.set(x, H / 2, 0);
-        group.add(b);
-    }
-    // Traversi
-    for (let i = 0; i < nTraversi; i++) {
-        const y = ((i + 1) * H) / (nTraversi + 1);
-        const b = box(L, tw, td, col);
-        b.position.set(0, y, 0);
-        group.add(b);
-    }
-    // Frame outline
-    const frame = box(L + mw, 0.008, md + 0.002, 0x222222);
-    frame.position.set(0, 0, 0);
-    group.add(frame);
-    const frameTop = frame.clone();
-    frameTop.position.set(0, H, 0);
-    group.add(frameTop);
+    // Telaio esterno (profilo più spesso)
+    const telW = Math.max(mw * 1.5, 40);
+    addBox(group, L + telW * 2, telW, telW, 0, H + telW / 2, 0, col);       // top
+    addBox(group, L + telW * 2, telW, telW, 0, -telW / 2, 0, col);          // bottom
+    addBox(group, telW, H + telW * 2, telW, -L / 2 - telW / 2, H / 2, 0, col); // left
+    addBox(group, telW, H + telW * 2, telW, L / 2 + telW / 2, H / 2, 0, col);  // right
 
+    // Montanti interni
+    const nMont = Math.max(2, Math.floor(L / interasse) + 1);
+    for (let i = 0; i < nMont; i++) {
+        const x = -L / 2 + i * (L / (nMont - 1));
+        addBox(group, mw, H, md, x, H / 2, 0, col);
+    }
+    // Traversi orizzontali
+    for (let i = 1; i <= nTraversi; i++) {
+        const y = (H / (nTraversi + 1)) * i;
+        addBox(group, L, td, tw, 0, y, 0, col);
+    }
     return group;
 }
 
 function renderCancello(m, pedonale) {
     const group = new THREE.Group();
-    const L = (m.luce_netta || (pedonale ? 1000 : 4000)) / 1000;
-    const H = (m.altezza || 1800) / 1000;
-    const [tw, td] = parseDim(m.profilo_telaio).map(v => v / 1000);
-    const [iw, id] = parseDim(m.profilo_infisso).map(v => v / 1000);
-    const interasse = (m.interasse_infissi || 100) / 1000;
+    const L = m.luce_netta || (pedonale ? 1000 : 4000);
+    const H = m.altezza || 1800;
+    const [tw, td] = parseDim(m.profilo_telaio);
+    const [iw, id] = parseDim(m.profilo_infisso);
+    const interasse = m.interasse_infissi || 100;
     const col = getColor(m);
     const nAnte = m.numero_ante || (pedonale ? 1 : 2);
     const anteW = L / nAnte;
@@ -90,41 +100,31 @@ function renderCancello(m, pedonale) {
     for (let a = 0; a < nAnte; a++) {
         const ox = -L / 2 + a * anteW + anteW / 2;
         // Telaio anta
-        const top = box(anteW, tw, td, col); top.position.set(ox, H, 0); group.add(top);
-        const bot = box(anteW, tw, td, col); bot.position.set(ox, 0, 0); group.add(bot);
-        const left = box(tw, H, td, col); left.position.set(ox - anteW / 2, H / 2, 0); group.add(left);
-        const right = box(tw, H, td, col); right.position.set(ox + anteW / 2, H / 2, 0); group.add(right);
+        addBox(group, anteW, tw, td, ox, H, 0, col);
+        addBox(group, anteW, tw, td, ox, 0, 0, col);
+        addBox(group, tw, H, td, ox - anteW / 2, H / 2, 0, col);
+        addBox(group, tw, H, td, ox + anteW / 2, H / 2, 0, col);
         // Infissi verticali
         const nInf = Math.max(1, Math.ceil(anteW / interasse) - 1);
         for (let i = 1; i <= nInf; i++) {
             const x = ox - anteW / 2 + (i * anteW) / (nInf + 1);
-            const b = box(iw, H - tw * 2, id, col);
-            b.position.set(x, H / 2, 0);
-            group.add(b);
+            addBox(group, iw, H - tw * 2, id, x, H / 2, 0, col);
         }
     }
     // Pilastri
     if (m.pilastri_esistenti) {
-        const pw = (m.larghezza_pilastro || 300) / 1000;
-        const pH = H + 0.2;
-        const pl = box(pw, pH, pw, 0x888888);
-        pl.position.set(-L / 2 - pw / 2 - 0.05, pH / 2, 0);
-        group.add(pl);
-        const pr = pl.clone();
-        pr.position.set(L / 2 + pw / 2 + 0.05, pH / 2, 0);
-        group.add(pr);
+        const pw = m.larghezza_pilastro || 300;
+        const pH = H + 200;
+        addBox(group, pw, pH, pw, -L / 2 - pw / 2 - 50, pH / 2, 0, 0x888888);
+        addBox(group, pw, pH, pw, L / 2 + pw / 2 + 50, pH / 2, 0, 0x888888);
     }
     // Guida scorrevole
     if (m.tipo_apertura === 'scorrevole') {
-        const rail = box(L * 1.3, 0.02, 0.06, 0x555555);
-        rail.position.set(L * 0.15, 0.01, 0);
-        group.add(rail);
+        addBox(group, L * 1.3, 20, 60, L * 0.15, 10, 0, 0x555555);
     }
     // Motore
     if (!pedonale && m.motorizzazione) {
-        const mot = box(0.3, 0.2, 0.2, 0x444444);
-        mot.position.set(-L / 2 - 0.35, 0.15, 0);
-        group.add(mot);
+        addBox(group, 300, 200, 200, -L / 2 - 350, 150, 0, 0x444444);
     }
     return group;
 }
@@ -132,60 +132,55 @@ function renderCancello(m, pedonale) {
 function renderScala(m) {
     const group = new THREE.Group();
     const nGradini = m.numero_gradini || 10;
-    const alz = (m.alzata || 175) / 1000;
-    const ped = (m.pedata || 280) / 1000;
-    const largh = (m.larghezza || 900) / 1000;
-    const spessore = (m.spessore_gradino || 4) / 1000;
+    const alz = m.alzata || 175;
+    const ped = m.pedata || 280;
+    const largh = m.larghezza || 900;
+    const spG = m.spessore_gradino || 4;
     const col = getColor(m);
 
     // Gradini: pedata orizzontale + alzata verticale
     for (let i = 0; i < nGradini; i++) {
         const y = i * alz;
         const z = i * ped;
-        // Pedata (piattaforma orizzontale)
-        const g = box(largh, spessore, ped, col);
-        g.position.set(0, y + alz + spessore / 2, z + ped / 2);
-        group.add(g);
-        // Alzata (pannello verticale)
-        const a = box(largh, alz, spessore, col);
-        a.position.set(0, y + alz / 2, z);
-        group.add(a);
+        addBox(group, largh, spG, ped, 0, y + alz + spG / 2, z + ped / 2, col);
+        addBox(group, largh, alz - spG, spG, 0, y + alz / 2, z, col);
     }
 
-    // Longheroni (struttura laterale lungo la diagonale)
+    // Longheroni laterali (diagonale)
     const totH = nGradini * alz;
     const totD = nGradini * ped;
     const diagL = Math.sqrt(totH * totH + totD * totD);
     const angle = Math.atan2(totH, totD);
-    const [sw, sh] = parseDim(m.profilo_struttura).map(v => v / 1000);
+    const [sw, sh] = parseDim(m.profilo_struttura);
+
     for (const side of [-1, 1]) {
-        const b = box(sw, sh, diagL, 0x666666);
-        b.rotation.x = -angle;
-        b.position.set(side * (largh / 2 - sw / 2), totH / 2, totD / 2);
-        group.add(b);
+        const geo = new THREE.BoxGeometry(sw, sh, diagL);
+        const mesh = profMesh(geo, 0x666666);
+        mesh.rotation.x = -angle;
+        mesh.position.set(side * (largh / 2 - sw / 2), totH / 2, totD / 2);
+        group.add(mesh);
     }
 
     // Corrimano
     if (m.corrimano) {
-        const hCorr = 1.0;
+        const hCorr = 900;
         const lato = m.lato_corrimano || 'dx';
         const sides = lato === 'entrambi' ? [-1, 1] : lato === 'sx' ? [-1] : [1];
         for (const s of sides) {
-            const x = s * (largh / 2 + 0.02);
-            // Montanti corrimano
-            const interM = (m.interasse_montanti || 150) / 1000;
+            const x = s * (largh / 2 + 30);
+            // Montanti
+            const interM = m.interasse_montanti || 150;
             const nM = Math.max(2, Math.ceil(diagL / interM));
             for (let i = 0; i <= nM; i++) {
                 const frac = i / nM;
                 const y = frac * totH;
                 const z = frac * totD;
-                const post = box(0.02, hCorr, 0.02, col);
-                post.position.set(x, y + hCorr / 2, z);
-                group.add(post);
+                addBox(group, 20, hCorr, 20, x, y + hCorr / 2, z, col);
             }
-            // Rail corrimano (parallelo alla diagonale)
-            const rail = cylinder(0.02, diagL, col);
-            rail.rotation.x = -angle;
+            // Rail
+            const rGeo = new THREE.CylinderGeometry(20, 20, diagL, 12);
+            const rail = profMesh(rGeo, col);
+            rail.rotation.x = Math.PI / 2 - angle;
             rail.position.set(x, totH / 2 + hCorr, totD / 2);
             group.add(rail);
         }
@@ -195,86 +190,69 @@ function renderScala(m) {
 
 function renderRecinzione(m) {
     const group = new THREE.Group();
-    const lungTot = (m.lunghezza_totale || 5000) / 1000;
-    const H = (m.altezza || 1500) / 1000;
-    const interassePali = (m.interasse_pali || 2500) / 1000;
+    const lungTot = m.lunghezza_totale || 5000;
+    const H = m.altezza || 1500;
+    const interassePali = m.interasse_pali || 2500;
     const nPali = Math.max(2, Math.ceil(lungTot / interassePali) + 1);
     const actualSpacing = lungTot / (nPali - 1);
-    const [pw, pd] = parseDim(m.profilo_palo).map(v => v / 1000);
+    const [pw, pd] = parseDim(m.profilo_palo);
     const nOrizz = m.numero_orizzontali || 3;
-    const [ow, od] = parseDim(m.profilo_orizzontale).map(v => v / 1000);
-    const [vw, vd] = parseDim(m.profilo_verticale).map(v => v / 1000);
-    const interasseV = (m.interasse_verticali || 120) / 1000;
+    const [ow, od] = parseDim(m.profilo_orizzontale);
+    const [vw, vd] = parseDim(m.profilo_verticale);
+    const interasseV = m.interasse_verticali || 120;
     const col = getColor(m);
 
     for (let i = 0; i < nPali; i++) {
         const x = -lungTot / 2 + i * actualSpacing;
-        // Palo (extra 0.3m interrato)
-        const p = box(pw, H + 0.3, pd, 0x555555);
-        p.position.set(x, (H + 0.3) / 2 - 0.3, 0);
-        group.add(p);
+        // Palo (+400mm interrato)
+        addBox(group, pw, H + 400, pd, x, (H + 400) / 2 - 400, 0, 0x555555);
         // Pannello tra pali
         if (i < nPali - 1) {
             const cx = x + actualSpacing / 2;
-            // Orizzontali
             for (let j = 0; j < nOrizz; j++) {
                 const y = ((j + 1) * H) / (nOrizz + 1);
-                const o = box(actualSpacing - pw, ow, od, col);
-                o.position.set(cx, y, 0);
-                group.add(o);
+                addBox(group, actualSpacing - pw, ow, od, cx, y, 0, col);
             }
-            // Verticali
             const nV = Math.max(1, Math.ceil(actualSpacing / interasseV) - 1);
             for (let j = 1; j <= nV; j++) {
                 const vx = x + pw / 2 + (j * (actualSpacing - pw)) / (nV + 1);
-                const v = box(vw, H - 0.1, vd, col);
-                v.position.set(vx, H / 2, 0);
-                group.add(v);
+                addBox(group, vw, H - 100, vd, vx, H / 2, 0, col);
             }
         }
     }
     // Terreno
-    const ground = box(lungTot + 1, 0.02, 2, 0x8B7355);
-    ground.position.set(0, -0.01, 0);
-    group.add(ground);
+    addBox(group, lungTot + 1000, 20, 2000, 0, -10, 0, 0x8B7355);
     return group;
 }
 
 function renderRinghiera(m) {
     const group = new THREE.Group();
-    const L = (m.lunghezza || 3000) / 1000;
-    const H = (m.altezza || 900) / 1000;
-    const [cw, cd] = parseDim(m.profilo_corrente).map(v => v / 1000);
-    const [mw, md] = parseDim(m.profilo_montante).map(v => v / 1000);
-    const interasseM = (m.interasse_montanti || 1000) / 1000;
-    const interasseI = (m.interasse_infissi || 100) / 1000;
+    const L = m.lunghezza || 3000;
+    const H = m.altezza || 900;
+    const [cw, cd] = parseDim(m.profilo_corrente);
+    const [mw, md] = parseDim(m.profilo_montante);
+    const interasseM = m.interasse_montanti || 1000;
+    const interasseI = m.interasse_infissi || 100;
     const col = getColor(m);
 
-    // Corrente superiore e inferiore
-    const topRail = box(L, cw, cd, col); topRail.position.set(0, H, 0); group.add(topRail);
-    const botRail = box(L, cw, cd, col); botRail.position.set(0, cw / 2, 0); group.add(botRail);
+    // Correnti superiore e inferiore
+    addBox(group, L, cw, cd, 0, H, 0, col);
+    addBox(group, L, cw, cd, 0, cw / 2, 0, col);
 
     // Montanti principali
     const nMont = Math.max(2, Math.ceil(L / interasseM) + 1);
     for (let i = 0; i < nMont; i++) {
         const x = -L / 2 + (i * L) / (nMont - 1);
-        const p = box(mw, H, md, col);
-        p.position.set(x, H / 2, 0);
-        group.add(p);
+        addBox(group, mw, H, md, x, H / 2, 0, col);
     }
     // Infissi
     const nInf = Math.max(1, Math.ceil(L / interasseI));
     for (let i = 1; i < nInf; i++) {
         const x = -L / 2 + (i * L) / nInf;
-        const inf = box(0.012, H - cw * 2, 0.012, col);
-        inf.position.set(x, H / 2, 0);
-        group.add(inf);
+        addBox(group, 12, H - cw * 2, 12, x, H / 2, 0, col);
     }
     // Corrimano
-    const cr = cylinder(0.02, L, col);
-    cr.rotation.z = Math.PI / 2;
-    cr.position.set(0, H + cw / 2 + 0.02, 0);
-    group.add(cr);
+    addCyl(group, 20, L, 0, H + cw / 2 + 20, 0, col, { z: Math.PI / 2 });
 
     return group;
 }
@@ -287,6 +265,26 @@ const RENDERERS = {
     recinzione: renderRecinzione,
     ringhiera: renderRinghiera,
 };
+
+// ── Auto-fit OrthographicCamera to object ──
+function fitCamera(camera, object, aspect) {
+    const bbox = new THREE.Box3().setFromObject(object);
+    const center = bbox.getCenter(new THREE.Vector3());
+    const size = bbox.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const pad = maxDim * 0.7;
+
+    camera.left = -pad * aspect;
+    camera.right = pad * aspect;
+    camera.top = pad;
+    camera.bottom = -pad;
+    camera.updateProjectionMatrix();
+
+    camera.userData.target = center.clone();
+    camera.userData.baseFrustum = pad;
+    camera.userData.zoom = 1;
+    camera.userData.maxDim = maxDim;
+}
 
 // ══════════════════════════════════════════
 // MAIN COMPONENT
@@ -309,22 +307,37 @@ const RilievoViewer3D = forwardRef(function RilievoViewer3D({ tipologia, misure 
     const buildScene = useCallback(() => {
         const st = stateRef.current;
         if (!st.scene) return;
-        // Clear old meshes
+        // Clear
         while (st.scene.children.length > 0) st.scene.remove(st.scene.children[0]);
 
-        // Lights
-        st.scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-        const dir = new THREE.DirectionalLight(0xffffff, 0.9);
-        dir.position.set(5, 10, 7);
-        st.scene.add(dir);
-        const fill = new THREE.DirectionalLight(0xffffff, 0.3);
-        fill.position.set(-3, 5, -5);
-        st.scene.add(fill);
+        // Background grigio tecnico
+        st.scene.background = new THREE.Color(0xf0f2f5);
 
-        // Grid floor
-        const grid = new THREE.GridHelper(10, 20, 0xcccccc, 0xe8e8e8);
-        grid.position.y = -0.01;
+        // Griglia di riferimento (stile CAD)
+        const grid = new THREE.GridHelper(10000, 20, 0xcccccc, 0xe0e0e0);
+        grid.position.y = -1;
         st.scene.add(grid);
+
+        // Piano d'appoggio trasparente
+        const planeMat = new THREE.MeshLambertMaterial({
+            color: 0xfafafa, transparent: true, opacity: 0.5, side: THREE.DoubleSide
+        });
+        const plane = new THREE.Mesh(new THREE.PlaneGeometry(10000, 10000), planeMat);
+        plane.rotation.x = -Math.PI / 2;
+        plane.position.y = -2;
+        st.scene.add(plane);
+
+        // 3-point lighting professionale
+        st.scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+        const key = new THREE.DirectionalLight(0xffffff, 0.8);
+        key.position.set(5000, 8000, 5000);
+        st.scene.add(key);
+        const fill = new THREE.DirectionalLight(0xffffff, 0.3);
+        fill.position.set(-5000, 3000, -5000);
+        st.scene.add(fill);
+        const rim = new THREE.DirectionalLight(0xffffff, 0.2);
+        rim.position.set(0, -2000, 5000);
+        st.scene.add(rim);
 
         // Build mesh
         const fn = RENDERERS[tipologia];
@@ -333,15 +346,9 @@ const RilievoViewer3D = forwardRef(function RilievoViewer3D({ tipologia, misure 
         st.scene.add(mesh);
 
         // Auto-fit camera
-        const bbox = new THREE.Box3().setFromObject(mesh);
-        const center = bbox.getCenter(new THREE.Vector3());
-        const size = bbox.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const dist = maxDim * 2;
-        st.camera.position.set(center.x + dist * 0.6, center.y + dist * 0.5, center.z + dist * 0.8);
-        st.camera.lookAt(center);
-        st.camera.userData.target = center.clone();
-        st.camera.userData.dist = dist;
+        const el = mountRef.current;
+        const aspect = el ? (el.clientWidth / (el.clientHeight || 400)) : 1.5;
+        fitCamera(st.camera, mesh, aspect);
     }, [tipologia, misure]);
 
     useEffect(() => {
@@ -349,11 +356,22 @@ const RilievoViewer3D = forwardRef(function RilievoViewer3D({ tipologia, misure 
         if (!el) return;
         const w = el.clientWidth;
         const h = el.clientHeight || 400;
+        const aspect = w / h;
 
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xf8f8f8);
-        const camera = new THREE.PerspectiveCamera(45, w / h, 0.01, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        scene.background = new THREE.Color(0xf0f2f5);
+
+        // OrthographicCamera (assonometria tecnica)
+        const frustum = 3000;
+        const camera = new THREE.OrthographicCamera(
+            -frustum * aspect, frustum * aspect,
+            frustum, -frustum,
+            -50000, 50000
+        );
+        camera.position.set(2000, 2000, 2000);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
         renderer.setSize(w, h);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         el.appendChild(renderer.domElement);
@@ -363,12 +381,12 @@ const RilievoViewer3D = forwardRef(function RilievoViewer3D({ tipologia, misure 
         st.scene = scene;
         st.camera = camera;
 
-        // Animate
+        // Animate (orbit via drag)
         const animate = () => {
             st.animId = requestAnimationFrame(animate);
             const drag = dragRef.current;
             const target = camera.userData.target || new THREE.Vector3();
-            const dist = camera.userData.dist || 5;
+            const dist = (camera.userData.maxDim || 3000) * 2;
             camera.position.x = target.x + dist * Math.sin(drag.rotY) * Math.cos(drag.rotX);
             camera.position.y = target.y + dist * Math.sin(drag.rotX);
             camera.position.z = target.z + dist * Math.cos(drag.rotY) * Math.cos(drag.rotX);
@@ -381,7 +399,13 @@ const RilievoViewer3D = forwardRef(function RilievoViewer3D({ tipologia, misure 
         const onResize = () => {
             const nw = el.clientWidth;
             const nh = el.clientHeight || 400;
-            camera.aspect = nw / nh;
+            const a = nw / nh;
+            const base = camera.userData.baseFrustum || 3000;
+            const z = camera.userData.zoom || 1;
+            camera.left = -base * a / z;
+            camera.right = base * a / z;
+            camera.top = base / z;
+            camera.bottom = -base / z;
             camera.updateProjectionMatrix();
             renderer.setSize(nw, nh);
         };
@@ -392,13 +416,11 @@ const RilievoViewer3D = forwardRef(function RilievoViewer3D({ tipologia, misure 
             cancelAnimationFrame(st.animId);
             renderer.dispose();
             if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
-            st.renderer = null;
-            st.scene = null;
-            st.camera = null;
+            st.renderer = null; st.scene = null; st.camera = null;
         };
     }, []);
 
-    // Manual mouse/touch rotation
+    // Manual mouse/touch rotation + zoom
     useEffect(() => {
         const el = mountRef.current;
         if (!el) return;
@@ -407,12 +429,9 @@ const RilievoViewer3D = forwardRef(function RilievoViewer3D({ tipologia, misure 
         const onDown = (x, y) => { drag.active = true; drag.prevX = x; drag.prevY = y; };
         const onMove = (x, y) => {
             if (!drag.active) return;
-            const dx = x - drag.prevX;
-            const dy = y - drag.prevY;
-            drag.rotY += dx * 0.008;
-            drag.rotX = Math.max(-1.2, Math.min(1.2, drag.rotX + dy * 0.008));
-            drag.prevX = x;
-            drag.prevY = y;
+            drag.rotY += (x - drag.prevX) * 0.008;
+            drag.rotX = Math.max(-1.2, Math.min(1.2, drag.rotX + (y - drag.prevY) * 0.008));
+            drag.prevX = x; drag.prevY = y;
         };
         const onUp = () => { drag.active = false; };
 
@@ -421,13 +440,20 @@ const RilievoViewer3D = forwardRef(function RilievoViewer3D({ tipologia, misure 
         const touchStart = (e) => { if (e.touches.length === 1) { e.preventDefault(); onDown(e.touches[0].clientX, e.touches[0].clientY); } };
         const touchMove = (e) => { if (e.touches.length === 1) { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); } };
 
-        // Zoom with wheel
+        // Zoom: change orthographic frustum
         const onWheel = (e) => {
             e.preventDefault();
-            const st = stateRef.current;
-            if (!st.camera) return;
-            const d = st.camera.userData.dist || 5;
-            st.camera.userData.dist = Math.max(1, Math.min(30, d + e.deltaY * 0.005));
+            const cam = stateRef.current.camera;
+            if (!cam) return;
+            const z = (cam.userData.zoom || 1) * (e.deltaY > 0 ? 0.9 : 1.1);
+            cam.userData.zoom = Math.max(0.2, Math.min(5, z));
+            const base = cam.userData.baseFrustum || 3000;
+            const a = el.clientWidth / (el.clientHeight || 400);
+            cam.left = -base * a / cam.userData.zoom;
+            cam.right = base * a / cam.userData.zoom;
+            cam.top = base / cam.userData.zoom;
+            cam.bottom = -base / cam.userData.zoom;
+            cam.updateProjectionMatrix();
         };
 
         el.addEventListener('mousedown', mouseDown);
@@ -449,16 +475,13 @@ const RilievoViewer3D = forwardRef(function RilievoViewer3D({ tipologia, misure 
         };
     }, []);
 
-    // Rebuild scene when tipologia/misure change
-    useEffect(() => {
-        buildScene();
-    }, [buildScene]);
+    useEffect(() => { buildScene(); }, [buildScene]);
 
     return (
         <div
             ref={mountRef}
             data-testid="rilievo-3d-viewer"
-            className="w-full h-[400px] md:h-[500px] rounded-lg border border-slate-200 bg-[#f8f8f8] cursor-grab active:cursor-grabbing touch-manipulation"
+            className="w-full h-[400px] md:h-[500px] rounded-lg border border-slate-300 bg-[#f0f2f5] cursor-grab active:cursor-grabbing touch-manipulation"
             style={{ touchAction: 'none' }}
         />
     );
