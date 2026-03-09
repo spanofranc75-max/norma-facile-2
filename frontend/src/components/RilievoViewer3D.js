@@ -2,7 +2,7 @@
  * RilievoViewer3D — Parametric 3D viewer for Rilievo measurements.
  * Manual touch/mouse rotation (no OrbitControls).
  */
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
 import * as THREE from 'three';
 
 // ── RAL color map (approximate hex) ──
@@ -281,10 +281,19 @@ const RENDERERS = {
 // MAIN COMPONENT
 // ══════════════════════════════════════════
 
-export default function RilievoViewer3D({ tipologia, misure }) {
+const RilievoViewer3D = forwardRef(function RilievoViewer3D({ tipologia, misure }, ref) {
     const mountRef = useRef(null);
     const stateRef = useRef({ renderer: null, scene: null, camera: null, animId: null });
     const dragRef = useRef({ active: false, prevX: 0, prevY: 0, rotX: 0.4, rotY: -0.6 });
+
+    useImperativeHandle(ref, () => ({
+        captureScreenshot: () => {
+            const st = stateRef.current;
+            if (!st.renderer || !st.scene || !st.camera) return null;
+            st.renderer.render(st.scene, st.camera);
+            return st.renderer.domElement.toDataURL('image/png');
+        }
+    }));
 
     const buildScene = useCallback(() => {
         const st = stateRef.current;
@@ -442,4 +451,6 @@ export default function RilievoViewer3D({ tipologia, misure }) {
             style={{ touchAction: 'none' }}
         />
     );
-}
+});
+
+export default RilievoViewer3D;

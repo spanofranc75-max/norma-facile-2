@@ -601,6 +601,7 @@ export default function RilievoEditorPage() {
     const [creatingPos, setCreatingPos] = useState(false);
     const [clients, setClients] = useState([]);
     const photoInputRef = useRef(null);
+    const viewer3dRef = useRef(null);
     
     const [formData, setFormData] = useState({
         client_id: clientIdFromUrl || '',
@@ -1152,8 +1153,43 @@ export default function RilievoEditorPage() {
                                             </div>
                                             <div>
                                                 <div className="text-xs font-medium text-slate-500 mb-2 uppercase tracking-wide">Vista 3D</div>
-                                                <RilievoViewer3D tipologia={formData.tipologia} misure={formData.misure} />
-                                                <p className="text-xs text-slate-400 mt-2 text-center">Trascina per ruotare, scroll per zoom</p>
+                                                <RilievoViewer3D ref={viewer3dRef} tipologia={formData.tipologia} misure={formData.misure} />
+                                                <div className="flex items-center justify-between mt-2">
+                                                    <p className="text-xs text-slate-400">Trascina per ruotare, scroll per zoom</p>
+                                                    {rilievoId && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            data-testid="btn-screenshot-3d"
+                                                            className="h-7 text-xs gap-1"
+                                                            onClick={async () => {
+                                                                if (!viewer3dRef.current) return;
+                                                                const dataUrl = viewer3dRef.current.captureScreenshot();
+                                                                if (!dataUrl) { toast.error('Screenshot non disponibile'); return; }
+                                                                try {
+                                                                    const resp = await fetch(dataUrl);
+                                                                    const blob = await resp.blob();
+                                                                    const fd = new FormData();
+                                                                    fd.append('file', blob, `vista_3d_${formData.tipologia}.png`);
+                                                                    fd.append('caption', `Vista 3D - ${TIPOLOGIE.find(t => t.id === formData.tipologia)?.label || formData.tipologia}`);
+                                                                    const res = await fetch(`${API}/api/rilievi/${rilievoId}/upload-foto`, {
+                                                                        method: 'POST', credentials: 'include', body: fd,
+                                                                    });
+                                                                    if (!res.ok) throw new Error('Upload fallito');
+                                                                    const photo = await res.json();
+                                                                    setFormData(prev => ({ ...prev, photos: [...prev.photos, photo] }));
+                                                                    toast.success('Screenshot 3D salvato nelle foto');
+                                                                } catch (err) {
+                                                                    toast.error(err.message || 'Errore salvataggio screenshot');
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Camera className="h-3 w-3" />
+                                                            Cattura
+                                                        </Button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                         {/* Calcola Materiali */}
