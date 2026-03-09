@@ -3,7 +3,7 @@
  * Professional CAD-style rendering: orthographic camera, wireframe edges,
  * 3-point lighting, RAL metal materials. All units in mm.
  */
-import { useRef, useEffect, useCallback, useImperativeHandle, forwardRef } from 'react';
+import { useRef, useEffect, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import * as THREE from 'three';
 
 // ── RAL color map (carpenteria più comuni) ──
@@ -73,26 +73,26 @@ function renderContesto(group, m, lw, lh) {
     const pw = c.larghezza_parete || 2000;
     const ph = c.altezza_parete || 2700;
     const pd = c.spessore_parete || 300;
-    const yBase = m.altezza_dal_suolo || 0;
+    const yBase = m.altezza_dal_suolo ?? 900;
     const mat = MAT_INTONACO();
     const spSx = (pw - lw) / 2;
 
-    // Segmento SINISTRO
+    // Segmento SINISTRO (tutta altezza)
     if (spSx > 0) addPareteBox(group, spSx, ph, pd, -lw / 2 - spSx / 2, ph / 2, -pd / 2, mat);
-    // Segmento DESTRO
+    // Segmento DESTRO (tutta altezza)
     if (spSx > 0) addPareteBox(group, spSx, ph, pd, lw / 2 + spSx / 2, ph / 2, -pd / 2, mat);
-    // Architrave (sopra vano)
+    // Architrave (sopra il vano)
     const altArch = ph - lh;
     if (altArch > 0) addPareteBox(group, lw, altArch, pd, 0, lh + altArch / 2, -pd / 2, mat);
-    // Sottopavimento (sotto vano)
+    // Muro sotto il vano (altezza davanzale)
     if (yBase > 0) addPareteBox(group, lw, yBase, pd, 0, yBase / 2, -pd / 2, mat);
 
-    // Guance vano (spessore parete visibile)
+    // Guance vano laterali (spessore parete visibile)
     const matM = MAT_MATTONE();
     const vanoH = lh - yBase;
     addPareteBox(group, 10, vanoH, pd, -lw / 2, yBase + vanoH / 2, -pd / 2, matM);
     addPareteBox(group, 10, vanoH, pd, lw / 2, yBase + vanoH / 2, -pd / 2, matM);
-    // Guancia superiore
+    // Guancia superiore (architrave interno)
     addPareteBox(group, lw, 10, pd, 0, lh, -pd / 2, matM);
 }
 
@@ -102,7 +102,7 @@ function renderDavanzale(group, m, lw) {
     const sp = c.sporgenza_davanzale || 80;
     const spH = c.spessore_davanzale || 50;
     const pd = c.spessore_parete || 300;
-    const yBase = m.altezza_dal_suolo || 0;
+    const yBase = m.altezza_dal_suolo ?? 900;
     const largh = lw + 80;
     const mesh = new THREE.Mesh(
         new THREE.BoxGeometry(largh, spH, pd + sp),
@@ -115,7 +115,7 @@ function renderDavanzale(group, m, lw) {
 function renderScuri(group, m, lw, lh) {
     const c = m.contesto;
     if (!c?.scuri) return;
-    const yBase = m.altezza_dal_suolo || 0;
+    const yBase = m.altezza_dal_suolo ?? 900;
     const altS = lh - yBase;
     const largS = lw / 2;
     const sp = 30;
@@ -179,7 +179,7 @@ function renderTapparella(group, m, lw, lh) {
 function renderZanzariera(group, m, lw, lh) {
     const c = m.contesto;
     if (!c?.zanzariera) return;
-    const yBase = m.altezza_dal_suolo || 0;
+    const yBase = m.altezza_dal_suolo ?? 900;
     const altZ = lh - yBase;
     const sp = 20;
     const matA = MAT_ALLUMINIO();
@@ -210,31 +210,38 @@ function renderInferriata(m) {
     const [mw, md] = parseDim(m.profilo_montante);
     const [tw, td] = parseDim(m.profilo_traverso);
     const col = getColor(m);
+    const yBase = m.altezza_dal_suolo ?? 900;
+
+    // Sub-group per la ferramenta, traslato all'altezza del davanzale
+    const metal = new THREE.Group();
+    metal.position.y = yBase;
 
     // Telaio esterno (profilo più spesso)
     const telW = Math.max(mw * 1.5, 40);
-    addBox(group, L + telW * 2, telW, telW, 0, H + telW / 2, 0, col);       // top
-    addBox(group, L + telW * 2, telW, telW, 0, -telW / 2, 0, col);          // bottom
-    addBox(group, telW, H + telW * 2, telW, -L / 2 - telW / 2, H / 2, 0, col); // left
-    addBox(group, telW, H + telW * 2, telW, L / 2 + telW / 2, H / 2, 0, col);  // right
+    addBox(metal, L + telW * 2, telW, telW, 0, H + telW / 2, 0, col);       // top
+    addBox(metal, L + telW * 2, telW, telW, 0, -telW / 2, 0, col);          // bottom
+    addBox(metal, telW, H + telW * 2, telW, -L / 2 - telW / 2, H / 2, 0, col); // left
+    addBox(metal, telW, H + telW * 2, telW, L / 2 + telW / 2, H / 2, 0, col);  // right
 
     // Montanti interni
     const nMont = Math.max(2, Math.floor(L / interasse) + 1);
     for (let i = 0; i < nMont; i++) {
         const x = -L / 2 + i * (L / (nMont - 1));
-        addBox(group, mw, H, md, x, H / 2, 0, col);
+        addBox(metal, mw, H, md, x, H / 2, 0, col);
     }
     // Traversi orizzontali
     for (let i = 1; i <= nTraversi; i++) {
         const y = (H / (nTraversi + 1)) * i;
-        addBox(group, L, td, tw, 0, y, 0, col);
+        addBox(metal, L, td, tw, 0, y, 0, col);
     }
-    // Contesto architettonico
-    renderContesto(group, m, L, H);
+    group.add(metal);
+
+    // Contesto architettonico (coordinate assolute, Y=0 = pavimento)
+    renderContesto(group, m, L, H + yBase);
     renderDavanzale(group, m, L);
-    renderScuri(group, m, L, H);
-    renderTapparella(group, m, L, H);
-    renderZanzariera(group, m, L, H);
+    renderScuri(group, m, L, H + yBase);
+    renderTapparella(group, m, L, H + yBase);
+    renderZanzariera(group, m, L, H + yBase);
     return group;
 }
 
@@ -454,6 +461,7 @@ const RilievoViewer3D = forwardRef(function RilievoViewer3D({ tipologia, misure 
     const mountRef = useRef(null);
     const stateRef = useRef({ renderer: null, scene: null, camera: null, animId: null });
     const dragRef = useRef({ active: false, prevX: 0, prevY: 0, rotX: 0.4, rotY: -0.6 });
+    const [vistaInterna, setVistaInterna] = useState(false);
 
     useImperativeHandle(ref, () => ({
         captureScreenshot: () => {
@@ -509,7 +517,27 @@ const RilievoViewer3D = forwardRef(function RilievoViewer3D({ tipologia, misure 
         const el = mountRef.current;
         const aspect = el ? (el.clientWidth / (el.clientHeight || 400)) : 1.5;
         fitCamera(st.camera, mesh, aspect);
-    }, [tipologia, misure]);
+
+        // Vista interna/esterna
+        const maxD = st.camera.userData.maxDim || 3000;
+        if (vistaInterna) {
+            dragRef.current.rotY = Math.PI + 0.6;
+            dragRef.current.rotX = 0.3;
+            // Parete semi-trasparente
+            mesh.traverse((child) => {
+                if (child.isMesh && child.material && child.material.color) {
+                    const c = child.material.color.getHex();
+                    if (c === 0xd4c9b5 || c === 0xc19a6b) {
+                        child.material.transparent = true;
+                        child.material.opacity = 0.3;
+                    }
+                }
+            });
+        } else {
+            dragRef.current.rotY = -0.6;
+            dragRef.current.rotX = 0.4;
+        }
+    }, [tipologia, misure, vistaInterna]);
 
     useEffect(() => {
         const el = mountRef.current;
@@ -638,12 +666,36 @@ const RilievoViewer3D = forwardRef(function RilievoViewer3D({ tipologia, misure 
     useEffect(() => { buildScene(); }, [buildScene]);
 
     return (
-        <div
-            ref={mountRef}
-            data-testid="rilievo-3d-viewer"
-            className="w-full h-[400px] md:h-[500px] rounded-lg border border-slate-300 bg-[#f0f2f5] cursor-grab active:cursor-grabbing touch-manipulation"
-            style={{ touchAction: 'none' }}
-        />
+        <div className="relative">
+            {(tipologia === 'inferriata_fissa' || tipologia === 'cancello_pedonale') && (
+                <div className="flex gap-1 mb-2" data-testid="vista-toggle">
+                    <button
+                        type="button"
+                        onClick={() => setVistaInterna(false)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-colors ${!vistaInterna ? 'bg-[#1a3a5c] text-white' : 'bg-white text-slate-600 border border-slate-300 hover:bg-slate-50'}`}
+                        data-testid="btn-vista-esterna"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        Vista Esterna
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setVistaInterna(true)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-colors ${vistaInterna ? 'bg-[#1a3a5c] text-white' : 'bg-white text-slate-600 border border-slate-300 hover:bg-slate-50'}`}
+                        data-testid="btn-vista-interna"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        Vista Interna
+                    </button>
+                </div>
+            )}
+            <div
+                ref={mountRef}
+                data-testid="rilievo-3d-viewer"
+                className="w-full h-[400px] md:h-[500px] rounded-lg border border-slate-300 bg-[#f0f2f5] cursor-grab active:cursor-grabbing touch-manipulation"
+                style={{ touchAction: 'none' }}
+            />
+        </div>
     );
 });
 

@@ -490,6 +490,7 @@ function FormMisure({ tipologia, misure, onChange }) {
             {m.presenza_davanzale && (
                 <NumField label="Altezza davanzale" unit="mm" value={m.altezza_davanzale} onChange={v => set('altezza_davanzale', v)} testId="m-altezza-davanzale" />
             )}
+            <NumField label="Altezza dal suolo" unit="mm" value={m.altezza_dal_suolo ?? 900} onChange={v => set('altezza_dal_suolo', v)} min={0} max={2000} hint="Altezza davanzale da pavimento" testId="m-altezza-dal-suolo" />
             <div className="grid grid-cols-2 gap-3">
                 <SelField label="Finitura" value={m.finitura} onChange={v => set('finitura', v)} options={FINITURE} testId="m-finitura" />
                 <SelField label="Colore RAL" value={m.colore} onChange={v => set('colore', v)} options={RAL_COMUNI} testId="m-colore" />
