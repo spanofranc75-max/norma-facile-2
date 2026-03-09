@@ -63,7 +63,11 @@ class FattureInCloudClient:
         url = f"{self.base_url}/c/{self.company_id}{endpoint}"
         try:
             async with httpx.AsyncClient() as client:
-                resp = await client.request(method, url, headers=self._headers(), **kwargs)
+                if 'json' in kwargs:
+                    body = json.dumps(kwargs.pop('json'), ensure_ascii=True)
+                    resp = await client.request(method, url, headers=self._headers(), content=body, **kwargs)
+                else:
+                    resp = await client.request(method, url, headers=self._headers(), **kwargs)
                 resp.raise_for_status()
                 return resp.json()
         except httpx.HTTPStatusError as e:
