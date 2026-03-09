@@ -60,6 +60,7 @@ import {
     SlidersHorizontal,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
+import RilievoViewer3D from '../components/RilievoViewer3D';
 import CanvasDraw from 'react-canvas-draw';
 
 // Sketch Editor Component
@@ -1139,11 +1140,20 @@ export default function RilievoEditorPage() {
                                         <h3 className="text-sm font-semibold text-slate-700 mb-4">
                                             Misure — {TIPOLOGIE.find(t => t.id === formData.tipologia)?.label}
                                         </h3>
-                                        <FormMisure
-                                            tipologia={formData.tipologia}
-                                            misure={formData.misure}
-                                            onChange={(newMisure) => updateField('misure', newMisure)}
-                                        />
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                            <div>
+                                                <FormMisure
+                                                    tipologia={formData.tipologia}
+                                                    misure={formData.misure}
+                                                    onChange={(newMisure) => updateField('misure', newMisure)}
+                                                />
+                                            </div>
+                                            <div>
+                                                <div className="text-xs font-medium text-slate-500 mb-2 uppercase tracking-wide">Vista 3D</div>
+                                                <RilievoViewer3D tipologia={formData.tipologia} misure={formData.misure} />
+                                                <p className="text-xs text-slate-400 mt-2 text-center">Trascina per ruotare, scroll per zoom</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </CardContent>
