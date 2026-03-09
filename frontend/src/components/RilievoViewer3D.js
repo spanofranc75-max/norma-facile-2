@@ -132,28 +132,39 @@ function renderCancello(m, pedonale) {
 function renderScala(m) {
     const group = new THREE.Group();
     const nGradini = m.numero_gradini || 10;
-    const alzata = (m.alzata || 175) / 1000;
-    const pedata = (m.pedata || 280) / 1000;
+    const alz = (m.alzata || 175) / 1000;
+    const ped = (m.pedata || 280) / 1000;
     const largh = (m.larghezza || 900) / 1000;
     const spessore = (m.spessore_gradino || 4) / 1000;
     const col = getColor(m);
 
-    // Gradini
+    // Gradini: pedata orizzontale + alzata verticale
     for (let i = 0; i < nGradini; i++) {
-        const g = box(largh, spessore, pedata, col);
-        g.position.set(0, (i + 1) * alzata - spessore / 2, -i * pedata);
+        const y = i * alz;
+        const z = i * ped;
+        // Pedata (piattaforma orizzontale)
+        const g = box(largh, spessore, ped, col);
+        g.position.set(0, y + alz + spessore / 2, z + ped / 2);
         group.add(g);
+        // Alzata (pannello verticale)
+        const a = box(largh, alz, spessore, col);
+        a.position.set(0, y + alz / 2, z);
+        group.add(a);
     }
-    // Longheroni (struttura)
-    const diagL = Math.sqrt((nGradini * alzata) ** 2 + (nGradini * pedata) ** 2);
-    const angle = Math.atan2(nGradini * alzata, nGradini * pedata);
+
+    // Longheroni (struttura laterale lungo la diagonale)
+    const totH = nGradini * alz;
+    const totD = nGradini * ped;
+    const diagL = Math.sqrt(totH * totH + totD * totD);
+    const angle = Math.atan2(totH, totD);
     const [sw, sh] = parseDim(m.profilo_struttura).map(v => v / 1000);
     for (const side of [-1, 1]) {
         const b = box(sw, sh, diagL, 0x666666);
         b.rotation.x = -angle;
-        b.position.set(side * (largh / 2 - sw / 2), (nGradini * alzata) / 2, -(nGradini * pedata) / 2);
+        b.position.set(side * (largh / 2 - sw / 2), totH / 2, totD / 2);
         group.add(b);
     }
+
     // Corrimano
     if (m.corrimano) {
         const hCorr = 1.0;
@@ -166,16 +177,16 @@ function renderScala(m) {
             const nM = Math.max(2, Math.ceil(diagL / interM));
             for (let i = 0; i <= nM; i++) {
                 const frac = i / nM;
-                const y = frac * nGradini * alzata;
-                const z = -frac * nGradini * pedata;
+                const y = frac * totH;
+                const z = frac * totD;
                 const post = box(0.02, hCorr, 0.02, col);
                 post.position.set(x, y + hCorr / 2, z);
                 group.add(post);
             }
-            // Corrimano rail
+            // Rail corrimano (parallelo alla diagonale)
             const rail = cylinder(0.02, diagL, col);
             rail.rotation.x = -angle;
-            rail.position.set(x, (nGradini * alzata) / 2 + hCorr, -(nGradini * pedata) / 2);
+            rail.position.set(x, totH / 2 + hCorr, totD / 2);
             group.add(rail);
         }
     }
