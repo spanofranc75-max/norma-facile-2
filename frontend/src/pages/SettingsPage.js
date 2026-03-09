@@ -1111,6 +1111,8 @@ function BackupTab() {
     const [showModeDialog, setShowModeDialog] = useState(false);
     const [history, setHistory] = useState([]);
 
+    const [backupProgress, setBackupProgress] = useState('');
+
     const API = process.env.REACT_APP_BACKEND_URL;
 
     useEffect(() => {
@@ -1131,17 +1133,55 @@ function BackupTab() {
 
     const handleExport = async () => {
         setExporting(true);
+        setBackupProgress('Avvio backup...');
         try {
-            const filename = `backup_normafacile_${new Date().toISOString().slice(0, 10)}.json`;
-            await downloadPdfBlob(`/admin/backup/export`, filename);
-            toast.success('Backup scaricato con successo!');
-            const lastRes = await apiRequest('/admin/backup/last');
+            // Step 1: Start async backup
+            const startRes = await apiRequest('/admin/backup/start', { method: 'POST' });
+            const backupId = startRes.backup_id;
+
+            // Step 2: Poll status every 2 seconds
+            let status = 'in_corso';
+            let pollData = null;
+            while (status === 'in_corso') {
+                await new Promise(r => setTimeout(r, 2000));
+                pollData = await apiRequest(`/admin/backup/status/${backupId}`);
+                status = pollData.status;
+                setBackupProgress(pollData.progress || 'In corso...');
+            }
+
+            if (status === 'errore') {
+                throw new Error(pollData?.error || 'Errore durante il backup');
+            }
+
+            // Step 3: Download completed backup
+            setBackupProgress('Download in corso...');
+            const dlUrl = `${API}/api/admin/backup/download/${backupId}`;
+            const res = await fetch(dlUrl, { credentials: 'include' });
+            if (!res.ok) throw new Error('Download fallito');
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = pollData?.filename || 'backup_normafacile.json';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            toast.success(`Backup completato: ${pollData?.total_records || 0} record`);
+
+            // Refresh history
+            const [lastRes, histRes] = await Promise.all([
+                apiRequest('/admin/backup/last'),
+                apiRequest('/admin/backup/history'),
+            ]);
             setLastBackup(lastRes.last_backup);
+            setHistory(histRes?.history || []);
         } catch (e) {
-            console.error('Download backup error:', e.name, e.message);
-            toast.error(e.message);
+            toast.error(e.message || 'Errore backup');
         }
-        finally { setExporting(false); }
+        finally {
+            setExporting(false);
+            setBackupProgress('');
+        }
     };
 
     const handleFileSelect = (e) => {
@@ -1284,7 +1324,7 @@ function BackupTab() {
                         data-testid="btn-export-backup"
                     >
                         {exporting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
-                        {exporting ? 'Generazione backup...' : 'Esegui Backup Ora'}
+                        {exporting ? (backupProgress || 'Backup in corso...') : 'Crea Backup'}
                     </Button>
                 </div>
 
