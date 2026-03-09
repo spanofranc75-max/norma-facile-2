@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Textarea } from '../components/ui/textarea';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Badge } from '../components/ui/badge';
 import { Save, Building2, CreditCard, FileText, ImageIcon, Upload, X, Plug, ShieldCheck, HardDrive, Download, Loader2, RefreshCw, UploadCloud, Users, UserPlus, Trash2, Shield, Bell } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import { useConfirm } from '../components/ConfirmProvider';
