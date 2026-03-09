@@ -64,7 +64,7 @@ class FattureInCloudClient:
         try:
             async with httpx.AsyncClient() as client:
                 if 'json' in kwargs:
-                    body = json.dumps(kwargs.pop('json'), ensure_ascii=True)
+                    body = json.dumps(kwargs.pop('json'), ensure_ascii=True, default=str)
                     headers = {**self._headers(), "Content-Type": "application/json"}
                     resp = await client.request(method, url, headers=headers, content=body, **kwargs)
                 else:
