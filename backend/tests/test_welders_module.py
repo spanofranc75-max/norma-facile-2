@@ -8,7 +8,7 @@ import os
 import uuid
 
 # API configuration - use public URL for testing
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://accounting-revamp-1.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://backup-async-system.preview.emergentagent.com').rstrip('/')
 AUTH_TOKEN = "TGOMljLQmmdDakMy3F9zTH_X1-_w2HFsTfcSo8Kbq3Q"
 
 
