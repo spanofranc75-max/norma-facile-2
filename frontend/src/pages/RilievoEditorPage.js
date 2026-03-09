@@ -33,6 +33,7 @@ import {
     TabsTrigger,
 } from '../components/ui/tabs';
 import { toast } from 'sonner';
+import { Switch } from '../components/ui/switch';
 import {
     Save,
     ArrowLeft,
@@ -348,6 +349,242 @@ function TipologiaSelector({ value, onChange }) {
         </div>
     );
 }
+
+
+// ── Profili standard ──
+const PROFILI_MONTANTE = ['20x20','25x25','30x30','40x40','50x50','60x60'];
+const PROFILI_TRAVERSO = ['20x20','25x25','30x20','30x30','40x20'];
+const PROFILI_TELAIO = ['40x40','50x30','60x40','80x40'];
+const PROFILI_INFISSO = ['20x20','25x25','30x20','40x20'];
+const PROFILI_STRUTTURA = ['UPN80','UPN100','UPN120','HEA100','IPE100'];
+const PROFILI_CORRIMANO = ['tondo_30','tondo_40','tondo_50','quadro_40x40'];
+const FINITURE = ['verniciata','zincata','zincata_verniciata','corten','inox'];
+const RAL_COMUNI = ['RAL 9005','RAL 9010','RAL 7016','RAL 7035','RAL 6005','RAL 3000','RAL 5010','RAL 8017'];
+const APERTURE_CANCELLO = ['battente','scorrevole','libro','a_scomparsa'];
+const TIPI_SCALA = ['dritta','a_L','a_U','a_chiocciola'];
+const TIPI_STRUTTURA_SCALA = ['a_ginocchio','a_cosciale','a_sbalzo','autoportante'];
+const TIPI_GRADINO = ['mandorlato','striato','grigliato','lamiera_piegata','legno'];
+const TIPI_PANNELLO = ['piatto','dogato','lamiera','rete'];
+const TIPI_ATTACCO = ['a_pavimento','laterale','a_muro'];
+
+// ── Helper components ──
+function NumField({ label, unit, value, onChange, min, step, testId }) {
+    return (
+        <div className="space-y-1">
+            <Label className="text-xs text-slate-600">{label}{unit && <span className="text-slate-400 ml-1">({unit})</span>}</Label>
+            <Input type="number" data-testid={testId} min={min || 0} step={step || 1}
+                value={value ?? ''} onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))}
+                className="h-10 touch-manipulation" />
+        </div>
+    );
+}
+function SelField({ label, value, onChange, options, testId }) {
+    return (
+        <div className="space-y-1">
+            <Label className="text-xs text-slate-600">{label}</Label>
+            <Select value={value || ''} onValueChange={onChange}>
+                <SelectTrigger className="h-10 touch-manipulation" data-testid={testId}><SelectValue /></SelectTrigger>
+                <SelectContent>
+                    {options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                </SelectContent>
+            </Select>
+        </div>
+    );
+}
+function BoolField({ label, value, onChange, testId }) {
+    return (
+        <div className="flex items-center justify-between py-2">
+            <Label className="text-sm text-slate-700">{label}</Label>
+            <Switch checked={!!value} onCheckedChange={onChange} data-testid={testId} />
+        </div>
+    );
+}
+
+// ── Form Misure per tipologia ──
+function FormMisure({ tipologia, misure, onChange }) {
+    const m = misure || {};
+    const set = (k, v) => onChange({ ...m, [k]: v });
+
+    if (tipologia === 'inferriata_fissa') return (
+        <div className="space-y-4" data-testid="form-inferriata">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <NumField label="Luce larghezza" unit="mm" value={m.luce_larghezza} onChange={v => set('luce_larghezza', v)} testId="m-luce-larghezza" />
+                <NumField label="Luce altezza" unit="mm" value={m.luce_altezza} onChange={v => set('luce_altezza', v)} testId="m-luce-altezza" />
+                <NumField label="Interasse montanti" unit="mm" value={m.interasse_montanti} onChange={v => set('interasse_montanti', v)} testId="m-interasse-montanti" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <SelField label="Profilo montante" value={m.profilo_montante} onChange={v => set('profilo_montante', v)} options={PROFILI_MONTANTE} testId="m-profilo-montante" />
+                <SelField label="Profilo traverso" value={m.profilo_traverso} onChange={v => set('profilo_traverso', v)} options={PROFILI_TRAVERSO} testId="m-profilo-traverso" />
+                <NumField label="Numero traversi" value={m.numero_traversi} onChange={v => set('numero_traversi', v)} testId="m-numero-traversi" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <SelField label="Tipo ancoraggio" value={m.tipo_ancoraggio} onChange={v => set('tipo_ancoraggio', v)} options={['tasselli','muratura','saldatura','a_muro']} testId="m-tipo-ancoraggio" />
+                <NumField label="Spessore muro" unit="mm" value={m.spessore_muro} onChange={v => set('spessore_muro', v)} testId="m-spessore-muro" />
+            </div>
+            <BoolField label="Presenza davanzale" value={m.presenza_davanzale} onChange={v => set('presenza_davanzale', v)} testId="m-davanzale" />
+            {m.presenza_davanzale && (
+                <NumField label="Altezza davanzale" unit="mm" value={m.altezza_davanzale} onChange={v => set('altezza_davanzale', v)} testId="m-altezza-davanzale" />
+            )}
+            <div className="grid grid-cols-2 gap-3">
+                <SelField label="Finitura" value={m.finitura} onChange={v => set('finitura', v)} options={FINITURE} testId="m-finitura" />
+                <SelField label="Colore RAL" value={m.colore} onChange={v => set('colore', v)} options={RAL_COMUNI} testId="m-colore" />
+            </div>
+        </div>
+    );
+
+    if (tipologia === 'cancello_carrabile') return (
+        <div className="space-y-4" data-testid="form-cancello-carrabile">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <NumField label="Luce netta" unit="mm" value={m.luce_netta} onChange={v => set('luce_netta', v)} testId="m-luce-netta" />
+                <NumField label="Altezza" unit="mm" value={m.altezza} onChange={v => set('altezza', v)} testId="m-altezza" />
+                <NumField label="Numero ante" value={m.numero_ante} onChange={v => set('numero_ante', v)} testId="m-numero-ante" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <SelField label="Tipo apertura" value={m.tipo_apertura} onChange={v => set('tipo_apertura', v)} options={APERTURE_CANCELLO} testId="m-tipo-apertura" />
+                <SelField label="Profilo telaio" value={m.profilo_telaio} onChange={v => set('profilo_telaio', v)} options={PROFILI_TELAIO} testId="m-profilo-telaio" />
+                <SelField label="Profilo infisso" value={m.profilo_infisso} onChange={v => set('profilo_infisso', v)} options={PROFILI_INFISSO} testId="m-profilo-infisso" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+                <NumField label="Interasse infissi" unit="mm" value={m.interasse_infissi} onChange={v => set('interasse_infissi', v)} testId="m-interasse-infissi" />
+            </div>
+            <BoolField label="Pendenza terreno" value={m.pendenza_terreno} onChange={v => set('pendenza_terreno', v)} testId="m-pendenza" />
+            <BoolField label="Pilastri esistenti" value={m.pilastri_esistenti} onChange={v => set('pilastri_esistenti', v)} testId="m-pilastri" />
+            {m.pilastri_esistenti && (
+                <NumField label="Larghezza pilastro" unit="mm" value={m.larghezza_pilastro} onChange={v => set('larghezza_pilastro', v)} testId="m-larg-pilastro" />
+            )}
+            <BoolField label="Motorizzazione" value={m.motorizzazione} onChange={v => set('motorizzazione', v)} testId="m-motorizzazione" />
+            {m.motorizzazione && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <SelField label="Tipo motore" value={m.tipo_motore} onChange={v => set('tipo_motore', v)} options={['FAAC','CAME','BFT','NICE','BENINCA']} testId="m-tipo-motore" />
+                    <NumField label="Spazio motore SX" unit="mm" value={m.spazio_motore_sx} onChange={v => set('spazio_motore_sx', v)} testId="m-spazio-sx" />
+                    <NumField label="Spazio motore DX" unit="mm" value={m.spazio_motore_dx} onChange={v => set('spazio_motore_dx', v)} testId="m-spazio-dx" />
+                </div>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+                <SelField label="Finitura" value={m.finitura} onChange={v => set('finitura', v)} options={FINITURE} testId="m-finitura" />
+                <SelField label="Colore RAL" value={m.colore} onChange={v => set('colore', v)} options={RAL_COMUNI} testId="m-colore" />
+            </div>
+        </div>
+    );
+
+    if (tipologia === 'cancello_pedonale') return (
+        <div className="space-y-4" data-testid="form-cancello-pedonale">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <NumField label="Luce netta" unit="mm" value={m.luce_netta} onChange={v => set('luce_netta', v)} testId="m-luce-netta" />
+                <NumField label="Altezza" unit="mm" value={m.altezza} onChange={v => set('altezza', v)} testId="m-altezza" />
+                <NumField label="Numero ante" value={m.numero_ante} onChange={v => set('numero_ante', v)} testId="m-numero-ante" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <SelField label="Tipo apertura" value={m.tipo_apertura} onChange={v => set('tipo_apertura', v)} options={['battente','scorrevole']} testId="m-tipo-apertura" />
+                <SelField label="Verso apertura" value={m.verso_apertura} onChange={v => set('verso_apertura', v)} options={['interno','esterno']} testId="m-verso-apertura" />
+                <SelField label="Serratura" value={m.serratura} onChange={v => set('serratura', v)} options={['Yale','a_cilindro','elettroserratura','nessuna']} testId="m-serratura" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <SelField label="Profilo telaio" value={m.profilo_telaio} onChange={v => set('profilo_telaio', v)} options={PROFILI_TELAIO} testId="m-profilo-telaio" />
+                <SelField label="Profilo infisso" value={m.profilo_infisso} onChange={v => set('profilo_infisso', v)} options={PROFILI_INFISSO} testId="m-profilo-infisso" />
+                <NumField label="Interasse infissi" unit="mm" value={m.interasse_infissi} onChange={v => set('interasse_infissi', v)} testId="m-interasse-infissi" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+                <SelField label="Finitura" value={m.finitura} onChange={v => set('finitura', v)} options={FINITURE} testId="m-finitura" />
+                <SelField label="Colore RAL" value={m.colore} onChange={v => set('colore', v)} options={RAL_COMUNI} testId="m-colore" />
+            </div>
+        </div>
+    );
+
+    if (tipologia === 'scala') return (
+        <div className="space-y-4" data-testid="form-scala">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <SelField label="Tipo scala" value={m.tipo} onChange={v => set('tipo', v)} options={TIPI_SCALA} testId="m-tipo-scala" />
+                <NumField label="Numero gradini" value={m.numero_gradini} onChange={v => set('numero_gradini', v)} testId="m-numero-gradini" />
+                <NumField label="Larghezza" unit="mm" value={m.larghezza} onChange={v => set('larghezza', v)} testId="m-larghezza" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <NumField label="Alzata" unit="mm" value={m.alzata} onChange={v => set('alzata', v)} testId="m-alzata" />
+                <NumField label="Pedata" unit="mm" value={m.pedata} onChange={v => set('pedata', v)} testId="m-pedata" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <SelField label="Tipo struttura" value={m.tipo_struttura} onChange={v => set('tipo_struttura', v)} options={TIPI_STRUTTURA_SCALA} testId="m-tipo-struttura" />
+                <SelField label="Profilo struttura" value={m.profilo_struttura} onChange={v => set('profilo_struttura', v)} options={PROFILI_STRUTTURA} testId="m-profilo-struttura" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <SelField label="Tipo gradino" value={m.tipo_gradino} onChange={v => set('tipo_gradino', v)} options={TIPI_GRADINO} testId="m-tipo-gradino" />
+                <NumField label="Spessore gradino" unit="mm" value={m.spessore_gradino} onChange={v => set('spessore_gradino', v)} testId="m-spessore-gradino" />
+            </div>
+            <BoolField label="Corrimano" value={m.corrimano} onChange={v => set('corrimano', v)} testId="m-corrimano" />
+            {m.corrimano && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <SelField label="Lato corrimano" value={m.lato_corrimano} onChange={v => set('lato_corrimano', v)} options={['sx','dx','entrambi']} testId="m-lato-corrimano" />
+                    <SelField label="Profilo corrimano" value={m.profilo_corrimano} onChange={v => set('profilo_corrimano', v)} options={PROFILI_CORRIMANO} testId="m-profilo-corrimano" />
+                    <SelField label="Montanti corrimano" value={m.montanti_corrimano} onChange={v => set('montanti_corrimano', v)} options={['quadro_20x20','quadro_25x25','tondo_20']} testId="m-montanti-corrimano" />
+                    <NumField label="Interasse montanti" unit="mm" value={m.interasse_montanti} onChange={v => set('interasse_montanti', v)} testId="m-interasse-montanti" />
+                </div>
+            )}
+            <BoolField label="Attacco a muro" value={m.attacco_muro} onChange={v => set('attacco_muro', v)} testId="m-attacco-muro" />
+            <div className="grid grid-cols-2 gap-3">
+                <SelField label="Finitura" value={m.finitura} onChange={v => set('finitura', v)} options={FINITURE} testId="m-finitura" />
+                <SelField label="Colore RAL" value={m.colore} onChange={v => set('colore', v)} options={RAL_COMUNI} testId="m-colore" />
+            </div>
+        </div>
+    );
+
+    if (tipologia === 'recinzione') return (
+        <div className="space-y-4" data-testid="form-recinzione">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <NumField label="Lunghezza totale" unit="mm" value={m.lunghezza_totale} onChange={v => set('lunghezza_totale', v)} testId="m-lunghezza-totale" />
+                <NumField label="Altezza" unit="mm" value={m.altezza} onChange={v => set('altezza', v)} testId="m-altezza" />
+                <NumField label="Numero campate" value={m.numero_campate} onChange={v => set('numero_campate', v)} testId="m-numero-campate" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <NumField label="Lunghezza campata" unit="mm" value={m.lunghezza_campata} onChange={v => set('lunghezza_campata', v)} testId="m-lung-campata" />
+                <NumField label="Interasse pali" unit="mm" value={m.interasse_pali} onChange={v => set('interasse_pali', v)} testId="m-interasse-pali" />
+                <SelField label="Profilo palo" value={m.profilo_palo} onChange={v => set('profilo_palo', v)} options={['40x40','50x50','60x60','80x80','tondo_48','tondo_60']} testId="m-profilo-palo" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <SelField label="Tipo pannello" value={m.tipo_pannello} onChange={v => set('tipo_pannello', v)} options={TIPI_PANNELLO} testId="m-tipo-pannello" />
+                <SelField label="Profilo orizzontale" value={m.profilo_orizzontale} onChange={v => set('profilo_orizzontale', v)} options={PROFILI_TRAVERSO} testId="m-profilo-orizz" />
+                <NumField label="N. orizzontali" value={m.numero_orizzontali} onChange={v => set('numero_orizzontali', v)} testId="m-num-orizz" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <SelField label="Profilo verticale" value={m.profilo_verticale} onChange={v => set('profilo_verticale', v)} options={PROFILI_INFISSO} testId="m-profilo-vert" />
+                <NumField label="Interasse verticali" unit="mm" value={m.interasse_verticali} onChange={v => set('interasse_verticali', v)} testId="m-interasse-vert" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+                <SelField label="Finitura" value={m.finitura} onChange={v => set('finitura', v)} options={FINITURE} testId="m-finitura" />
+                <SelField label="Colore RAL" value={m.colore} onChange={v => set('colore', v)} options={RAL_COMUNI} testId="m-colore" />
+            </div>
+        </div>
+    );
+
+    if (tipologia === 'ringhiera') return (
+        <div className="space-y-4" data-testid="form-ringhiera">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <NumField label="Lunghezza" unit="mm" value={m.lunghezza} onChange={v => set('lunghezza', v)} testId="m-lunghezza" />
+                <NumField label="Altezza" unit="mm" value={m.altezza} onChange={v => set('altezza', v)} testId="m-altezza" />
+                <SelField label="Tipo" value={m.tipo} onChange={v => set('tipo', v)} options={['diritta','curva','angolare']} testId="m-tipo" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <SelField label="Profilo corrente" value={m.profilo_corrente} onChange={v => set('profilo_corrente', v)} options={PROFILI_MONTANTE} testId="m-profilo-corrente" />
+                <SelField label="Profilo montante" value={m.profilo_montante} onChange={v => set('profilo_montante', v)} options={PROFILI_MONTANTE} testId="m-profilo-montante" />
+                <NumField label="Interasse montanti" unit="mm" value={m.interasse_montanti} onChange={v => set('interasse_montanti', v)} testId="m-interasse-montanti" />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <SelField label="Tipo infisso" value={m.tipo_infisso} onChange={v => set('tipo_infisso', v)} options={['quadro_20x20','quadro_25x25','tondo_12','tondo_16']} testId="m-tipo-infisso" />
+                <NumField label="Interasse infissi" unit="mm" value={m.interasse_infissi} onChange={v => set('interasse_infissi', v)} testId="m-interasse-infissi" />
+                <SelField label="Corrimano" value={m.corrimano} onChange={v => set('corrimano', v)} options={PROFILI_CORRIMANO} testId="m-corrimano" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+                <SelField label="Tipo attacco" value={m.tipo_attacco} onChange={v => set('tipo_attacco', v)} options={TIPI_ATTACCO} testId="m-tipo-attacco" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+                <SelField label="Finitura" value={m.finitura} onChange={v => set('finitura', v)} options={FINITURE} testId="m-finitura" />
+                <SelField label="Colore RAL" value={m.colore} onChange={v => set('colore', v)} options={RAL_COMUNI} testId="m-colore" />
+            </div>
+        </div>
+    );
+
+    return null;
+}
+
 
 
 
@@ -898,10 +1135,15 @@ export default function RilievoEditorPage() {
                                     }}
                                 />
                                 {formData.tipologia && (
-                                    <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                                        <p className="text-sm text-slate-500">
-                                            Il form misure per <strong>{TIPOLOGIE.find(t => t.id === formData.tipologia)?.label}</strong> sara disponibile nello Step 3.
-                                        </p>
+                                    <div className="mt-6 pt-6 border-t border-slate-200">
+                                        <h3 className="text-sm font-semibold text-slate-700 mb-4">
+                                            Misure — {TIPOLOGIE.find(t => t.id === formData.tipologia)?.label}
+                                        </h3>
+                                        <FormMisure
+                                            tipologia={formData.tipologia}
+                                            misure={formData.misure}
+                                            onChange={(newMisure) => updateField('misure', newMisure)}
+                                        />
                                     </div>
                                 )}
                             </CardContent>
