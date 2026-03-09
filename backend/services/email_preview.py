@@ -18,9 +18,9 @@ def _fmt_eur(val):
     return f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def _wrap_body(inner_html: str, accent_color: str = "#1e3a5f") -> str:
+def _wrap_body(inner_html: str, accent_color: str = "#1e3a5f", company_name: str = None) -> str:
     """Wrap email content in branded email frame — matches email_service.py exactly."""
-    company = _company()
+    company = company_name or _company()
     return f"""
     <div style="font-family: 'Segoe UI', Tahoma, sans-serif; max-width: 600px; margin: 0 auto; background: #f1f5f9; padding: 32px 16px;">
         <div style="background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
@@ -62,7 +62,7 @@ def build_invoice_email(client_name: str, document_number: str, document_type: s
         </p>
         <p style="color: #475569; font-size: 14px; margin-bottom: 0;">Cordiali saluti,<br/><strong>{display_name}</strong></p>
     """
-    return {"subject": subject, "html_body": _wrap_body(inner)}
+    return {"subject": subject, "html_body": _wrap_body(inner, company_name=display_name)}
 
 
 # ── DDT ──────────────────────────────────────────────────
