@@ -58,6 +58,8 @@ import {
     Fence,
     Grip,
     SlidersHorizontal,
+    ChevronDown,
+    ChevronUp,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import RilievoViewer3D from '../components/RilievoViewer3D';
@@ -419,6 +421,51 @@ function riepilogoMisure(tip, m) {
     return '';
 }
 
+function ContestoSection({ misure, onChange }) {
+    const [aperto, setAperto] = useState(false);
+    const ctx = misure?.contesto || {};
+    const setCtx = (k, v) => onChange({ ...misure, contesto: { ...ctx, [k]: v } });
+
+    return (
+        <div className="mt-6 border border-slate-200 rounded-lg overflow-hidden" data-testid="contesto-section">
+            <button
+                type="button"
+                onClick={() => setAperto(!aperto)}
+                className="w-full flex items-center justify-between bg-slate-50 px-4 py-3 hover:bg-slate-100 transition-colors"
+            >
+                <span className="text-[13px] font-semibold text-slate-600 flex items-center gap-2">
+                    <Building2 className="h-4 w-4" /> Contesto Installazione (opzionale)
+                </span>
+                {aperto ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+            </button>
+            {aperto && (
+                <div className="p-4 space-y-3" data-testid="contesto-fields">
+                    <BoolField label="Mostra parete nel 3D" value={ctx.mostra_parete} onChange={v => setCtx('mostra_parete', v)} testId="ctx-mostra-parete" />
+                    {ctx.mostra_parete && (
+                        <div className="space-y-3 pl-2 border-l-2 border-blue-200">
+                            <div className="grid grid-cols-3 gap-3">
+                                <NumField label="Spessore parete" unit="mm" value={ctx.spessore_parete ?? 300} onChange={v => setCtx('spessore_parete', v)} min={150} max={600} hint="Tipico: 300mm" testId="ctx-spessore-parete" />
+                                <NumField label="Altezza parete" unit="mm" value={ctx.altezza_parete ?? 2700} onChange={v => setCtx('altezza_parete', v)} min={2000} max={4000} testId="ctx-altezza-parete" />
+                                <NumField label="Larghezza parete" unit="mm" value={ctx.larghezza_parete ?? 2000} onChange={v => setCtx('larghezza_parete', v)} min={1000} max={5000} testId="ctx-larghezza-parete" />
+                            </div>
+                            <BoolField label="Davanzale" value={ctx.davanzale} onChange={v => setCtx('davanzale', v)} testId="ctx-davanzale" />
+                            {ctx.davanzale && (
+                                <NumField label="Sporgenza davanzale" unit="mm" value={ctx.sporgenza_davanzale ?? 80} onChange={v => setCtx('sporgenza_davanzale', v)} min={50} max={200} testId="ctx-sporgenza-dav" />
+                            )}
+                            <BoolField label="Scuri / Persiane" value={ctx.scuri} onChange={v => setCtx('scuri', v)} testId="ctx-scuri" />
+                            {ctx.scuri && (
+                                <SelField label="Tipo scuri" value={ctx.tipo_scuri || 'battenti'} onChange={v => setCtx('tipo_scuri', v)} options={['battenti','scorrevoli']} testId="ctx-tipo-scuri" />
+                            )}
+                            <BoolField label="Tapparella avvolgibile" value={ctx.tapparelle} onChange={v => setCtx('tapparelle', v)} testId="ctx-tapparelle" />
+                            <BoolField label="Zanzariera" value={ctx.zanzariera} onChange={v => setCtx('zanzariera', v)} testId="ctx-zanzariera" />
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
 function FormMisure({ tipologia, misure, onChange }) {
     const m = misure || {};
     const set = (k, v) => onChange({ ...m, [k]: v });
@@ -447,6 +494,7 @@ function FormMisure({ tipologia, misure, onChange }) {
                 <SelField label="Finitura" value={m.finitura} onChange={v => set('finitura', v)} options={FINITURE} testId="m-finitura" />
                 <SelField label="Colore RAL" value={m.colore} onChange={v => set('colore', v)} options={RAL_COMUNI} testId="m-colore" />
             </div>
+            <ContestoSection misure={m} onChange={onChange} />
         </div>
     );
 
@@ -506,6 +554,7 @@ function FormMisure({ tipologia, misure, onChange }) {
                 <SelField label="Finitura" value={m.finitura} onChange={v => set('finitura', v)} options={FINITURE} testId="m-finitura" />
                 <SelField label="Colore RAL" value={m.colore} onChange={v => set('colore', v)} options={RAL_COMUNI} testId="m-colore" />
             </div>
+            <ContestoSection misure={m} onChange={onChange} />
         </div>
     );
 

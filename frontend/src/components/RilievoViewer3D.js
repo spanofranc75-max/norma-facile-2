@@ -52,6 +52,152 @@ function addCyl(group, r, len, x, y, z, color, rot) {
 }
 
 // ══════════════════════════════════════════
+// CONTESTO ARCHITETTONICO (parete + accessori)
+// ══════════════════════════════════════════
+
+const MAT_INTONACO = () => new THREE.MeshPhongMaterial({ color: 0xd4c9b5, specular: 0x111111, shininess: 5 });
+const MAT_MATTONE = () => new THREE.MeshPhongMaterial({ color: 0xc19a6b, specular: 0x111111, shininess: 3 });
+const MAT_PIETRA = () => new THREE.MeshPhongMaterial({ color: 0xe8e0d0, specular: 0x444444, shininess: 40 });
+const MAT_LEGNO = () => new THREE.MeshPhongMaterial({ color: 0x2d4a1e, specular: 0x111111, shininess: 20 });
+const MAT_ALLUMINIO = () => new THREE.MeshPhongMaterial({ color: 0xc0c0c0, shininess: 80 });
+
+function addPareteBox(group, w, h, d, x, y, z, mat) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    mesh.position.set(x, y, z);
+    group.add(mesh);
+}
+
+function renderContesto(group, m, lw, lh) {
+    const c = m.contesto;
+    if (!c?.mostra_parete) return;
+    const pw = c.larghezza_parete || 2000;
+    const ph = c.altezza_parete || 2700;
+    const pd = c.spessore_parete || 300;
+    const yBase = m.altezza_dal_suolo || 0;
+    const mat = MAT_INTONACO();
+    const spSx = (pw - lw) / 2;
+
+    // Segmento SINISTRO
+    if (spSx > 0) addPareteBox(group, spSx, ph, pd, -lw / 2 - spSx / 2, ph / 2, -pd / 2, mat);
+    // Segmento DESTRO
+    if (spSx > 0) addPareteBox(group, spSx, ph, pd, lw / 2 + spSx / 2, ph / 2, -pd / 2, mat);
+    // Architrave (sopra vano)
+    const altArch = ph - lh;
+    if (altArch > 0) addPareteBox(group, lw, altArch, pd, 0, lh + altArch / 2, -pd / 2, mat);
+    // Sottopavimento (sotto vano)
+    if (yBase > 0) addPareteBox(group, lw, yBase, pd, 0, yBase / 2, -pd / 2, mat);
+
+    // Guance vano (spessore parete visibile)
+    const matM = MAT_MATTONE();
+    const vanoH = lh - yBase;
+    addPareteBox(group, 10, vanoH, pd, -lw / 2, yBase + vanoH / 2, -pd / 2, matM);
+    addPareteBox(group, 10, vanoH, pd, lw / 2, yBase + vanoH / 2, -pd / 2, matM);
+    // Guancia superiore
+    addPareteBox(group, lw, 10, pd, 0, lh, -pd / 2, matM);
+}
+
+function renderDavanzale(group, m, lw) {
+    const c = m.contesto;
+    if (!c?.davanzale) return;
+    const sp = c.sporgenza_davanzale || 80;
+    const spH = c.spessore_davanzale || 50;
+    const pd = c.spessore_parete || 300;
+    const yBase = m.altezza_dal_suolo || 0;
+    const largh = lw + 80;
+    const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(largh, spH, pd + sp),
+        MAT_PIETRA()
+    );
+    mesh.position.set(0, yBase - spH / 2, -pd / 2 + sp / 2);
+    group.add(mesh);
+}
+
+function renderScuri(group, m, lw, lh) {
+    const c = m.contesto;
+    if (!c?.scuri) return;
+    const yBase = m.altezza_dal_suolo || 0;
+    const altS = lh - yBase;
+    const largS = lw / 2;
+    const sp = 30;
+    const pd = c.spessore_parete || 300;
+    const mat = MAT_LEGNO();
+
+    if (c.tipo_scuri !== 'scorrevoli') {
+        // Battenti: ante aperte a 90° (appoggiate alla parete)
+        for (const side of [-1, 1]) {
+            const anta = new THREE.Group();
+            const solid = new THREE.Mesh(new THREE.BoxGeometry(sp, altS, largS), mat);
+            anta.add(solid);
+            // Listelli decorativi
+            for (let i = 0; i < 3; i++) {
+                const ly = -altS / 4 + (altS / 4) * i;
+                const lis = new THREE.Mesh(
+                    new THREE.BoxGeometry(sp + 2, 20, largS),
+                    new THREE.MeshPhongMaterial({ color: 0x1a2e0e, shininess: 10 })
+                );
+                lis.position.y = ly;
+                anta.add(lis);
+            }
+            anta.position.set(
+                side * (lw / 2 + largS / 2),
+                yBase + altS / 2,
+                -pd + sp / 2
+            );
+            group.add(anta);
+        }
+    } else {
+        // Scorrevoli: chiuse
+        for (const side of [-1, 1]) {
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(largS, altS, sp), mat);
+            mesh.position.set(side * lw / 4, yBase + altS / 2, -pd);
+            group.add(mesh);
+        }
+    }
+}
+
+function renderTapparella(group, m, lw, lh) {
+    const c = m.contesto;
+    if (!c?.tapparelle) return;
+    const pd = c.spessore_parete || 300;
+    // Cassonetto
+    const hCass = 150;
+    const cass = new THREE.Mesh(
+        new THREE.BoxGeometry(lw + 60, hCass, pd),
+        MAT_INTONACO()
+    );
+    cass.position.set(0, lh + hCass / 2, -pd / 2);
+    group.add(cass);
+    // Listelli tapparella (avvolta parzialmente — 10 listelli visibili)
+    const matL = new THREE.MeshPhongMaterial({ color: 0xb8a898, shininess: 10 });
+    for (let i = 0; i < 10; i++) {
+        const lis = new THREE.Mesh(new THREE.BoxGeometry(lw, 40, 15), matL);
+        lis.position.set(0, lh - i * 40 - 20, 0);
+        group.add(lis);
+    }
+}
+
+function renderZanzariera(group, m, lw, lh) {
+    const c = m.contesto;
+    if (!c?.zanzariera) return;
+    const yBase = m.altezza_dal_suolo || 0;
+    const altZ = lh - yBase;
+    const sp = 20;
+    const matA = MAT_ALLUMINIO();
+    // Telaio 4 lati
+    addPareteBox(group, lw, sp, sp, 0, lh - sp / 2, 10, matA);
+    addPareteBox(group, lw, sp, sp, 0, yBase + sp / 2, 10, matA);
+    addPareteBox(group, sp, altZ, sp, -lw / 2 + sp / 2, yBase + altZ / 2, 10, matA);
+    addPareteBox(group, sp, altZ, sp, lw / 2 - sp / 2, yBase + altZ / 2, 10, matA);
+    // Rete traslucida
+    const rete = new THREE.Mesh(
+        new THREE.PlaneGeometry(lw - sp * 2, altZ - sp * 2, 20, 20),
+        new THREE.MeshBasicMaterial({ color: 0x888888, transparent: true, opacity: 0.15, wireframe: true })
+    );
+    rete.position.set(0, yBase + altZ / 2, 12);
+    group.add(rete);
+}
+
+// ══════════════════════════════════════════
 // RENDERERS (all dimensions in mm)
 // ══════════════════════════════════════════
 
@@ -83,6 +229,12 @@ function renderInferriata(m) {
         const y = (H / (nTraversi + 1)) * i;
         addBox(group, L, td, tw, 0, y, 0, col);
     }
+    // Contesto architettonico
+    renderContesto(group, m, L, H);
+    renderDavanzale(group, m, L);
+    renderScuri(group, m, L, H);
+    renderTapparella(group, m, L, H);
+    renderZanzariera(group, m, L, H);
     return group;
 }
 
@@ -125,6 +277,14 @@ function renderCancello(m, pedonale) {
     // Motore
     if (!pedonale && m.motorizzazione) {
         addBox(group, 300, 200, 200, -L / 2 - 350, 150, 0, 0x444444);
+    }
+    // Contesto architettonico (solo pedonale)
+    if (pedonale) {
+        renderContesto(group, m, L, H);
+        renderDavanzale(group, m, L);
+        renderScuri(group, m, L, H);
+        renderTapparella(group, m, L, H);
+        renderZanzariera(group, m, L, H);
     }
     return group;
 }
