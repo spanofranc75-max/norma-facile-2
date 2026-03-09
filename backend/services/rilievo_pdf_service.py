@@ -12,6 +12,55 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+TIPOLOGIE_LABELS = {
+    "inferriata_fissa": "Inferriata Fissa",
+    "cancello_carrabile": "Cancello Carrabile",
+    "cancello_pedonale": "Cancello Pedonale",
+    "scala": "Scala",
+    "recinzione": "Recinzione",
+    "ringhiera": "Ringhiera",
+}
+
+MISURE_LABELS = {
+    "luce_larghezza": ("Luce larghezza", "mm"),
+    "luce_altezza": ("Luce altezza", "mm"),
+    "interasse_montanti": ("Interasse montanti", "mm"),
+    "profilo_montante": ("Profilo montante", ""),
+    "profilo_traverso": ("Profilo traverso", ""),
+    "numero_traversi": ("N. traversi", ""),
+    "altezza_davanzale": ("Altezza davanzale", "mm"),
+    "luce_netta": ("Luce netta", "mm"),
+    "altezza": ("Altezza", "mm"),
+    "profilo_telaio": ("Profilo telaio", ""),
+    "profilo_infisso": ("Profilo infisso", ""),
+    "interasse_infissi": ("Interasse infissi", "mm"),
+    "larghezza_pilastro": ("Larghezza pilastro", "mm"),
+    "motorizzazione": ("Motorizzazione", ""),
+    "tipo_motore": ("Tipo motore", ""),
+    "numero_gradini": ("N. gradini", ""),
+    "larghezza": ("Larghezza", "mm"),
+    "alzata": ("Alzata", "mm"),
+    "pedata": ("Pedata", "mm"),
+    "profilo_struttura": ("Profilo struttura", ""),
+    "tipo_gradino": ("Tipo gradino", ""),
+    "spessore_gradino": ("Spessore gradino", "mm"),
+    "corrimano": ("Corrimano", ""),
+    "lato_corrimano": ("Lato corrimano", ""),
+    "profilo_corrimano": ("Profilo corrimano", ""),
+    "montanti_corrimano": ("Montanti corrimano", ""),
+    "lunghezza_totale": ("Lunghezza totale", "mm"),
+    "interasse_pali": ("Interasse pali", "mm"),
+    "profilo_palo": ("Profilo palo", ""),
+    "numero_orizzontali": ("N. orizzontali", ""),
+    "profilo_orizzontale": ("Profilo orizzontale", ""),
+    "interasse_verticali": ("Interasse verticali", "mm"),
+    "profilo_verticale": ("Profilo verticale", ""),
+    "lunghezza": ("Lunghezza", "mm"),
+    "profilo_corrente": ("Profilo corrente", ""),
+    "tipo_infisso": ("Tipo infisso", ""),
+    "lunghezza_campata": ("Lunghezza campata", "mm"),
+}
+
 
 class RilievoPDFService:
     """Service for generating Rilievo PDF summaries."""
@@ -204,6 +253,131 @@ class RilievoPDFService:
         elements.append(info_table)
         elements.append(Spacer(1, 8*mm))
         
+        # ========== TIPOLOGIA & MISURE STRUTTURATE ==========
+        tipologia = rilievo.get('tipologia', '')
+        misure = rilievo.get('misure', {})
+        
+        if tipologia and misure:
+            tip_label = TIPOLOGIE_LABELS.get(tipologia, tipologia)
+            elements.append(Paragraph(f"TIPOLOGIA: {tip_label}", styles['SectionTitle']))
+            
+            # Build misure table
+            misure_rows = [[
+                Paragraph("<b>Parametro</b>", styles['SmallText']),
+                Paragraph("<b>Valore</b>", styles['SmallText']),
+            ]]
+            for key, val in misure.items():
+                if val is None or val == '':
+                    continue
+                label_info = MISURE_LABELS.get(key)
+                if label_info:
+                    label, unit = label_info
+                else:
+                    label, unit = key.replace('_', ' ').capitalize(), ''
+                # Format booleans
+                if isinstance(val, bool):
+                    display_val = "Si" if val else "No"
+                else:
+                    display_val = f"{val} {unit}".strip() if unit else str(val)
+                misure_rows.append([
+                    Paragraph(label, styles['SmallText']),
+                    Paragraph(display_val, styles['NormalText']),
+                ])
+            
+            if len(misure_rows) > 1:
+                m_table = Table(misure_rows, colWidths=[85*mm, 85*mm])
+                m_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), RilievoPDFService.NAVY),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('BACKGROUND', (0, 1), (-1, -1), RilievoPDFService.SLATE_50),
+                    ('BOX', (0, 0), (-1, -1), 0.5, RilievoPDFService.SLATE_200),
+                    ('GRID', (0, 0), (-1, -1), 0.5, RilievoPDFService.SLATE_200),
+                    ('PADDING', (0, 0), (-1, -1), 5),
+                    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ]))
+                elements.append(m_table)
+                elements.append(Spacer(1, 6*mm))
+        
+        # ========== VISTA 3D (screenshot separata dalle foto) ==========
+        photos = rilievo.get('photos', [])
+        vista_3d_photo = None
+        other_photos = []
+        for p in photos:
+            caption = p.get('caption', '') or p.get('name', '') or ''
+            if caption.startswith('Vista 3D'):
+                vista_3d_photo = p
+            else:
+                other_photos.append(p)
+        
+        if vista_3d_photo:
+            elements.append(Paragraph("VISTA 3D", styles['SectionTitle']))
+            img_3d = RilievoPDFService._load_photo_image(vista_3d_photo, max_width=140*mm, max_height=100*mm)
+            if img_3d:
+                elements.append(img_3d)
+                cap = vista_3d_photo.get('caption', '') or ''
+                if cap:
+                    elements.append(Paragraph(f"<i>{cap}</i>", styles['SmallText']))
+                elements.append(Spacer(1, 6*mm))
+        
+        # ========== MATERIALI CALCOLATI ==========
+        if tipologia and misure:
+            try:
+                from routes.rilievi import CALCOLA_FN
+                if tipologia in CALCOLA_FN:
+                    risultato = CALCOLA_FN[tipologia](misure)
+                    mat_list = risultato.get('materiali', [])
+                    peso_tot = risultato.get('peso_totale_kg', 0)
+                    sup_vern = risultato.get('superficie_verniciatura_m2', 0)
+                    
+                    if mat_list:
+                        elements.append(Paragraph("LISTA MATERIALI CALCOLATA", styles['SectionTitle']))
+                        
+                        mat_rows = [[
+                            Paragraph("<b>Descrizione</b>", styles['SmallText']),
+                            Paragraph("<b>Qtà</b>", styles['SmallText']),
+                            Paragraph("<b>ML</b>", styles['SmallText']),
+                            Paragraph("<b>Peso (kg)</b>", styles['SmallText']),
+                        ]]
+                        for item in mat_list:
+                            mat_rows.append([
+                                Paragraph(str(item.get('descrizione', '')), styles['SmallText']),
+                                Paragraph(str(item.get('quantita', '')), styles['NormalText']),
+                                Paragraph(str(item.get('ml', '')), styles['NormalText']),
+                                Paragraph(str(item.get('peso_kg', '')), styles['NormalText']),
+                            ])
+                        # Totals row
+                        mat_rows.append([
+                            Paragraph("<b>TOTALE</b>", styles['SmallText']),
+                            Paragraph("", styles['SmallText']),
+                            Paragraph("", styles['SmallText']),
+                            Paragraph(f"<b>{peso_tot} kg</b>", styles['NormalText']),
+                        ])
+                        
+                        mat_table = Table(mat_rows, colWidths=[70*mm, 25*mm, 30*mm, 40*mm])
+                        mat_table.setStyle(TableStyle([
+                            ('BACKGROUND', (0, 0), (-1, 0), RilievoPDFService.NAVY),
+                            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                            ('BACKGROUND', (0, 1), (-1, -2), RilievoPDFService.SLATE_50),
+                            ('BACKGROUND', (0, -1), (-1, -1), RilievoPDFService.SLATE_200),
+                            ('BOX', (0, 0), (-1, -1), 0.5, RilievoPDFService.SLATE_200),
+                            ('GRID', (0, 0), (-1, -1), 0.5, RilievoPDFService.SLATE_200),
+                            ('PADDING', (0, 0), (-1, -1), 5),
+                            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                            ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+                        ]))
+                        elements.append(mat_table)
+                        
+                        # Surface info
+                        if sup_vern > 0:
+                            elements.append(Spacer(1, 3*mm))
+                            elements.append(Paragraph(
+                                f"<b>Superficie verniciatura stimata:</b> {sup_vern} m²",
+                                styles['NormalText']
+                            ))
+                        elements.append(Spacer(1, 6*mm))
+            except Exception as e:
+                logger.warning(f"Calcolo materiali PDF fallito: {e}")
+        
         # ========== SKETCHES ==========
         sketches = rilievo.get('sketches', [])
         if sketches:
@@ -227,16 +401,18 @@ class RilievoPDFService:
                 
                 elements.append(Spacer(1, 4*mm))
         
-        # ========== PHOTOS ==========
-        photos = rilievo.get('photos', [])
-        if photos:
+        # ========== PHOTOS (esclusa Vista 3D già mostrata sopra) ==========
+        if not tipologia:
+            # Se non c'è tipologia, other_photos non è definito, usa tutte le foto
+            other_photos = rilievo.get('photos', [])
+        if other_photos:
             elements.append(Paragraph("FOTO SOPRALLUOGO", styles['SectionTitle']))
             
             # Create photo grid (2 columns)
             photo_rows = []
             current_row = []
             
-            for i, photo in enumerate(photos):
+            for i, photo in enumerate(other_photos):
                 photo_name = photo.get('name') or photo.get('caption') or f"Foto {i + 1}"
                 
                 img = RilievoPDFService._load_photo_image(photo, max_width=80*mm, max_height=60*mm)
