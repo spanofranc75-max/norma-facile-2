@@ -879,6 +879,8 @@ export default function RilievoEditorPage() {
     const [showLinkDialog, setShowLinkDialog] = useState(false);
     const [commesseList, setCommesseList] = useState([]);
     const [linkedCommessa, setLinkedCommessa] = useState(null);
+    const [materialiResult, setMaterialiResult] = useState(null);
+    const [calcoloLoading, setCalcoloLoading] = useState(false);
 
     useEffect(() => {
         if (formData.commessa_id) {
@@ -1154,6 +1156,68 @@ export default function RilievoEditorPage() {
                                                 <p className="text-xs text-slate-400 mt-2 text-center">Trascina per ruotare, scroll per zoom</p>
                                             </div>
                                         </div>
+                                        {/* Calcola Materiali */}
+                                        {rilievoId && (
+                                            <div className="mt-6 pt-4 border-t border-slate-200">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <span className="text-sm font-semibold text-slate-700">Calcolo Materiali</span>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        data-testid="btn-calcola-materiali"
+                                                        disabled={calcoloLoading}
+                                                        onClick={async () => {
+                                                            try {
+                                                                setCalcoloLoading(true);
+                                                                // Salva prima le misure correnti
+                                                                await apiRequest(`/rilievi/${rilievoId}`, {
+                                                                    method: 'PUT',
+                                                                    body: JSON.stringify({ tipologia: formData.tipologia, misure: formData.misure }),
+                                                                });
+                                                                const res = await apiRequest(`/rilievi/${rilievoId}/calcola-materiali`, { method: 'POST' });
+                                                                setMaterialiResult(res);
+                                                            } catch (err) {
+                                                                toast.error(err.message || 'Errore calcolo materiali');
+                                                            } finally {
+                                                                setCalcoloLoading(false);
+                                                            }
+                                                        }}
+                                                    >
+                                                        {calcoloLoading ? 'Calcolo...' : 'Calcola'}
+                                                    </Button>
+                                                </div>
+                                                {materialiResult && (
+                                                    <div className="space-y-3" data-testid="materiali-result">
+                                                        <div className="overflow-x-auto">
+                                                            <table className="w-full text-sm">
+                                                                <thead>
+                                                                    <tr className="border-b border-slate-200 text-left text-xs text-slate-500 uppercase">
+                                                                        <th className="py-2 pr-3">Materiale</th>
+                                                                        <th className="py-2 pr-3 text-right">Qty</th>
+                                                                        <th className="py-2 pr-3 text-right">ml</th>
+                                                                        <th className="py-2 text-right">Peso (kg)</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {materialiResult.materiali?.map((m, i) => (
+                                                                        <tr key={i} className="border-b border-slate-100">
+                                                                            <td className="py-2 pr-3 text-slate-700">{m.descrizione}</td>
+                                                                            <td className="py-2 pr-3 text-right text-slate-600">{m.quantita}</td>
+                                                                            <td className="py-2 pr-3 text-right text-slate-600">{m.ml}</td>
+                                                                            <td className="py-2 text-right font-medium text-slate-800">{m.peso_kg}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                        <div className="flex gap-4 text-sm bg-slate-50 rounded-lg p-3">
+                                                            <div><span className="text-slate-500">Peso totale:</span> <strong>{materialiResult.peso_totale_kg} kg</strong></div>
+                                                            <div><span className="text-slate-500">Superficie vern.:</span> <strong>{materialiResult.superficie_verniciatura_m2} m²</strong></div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </CardContent>
