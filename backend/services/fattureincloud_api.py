@@ -229,21 +229,23 @@ def map_fattura_to_fic(invoice: dict, client: dict) -> Dict[str, Any]:
             "product_id": None,
             "code": line.get("code", ""),
             "name": desc,
-            "net_price": float(line.get("unit_price", 0)),
-            "qty": float(line.get("quantity", 1)),
+            "net_price": float(line.get("unit_price") or 0),
+            "qty": float(line.get("quantity") or 1),
             "vat": {"id": 0, "value": vat_val},
-            "discount": float(line.get("discount_percent", 0)),
+            "discount": float(line.get("discount_percent") or 0),
         })
 
-    # Extract numeric part from document_number (e.g. "16/2026" -> 16)
+    # Extract numeric part from document_number (e.g. "16/2026" -> 16, "NC-1/2026" -> 1)
     doc_num_raw = invoice.get("document_number", "")
     try:
-        doc_number_int = int(str(doc_num_raw).split("/")[0])
+        num_part = str(doc_num_raw).split("/")[0]
+        num_part = num_part.split("-")[-1] if "-" in num_part else num_part
+        doc_number_int = int(num_part)
     except (ValueError, IndexError):
         doc_number_int = 0
 
     # Calculate total document amount for payment
-    totals = invoice.get("totals", {})
+    totals = invoice.get("totals") or {}
     amount_due = float(totals.get("total_document", 0) or 0)
     if not amount_due:
         amount_due = sum(
@@ -264,8 +266,9 @@ def map_fattura_to_fic(invoice: dict, client: dict) -> Dict[str, Any]:
     }
     ei_payment = ei_payment_map.get(payment_method_code, "MP05")
 
+    doc_type = invoice.get("document_type", "FT")
     payload = {
-        "type": "invoice",
+        "type": "credit_note" if doc_type == "NC" else "invoice",
         "e_invoice": True,
         "ei_data": {
             "payment_method": ei_payment,
