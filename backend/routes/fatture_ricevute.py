@@ -1479,9 +1479,22 @@ async def _sync_fatture_from_fic_impl(user: dict):
     errors = []
     page = 1
 
+    # PUNTO 1 — Leggi watermark ultima sync
+    sync_state = await db.sync_state.find_one(
+        {"user_id": user["user_id"], "type": "fatture_ricevute"},
+        {"_id": 0, "last_sync_at": 1}
+    )
+    last_sync_date = None
+    if sync_state and sync_state.get("last_sync_at"):
+        last_sync_date = sync_state["last_sync_at"][:10]
+
     try:
         while True:
-            resp = await client.list_received_invoices(page=page, per_page=50)
+            # PUNTO 2 — Filtra per data se watermark disponibile
+            extra_params = {}
+            if last_sync_date:
+                extra_params["filter[date][from]"] = last_sync_date
+            resp = await client.list_received_invoices(page=page, per_page=50, **extra_params)
             data_list = resp.get("data", [])
             if not data_list:
                 break
@@ -1657,6 +1670,17 @@ async def _sync_fatture_from_fic_impl(user: dict):
         logger.error(f"FIC sync error: {e}")
         if imported == 0:
             raise HTTPException(502, f"Errore comunicazione FattureInCloud: {str(e)}")
+
+    # PUNTO 3 — Salva watermark (solo se completato senza eccezioni fatali)
+    await db.sync_state.update_one(
+        {"user_id": user["user_id"], "type": "fatture_ricevute"},
+        {"$set": {
+            "last_sync_at": datetime.now(timezone.utc).isoformat(),
+            "last_sync_imported": imported,
+            "last_sync_skipped": skipped,
+        }},
+        upsert=True
+    )
 
     return {
         "message": f"Sincronizzazione completata: {imported} importate, {skipped} già presenti",

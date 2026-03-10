@@ -132,12 +132,10 @@ class FattureInCloudClient:
 
     # ── Received Invoices ──
 
-    async def list_received_invoices(self, page: int = 1, per_page: int = 50) -> Dict[str, Any]:
-        return await self._request("GET", "/received_documents", params={
-            "type": "expense",
-            "page": page,
-            "per_page": per_page,
-        })
+    async def list_received_invoices(self, page: int = 1, per_page: int = 50, **extra_params) -> Dict[str, Any]:
+        params = {"type": "expense", "page": page, "per_page": per_page}
+        params.update(extra_params)
+        return await self._request("GET", "/received_documents", params=params)
 
     async def get_received_document_detail(self, document_id: str) -> Dict[str, Any]:
         """Get detailed received document including items_list."""
