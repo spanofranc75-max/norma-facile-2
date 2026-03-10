@@ -195,7 +195,15 @@ async def get_all_margins(uid: str) -> dict:
             for r in imp.get("righe", []):
                 if r.get("target_type") == "commessa" and r.get("target_id"):
                     rtid = r["target_id"]
-                    fr_by_commessa[rtid] = fr_by_commessa.get(rtid, 0) + float(fr.get("totale_documento", 0) or 0)
+                    # Usa importo della riga se presente, altrimenti
+                    # quota proporzionale su totale_documento
+                    importo_riga = float(r.get("importo", 0) or 0)
+                    if importo_riga == 0:
+                        pct = float(r.get("percentuale", 0) or 0)
+                        importo_riga = round(
+                            float(fr.get("totale_documento", 0) or 0) * pct / 100, 2
+                        )
+                    fr_by_commessa[rtid] = fr_by_commessa.get(rtid, 0) + importo_riga
 
     results = []
     totale_ricavi = 0
