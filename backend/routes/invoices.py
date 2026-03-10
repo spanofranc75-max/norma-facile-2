@@ -804,6 +804,72 @@ async def get_invoice_scadenze(invoice_id: str, user: dict = Depends(get_current
     return {"scadenze": doc.get("scadenze_pagamento", []), "invoice_id": invoice_id}
 
 
+@router.post("/{invoice_id}/scadenze/pagamento")
+async def add_scadenza_pagamento(invoice_id: str, body: dict, user: dict = Depends(get_current_user)):
+    """Register a payment against an invoice."""
+    inv = await db.invoices.find_one(
+        {"invoice_id": invoice_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not inv:
+        raise HTTPException(404, "Fattura non trovata")
+
+    payment = {
+        "payment_id": str(uuid.uuid4()),
+        "data_pagamento": body.get("data_pagamento", datetime.now(timezone.utc).strftime("%Y-%m-%d")),
+        "importo": float(body.get("importo", 0)),
+        "metodo": body.get("metodo", ""),
+        "note": body.get("note", ""),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    scadenze = inv.get("scadenze_pagamento", [])
+    scadenze.append(payment)
+    totale_pagato = sum(s.get("importo", 0) for s in scadenze if s.get("importo"))
+
+    update = {
+        "scadenze_pagamento": scadenze,
+        "totale_pagato": totale_pagato,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    total_doc = inv.get("total_document") or inv.get("total", 0)
+    if totale_pagato >= total_doc and total_doc > 0:
+        update["status"] = "pagata"
+        update["payment_status"] = "pagata"
+
+    await db.invoices.update_one({"invoice_id": invoice_id}, {"$set": update})
+    return {"scadenze": scadenze, "totale_pagato": totale_pagato, "message": "Pagamento registrato"}
+
+
+@router.delete("/{invoice_id}/scadenze/pagamento/{payment_id}")
+async def delete_scadenza_pagamento(invoice_id: str, payment_id: str, user: dict = Depends(get_current_user)):
+    """Remove a payment from an invoice."""
+    inv = await db.invoices.find_one(
+        {"invoice_id": invoice_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not inv:
+        raise HTTPException(404, "Fattura non trovata")
+
+    scadenze = inv.get("scadenze_pagamento", [])
+    scadenze = [s for s in scadenze if s.get("payment_id") != payment_id]
+    totale_pagato = sum(s.get("importo", 0) for s in scadenze if s.get("importo"))
+
+    update = {
+        "scadenze_pagamento": scadenze,
+        "totale_pagato": totale_pagato,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    total_doc = inv.get("total_document") or inv.get("total", 0)
+    old_status = inv.get("status", "")
+    if totale_pagato < total_doc and old_status == "pagata":
+        update["status"] = "accettata" if inv.get("sdi_sent_at") else "inviata_sdi" if inv.get("fic_document_id") else "emessa"
+        update["payment_status"] = "parziale" if totale_pagato > 0 else "non_pagata"
+
+    await db.invoices.update_one({"invoice_id": invoice_id}, {"$set": update})
+    return {"scadenze": scadenze, "totale_pagato": totale_pagato, "message": "Pagamento rimosso"}
+
+
 @router.post("/{invoice_id}/scadenze/genera")
 async def regenerate_invoice_scadenze(invoice_id: str, user: dict = Depends(get_current_user)):
     """(Re)generate payment deadlines for an invoice based on client's payment type."""
