@@ -62,7 +62,7 @@ class FattureInCloudClient:
         """Make an authenticated request to FIC API."""
         url = f"{self.base_url}/c/{self.company_id}{endpoint}"
         try:
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=10.0)) as client:
                 if 'json' in kwargs:
                     body = json.dumps(kwargs.pop('json'), ensure_ascii=True, default=str)
                     headers = {**self._headers(), "Content-Type": "application/json"}
@@ -75,6 +75,16 @@ class FattureInCloudClient:
             error_body = e.response.text
             logger.error(f"FIC API error {e.response.status_code}: {error_body}")
             raise
+        except httpx.TimeoutException as e:
+            logger.error(f"FIC request timeout ({method} {endpoint}): {e}")
+            raise httpx.TimeoutException(
+                f"Fatture in Cloud non risponde (timeout 30s). Riprova tra qualche minuto."
+            ) from e
+        except httpx.ConnectError as e:
+            logger.error(f"FIC connection error ({method} {endpoint}): {e}")
+            raise httpx.ConnectError(
+                f"Impossibile connettersi a Fatture in Cloud. Verifica la connessione."
+            ) from e
         except Exception as e:
             logger.error(f"FIC request failed: {e}")
             raise
