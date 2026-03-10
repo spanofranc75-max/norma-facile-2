@@ -1327,7 +1327,11 @@ async def _send_sdi_impl(invoice_id: str, user: dict):
     fic = get_fic_client(access_token=fic_token, company_id=int(fic_company_id))
 
     # ── STEP 2: Map to FIC format (includes payload logging) ──
-    fic_data = map_fattura_to_fic(invoice, client_doc)
+    try:
+        fic_data = map_fattura_to_fic(invoice, client_doc)
+    except Exception as e:
+        logger.error(f"map_fattura_to_fic failed for {invoice_id}: {e}")
+        raise HTTPException(422, f"Errore nella mappatura dati per FIC: {e}")
 
     # ── STEP 3: Create or update on FIC ──
     fic_doc_id = invoice.get("fic_document_id")
@@ -1350,6 +1354,8 @@ async def _send_sdi_impl(invoice_id: str, user: dict):
                 detail = extract_fic_error_message(e)
                 logger.error(f"FIC create failed ({e.response.status_code}): {detail}")
                 raise HTTPException(e.response.status_code, f"Errore Fatture in Cloud: {detail}")
+        except (httpx.TimeoutException, httpx.ConnectError) as e:
+            raise HTTPException(503, str(e))
 
     if not fic_doc_id:
         raise HTTPException(500, "Fatture in Cloud non ha restituito un ID documento")
@@ -1392,6 +1398,15 @@ async def _send_sdi_impl(invoice_id: str, user: dict):
             {"$set": {"fic_document_id": fic_doc_id, "updated_at": datetime.now(timezone.utc).isoformat()}}
         )
         raise HTTPException(e.response.status_code, f"Documento creato su FIC (id={fic_doc_id}), ma invio SDI fallito: {detail}")
+    except (httpx.TimeoutException, httpx.ConnectError) as e:
+        await db.invoices.update_one(
+            {"invoice_id": invoice_id},
+            {"$set": {
+                "fic_document_id": fic_doc_id,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        raise HTTPException(503, str(e))
 
     # ── STEP 5: Update local status ──
     await db.invoices.update_one(
