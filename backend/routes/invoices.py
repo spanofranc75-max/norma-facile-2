@@ -728,6 +728,10 @@ async def update_invoice_status(
     user: dict = Depends(get_current_user)
 ):
     """Update invoice status."""
+    # PUNTO 1 — Verifica body
+    if not status_update or not status_update.status:
+        raise HTTPException(422, "Campo 'status' mancante nel body")
+
     existing = await db.invoices.find_one(
         {"invoice_id": invoice_id, "user_id": user["user_id"]},
         {"_id": 0}
@@ -769,15 +773,21 @@ async def update_invoice_status(
         update_fields["totale_pagato"] = total_doc
         update_fields["residuo"] = 0
     
-    await db.invoices.update_one(
-        {"invoice_id": invoice_id},
-        {"$set": update_fields}
-    )
+    # PUNTO 2 — Wrappa update MongoDB
+    try:
+        await db.invoices.update_one(
+            {"invoice_id": invoice_id},
+            {"$set": update_fields}
+        )
+    except Exception as e:
+        logger.error(f"Status update failed for {invoice_id}: {e}")
+        raise HTTPException(500, f"Errore aggiornamento stato: {e}")
 
     # Auto-generate payment deadlines when invoice is emitted
     if new_status == "emessa":
         await generate_scadenze_pagamento(existing, user["user_id"])
     
+    # PUNTO 3 — _id escluso in tutte le projection
     updated = await db.invoices.find_one({"invoice_id": invoice_id}, {"_id": 0})
     
     # Populate client name
