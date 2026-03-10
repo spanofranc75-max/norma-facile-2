@@ -2,7 +2,7 @@
  * Preventivi Page - Lista Preventivi Commerciali
  */
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { apiRequest, formatDateIT } from '../lib/utils';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -15,6 +15,7 @@ import { Plus, FileText, Trash2, CheckCircle2, XCircle, Minus, Copy, FolderOpen,
 import DashboardLayout from '../components/DashboardLayout';
 import EmptyState from '../components/EmptyState';
 import { useConfirm } from '../components/ConfirmProvider';
+import { useTabContext } from '../contexts/TabContext';
 
 const STATUS_MAP = {
     bozza: { label: 'Bozza', color: 'bg-yellow-100 text-yellow-800', rowBg: '' },
@@ -47,9 +48,20 @@ function InvoicingProgressBar({ progress }) {
 export default function PreventiviPage() {
     const confirm = useConfirm();
     const navigate = useNavigate();
+    const location = useLocation();
+    const { activeTabId, setTabDirty, getTabDraft } = useTabContext();
     const [preventivi, setPreventivi] = useState([]);
     const [totalCount, setTotalCount] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [draftBanner, setDraftBanner] = useState(false);
+
+    // Restore draft on mount
+    useEffect(() => {
+        const draft = getTabDraft(location.pathname);
+        if (draft?.formData) {
+            setDraftBanner(true);
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const fetch_ = useCallback(async () => {
         setLoading(true);

@@ -2,7 +2,7 @@
  * Invoices List Page - Lista Fatture con Tracciamento Pagamenti
  */
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { apiRequest, formatDateIT, downloadPdfBlob } from '../lib/utils';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -33,6 +33,7 @@ import { PDFPreviewModal } from '../components/PDFPreviewModal';
 import { useConfirm } from '../components/ConfirmProvider';
 import EmptyState from '../components/EmptyState';
 import EmailPreviewDialog from '../components/EmailPreviewDialog';
+import { useTabContext } from '../contexts/TabContext';
 
 const DOC_TYPES = {
     FT: { label: 'Fattura', color: 'bg-blue-100 text-blue-800' },
@@ -57,7 +58,9 @@ const formatCurrency = (value) =>
 
 export default function InvoicesPage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const confirm = useConfirm();
+    const { activeTabId, setTabDirty, getTabDraft } = useTabContext();
     const [invoices, setInvoices] = useState([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -66,6 +69,23 @@ export default function InvoicesPage() {
         status: '',
         year: new Date().getFullYear().toString(),
     });
+    const [draftBanner, setDraftBanner] = useState(false);
+
+    // Restore draft filters on mount
+    useEffect(() => {
+        const draft = getTabDraft(location.pathname);
+        if (draft?.formData?.filters) {
+            setFilters(draft.formData.filters);
+            setDraftBanner(true);
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Save filters as draft on change
+    useEffect(() => {
+        if (filters.document_type || filters.status) {
+            setTabDirty(activeTabId, { formData: { filters } });
+        }
+    }, [filters, activeTabId, setTabDirty]);
 
     // Payment dialog state
     const [paymentDialog, setPaymentDialog] = useState(false);

@@ -3,7 +3,7 @@
  * Shows lifecycle state, events timeline, linked modules, and actions.
  */
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { apiRequest, formatDateIT, downloadPdfBlob } from '../lib/utils';
 import DashboardLayout from '../components/DashboardLayout';
 import { Button } from '../components/ui/button';
@@ -23,6 +23,7 @@ import {
     AlertTriangle, Loader2, BookOpen, CalendarDays, TrendingUp,
     CircleDollarSign, Tag, Wrench as WrenchIcon, QrCode,
 } from 'lucide-react';
+import { useTabContext } from '../contexts/TabContext';
 import CommessaOpsPanel from '../components/CommessaOpsPanel';
 import { DisabledTooltip } from '../components/DisabledTooltip';
 
@@ -99,6 +100,8 @@ function formatEventDate(d) {
 export default function CommessaHubPage() {
     const { commessaId } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
+    const { activeTabId, setTabDirty, getTabDraft } = useTabContext();
     const [hub, setHub] = useState(null);
     const [loading, setLoading] = useState(true);
     const [emitting, setEmitting] = useState(false);
@@ -115,6 +118,23 @@ export default function CommessaHubPage() {
     const [closeSimpleNote, setCloseSimpleNote] = useState('');
     const [closingSimple, setClosingSimple] = useState(false);
     const [checklistStato, setChecklistStato] = useState({});
+    const [draftBanner, setDraftBanner] = useState(false);
+
+    // Restore draft on mount
+    useEffect(() => {
+        const draft = getTabDraft(location.pathname);
+        if (draft?.formData?.eventNote) {
+            setEventNote(draft.formData.eventNote);
+            setDraftBanner(true);
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Save event note as draft when modified
+    useEffect(() => {
+        if (eventNote) {
+            setTabDirty(activeTabId, { formData: { eventNote } });
+        }
+    }, [eventNote, activeTabId, setTabDirty]);
 
     const fetchHub = useCallback(async () => {
         try {

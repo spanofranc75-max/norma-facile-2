@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTabContext } from '../contexts/TabContext';
 import { apiRequest } from '../lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import {
@@ -17,13 +18,14 @@ import {
 } from '../components/ui/dropdown-menu';
 import { LegalFooter } from './LegalFooter';
 import GlobalSearchBar from './GlobalSearchBar';
+import TabBar from './TabBar';
 import {
     Sparkles, Receipt, Users, Settings, Ruler, Package, Shield,
     HardHat, Warehouse, ClipboardList, Truck, Factory, ShieldAlert,
     BarChart3, BoxIcon, FileInput, Camera, ChevronDown,
     Briefcase, Wrench, Award, ShoppingCart, FileText, LayoutGrid,
     CreditCard, TrendingUp, ClipboardCheck, Calendar, CircleDollarSign,
-    User, LogOut, Bell, Flame, Calculator, ScrollText,
+    User, LogOut, Bell, Flame, Calculator, ScrollText, ExternalLink,
 } from 'lucide-react';
 
 // ── Navigation Structure ────────────────────────────────────────
@@ -169,6 +171,7 @@ export default function DashboardLayout({ children }) {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const { openTab, updateActiveTabPath } = useTabContext();
     const [companyLogo, setCompanyLogo] = useState(null);
     const [alertCount, setAlertCount] = useState(0);
 
@@ -219,6 +222,11 @@ export default function DashboardLayout({ children }) {
         }
     }, [activeGroupId]);
 
+    // Sync tab title/path when route changes from sidebar click
+    useEffect(() => {
+        updateActiveTabPath(location.pathname);
+    }, [location.pathname, updateActiveTabPath]);
+
     const toggleGroup = (groupId) => {
         setOpenGroups(prev => {
             const next = new Set(prev);
@@ -247,7 +255,7 @@ export default function DashboardLayout({ children }) {
                     <div className="space-y-0.5">
                         {filteredNav.map((group) => {
                             if (group.type === 'link') {
-                                return <SingleLink key={group.id} item={group} active={activeGroupId === group.id} navigate={navigate} badge={group.id === 'notifiche' ? alertCount : 0} />;
+                                return <SingleLink key={group.id} item={group} active={activeGroupId === group.id} navigate={navigate} badge={group.id === 'notifiche' ? alertCount : 0} onOpenTab={openTab} />;
                             }
                             const isOpen = openGroups.has(group.id);
                             const hasActive = activeGroupId === group.id;
@@ -260,6 +268,7 @@ export default function DashboardLayout({ children }) {
                                     pathname={location.pathname}
                                     onToggle={() => toggleGroup(group.id)}
                                     navigate={navigate}
+                                    onOpenTab={openTab}
                                 />
                             );
                         })}
@@ -316,6 +325,8 @@ export default function DashboardLayout({ children }) {
                 <div className="sticky top-0 z-40 bg-slate-50/80 backdrop-blur-sm border-b border-slate-200/60 px-8 py-3 flex items-center justify-end">
                     <GlobalSearchBar />
                 </div>
+                {/* Tab bar */}
+                <TabBar />
                 <div className="p-8 pb-16">{children}</div>
             </main>
             <div className="ml-64"><LegalFooter /></div>
@@ -325,14 +336,22 @@ export default function DashboardLayout({ children }) {
 
 // ── Sub-components ──────────────────────────────────────────────
 
-function SingleLink({ item, active, navigate, badge = 0 }) {
+function SingleLink({ item, active, navigate, badge = 0, onOpenTab }) {
     const Icon = item.icon;
+    const handleClick = (e) => {
+        e.preventDefault();
+        if (e.ctrlKey || e.metaKey) {
+            onOpenTab(item.path, item.label);
+        } else {
+            navigate(item.path);
+        }
+    };
     return (
         <a
             href={item.path}
             data-testid={`nav-${item.path.slice(1).replace(/\//g, '-')}`}
-            onClick={(e) => { e.preventDefault(); navigate(item.path); }}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-all duration-150 ${
+            onClick={handleClick}
+            className={`group flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-all duration-150 ${
                 active
                     ? 'bg-[#0055FF] text-white font-medium'
                     : 'text-slate-300 hover:text-white hover:bg-white/10'
@@ -345,11 +364,17 @@ function SingleLink({ item, active, navigate, badge = 0 }) {
                     {badge}
                 </span>
             )}
+            <ExternalLink
+                className="h-3 w-3 flex-shrink-0 opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity"
+                strokeWidth={1.5}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onOpenTab(item.path, item.label); }}
+                data-testid={`nav-newtab-${item.path.slice(1).replace(/\//g, '-')}`}
+            />
         </a>
     );
 }
 
-function NavGroup({ group, isOpen, hasActive, pathname, onToggle, navigate }) {
+function NavGroup({ group, isOpen, hasActive, pathname, onToggle, navigate, onOpenTab }) {
     const Icon = group.icon;
     return (
         <div data-testid={`nav-group-${group.id}`}>
@@ -381,20 +406,34 @@ function NavGroup({ group, isOpen, hasActive, pathname, onToggle, navigate }) {
                     {group.children.map((child) => {
                         const ChildIcon = child.icon;
                         const active = isChildActive(pathname, child.path);
+                        const handleClick = (e) => {
+                            e.preventDefault();
+                            if (e.ctrlKey || e.metaKey) {
+                                onOpenTab(child.path, child.label);
+                            } else {
+                                navigate(child.path);
+                            }
+                        };
                         return (
                             <a
                                 key={child.path}
                                 href={child.path}
                                 data-testid={`nav-${child.path.slice(1).replace(/\//g, '-')}`}
-                                onClick={(e) => { e.preventDefault(); navigate(child.path); }}
-                                className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-xs transition-all duration-150 ${
+                                onClick={handleClick}
+                                className={`group flex items-center gap-2.5 px-3 py-2 rounded-md text-xs transition-all duration-150 ${
                                     active
                                         ? 'bg-[#0055FF]/90 text-white font-medium'
                                         : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
                                 }`}
                             >
                                 <ChildIcon className="h-3.5 w-3.5 flex-shrink-0" strokeWidth={1.5} />
-                                <span>{child.label}</span>
+                                <span className="flex-1">{child.label}</span>
+                                <ExternalLink
+                                    className="h-3 w-3 flex-shrink-0 opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity"
+                                    strokeWidth={1.5}
+                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onOpenTab(child.path, child.label); }}
+                                    data-testid={`nav-newtab-${child.path.slice(1).replace(/\//g, '-')}`}
+                                />
                             </a>
                         );
                     })}
