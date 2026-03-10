@@ -567,6 +567,39 @@ async def run_expiration_check(manual: bool = False) -> dict:
     return result
 
 
+async def _check_presenze_report_schedule():
+    """Check if today is the day to auto-send presenze report for previous month."""
+    today = date.today()
+    # Get all admin users with report settings
+    async for company in db.company_settings.find(
+        {"report_presenze_giorno_invio": {"$exists": True}},
+        {"_id": 0, "user_id": 1, "report_presenze_giorno_invio": 1, "report_presenze_email_consulente": 1}
+    ):
+        giorno_invio = company.get("report_presenze_giorno_invio", 5)
+        email = company.get("report_presenze_email_consulente", "")
+        uid = company.get("user_id", "")
+        if not email or not uid or today.day != giorno_invio:
+            continue
+        # Calculate previous month
+        if today.month == 1:
+            prev_mese = f"{today.year - 1}-12"
+        else:
+            prev_mese = f"{today.year}-{today.month - 1:02d}"
+        # Check if already sent
+        already = await db.report_inviati.find_one({"user_id": uid, "mese": prev_mese})
+        if already:
+            continue
+        # Trigger report send
+        try:
+            from routes.personale import invia_report_email
+            fake_user = {"user_id": uid}
+            await invia_report_email(mese=prev_mese, user=fake_user)
+            logger.info(f"[WATCHDOG] Report presenze {prev_mese} inviato a {email} per user {uid}")
+        except Exception as e:
+            logger.error(f"[WATCHDOG] Errore invio report presenze {prev_mese} per {uid}: {e}")
+
+
+
 async def _scheduler_loop():
     """Background loop that periodically checks expirations and performs auto-backups."""
     logger.info("[WATCHDOG] Scheduler avviato (intervallo: 24h, 1 volta al giorno)")
@@ -577,6 +610,11 @@ async def _scheduler_loop():
             await run_expiration_check(manual=False)
         except Exception as e:
             logger.error(f"[WATCHDOG] Errore nel controllo programmato: {e}")
+        # Auto report presenze check
+        try:
+            await _check_presenze_report_schedule()
+        except Exception as e:
+            logger.error(f"[WATCHDOG] Errore nel check report presenze: {e}")
         # Auto-backup (runs after expiration check)
         try:
             await _run_auto_backup()

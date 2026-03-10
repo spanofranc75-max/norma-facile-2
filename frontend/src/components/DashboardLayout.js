@@ -79,6 +79,7 @@ const NAV_GROUPS = [
             { path: '/distinte', label: 'Distinte', icon: Package },
             { path: '/tracciabilita', label: 'Tracciabilit\u00e0 EN 1090', icon: Shield },
             { path: '/sicurezza', label: 'Sicurezza POS', icon: HardHat },
+            { path: '/personale', label: 'Personale', icon: Users },
         ],
     },
     {
