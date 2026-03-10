@@ -52,7 +52,7 @@ export default function CostControlPage() {
 
     const fetchMargins = useCallback(async () => {
         try {
-            const data = await apiRequest('/costs/margin-analysis');
+            const data = await apiRequest('/costs/margin-full');
             setMargins(data.commesse || []);
         } catch { /* silent */ }
     }, []);
