@@ -252,7 +252,7 @@ async def create_preventivo_from_distinta(
     max_existing = max_doc[0]["num"] if max_doc else 0
     existing_counter = await db.document_counters.find_one({"counter_id": counter_id})
     current_counter = existing_counter.get("counter", 0) if existing_counter else 0
-    if current_counter > max_existing:
+    if current_counter != max_existing:
         await db.document_counters.update_one(
             {"counter_id": counter_id},
             {"$set": {"counter": max_existing}},
@@ -474,8 +474,8 @@ async def create_preventivo(data: PreventivoCreate, user: dict = Depends(get_cur
     existing_counter = await db.document_counters.find_one({"counter_id": counter_id})
     current_counter = existing_counter.get("counter", 0) if existing_counter else 0
 
-    # If counter is ahead of reality (due to deletions), reset it
-    if current_counter > max_existing:
+    # If counter is out of sync, reset it
+    if current_counter != max_existing:
         await db.document_counters.update_one(
             {"counter_id": counter_id},
             {"$set": {"counter": max_existing}},
@@ -667,7 +667,7 @@ async def clone_preventivo(prev_id: str, user: dict = Depends(get_current_user))
     max_existing = max_doc[0]["num"] if max_doc else 0
     existing_counter = await db.document_counters.find_one({"counter_id": counter_id})
     current_counter = existing_counter.get("counter", 0) if existing_counter else 0
-    if current_counter > max_existing:
+    if current_counter != max_existing:
         await db.document_counters.update_one(
             {"counter_id": counter_id},
             {"$set": {"counter": max_existing}},
