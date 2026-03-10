@@ -15,7 +15,7 @@ import requests
 import time
 from datetime import datetime, date
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://guided-survey.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://cad-survey-tool.preview.emergentagent.com").rstrip("/")
 API_URL = f"{BASE_URL}/api"
 
 # Test data identifiers
