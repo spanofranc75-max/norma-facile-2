@@ -235,7 +235,7 @@ Scrivi in italiano formale, come in un documento POS reale.
 Usa paragrafi separati per ogni lavorazione.
 NON usare markdown, scrivi testo semplice con titoli in MAIUSCOLO."""
 
-try:
+        try:
             client_ai = AsyncOpenAI(api_key=LLM_KEY)
             completion = await client_ai.chat.completions.create(
                 model="gpt-4o",
