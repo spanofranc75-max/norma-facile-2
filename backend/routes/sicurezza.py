@@ -235,30 +235,28 @@ Scrivi in italiano formale, come in un documento POS reale.
 Usa paragrafi separati per ogni lavorazione.
 NON usare markdown, scrivi testo semplice con titoli in MAIUSCOLO."""
 
- try:
-        client_ai = AsyncOpenAI(api_key=LLM_KEY)
-        completion = await client_ai.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "Sei un consulente per la sicurezza sul lavoro specializzato in cantieri di carpenteria metallica. Rispondi sempre in italiano formale."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        response = completion.choices[0].message.content
+try:
+            client_ai = AsyncOpenAI(api_key=LLM_KEY)
+            completion = await client_ai.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "Sei un consulente per la sicurezza sul lavoro specializzato in cantieri di carpenteria metallica. Rispondi sempre in italiano formale."},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            response = completion.choices[0].message.content
 
-        
-        await db.pos_documents.update_one(
-            {"pos_id": pos_id},
-            {"$set": {"ai_risk_assessment": response, "updated_at": datetime.now(timezone.utc)}},
-        )
+            await db.pos_documents.update_one(
+                {"pos_id": pos_id},
+                {"$set": {"ai_risk_assessment": response, "updated_at": datetime.now(timezone.utc)}},
+            )
 
-        logger.info(f"AI risk assessment generated for POS {pos_id}")
-        return {"pos_id": pos_id, "ai_risk_assessment": response, "status": "generated"}
+            logger.info(f"AI risk assessment generated for POS {pos_id}")
+            return {"pos_id": pos_id, "ai_risk_assessment": response, "status": "generated"}
 
-    except Exception as e:
-        logger.error(f"AI generation failed for POS {pos_id}: {e}")
-        raise HTTPException(500, f"Errore nella generazione AI: {str(e)}")
-
+        except Exception as e:
+            logger.error(f"AI generation failed for POS {pos_id}: {e}")
+            raise HTTPException(500, f"Errore nella generazione AI: {str(e)}")
 
 # ── PDF Generation ───────────────────────────────────────────────
 
