@@ -246,7 +246,7 @@ NON usare markdown, scrivi testo semplice con titoli in MAIUSCOLO."""
         )
         response = completion.choices[0].message.content
 
-        await db.pos_documents.update_one(   
+        
         await db.pos_documents.update_one(
             {"pos_id": pos_id},
             {"$set": {"ai_risk_assessment": response, "updated_at": datetime.now(timezone.utc)}},
