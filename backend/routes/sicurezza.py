@@ -95,13 +95,12 @@ async def create_pos(data: PosCreate, user: dict = Depends(get_current_user)):
 
 @router.post("/from-rilievo/{rilievo_id}", response_model=PosResponse, status_code=201)
 async def create_pos_from_rilievo(rilievo_id: str, user: dict = Depends(get_current_user)):
-    """Create a POS pre-filled from a Rilievo (on-site survey). Auto-fills cantiere address, client, and description."""
+    """Create a POS pre-filled from a Rilievo (on-site survey)."""
     uid = user["user_id"]
     rilievo = await db.rilievi.find_one({"rilievo_id": rilievo_id, "user_id": uid}, {"_id": 0})
     if not rilievo:
         raise HTTPException(404, "Rilievo non trovato")
 
-    # Get client name
     client_id = rilievo.get("client_id", "")
     client_name = ""
     if client_id:
@@ -111,7 +110,6 @@ async def create_pos_from_rilievo(rilievo_id: str, user: dict = Depends(get_curr
     now = datetime.now(timezone.utc)
     pos_id = f"pos_{uuid.uuid4().hex[:12]}"
 
-    # Parse location for cantiere address
     location = rilievo.get("location", "")
     location_parts = [p.strip() for p in location.split(",") if p.strip()] if location else []
     address = location_parts[0] if location_parts else location
@@ -235,28 +233,32 @@ Scrivi in italiano formale, come in un documento POS reale.
 Usa paragrafi separati per ogni lavorazione.
 NON usare markdown, scrivi testo semplice con titoli in MAIUSCOLO."""
 
-        try:
-            client_ai = AsyncOpenAI(api_key=LLM_KEY)
-            completion = await client_ai.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {"role": "system", "content": "Sei un consulente per la sicurezza sul lavoro specializzato in cantieri di carpenteria metallica. Rispondi sempre in italiano formale."},
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            response = completion.choices[0].message.content
+    try:
+        client_ai = AsyncOpenAI(api_key=LLM_KEY)
+        completion = await client_ai.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Sei un consulente per la sicurezza sul lavoro specializzato in cantieri di carpenteria metallica. Rispondi sempre in italiano formale."
+                },
+                {"role": "user", "content": prompt}
+            ]
+        )
+        response = completion.choices[0].message.content
 
-            await db.pos_documents.update_one(
-                {"pos_id": pos_id},
-                {"$set": {"ai_risk_assessment": response, "updated_at": datetime.now(timezone.utc)}},
-            )
+        await db.pos_documents.update_one(
+            {"pos_id": pos_id},
+            {"$set": {"ai_risk_assessment": response, "updated_at": datetime.now(timezone.utc)}},
+        )
 
-            logger.info(f"AI risk assessment generated for POS {pos_id}")
-            return {"pos_id": pos_id, "ai_risk_assessment": response, "status": "generated"}
+        logger.info(f"AI risk assessment generated for POS {pos_id}")
+        return {"pos_id": pos_id, "ai_risk_assessment": response, "status": "generated"}
 
-        except Exception as e:
-            logger.error(f"AI generation failed for POS {pos_id}: {e}")
-            raise HTTPException(500, f"Errore nella generazione AI: {str(e)}")
+    except Exception as e:
+        logger.error(f"AI generation failed for POS {pos_id}: {e}")
+        raise HTTPException(500, f"Errore nella generazione AI: {str(e)}")
+
 
 # ── PDF Generation ───────────────────────────────────────────────
 
@@ -306,4 +308,3 @@ async def suggest_dpi(pos_id: str, user: dict = Depends(get_current_user)):
         "required_dpi": SafetyValidator.get_required_dpi(risks),
         "suggested_machines": SafetyValidator.get_suggested_machines(risks),
     }
-
