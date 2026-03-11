@@ -17,55 +17,65 @@ logger = logging.getLogger(__name__)
 from core.config import settings
 from core.database import close_database
 
-# Import routers
-from routes.auth import router as auth_router
-from routes.documents import router as documents_router
-from routes.chat import router as chat_router
-from routes.clients import router as clients_router
-from routes.invoices import router as invoices_router
-from routes.company import router as company_router
-from routes.rilievi import router as rilievi_router
-from routes.distinta import router as distinta_router
-from routes.certificazioni import router as certificazioni_router
-from routes.sicurezza import router as sicurezza_router
-from routes.dashboard import router as dashboard_router
-from routes.catalogo import router as catalogo_router
-from routes.vendor_api import router as vendor_router
-from routes.preventivi import router as preventivi_router
-from routes.payment_types import router as payment_types_router
-from routes.ddt import router as ddt_router
-from routes.perizia import router as perizia_router
-from routes.articoli import router as articoli_router
-from routes.fatture_ricevute import router as fatture_ricevute_router
-from routes.sopralluogo import router as sopralluogo_router
-from routes.movimenti import router as movimenti_router
-from routes.engine import router as engine_router
-from routes.commesse import router as commesse_router
-from routes.commessa_ops import router as commessa_ops_router
-from routes.fpc import router as fpc_router
-from routes.cam import router as cam_router
-from routes.fascicolo_tecnico import router as fascicolo_tecnico_router
-from routes.company_docs import router as company_docs_router
-from routes.instruments import router as instruments_router
-from routes.welders import router as welders_router
-from routes.audits import router as audits_router
-from routes.quality_hub import router as quality_hub_router
-from routes.smart_assign import router as smart_assign_router
-from routes.migrazione import router as migrazione_router
-from routes.gate_certification import router as gate_cert_router
-from routes.consumables import router as consumables_router
-from routes.cost_control import router as cost_control_router
-from routes.backup import router as backup_router
-from routes.team import router as team_router
-from routes.notifications import router as notifications_router
-from routes.qrcode_gen import router as qrcode_router
-from routes.db_cleanup import router as cleanup_router
-from routes.wps import router as wps_router
-from routes.rdp import router as rdp_router
-from routes.search import router as search_router
-from routes.activity_log import router as activity_log_router
-from routes.personale import router as personale_router
+# Import routers - with error logging
+import sys as _sys
+import importlib as _importlib
 
+def _safe_import(module_path):
+    try:
+        m = _importlib.import_module(module_path)
+        return m.router
+    except Exception as e:
+        print(f"FATAL IMPORT ERROR: {module_path} -> {e}", file=_sys.stderr, flush=True)
+        raise
+
+auth_router = _safe_import("routes.auth")
+documents_router = _safe_import("routes.documents")
+chat_router = _safe_import("routes.chat")
+clients_router = _safe_import("routes.clients")
+invoices_router = _safe_import("routes.invoices")
+company_router = _safe_import("routes.company")
+rilievi_router = _safe_import("routes.rilievi")
+distinta_router = _safe_import("routes.distinta")
+certificazioni_router = _safe_import("routes.certificazioni")
+sicurezza_router = _safe_import("routes.sicurezza")
+dashboard_router = _safe_import("routes.dashboard")
+catalogo_router = _safe_import("routes.catalogo")
+vendor_router = _safe_import("routes.vendor_api")
+preventivi_router = _safe_import("routes.preventivi")
+payment_types_router = _safe_import("routes.payment_types")
+ddt_router = _safe_import("routes.ddt")
+perizia_router = _safe_import("routes.perizia")
+articoli_router = _safe_import("routes.articoli")
+fatture_ricevute_router = _safe_import("routes.fatture_ricevute")
+sopralluogo_router = _safe_import("routes.sopralluogo")
+movimenti_router = _safe_import("routes.movimenti")
+engine_router = _safe_import("routes.engine")
+commesse_router = _safe_import("routes.commesse")
+commessa_ops_router = _safe_import("routes.commessa_ops")
+fpc_router = _safe_import("routes.fpc")
+cam_router = _safe_import("routes.cam")
+fascicolo_tecnico_router = _safe_import("routes.fascicolo_tecnico")
+company_docs_router = _safe_import("routes.company_docs")
+instruments_router = _safe_import("routes.instruments")
+welders_router = _safe_import("routes.welders")
+audits_router = _safe_import("routes.audits")
+quality_hub_router = _safe_import("routes.quality_hub")
+smart_assign_router = _safe_import("routes.smart_assign")
+migrazione_router = _safe_import("routes.migrazione")
+gate_cert_router = _safe_import("routes.gate_certification")
+consumables_router = _safe_import("routes.consumables")
+cost_control_router = _safe_import("routes.cost_control")
+backup_router = _safe_import("routes.backup")
+team_router = _safe_import("routes.team")
+notifications_router = _safe_import("routes.notifications")
+qrcode_router = _safe_import("routes.qrcode_gen")
+cleanup_router = _safe_import("routes.db_cleanup")
+wps_router = _safe_import("routes.wps")
+rdp_router = _safe_import("routes.rdp")
+search_router = _safe_import("routes.search")
+activity_log_router = _safe_import("routes.activity_log")
+personale_router = _safe_import("routes.personale")
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
