@@ -14,7 +14,7 @@ from models.sicurezza import (
 )
 from services.pos_pdf_service import generate_pos_pdf
 from core.engine.safety import SafetyValidator
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from openai import AsyncOpenAI
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/sicurezza", tags=["sicurezza"])
