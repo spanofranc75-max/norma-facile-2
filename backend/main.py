@@ -112,8 +112,15 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=_cors_origins,
     allow_origin_regex=r"https://.*\.emergentagent\.com|https://.*\.emergent\.host|https://.*\.netlify\.app",
-
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+    
 )
 
 # Log validation errors in detail for debugging
