@@ -1,6 +1,6 @@
 /**
- * Auth Callback Page - Handles OAuth redirect
- * Processes session_id from URL fragment and exchanges it for session.
+ * Auth Callback Page - Handles Google OAuth redirect
+ * Processes 'code' from URL query string and exchanges it for session.
  */
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -13,35 +13,33 @@ export default function AuthCallback() {
     const hasProcessed = useRef(false);
 
     useEffect(() => {
-        // Use useRef for processed flag to prevent race conditions under StrictMode
         if (hasProcessed.current) return;
         hasProcessed.current = true;
 
         const processAuth = async () => {
             try {
-                // Extract session_id from URL fragment
-                const hash = window.location.hash;
-                const sessionIdMatch = hash.match(/session_id=([^&]+)/);
-                
-                if (!sessionIdMatch) {
-                    console.error('No session_id found in URL');
+                // Google OAuth sends 'code' as a query parameter
+                const params = new URLSearchParams(window.location.search);
+                const code = params.get('code');
+
+                if (!code) {
+                    console.error('No code found in URL');
                     navigate('/');
                     return;
                 }
 
-                const sessionId = sessionIdMatch[1];
+                // The redirect_uri must match exactly what's registered in Google Console
+                const redirectUri = `${window.location.origin}/auth/callback`;
 
-                // Exchange session_id for user session via backend
-                const user = await apiRequest('/auth/session', {
+                // Exchange code for user session via backend
+                const user = await apiRequest('/auth/callback', {
                     method: 'POST',
-                    body: JSON.stringify({ session_id: sessionId }),
+                    body: JSON.stringify({ code, redirect_uri: redirectUri }),
                 });
 
-                // Update auth context with user data
                 setAuthUser(user);
-
-                // Navigate to dashboard with user data
                 navigate('/dashboard', { state: { user } });
+
             } catch (error) {
                 console.error('Auth callback error:', error);
                 navigate('/');
@@ -60,3 +58,4 @@ export default function AuthCallback() {
         </div>
     );
 }
+
