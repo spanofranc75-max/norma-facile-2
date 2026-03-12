@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Request, Response, HTTPException, Depends
 from pydantic import BaseModel
 from core.security import (
-    exchange_session_id,
+    exchange_google_code,
     create_session,
     get_current_user,
     delete_session
@@ -14,48 +14,40 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-class SessionExchangeRequest(BaseModel):
-    """Request body for session exchange."""
-    session_id: str
+class GoogleCallbackRequest(BaseModel):
+    """Request body for Google OAuth callback."""
+    code: str
+    redirect_uri: str
 
 
-@router.post("/session", response_model=UserResponse)
-async def exchange_session(request: SessionExchangeRequest, response: Response):
+@router.post("/callback", response_model=UserResponse)
+async def google_callback(request: GoogleCallbackRequest, response: Response):
     """
-    Exchange Emergent Auth session_id for user session.
-    Called by frontend after Google OAuth redirect.
+    Handle Google OAuth callback.
+    Frontend sends the 'code' received from Google redirect.
     """
     try:
-        # Exchange session_id with Emergent Auth
-        user_data = await exchange_session_id(request.session_id)
-        
-        # Create/update user and session
+        user_data = await exchange_google_code(request.code, request.redirect_uri)
         user = await create_session(user_data, response)
-        
         logger.info(f"User logged in: {user['email']}")
         return UserResponse(**user)
-        
+
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Session exchange failed: {str(e)}")
+        logger.error(f"Google callback failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Errore durante l'autenticazione")
 
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(user: dict = Depends(get_current_user)):
-    """
-    Get current authenticated user.
-    Used to verify session and get user data.
-    """
+    """Get current authenticated user."""
     return UserResponse(**user)
 
 
 @router.post("/logout")
 async def logout(request: Request, response: Response):
-    """
-    Logout user by deleting session and clearing cookie.
-    """
+    """Logout user."""
     await delete_session(request, response)
     return {"message": "Logout effettuato con successo"}
 
@@ -66,3 +58,4 @@ async def get_download_token(user: dict = Depends(get_current_user)):
     from core.security import create_download_token
     token = await create_download_token(user["user_id"])
     return {"token": token}
+
