@@ -243,3 +243,4 @@ async def delete_session(request: Request, response: Response) -> bool:
     )
 
     return True
+
