@@ -1,0 +1,5 @@
+[phases.build]
+cmds = ["yarn build"]
+
+[start]
+cmd = "npx serve -s build -l 3000"
