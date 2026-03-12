@@ -120,8 +120,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-    
-)
 
 # Log validation errors in detail for debugging
 @app.exception_handler(RequestValidationError)
