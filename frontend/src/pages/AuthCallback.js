@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 export default function AuthCallback() {
   const navigate = useNavigate();
-  const { setUser } = useAuth();
+  const auth = useAuth();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -23,12 +23,14 @@ export default function AuthCallback() {
       body: { code, redirect_uri: redirectUri },
     })
       .then((data) => {
-        // Salva il token in localStorage
         if (data.session_token) {
           localStorage.setItem('session_token', data.session_token);
         }
-        setUser(data.user);
-        navigate('/dashboard');
+        if (auth && auth.checkAuth) {
+          auth.checkAuth().then(() => navigate('/dashboard'));
+        } else {
+          navigate('/dashboard');
+        }
       })
       .catch((err) => {
         console.error('Auth callback error:', err);
