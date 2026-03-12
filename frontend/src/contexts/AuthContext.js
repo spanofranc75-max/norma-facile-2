@@ -7,6 +7,8 @@ import { apiRequest } from '../lib/utils';
 
 const AuthContext = createContext(null);
 
+const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -23,9 +25,8 @@ export function AuthProvider({ children }) {
     }, []);
 
     useEffect(() => {
-        // CRITICAL: If returning from OAuth callback, skip the /me check.
-        // AuthCallback will exchange the session_id and establish the session first.
-        if (window.location.hash?.includes('session_id=')) {
+        // If returning from Google OAuth callback, skip the /me check.
+        if (window.location.search?.includes('code=')) {
             setLoading(false);
             return;
         }
@@ -33,9 +34,16 @@ export function AuthProvider({ children }) {
     }, [checkAuth]);
 
     const login = () => {
-        // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-        const redirectUrl = window.location.origin + '/dashboard';
-        window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+        const redirectUri = `${window.location.origin}/auth/callback`;
+        const params = new URLSearchParams({
+            client_id: GOOGLE_CLIENT_ID,
+            redirect_uri: redirectUri,
+            response_type: 'code',
+            scope: 'openid email profile',
+            access_type: 'offline',
+            prompt: 'select_account',
+        });
+        window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
     };
 
     const logout = async () => {
