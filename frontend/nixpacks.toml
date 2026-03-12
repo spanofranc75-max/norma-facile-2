@@ -1,5 +1,11 @@
+[phases.setup]
+nixPkgs = ["nodejs"]
+
+[phases.install]
+cmds = ["npm install"]
+
 [phases.build]
-cmds = ["yarn build"]
+cmds = ["npm run build", "npm install -g serve"]
 
 [start]
-cmd = "npx serve -s build -l 3000"
+cmd = "serve -s build -l 3000"
