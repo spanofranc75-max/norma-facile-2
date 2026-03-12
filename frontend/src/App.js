@@ -65,22 +65,12 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './App.css';
 
-/**
- * App Router with session_id detection
- * Detects session_id DURING RENDER (not in useEffect) to prevent race conditions.
- */
 function AppRouter() {
-    const location = useLocation();
-
-    // Check URL fragment for session_id synchronously during render
-    // This prevents race conditions by processing new session_id FIRST
-    if (location.hash?.includes('session_id=')) {
-        return <AuthCallback />;
-    }
-
     return (
         <Routes>
             <Route path="/" element={<LandingPage />} />
+            {/* Google OAuth callback */}
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route
                 path="/dashboard"
                 element={
@@ -89,136 +79,41 @@ function AppRouter() {
                     </ProtectedRoute>
                 }
             />
-            {/* Clients */}
-            <Route
-                path="/clients"
-                element={
-                    <ProtectedRoute>
-                        <ClientsPage />
-                    </ProtectedRoute>
-                }
-            />
-            {/* Invoices */}
-            <Route
-                path="/invoices"
-                element={
-                    <ProtectedRoute>
-                        <InvoicesPage />
-                    </ProtectedRoute>
-                }
-            />
-            <Route
-                path="/invoices/new"
-                element={
-                    <ProtectedRoute>
-                        <InvoiceEditorPage />
-                    </ProtectedRoute>
-                }
-            />
-            <Route
-                path="/invoices/:invoiceId"
-                element={
-                    <ProtectedRoute>
-                        <InvoiceEditorPage />
-                    </ProtectedRoute>
-                }
-            />
-            {/* Rilievi */}
-            <Route
-                path="/rilievi"
-                element={
-                    <ProtectedRoute>
-                        <RilieviPage />
-                    </ProtectedRoute>
-                }
-            />
-            <Route
-                path="/rilievi/new"
-                element={
-                    <ProtectedRoute>
-                        <RilievoEditorPage />
-                    </ProtectedRoute>
-                }
-            />
-            <Route
-                path="/rilievi/:rilievoId"
-                element={
-                    <ProtectedRoute>
-                        <RilievoEditorPage />
-                    </ProtectedRoute>
-                }
-            />
-            {/* Distinte */}
-            <Route
-                path="/distinte"
-                element={
-                    <ProtectedRoute>
-                        <DistintePage />
-                    </ProtectedRoute>
-                }
-            />
-            <Route
-                path="/distinte/new"
-                element={
-                    <ProtectedRoute>
-                        <DistintaEditorPage />
-                    </ProtectedRoute>
-                }
-            />
-            <Route
-                path="/distinte/:distintaId"
-                element={
-                    <ProtectedRoute>
-                        <DistintaEditorPage />
-                    </ProtectedRoute>
-                }
-            />
-            {/* Settings */}
-            <Route
-                path="/settings"
-                element={
-                    <ProtectedRoute>
-                        <SettingsPage />
-                    </ProtectedRoute>
-                }
-            />
-            {/* Certificazioni CE */}
+            <Route path="/clients" element={<ProtectedRoute><ClientsPage /></ProtectedRoute>} />
+            <Route path="/invoices" element={<ProtectedRoute><InvoicesPage /></ProtectedRoute>} />
+            <Route path="/invoices/new" element={<ProtectedRoute><InvoiceEditorPage /></ProtectedRoute>} />
+            <Route path="/invoices/:invoiceId" element={<ProtectedRoute><InvoiceEditorPage /></ProtectedRoute>} />
+            <Route path="/rilievi" element={<ProtectedRoute><RilieviPage /></ProtectedRoute>} />
+            <Route path="/rilievi/new" element={<ProtectedRoute><RilievoEditorPage /></ProtectedRoute>} />
+            <Route path="/rilievi/:rilievoId" element={<ProtectedRoute><RilievoEditorPage /></ProtectedRoute>} />
+            <Route path="/distinte" element={<ProtectedRoute><DistintePage /></ProtectedRoute>} />
+            <Route path="/distinte/new" element={<ProtectedRoute><DistintaEditorPage /></ProtectedRoute>} />
+            <Route path="/distinte/:distintaId" element={<ProtectedRoute><DistintaEditorPage /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="/certificazioni" element={<ProtectedRoute><CertificazioniPage /></ProtectedRoute>} />
             <Route path="/certificazioni/new" element={<ProtectedRoute><CertificazioneWizardPage /></ProtectedRoute>} />
             <Route path="/certificazioni/:certId" element={<ProtectedRoute><CertificazioneWizardPage /></ProtectedRoute>} />
-            {/* Sicurezza Cantieri */}
             <Route path="/sicurezza" element={<ProtectedRoute><SicurezzaPage /></ProtectedRoute>} />
             <Route path="/sicurezza/new" element={<ProtectedRoute><PosWizardPage /></ProtectedRoute>} />
             <Route path="/sicurezza/:posId" element={<ProtectedRoute><PosWizardPage /></ProtectedRoute>} />
-            {/* Catalogo Profili */}
             <Route path="/catalogo" element={<ProtectedRoute><CatalogoPage /></ProtectedRoute>} />
-            {/* Fascicolo Cantiere */}
             <Route path="/fascicolo/:clientId" element={<ProtectedRoute><FascicoloCantierePage /></ProtectedRoute>} />
-            {/* Tipi Pagamento */}
             <Route path="/impostazioni/pagamenti" element={<ProtectedRoute><PaymentTypesPage /></ProtectedRoute>} />
-            {/* Preventivi */}
             <Route path="/preventivi" element={<ProtectedRoute><PreventiviPage /></ProtectedRoute>} />
             <Route path="/preventivi/new" element={<ProtectedRoute><PreventivoEditorPage /></ProtectedRoute>} />
             <Route path="/preventivi/:prevId" element={<ProtectedRoute><PreventivoEditorPage /></ProtectedRoute>} />
-            {/* DDT */}
             <Route path="/ddt" element={<ProtectedRoute><DDTListPage /></ProtectedRoute>} />
             <Route path="/ddt/new" element={<ProtectedRoute><DDTEditorPage /></ProtectedRoute>} />
             <Route path="/ddt/:ddtId" element={<ProtectedRoute><DDTEditorPage /></ProtectedRoute>} />
-            {/* Fornitori */}
             <Route path="/fornitori" element={<ProtectedRoute><FornitoriPage /></ProtectedRoute>} />
-            {/* Perizie Sinistro */}
             <Route path="/perizie" element={<ProtectedRoute><PeriziaListPage /></ProtectedRoute>} />
             <Route path="/perizie/new" element={<ProtectedRoute><PeriziaEditorPage /></ProtectedRoute>} />
             <Route path="/perizie/:periziaId" element={<ProtectedRoute><PeriziaEditorPage /></ProtectedRoute>} />
-            {/* Sopralluoghi & Messa a Norma AI */}
             <Route path="/sopralluoghi" element={<ProtectedRoute><SopralluoghiPage /></ProtectedRoute>} />
             <Route path="/sopralluoghi/new" element={<ProtectedRoute><SopralluogoWizardPage /></ProtectedRoute>} />
             <Route path="/sopralluoghi/:sopralluogoId" element={<ProtectedRoute><SopralluogoWizardPage /></ProtectedRoute>} />
-            {/* Archivio Sinistri */}
             <Route path="/archivio-sinistri" element={<ProtectedRoute><ArchivioSinistriPage /></ProtectedRoute>} />
-            {/* Catalogo Articoli */}
             <Route path="/articoli" element={<ProtectedRoute><ArticoliPage /></ProtectedRoute>} />
-            {/* Fatture Ricevute */}
             <Route path="/fatture-ricevute" element={<ProtectedRoute><FattureRicevutePage /></ProtectedRoute>} />
             <Route path="/scadenziario" element={<ProtectedRoute><ScadenziarioPage /></ProtectedRoute>} />
             <Route path="/movimenti-bancari" element={<ProtectedRoute><MovimentiBancariPage /></ProtectedRoute>} />
@@ -228,18 +123,13 @@ function AppRouter() {
             <Route path="/legal/disclaimer" element={<DisclaimerPage />} />
             <Route path="/legal/terms" element={<TermsPage />} />
             <Route path="/legal/privacy" element={<PrivacyPage />} />
-            {/* Core Engine */}
             <Route path="/core-engine" element={<ProtectedRoute><CoreEnginePage /></ProtectedRoute>} />
-
             <Route path="/validazione-foto" element={<ProtectedRoute><ValidazioneFotoPage /></ProtectedRoute>} />
-
             <Route path="/planning" element={<ProtectedRoute><PlanningPage /></ProtectedRoute>} />
             <Route path="/commesse/:commessaId" element={<ProtectedRoute><CommessaHubPage /></ProtectedRoute>} />
             <Route path="/ebitda" element={<ProtectedRoute><EBITDAPage /></ProtectedRoute>} />
-            {/* Tracciabilità EN 1090 */}
             <Route path="/tracciabilita" element={<ProtectedRoute><TracciabilitaPage /></ProtectedRoute>} />
             <Route path="/tracciabilita/progetto/:projectId" element={<ProtectedRoute><FPCProjectPage /></ProtectedRoute>} />
-            {/* Report CAM */}
             <Route path="/report-cam" element={<ProtectedRoute><ReportCAMPage /></ProtectedRoute>} />
             <Route path="/archivio-certificati" element={<ProtectedRoute><ArchivioCertificatiPage /></ProtectedRoute>} />
             <Route path="/sistema-qualita" element={<ProtectedRoute><QualitySystemPage /></ProtectedRoute>} />
