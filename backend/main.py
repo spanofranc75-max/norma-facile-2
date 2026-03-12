@@ -112,15 +112,8 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Add CORS middleware
-_cors_origins = [o.strip() for o in settings.cors_origins.split(',') if o.strip() and o.strip() != '*']
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=_cors_origins,
-    allow_origin_regex=r"https://.*\.emergentagent\.com|https://.*\.emergent\.host",
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origin_regex=r"https://.*\.emergentagent\.com|https://.*\.emergent\.host|https://.*\.netlify\.app",
+
 )
 
 # Log validation errors in detail for debugging
