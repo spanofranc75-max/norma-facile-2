@@ -349,19 +349,14 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     if cl_sdi: cl_parts.append(f"Cod. SDI {cl_sdi}")
     if cl_pec: cl_parts.append(f"PEC {cl_pec}")
 
-    # Left: Spett.le label + client name/address (matching reference layout)
-    client_left = Table([
+    # Left: Spett.le label + client name/address — left blue bar box
+    client_box = _left_bar_box([
         [Paragraph("Spett.le", S['spett'])],
         [Paragraph(cl_name, S['client_name'])],
         [Paragraph("<br/>".join(cl_parts), S['client_detail'])],
-    ], colWidths=[PAGE_W * 0.5], style=TableStyle([
-        ('LEFTPADDING', (0,0), (-1,-1), 0),
-        ('RIGHTPADDING', (0,0), (-1,-1), 4),
-        ('TOPPADDING', (0,0), (-1,-1), 2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
-    ]))
+    ], PAGE_W)
 
-    story.append(client_left)
+    story.append(client_box)
     story.append(Spacer(1, 5*mm))
 
     # ── 5. ITEMS TABLE ──
@@ -415,7 +410,6 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         ('BOTTOMPADDING', (0,1), (-1,-1), 8),
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('BACKGROUND', (0,1), (-1,-1), COL_WHITE),
-        ('LINEBELOW', (0,0), (-1,-1), 0.5, COL_ROW_BORDER),
         ('LINEBELOW', (0,-1), (-1,-1), 1.5, COL_NAVY),
     ]))
     story.append(items_table)
@@ -447,8 +441,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         ('RIGHTPADDING', (0,0), (-1,-1), 5),
         ('TOPPADDING', (0,0), (-1,-1), 4),
         ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-        ('BACKGROUND', (0,0), (-1,-1), COL_WHITE),
-        ('LINEBELOW', (0,0), (-1,-2), 0.3, COL_ROW_BORDER),
+        ('BACKGROUND', (0,0), (-1,-1), COL_LIGHT_GRAY),
     ]))
 
     netto = iva_data["total"] - ritenuta if ritenuta > 0 else iva_data["total"]
@@ -484,7 +477,16 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     story.append(totals_row)
     story.append(Spacer(1, 6*mm))
 
-    # ── 7. COORDINATE BANCARIE (left blue bar box) ──
+    # ── 7. NOTE ──
+    if invoice.get("notes"):
+        notes_box = _left_bar_box([
+            [Paragraph("NOTE", S['section_title'])],
+            [Paragraph(_s(invoice["notes"]).replace("\n", "<br/>"), S['section_detail'])],
+        ], PAGE_W)
+        story.append(notes_box)
+        story.append(Spacer(1, 3*mm))
+
+    # ── 8. COORDINATE BANCARIE (left blue bar box) ──
     bank = co.get("bank_details", {}) or {}
     bank_name = _s(bank.get("bank_name", ""))
     bank_iban = _s(bank.get("iban", ""))
@@ -506,7 +508,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         story.append(bank_box)
         story.append(Spacer(1, 3*mm))
 
-    # ── 8. SCADENZA PAGAMENTI (left blue bar box) ──
+    # ── 9. SCADENZA PAGAMENTI (left blue bar box) ──
     payment_type_label = _s(invoice.get("payment_type_label", "")) or _s(payment_label)
     scad_parts = []
     if payment_type_label:
@@ -520,15 +522,6 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
             [Paragraph("<br/>".join(scad_parts), S['section_detail'])],
         ], PAGE_W)
         story.append(scad_box)
-        story.append(Spacer(1, 5*mm))
-
-    # ── 9. NOTES ──
-    if invoice.get("notes"):
-        notes_box = _left_bar_box([
-            [Paragraph("NOTE", S['section_title'])],
-            [Paragraph(_s(invoice["notes"]).replace("\n", "<br/>"), S['section_detail'])],
-        ], PAGE_W)
-        story.append(notes_box)
         story.append(Spacer(1, 5*mm))
 
     # ── 10. FOOTER ──
