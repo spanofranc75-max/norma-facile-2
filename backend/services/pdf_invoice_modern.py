@@ -2,6 +2,7 @@
 
 Colors: deep blue header, white text, accent blue for totals.
 Logo: larger rendering (up to 55mm wide).
+Clean style: no red banner, no alternating rows, minimal visual noise.
 """
 from io import BytesIO
 from datetime import datetime
@@ -29,10 +30,8 @@ COL_DARK        = colors.HexColor("#1a1a2e")
 COL_GRAY        = colors.HexColor("#64748b")
 COL_LIGHT_BLUE  = colors.HexColor("#EFF6FF")   # very light blue
 COL_BORDER      = colors.HexColor("#BFDBFE")   # light blue border
+COL_ROW_BORDER  = colors.HexColor("#E2E8F0")   # subtle row separator
 COL_WHITE       = colors.white
-COL_ROW_ALT     = colors.HexColor("#F0F7FF")   # alternate row light blue
-COL_RED_BG      = colors.HexColor("#FEF2F2")
-COL_RED         = colors.HexColor("#B91C1C")
 COL_TOTAL_BG    = colors.HexColor("#1E3A5F")   # grand total background
 
 DOC_TYPE_NAMES = {
@@ -180,14 +179,6 @@ def _styles():
         'reg_footer', fontSize=7.5, fontName='Helvetica-Bold',
         textColor=COL_ACCENT, alignment=TA_CENTER
     )
-    S['due_label'] = ParagraphStyle(
-        'due_label', fontSize=8.5, fontName='Helvetica-Bold',
-        textColor=COL_RED
-    )
-    S['due_value'] = ParagraphStyle(
-        'due_value', fontSize=11, fontName='Helvetica-Bold',
-        textColor=colors.HexColor("#991b1b"), alignment=TA_RIGHT
-    )
     return S
 
 
@@ -275,6 +266,17 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         invoice.get("payment_method", ""), invoice.get("payment_method", "")
     )
 
+    # Build meta rows — include due date here instead of red banner
+    meta_rows = [
+        [Paragraph("Data:", S['meta_label']), Paragraph(issue_date, S['meta_value'])],
+        [Paragraph("Pagamento:", S['meta_label']), Paragraph(_s(payment_label), S['meta_value'])],
+    ]
+    if due_date:
+        meta_rows.append([
+            Paragraph("Scadenza:", S['meta_label']),
+            Paragraph(_date(due_date), S['meta_value']),
+        ])
+
     title_left = Table([
         [Paragraph(doc_title, S['doc_type'])],
         [Paragraph(display_num, S['doc_number'])],
@@ -285,10 +287,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         ('BOTTOMPADDING', (0,0), (-1,-1), 1),
     ]))
 
-    meta_right = Table([
-        [Paragraph("Data:", S['meta_label']), Paragraph(issue_date, S['meta_value'])],
-        [Paragraph("Pagamento:", S['meta_label']), Paragraph(_s(payment_label), S['meta_value'])],
-    ], colWidths=[32*mm, 58*mm], style=TableStyle([
+    meta_right = Table(meta_rows, colWidths=[32*mm, 58*mm], style=TableStyle([
         ('ALIGN', (0,0), (-1,-1), 'RIGHT'),
         ('LEFTPADDING', (0,0), (-1,-1), 2),
         ('RIGHTPADDING', (0,0), (-1,-1), 0),
@@ -377,12 +376,14 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     cw = [PAGE_W*0.44, PAGE_W*0.08, PAGE_W*0.14, PAGE_W*0.10, PAGE_W*0.08, PAGE_W*0.16]
     items_table = Table(table_data, colWidths=cw, repeatRows=1)
     items_table.setStyle(TableStyle([
+        # Header row
         ('BACKGROUND', (0,0), (-1,0), COL_HEADER_BG),
         ('TEXTCOLOR', (0,0), (-1,0), COL_WHITE),
         ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
         ('FONTSIZE', (0,0), (-1,0), 7.5),
         ('TOPPADDING', (0,0), (-1,0), 9),
         ('BOTTOMPADDING', (0,0), (-1,0), 9),
+        # Data rows
         ('LEFTPADDING', (0,0), (-1,-1), 7),
         ('RIGHTPADDING', (0,0), (-1,-1), 7),
         ('FONTNAME', (0,1), (-1,-1), 'Helvetica'),
@@ -390,8 +391,9 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         ('TOPPADDING', (0,1), (-1,-1), 8),
         ('BOTTOMPADDING', (0,1), (-1,-1), 8),
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('ROWBACKGROUNDS', (0,1), (-1,-1), [COL_WHITE, COL_ROW_ALT]),
-        ('LINEBELOW', (0,0), (-1,-1), 0.5, COL_BORDER),
+        ('BACKGROUND', (0,1), (-1,-1), COL_WHITE),
+        # Only subtle bottom border per row
+        ('LINEBELOW', (0,0), (-1,-1), 0.5, COL_ROW_BORDER),
         ('LINEBELOW', (0,-1), (-1,-1), 2, COL_HEADER_BG),
     ]))
     story.append(items_table)
@@ -439,7 +441,9 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         ('RIGHTPADDING', (0,0), (-1,-1), 5),
         ('TOPPADDING', (0,0), (-1,-1), 3),
         ('BOTTOMPADDING', (0,0), (-1,-1), 3),
-        ('LINEBELOW', (0,-1), (-1,-1), 0.5, COL_BORDER),
+        ('BACKGROUND', (0,0), (-1,-1), COL_WHITE),
+        ('LINEBELOW', (0,0), (-1,-2), 0.3, COL_ROW_BORDER),
+        ('LINEBELOW', (0,-1), (-1,-1), 1, COL_BORDER),
     ]))
 
     # Grand total — dark blue background
@@ -458,8 +462,8 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LEFTPADDING', (0,0), (-1,-1), 5),
         ('RIGHTPADDING', (0,0), (-1,-1), 5),
-        ('TOPPADDING', (0,0), (-1,-1), 6),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('TOPPADDING', (0,0), (-1,-1), 8),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
     ]))
 
     totals_col = Table([
@@ -472,7 +476,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         ('BOTTOMPADDING', (0,0), (-1,-1), 2),
     ]))
 
-    # ── BANK INFO ──
+    # ── BANK INFO — include due date ──
     bank = co.get("bank_details", {}) or {}
     bank_name = _s(bank.get("bank_name", ""))
     bank_iban = _s(bank.get("iban", ""))
@@ -482,6 +486,8 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     bank_lines = []
     if payment_type_label:
         bank_lines.append(f"<b>Condizioni:</b> {payment_type_label}")
+    if due_date:
+        bank_lines.append(f"<b>Scadenza:</b> {_date(due_date)}")
     if bank_name:
         bank_lines.append(f"<b>Banca:</b> {bank_name}")
     if bank_iban:
@@ -509,25 +515,8 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     ]))
     story.append(footer_row)
 
-    # ── DUE DATE ──
-    if due_date:
-        story.append(Spacer(1, 2*mm))
-        due_table = Table([[
-            Paragraph("⚠  Scadenza Pagamento:", S['due_label']),
-            Paragraph(_date(due_date), S['due_value']),
-        ]], colWidths=[70*mm, 100*mm], style=TableStyle([
-            ('BACKGROUND', (0,0), (-1,-1), COL_RED_BG),
-            ('BOX', (0,0), (-1,-1), 1, colors.HexColor("#FCA5A5")),
-            ('LEFTPADDING', (0,0), (-1,-1), 8),
-            ('RIGHTPADDING', (0,0), (-1,-1), 8),
-            ('TOPPADDING', (0,0), (-1,-1), 5),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
-            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ]))
-        story.append(due_table)
-
     # ── LEGAL FOOTER ──
-    story.append(Spacer(1, 5*mm))
+    story.append(Spacer(1, 6*mm))
     story.append(HRFlowable(width="100%", thickness=0.5, color=COL_BORDER))
     story.append(Spacer(1, 1.5*mm))
     story.append(Paragraph(
