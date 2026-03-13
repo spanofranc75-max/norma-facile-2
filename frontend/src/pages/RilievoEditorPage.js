@@ -160,23 +160,10 @@ function SketchEditor({ sketch, onSave, onCancel }) {
                         style={{ zIndex: 0 }}
                     />
                 )}
-                <div style={{ position: 'relative', zIndex: 1 }}>
-                    <CanvasDraw
-                        ref={canvasRef}
-                        brushColor={brushColor}
-                        brushRadius={brushRadius}
-                        lazyRadius={0}
-                        canvasWidth={800}
-                        canvasHeight={500}
-                        backgroundColor="transparent"
-                        hideGrid={true}
-                        saveData={sketch?.drawing_data || ''}
-                        immediateLoading={true}
-                        style={{ touchAction: 'none' }}
-                    />
+<div style={{ position: 'relative', zIndex: 1, width: 800, height: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
+                    <p style={{ color: '#94a3b8', fontSize: 13 }}>Funzione disegno temporaneamente non disponibile</p>
                 </div>
-            </div>
-
+            </div>              
             {/* Drawing Tools */}
             <div className="flex flex-wrap items-center gap-4 p-4 bg-slate-50 rounded-lg">
                 <div className="flex items-center gap-2">
