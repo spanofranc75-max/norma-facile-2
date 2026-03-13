@@ -13,6 +13,12 @@ import { Mail, Send, Loader2, Paperclip, User, FileText, Pencil, Eye, Maximize2,
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
+function getAuthHeaders() {
+    const token = localStorage.getItem('session_token');
+    if (token) return { 'Authorization': `Bearer ${token}` };
+    return {};
+}
+
 export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sendUrl, onSent }) {
     const [loading, setLoading] = useState(false);
     const [sending, setSending] = useState(false);
@@ -32,7 +38,7 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
             setEditMode(false);
             setExpanded(false);
             fetch(`${API}${previewUrl}`, {
-                credentials: 'include',
+                headers: getAuthHeaders(),
             })
             .then(r => {
                 if (!r.ok) throw new Error('Errore caricamento anteprima');
@@ -76,9 +82,9 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
                 : {};
             const res = await fetch(`${API}${sendUrl}`, {
                 method: 'POST',
-                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
+                    ...getAuthHeaders(),
                 },
                 body: JSON.stringify(body),
             });
