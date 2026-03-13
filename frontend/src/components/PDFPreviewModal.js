@@ -14,6 +14,12 @@ import 'react-pdf/dist/Page/TextLayer.css';
 
 pdfjs.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
+function getAuthHeaders() {
+    const token = localStorage.getItem('session_token');
+    if (token) return { 'Authorization': `Bearer ${token}` };
+    return {};
+}
+
 export function PDFPreviewModal({ open, onClose, pdfUrl, title }) {
     const [loading, setLoading] = useState(false);
     const [pdfData, setPdfData] = useState(null);
@@ -33,7 +39,9 @@ export function PDFPreviewModal({ open, onClose, pdfUrl, title }) {
         setPageNumber(1);
         setNumPages(null);
 
-        fetch(`${API_BASE}${pdfUrl}`, { credentials: 'include' })
+        fetch(`${API_BASE}${pdfUrl}`, {
+            headers: getAuthHeaders(),
+        })
             .then(r => {
                 if (!r.ok) throw new Error(`Errore HTTP ${r.status}`);
                 return r.arrayBuffer();
@@ -59,7 +67,7 @@ export function PDFPreviewModal({ open, onClose, pdfUrl, title }) {
 
     const handleDownload = async () => {
         try {
-            const res = await fetch(`${API_BASE}${pdfUrl}`, { credentials: 'include' });
+            const res = await fetch(`${API_BASE}${pdfUrl}`, { headers: getAuthHeaders() });
             const blob = await res.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
