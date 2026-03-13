@@ -526,7 +526,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     ))
     story.append(Spacer(1, 1.5*mm))
     story.append(Paragraph(
-        "Azienda Certificata EN 1090-1 EXC2  •  ISO 3834-2  •  Centro di Trasformazione Acciaio",
+        "Azienda Certificata EN 1090-1 EXC3  •  ISO 3834-2  •  Centro di Trasformazione Acciaio",
         S['reg_footer']
     ))
 
