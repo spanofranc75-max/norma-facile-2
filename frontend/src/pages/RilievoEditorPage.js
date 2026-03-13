@@ -63,8 +63,7 @@ import {
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import RilievoViewer3D from '../components/RilievoViewer3D';
-import CanvasDraw from 'react-canvas-draw';
-
+// import CanvasDraw from 'react-canvas-draw'; // rimosso - incompatibile React 19
 // Sketch Editor Component
 function SketchEditor({ sketch, onSave, onCancel }) {
     const canvasRef = useRef(null);
