@@ -1,8 +1,12 @@
 """Professional Invoice PDF generator — ReportLab, Blue Professional theme.
 
-Colors: deep blue header, white text, accent blue for totals.
-Logo: larger rendering (up to 55mm wide).
-Clean style: no red banner, no alternating rows, minimal visual noise.
+Style: clean minimal, reference Fattura 7/2026.
+- Logo left, company details right, single navy divider
+- Client box: white bg with left blue accent bar
+- Items table: navy header, white rows, subtle gray borders
+- Totals: white subtotals, navy grand total only
+- Payment: plain text, no colored box
+- No red banner — due date in payment section
 """
 from io import BytesIO
 from datetime import datetime
@@ -21,18 +25,15 @@ from reportlab.platypus import (
 )
 from reportlab.platypus.flowables import PageBreak
 
-# ── Color Palette: Blue Professional ──
-COL_HEADER_BG   = colors.HexColor("#1E3A5F")   # deep navy blue
-COL_HEADER_TEXT = colors.white
-COL_ACCENT      = colors.HexColor("#0055FF")   # bright blue
+# ── Color Palette ──
+COL_NAVY        = colors.HexColor("#1E3A5F")
+COL_ACCENT      = colors.HexColor("#0055FF")
 COL_ACCENT_DARK = colors.HexColor("#1E3A5F")
 COL_DARK        = colors.HexColor("#1a1a2e")
 COL_GRAY        = colors.HexColor("#64748b")
-COL_LIGHT_BLUE  = colors.HexColor("#EFF6FF")   # very light blue
-COL_BORDER      = colors.HexColor("#BFDBFE")   # light blue border
-COL_ROW_BORDER  = colors.HexColor("#E2E8F0")   # subtle row separator
+COL_BORDER      = colors.HexColor("#CBD5E1")
+COL_ROW_BORDER  = colors.HexColor("#E2E8F0")
 COL_WHITE       = colors.white
-COL_TOTAL_BG    = colors.HexColor("#1E3A5F")   # grand total background
 
 DOC_TYPE_NAMES = {
     "FT": "FATTURA",
@@ -50,7 +51,7 @@ PAYMENT_METHOD_NAMES = {
     "altro": "Altro",
 }
 
-PAGE_W = A4[0] - 32*mm  # usable width
+PAGE_W = A4[0] - 32*mm
 
 
 def _fmt(n) -> str:
@@ -80,7 +81,7 @@ def _date(d) -> str:
 def _styles():
     S = {}
     S['company_name'] = ParagraphStyle(
-        'company_name', fontSize=14, fontName='Helvetica-Bold',
+        'company_name', fontSize=13, fontName='Helvetica-Bold',
         textColor=COL_ACCENT_DARK, alignment=TA_RIGHT, spaceAfter=2
     )
     S['company_detail'] = ParagraphStyle(
@@ -89,11 +90,11 @@ def _styles():
     )
     S['doc_type'] = ParagraphStyle(
         'doc_type', fontSize=8, fontName='Helvetica-Bold',
-        textColor=COL_ACCENT, spaceAfter=2, leading=10
+        textColor=COL_ACCENT, spaceAfter=1, leading=10
     )
     S['doc_number'] = ParagraphStyle(
-        'doc_number', fontSize=24, fontName='Helvetica-Bold',
-        textColor=COL_ACCENT_DARK, spaceAfter=2, leading=28
+        'doc_number', fontSize=26, fontName='Helvetica-Bold',
+        textColor=COL_ACCENT_DARK, spaceAfter=2, leading=30
     )
     S['meta_label'] = ParagraphStyle(
         'meta_label', fontSize=8, fontName='Helvetica-Bold',
@@ -108,7 +109,7 @@ def _styles():
         textColor=COL_ACCENT, spaceAfter=2, leading=10
     )
     S['client_name'] = ParagraphStyle(
-        'client_name', fontSize=12, fontName='Helvetica-Bold',
+        'client_name', fontSize=11, fontName='Helvetica-Bold',
         textColor=COL_ACCENT_DARK, spaceAfter=2
     )
     S['client_detail'] = ParagraphStyle(
@@ -141,27 +142,27 @@ def _styles():
     )
     S['total_label'] = ParagraphStyle(
         'total_label', fontSize=8.5, fontName='Helvetica',
-        textColor=COL_GRAY
+        textColor=COL_GRAY, alignment=TA_RIGHT
     )
     S['total_value'] = ParagraphStyle(
         'total_value', fontSize=8.5, fontName='Helvetica',
         textColor=COL_DARK, alignment=TA_RIGHT
     )
     S['grand_label'] = ParagraphStyle(
-        'grand_label', fontSize=12, fontName='Helvetica-Bold',
+        'grand_label', fontSize=11, fontName='Helvetica-Bold',
         textColor=COL_WHITE
     )
     S['grand_value'] = ParagraphStyle(
-        'grand_value', fontSize=14, fontName='Helvetica-Bold',
+        'grand_value', fontSize=13, fontName='Helvetica-Bold',
         textColor=COL_WHITE, alignment=TA_RIGHT
     )
-    S['bank_title'] = ParagraphStyle(
-        'bank_title', fontSize=7.5, fontName='Helvetica-Bold',
-        textColor=COL_ACCENT, spaceAfter=3
+    S['payment_title'] = ParagraphStyle(
+        'payment_title', fontSize=7.5, fontName='Helvetica-Bold',
+        textColor=COL_ACCENT, spaceAfter=4
     )
-    S['bank_detail'] = ParagraphStyle(
-        'bank_detail', fontSize=8.5, fontName='Helvetica',
-        textColor=colors.HexColor("#334155"), leading=14
+    S['payment_detail'] = ParagraphStyle(
+        'payment_detail', fontSize=8.5, fontName='Helvetica',
+        textColor=colors.HexColor("#334155"), leading=15
     )
     S['notes_title'] = ParagraphStyle(
         'notes_title', fontSize=7.5, fontName='Helvetica-Bold',
@@ -195,7 +196,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     cl = client or {}
     story = []
 
-    # ── HEADER ──
+    # ── HEADER: logo left, company right ──
     company_name = _s(co.get("business_name"))
     addr = _s(co.get("address"))
     cap = _s(co.get("cap"))
@@ -211,11 +212,10 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     loc = " ".join(p for p in [cap, city, f"({prov})" if prov else ""] if p)
     if loc: addr_parts.append(loc)
     if piva: addr_parts.append(f"P.IVA {piva}")
-    if cf: addr_parts.append(f"C.F. {cf}")
-    if phone: addr_parts.append(f"Tel {phone}")
+    if cf and cf != piva: addr_parts.append(f"C.F. {cf}")
+    if phone: addr_parts.append(f"Tel: {phone}")
     if email: addr_parts.append(email)
 
-    # Logo
     logo_cell = Spacer(1, 1)
     logo_url = co.get("logo_url", "")
     if logo_url and logo_url.startswith("data:image"):
@@ -226,7 +226,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
             parts = logo_url.split(",", 1)
             if len(parts) == 2:
                 img_data = base64.b64decode(parts[1])
-                logo_cell = RLImage(BIO(img_data), width=55*mm, height=22*mm, kind='proportional')
+                logo_cell = RLImage(BIO(img_data), width=50*mm, height=20*mm, kind='proportional')
         except Exception:
             pass
 
@@ -249,11 +249,10 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         ('RIGHTPADDING', (0,0), (-1,-1), 0),
     ]))
     story.append(header_table)
-    story.append(Spacer(1, 3*mm))
+    story.append(Spacer(1, 4*mm))
 
-    # Blue divider
-    story.append(HRFlowable(width="100%", thickness=4, color=COL_HEADER_BG))
-    story.append(HRFlowable(width="100%", thickness=1.5, color=COL_ACCENT, spaceAfter=4*mm))
+    # Single clean navy divider
+    story.append(HRFlowable(width="100%", thickness=2, color=COL_NAVY, spaceAfter=4*mm))
 
     # ── TITLE ROW ──
     doc_type = invoice.get("document_type", "FT")
@@ -266,7 +265,6 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         invoice.get("payment_method", ""), invoice.get("payment_method", "")
     )
 
-    # Build meta rows — include due date here instead of red banner
     meta_rows = [
         [Paragraph("Data:", S['meta_label']), Paragraph(issue_date, S['meta_value'])],
         [Paragraph("Pagamento:", S['meta_label']), Paragraph(_s(payment_label), S['meta_value'])],
@@ -302,9 +300,9 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         ('RIGHTPADDING', (0,0), (-1,-1), 0),
     ]))
     story.append(title_row)
-    story.append(Spacer(1, 4*mm))
+    story.append(Spacer(1, 5*mm))
 
-    # ── CLIENT (light blue box) ──
+    # ── CLIENT BOX: white bg, left blue accent bar ──
     cl_name = _s(cl.get("business_name"))
     cl_parts = []
     cl_addr = _s(cl.get("address"))
@@ -323,22 +321,39 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     if cl_sdi: cl_parts.append(f"Cod. SDI {cl_sdi}")
     if cl_pec: cl_parts.append(f"PEC {cl_pec}")
 
-    client_table = Table([
+    accent_bar = Table([['']], colWidths=[3*mm], style=TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), COL_ACCENT),
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('RIGHTPADDING', (0,0), (-1,-1), 0),
+        ('TOPPADDING', (0,0), (-1,-1), 0),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+    ]))
+
+    client_inner = Table([
         [Paragraph("SPETTABILE CLIENTE", S['client_label'])],
         [Paragraph(cl_name, S['client_name'])],
         [Paragraph("<br/>".join(cl_parts), S['client_detail'])],
-    ], colWidths=[PAGE_W], style=TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), COL_LIGHT_BLUE),
+    ], colWidths=[PAGE_W - 5*mm], style=TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), COL_WHITE),
         ('LEFTPADDING', (0,0), (-1,-1), 8),
         ('RIGHTPADDING', (0,0), (-1,-1), 8),
         ('TOPPADDING', (0,0), (0,0), 6),
         ('TOPPADDING', (0,1), (-1,-1), 2),
         ('BOTTOMPADDING', (0,-1), (-1,-1), 6),
         ('BOTTOMPADDING', (0,0), (-1,-2), 1),
-        ('LINEABOVE', (0,0), (-1,0), 2, COL_ACCENT),
+    ]))
+
+    client_table = Table([[accent_bar, client_inner]], colWidths=[3*mm, PAGE_W - 3*mm])
+    client_table.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('RIGHTPADDING', (0,0), (-1,-1), 0),
+        ('TOPPADDING', (0,0), (-1,-1), 0),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+        ('BOX', (0,0), (-1,-1), 0.5, COL_BORDER),
     ]))
     story.append(client_table)
-    story.append(Spacer(1, 4*mm))
+    story.append(Spacer(1, 5*mm))
 
     # ── ITEMS TABLE ──
     lines = invoice.get("lines", [])
@@ -376,14 +391,12 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     cw = [PAGE_W*0.44, PAGE_W*0.08, PAGE_W*0.14, PAGE_W*0.10, PAGE_W*0.08, PAGE_W*0.16]
     items_table = Table(table_data, colWidths=cw, repeatRows=1)
     items_table.setStyle(TableStyle([
-        # Header row
-        ('BACKGROUND', (0,0), (-1,0), COL_HEADER_BG),
+        ('BACKGROUND', (0,0), (-1,0), COL_NAVY),
         ('TEXTCOLOR', (0,0), (-1,0), COL_WHITE),
         ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
         ('FONTSIZE', (0,0), (-1,0), 7.5),
         ('TOPPADDING', (0,0), (-1,0), 9),
         ('BOTTOMPADDING', (0,0), (-1,0), 9),
-        # Data rows
         ('LEFTPADDING', (0,0), (-1,-1), 7),
         ('RIGHTPADDING', (0,0), (-1,-1), 7),
         ('FONTNAME', (0,1), (-1,-1), 'Helvetica'),
@@ -392,12 +405,11 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         ('BOTTOMPADDING', (0,1), (-1,-1), 8),
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('BACKGROUND', (0,1), (-1,-1), COL_WHITE),
-        # Only subtle bottom border per row
         ('LINEBELOW', (0,0), (-1,-1), 0.5, COL_ROW_BORDER),
-        ('LINEBELOW', (0,-1), (-1,-1), 2, COL_HEADER_BG),
+        ('LINEBELOW', (0,-1), (-1,-1), 2, COL_NAVY),
     ]))
     story.append(items_table)
-    story.append(Spacer(1, 3*mm))
+    story.append(Spacer(1, 4*mm))
 
     # ── NOTES ──
     if invoice.get("notes"):
@@ -405,15 +417,15 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
             [Paragraph("NOTE", S['notes_title'])],
             [Paragraph(_s(invoice["notes"]).replace("\n", "<br/>"), S['notes_text'])],
         ], colWidths=[PAGE_W], style=TableStyle([
-            ('BACKGROUND', (0,0), (-1,-1), COL_LIGHT_BLUE),
-            ('LINEABOVE', (0,0), (-1,0), 1.5, COL_ACCENT),
-            ('LEFTPADDING', (0,0), (-1,-1), 7),
-            ('RIGHTPADDING', (0,0), (-1,-1), 7),
-            ('TOPPADDING', (0,0), (-1,-1), 5),
+            ('LEFTPADDING', (0,0), (-1,-1), 0),
+            ('RIGHTPADDING', (0,0), (-1,-1), 0),
+            ('TOPPADDING', (0,0), (-1,-1), 3),
             ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('LINEABOVE', (0,0), (-1,0), 1, COL_BORDER),
+            ('LINEBELOW', (0,-1), (-1,-1), 1, COL_BORDER),
         ]))
         story.append(notes_table)
-        story.append(Spacer(1, 3*mm))
+        story.append(Spacer(1, 4*mm))
 
     # ── TOTALS ──
     from services.pdf_template import compute_iva_groups
@@ -439,26 +451,31 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LEFTPADDING', (0,0), (-1,-1), 5),
         ('RIGHTPADDING', (0,0), (-1,-1), 5),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
         ('BACKGROUND', (0,0), (-1,-1), COL_WHITE),
         ('LINEBELOW', (0,0), (-1,-2), 0.3, COL_ROW_BORDER),
         ('LINEBELOW', (0,-1), (-1,-1), 1, COL_BORDER),
     ]))
 
-    # Grand total — dark blue background
-    grand_rows = [[Paragraph("TOTALE DOCUMENTO", S['grand_label']),
-                   Paragraph(f"{_fmt(iva_data['total'])} €", S['grand_value'])]]
+    grand_rows = [[
+        Paragraph("TOTALE", S['grand_label']),
+        Paragraph(f"{_fmt(iva_data['total'])} €", S['grand_value']),
+    ]]
     if ritenuta > 0:
         netto = iva_data["total"] - ritenuta
-        grand_rows.append([Paragraph("Ritenuta d'acconto", S['grand_label']),
-                           Paragraph(f"-{_fmt(ritenuta)} €", S['grand_value'])])
-        grand_rows.append([Paragraph("NETTO A PAGARE", S['grand_label']),
-                           Paragraph(f"{_fmt(netto)} €", S['grand_value'])])
+        grand_rows.append([
+            Paragraph("Ritenuta d'acconto", S['grand_label']),
+            Paragraph(f"-{_fmt(ritenuta)} €", S['grand_value']),
+        ])
+        grand_rows.append([
+            Paragraph("NETTO A PAGARE", S['grand_label']),
+            Paragraph(f"{_fmt(netto)} €", S['grand_value']),
+        ])
 
     grand_table = Table(grand_rows, colWidths=[55*mm, 30*mm])
     grand_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), COL_HEADER_BG),
+        ('BACKGROUND', (0,0), (-1,-1), COL_NAVY),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
         ('LEFTPADDING', (0,0), (-1,-1), 5),
         ('RIGHTPADDING', (0,0), (-1,-1), 5),
@@ -473,41 +490,40 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         ('LEFTPADDING', (0,0), (-1,-1), 0),
         ('RIGHTPADDING', (0,0), (-1,-1), 0),
         ('TOPPADDING', (0,0), (-1,-1), 0),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 0),
     ]))
 
-    # ── BANK INFO — include due date ──
+    # ── PAYMENT: plain text, no colored box ──
     bank = co.get("bank_details", {}) or {}
     bank_name = _s(bank.get("bank_name", ""))
     bank_iban = _s(bank.get("iban", ""))
     bank_bic = _s(bank.get("bic_swift", ""))
     payment_type_label = _s(invoice.get("payment_type_label", "")) or _s(payment_label)
 
-    bank_lines = []
+    payment_lines = []
     if payment_type_label:
-        bank_lines.append(f"<b>Condizioni:</b> {payment_type_label}")
+        payment_lines.append(f"<b>Condizioni:</b> {payment_type_label}")
     if due_date:
-        bank_lines.append(f"<b>Scadenza:</b> {_date(due_date)}")
+        payment_lines.append(f"<b>Scadenza:</b> {_date(due_date)}")
     if bank_name:
-        bank_lines.append(f"<b>Banca:</b> {bank_name}")
+        payment_lines.append(f"<b>Banca:</b> {bank_name}")
     if bank_iban:
-        bank_lines.append(f"<b>IBAN:</b> {bank_iban}")
+        payment_lines.append(f"<b>IBAN:</b> {bank_iban}")
     if bank_bic:
-        bank_lines.append(f"<b>BIC/SWIFT:</b> {bank_bic}")
+        payment_lines.append(f"<b>BIC/SWIFT:</b> {bank_bic}")
 
-    bank_col = Table([
-        [Paragraph("DATI PAGAMENTO", S['bank_title'])],
-        [Paragraph("<br/>".join(bank_lines) if bank_lines else "", S['bank_detail'])],
+    payment_col = Table([
+        [Paragraph("DATI PAGAMENTO", S['payment_title'])],
+        [Paragraph("<br/>".join(payment_lines) if payment_lines else "", S['payment_detail'])],
     ], colWidths=[80*mm], style=TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), COL_LIGHT_BLUE),
-        ('LINEABOVE', (0,0), (-1,0), 2, COL_ACCENT),
-        ('LEFTPADDING', (0,0), (-1,-1), 7),
-        ('RIGHTPADDING', (0,0), (-1,-1), 7),
-        ('TOPPADDING', (0,0), (-1,-1), 5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('RIGHTPADDING', (0,0), (-1,-1), 4),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('LINEABOVE', (0,0), (-1,0), 1, COL_BORDER),
     ]))
 
-    footer_row = Table([[bank_col, Spacer(1,1), totals_col]], colWidths=[80*mm, 5*mm, 85*mm])
+    footer_row = Table([[payment_col, Spacer(1,1), totals_col]], colWidths=[80*mm, 5*mm, 85*mm])
     footer_row.setStyle(TableStyle([
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('LEFTPADDING', (0,0), (-1,-1), 0),
