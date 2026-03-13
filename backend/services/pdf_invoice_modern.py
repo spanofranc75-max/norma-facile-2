@@ -1,399 +1,34 @@
-"""Professional Invoice PDF generator — clean, modern design.
+"""Professional Invoice PDF generator — ReportLab implementation.
 
-Replaces the old 'receipt-like' layout with a proper business invoice:
-- Spacious header with logo + right-aligned company info
-- Client section WITHOUT box borders
-- Generous table padding with zebra rows
-- Prominent due date near totals
-- Modern sans-serif typography (Helvetica/Liberation Sans)
+Replaces WeasyPrint with ReportLab for zero system-dependency PDF generation.
+Layout: header with company info, client section, items table, totals, bank info.
 """
 from io import BytesIO
-from datetime import datetime, timezone
-import html as html_mod
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
 
-_esc = html_mod.escape
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
+from reportlab.platypus import (
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+    HRFlowable, KeepTogether
+)
+from reportlab.platypus.flowables import PageBreak
 
-
-def _fmt(n) -> str:
-    """Format number Italian style: 1.234,56"""
-    try:
-        val = float(n or 0)
-    except (ValueError, TypeError):
-        return "0,00"
-    s = f"{val:,.2f}"
-    return s.replace(",", "X").replace(".", ",").replace("X", ".")
-
-
-def _s(val) -> str:
-    return _esc(str(val or ""))
-
-
-def _date(d) -> str:
-    if isinstance(d, datetime):
-        return d.strftime("%d/%m/%Y")
-    if isinstance(d, str):
-        try:
-            return datetime.fromisoformat(d.replace("Z", "+00:00")).strftime("%d/%m/%Y")
-        except Exception:
-            return d
-    return ""
-
-
-# ═══════════════════════════════════════════════════════════════════
-# CSS — Professional invoice design
-# ═══════════════════════════════════════════════════════════════════
-
-INVOICE_CSS = """
-@page {
-    size: A4;
-    margin: 14mm 16mm 16mm 16mm;
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-    font-family: Helvetica, "Liberation Sans", Arial, sans-serif;
-    font-size: 9pt;
-    color: #1a1a2e;
-    line-height: 1.4;
-}
-
-/* ── HEADER ── */
-.inv-header {
-    display: table;
-    width: 100%;
-    margin-bottom: 6mm;
-}
-.inv-header-left {
-    display: table-cell;
-    width: 50%;
-    vertical-align: top;
-}
-.inv-header-right {
-    display: table-cell;
-    width: 50%;
-    vertical-align: top;
-    text-align: right;
-}
-.inv-logo img {
-    max-width: 180px;
-    max-height: 60px;
-    margin-bottom: 4px;
-}
-.inv-company-name {
-    font-size: 14pt;
-    font-weight: 800;
-    color: #1a1a2e;
-    margin-bottom: 2px;
-}
-.inv-company-details {
-    font-size: 8pt;
-    color: #64748b;
-    line-height: 1.6;
-}
-
-/* ── DIVIDER ── */
-.inv-divider {
-    height: 3px;
-    background: #0F172A;
-    margin: 3mm 0 5mm;
-    border-radius: 1px;
-}
-
-/* ── TITLE + META ── */
-.inv-title-row {
-    display: table;
-    width: 100%;
-    margin-bottom: 5mm;
-}
-.inv-title-left {
-    display: table-cell;
-    width: 50%;
-    vertical-align: top;
-}
-.inv-title-right {
-    display: table-cell;
-    width: 50%;
-    vertical-align: top;
-    text-align: right;
-}
-.inv-doc-type {
-    font-size: 9pt;
-    font-weight: 600;
-    color: #64748b;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    margin-bottom: 1px;
-}
-.inv-doc-number {
-    font-size: 22pt;
-    font-weight: 800;
-    color: #0F172A;
-    line-height: 1.1;
-}
-.inv-meta {
-    font-size: 8.5pt;
-    color: #475569;
-    line-height: 1.8;
-}
-.inv-meta-label {
-    display: inline-block;
-    width: 70px;
-    font-weight: 600;
-    color: #64748b;
-}
-
-/* ── CLIENT ── */
-.inv-client {
-    margin-bottom: 5mm;
-    padding: 3mm 0;
-}
-.inv-client-label {
-    font-size: 7.5pt;
-    font-weight: 600;
-    color: #94a3b8;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    margin-bottom: 2px;
-}
-.inv-client-name {
-    font-size: 12pt;
-    font-weight: 700;
-    color: #1a1a2e;
-    margin-bottom: 2px;
-}
-.inv-client-details {
-    font-size: 8.5pt;
-    color: #475569;
-    line-height: 1.6;
-}
-
-/* ── ITEMS TABLE ── */
-.inv-items {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 3mm 0 4mm;
-    font-size: 8.5pt;
-}
-.inv-items thead th {
-    background: #0F172A;
-    border-bottom: 2px solid #0F172A;
-    padding: 10px 10px;
-    font-weight: 700;
-    font-size: 7.5pt;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #ffffff;
-}
-.inv-items thead th.al { text-align: left; }
-.inv-items thead th.ar { text-align: right; }
-.inv-items thead th.ac { text-align: center; }
-.inv-items tbody td {
-    padding: 10px 10px;
-    border-bottom: 1px solid #e2e8f0;
-    vertical-align: top;
-}
-.inv-items tbody tr:last-child td {
-    border-bottom: 2px solid #cbd5e1;
-}
-.inv-items .desc {
-    text-align: left;
-    line-height: 1.45;
-}
-.inv-items .num {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-}
-.inv-items .cen {
-    text-align: center;
-}
-
-/* ── FOOTER AREA: Bank + Totals side by side ── */
-.inv-footer-row {
-    display: table;
-    width: 100%;
-    margin-top: 4mm;
-}
-.inv-footer-left {
-    display: table-cell;
-    width: 48%;
-    vertical-align: top;
-    padding-right: 4mm;
-}
-.inv-footer-right {
-    display: table-cell;
-    width: 52%;
-    vertical-align: top;
-}
-
-/* ── BANK INFO ── */
-.inv-bank {
-    padding: 3mm;
-    border: 1px solid #e2e8f0;
-    border-radius: 4px;
-    background: #f8fafc;
-    font-size: 8pt;
-    color: #475569;
-    line-height: 1.7;
-}
-.inv-bank-title {
-    font-size: 7.5pt;
-    font-weight: 700;
-    color: #64748b;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-bottom: 2px;
-    padding-bottom: 2px;
-    border-bottom: 1px solid #e2e8f0;
-}
-.inv-bank-label {
-    font-weight: 600;
-    color: #334155;
-}
-
-/* ── TOTALS ── */
-.inv-totals {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 9pt;
-}
-.inv-totals td {
-    padding: 4px 8px;
-    border: none;
-}
-.inv-totals .lbl {
-    color: #64748b;
-    font-weight: 500;
-}
-.inv-totals .val {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-    color: #1a1a2e;
-}
-.inv-totals .sep td {
-    border-top: 1px solid #e2e8f0;
-    padding-top: 6px;
-}
-.inv-totals .grand td {
-    border-top: 2px solid #0F172A;
-    padding-top: 8px;
-    padding-bottom: 8px;
-}
-.inv-totals .grand .lbl {
-    font-size: 12pt;
-    font-weight: 800;
-    color: #0F172A;
-}
-.inv-totals .grand .val {
-    font-size: 18pt;
-    font-weight: 800;
-    color: #0F172A;
-}
-
-/* ── DUE DATE ── */
-.inv-due {
-    margin-top: 3mm;
-    padding: 3mm 4mm;
-    background: #fef2f2;
-    border: 1px solid #fca5a5;
-    border-radius: 4px;
-    font-size: 9pt;
-}
-.inv-due-label {
-    font-weight: 600;
-    color: #b91c1c;
-}
-.inv-due-date {
-    font-weight: 800;
-    color: #991b1b;
-    font-size: 11pt;
-}
-
-/* ── NOTES ── */
-.inv-notes {
-    margin-top: 4mm;
-    padding: 3mm 4mm;
-    background: #fafafa;
-    border: 1px solid #e2e8f0;
-    border-radius: 4px;
-    font-size: 8pt;
-    color: #475569;
-    line-height: 1.5;
-}
-.inv-notes-title {
-    font-weight: 700;
-    font-size: 7.5pt;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 2px;
-}
-
-/* ── PAGE 2: CONDITIONS ── */
-.page-break { page-break-before: always; }
-
-/* ── LEGAL FOOTER ── */
-.inv-legal-notes {
-    margin-top: 5mm;
-    padding: 2mm 3mm;
-    font-size: 7pt;
-    color: #94a3b8;
-    line-height: 1.4;
-    border-top: 1px solid #e2e8f0;
-}
-.inv-regulatory-footer {
-    margin-top: 2mm;
-    padding: 2mm 3mm;
-    text-align: center;
-    font-size: 7.5pt;
-    font-weight: 600;
-    color: #64748b;
-    letter-spacing: 0.5px;
-}
-
-.conditions-title {
-    font-size: 11pt;
-    font-weight: bold;
-    text-align: center;
-    margin-bottom: 12px;
-    text-transform: uppercase;
-}
-.conditions-text {
-    font-size: 7.5pt;
-    line-height: 1.45;
-    text-align: justify;
-}
-.acceptance-section { margin-top: 30px; }
-.sig-block { margin: 15px 0; }
-.sig-line {
-    border-bottom: 1px solid #333;
-    width: 250px;
-    height: 30px;
-    margin: 4px 0;
-}
-.sig-label { font-size: 7.5pt; color: #666; }
-.legal-notice {
-    margin-top: 20px;
-    font-size: 7pt;
-    line-height: 1.4;
-    border: 1px solid #ccc;
-    padding: 6px 8px;
-    background: #fafafa;
-}
-.doc-footer {
-    margin-top: 40px;
-    text-align: right;
-    font-size: 8pt;
-    color: #555;
-}
-"""
-
-
-# ═══════════════════════════════════════════════════════════════════
-# Generator
-# ═══════════════════════════════════════════════════════════════════
+# ── Colors ──
+COL_DARK = colors.HexColor("#0F172A")
+COL_BLUE = colors.HexColor("#0055FF")
+COL_GRAY = colors.HexColor("#64748b")
+COL_LIGHT = colors.HexColor("#f8fafc")
+COL_BORDER = colors.HexColor("#e2e8f0")
+COL_RED_BG = colors.HexColor("#fef2f2")
+COL_RED = colors.HexColor("#b91c1c")
+COL_WHITE = colors.white
 
 DOC_TYPE_NAMES = {
     "FT": "FATTURA",
@@ -412,45 +47,224 @@ PAYMENT_METHOD_NAMES = {
 }
 
 
-def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> bytes:
-    """Generate a professional, modern invoice PDF."""
-    from weasyprint import HTML
+def _fmt(n) -> str:
+    try:
+        val = float(n or 0)
+    except (ValueError, TypeError):
+        return "0,00"
+    s = f"{val:,.2f}"
+    return s.replace(",", "X").replace(".", ",").replace("X", ".")
 
+
+def _s(val) -> str:
+    return str(val or "")
+
+
+def _date(d) -> str:
+    if isinstance(d, datetime):
+        return d.strftime("%d/%m/%Y")
+    if isinstance(d, str):
+        try:
+            return datetime.fromisoformat(d.replace("Z", "+00:00")).strftime("%d/%m/%Y")
+        except Exception:
+            return d
+    return ""
+
+
+def _styles():
+    base = getSampleStyleSheet()
+    styles = {}
+
+    styles['company_name'] = ParagraphStyle(
+        'company_name', fontSize=13, fontName='Helvetica-Bold',
+        textColor=COL_DARK, alignment=TA_RIGHT, spaceAfter=2
+    )
+    styles['company_detail'] = ParagraphStyle(
+        'company_detail', fontSize=8, fontName='Helvetica',
+        textColor=COL_GRAY, alignment=TA_RIGHT, leading=12
+    )
+    styles['doc_type'] = ParagraphStyle(
+        'doc_type', fontSize=8, fontName='Helvetica-Bold',
+        textColor=COL_GRAY, spaceAfter=2, leading=10
+    )
+    styles['doc_number'] = ParagraphStyle(
+        'doc_number', fontSize=22, fontName='Helvetica-Bold',
+        textColor=COL_DARK, spaceAfter=2, leading=26
+    )
+    styles['meta_label'] = ParagraphStyle(
+        'meta_label', fontSize=8, fontName='Helvetica-Bold',
+        textColor=COL_GRAY, alignment=TA_RIGHT, leading=14
+    )
+    styles['meta_value'] = ParagraphStyle(
+        'meta_value', fontSize=8, fontName='Helvetica',
+        textColor=COL_DARK, alignment=TA_RIGHT, leading=14
+    )
+    styles['client_label'] = ParagraphStyle(
+        'client_label', fontSize=7, fontName='Helvetica-Bold',
+        textColor=COL_GRAY, spaceAfter=2
+    )
+    styles['client_name'] = ParagraphStyle(
+        'client_name', fontSize=12, fontName='Helvetica-Bold',
+        textColor=COL_DARK, spaceAfter=2
+    )
+    styles['client_detail'] = ParagraphStyle(
+        'client_detail', fontSize=8, fontName='Helvetica',
+        textColor=colors.HexColor("#475569"), leading=12
+    )
+    styles['table_header'] = ParagraphStyle(
+        'table_header', fontSize=7, fontName='Helvetica-Bold',
+        textColor=COL_WHITE
+    )
+    styles['table_cell'] = ParagraphStyle(
+        'table_cell', fontSize=8, fontName='Helvetica',
+        textColor=COL_DARK, leading=11
+    )
+    styles['table_cell_right'] = ParagraphStyle(
+        'table_cell_right', fontSize=8, fontName='Helvetica',
+        textColor=COL_DARK, alignment=TA_RIGHT, leading=11
+    )
+    styles['table_cell_center'] = ParagraphStyle(
+        'table_cell_center', fontSize=8, fontName='Helvetica',
+        textColor=COL_DARK, alignment=TA_CENTER, leading=11
+    )
+    styles['total_label'] = ParagraphStyle(
+        'total_label', fontSize=8, fontName='Helvetica',
+        textColor=COL_GRAY, alignment=TA_LEFT
+    )
+    styles['total_value'] = ParagraphStyle(
+        'total_value', fontSize=8, fontName='Helvetica',
+        textColor=COL_DARK, alignment=TA_RIGHT
+    )
+    styles['grand_label'] = ParagraphStyle(
+        'grand_label', fontSize=12, fontName='Helvetica-Bold',
+        textColor=COL_DARK, alignment=TA_LEFT
+    )
+    styles['grand_value'] = ParagraphStyle(
+        'grand_value', fontSize=14, fontName='Helvetica-Bold',
+        textColor=COL_DARK, alignment=TA_RIGHT
+    )
+    styles['bank_title'] = ParagraphStyle(
+        'bank_title', fontSize=7, fontName='Helvetica-Bold',
+        textColor=COL_GRAY, spaceAfter=3
+    )
+    styles['bank_detail'] = ParagraphStyle(
+        'bank_detail', fontSize=8, fontName='Helvetica',
+        textColor=colors.HexColor("#475569"), leading=13
+    )
+    styles['notes_title'] = ParagraphStyle(
+        'notes_title', fontSize=7, fontName='Helvetica-Bold',
+        textColor=COL_GRAY, spaceAfter=2
+    )
+    styles['notes_text'] = ParagraphStyle(
+        'notes_text', fontSize=8, fontName='Helvetica',
+        textColor=colors.HexColor("#475569"), leading=12
+    )
+    styles['legal'] = ParagraphStyle(
+        'legal', fontSize=6.5, fontName='Helvetica',
+        textColor=COL_GRAY, leading=10
+    )
+    styles['due_label'] = ParagraphStyle(
+        'due_label', fontSize=8, fontName='Helvetica-Bold',
+        textColor=COL_RED
+    )
+    styles['due_value'] = ParagraphStyle(
+        'due_value', fontSize=10, fontName='Helvetica-Bold',
+        textColor=colors.HexColor("#991b1b")
+    )
+    return styles
+
+
+def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> bytes:
+    """Generate a professional invoice PDF using ReportLab."""
+
+    buf = BytesIO()
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=A4,
+        leftMargin=16*mm, rightMargin=16*mm,
+        topMargin=14*mm, bottomMargin=16*mm,
+    )
+
+    S = _styles()
     co = company or {}
     cl = client or {}
+    story = []
 
-    # ── Company info ──
-    logo_html = ""
-    logo_url = co.get("logo_url", "")
-    if logo_url and logo_url.startswith("data:image"):
-        logo_html = f'<div class="inv-logo"><img src="{logo_url}" /></div>'
-
+    # ── HEADER: Logo left, Company right ──
     company_name = _s(co.get("business_name"))
     addr = _s(co.get("address"))
     cap = _s(co.get("cap"))
     city = _s(co.get("city"))
     prov = _s(co.get("province"))
-    addr_line = addr
-    if cap or city:
-        parts = [p for p in [cap, city, f"({prov})" if prov else ""] if p]
-        addr_line += "<br>" + " ".join(parts) if addr else " ".join(parts)
-
     piva = _s(co.get("partita_iva"))
     cf = _s(co.get("codice_fiscale"))
     phone = _s(co.get("phone") or co.get("tel"))
     email = _s(co.get("email") or co.get("contact_email"))
 
-    company_right = f"""
-    <div class="inv-company-name">{company_name}</div>
-    <div class="inv-company-details">
-        {addr_line}
-        {"<br>P.IVA " + piva if piva else ""}
-        {"<br>C.F. " + cf if cf else ""}
-        {"<br>Tel " + phone if phone else ""}
-        {"<br>" + email if email else ""}
-    </div>"""
+    addr_parts = [addr]
+    loc = " ".join(p for p in [cap, city, f"({prov})" if prov else ""] if p)
+    if loc:
+        addr_parts.append(loc)
+    if piva:
+        addr_parts.append(f"P.IVA {piva}")
+    if cf:
+        addr_parts.append(f"C.F. {cf}")
+    if phone:
+        addr_parts.append(f"Tel {phone}")
+    if email:
+        addr_parts.append(email)
 
-    # ── Document info ──
+    company_detail_text = "<br/>".join(addr_parts)
+
+    header_data = [[
+        Paragraph("", S['company_name']),  # logo placeholder
+        Table([
+            [Paragraph(company_name, S['company_name'])],
+            [Paragraph(company_detail_text, S['company_detail'])],
+        ], colWidths=[None], style=TableStyle([
+            ('ALIGN', (0,0), (-1,-1), 'RIGHT'),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ]))
+    ]]
+
+    # Try to add logo if available
+    logo_url = co.get("logo_url", "")
+    logo_cell = Paragraph("", S['company_name'])
+    if logo_url and logo_url.startswith("data:image"):
+        try:
+            import base64
+            from reportlab.platypus import Image as RLImage
+            from io import BytesIO as BIO
+            header_data2 = logo_url.split(",", 1)
+            if len(header_data2) == 2:
+                img_data = base64.b64decode(header_data2[1])
+                img_buf = BIO(img_data)
+                logo_cell = RLImage(img_buf, width=45*mm, height=18*mm, kind='proportional')
+        except Exception:
+            pass
+
+    header_table = Table([
+        [logo_cell, Table([
+            [Paragraph(company_name, S['company_name'])],
+            [Paragraph(company_detail_text, S['company_detail'])],
+        ], colWidths=[85*mm], style=TableStyle([
+            ('ALIGN', (0,0), (-1,-1), 'RIGHT'),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('LEFTPADDING', (0,0), (-1,-1), 0),
+            ('RIGHTPADDING', (0,0), (-1,-1), 0),
+        ]))]
+    ], colWidths=[85*mm, 85*mm])
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('RIGHTPADDING', (0,0), (-1,-1), 0),
+    ]))
+    story.append(header_table)
+    story.append(Spacer(1, 3*mm))
+    story.append(HRFlowable(width="100%", thickness=3, color=COL_DARK))
+    story.append(Spacer(1, 4*mm))
+
+    # ── TITLE + META ──
     doc_type = invoice.get("document_type", "FT")
     doc_title = DOC_TYPE_NAMES.get(doc_type, "DOCUMENTO")
     doc_number = _s(invoice.get("document_number", ""))
@@ -461,45 +275,86 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         invoice.get("payment_method", ""), invoice.get("payment_method", "")
     )
 
-    meta_html = f"""
-    <div class="inv-meta">
-        <span class="inv-meta-label">Data:</span> {issue_date}<br>
-        <span class="inv-meta-label">Pagamento:</span> {_s(payment_label)}
-    </div>"""
+    title_left = Table([
+        [Paragraph(doc_title, S['doc_type'])],
+        [Paragraph(display_num, S['doc_number'])],
+    ], colWidths=[85*mm], style=TableStyle([
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('RIGHTPADDING', (0,0), (-1,-1), 0),
+        ('TOPPADDING', (0,0), (-1,-1), 0),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1),
+    ]))
 
-    # ── Client ──
+    meta_right = Table([
+        [Paragraph("Data:", S['meta_label']), Paragraph(issue_date, S['meta_value'])],
+        [Paragraph("Pagamento:", S['meta_label']), Paragraph(_s(payment_label), S['meta_value'])],
+    ], colWidths=[30*mm, 55*mm], style=TableStyle([
+        ('ALIGN', (0,0), (-1,-1), 'RIGHT'),
+        ('LEFTPADDING', (0,0), (-1,-1), 2),
+        ('RIGHTPADDING', (0,0), (-1,-1), 0),
+        ('TOPPADDING', (0,0), (-1,-1), 1),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1),
+    ]))
+
+    title_row = Table([[title_left, meta_right]], colWidths=[85*mm, 85*mm])
+    title_row.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('RIGHTPADDING', (0,0), (-1,-1), 0),
+    ]))
+    story.append(title_row)
+    story.append(Spacer(1, 4*mm))
+
+    # ── CLIENT ──
     cl_name = _s(cl.get("business_name"))
     cl_addr = _s(cl.get("address"))
     cl_cap = _s(cl.get("cap"))
     cl_city = _s(cl.get("city"))
     cl_prov = _s(cl.get("province"))
-    cl_full = cl_addr
-    if cl_cap or cl_city:
-        parts = [p for p in [cl_cap, cl_city, f"({cl_prov})" if cl_prov else ""] if p]
-        cl_full += "<br>" + " ".join(parts) if cl_addr else " ".join(parts)
     cl_piva = _s(cl.get("partita_iva"))
     cl_cf = _s(cl.get("codice_fiscale"))
     cl_sdi = _s(cl.get("codice_sdi"))
     cl_pec = _s(cl.get("pec"))
 
-    client_html = f"""
-    <div class="inv-client">
-        <div class="inv-client-label">Spettabile Cliente</div>
-        <div class="inv-client-name">{cl_name}</div>
-        <div class="inv-client-details">
-            {cl_full}
-            {"<br>P.IVA " + cl_piva if cl_piva else ""}
-            {"<br>C.F. " + cl_cf if cl_cf else ""}
-            {"<br>Cod. SDI " + cl_sdi if cl_sdi else ""}
-            {"<br>PEC " + cl_pec if cl_pec else ""}
-        </div>
-    </div>"""
+    cl_parts = []
+    if cl_addr:
+        cl_parts.append(cl_addr)
+    loc2 = " ".join(p for p in [cl_cap, cl_city, f"({cl_prov})" if cl_prov else ""] if p)
+    if loc2:
+        cl_parts.append(loc2)
+    if cl_piva:
+        cl_parts.append(f"P.IVA {cl_piva}")
+    if cl_cf:
+        cl_parts.append(f"C.F. {cl_cf}")
+    if cl_sdi:
+        cl_parts.append(f"Cod. SDI {cl_sdi}")
+    if cl_pec:
+        cl_parts.append(f"PEC {cl_pec}")
 
-    # ── Line items ──
+    story.append(Paragraph("SPETTABILE CLIENTE", S['client_label']))
+    story.append(Paragraph(cl_name, S['client_name']))
+    if cl_parts:
+        story.append(Paragraph("<br/>".join(cl_parts), S['client_detail']))
+    story.append(Spacer(1, 4*mm))
+
+    # ── ITEMS TABLE ──
     lines = invoice.get("lines", [])
-    rows_html = ""
+    th = S['table_header']
+    tc = S['table_cell']
+    tcr = S['table_cell_right']
+    tcc = S['table_cell_center']
+
+    table_data = [[
+        Paragraph("Descrizione", th),
+        Paragraph("Q.tà", th),
+        Paragraph("Prezzo Unit.", th),
+        Paragraph("Sconto", th),
+        Paragraph("IVA", th),
+        Paragraph("Importo", th),
+    ]]
+
     for ln in lines:
-        desc = _s(ln.get("description") or "").replace("\n", "<br>")
+        desc = _s(ln.get("description") or "").replace("\n", "<br/>")
         qty = _fmt(ln.get("quantity", 0))
         price = _fmt(ln.get("unit_price", 0))
         disc = float(ln.get("discount_percent") or ln.get("sconto_1") or 0)
@@ -510,209 +365,204 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         vat = _s(str(ln.get("vat_rate", "22")))
         total = _fmt(ln.get("line_total", 0))
 
-        rows_html += f"""<tr>
-            <td class="desc">{desc}</td>
-            <td class="num">{qty}</td>
-            <td class="num">{price}</td>
-            <td class="cen">{disc_str}</td>
-            <td class="cen">{vat}%</td>
-            <td class="num"><strong>{total}</strong></td>
-        </tr>"""
+        table_data.append([
+            Paragraph(desc, tc),
+            Paragraph(qty, tcr),
+            Paragraph(price, tcr),
+            Paragraph(disc_str, tcc),
+            Paragraph(f"{vat}%", tcc),
+            Paragraph(f"<b>{total}</b>", tcr),
+        ])
 
-    # ── Compute IVA ──
+    col_w = [170*0.44*mm, 170*0.08*mm, 170*0.14*mm, 170*0.10*mm, 170*0.08*mm, 170*0.16*mm]
+    items_table = Table(table_data, colWidths=col_w, repeatRows=1)
+    items_table.setStyle(TableStyle([
+        # Header
+        ('BACKGROUND', (0,0), (-1,0), COL_DARK),
+        ('TEXTCOLOR', (0,0), (-1,0), COL_WHITE),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,0), 7),
+        ('TOPPADDING', (0,0), (-1,0), 8),
+        ('BOTTOMPADDING', (0,0), (-1,0), 8),
+        ('LEFTPADDING', (0,0), (-1,-1), 6),
+        ('RIGHTPADDING', (0,0), (-1,-1), 6),
+        # Body
+        ('FONTNAME', (0,1), (-1,-1), 'Helvetica'),
+        ('FONTSIZE', (0,1), (-1,-1), 8),
+        ('TOPPADDING', (0,1), (-1,-1), 7),
+        ('BOTTOMPADDING', (0,1), (-1,-1), 7),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('ALIGN', (1,1), (-1,-1), 'RIGHT'),
+        ('ALIGN', (3,1), (4,-1), 'CENTER'),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [COL_WHITE, COL_LIGHT]),
+        ('LINEBELOW', (0,0), (-1,-1), 0.5, COL_BORDER),
+        ('LINEBELOW', (0,-1), (-1,-1), 1.5, colors.HexColor("#cbd5e1")),
+    ]))
+    story.append(items_table)
+    story.append(Spacer(1, 3*mm))
+
+    # ── NOTES ──
+    if invoice.get("notes"):
+        notes_table = Table([
+            [Paragraph("NOTE", S['notes_title'])],
+            [Paragraph(_s(invoice["notes"]).replace("\n", "<br/>"), S['notes_text'])],
+        ], colWidths=[170*mm], style=TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), COL_LIGHT),
+            ('BOX', (0,0), (-1,-1), 0.5, COL_BORDER),
+            ('LEFTPADDING', (0,0), (-1,-1), 6),
+            ('RIGHTPADDING', (0,0), (-1,-1), 6),
+            ('TOPPADDING', (0,0), (-1,-1), 4),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ]))
+        story.append(notes_table)
+        story.append(Spacer(1, 3*mm))
+
+    # ── TOTALS ──
     from services.pdf_template import compute_iva_groups
     iva_data = compute_iva_groups(lines)
-
-    # IVA breakdown rows
-    iva_rows = ""
-    for rate_str, grp in sorted(iva_data["groups"].items()):
-        iva_rows += f"""<tr>
-            <td class="lbl">IVA {rate_str}% su {_fmt(grp['base'])}</td>
-            <td class="val">{_fmt(grp['tax'])}</td>
-        </tr>"""
-
-    # Extra rows for ritenuta
     totals = invoice.get("totals", {})
     ritenuta = float(totals.get("ritenuta", 0) or 0)
-    ritenuta_rows = ""
+
+    totals_rows = [
+        [Paragraph("Imponibile:", S['total_label']), Paragraph(_fmt(iva_data['imponibile']), S['total_value'])],
+    ]
+    for rate_str, grp in sorted(iva_data["groups"].items()):
+        totals_rows.append([
+            Paragraph(f"IVA {rate_str}% su {_fmt(grp['base'])}", S['total_label']),
+            Paragraph(_fmt(grp['tax']), S['total_value']),
+        ])
+    totals_rows.append([
+        Paragraph("Totale IVA:", S['total_label']),
+        Paragraph(_fmt(iva_data['total_vat']), S['total_value']),
+    ])
+    totals_rows.append([
+        Paragraph("TOTALE", S['grand_label']),
+        Paragraph(f"{_fmt(iva_data['total'])} €", S['grand_value']),
+    ])
     if ritenuta > 0:
         netto = iva_data["total"] - ritenuta
-        ritenuta_rows = f"""<tr>
-            <td class="lbl">Ritenuta d'acconto:</td>
-            <td class="val">-{_fmt(ritenuta)}</td>
-        </tr>
-        <tr class="grand">
-            <td class="lbl">NETTO A PAGARE:</td>
-            <td class="val">{_fmt(netto)} &euro;</td>
-        </tr>"""
+        totals_rows.append([
+            Paragraph("Ritenuta d'acconto:", S['total_label']),
+            Paragraph(f"-{_fmt(ritenuta)}", S['total_value']),
+        ])
+        totals_rows.append([
+            Paragraph("NETTO A PAGARE:", S['grand_label']),
+            Paragraph(f"{_fmt(netto)} €", S['grand_value']),
+        ])
 
-    totals_html = f"""
-    <table class="inv-totals">
-        <tr>
-            <td class="lbl">Imponibile:</td>
-            <td class="val">{_fmt(iva_data['imponibile'])}</td>
-        </tr>
-        {iva_rows}
-        <tr class="sep">
-            <td class="lbl">Totale IVA:</td>
-            <td class="val">{_fmt(iva_data['total_vat'])}</td>
-        </tr>
-        <tr class="grand">
-            <td class="lbl">TOTALE</td>
-            <td class="val">{_fmt(iva_data['total'])} &euro;</td>
-        </tr>
-        {ritenuta_rows}
-    </table>"""
-
-    # ── Due date (prominent) ──
-    due_html = ""
+    # ── DUE DATE ──
+    due_cell_content = [Spacer(1, 1*mm)]
     if due_date:
-        due_html = f"""
-        <div class="inv-due">
-            <span class="inv-due-label">Scadenza Pagamento:</span>
-            <span class="inv-due-date">{_date(due_date)}</span>
-        </div>"""
+        due_inner = Table([
+            [Paragraph("Scadenza Pagamento:", S['due_label'])],
+            [Paragraph(_date(due_date), S['due_value'])],
+        ], colWidths=[80*mm], style=TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), COL_RED_BG),
+            ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor("#fca5a5")),
+            ('LEFTPADDING', (0,0), (-1,-1), 6),
+            ('RIGHTPADDING', (0,0), (-1,-1), 6),
+            ('TOPPADDING', (0,0), (-1,-1), 4),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ]))
+        due_cell_content.append(due_inner)
 
-    # ── Bank info + Payment Conditions ──
-    bank_html = ""
+    # ── BANK INFO ──
     bank = co.get("bank_details", {}) or {}
     bank_name = _s(bank.get("bank_name", ""))
     bank_iban = _s(bank.get("iban", ""))
     bank_bic = _s(bank.get("bic_swift", ""))
+    payment_type_label = _s(invoice.get("payment_type_label", "")) or _s(payment_label)
 
-    # Build payment conditions label
-    payment_cond_label = _s(payment_label)
-    payment_type_label = _s(invoice.get("payment_type_label", ""))
-    if payment_type_label:
-        payment_cond_label = payment_type_label
-
-    bank_lines = []
-    bank_lines.append(f'<span class="inv-bank-label">Condizioni di Pagamento:</span> {payment_cond_label}<br>')
+    bank_lines = [f"<b>Condizioni:</b> {payment_type_label}"]
     if bank_name:
-        bank_lines.append(f'<span class="inv-bank-label">Banca:</span> {bank_name}<br>')
+        bank_lines.append(f"<b>Banca:</b> {bank_name}")
     if bank_iban:
-        bank_lines.append(f'<span class="inv-bank-label">IBAN:</span> {bank_iban}<br>')
+        bank_lines.append(f"<b>IBAN:</b> {bank_iban}")
     if bank_bic:
-        bank_lines.append(f'<span class="inv-bank-label">BIC/SWIFT:</span> {bank_bic}')
+        bank_lines.append(f"<b>BIC/SWIFT:</b> {bank_bic}")
 
-    bank_html = f"""
-        <div class="inv-bank">
-            <div class="inv-bank-title">Dati Pagamento</div>
-            {''.join(bank_lines)}
-        </div>"""
+    bank_inner = Table([
+        [Paragraph("DATI PAGAMENTO", S['bank_title'])],
+        [Paragraph("<br/>".join(bank_lines), S['bank_detail'])],
+    ], colWidths=[80*mm], style=TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), COL_LIGHT),
+        ('BOX', (0,0), (-1,-1), 0.5, COL_BORDER),
+        ('LEFTPADDING', (0,0), (-1,-1), 6),
+        ('RIGHTPADDING', (0,0), (-1,-1), 6),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ('LINEBELOW', (0,0), (-1,0), 0.5, COL_BORDER),
+    ]))
 
-    # ── Notes ──
-    notes_html = ""
-    if invoice.get("notes"):
-        notes_html = f"""
-        <div class="inv-notes">
-            <div class="inv-notes-title">Note</div>
-            {_s(invoice["notes"]).replace(chr(10), "<br>")}
-        </div>"""
+    totals_n = len(totals_rows)
+    ts = TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('LEFTPADDING', (0,0), (-1,-1), 4),
+        ('RIGHTPADDING', (0,0), (-1,-1), 4),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('LINEABOVE', (0, totals_n-1-(1 if ritenuta > 0 else 0)), (-1, totals_n-1-(1 if ritenuta > 0 else 0)), 2, COL_DARK),
+    ])
+    # separator before grand total
+    sep_idx = 3  # after IVA rows
+    ts.add('LINEABOVE', (0, sep_idx), (-1, sep_idx), 0.5, COL_BORDER)
 
-    # ── Conditions page (SOLO per Preventivi, NON per Fatture) ──
-    conditions_html = ""
+    totals_table = Table(totals_rows, colWidths=[55*mm, 30*mm])
+    totals_table.setStyle(ts)
+
+    footer_row = Table([
+        [bank_inner, Spacer(1,1), totals_table],
+    ], colWidths=[82*mm, 6*mm, 82*mm])
+    footer_row.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('RIGHTPADDING', (0,0), (-1,-1), 0),
+    ]))
+    story.append(footer_row)
+
+    if due_date:
+        story.append(Spacer(1, 2*mm))
+        due_inner2 = Table([
+            [Paragraph("Scadenza Pagamento:", S['due_label']),
+             Paragraph(_date(due_date), S['due_value'])],
+        ], colWidths=[55*mm, 115*mm], style=TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), COL_RED_BG),
+            ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor("#fca5a5")),
+            ('LEFTPADDING', (0,0), (-1,-1), 6),
+            ('RIGHTPADDING', (0,0), (-1,-1), 6),
+            ('TOPPADDING', (0,0), (-1,-1), 4),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+        story.append(due_inner2)
+
+    # ── LEGAL FOOTER ──
+    story.append(Spacer(1, 4*mm))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=COL_BORDER))
+    story.append(Spacer(1, 1*mm))
+    story.append(Paragraph(
+        "Condizioni Generali di Vendita: Riserva di proprietà ex art. 1523 C.C. — "
+        "Interessi moratori ex D.Lgs 231/02 — Foro competente esclusivo quello della sede legale del venditore.",
+        S['legal']
+    ))
+    story.append(Spacer(1, 1*mm))
+    story.append(Paragraph(
+        "Azienda Certificata EN 1090-1 EXC2  •  ISO 3834-2  •  Centro di Trasformazione Acciaio",
+        ParagraphStyle('reg', fontSize=7, fontName='Helvetica-Bold', textColor=COL_GRAY,
+                       alignment=TA_CENTER)
+    ))
+
+    # ── CONDITIONS PAGE (solo Preventivi) ──
     condizioni = co.get("condizioni_vendita", "") or ""
     if condizioni.strip() and doc_type == "PRV":
-        conditions_html = f"""
-        <div class="page-break"></div>
-        <h2 class="conditions-title">CONDIZIONI GENERALI DI VENDITA</h2>
-        <div class="conditions-text">{_esc(condizioni).replace(chr(10), "<br>")}</div>
-        <div class="acceptance-section">
-            <div class="sig-block">
-                <p>Firma e timbro per accettazione</p>
-                <div class="sig-line"></div>
-                <p class="sig-label">Data di accettazione (legale rappresentante)</p>
-            </div>
-            <div class="legal-notice">
-                <p>Ai sensi e per gli effetti dell'Art. 1341 e segg. Del Codice Civile,
-                il sottoscritto Acquirente dichiara di aver preso specifica, precisa e
-                dettagliata visione di tutte le disposizioni del contratto e di approvarle
-                integralmente senza alcuna riserva.</p>
-            </div>
-            <div class="sig-block" style="margin-top: 20px;">
-                <p>li _______________</p>
-                <div class="sig-line"></div>
-                <p class="sig-label">Firma e timbro (il legale rappresentante)</p>
-            </div>
-        </div>
-        <div class="doc-footer">
-            <p>{company_name}</p>
-            <p>Documento {display_num}</p>
-        </div>"""
+        story.append(PageBreak())
+        story.append(Paragraph("CONDIZIONI GENERALI DI VENDITA",
+            ParagraphStyle('ct', fontSize=11, fontName='Helvetica-Bold',
+                           alignment=TA_CENTER, spaceAfter=8)))
+        story.append(Paragraph(condizioni.replace("\n", "<br/>"),
+            ParagraphStyle('ctext', fontSize=7.5, fontName='Helvetica',
+                           leading=11, alignment=4)))  # justified
 
-    # ── Legal + Regulatory footer ──
-    legal_html = """
-    <div class="inv-legal-notes">
-        Condizioni Generali di Vendita: Riserva di propriet&agrave; ex art. 1523 C.C. &mdash;
-        Interessi moratori ex D.Lgs 231/02 &mdash; Foro competente esclusivo quello della sede legale del venditore.
-    </div>
-    <div class="inv-regulatory-footer">
-        Azienda Certificata EN 1090-1 EXC2 &bull; ISO 3834-2 &bull; Centro di Trasformazione Acciaio
-    </div>"""
-
-    # ── Assemble full HTML ──
-    full_html = f"""<!DOCTYPE html>
-<html lang="it"><head><meta charset="utf-8">
-<style>{INVOICE_CSS}</style>
-</head><body>
-
-    <!-- HEADER -->
-    <div class="inv-header">
-        <div class="inv-header-left">{logo_html}</div>
-        <div class="inv-header-right">{company_right}</div>
-    </div>
-
-    <div class="inv-divider"></div>
-
-    <!-- TITLE + META -->
-    <div class="inv-title-row">
-        <div class="inv-title-left">
-            <div class="inv-doc-type">{doc_title}</div>
-            <div class="inv-doc-number">{display_num}</div>
-        </div>
-        <div class="inv-title-right">{meta_html}</div>
-    </div>
-
-    <!-- CLIENT -->
-    {client_html}
-
-    <!-- ITEMS TABLE -->
-    <table class="inv-items">
-        <colgroup>
-            <col style="width:44%"><col style="width:8%"><col style="width:14%">
-            <col style="width:10%"><col style="width:8%"><col style="width:16%">
-        </colgroup>
-        <thead><tr>
-            <th class="al">Descrizione</th>
-            <th class="ar">Q.ta'</th>
-            <th class="ar">Prezzo Unit.</th>
-            <th class="ac">Sconto</th>
-            <th class="ac">IVA</th>
-            <th class="ar">Importo</th>
-        </tr></thead>
-        <tbody>{rows_html}</tbody>
-    </table>
-
-    {notes_html}
-
-    <!-- FOOTER: Bank + Totals -->
-    <div class="inv-footer-row">
-        <div class="inv-footer-left">{bank_html}</div>
-        <div class="inv-footer-right">
-            {totals_html}
-            {due_html}
-        </div>
-    </div>
-
-    <!-- LEGAL + REGULATORY FOOTER -->
-    {legal_html}
-
-    {conditions_html}
-
-</body></html>"""
-
-    buf = BytesIO()
-    HTML(string=full_html).write_pdf(buf)
+    doc.build(story)
     buf.seek(0)
     return buf.getvalue()
