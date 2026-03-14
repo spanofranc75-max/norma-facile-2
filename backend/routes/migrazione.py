@@ -10,8 +10,7 @@ from datetime import datetime, timezone
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/migrazione", tags=["Migrazione"])
 
-EXPORT_URL = "https://cad-survey-tool.preview.emergentagent.com/api/export/migrazione-completa"
-
+EXPORT_URL = ""
 
 @router.post("/importa")
 async def importa_da_vecchia_app(user: dict = Depends(get_current_user)):
