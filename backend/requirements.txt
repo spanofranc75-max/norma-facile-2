@@ -148,5 +148,4 @@ xhtml2pdf==0.2.16
 
 yarl==1.22.0
 zipp==3.23.0
-weasyprint==62.3
 zopfli==0.4.1
