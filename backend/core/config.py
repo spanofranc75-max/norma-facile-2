@@ -23,7 +23,7 @@ class Settings(BaseModel):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
     session_expire_days: int = 7
-    emergent_auth_url: str = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
+   emergent_auth_url: str = ""
 
     # CORS
     cors_origins: str = os.environ.get('CORS_ORIGINS', '*')
