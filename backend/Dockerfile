@@ -1,11 +1,24 @@
-1. Vai su questo URL:
-https://github.com/spanofranc75-max/norma-facile-2/blob/main/Dockerfile
+FROM python:3.12-slim
 
-2. Clicca la MATITA ✏️ in alto a destra del file
-   (non "Add file" — quella crea un nuovo file)
+RUN apt-get update && apt-get install -y \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf2.0-0 \
+    libffi-dev \
+    shared-mime-info \
+    libcairo2 \
+    libgobject-2.0-0 \
+    fonts-liberation \
+    fontconfig \
+    libharfbuzz0b \
+    && rm -rf /var/lib/apt/lists/*
 
-3. Cancella tutto il contenuto attuale
+WORKDIR /app
 
-4. Incolla il nuovo contenuto che ti ho dato
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-5. Clicca "Commit changes" (bottone verde in alto a destra)
+COPY . .
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
