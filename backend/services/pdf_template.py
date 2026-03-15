@@ -232,3 +232,67 @@ def render_pdf(html_content: str) -> BytesIO:
         raise Exception(f"Errore generazione PDF: {pisa_status.err}")
     buffer.seek(0)
     return buffer
+    rows += f"""
+    <tr class="total-final">
+        <td><strong>TOTALE DOCUMENTO:</strong></td>
+        <td style="text-align:right"><strong>€ {fmt_it(total_doc)}</strong></td>
+    </tr>"""
+    if acconto:
+        rows += f"""
+        <tr class="summary-row">
+            <td>Acconto:</td>
+            <td style="text-align:right">- {fmt_it(acconto)}</td>
+        </tr>
+        <tr class="total-final">
+            <td><strong>SALDO:</strong></td>
+            <td style="text-align:right"><strong>€ {fmt_it(saldo)}</strong></td>
+        </tr>"""
+    return f'<div class="totals-block"><table class="summary-table">{rows}</table></div>'
+
+
+def render_pdf(html_content: str) -> BytesIO:
+    """Render PDF usando ReportLab — puro Python, zero dipendenze sistema."""
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    import re
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=18*mm,
+        leftMargin=18*mm,
+        topMargin=15*mm,
+        bottomMargin=18*mm
+    )
+
+    styles = getSampleStyleSheet()
+    style_normal = ParagraphStyle(
+        'CustomNormal',
+        parent=styles['Normal'],
+        fontSize=9,
+        leading=12,
+    )
+
+    def strip_html(text):
+        text = re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
+        text = re.sub(r'<[^>]+>', '', text)
+        return text.strip()
+
+    clean_text = strip_html(html_content)
+    lines = [l for l in clean_text.split('\n') if l.strip()]
+
+    story = []
+    for line in lines[:300]:
+        line = line.strip()
+        if not line:
+            story.append(Spacer(1, 3*mm))
+        else:
+            story.append(Paragraph(line, style_normal))
+            story.append(Spacer(1, 1*mm))
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
