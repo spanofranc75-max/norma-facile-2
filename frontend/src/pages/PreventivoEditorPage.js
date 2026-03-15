@@ -349,17 +349,25 @@ export default function PreventivoEditorPage() {
     };
 
     const handleDownloadPdf = async () => {
-        if (isNew) return;
-        try {
-            const API_BASE = `${process.env.REACT_APP_BACKEND_URL}/api`;
-            const res = await fetch(`${API_BASE}/preventivi/${prevId}/pdf`, { credentials: 'include' });
-            if (!res.ok) throw new Error('Errore PDF');
-            const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = `preventivo_${prevId}.pdf`; a.click();
-            URL.revokeObjectURL(url);
-        } catch (e) { toast.error(e.message); }
-    };
+    if (isNew) return;
+    try {
+        const token = localStorage.getItem('session_token');
+        const API_BASE = `${process.env.REACT_APP_BACKEND_URL}/api`;
+        const res = await fetch(`${API_BASE}/preventivi/${prevId}/pdf`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Errore PDF: ' + res.status);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `preventivo_${prevId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (e) { toast.error(e.message); }
+};
 
     const handleClone = async () => {
         if (isNew) return;
