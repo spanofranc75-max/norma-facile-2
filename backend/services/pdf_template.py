@@ -1,8 +1,9 @@
-"""Shared PDF template utilities — xhtml2pdf (no system deps)."""
+"""Shared PDF template utilities — ReportLab only, no system deps."""
 from io import BytesIO
 from datetime import datetime, timezone
 import html as html_mod
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 _esc = html_mod.escape
@@ -21,70 +22,19 @@ def safe(val) -> str:
     return _esc(str(val or ""))
 
 
-COMMON_CSS = """
-@page { size: A4; margin: 15mm 18mm 18mm 18mm; }
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: Arial, Helvetica, sans-serif; font-size: 9pt; color: #222; line-height: 1.35; }
-.page-break { page-break-before: always; }
-.header-table { width: 100%; border: none; border-collapse: collapse; margin-bottom: 10px; }
-.header-table td { vertical-align: top; border: none; padding: 0; }
-.company-cell { width: 55%; padding-right: 15px; }
-.client-cell { width: 45%; padding: 8px 10px; font-size: 8.5pt; }
-.logo { max-width: 140px; max-height: 55px; margin-bottom: 6px; }
-.company-name { font-size: 13pt; font-weight: bold; color: #222; margin-bottom: 3px; }
-.company-details { font-size: 8pt; color: #333; line-height: 1.55; }
-.cl-label { font-size: 8pt; color: #555; font-weight: bold; }
-.cl-name { font-weight: bold; font-size: 10pt; margin: 2px 0; }
-.cl-details { font-size: 8pt; color: #333; line-height: 1.55; }
-.doc-title { text-align: center; margin: 14px 0 6px 0; }
-.doc-title h1 { font-size: 18pt; font-weight: bold; color: #222; letter-spacing: 2px; margin: 0 0 2px 0; }
-.doc-num { font-size: 14pt; font-weight: bold; color: #333; }
-.meta-table { margin: 8px 0; font-size: 9pt; border: none; border-collapse: collapse; }
-.meta-table td { border: none; padding: 1px 6px 1px 0; vertical-align: top; }
-.meta-label { font-weight: bold; white-space: nowrap; width: 110px; }
-.ref-note { margin: 8px 0; padding: 5px 8px; background: #f5f5f5; border-left: 3px solid #888; font-size: 8.5pt; }
-.items-table { width: 100%; border-collapse: collapse; margin: 10px 0 6px 0; font-size: 8pt; }
-.items-table th { background: #eee; border: 1px solid #999; padding: 5px 4px; font-weight: bold; text-transform: uppercase; font-size: 7.5pt; text-align: center; }
-.items-table td { border: 1px solid #bbb; padding: 4px 4px; vertical-align: top; }
-.items-table .desc-cell { text-align: left; line-height: 1.4; }
-.items-table .tc { text-align: center; }
-.items-table .tr { text-align: right; }
-.info-box { margin: 8px 0; padding: 6px 8px; background: #fafafa; border: 1px solid #ddd; font-size: 8pt; line-height: 1.4; }
-.info-box-title { font-weight: bold; margin-bottom: 3px; font-size: 8.5pt; }
-.totals-block { width: 55%; margin-left: auto; margin-top: 10px; }
-.iva-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-bottom: 6px; }
-.iva-table th { background: #eee; border: 1px solid #999; padding: 4px 5px; font-size: 7.5pt; text-transform: uppercase; text-align: center; }
-.iva-table td { border: 1px solid #bbb; padding: 3px 5px; }
-.summary-table { width: 100%; font-size: 9pt; margin-top: 4px; border: none; border-collapse: collapse; }
-.summary-table td { padding: 2px 5px; border: none; }
-.total-final td { font-size: 13pt; font-weight: bold; border-top: 2px solid #333; padding-top: 6px; }
-.bank-info { margin-top: 12px; padding: 6px 8px; border: 1px solid #ccc; font-size: 8pt; background: #fafafa; }
-.payment-schedule { margin-top: 12px; padding: 8px; border: 1px solid #999; background: #f9f9f9; }
-.schedule-title { font-size: 9pt; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
-.schedule-table { width: 100%; border-collapse: collapse; font-size: 8pt; }
-.schedule-table th { background: #e8e8e8; border: 1px solid #ccc; padding: 3px 6px; font-weight: bold; text-align: center; }
-.schedule-table td { border: 1px solid #ccc; padding: 3px 6px; }
-.transport-table { width: 100%; border-collapse: collapse; font-size: 8pt; margin: 6px 0; }
-.transport-table td { border: 1px solid #ccc; padding: 3px 5px; }
-.transport-table .t-label { font-weight: bold; background: #f5f5f5; width: 22%; }
-.signatures-row { width: 100%; border: none; border-collapse: collapse; margin-top: 25px; }
-.signatures-row td { border: none; width: 33%; text-align: center; vertical-align: bottom; padding: 0 10px; }
-.sig-line-center { border-top: 1px solid #333; margin-top: 40px; padding-top: 4px; font-size: 7.5pt; color: #555; }
-.conditions-title { font-size: 11pt; font-weight: bold; text-align: center; margin-bottom: 12px; text-transform: uppercase; }
-.conditions-text { font-size: 7.5pt; line-height: 1.45; text-align: justify; }
-.acceptance-section { margin-top: 30px; }
-.sig-block { margin: 15px 0; }
-.sig-line { border-bottom: 1px solid #333; width: 250px; height: 30px; margin: 4px 0; }
-.sig-label { font-size: 7.5pt; color: #666; }
-.legal-notice { margin-top: 20px; font-size: 7pt; line-height: 1.4; border: 1px solid #ccc; padding: 6px 8px; background: #fafafa; }
-.doc-footer { margin-top: 40px; text-align: right; font-size: 8pt; color: #555; }
-"""
+COMMON_CSS = ""
+
+
+def strip_html(text: str) -> str:
+    text = re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
+    text = re.sub(r'<[^>]+>', '', text)
+    return text.strip()
 
 
 def build_header_html(company: dict, client: dict, no_client_border: bool = False) -> str:
     co = company or {}
     cl = client or {}
-    company_name = safe(co.get("business_name"))
+    company_name = safe(co.get("business_name", ""))
     addr = safe(co.get("address", ""))
     cap = safe(co.get("cap", ""))
     city = safe(co.get("city", ""))
@@ -92,15 +42,11 @@ def build_header_html(company: dict, client: dict, no_client_border: bool = Fals
     full_addr = addr
     if cap or city:
         parts = [p for p in [cap, city, f"({prov})" if prov else ""] if p]
-        full_addr += f"<br>{' '.join(parts)}" if addr else ' '.join(parts)
+        full_addr += f" {' '.join(parts)}"
     piva = safe(co.get("partita_iva", ""))
     cf = safe(co.get("codice_fiscale", ""))
     phone = safe(co.get("phone") or co.get("tel", ""))
     email = safe(co.get("email") or co.get("contact_email", ""))
-    logo_html = ""
-    logo_url = co.get("logo_url", "")
-    if logo_url and logo_url.startswith("data:image"):
-        logo_html = f'<img src="{logo_url}" class="logo" />'
     cl_name = safe(cl.get("business_name", ""))
     cl_addr = safe(cl.get("address", ""))
     cl_cap = safe(cl.get("cap", ""))
@@ -109,40 +55,38 @@ def build_header_html(company: dict, client: dict, no_client_border: bool = Fals
     cl_full = cl_addr
     if cl_cap or cl_city:
         parts = [p for p in [cl_cap, cl_city, f"({cl_prov})" if cl_prov else ""] if p]
-        cl_full += f"<br>{' '.join(parts)}" if cl_addr else ' '.join(parts)
+        cl_full += f" {' '.join(parts)}"
     cl_piva = safe(cl.get("partita_iva", ""))
     cl_cf = safe(cl.get("codice_fiscale", ""))
     cl_sdi = safe(cl.get("codice_sdi", ""))
     cl_pec = safe(cl.get("pec", ""))
     cl_email = safe(cl.get("email", ""))
-    return f"""
-    <table class="header-table">
-        <tr>
-            <td class="company-cell">
-                {logo_html}
-                <div class="company-name">{company_name}</div>
-                <div class="company-details">
-                    {full_addr}
-                    {"<br>P.IVA: " + piva if piva else ""}
-                    {"<br>Cod. Fisc.: " + cf if cf else ""}
-                    {"<br>Tel: " + phone if phone else ""}
-                    {"<br>Email: " + email if email else ""}
-                </div>
-            </td>
-            <td class="client-cell">
-                <div class="cl-label">Spett.le</div>
-                <div class="cl-name">{cl_name}</div>
-                <div class="cl-details">
-                    {cl_full}
-                    {"<br>P.IVA: " + cl_piva if cl_piva else ""}
-                    {"<br>Cod. Fisc.: " + cl_cf if cl_cf else ""}
-                    {"<br>Cod. SDI: " + cl_sdi if cl_sdi else ""}
-                    {"<br>PEC: " + cl_pec if cl_pec else ""}
-                    {"<br>Email: " + cl_email if cl_email and not cl_pec else ""}
-                </div>
-            </td>
-        </tr>
-    </table>"""
+    lines = [
+        f"AZIENDA: {company_name}",
+        f"Indirizzo: {full_addr}",
+    ]
+    if piva:
+        lines.append(f"P.IVA: {piva}")
+    if cf:
+        lines.append(f"Cod.Fisc.: {cf}")
+    if phone:
+        lines.append(f"Tel: {phone}")
+    if email:
+        lines.append(f"Email: {email}")
+    lines.append("---")
+    lines.append(f"Spett.le: {cl_name}")
+    lines.append(f"Indirizzo: {cl_full}")
+    if cl_piva:
+        lines.append(f"P.IVA: {cl_piva}")
+    if cl_cf:
+        lines.append(f"Cod.Fisc.: {cl_cf}")
+    if cl_sdi:
+        lines.append(f"Cod.SDI: {cl_sdi}")
+    if cl_pec:
+        lines.append(f"PEC: {cl_pec}")
+    elif cl_email:
+        lines.append(f"Email: {cl_email}")
+    return "\n".join(lines)
 
 
 def compute_iva_groups(lines: list, sconto_globale: float = 0) -> dict:
@@ -178,76 +122,19 @@ def build_totals_html(iva_data: dict, acconto: float = 0) -> str:
     sconto_val = iva_data.get("sconto_val", 0)
     subtotal = iva_data.get("subtotal", 0)
     total_doc = iva_data.get("total_doc", 0)
-    rows = ""
-    if sconto_val:
-        rows += f"""
-        <tr class="summary-row">
-            <td>Imponibile lordo:</td>
-            <td style="text-align:right">{fmt_it(subtotal)}</td>
-        </tr>
-        <tr class="summary-row">
-            <td>Sconto:</td>
-            <td style="text-align:right">- {fmt_it(sconto_val)}</td>
-        </tr>"""
-    for rate_str, g in sorted(groups.items()):
-        rows += f"""
-        <tr class="summary-row">
-            <td>Imponibile IVA {rate_str}%:</td>
-            <td style="text-align:right">{fmt_it(g['base'])}</td>
-        </tr>
-        <tr class="summary-row">
-            <td>IVA {rate_str}%:</td>
-            <td style="text-align:right">{fmt_it(g['iva'])}</td>
-        </tr>"""
     saldo = total_doc - acconto
-    rows += f"""
-    <tr class="total-final">
-        <td><strong>TOTALE DOCUMENTO:</strong></td>
-        <td style="text-align:right"><strong>€ {fmt_it(total_doc)}</strong></td>
-    </tr>"""
+    lines = []
+    if sconto_val:
+        lines.append(f"Imponibile lordo: {fmt_it(subtotal)}")
+        lines.append(f"Sconto: - {fmt_it(sconto_val)}")
+    for rate_str, g in sorted(groups.items()):
+        lines.append(f"Imponibile IVA {rate_str}%: {fmt_it(g['base'])}")
+        lines.append(f"IVA {rate_str}%: {fmt_it(g['iva'])}")
+    lines.append(f"TOTALE DOCUMENTO: EUR {fmt_it(total_doc)}")
     if acconto:
-        rows += f"""
-        <tr class="summary-row">
-            <td>Acconto:</td>
-            <td style="text-align:right">- {fmt_it(acconto)}</td>
-        </tr>
-        <tr class="total-final">
-            <td><strong>SALDO:</strong></td>
-            <td style="text-align:right"><strong>€ {fmt_it(saldo)}</strong></td>
-        </tr>"""
-    return f'<div class="totals-block"><table class="summary-table">{rows}</table></div>'
-
-
-def render_pdf(html_content: str) -> BytesIO:
-    """Render HTML to PDF usando xhtml2pdf (puro Python)."""
-    from xhtml2pdf import pisa
-    buffer = BytesIO()
-    pisa_status = pisa.CreatePDF(
-        html_content,
-        dest=buffer,
-        encoding='utf-8'
-    )
-    if pisa_status.err:
-        logger.error(f"xhtml2pdf errors: {pisa_status.err}")
-        raise Exception(f"Errore generazione PDF: {pisa_status.err}")
-    buffer.seek(0)
-    return buffer
-    rows += f"""
-    <tr class="total-final">
-        <td><strong>TOTALE DOCUMENTO:</strong></td>
-        <td style="text-align:right"><strong>€ {fmt_it(total_doc)}</strong></td>
-    </tr>"""
-    if acconto:
-        rows += f"""
-        <tr class="summary-row">
-            <td>Acconto:</td>
-            <td style="text-align:right">- {fmt_it(acconto)}</td>
-        </tr>
-        <tr class="total-final">
-            <td><strong>SALDO:</strong></td>
-            <td style="text-align:right"><strong>€ {fmt_it(saldo)}</strong></td>
-        </tr>"""
-    return f'<div class="totals-block"><table class="summary-table">{rows}</table></div>'
+        lines.append(f"Acconto: - {fmt_it(acconto)}")
+        lines.append(f"SALDO: EUR {fmt_it(saldo)}")
+    return "\n".join(lines)
 
 
 def render_pdf(html_content: str) -> BytesIO:
@@ -256,7 +143,6 @@ def render_pdf(html_content: str) -> BytesIO:
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
-    import re
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(
@@ -270,28 +156,40 @@ def render_pdf(html_content: str) -> BytesIO:
 
     styles = getSampleStyleSheet()
     style_normal = ParagraphStyle(
-        'CustomNormal',
+        'NormaFacileNormal',
         parent=styles['Normal'],
         fontSize=9,
-        leading=12,
+        leading=13,
+        fontName='Helvetica',
+    )
+    style_bold = ParagraphStyle(
+        'NormaFacileBold',
+        parent=styles['Normal'],
+        fontSize=9,
+        leading=13,
+        fontName='Helvetica-Bold',
     )
 
-    def strip_html(text):
-        text = re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
-        text = re.sub(r'<[^>]+>', '', text)
-        return text.strip()
-
     clean_text = strip_html(html_content)
-    lines = [l for l in clean_text.split('\n') if l.strip()]
+    lines = clean_text.split('\n')
 
     story = []
-    for line in lines[:300]:
+    for line in lines:
         line = line.strip()
         if not line:
-            story.append(Spacer(1, 3*mm))
+            story.append(Spacer(1, 2*mm))
+            continue
+        if line.startswith('---'):
+            story.append(Spacer(1, 4*mm))
+            continue
+        if (line.isupper() and len(line) > 3) or line.startswith('TOTALE') or line.startswith('SALDO'):
+            story.append(Paragraph(line, style_bold))
         else:
             story.append(Paragraph(line, style_normal))
-            story.append(Spacer(1, 1*mm))
+        story.append(Spacer(1, 1*mm))
+
+    if not story:
+        story.append(Paragraph("Documento generato da Norma Facile 2.0", style_normal))
 
     doc.build(story)
     buffer.seek(0)
