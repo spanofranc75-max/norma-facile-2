@@ -10,14 +10,11 @@ export default function AuthCallback() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
-
     if (!code) {
       navigate('/');
       return;
     }
-
     const redirectUri = window.location.origin + '/auth/callback';
-
     apiRequest('/auth/callback', {
       method: 'POST',
       body: { code, redirect_uri: redirectUri },
