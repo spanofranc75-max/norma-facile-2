@@ -1,5 +1,5 @@
 /**
- * Preventivo Editor — Invoicex-style Smart Quote.
+ * Preventivo Editor — Invoicex-style Smart Quote. v2
  * Features: Quick Fill from client, dual discounts, acconto, sidebar tabs.
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
