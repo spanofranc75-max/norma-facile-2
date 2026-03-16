@@ -1,252 +1,135 @@
 /**
- * PDF Preview Modal — genera PDF nel browser via jsPDF CDN.
- * Nessuna dipendenza npm, nessuna chiamata backend per il PDF.
+ * PDF Preview Modal — iframe blob-based renderer with expand support.
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Button } from '../components/ui/button';
-import { Eye, Download, Loader2, AlertTriangle } from 'lucide-react';
+import { Eye, Download, Loader2, AlertTriangle, Maximize2, Minimize2 } from 'lucide-react';
 import { API_BASE } from '../lib/utils';
 
 function getAuthHeaders() {
     const token = localStorage.getItem('session_token');
-    return token ? { 'Authorization': 'Bearer ' + token } : {};
+    if (token) return { 'Authorization': `Bearer ${token}` };
+    return {};
 }
 
-function loadScript(src) {
-    return new Promise((resolve, reject) => {
-        if (document.querySelector('script[src="' + src + '"]')) { resolve(); return; }
-        const s = document.createElement('script');
-        s.src = src; s.onload = resolve; s.onerror = reject;
-        document.head.appendChild(s);
-    });
-}
-
-function fmtEur(v) {
-    return (parseFloat(v) || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
-}
-function fmtQty(v) {
-    return (parseFloat(v) || 0).toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-}
-function fmtDate(d) {
-    if (!d) return '';
-    try { return new Date(d).toLocaleDateString('it-IT'); } catch(e) { return ''; }
-}
-
-function extractId(pdfUrl, preventivoId) {
-    if (preventivoId) return preventivoId;
-    if (pdfUrl) {
-        const m = pdfUrl.match(/\/preventivi\/([^\/]+)\/pdf/);
-        if (m) return m[1];
-    }
-    // Fallback: prende l'ID dall'URL del browser corrente
-    const urlMatch = window.location.pathname.match(/\/preventivi\/([^\/]+)/);
-    return urlMatch ? urlMatch[1] : null;
-}
-
-async function buildPDF(prev, company, client) {
-    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const co = company || {}, cl = client || {};
-    const pageW = 210, margin = 15;
-    let y = 15;
-    const blue = [0, 85, 255], dark = [30, 41, 59], gray = [100, 116, 139], lightGray = [241, 245, 249];
-
-    doc.setFillColor(...blue); doc.rect(0, 0, pageW, 28, 'F');
-    doc.setTextColor(255, 255, 255); doc.setFontSize(14); doc.setFont('helvetica', 'bold');
-    doc.text(co.business_name || co.name || 'Steel Project Design', margin, 11);
-    doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
-    const coAddr = [co.address, co.city, co.vat_number ? 'P.IVA ' + co.vat_number : ''].filter(Boolean).join('  |  ');
-    if (coAddr) doc.text(coAddr, margin, 17);
-    if (co.email || co.phone) doc.text([co.email, co.phone].filter(Boolean).join('  |  '), margin, 22);
-
-    y = 34;
-    const docNum = (prev.number || '').replace('PRV-', '').replace('/', '-');
-    doc.setTextColor(...dark); doc.setFontSize(18); doc.setFont('helvetica', 'bold');
-    doc.text('PREVENTIVO', margin, y);
-    doc.setFontSize(11); doc.setTextColor(...gray);
-    doc.text('N. ' + docNum, margin, y + 7); y += 16;
-
-    const boxH = 28;
-    doc.setFillColor(...lightGray);
-    doc.roundedRect(margin, y, 90, boxH, 2, 2, 'F');
-    doc.roundedRect(pageW - margin - 65, y, 65, boxH, 2, 2, 'F');
-    doc.setFontSize(7); doc.setTextColor(...gray); doc.setFont('helvetica', 'bold');
-    doc.text('CLIENTE', margin + 4, y + 5);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...dark);
-    doc.text((cl.business_name || prev.client_name || '-').substring(0, 40), margin + 4, y + 11);
-    const clAddr = [cl.address, cl.city].filter(Boolean).join(', ');
-    if (clAddr) doc.text(clAddr.substring(0, 40), margin + 4, y + 17);
-    if (cl.vat_number) doc.text('P.IVA ' + cl.vat_number, margin + 4, y + 23);
-    const metaX = pageW - margin - 63;
-    doc.setFontSize(7); doc.setTextColor(...gray); doc.setFont('helvetica', 'bold');
-    doc.text('DETTAGLI', metaX, y + 5);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...dark);
-    doc.text('Data: ' + fmtDate(prev.created_at || prev.data_preventivo), metaX, y + 11);
-    doc.text('Validita: ' + (prev.validity_days || 30) + ' giorni', metaX, y + 17);
-    if (prev.payment_type_label) doc.text('Pag.: ' + prev.payment_type_label.substring(0, 25), metaX, y + 23);
-    y += boxH + 8;
-
-    if (prev.subject) {
-        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(...dark);
-        doc.text('Oggetto:', margin, y); doc.setFont('helvetica', 'normal');
-        const sl = doc.splitTextToSize(prev.subject, 130);
-        doc.text(sl[0] || '', margin + 20, y); y += 7;
-    }
-
-    const lines = prev.lines || [];
-    const rows = lines.map(ln => {
-        const s1 = parseFloat(ln.sconto_1 || 0), s2 = parseFloat(ln.sconto_2 || 0);
-        let sc = s1 > 0 && s2 > 0 ? fmtQty(s1)+'%+'+fmtQty(s2)+'%' : s1 > 0 ? fmtQty(s1)+'%' : s2 > 0 ? fmtQty(s2)+'%' : '';
-        return [ln.codice_articolo || '', (ln.description || '').replace(/\n/g,' '), ln.unit || 'pz', fmtQty(ln.quantity), fmtEur(ln.unit_price), sc, fmtEur(ln.line_total), (ln.vat_rate || 22)+'%'];
-    });
-
-    doc.autoTable({
-        startY: y, head: [['Codice','Descrizione','U.M.','Qta','Prezzo','Sc.','Importo','IVA']], body: rows,
-        theme: 'grid',
-        headStyles: { fillColor: blue, textColor: 255, fontStyle: 'bold', fontSize: 8, cellPadding: 3 },
-        bodyStyles: { fontSize: 7.5, textColor: dark, cellPadding: 2.5 },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
-        columnStyles: { 0:{cellWidth:18}, 1:{cellWidth:65}, 2:{cellWidth:12,halign:'center'}, 3:{cellWidth:13,halign:'right'}, 4:{cellWidth:22,halign:'right'}, 5:{cellWidth:14,halign:'center'}, 6:{cellWidth:22,halign:'right'}, 7:{cellWidth:14,halign:'center'} },
-        margin: { left: margin, right: margin },
-    });
-
-    y = doc.lastAutoTable.finalY + 6;
-    const totals = prev.totals || {};
-    const subtotal = parseFloat(totals.subtotal || 0);
-    const scontoVal = parseFloat(totals.sconto_val || 0);
-    const imponibile = parseFloat(totals.imponibile || subtotal);
-    const iva = parseFloat(totals.total_vat || 0);
-    const total = parseFloat(totals.total || 0);
-    const acconto = parseFloat(totals.acconto || prev.acconto || 0);
-    const daPagare = parseFloat(totals.da_pagare || (total - acconto));
-    const totX = pageW - margin - 70, totW = 70;
-    const totRows = [
-        ['Subtotale', fmtEur(subtotal)],
-        ...(scontoVal > 0 ? [['Sconto '+(totals.sconto_globale_pct||0)+'%', '- '+fmtEur(scontoVal)]] : []),
-        ['Imponibile', fmtEur(imponibile)], ['IVA', fmtEur(iva)],
-        ...(acconto > 0 ? [['Acconto', '- '+fmtEur(acconto)]] : []),
-    ];
-    totRows.forEach(([label, value]) => {
-        doc.setFillColor(...lightGray); doc.rect(totX, y, totW, 6.5, 'F');
-        doc.setFontSize(8); doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...gray); doc.text(label, totX+3, y+4.5);
-        doc.setTextColor(...dark); doc.text(value, totX+totW-3, y+4.5, {align:'right'});
-        y += 7;
-    });
-    doc.setFillColor(...blue); doc.rect(totX, y, totW, 8, 'F');
-    doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(255,255,255);
-    doc.text('TOTALE', totX+3, y+5.5);
-    doc.text(fmtEur(daPagare || total), totX+totW-3, y+5.5, {align:'right'});
-
-    if (prev.notes && prev.notes.trim()) {
-        const noteY = doc.lastAutoTable.finalY + 10;
-        doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(...dark);
-        doc.text('Note:', margin, noteY); doc.setFont('helvetica','normal'); doc.setTextColor(...gray);
-        doc.text(doc.splitTextToSize(prev.notes, 120).slice(0,4), margin, noteY+6);
-    }
-
-    const iban = prev.iban || (co.bank_details && co.bank_details.iban);
-    const banca = prev.banca || (co.bank_details && co.bank_details.bank_name);
-    if (iban || banca) {
-        const bY = doc.internal.pageSize.height - 25;
-        doc.setFillColor(...lightGray); doc.rect(margin, bY, 120, 14, 'F');
-        doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(...dark);
-        doc.text('Dati bancari', margin+3, bY+5); doc.setFont('helvetica','normal'); doc.setTextColor(...gray);
-        if (banca) doc.text('Banca: '+banca, margin+3, bY+10);
-        if (iban) doc.text('IBAN: '+iban, margin+3+(banca?55:0), bY+10);
-    }
-
-    const fY = doc.internal.pageSize.height - 8;
-    doc.setDrawColor(220,220,220); doc.line(margin, fY-2, pageW-margin, fY-2);
-    doc.setFontSize(7); doc.setTextColor(...gray); doc.setFont('helvetica','normal');
-    doc.text(co.business_name || '', margin, fY);
-    doc.text('Preventivo '+(prev.number||'')+' - Pag. 1', pageW/2, fY, {align:'center'});
-    doc.text('NormaFacile 2.0', pageW-margin, fY, {align:'right'});
-    return doc;
-}
-
-export function PDFPreviewModal({ open, onClose, pdfUrl, title, preventivoId }) {
+export function PDFPreviewModal({ open, onClose, pdfUrl, title }) {
     const [loading, setLoading] = useState(false);
     const [blobUrl, setBlobUrl] = useState(null);
     const [error, setError] = useState(null);
+    const [expanded, setExpanded] = useState(false);
 
-    const generate = useCallback(async () => {
-        const id = extractId(pdfUrl, preventivoId);
-        if (!id) { setError('ID preventivo non trovato'); return; }
-        setLoading(true); setError(null);
+    useEffect(() => {
+        if (!open || !pdfUrl) return;
+
+        let objectUrl = null;
+        setLoading(true);
+        setError(null);
+        setBlobUrl(null);
+        setExpanded(false);
+
+        fetch(`${API_BASE}${pdfUrl}`, { headers: getAuthHeaders() })
+            .then(r => {
+                if (!r.ok) throw new Error(`Errore HTTP ${r.status}`);
+                return r.blob();
+            })
+            .then(blob => {
+                objectUrl = URL.createObjectURL(blob);
+                setBlobUrl(objectUrl);
+            })
+            .catch(e => setError(e.message))
+            .finally(() => setLoading(false));
+
+        return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
+    }, [open, pdfUrl]);
+
+    useEffect(() => {
+        if (!open && blobUrl) {
+            URL.revokeObjectURL(blobUrl);
+            setBlobUrl(null);
+        }
+    }, [open]);
+
+    const handleDownload = async () => {
         try {
-            const headers = getAuthHeaders();
-            const [prevRes, compRes] = await Promise.all([
-                fetch(API_BASE + '/preventivi/' + id, { headers }),
-                fetch(API_BASE + '/settings/company', { headers }),
-            ]);
-            if (!prevRes.ok) throw new Error('Errore dati: ' + prevRes.status);
-            const prev = await prevRes.json();
-            const company = compRes.ok ? await compRes.json() : {};
-            let client = {};
-            if (prev.client_id) {
-                const cRes = await fetch(API_BASE + '/clients/' + prev.client_id, { headers });
-                if (cRes.ok) client = await cRes.json();
-            }
-            const doc = await buildPDF(prev, company, client);
-            if (blobUrl) URL.revokeObjectURL(blobUrl);
-            setBlobUrl(URL.createObjectURL(doc.output('blob')));
-        } catch(e) { setError(e.message); } finally { setLoading(false); }
-    }, [pdfUrl, preventivoId]);
-
-    useEffect(() => { if (open) generate(); }, [open]);
-
-    const handleClose = () => {
-        if (blobUrl) URL.revokeObjectURL(blobUrl);
-        setBlobUrl(null); onClose();
+            const res = await fetch(`${API_BASE}${pdfUrl}`, { headers: getAuthHeaders() });
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'documento.pdf';
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (e) { console.error(e); }
     };
 
-    const handleDownload = () => {
-        if (!blobUrl) return;
-        const a = document.createElement('a');
-        a.href = blobUrl; a.download = (title || 'preventivo') + '.pdf'; a.click();
-    };
+    const sizeClass = expanded
+        ? 'max-w-[98vw] w-[98vw] max-h-[98vh] h-[98vh]'
+        : 'sm:max-w-[900px] max-h-[95vh]';
+
+    const iframeHeight = expanded ? 'calc(98vh - 70px)' : '75vh';
 
     return (
-        <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-            <DialogContent className="sm:max-w-[900px] max-h-[95vh] flex flex-col p-0" data-testid="pdf-preview-modal">
+        <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+            <DialogContent className={`${sizeClass} flex flex-col p-0 transition-all duration-200`} data-testid="pdf-preview-modal">
                 <DialogHeader className="px-4 py-3 border-b border-slate-200 shrink-0">
                     <div className="flex items-center justify-between w-full">
-                        <DialogTitle className="text-sm font-semibold text-[#1E293B]">{title || 'Anteprima PDF'}</DialogTitle>
-                        <Button variant="outline" size="sm" onClick={handleDownload} disabled={!blobUrl} className="text-xs h-8">
-                            <Download className="h-3.5 w-3.5 mr-1" /> Scarica
-                        </Button>
+                        <DialogTitle className="text-sm font-semibold text-[#1E293B]">
+                            {title || 'Anteprima PDF'}
+                        </DialogTitle>
+                        <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0"
+                                onClick={() => setExpanded(v => !v)}
+                                data-testid="pdf-toggle-expand">
+                                {expanded
+                                    ? <Minimize2 className="h-4 w-4" />
+                                    : <Maximize2 className="h-4 w-4" />}
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={handleDownload}
+                                className="text-xs h-8" data-testid="btn-download-pdf-modal">
+                                <Download className="h-3.5 w-3.5 mr-1" /> Scarica
+                            </Button>
+                        </div>
                     </div>
                 </DialogHeader>
-                <div className="flex-1 overflow-hidden bg-slate-200 flex justify-center items-center" style={{minHeight:'70vh'}}>
-                    {loading && <div className="text-center"><Loader2 className="h-8 w-8 animate-spin text-[#0055FF] mx-auto mb-2" /><p className="text-xs text-slate-500">Generazione PDF...</p></div>}
-                    {error && !loading && (
-                        <div className="text-center px-4">
-                            <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
-                            <p className="text-sm text-red-600 mb-1">Errore generazione PDF</p>
-                            <p className="text-xs text-slate-500">{error}</p>
-                            <Button size="sm" className="mt-3 text-xs" onClick={generate}>Riprova</Button>
+                <div className="flex-1 overflow-hidden bg-slate-200 flex justify-center items-center">
+                    {loading && (
+                        <div className="text-center">
+                            <Loader2 className="h-8 w-8 animate-spin text-[#0055FF] mx-auto mb-2" />
+                            <p className="text-xs text-slate-500">Generazione anteprima...</p>
                         </div>
                     )}
-                    {blobUrl && !loading && <iframe src={blobUrl} className="w-full border-0" style={{height:'75vh'}} title="PDF Preview" />}
+                    {error && (
+                        <div className="text-center px-4">
+                            <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
+                            <p className="text-sm text-red-600 mb-1">Errore caricamento PDF</p>
+                            <p className="text-xs text-slate-500">{error}</p>
+                        </div>
+                    )}
+                    {blobUrl && (
+                        <iframe
+                            src={blobUrl}
+                            className="w-full border-0"
+                            style={{ height: iframeHeight }}
+                            title="PDF Preview"
+                        />
+                    )}
                 </div>
             </DialogContent>
         </Dialog>
     );
 }
 
-export function PDFPreviewButton({ pdfUrl, title, preventivoId, variant = 'outline', size = 'sm', className = '' }) {
+export function PDFPreviewButton({ pdfUrl, title, variant = 'outline', size = 'sm', className = '' }) {
     const [open, setOpen] = useState(false);
+
     return (
         <>
             <Button variant={variant} size={size} data-testid="btn-preview-pdf"
-                onClick={() => setOpen(true)} className={'text-xs ' + className}>
+                onClick={() => setOpen(true)} className={`text-xs ${className}`}>
                 <Eye className="h-3.5 w-3.5 mr-1.5" /> Anteprima
             </Button>
-            <PDFPreviewModal open={open} onClose={() => setOpen(false)} pdfUrl={pdfUrl} title={title} preventivoId={preventivoId} />
+            <PDFPreviewModal open={open} onClose={() => setOpen(false)} pdfUrl={pdfUrl} title={title} />
         </>
     );
-        }
+            }
