@@ -1,7 +1,8 @@
 /**
- * PDF Preview Modal — genera PDF nel browser con jsPDF (nessuna chiamata backend).
+ * PDF Preview Modal — genera PDF nel browser con jsPDF.
+ * Zero chiamate backend per il PDF.
  */
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Button } from '../components/ui/button';
 import { Eye, Download, Loader2, AlertTriangle } from 'lucide-react';
@@ -10,31 +11,7 @@ import { generatePreventivoFrontend } from '../services/pdfGenerator';
 
 function getAuthHeaders() {
     const token = localStorage.getItem('session_token');
-    if (token) return { 'Authorization': 'Bearer ' + token };
-    return {};
-}
-
-async function fetchPreventivoData(prevId) {
-    const res = await fetch(API_BASE + '/preventivi/' + prevId, { headers: getAuthHeaders() });
-    if (!res.ok) throw new Error('Errore caricamento preventivo: ' + res.status);
-    return res.json();
-}
-
-async function fetchCompanyData() {
-    try {
-        const res = await fetch(API_BASE + '/settings/company', { headers: getAuthHeaders() });
-        if (!res.ok) return {};
-        return res.json();
-    } catch { return {}; }
-}
-
-async function fetchClientData(clientId) {
-    if (!clientId) return {};
-    try {
-        const res = await fetch(API_BASE + '/clients/' + clientId, { headers: getAuthHeaders() });
-        if (!res.ok) return {};
-        return res.json();
-    } catch { return {}; }
+    return token ? { 'Authorization': 'Bearer ' + token } : {};
 }
 
 export function PDFPreviewModal({ open, onClose, pdfUrl, title, preventivoId }) {
@@ -42,38 +19,47 @@ export function PDFPreviewModal({ open, onClose, pdfUrl, title, preventivoId }) 
     const [blobUrl, setBlobUrl] = useState(null);
     const [error, setError] = useState(null);
 
-    const generateAndShow = useCallback(async () => {
-        if (!open) return;
+    const extractId = (url) => {
+        if (!url) return null;
+        const m = url.match(/\/preventivi\/([^\/]+)\/pdf/);
+        return m ? m[1] : null;
+    };
+
+    const generate = useCallback(async () => {
+        const id = preventivoId || extractId(pdfUrl);
+        if (!id) { setError('ID preventivo non trovato'); return; }
         setLoading(true);
         setError(null);
         setBlobUrl(null);
         try {
-            // Estrae l'ID dal pdfUrl se preventivoId non è passato direttamente
-            const id = preventivoId || (pdfUrl && pdfUrl.match(/\/preventivi\/([^\/]+)\/pdf/)?.[1]);
-            if (!id) throw new Error('ID preventivo non trovato');
-
-            const [prev, company] = await Promise.all([
-                fetchPreventivoData(id),
-                fetchCompanyData(),
+            const [prevRes, compRes] = await Promise.all([
+                fetch(API_BASE + '/preventivi/' + id, { headers: getAuthHeaders() }),
+                fetch(API_BASE + '/settings/company', { headers: getAuthHeaders() }),
             ]);
-            const client = await fetchClientData(prev.client_id);
+            if (!prevRes.ok) throw new Error('Errore caricamento preventivo: ' + prevRes.status);
+            const prev = await prevRes.json();
+            const company = compRes.ok ? await compRes.json() : {};
+            let client = {};
+            if (prev.client_id) {
+                const cRes = await fetch(API_BASE + '/clients/' + prev.client_id, { headers: getAuthHeaders() });
+                if (cRes.ok) client = await cRes.json();
+            }
             const doc = generatePreventivoFrontend(prev, company, client);
-            const pdfBlob = doc.output('blob');
-            const url = URL.createObjectURL(pdfBlob);
+            const blob = doc.output('blob');
+            const url = URL.createObjectURL(blob);
             setBlobUrl(url);
         } catch (e) {
             setError(e.message);
         } finally {
             setLoading(false);
         }
-    }, [open, pdfUrl, preventivoId]);
+    }, [pdfUrl, preventivoId]);
 
-    // Genera quando si apre il modal
-    useState(() => {
-        if (open) generateAndShow();
-    });
+    useEffect(() => {
+        if (open) generate();
+        return () => { if (blobUrl) { URL.revokeObjectURL(blobUrl); setBlobUrl(null); } };
+    }, [open]);
 
-    // Cleanup blob URL quando si chiude
     const handleClose = () => {
         if (blobUrl) URL.revokeObjectURL(blobUrl);
         setBlobUrl(null);
@@ -97,8 +83,7 @@ export function PDFPreviewModal({ open, onClose, pdfUrl, title, preventivoId }) 
                             {title || 'Anteprima PDF'}
                         </DialogTitle>
                         <Button variant="outline" size="sm" onClick={handleDownload}
-                            disabled={!blobUrl}
-                            className="text-xs h-8" data-testid="btn-download-pdf-modal">
+                            disabled={!blobUrl} className="text-xs h-8" data-testid="btn-download-pdf-modal">
                             <Download className="h-3.5 w-3.5 mr-1" /> Scarica
                         </Button>
                     </div>
@@ -110,21 +95,17 @@ export function PDFPreviewModal({ open, onClose, pdfUrl, title, preventivoId }) 
                             <p className="text-xs text-slate-500">Generazione PDF...</p>
                         </div>
                     )}
-                    {error && (
+                    {error && !loading && (
                         <div className="text-center px-4">
                             <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
                             <p className="text-sm text-red-600 mb-1">Errore generazione PDF</p>
                             <p className="text-xs text-slate-500">{error}</p>
-                            <Button size="sm" className="mt-3" onClick={generateAndShow}>Riprova</Button>
+                            <Button size="sm" className="mt-3 text-xs" onClick={generate}>Riprova</Button>
                         </div>
                     )}
-                    {blobUrl && (
-                        <iframe
-                            src={blobUrl}
-                            className="w-full border-0"
-                            style={{ height: '75vh' }}
-                            title="PDF Preview"
-                        />
+                    {blobUrl && !loading && (
+                        <iframe src={blobUrl} className="w-full border-0"
+                            style={{ height: '75vh' }} title="PDF Preview" />
                     )}
                 </div>
             </DialogContent>
@@ -144,4 +125,4 @@ export function PDFPreviewButton({ pdfUrl, title, preventivoId, variant = 'outli
                 pdfUrl={pdfUrl} title={title} preventivoId={preventivoId} />
         </>
     );
-    }
+        }
