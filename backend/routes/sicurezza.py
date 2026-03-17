@@ -14,7 +14,7 @@ from models.sicurezza import (
 )
 from services.pos_pdf_service import generate_pos_pdf
 from core.engine.safety import SafetyValidator
-from openai import AsyncOpenAI
+import google.generativeai as genai  # openai replaced with google genai
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/sicurezza", tags=["sicurezza"])
@@ -22,14 +22,14 @@ router = APIRouter(prefix="/sicurezza", tags=["sicurezza"])
 LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
 
 
-# ── Reference data endpoints ────────────────────────────────────
+# ââ Reference data endpoints ââââââââââââââââââââââââââââââââââââ
 
 @router.get("/rischi")
 async def get_rischi():
     return {"rischi": RISCHI_LAVORAZIONI, "macchine": MACCHINE_ATTREZZATURE, "dpi": DPI_LIST}
 
 
-# ── CRUD ─────────────────────────────────────────────────────────
+# ââ CRUD âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 async def _populate_names(doc: dict):
     if doc.get("client_id"):
@@ -128,7 +128,7 @@ async def create_pos_from_rilievo(rilievo_id: str, user: dict = Depends(get_curr
     doc = {
         "pos_id": pos_id,
         "user_id": uid,
-        "project_name": f"POS — {rilievo.get('project_name', 'Cantiere')}",
+        "project_name": f"POS â {rilievo.get('project_name', 'Cantiere')}",
         "client_id": client_id,
         "distinta_id": None,
         "cantiere": cantiere,
@@ -188,7 +188,7 @@ async def delete_pos(pos_id: str, user: dict = Depends(get_current_user)):
     return {"message": "POS eliminato con successo"}
 
 
-# ── AI Risk Assessment ───────────────────────────────────────────
+# ââ AI Risk Assessment âââââââââââââââââââââââââââââââââââââââââââ
 
 @router.post("/{pos_id}/genera-rischi")
 async def generate_risk_assessment(pos_id: str, user: dict = Depends(get_current_user)):
@@ -260,7 +260,7 @@ NON usare markdown, scrivi testo semplice con titoli in MAIUSCOLO."""
         raise HTTPException(500, f"Errore nella generazione AI: {str(e)}")
 
 
-# ── PDF Generation ───────────────────────────────────────────────
+# ââ PDF Generation âââââââââââââââââââââââââââââââââââââââââââââââ
 
 @router.get("/{pos_id}/pdf")
 async def get_pos_pdf(pos_id: str, user: dict = Depends(get_current_user)):
@@ -280,7 +280,7 @@ async def get_pos_pdf(pos_id: str, user: dict = Depends(get_current_user)):
     )
 
 
-# ── Safety Validation ────────────────────────────────────────────
+# ââ Safety Validation ââââââââââââââââââââââââââââââââââââââââââââ
 
 @router.post("/{pos_id}/validate")
 async def validate_pos(pos_id: str, user: dict = Depends(get_current_user)):
