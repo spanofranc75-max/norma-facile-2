@@ -1,4 +1,4 @@
-"""PDF Generator for Scheda Rintracciabilità Materiali (MOD. 07) — EN 1090."""
+"""PDF Generator for Scheda RintracciabilitÃ  Materiali (MOD. 07) â EN 1090."""
 from io import BytesIO
 from datetime import datetime, timezone
 import logging
@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Optional
 logger = logging.getLogger(__name__)
 
 try:
-    from weasyprint import HTML
+    from services.pdf_template import render_pdf
     WEASYPRINT_AVAILABLE = True
 except ImportError:
     WEASYPRINT_AVAILABLE = False
@@ -171,7 +171,7 @@ def generate_scheda_rintracciabilita_pdf(
     </div>
     <div class="header-center">
         <div class="doc-title">Scheda Rintracciabilit&agrave; Materiali</div>
-        <div class="doc-mod">MOD. 07 — EN 1090</div>
+        <div class="doc-mod">MOD. 07 â EN 1090</div>
     </div>
     <div class="header-right">
         <div style="font-size:8pt; color:#666;">Data: {now_str}</div>
