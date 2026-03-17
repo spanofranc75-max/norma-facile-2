@@ -1,39 +1,208 @@
-"""Shared PDF template utilities Ã¢ÂÂ ReportLab only, no system deps."""
+"""PDF Template - NormaFacile 2.0 - HTML/CSS con xhtml2pdf"""
 from io import BytesIO
-from datetime import datetime, timezone
-import html as html_mod
-import logging
-import re
-
-logger = logging.getLogger(__name__)
-_esc = html_mod.escape
 
 
 def fmt_it(n) -> str:
     try:
-        val = float(n or 0)
-    except (ValueError, TypeError):
-        return "0,00"
-    s = f"{val:,.2f}"
-    return s.replace(",", "X").replace(".", ",").replace("X", ".")
+        return f"{float(n):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    except:
+        return str(n or "0,00")
 
 
 def safe(val) -> str:
-    return _esc(str(val or ""))
-
-
-COMMON_CSS = ""
+    if val is None:
+        return ""
+    return str(val).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
 def strip_html(text: str) -> str:
-    text = re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
-    text = re.sub(r'<[^>]+>', '', text)
-    return text.strip()
+    import re
+    return re.sub(r'<[^>]+>', '', text or '')
+
+
+def format_date(date_str: str) -> str:
+    if not date_str:
+        return ""
+    try:
+        from datetime import datetime
+        dt = datetime.fromisoformat(str(date_str).replace('Z', '+00:00'))
+        return dt.strftime('%d/%m/%Y')
+    except Exception:
+        return str(date_str)[:10] if date_str else ""
+
+
+CSS = """
+@page {
+    size: A4;
+    margin: 15mm 18mm 18mm 18mm;
+}
+body {
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 9.5px;
+    color: #1a1a1a;
+    margin: 0;
+    padding: 0;
+}
+.header-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 12px;
+}
+.company-box {
+    width: 50%;
+    vertical-align: top;
+    padding-right: 10px;
+}
+.client-box {
+    width: 50%;
+    vertical-align: top;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    padding: 8px 10px;
+    border-radius: 3px;
+}
+.company-name {
+    font-size: 13px;
+    font-weight: bold;
+    color: #0055FF;
+    margin-bottom: 3px;
+}
+.company-detail {
+    font-size: 8.5px;
+    color: #555;
+    line-height: 1.5;
+}
+.piva-bold {
+    font-weight: bold;
+    font-size: 9px;
+}
+.client-label {
+    font-size: 8px;
+    color: #888;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+.client-name {
+    font-size: 11px;
+    font-weight: bold;
+    color: #1E293B;
+}
+.client-detail {
+    font-size: 8.5px;
+    color: #555;
+    line-height: 1.5;
+}
+.doc-title-bar {
+    background: #0055FF;
+    color: white;
+    padding: 6px 12px;
+    margin-bottom: 10px;
+    display: table;
+    width: 100%;
+    box-sizing: border-box;
+}
+.doc-title {
+    font-size: 13px;
+    font-weight: bold;
+    display: table-cell;
+    vertical-align: middle;
+}
+.doc-number {
+    font-size: 13px;
+    font-weight: bold;
+    display: table-cell;
+    text-align: right;
+    vertical-align: middle;
+}
+.meta-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+    font-size: 8.5px;
+}
+.meta-table td {
+    padding: 2px 6px;
+    vertical-align: top;
+}
+.meta-label {
+    font-weight: bold;
+    color: #555;
+    width: 100px;
+}
+.lines-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+    font-size: 8.5px;
+}
+.lines-table th {
+    background: #1E293B;
+    color: white;
+    padding: 4px 5px;
+    text-align: left;
+    font-size: 8px;
+    font-weight: bold;
+}
+.lines-table th.tr { text-align: right; }
+.lines-table th.tc { text-align: center; }
+.lines-table td {
+    padding: 4px 5px;
+    border-bottom: 1px solid #e9ecef;
+    vertical-align: top;
+}
+.lines-table tr:nth-child(even) td { background: #f8f9fa; }
+.tc { text-align: center; }
+.tr { text-align: right; }
+.desc-cell { max-width: 200px; }
+.totals-table {
+    width: 220px;
+    margin-left: auto;
+    border-collapse: collapse;
+    font-size: 9px;
+    margin-bottom: 10px;
+}
+.totals-table td {
+    padding: 2px 5px;
+}
+.totals-table .label { color: #555; }
+.totals-table .value { text-align: right; font-family: monospace; }
+.total-final {
+    font-size: 11px;
+    font-weight: bold;
+    color: #0055FF;
+    border-top: 2px solid #0055FF;
+    padding-top: 3px;
+}
+.notes-box {
+    background: #f8f9fa;
+    border-left: 3px solid #0055FF;
+    padding: 6px 10px;
+    font-size: 8.5px;
+    margin-bottom: 10px;
+    color: #444;
+}
+.bank-box {
+    background: #f0f4ff;
+    border: 1px solid #c7d7ff;
+    padding: 6px 10px;
+    font-size: 8.5px;
+    margin-bottom: 10px;
+    border-radius: 3px;
+}
+.section-title {
+    font-size: 9px;
+    font-weight: bold;
+    color: #0055FF;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+}
+"""
 
 
 def build_header_html(company: dict, client: dict, no_client_border: bool = False) -> str:
     co = company or {}
     cl = client or {}
+
     company_name = safe(co.get("business_name", ""))
     addr = safe(co.get("address", ""))
     cap = safe(co.get("cap", ""))
@@ -47,6 +216,7 @@ def build_header_html(company: dict, client: dict, no_client_border: bool = Fals
     cf = safe(co.get("codice_fiscale", ""))
     phone = safe(co.get("phone") or co.get("tel", ""))
     email = safe(co.get("email") or co.get("contact_email", ""))
+
     cl_name = safe(cl.get("business_name", ""))
     cl_addr = safe(cl.get("address", ""))
     cl_cap = safe(cl.get("cap", ""))
@@ -61,32 +231,34 @@ def build_header_html(company: dict, client: dict, no_client_border: bool = Fals
     cl_sdi = safe(cl.get("codice_sdi", ""))
     cl_pec = safe(cl.get("pec", ""))
     cl_email = safe(cl.get("email", ""))
-    lines = [
-        f"AZIENDA: {company_name}",
-        f"Indirizzo: {full_addr}",
-    ]
-    if piva:
-        lines.append(f"P.IVA: {piva}")
-    if cf:
-        lines.append(f"Cod.Fisc.: {cf}")
-    if phone:
-        lines.append(f"Tel: {phone}")
-    if email:
-        lines.append(f"Email: {email}")
-    lines.append("---")
-    lines.append(f"Spett.le: {cl_name}")
-    lines.append(f"Indirizzo: {cl_full}")
-    if cl_piva:
-        lines.append(f"P.IVA: {cl_piva}")
-    if cl_cf:
-        lines.append(f"Cod.Fisc.: {cl_cf}")
-    if cl_sdi:
-        lines.append(f"Cod.SDI: {cl_sdi}")
-    if cl_pec:
-        lines.append(f"PEC: {cl_pec}")
-    elif cl_email:
-        lines.append(f"Email: {cl_email}")
-    return "\n".join(lines)
+
+    return f"""
+    <table class="header-table">
+      <tr>
+        <td class="company-box">
+          <div class="company-name">{company_name}</div>
+          <div class="company-detail">
+            {full_addr}<br>
+            {"<span class='piva-bold'>P.IVA: " + piva + "</span><br>" if piva else ""}
+            {"Cod.Fisc.: " + cf + "<br>" if cf else ""}
+            {"Tel: " + phone + "<br>" if phone else ""}
+            {"Email: " + email if email else ""}
+          </div>
+        </td>
+        <td class="client-box">
+          <div class="client-label">Destinatario</div>
+          <div class="client-name">{cl_name}</div>
+          <div class="client-detail">
+            {cl_full}<br>
+            {"<span class='piva-bold'>P.IVA: " + cl_piva + "</span><br>" if cl_piva else ""}
+            {"Cod.Fisc.: " + cl_cf + "<br>" if cl_cf else ""}
+            {"Cod.SDI: " + cl_sdi + "<br>" if cl_sdi else ""}
+            {"PEC: " + cl_pec if cl_pec else ("Email: " + cl_email if cl_email else "")}
+          </div>
+        </td>
+      </tr>
+    </table>
+    """
 
 
 def compute_iva_groups(lines: list, sconto_globale: float = 0) -> dict:
@@ -98,70 +270,67 @@ def compute_iva_groups(lines: list, sconto_globale: float = 0) -> dict:
         rate_str = str(ln.get("vat_rate", "22"))
         base = float(ln.get("line_total") or 0)
         if sconto_globale and subtotal > 0:
-            base = base * (1 - sconto_globale / 100)
-        groups.setdefault(rate_str, {"base": 0.0, "iva": 0.0})
-        rate = float(rate_str) / 100
-        groups[rate_str]["base"] += round(base, 2)
-        groups[rate_str]["iva"] += round(base * rate, 2)
-    total_iva = sum(g["iva"] for g in groups.values())
-    total_imponibile = sum(g["base"] for g in groups.values())
-    total_doc = round(total_imponibile + total_iva, 2)
+            base = round(base * (1 - sconto_globale / 100), 2)
+        if rate_str not in groups:
+            groups[rate_str] = {"base": 0, "iva": 0}
+        groups[rate_str]["base"] = round(groups[rate_str]["base"] + base, 2)
+        groups[rate_str]["iva"] = round(groups[rate_str]["iva"] + base * float(rate_str) / 100, 2)
     return {
+        "groups": groups,
         "subtotal": subtotal,
         "sconto_val": sconto_val,
         "imponibile": imponibile,
-        "groups": groups,
-        "total_iva": round(total_iva, 2),
-        "total_imponibile": round(total_imponibile, 2),
-        "total_doc": total_doc,
+        "total_iva": round(sum(g["iva"] for g in groups.values()), 2),
+        "total": round(imponibile + sum(g["iva"] for g in groups.values()), 2),
     }
 
 
 def build_totals_html(iva_data: dict, acconto: float = 0) -> str:
-    groups = iva_data.get("groups", {})
-    sconto_val = iva_data.get("sconto_val", 0)
-    subtotal = iva_data.get("subtotal", 0)
-    total_doc = iva_data.get("total_doc", 0)
-    saldo = total_doc - acconto
-    lines = []
-    if sconto_val:
-        lines.append(f"Imponibile lordo: {fmt_it(subtotal)}")
-        lines.append(f"Sconto: - {fmt_it(sconto_val)}")
-    for rate_str, g in sorted(groups.items()):
-        lines.append(f"Imponibile IVA {rate_str}%: {fmt_it(g['base'])}")
-        lines.append(f"IVA {rate_str}%: {fmt_it(g['iva'])}")
-    lines.append(f"TOTALE DOCUMENTO: EUR {fmt_it(total_doc)}")
+    rows = ""
+    if iva_data.get("sconto_val", 0) > 0:
+        rows += f'<tr><td class="label">Totale senza IVA</td><td class="value">{fmt_it(iva_data["subtotal"])} &euro;</td></tr>'
+        rows += f'<tr><td class="label">Sconto</td><td class="value">- {fmt_it(iva_data["sconto_val"])} &euro;</td></tr>'
+    rows += f'<tr><td class="label">Imponibile</td><td class="value">{fmt_it(iva_data["imponibile"])} &euro;</td></tr>'
+    for rate, g in iva_data.get("groups", {}).items():
+        rows += f'<tr><td class="label">IVA {rate}%</td><td class="value">{fmt_it(g["iva"])} &euro;</td></tr>'
+    rows += f'<tr><td class="label total-final">TOTALE</td><td class="value total-final">{fmt_it(iva_data["total"])} &euro;</td></tr>'
     if acconto:
-        lines.append(f"Acconto: - {fmt_it(acconto)}")
-        lines.append(f"SALDO: EUR {fmt_it(saldo)}")
-    return "\n".join(lines)
+        da_pagare = round(iva_data["total"] - acconto, 2)
+        rows += f'<tr><td class="label">Acconto</td><td class="value">- {fmt_it(acconto)} &euro;</td></tr>'
+        rows += f'<tr><td class="label total-final">DA PAGARE</td><td class="value total-final">{fmt_it(da_pagare)} &euro;</td></tr>'
+    return f'<table class="totals-table">{rows}</table>'
+
+
+def build_conditions_html(company: dict, doc_number: str) -> str:
+    company_name = safe((company or {}).get('business_name', ''))
+    return f"""
+    <div style="page-break-before: always; padding: 10px; font-size: 9px;">
+        <h3 style="color: #0055FF; border-bottom: 2px solid #0055FF; padding-bottom: 5px;">CONDIZIONI GENERALI DI FORNITURA</h3>
+        <p><strong>Documento:</strong> {safe(doc_number)} &nbsp;&nbsp; <strong>Azienda:</strong> {company_name}</p>
+        <p><strong>1. VALIDIT&Agrave; DELL&#39;OFFERTA</strong><br>Il presente preventivo ha validit&agrave; come indicato nel documento dalla data di emissione.</p>
+        <p><strong>2. PREZZI</strong><br>I prezzi indicati si intendono IVA esclusa salvo diversa indicazione esplicita.</p>
+        <p><strong>3. TEMPI DI CONSEGNA</strong><br>I tempi di consegna decorrono dalla data di conferma dell&#39;ordine e ricevimento dell&#39;acconto.</p>
+        <p><strong>4. PAGAMENTO</strong><br>Il pagamento dovr&agrave; avvenire secondo le modalit&agrave; indicate nel preventivo.</p>
+        <p><strong>5. TRASPORTO</strong><br>La merce viaggia a rischio e pericolo del committente salvo diversa indicazione.</p>
+        <p><strong>6. FORO COMPETENTE</strong><br>Per qualsiasi controversia &egrave; competente il Foro del luogo ove ha sede il fornitore.</p>
+    </div>
+    """
 
 
 def render_pdf(html_content: str) -> BytesIO:
     """Render PDF usando xhtml2pdf - supporta HTML/CSS completo."""
     from xhtml2pdf import pisa
-    
-    buffer = BytesIO()
-    
-    # Aggiungi CSS base se non presente
-    if '<html' not in html_content.lower():
-        html_content = f"""<!DOCTYPE html>
+
+    full_html = f"""<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
-<style>
-  body {{ font-family: Helvetica, Arial, sans-serif; font-size: 10px; margin: 0; padding: 0; }}
-  @page {{ size: A4; margin: 15mm 18mm 18mm 18mm; }}
-</style>
+<style>{CSS}</style>
 </head>
 <body>{html_content}</body>
 </html>"""
-    
-    pisa_status = pisa.CreatePDF(html_content, dest=buffer, encoding='utf-8')
-    
-    if pisa_status.err:
-        # Fallback: ritorna buffer anche con errori minori
-        pass
-    
+
+    buffer = BytesIO()
+    pisa.CreatePDF(full_html, dest=buffer, encoding='utf-8')
     buffer.seek(0)
     return buffer
