@@ -3,7 +3,7 @@ from io import BytesIO
 from datetime import datetime, timezone
 
 try:
-    from weasyprint import HTML
+    from services.pdf_template import render_pdf
 except ImportError:
     pass
 
@@ -40,14 +40,14 @@ def generate_ncr_pdf(company: dict, commessa: dict, cl: dict) -> BytesIO:
     </style></head><body>
     <div class="header">
         <div class="header-left">{logo_html}<br/><span style="font-size:9pt;font-weight:700;">{biz}</span></div>
-        <div class="header-center"><h1>RAPPORTO DI NON CONFORMITA'</h1><div style="font-size:9pt;color:#DC2626;font-weight:600;">NCR — Non Conformity Report</div></div>
+        <div class="header-center"><h1>RAPPORTO DI NON CONFORMITA'</h1><div style="font-size:9pt;color:#DC2626;font-weight:600;">NCR â Non Conformity Report</div></div>
         <div class="header-right">Commessa: {comm_num}<br/>Data: {now}<br/>NCR N.: {cl.get('cl_id','')}</div>
     </div>
 
     <h2>1. Dati Fornitore / Lavorazione</h2>
     <table class="info">
         <tr><td class="lbl">Fornitore:</td><td>{cl.get('fornitore_nome','')}</td><td class="lbl">Tipo Lavorazione:</td><td style="text-transform:capitalize;">{cl.get('tipo','')}</td></tr>
-        <tr><td class="lbl">Commessa:</td><td>{comm_num} — {commessa.get('title','')}</td><td class="lbl">Data Invio:</td><td>{cl.get('data_invio','')}</td></tr>
+        <tr><td class="lbl">Commessa:</td><td>{comm_num} â {commessa.get('title','')}</td><td class="lbl">Data Invio:</td><td>{cl.get('data_invio','')}</td></tr>
         <tr><td class="lbl">Materiali:</td><td colspan="3">{materiali}</td></tr>
     </table>
 
@@ -81,7 +81,7 @@ def generate_ncr_pdf(company: dict, commessa: dict, cl: dict) -> BytesIO:
         <div class="sign-box"><div class="sign-label">Emesso da (QC)</div><div class="sign-line"></div></div>
         <div class="sign-box"><div class="sign-label">Approvato da (Resp. Produzione)</div><div class="sign-line"></div></div>
     </div>
-    <div class="footer">Documento generato automaticamente da Norma Facile 2.0 — {now}</div>
+    <div class="footer">Documento generato automaticamente da Norma Facile 2.0 â {now}</div>
     </body></html>"""
 
     buf = BytesIO()
