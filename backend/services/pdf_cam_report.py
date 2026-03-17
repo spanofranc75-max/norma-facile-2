@@ -1,6 +1,6 @@
 """
 PDF Generator for CAM Multi-Commessa Sustainability Report.
-Bilancio di Sostenibilità Ambientale aziendale.
+Bilancio di SostenibilitÃ  Ambientale aziendale.
 """
 from io import BytesIO
 from datetime import datetime, timezone
@@ -10,7 +10,7 @@ from typing import Dict, List, Any
 logger = logging.getLogger(__name__)
 
 try:
-    from weasyprint import HTML
+    from services.pdf_template import render_pdf
     WEASYPRINT_AVAILABLE = True
 except ImportError:
     WEASYPRINT_AVAILABLE = False
@@ -167,7 +167,7 @@ def generate_cam_report_pdf(report: Dict, company: Dict) -> bytes:
     <div class="report-hero">
         {logo_html}
         <h1>BILANCIO DI SOSTENIBILIT&Agrave; AMBIENTALE</h1>
-        <div class="subtitle">Criteri Ambientali Minimi — DM 23 giugno 2022 n. 256</div>
+        <div class="subtitle">Criteri Ambientali Minimi â DM 23 giugno 2022 n. 256</div>
         <div class="anno">{anno}</div>
         <div class="subtitle">{safe(company_name)}</div>
     </div>
@@ -321,7 +321,7 @@ def generate_cam_report_pdf(report: Dict, company: Dict) -> bytes:
     # Footer note
     footer_html = f"""
     <div class="footer-note">
-        <strong>Riferimento normativo:</strong> DM 23 giugno 2022 n. 256 — Criteri Ambientali Minimi per l'Edilizia.<br/>
+        <strong>Riferimento normativo:</strong> DM 23 giugno 2022 n. 256 â Criteri Ambientali Minimi per l'Edilizia.<br/>
         <strong>Calcolo CO2:</strong> Basato sui fattori di emissione del World Steel Association (2023):
         acciaio da forno elettrico (EAF) = 0,67 tCO2/t; acciaio da ciclo integrale (BOF) = 2,33 tCO2/t.<br/>
         <strong>Data generazione:</strong> {datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M')} UTC
