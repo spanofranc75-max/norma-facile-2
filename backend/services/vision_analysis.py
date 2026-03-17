@@ -3,7 +3,7 @@ import os
 import json
 import logging
 from typing import List
-from openai import AsyncOpenAI
+import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
