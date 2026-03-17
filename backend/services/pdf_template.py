@@ -318,297 +318,62 @@ def build_conditions_html(company: dict, doc_number: str) -> str:
 
 
 def render_pdf(html_content: str) -> BytesIO:
-    """Render PDF professionale con ReportLab - parsing diretto HTML NormaFacile."""
-    import re
-    from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table,
-        TableStyle, HRFlowable, PageBreak, KeepTogether)
+    """Render PDF usando ReportLab con layout professionale."""
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
     from reportlab.lib import colors
     from reportlab.lib.enums import TA_RIGHT, TA_CENTER, TA_LEFT
+    import re
+
+    # Pulisci HTML - estrai testo con struttura
+    def clean(text):
+        text = str(text or '')
+        text = re.sub(r'<brs*/?>', '\n', text, flags=re.IGNORECASE)
+        text = re.sub(r'<[^>]+>', '', text)
+        text = text.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>').replace('&euro;', '€').replace('&#39;', "'")
+        return text.strip()
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+        rightMargin=18*mm, leftMargin=18*mm, topMargin=15*mm, bottomMargin=18*mm)
 
     BLUE = colors.HexColor('#0055FF')
     DARK = colors.HexColor('#1E293B')
     GRAY = colors.HexColor('#F8F9FA')
-    BORDER = colors.HexColor('#DEE2E6')
-    WHITE = colors.white
-    GRAY_TEXT = colors.HexColor('#6B7280')
-
-    W = A4[0] - 36*mm
+    LIGHT = colors.HexColor('#E9ECEF')
 
     styles = getSampleStyleSheet()
-    def S(name, **kw):
-        return ParagraphStyle(name, parent=styles['Normal'], **kw)
-
-    def c(html):
-        """Pulisce HTML in testo."""
-        h = str(html or '')
-        h = re.sub(r'<br\s*/?>', '\n', h, flags=re.IGNORECASE)
-        h = re.sub(r'<[^>]+>', '', h)
-        return (h.replace('&amp;','&').replace('&lt;','<').replace('&gt;','>')
-                 .replace('&euro;','€').replace('&#39;',"'").replace('&nbsp;',' ')
-                 .replace('&agrave;','à').replace('&egrave;','è').replace('&igrave;','ì')
-                 .replace('&ograve;','ò').replace('&ugrave;','ù')).strip()
-
-    def P(text, style):
-        t = c(text).replace('\n','<br/>')
-        return Paragraph(t, style) if t else Spacer(1,1)
-
-    N   = S('N', fontSize=9, leading=13)
-    B   = S('B', fontSize=9, leading=13, fontName='Helvetica-Bold')
-    SM  = S('SM', fontSize=8, leading=11, textColor=GRAY_TEXT)
-    SMB = S('SMB', fontSize=8, leading=11, fontName='Helvetica-Bold', textColor=GRAY_TEXT)
-    BIG = S('BIG', fontSize=18, leading=22, fontName='Helvetica-Bold', textColor=BLUE, alignment=TA_CENTER)
-    TH  = S('TH', fontSize=8.5, leading=11, fontName='Helvetica-Bold', textColor=WHITE)
-    THR = S('THR', fontSize=8.5, leading=11, fontName='Helvetica-Bold', textColor=WHITE, alignment=TA_RIGHT)
-    TD  = S('TD', fontSize=8.5, leading=12)
-    TDR = S('TDR', fontSize=8.5, leading=12, alignment=TA_RIGHT)
-    TDC = S('TDC', fontSize=8.5, leading=12, alignment=TA_CENTER)
-    TL  = S('TL', fontSize=9, leading=13, textColor=GRAY_TEXT)
-    TV  = S('TV', fontSize=9, leading=13, alignment=TA_RIGHT, fontName='Helvetica-Bold')
-    GL  = S('GL', fontSize=11, leading=14, fontName='Helvetica-Bold', textColor=WHITE)
-    GV  = S('GV', fontSize=11, leading=14, fontName='Helvetica-Bold', textColor=WHITE, alignment=TA_RIGHT)
-    BLB = S('BLB', fontSize=10, leading=13, fontName='Helvetica-Bold', textColor=BLUE)
-    CO  = S('CO', fontSize=12, leading=15, fontName='Helvetica-Bold', textColor=BLUE)
-    CL  = S('CL', fontSize=11, leading=14, fontName='Helvetica-Bold', textColor=DARK)
-
     story = []
-    buf = BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4,
-        rightMargin=18*mm, leftMargin=18*mm, topMargin=15*mm, bottomMargin=20*mm)
 
-    # ── Estrai sezioni dall'HTML ──────────────────────────────────
-    def get_tag_content(html, tag, cls=None):
-        """Estrae contenuto di un tag con classe opzionale."""
-        if cls:
-            pattern = rf'<{tag}[^>]*class=["'][^"']*{re.escape(cls)}[^"']*["'][^>]*>(.*?)</{tag}>'
+    # Parse HTML in blocchi
+    lines = html_content.split('\n')
+    clean_lines = [clean(l) for l in lines if clean(l)]
+
+    normal = ParagraphStyle('N', parent=styles['Normal'], fontSize=9, leading=13)
+    bold = ParagraphStyle('B', parent=styles['Normal'], fontSize=9, leading=13, fontName='Helvetica-Bold')
+    title = ParagraphStyle('T', parent=styles['Normal'], fontSize=14, leading=18, fontName='Helvetica-Bold', textColor=BLUE)
+    small = ParagraphStyle('S', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor('#555555'))
+
+    for line in clean_lines:
+        if not line:
+            story.append(Spacer(1, 3*mm))
+        elif line.startswith('AZIENDA:'):
+            story.append(Paragraph(line.replace('AZIENDA:', '<b>').strip() + '</b>', title))
+        elif line.startswith('P.IVA:') or line.startswith('Cod.Fisc:') or line.startswith('Cod.SDI:'):
+            story.append(Paragraph(line, bold))
+        elif line.startswith('---'):
+            story.append(HRFlowable(width="100%", thickness=1, color=LIGHT))
+            story.append(Spacer(1, 3*mm))
+        elif line.startswith('Spett.le:'):
+            story.append(Paragraph(line.replace('Spett.le:', '<b>Spett.le:</b>'), bold))
+        elif line in ('PREVENTIVO', 'FATTURA', 'DDT', 'DOCUMENTO DI TRASPORTO'):
+            story.append(Spacer(1, 4*mm))
+            story.append(Paragraph(line, title))
         else:
-            pattern = rf'<{tag}[^>]*>(.*?)</{tag}>'
-        m = re.search(pattern, html, re.DOTALL | re.IGNORECASE)
-        return m.group(1) if m else ''
-
-    def get_div_content(html, cls):
-        """Estrae contenuto di un div con classe."""
-        pattern = rf'<(?:div|td)[^>]*class=["'][^"']*{re.escape(cls)}[^"']*["'][^>]*>(.*?)</(?:div|td)>'
-        m = re.search(pattern, html, re.DOTALL | re.IGNORECASE)
-        return m.group(1) if m else ''
-
-    # ── 1. HEADER AZIENDA + CLIENTE ───────────────────────────────
-    company_box = get_div_content(html_content, 'company-box') or get_div_content(html_content, 'company_box')
-    client_box  = get_div_content(html_content, 'client-box')  or get_div_content(html_content, 'client_box')
-
-    if company_box or client_box:
-        # Azienda
-        co_name = c(get_div_content(company_box, 'company-name') or get_div_content(company_box, 'company_name'))
-        co_detail = c(get_div_content(company_box, 'company-detail') or get_div_content(company_box, 'company_detail') or company_box)
-        co_paras = []
-        if co_name:
-            co_paras.append(Paragraph(co_name, CO))
-        for line in co_detail.split('\n'):
-            line = line.strip()
-            if not line or line == co_name: continue
-            if 'P.IVA' in line or 'Cod.Fisc' in line:
-                co_paras.append(Paragraph(line, B))
-            else:
-                co_paras.append(Paragraph(line, SM))
-
-        # Cliente
-        cl_name = c(get_div_content(client_box, 'client-name') or get_div_content(client_box, 'client_name'))
-        cl_detail = c(get_div_content(client_box, 'client-detail') or get_div_content(client_box, 'client_detail') or client_box)
-        cl_paras = [Paragraph('Spett.le', SMB)]
-        if cl_name:
-            cl_paras.append(Paragraph(cl_name, CL))
-        for line in cl_detail.split('\n'):
-            line = line.strip()
-            if not line or line == cl_name: continue
-            if 'P.IVA' in line or 'Cod.Fisc' in line:
-                cl_paras.append(Paragraph(line, B))
-            else:
-                cl_paras.append(Paragraph(line, SM))
-
-        hdr = Table([[co_paras, cl_paras]], colWidths=[W*0.55, W*0.43])
-        hdr.setStyle(TableStyle([
-            ('VALIGN',(0,0),(-1,-1),'TOP'),
-            ('LEFTPADDING',(0,0),(0,0),0),
-            ('RIGHTPADDING',(0,0),(0,0),6),
-            ('LEFTPADDING',(1,0),(1,0),10),
-            ('TOPPADDING',(1,0),(1,0),6),
-            ('BOTTOMPADDING',(1,0),(1,0),6),
-            ('BACKGROUND',(1,0),(1,0),GRAY),
-            ('BOX',(1,0),(1,0),0.5,BORDER),
-        ]))
-        story.append(hdr)
-        story.append(HRFlowable(width='100%',thickness=0.5,color=BORDER,spaceAfter=6))
-
-    # ── 2. TITOLO ─────────────────────────────────────────────────
-    doc_title_div = get_div_content(html_content, 'doc-title')
-    if doc_title_div:
-        h1_m = re.search(r'<h1[^>]*>(.*?)</h1>', doc_title_div, re.DOTALL | re.IGNORECASE)
-        num_m = re.search(r'class=["'][^"']*doc-num[^"']*["'][^>]*>(.*?)</div>', doc_title_div, re.DOTALL | re.IGNORECASE)
-        title = c(h1_m.group(1)) if h1_m else ''
-        num   = c(num_m.group(1)) if num_m else ''
-        if title:
-            story.append(Paragraph(f"{title}  {num}".strip(), BIG))
-            story.append(Spacer(1,4))
-
-    # ── 3. META TABLE ─────────────────────────────────────────────
-    meta_html = get_tag_content(html_content, 'table', 'meta-table')
-    if meta_html:
-        rows_html = re.findall(r'<tr[^>]*>(.*?)</tr>', meta_html, re.DOTALL | re.IGNORECASE)
-        meta_data = []
-        for row_h in rows_html:
-            cells = re.findall(r'<td[^>]*>(.*?)</td>', row_h, re.DOTALL | re.IGNORECASE)
-            if len(cells) >= 2:
-                meta_data.append([Paragraph(c(cells[0]), SMB), Paragraph(c(cells[1]), N)])
-        if meta_data:
-            half = (len(meta_data)+1)//2
-            left, right = meta_data[:half], meta_data[half:]
-            while len(right) < len(left): right.append([Paragraph('',N), Paragraph('',N)])
-            rows = [left[i] + [Spacer(4,1)] + right[i] for i in range(len(left))]
-            mt = Table(rows, colWidths=[W*0.17, W*0.30, W*0.06, W*0.17, W*0.30])
-            mt.setStyle(TableStyle([
-                ('BACKGROUND',(0,0),(-1,-1),GRAY),
-                ('BOX',(0,0),(-1,-1),0.5,BORDER),
-                ('TOPPADDING',(0,0),(-1,-1),3),
-                ('BOTTOMPADDING',(0,0),(-1,-1),3),
-                ('LEFTPADDING',(0,0),(-1,-1),5),
-            ]))
-            story.append(mt)
-            story.append(Spacer(1,6))
-
-    # ── 4. REF NOTE ───────────────────────────────────────────────
-    ref_note_m = re.search(r'class=["'][^"']*ref-note[^"']*["'][^>]*>(.*?)</p>', html_content, re.DOTALL | re.IGNORECASE)
-    if ref_note_m:
-        story.append(Paragraph(c(ref_note_m.group(1)), N))
-        story.append(Spacer(1,4))
-
-    # ── 5. TABELLA RIGHE ──────────────────────────────────────────
-    items_html = get_tag_content(html_content, 'table', 'items-table')
-    if items_html:
-        thead_h = get_tag_content(items_html, 'thead')
-        tbody_h = get_tag_content(items_html, 'tbody')
-        th_cells = re.findall(r'<th[^>]*>(.*?)</th>', thead_h, re.DOTALL | re.IGNORECASE) if thead_h else []
-        n = len(th_cells) if th_cells else 8
-        col_w = [W*0.08, W*0.36, W*0.06, W*0.08, W*0.12, W*0.08, W*0.12, W*0.08][:n]
-        while len(col_w) < n: col_w.append(W*0.10)
-
-        table_data = [[Paragraph(c(th), TH if i<1 else THR if i>=3 else TH) for i,th in enumerate(th_cells)]] if th_cells else []
-
-        if tbody_h:
-            for tr_h in re.findall(r'<tr[^>]*>(.*?)</tr>', tbody_h, re.DOTALL | re.IGNORECASE):
-                cells = re.findall(r'<td[^>]*>(.*?)</td>', tr_h, re.DOTALL | re.IGNORECASE)
-                row = []
-                for j,cell in enumerate(cells):
-                    txt = c(cell)
-                    if j == 1: row.append(Paragraph(txt.replace('\n','<br/>'), TD))
-                    elif j in (3,4,6): row.append(Paragraph(txt, TDR))
-                    elif j in (2,5,7): row.append(Paragraph(txt, TDC))
-                    else: row.append(Paragraph(txt, TD))
-                while len(row) < n: row.append(Paragraph('', TD))
-                table_data.append(row[:n])
-
-        if table_data:
-            it = Table(table_data, colWidths=col_w)
-            ts = TableStyle([
-                ('BACKGROUND',(0,0),(-1,0),DARK),
-                ('TEXTCOLOR',(0,0),(-1,0),WHITE),
-                ('TOPPADDING',(0,0),(-1,0),5),('BOTTOMPADDING',(0,0),(-1,0),5),
-                ('TOPPADDING',(0,1),(-1,-1),3),('BOTTOMPADDING',(0,1),(-1,-1),3),
-                ('LEFTPADDING',(0,0),(-1,-1),4),('RIGHTPADDING',(0,0),(-1,-1),4),
-                ('VALIGN',(0,0),(-1,-1),'TOP'),
-                ('LINEBELOW',(0,1),(-1,-1),0.3,BORDER),
-            ])
-            for i in range(1, len(table_data), 2):
-                ts.add('BACKGROUND',(0,i),(-1,i),GRAY)
-            it.setStyle(ts)
-            story.append(it)
-            story.append(Spacer(1,6))
-
-    # ── 6. NOTE TECNICHE ──────────────────────────────────────────
-    info_box_m = re.search(r'class=["'][^"']*info-box[^"']*["'][^>]*>(.*?)</div>', html_content, re.DOTALL | re.IGNORECASE)
-    if info_box_m:
-        ib = Table([[Paragraph(c(info_box_m.group(1)), N)]], colWidths=[W])
-        ib.setStyle(TableStyle([
-            ('BACKGROUND',(0,0),(0,0),GRAY),('LINEBEFORE',(0,0),(0,0),3,BLUE),
-            ('LEFTPADDING',(0,0),(0,0),10),('TOPPADDING',(0,0),(0,0),6),('BOTTOMPADDING',(0,0),(0,0),6),
-        ]))
-        story.append(ib)
-        story.append(Spacer(1,4))
-
-    # ── 7. TOTALI ─────────────────────────────────────────────────
-    totals_block_m = re.search(r'class=["'][^"']*totals-block[^"']*["'][^>]*>(.*?)</div>\s*</div>', html_content, re.DOTALL | re.IGNORECASE)
-    if not totals_block_m:
-        # Cerca tabella totali generata da build_totals_html
-        totals_block_m = re.search(r'<table[^>]*class=["'][^"']*totals[^"']*["'][^>]*>(.*?)</table>', html_content, re.DOTALL | re.IGNORECASE)
-
-    # Cerca pattern Imponibile/IVA/TOTALE ovunque nell'HTML
-    tot_lines = re.findall(r'<tr[^>]*>\s*<td[^>]*>(.*?)</td>\s*<td[^>]*>(.*?)</td>\s*</tr>', html_content, re.DOTALL)
-    if not tot_lines:
-        # Fallback: cerca testo con pattern numerico
-        tot_text = re.findall(r'(Imponibile|Totale IVA|IVA \d+%|TOTALE|Acconto|Da pagare)[^\n<]*([€\d][^\n<]*)', html_content)
-        tot_lines = [(t[0], t[1]) for t in tot_text]
-
-    tot_data = []
-    grand = None
-    for label_h, val_h in tot_lines:
-        label = c(label_h).strip()
-        val   = c(val_h).strip()
-        if not label or not val: continue
-        if 'TOTALE' in label.upper() and 'IVA' not in label.upper():
-            grand = (label, val)
-        else:
-            tot_data.append([Paragraph(label, TL), Paragraph(val, TV)])
-
-    if tot_data:
-        tt = Table(tot_data, colWidths=[W*0.65, W*0.33], hAlign='RIGHT')
-        tt.setStyle(TableStyle([
-            ('ALIGN',(0,0),(-1,-1),'RIGHT'),
-            ('TOPPADDING',(0,0),(-1,-1),2),('BOTTOMPADDING',(0,0),(-1,-1),2),
-        ]))
-        story.append(tt)
-    if grand:
-        gt = Table([[Paragraph(grand[0], GL), Paragraph(grand[1], GV)]],
-                    colWidths=[W*0.65, W*0.33], hAlign='RIGHT')
-        gt.setStyle(TableStyle([
-            ('BACKGROUND',(0,0),(-1,-1),BLUE),
-            ('TOPPADDING',(0,0),(-1,-1),6),('BOTTOMPADDING',(0,0),(-1,-1),6),
-            ('LEFTPADDING',(0,0),(-1,-1),8),('RIGHTPADDING',(0,0),(-1,-1),8),
-        ]))
-        story.append(Spacer(1,2))
-        story.append(gt)
-    story.append(Spacer(1,8))
-
-    # ── 8. BANCA ──────────────────────────────────────────────────
-    bank_m = re.search(r'class=["'][^"']*bank-info[^"']*["'][^>]*>(.*?)</div>', html_content, re.DOTALL | re.IGNORECASE)
-    if bank_m:
-        bank_txt = c(bank_m.group(1)).replace('\n','  ')
-        bt = Table([[Paragraph(bank_txt, B)]], colWidths=[W])
-        bt.setStyle(TableStyle([
-            ('LINEBEFORE',(0,0),(0,0),3,BLUE),
-            ('BACKGROUND',(0,0),(0,0),GRAY),
-            ('LEFTPADDING',(0,0),(0,0),10),
-            ('TOPPADDING',(0,0),(0,0),6),('BOTTOMPADDING',(0,0),(0,0),6),
-        ]))
-        story.append(bt)
-        story.append(Spacer(1,6))
-
-    # ── 9. CONDIZIONI GENERALI ────────────────────────────────────
-    cond_m = re.search(r'page-break.*?>(.*?)$', html_content, re.DOTALL | re.IGNORECASE)
-    if cond_m:
-        story.append(PageBreak())
-        story.append(Paragraph('CONDIZIONI GENERALI DI FORNITURA', BLB))
-        story.append(HRFlowable(width='100%',thickness=1,color=BLUE,spaceAfter=6))
-        cond_text = c(cond_m.group(1))
-        for line in cond_text.split('\n'):
-            line = line.strip()
-            if not line or 'CONDIZIONI GENERALI' in line.upper(): continue
-            if re.match(r'^\d+\.', line):
-                story.append(Spacer(1,3))
-                story.append(Paragraph(line, B))
-            else:
-                story.append(Paragraph(line, N))
+            story.append(Paragraph(line, normal))
 
     doc.build(story)
-    buf.seek(0)
-    return buf
+    buffer.seek(0)
+    return buffer
