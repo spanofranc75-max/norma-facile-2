@@ -1,13 +1,13 @@
-"""Super Fascicolo Tecnico Unico — Aggregation of all EN 1090 + CAM documents.
+"""Super Fascicolo Tecnico Unico â Aggregation of all EN 1090 + CAM documents.
 
 Generates a single comprehensive PDF organized as:
   Cap 1: Dati Generali (Dossier Commessa)
   Cap 2: Riesame Tecnico & ITT
-  Cap 3: Tracciabilità Materiali & Sostenibilità (CAM + Green Cert + Cert 3.1)
+  Cap 3: TracciabilitÃ  Materiali & SostenibilitÃ  (CAM + Green Cert + Cert 3.1)
   Cap 4: Processo di Saldatura (PCQ + Registro + VT)
   Cap 5: Marcatura CE (DoP + Etichetta CE)
 
-Operates in READ-ONLY mode — no business logic changes.
+Operates in READ-ONLY mode â no business logic changes.
 """
 from io import BytesIO
 from datetime import datetime, timezone
@@ -20,16 +20,16 @@ from pypdf import PdfWriter, PdfReader
 logger = logging.getLogger(__name__)
 
 try:
-    from weasyprint import HTML
+    from services.pdf_template import render_pdf
     WEASYPRINT_AVAILABLE = True
 except ImportError:
     WEASYPRINT_AVAILABLE = False
 
 from models.cam import calcola_co2_risparmiata
 
-# ══════════════════════════════════════════════════════════════
-# SHARED CSS — coerente con documenti originali
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# SHARED CSS â coerente con documenti originali
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 PAGE_CSS = """
 @page {
     size: A4; margin: 14mm 16mm 20mm 16mm;
@@ -105,9 +105,9 @@ def _firma_img(firma_b64: str) -> str:
     return ""
 
 
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # COVER + INDEX (Template-based professional cover page)
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 def _build_cover(ctx: dict) -> bytes:
     """Generate professional cover page from Jinja2-style HTML template."""
     import os
@@ -200,14 +200,14 @@ def _build_cover_fallback(ctx: dict) -> bytes:
         <div style="font-size:11pt; color:#444; margin-top:12px;">{_s(comm.get('title',''))}</div>
         <div style="font-size:10pt; color:#555; margin-top:6px;">Cliente: <strong>{_s(ctx.get('client_name',''))}</strong></div>
     </div>
-    <div style="string-set: footer-text 'Generato il {now.strftime('%d/%m/%Y')} — Conforme EN 1090-1:2009+A1:2011'; display:none;"></div>
+    <div style="string-set: footer-text 'Generato il {now.strftime('%d/%m/%Y')} â Conforme EN 1090-1:2009+A1:2011'; display:none;"></div>
     """
     return _render(html)
 
 
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # CAP 1: DATI GENERALI (Dossier Commessa)
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 def _safe_date(val, fmt: str = "%d/%m/%Y") -> str:
     """Safely convert datetime or string to date string."""
     if val is None:
@@ -224,7 +224,7 @@ def _safe_date(val, fmt: str = "%d/%m/%Y") -> str:
 def _build_cap1(ctx: dict) -> bytes:
     co = ctx["company"]
     comm = ctx["commessa"]
-    hdr = _header(co.get("logo_url",""), co.get("business_name",""), comm.get("numero",""), "Cap. 1 — Dati Generali della Commessa")
+    hdr = _header(co.get("logo_url",""), co.get("business_name",""), comm.get("numero",""), "Cap. 1 â Dati Generali della Commessa")
     fasi = comm.get("fasi_produzione", [])
     fasi_rows = ""
     for f in fasi:
@@ -258,15 +258,15 @@ def _build_cap1(ctx: dict) -> bytes:
     return _render(html)
 
 
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # CAP 2: RIESAME TECNICO & ITT
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 def _build_cap2(ctx: dict) -> bytes:
     from services.pdf_fascicolo_tecnico import DEFAULT_REQUISITI, DEFAULT_ITT
     co = ctx["company"]
     comm = ctx["commessa"]
     ft = ctx.get("ft", {})
-    hdr = _header(co.get("logo_url",""), co.get("business_name",""), comm.get("numero",""), "Cap. 2 — Riesame Tecnico & ITT")
+    hdr = _header(co.get("logo_url",""), co.get("business_name",""), comm.get("numero",""), "Cap. 2 â Riesame Tecnico & ITT")
 
     requisiti = ft.get("requisiti", [])
     if not requisiti:
@@ -295,7 +295,7 @@ def _build_cap2(ctx: dict) -> bytes:
     </table>
 
     <div class="page-break"></div>
-    {_header(co.get("logo_url",""), co.get("business_name",""), comm.get("numero",""), "Cap. 2 — ITT di Commessa")}
+    {_header(co.get("logo_url",""), co.get("business_name",""), comm.get("numero",""), "Cap. 2 â ITT di Commessa")}
     <h2>2.2 Ispezioni, Test e Prove (ITT)</h2>
     <table class="data">
         <thead><tr><th style="width:22%;text-align:left;">Caratteristica</th><th style="width:30%;text-align:left;">Metodo</th><th style="width:18%;">Esito</th><th style="width:30%;text-align:left;">Criterio</th></tr></thead>
@@ -305,14 +305,14 @@ def _build_cap2(ctx: dict) -> bytes:
     return _render(html)
 
 
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # CAP 3: MATERIALI & SOSTENIBILITA'
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 def _build_cap3_materials(ctx: dict) -> bytes:
     co = ctx["company"]
     comm = ctx["commessa"]
     batches = ctx.get("batches", [])
-    hdr = _header(co.get("logo_url",""), co.get("business_name",""), comm.get("numero",""), "Cap. 3 — Tracciabilita' Materiali")
+    hdr = _header(co.get("logo_url",""), co.get("business_name",""), comm.get("numero",""), "Cap. 3 â Tracciabilita' Materiali")
 
     all_cert_heats = {
         h.strip()
@@ -356,7 +356,7 @@ def _build_cap3_cam(ctx: dict) -> bytes:
     comm = ctx["commessa"]
     cam_lotti = ctx.get("cam_lotti", [])
     batches = ctx.get("batches", [])
-    hdr = _header(co.get("logo_url",""), co.get("business_name",""), comm.get("numero",""), "Cap. 3 — Dichiarazione CAM")
+    hdr = _header(co.get("logo_url",""), co.get("business_name",""), comm.get("numero",""), "Cap. 3 â Dichiarazione CAM")
 
     if not cam_lotti:
         html = f"""{hdr}
@@ -365,7 +365,7 @@ def _build_cap3_cam(ctx: dict) -> bytes:
         """
         return _render(html)
 
-    # ── Calcolo pesi con fallback ──
+    # ââ Calcolo pesi con fallback ââ
     # Per ogni lotto, se peso_kg == 0, cerca in material_batches o arrivi
     arrivi = (comm.get("approvvigionamento") or {}).get("arrivi", [])
     batch_by_heat = {b.get("heat_number", ""): b for b in batches}
@@ -423,7 +423,7 @@ def _build_cap3_cam(ctx: dict) -> bytes:
 
     html = f"""{hdr}
     <h2>3.2 Dichiarazione di Conformita' CAM</h2>
-    <p style="font-size:9pt;">ai sensi del DM 23 giugno 2022 n. 256 — Criteri Ambientali Minimi per l'edilizia</p>
+    <p style="font-size:9pt;">ai sensi del DM 23 giugno 2022 n. 256 â Criteri Ambientali Minimi per l'edilizia</p>
     <table class="data">
         <thead><tr><th>Materiale</th><th>Colata</th><th>Peso (kg)</th><th>% Riciclato</th><th>Metodo</th><th>Conformita'</th></tr></thead>
         <tbody>{rows}</tbody>
@@ -442,12 +442,12 @@ def _build_cap3_green(ctx: dict) -> bytes:
     co = ctx["company"]
     comm = ctx["commessa"]
     cam_lotti = ctx.get("cam_lotti", [])
-    hdr = _header(co.get("logo_url",""), co.get("business_name",""), comm.get("numero",""), "Cap. 3 — Green Certificate")
+    hdr = _header(co.get("logo_url",""), co.get("business_name",""), comm.get("numero",""), "Cap. 3 â Green Certificate")
 
     if not cam_lotti:
         html = f"""{hdr}
         <h2>3.3 Certificato Verde</h2>
-        <div class="note-box">Green Certificate non disponibile — nessun dato CAM per questa commessa.</div>"""
+        <div class="note-box">Green Certificate non disponibile â nessun dato CAM per questa commessa.</div>"""
         return _render(html)
 
     peso_tot = sum(l.get("peso_kg", 0) for l in cam_lotti)
@@ -473,7 +473,7 @@ def _build_cap3_green(ctx: dict) -> bytes:
         co2_risp_str = 'N.D.'
 
     html = f"""{hdr}
-    <h2>3.3 Certificato Verde — Risparmio CO2</h2>
+    <h2>3.3 Certificato Verde â Risparmio CO2</h2>
     <div style="text-align:center;margin:20px 0;padding:20px;border:2px solid #059669;border-radius:8px;background:#f0fdf4;">
         <div style="font-size:14pt;font-weight:700;color:#059669;">Risparmio CO2 stimato</div>
         <div style="font-size:28pt;font-weight:800;color:#059669;margin:8px 0;">{co2_display}</div>
@@ -491,11 +491,11 @@ def _build_cap3_green(ctx: dict) -> bytes:
     return _render(html)
 
 
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # CAP 4: PROCESSO DI SALDATURA
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 def _build_cap4_pcq(ctx: dict) -> bytes:
-    """Piano di Controllo Qualità — landscape."""
+    """Piano di Controllo QualitÃ  â landscape."""
     from services.pdf_fascicolo_tecnico import DEFAULT_PHASES, _co, _header_html, _firma_img_html, BASE_CSS
     co = ctx["company"]
     comm = ctx["commessa"]
@@ -509,7 +509,7 @@ def _build_cap4_pcq(ctx: dict) -> bytes:
     if not fasi:
         fasi = [dict(f) for f in DEFAULT_PHASES]
 
-    # ── Enrich PCQ phases with data from commessa.produzione ──
+    # ââ Enrich PCQ phases with data from commessa.produzione ââ
     produzione = comm.get("produzione", [])
     prod_by_name = {}
     for p in produzione:
@@ -567,13 +567,13 @@ def _build_cap4_pcq(ctx: dict) -> bytes:
 
 
 def _build_cap4_registro(ctx: dict) -> bytes:
-    """Registro di Saldatura — use existing generator, enriched with assigned welders."""
+    """Registro di Saldatura â use existing generator, enriched with assigned welders."""
     from services.pdf_fascicolo_tecnico import generate_registro_saldatura_pdf
     co = ctx["company"]
     comm = ctx["commessa"]
     ft = ctx.get("ft", {})
 
-    # ── Enrich saldature from assigned_welders if ft.saldature is empty ──
+    # ââ Enrich saldature from assigned_welders if ft.saldature is empty ââ
     saldature = ft.get("saldature", [])
     if not saldature:
         assigned = ctx.get("assigned_welders", [])
@@ -622,7 +622,7 @@ def _build_cap4_registro(ctx: dict) -> bytes:
 
 
 def _build_cap4_vt(ctx: dict) -> bytes:
-    """Rapporto VT — use existing generator."""
+    """Rapporto VT â use existing generator."""
     from services.pdf_fascicolo_tecnico import generate_rapporto_vt_pdf
     co = ctx["company"]
     comm = ctx["commessa"]
@@ -632,15 +632,15 @@ def _build_cap4_vt(ctx: dict) -> bytes:
 
 
 def _build_cap4_welder(ctx: dict) -> bytes:
-    """Welder qualification summary — lists all welders assigned to this commessa."""
+    """Welder qualification summary â lists all welders assigned to this commessa."""
     co = ctx["company"]
     comm = ctx["commessa"]
     assigned_welders = ctx.get("assigned_welders", [])
-    hdr = _header(co.get("logo_url",""), co.get("business_name",""), comm.get("numero",""), "Cap. 4 — Patentini Saldatori")
+    hdr = _header(co.get("logo_url",""), co.get("business_name",""), comm.get("numero",""), "Cap. 4 â Patentini Saldatori")
 
     if not assigned_welders:
         html = f"""{hdr}
-        <h2>4.4 Appendice B — Patentini Saldatori</h2>
+        <h2>4.4 Appendice B â Patentini Saldatori</h2>
         <div class="note-box">Nessun saldatore assegnato dalla sezione Registro Saldatura di questa commessa.</div>"""
         return _render(html)
 
@@ -653,7 +653,7 @@ def _build_cap4_welder(ctx: dict) -> bytes:
             exp = _s(q.get("expiry_date", ""))
             st_color = "#059669" if q.get("status") == "attivo" else "#ea580c"
             has_pdf = "PDF allegato" if q.get("has_file") else "Nessun PDF"
-            qual_list += f'<div style="font-size:8pt;margin:1px 0;"><span style="color:{st_color};font-weight:700;">&#9679;</span> {_s(q.get("standard",""))} — {_s(q.get("process",""))} (scad. {exp}) — <em style="color:#777;">{has_pdf}</em></div>'
+            qual_list += f'<div style="font-size:8pt;margin:1px 0;"><span style="color:{st_color};font-weight:700;">&#9679;</span> {_s(q.get("standard",""))} â {_s(q.get("process",""))} (scad. {exp}) â <em style="color:#777;">{has_pdf}</em></div>'
         if not qual_list:
             qual_list = '<span style="color:#999;font-size:8pt;">Nessuna qualifica valida</span>'
 
@@ -671,7 +671,7 @@ def _build_cap4_welder(ctx: dict) -> bytes:
     note = f'<div class="note-box" style="margin-top:8px;">Le copie dei {n_pdfs} patentini PDF validi sono allegate nelle pagine successive.</div>' if n_pdfs > 0 else ""
 
     html = f"""{hdr}
-    <h2>4.4 Appendice B — Patentini Saldatori</h2>
+    <h2>4.4 Appendice B â Patentini Saldatori</h2>
     <p style="font-size:9pt;color:#555;margin-bottom:6px;">Saldatori assegnati alla commessa {_s(comm.get('numero',''))} con le rispettive qualifiche valide.</p>
     <table class="data">
         <thead><tr><th style="text-align:left;">Saldatore</th><th>Punzone</th><th>Stato</th><th style="text-align:left;">Qualifiche</th></tr></thead>
@@ -682,17 +682,17 @@ def _build_cap4_welder(ctx: dict) -> bytes:
     return _render(html)
 
 
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # CAP 5: MARCATURA CE (DoP + Etichetta)
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 def _build_cap5_dop(ctx: dict) -> bytes:
-    """DoP — use existing generator, enriched with dynamic material data."""
+    """DoP â use existing generator, enriched with dynamic material data."""
     from services.pdf_fascicolo_tecnico import generate_dop_pdf, _get_material_properties, _get_durabilita
     co = ctx["company"]
     comm = ctx["commessa"]
     ft = ctx.get("ft", {})
 
-    # ── Inject dynamic material properties from actual CAM/batches ──
+    # ââ Inject dynamic material properties from actual CAM/batches ââ
     cam_lotti = ctx.get("cam_lotti", [])
     batches = ctx.get("batches", [])
     source_data = cam_lotti or batches
@@ -724,7 +724,7 @@ def _build_cap5_dop(ctx: dict) -> bytes:
         oggi = _dt.now().strftime("%d/%m/%Y")
         ft_enriched["luogo_data_firma"] = f"Sala Bolognese, {oggi}"
 
-    # FIX 2: DDT riferimento pulito — evita "Rif. DDT n. del" incompleto
+    # FIX 2: DDT riferimento pulito â evita "Rif. DDT n. del" incompleto
     ddt_ref = comm.get("ddt_riferimento", "").strip()
     if not ddt_ref:
         ft_enriched["ddt_riferimento"] = "__SKIP__"
@@ -737,13 +737,13 @@ def _build_cap5_dop(ctx: dict) -> bytes:
 
 
 def _build_cap5_ce(ctx: dict) -> bytes:
-    """CE Label — use existing generator, enriched with dynamic material data."""
+    """CE Label â use existing generator, enriched with dynamic material data."""
     from services.pdf_fascicolo_tecnico import generate_ce_pdf, _get_material_properties, _get_durabilita
     co = ctx["company"]
     comm = ctx["commessa"]
     ft = ctx.get("ft", {})
 
-    # ── Same dynamic enrichment as DoP ──
+    # ââ Same dynamic enrichment as DoP ââ
     cam_lotti = ctx.get("cam_lotti", [])
     batches = ctx.get("batches", [])
     source_data = cam_lotti or batches
@@ -769,9 +769,9 @@ def _build_cap5_ce(ctx: dict) -> bytes:
     return buf.getvalue()
 
 
-# ══════════════════════════════════════════════════════════════
-# MERGE ALL — PDF orchestrator
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# MERGE ALL â PDF orchestrator
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 def _add_pdf(merger: PdfWriter, pdf_bytes: bytes, label: str = ""):
     """Safely add a PDF section to the merger."""
     try:
@@ -790,10 +790,10 @@ def _decode_cert(b64: str) -> bytes:
 
 
 async def generate_super_fascicolo(commessa_id: str, user_id: str) -> BytesIO:
-    """Main entry point — gathers all data and generates the unified PDF."""
+    """Main entry point â gathers all data and generates the unified PDF."""
     from core.database import db
 
-    # ── 1. Load all data (read-only) ──
+    # ââ 1. Load all data (read-only) ââ
     commessa = await db.commesse.find_one(
         {"commessa_id": commessa_id, "user_id": user_id}, {"_id": 0}
     )
@@ -852,7 +852,7 @@ async def generate_super_fascicolo(commessa_id: str, user_id: str) -> BytesIO:
         ]}, {"_id": 0}
     ) if prev_id else None
 
-    # Welders — find all assigned via Smart Assign in fascicolo_tecnico.saldature
+    # Welders â find all assigned via Smart Assign in fascicolo_tecnico.saldature
     assigned_welders = []
     saldature = ft.get("saldature", [])
     seen_welder_ids = set()
@@ -935,7 +935,7 @@ async def generate_super_fascicolo(commessa_id: str, user_id: str) -> BytesIO:
     # Conto Lavoro items (for certificates from subcontractors)
     conto_lavoro = commessa.get("conto_lavoro", [])
 
-    # ── Load certificate PDFs from commessa_documents (Repository) ──
+    # ââ Load certificate PDFs from commessa_documents (Repository) ââ
     cert_documents = []
     async for doc in db.commessa_documents.find(
         {"commessa_id": commessa_id, "user_id": user_id, "tipo": {"$in": ["certificato_31", "certificato_materiale", "certificato"]}},
@@ -958,7 +958,7 @@ async def generate_super_fascicolo(commessa_id: str, user_id: str) -> BytesIO:
         "cert_documents": cert_documents,
     }
 
-    # ── 2. Generate each section ──
+    # ââ 2. Generate each section ââ
     merger = PdfWriter()
 
     # Cover + Index
@@ -970,7 +970,7 @@ async def generate_super_fascicolo(commessa_id: str, user_id: str) -> BytesIO:
     # Cap 2: Riesame & ITT
     _add_pdf(merger, _build_cap2(ctx), "Cap 2 - Riesame & ITT")
 
-    # Cap 3: Materiali & Sostenibilità
+    # Cap 3: Materiali & SostenibilitÃ 
     _add_pdf(merger, _build_cap3_materials(ctx), "Cap 3.1 - Materiali")
     _add_pdf(merger, _build_cap3_cam(ctx), "Cap 3.2 - CAM")
     _add_pdf(merger, _build_cap3_green(ctx), "Cap 3.3 - Green Certificate")
@@ -1042,7 +1042,7 @@ async def generate_super_fascicolo(commessa_id: str, user_id: str) -> BytesIO:
     _add_pdf(merger, _build_cap5_dop(ctx), "Cap 5.1 - DoP")
     _add_pdf(merger, _build_cap5_ce(ctx), "Cap 5.2 - Etichetta CE")
 
-    # ── 3. Output ──
+    # ââ 3. Output ââ
     output = BytesIO()
     merger.write(output)
     output.seek(0)
