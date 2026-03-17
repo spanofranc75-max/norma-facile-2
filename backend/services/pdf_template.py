@@ -1,4 +1,4 @@
-"""Shared PDF template utilities — ReportLab only, no system deps."""
+"""Shared PDF template utilities â ReportLab only, no system deps."""
 from io import BytesIO
 from datetime import datetime, timezone
 import html as html_mod
@@ -138,7 +138,7 @@ def build_totals_html(iva_data: dict, acconto: float = 0) -> str:
 
 
 def render_pdf(html_content: str) -> BytesIO:
-    """Render PDF usando ReportLab — puro Python, zero dipendenze sistema."""
+    """Render PDF usando ReportLab â puro Python, zero dipendenze sistema."""
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.pagesizes import A4
@@ -194,3 +194,43 @@ def render_pdf(html_content: str) -> BytesIO:
     doc.build(story)
     buffer.seek(0)
     return buffer
+
+
+def format_date(date_str: str) -> str:
+    """Format date string to Italian format dd/mm/yyyy."""
+    if not date_str:
+        return ""
+    try:
+        from datetime import datetime
+        dt = datetime.fromisoformat(str(date_str).replace('Z', '+00:00'))
+        return dt.strftime('%d/%m/%Y')
+    except Exception:
+        return str(date_str)[:10] if date_str else ""
+
+
+def build_conditions_html(company: dict, doc_number: str) -> str:
+    """Build conditions page HTML for preventivo PDF."""
+    company_name = safe(company.get('business_name', ''))
+    return f"""
+    <div style="page-break-before: always; padding: 40px; font-family: Arial, sans-serif; font-size: 11px;">
+        <h2 style="color: #1E293B; border-bottom: 2px solid #0055FF; padding-bottom: 8px;">
+            CONDIZIONI GENERALI DI FORNITURA
+        </h2>
+        <p><strong>Documento:</strong> {safe(doc_number)}</p>
+        <p><strong>Azienda:</strong> {company_name}</p>
+        <div style="margin-top: 20px; line-height: 1.8;">
+            <p><strong>1. VALIDIT&#192; DELL&#39;OFFERTA</strong><br>
+            Il presente preventivo ha validit&#224; come indicato nel documento dalla data di emissione.</p>
+            <p><strong>2. PREZZI</strong><br>
+            I prezzi indicati si intendono IVA esclusa salvo diversa indicazione esplicita.</p>
+            <p><strong>3. TEMPI DI CONSEGNA</strong><br>
+            I tempi di consegna decorrono dalla data di conferma dell&#39;ordine e ricevimento dell&#39;acconto eventualmente previsto.</p>
+            <p><strong>4. PAGAMENTO</strong><br>
+            Il pagamento dovr&#224; avvenire secondo le modalit&#224; indicate nel preventivo.</p>
+            <p><strong>5. TRASPORTO</strong><br>
+            La merce viaggia a rischio e pericolo del committente salvo diversa indicazione.</p>
+            <p><strong>6. FORO COMPETENTE</strong><br>
+            Per qualsiasi controversia &#232; competente il Foro del luogo ove ha sede il fornitore.</p>
+        </div>
+    </div>
+    """
