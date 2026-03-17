@@ -122,7 +122,6 @@ app.add_middleware(
     max_age=3600,
 )
 
-)
 
 # Log validation errors in detail for debugging
 @app.exception_handler(RequestValidationError)
