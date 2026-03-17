@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/preventivi", tags=["preventivi"])
 
 
-# ── Models ───────────────────────────────────────────────────────
+# ââ Models âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 class ThermalData(BaseModel):
     glass_id: Optional[str] = None
@@ -133,7 +133,7 @@ class ProgressiveInvoiceRequest(BaseModel):
     description: Optional[str] = None          # Custom description override
 
 
-# ── Helpers ──────────────────────────────────────────────────────
+# ââ Helpers ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 def calc_line(line: dict) -> dict:
     qty = float(line.get("quantity", 1))
@@ -222,7 +222,7 @@ def run_compliance(lines: list) -> dict:
     }
 
 
-# ── BRIDGE: Distinta → Preventivo ────────────────────────────────
+# ââ BRIDGE: Distinta â Preventivo ââââââââââââââââââââââââââââââââ
 
 @router.post("/from-distinta/{distinta_id}")
 async def create_preventivo_from_distinta(
@@ -240,7 +240,7 @@ async def create_preventivo_from_distinta(
     prev_id = f"prev_{uuid.uuid4().hex[:12]}"
     year = now.year
 
-    # Atomic counter — sync with max existing to avoid gaps/duplicates
+    # Atomic counter â sync with max existing to avoid gaps/duplicates
     counter_id = f"PRV-{uid}-{year}"
     pipeline = [
         {"$match": {"user_id": uid, "number": {"$regex": f"^PRV-{year}-"}}},
@@ -283,7 +283,7 @@ async def create_preventivo_from_distinta(
             line_total = round(selling_price * q, 2)
             lines.append({
                 "line_id": f"ln_{uuid.uuid4().hex[:8]}",
-                "description": f"{item.get('name', item.get('code', ''))} — {item.get('dimensions', '')} × {float(item.get('length_mm',0))}mm",
+                "description": f"{item.get('name', item.get('code', ''))} â {item.get('dimensions', '')} Ã {float(item.get('length_mm',0))}mm",
                 "codice_articolo": item.get("code", ""),
                 "quantity": q,
                 "unit": item.get("unit", "pz"),
@@ -300,7 +300,7 @@ async def create_preventivo_from_distinta(
         selling_price = round(material_cost * (1 + markup_percent / 100), 2)
         lines.append({
             "line_id": f"ln_{uuid.uuid4().hex[:8]}",
-            "description": f"Realizzazione opera (da Distinta #{distinta.get('name', distinta_id)}) — {len(items)} voci, {round(total_weight, 1)} kg",
+            "description": f"Realizzazione opera (da Distinta #{distinta.get('name', distinta_id)}) â {len(items)} voci, {round(total_weight, 1)} kg",
             "codice_articolo": "",
             "quantity": 1,
             "unit": "corpo",
@@ -310,7 +310,7 @@ async def create_preventivo_from_distinta(
             "sconto_2": 0,
             "vat_rate": "22",
             "line_total": selling_price,
-            "notes": f"Costo materiale: €{material_cost:.2f} + markup {markup_percent:.0f}%",
+            "notes": f"Costo materiale: â¬{material_cost:.2f} + markup {markup_percent:.0f}%",
         })
 
     # Totals
@@ -356,7 +356,7 @@ async def create_preventivo_from_distinta(
     }
 
 
-# ── CRUD ─────────────────────────────────────────────────────────
+# ââ CRUD âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 @router.get("/")
 async def list_preventivi(
@@ -458,7 +458,7 @@ async def create_preventivo(data: PreventivoCreate, user: dict = Depends(get_cur
     year = now.year
     uid = user["user_id"]
 
-    # Atomic counter — always sync with max existing number to avoid gaps
+    # Atomic counter â always sync with max existing number to avoid gaps
     counter_id = f"PRV-{uid}-{year}"
     # Find current max number in database
     pipeline = [
@@ -608,7 +608,7 @@ async def delete_preventivo(prev_id: str, user: dict = Depends(get_current_user)
         raise HTTPException(404, "Preventivo non trovato")
 
     if doc.get("status") == "eliminato":
-        raise HTTPException(409, "Preventivo già eliminato")
+        raise HTTPException(409, "Preventivo giÃ  eliminato")
 
     await db.preventivi.update_one(
         {"preventivo_id": prev_id, "user_id": uid},
@@ -637,7 +637,7 @@ async def hide_preventivo_from_planning(prev_id: str, user: dict = Depends(get_c
 
 
 
-# ── Clone Preventivo ─────────────────────────────────────────────
+# ââ Clone Preventivo âââââââââââââââââââââââââââââââââââââââââââââ
 
 @router.post("/{prev_id}/clone", status_code=201)
 async def clone_preventivo(prev_id: str, user: dict = Depends(get_current_user)):
@@ -655,7 +655,7 @@ async def clone_preventivo(prev_id: str, user: dict = Depends(get_current_user))
     year = now.year
     new_id = f"prev_{uuid.uuid4().hex[:10]}"
 
-    # Generate new number — sync counter with max existing to avoid gaps
+    # Generate new number â sync counter with max existing to avoid gaps
     counter_id = f"PRV-{uid}-{year}"
     pipeline = [
         {"$match": {"user_id": uid, "number": {"$regex": f"^PRV-{year}-"}}},
@@ -696,7 +696,7 @@ async def clone_preventivo(prev_id: str, user: dict = Depends(get_current_user))
         float(source.get("acconto", 0)),
     )
 
-    # Build new document — copy everything except system/workflow fields
+    # Build new document â copy everything except system/workflow fields
     new_doc = {
         "preventivo_id": new_id,
         "user_id": uid,
@@ -734,11 +734,11 @@ async def clone_preventivo(prev_id: str, user: dict = Depends(get_current_user))
 
     await db.preventivi.insert_one(new_doc)
     created = await db.preventivi.find_one({"preventivo_id": new_id}, {"_id": 0})
-    logger.info(f"Preventivo cloned: {prev_id} → {new_id} ({number})")
+    logger.info(f"Preventivo cloned: {prev_id} â {new_id} ({number})")
     return created
 
 
-# ── Compliance Check ─────────────────────────────────────────────
+# ââ Compliance Check âââââââââââââââââââââââââââââââââââââââââââââ
 
 @router.post("/{prev_id}/check-compliance")
 async def check_compliance(prev_id: str, user: dict = Depends(get_current_user)):
@@ -763,7 +763,7 @@ async def check_compliance(prev_id: str, user: dict = Depends(get_current_user))
 
 
 
-# ── Convert to Invoice ───────────────────────────────────────────
+# ââ Convert to Invoice âââââââââââââââââââââââââââââââââââââââââââ
 
 @router.post("/{prev_id}/convert-to-invoice")
 async def convert_to_invoice(prev_id: str, user: dict = Depends(get_current_user)):
@@ -792,7 +792,7 @@ async def convert_to_invoice(prev_id: str, user: dict = Depends(get_current_user
     invoice_id = f"inv_{uuid.uuid4().hex[:12]}"
     year = now.year
 
-    # Get next invoice number — use SAME counter as progressive-invoice and invoices module
+    # Get next invoice number â use SAME counter as progressive-invoice and invoices module
     ft_counter_id = f"{user['user_id']}_FT_{year}"
     ft_existing = await db.document_counters.find_one({"counter_id": ft_counter_id})
     if not ft_existing:
@@ -936,11 +936,11 @@ async def convert_to_invoice(prev_id: str, user: dict = Depends(get_current_user
     }
 
 
-# ── Progressive Invoicing (Acconto / SAL / Saldo) ─────────────────
+# ââ Progressive Invoicing (Acconto / SAL / Saldo) âââââââââââââââââ
 
 @router.get("/{prev_id}/invoicing-status")
 async def get_invoicing_status(prev_id: str, user: dict = Depends(get_current_user)):
-    """Get the invoicing progress for a preventivo — how much has been billed.
+    """Get the invoicing progress for a preventivo â how much has been billed.
     REGOLA: si lavora SEMPRE sull'imponibile (base senza IVA). L'IVA si aggiunge solo in fattura.
     """
     uid = user["user_id"]
@@ -955,7 +955,7 @@ async def get_invoicing_status(prev_id: str, user: dict = Depends(get_current_us
     subtotal_prev = float(totals.get("subtotal", 0))
     sconto_val = float(totals.get("sconto_val", 0))
     imponibile_prev = float(totals.get("imponibile", subtotal_prev - sconto_val))
-    # Protezione: imponibile non può essere negativo
+    # Protezione: imponibile non puÃ² essere negativo
     if imponibile_prev <= 0:
         imponibile_prev = subtotal_prev
     total_with_vat = float(totals.get("total", imponibile_prev))
@@ -1019,7 +1019,7 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
     subtotal_prev = float(totals.get("subtotal", 0))
     sconto_val = float(totals.get("sconto_val", 0))
     imponibile_prev = float(totals.get("imponibile", subtotal_prev - sconto_val))
-    # Protezione: imponibile non può essere negativo
+    # Protezione: imponibile non puÃ² essere negativo
     if imponibile_prev <= 0:
         imponibile_prev = subtotal_prev
     prev_number = doc.get("number", prev_id)
@@ -1047,8 +1047,8 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
     if remaining <= 0.01 and body.invoice_type != "saldo":
         raise HTTPException(400, "Preventivo gia' completamente fatturato.")
 
-    # ── Determine invoice amount and lines ──
-    # REGOLA: progressive_amount è SEMPRE l'imponibile, MAI il totale con IVA
+    # ââ Determine invoice amount and lines ââ
+    # REGOLA: progressive_amount Ã¨ SEMPRE l'imponibile, MAI il totale con IVA
     invoice_lines = []
     progressive_amount = 0.0
     vat_rate = prev_lines[0].get("vat_rate", "22") if prev_lines else "22"
@@ -1142,7 +1142,7 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
     else:
         raise HTTPException(400, "Tipo fattura non valido. Usare: acconto, sal, saldo")
 
-    # ── Create the invoice document ──
+    # ââ Create the invoice document ââ
     now = datetime.now(timezone.utc)
     invoice_id = f"inv_{uuid.uuid4().hex[:12]}"
     year = now.year
@@ -1205,7 +1205,7 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
             "total_document": total_document,
             "total_to_pay": total_document,
         },
-        "notes": f"Rif. Preventivo {prev_number} — {type_labels.get(body.invoice_type, body.invoice_type)}",
+        "notes": f"Rif. Preventivo {prev_number} â {type_labels.get(body.invoice_type, body.invoice_type)}",
         "internal_notes": None,
         "created_at": now,
         "updated_at": now,
@@ -1254,7 +1254,7 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
 
     logger.info(f"Progressive invoice {doc_number} ({body.invoice_type}) created from preventivo {prev_id}: {progressive_amount:.2f} EUR")
     return {
-        "message": f"Fattura {type_labels.get(body.invoice_type, body.invoice_type)} {doc_number} creata — {fmtEur_py(progressive_amount)}",
+        "message": f"Fattura {type_labels.get(body.invoice_type, body.invoice_type)} {doc_number} creata â {fmtEur_py(progressive_amount)}",
         "invoice_id": invoice_id,
         "document_number": doc_number,
         "progressive_type": body.invoice_type,
@@ -1269,7 +1269,7 @@ def fmtEur_py(v):
     return f"{v:,.2f} EUR".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-# ── PDF Generation ───────────────────────────────────────────────
+# ââ PDF Generation âââââââââââââââââââââââââââââââââââââââââââââââ
 
 @router.get("/{prev_id}/pdf")
 async def get_preventivo_pdf(prev_id: str, user: dict = Depends(get_current_user)):
@@ -1299,7 +1299,7 @@ async def get_preventivo_pdf(prev_id: str, user: dict = Depends(get_current_user
     )
 
 
-# ── Send Preventivo via Email ──
+# ââ Send Preventivo via Email ââ
 
 @router.get("/{prev_id}/preview-email")
 async def preview_preventivo_email(prev_id: str, user: dict = Depends(get_current_user)):
@@ -1430,131 +1430,11 @@ async def send_preventivo_email(prev_id: str, payload: dict = None, user: dict =
 
 
 
-# ── PDF Builder (WeasyPrint — shared template) ──────────────────
+# ââ PDF Builder (WeasyPrint â shared template) ââââââââââââââââââ
 
 def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_type: dict = None):
-    """Generate Preventivo PDF using the unified template."""
-    from services.pdf_template import (
-        fmt_it, safe, build_header_html, compute_iva_groups,
-        build_totals_html, build_conditions_html, render_pdf, format_date,
-    )
+    """Generate Preventivo PDF using modern layout (same as invoices)."""
+    from services.pdf_preventivo_modern import generate_modern_preventivo_pdf
+    buf = generate_modern_preventivo_pdf(prev, client or {}, company or {})
+    return buf
 
-    co = company or {}
-    cl = client or {}
-
-    header = build_header_html(co, cl)
-
-    # ── Document data ──
-    doc_number = prev.get("number", "")
-    display_num = doc_number.replace("PRV-", "").replace("/", "-") if doc_number else ""
-    doc_date = format_date(prev.get("created_at", ""))
-    payment_label = safe(prev.get("payment_type_label"))
-    validity = prev.get("validity_days", 30) or 30
-    riferimento = safe(prev.get("riferimento"))
-    subject = safe(prev.get("subject"))
-    notes_text = prev.get("notes", "") or ""
-
-    # ── Build line items HTML ──
-    lines = prev.get("lines", [])
-    lines_html = ""
-    for ln in lines:
-        codice = safe(ln.get("codice_articolo") or "")
-        desc = safe(ln.get("description") or "").replace("\n", "<br>")
-        um = safe(ln.get("unit", "pz"))
-        qty = fmt_it(ln.get("quantity", 1))
-        price = fmt_it(ln.get("unit_price", 0))
-        s1 = float(ln.get("sconto_1") or 0)
-        s2 = float(ln.get("sconto_2") or 0)
-        sc = ""
-        if s1 > 0 and s2 > 0:
-            sc = f"{fmt_it(s1)}%+{fmt_it(s2)}%"
-        elif s1 > 0:
-            sc = f"{fmt_it(s1)}%"
-        elif s2 > 0:
-            sc = f"{fmt_it(s2)}%"
-        importo = fmt_it(ln.get("line_total", 0))
-        iva = safe(str(ln.get("vat_rate", "22")))
-
-        lines_html += f"""<tr>
-            <td class="tc">{codice}</td>
-            <td class="desc-cell">{desc}</td>
-            <td class="tc">{um}</td>
-            <td class="tr">{qty}</td>
-            <td class="tr">{price}</td>
-            <td class="tc">{sc}</td>
-            <td class="tr">{importo}</td>
-            <td class="tc">{iva}%</td>
-        </tr>"""
-
-    # ── IVA / Totals ──
-    sconto_globale = float(prev.get("sconto_globale") or 0)
-    iva_data = compute_iva_groups(lines, sconto_globale)
-    totals_html = build_totals_html(iva_data, sconto_globale)
-
-    # ── Notes ──
-    ref_note_html = ""
-    if riferimento:
-        ref_note_html = f'<p class="ref-note"><strong>Note:</strong> {riferimento}</p>'
-    elif subject:
-        ref_note_html = f'<p class="ref-note"><strong>Note:</strong> {subject}</p>'
-
-    tech_notes_html = ""
-    if notes_text.strip():
-        tech_notes_html = f'<div class="info-box"><strong>Note:</strong> {safe(notes_text).replace(chr(10), "<br>")}</div>'
-
-    # ── Bank details ──
-    bank_name = safe(prev.get("banca") or "")
-    bank_iban = safe(prev.get("iban") or "")
-    # Fallback to old bank_details if preventivo doesn't have specific bank
-    if not bank_name and not bank_iban:
-        bank = co.get("bank_details", {}) or {}
-        bank_name = safe(bank.get("bank_name") or "")
-        bank_iban = safe(bank.get("iban") or "")
-    bank_html = ""
-    if bank_name or bank_iban:
-        bank_html = '<div class="bank-info">'
-        if bank_name:
-            bank_html += f"<p><strong>Banca:</strong> {bank_name}</p>"
-        if bank_iban:
-            bank_html += f"<p><strong>IBAN:</strong> {bank_iban}</p>"
-        bank_html += "</div>"
-
-    # ── Conditions page ──
-    condizioni_html = build_conditions_html(co, doc_number)
-
-    # ── Assemble ──
-    body = f"""
-    {header}
-    <div class="doc-title">
-        <h1>PREVENTIVO</h1>
-        <div class="doc-num">{safe(display_num)}</div>
-    </div>
-    <table class="meta-table">
-        <tr><td class="meta-label">DATA:</td><td>{doc_date}</td></tr>
-        <tr><td class="meta-label">Pagamento:</td><td>{payment_label}</td></tr>
-        <tr><td class="meta-label">Validit&agrave;:</td><td>{validity} giorni</td></tr>
-    </table>
-
-    {ref_note_html}
-
-    <table class="items-table">
-        <colgroup>
-            <col style="width:8%"><col style="width:38%"><col style="width:6%">
-            <col style="width:8%"><col style="width:12%"><col style="width:8%">
-            <col style="width:12%"><col style="width:8%">
-        </colgroup>
-        <thead><tr>
-            <th>Codice</th><th>Descrizione</th><th>u.m.</th>
-            <th>Quantit&agrave;</th><th>Prezzo</th><th>Sconti</th>
-            <th>Importo</th><th>Iva</th>
-        </tr></thead>
-        <tbody>{lines_html}</tbody>
-    </table>
-
-    {tech_notes_html}
-    {totals_html}
-    {bank_html}
-    {condizioni_html}
-    """
-
-    return render_pdf(body)
