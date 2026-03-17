@@ -314,15 +314,15 @@ def build_conditions_html(company: dict, doc_number: str) -> str:
             .replace('\u00e2\u0080\u0099', "'")
             .replace('\u00e2\u0080\u009c', '"')
             .replace('\u00e2\u0080\u009d', '"')
-            .replace('\u00e0', 'ÃÂÃÂÃÂÃÂ ').replace('\u00e8', 'ÃÂÃÂÃÂÃÂ¨')
-            .replace('\u00e9', 'ÃÂÃÂÃÂÃÂ©').replace('\u00ec', 'ÃÂÃÂÃÂÃÂ¬')
-            .replace('\u00f2', 'ÃÂÃÂÃÂÃÂ²').replace('\u00f9', 'ÃÂÃÂÃÂÃÂ¹')
-            .replace('\u00c0', 'ÃÂÃÂÃÂÃÂ').replace('\u00c8', 'ÃÂÃÂÃÂÃÂ')
-            .replace('ÃÂÃÂÃÂÃÂ ', 'ÃÂÃÂÃÂÃÂ ').replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨', 'ÃÂÃÂÃÂÃÂ¨').replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©', 'ÃÂÃÂÃÂÃÂ©')
-            .replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¬', 'ÃÂÃÂÃÂÃÂ¬').replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ²', 'ÃÂÃÂÃÂÃÂ²').replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¹', 'ÃÂÃÂÃÂÃÂ¹')
-            .replace('ÃÂÃÂÃÂÃÂ¢\x80\x99', "'").replace('ÃÂÃÂÃÂÃÂ¢\x80\x9c', '"')
-            .replace('ÃÂÃÂÃÂÃÂ¢\x80\x9d', '"').replace('ÃÂÃÂÃÂÃÂ¢\x80\x93', 'ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ')
-            .replace('\u2013', 'ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ').replace('\u2014', 'ÃÂÃÂ¢ÃÂÃÂÃÂÃÂ')
+            .replace('\u00e0', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ ').replace('\u00e8', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨')
+            .replace('\u00e9', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©').replace('\u00ec', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¬')
+            .replace('\u00f2', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ²').replace('\u00f9', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¹')
+            .replace('\u00c0', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ').replace('\u00c8', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ')
+            .replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ ', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ ').replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨').replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©')
+            .replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¬', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¬').replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ²', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ²').replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¹', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¹')
+            .replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢\x80\x99', "'").replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢\x80\x9c', '"')
+            .replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢\x80\x9d', '"').replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢\x80\x93', 'ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ')
+            .replace('\u2013', 'ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ').replace('\u2014', 'ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ')
         )
     
     if condizioni:
@@ -345,8 +345,10 @@ def build_conditions_html(company: dict, doc_number: str) -> str:
 
 
 def render_pdf(html_content: str) -> BytesIO:
-    """Render PDF stile Invoicex - layout professionale pulito."""
+    """Render PDF Invoicex - v6 con fix duplicati header e totali."""
     import base64 as _b64, re as _re
+    import html as _hmod
+    from copy import deepcopy
     from lxml import html as _lhtml
     from reportlab.lib import colors as _col
     from reportlab.lib.pagesizes import A4
@@ -356,48 +358,54 @@ def render_pdf(html_content: str) -> BytesIO:
     from reportlab.lib.units import cm
     from reportlab.lib.enums import TA_RIGHT, TA_CENTER, TA_LEFT
 
-    def _img(s):
+    def _di(s):
         try:
             if "base64," in s: s = s.split("base64,")[1]
             return BytesIO(_b64.b64decode(s))
         except: return None
 
-    def _fix(t):
+    def _c(t):
         t = str(t or '')
-        for a, b in [('\u00e0','\u00e0'),('\u00e8','\u00e8'),('\u00e9','\u00e9'),('\u00ec','\u00ec'),('\u00f2','\u00f2'),('\u00f9','\u00f9'),
-            ('\u00c3\u00a0','\u00e0'),('\u00c3\u00a8','\u00e8'),('\u00c3\u00a9','\u00e9'),('\u00c3\u00ac','\u00ec'),('\u00c3\u00b2','\u00f2'),('\u00c3\u00b9','\u00f9'),
-            ('\u00e2\x80\x99',"'"),('\u00e2\x80\x93','\u2013'),('&agrave;','\u00e0'),('&egrave;','\u00e8'),
-            ('&amp;','&'),('&nbsp;',' '),('&mdash;','\u2014'),('&lt;','<'),('&gt;','>'),]: t = t.replace(a, b)
-        return t.strip()
+        for a,b in [
+            ('\u00e2\u0080\u0099',"'"),('\u00e2\u0080\u009c','"'),('\u00e2\u0080\u009d','"'),
+            ('\u00e2\u0080\u0093','\u2013'),('\u00e2\u0080\u0094','\u2014'),
+            ('\u00c3\u00a0','\u00e0'),('\u00c3\u00a8','\u00e8'),('\u00c3\u00a9','\u00e9'),
+            ('\u00c3\u00ac','\u00ec'),('\u00c3\u00b2','\u00f2'),('\u00c3\u00b9','\u00f9'),
+            ('&amp;','&'),('&nbsp;',' '),('&lt;','<'),('&gt;','>'),
+        ]: t = t.replace(a,b)
+        return _hmod.unescape(t).strip()
 
-    def _t(el):
+    def _tx(el):
         if el is None: return ''
-        return _fix(' '.join(el.itertext()))
+        return _c(' '.join(el.itertext()))
 
-    def _br_lines(el):
+    def _bl(el):
         if el is None: return []
-        for br in el.findall('.//br'): br.tail = '\n' + (br.tail or '')
-        return [_fix(l) for l in '\n'.join(el.itertext()).split('\n') if _fix(l)]
+        el2 = deepcopy(el)
+        for br in el2.iter('br'): br.tail = '\n'+(br.tail or '')
+        return [_c(l) for l in '\n'.join(el2.itertext()).split('\n') if _c(l)]
 
-    def P(text, sty):
-        t = _fix(str(text or ''))
-        return Paragraph(t.replace('\n','<br/>'), sty) if t else Spacer(1,1)
+    def P(t,s):
+        t=_c(str(t or ''))
+        return Paragraph(t.replace('\n','<br/>'),s) if t else Spacer(1,1)
 
-    if isinstance(html_content, bytes): html_content = html_content.decode('utf-8')
-    tree = _lhtml.fromstring('<div id="root">' + html_content + '</div>')
-    buf = BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1.5*cm, bottomMargin=2.0*cm)
-    BLUE=_col.HexColor('#1a56db'); DARK=_col.HexColor('#1E293B'); LGRAY=_col.HexColor('#f3f4f6')
+    def f1(el,xp):
+        r=el.xpath(xp); return r[0] if r else None
+
+    if isinstance(html_content,bytes): html_content=html_content.decode('utf-8')
+    root=_lhtml.fromstring('<div class="nr">'+html_content+'</div>')
+
+    BLUE=_col.HexColor('#1a56db'); LGRAY=_col.HexColor('#f3f4f6')
     BRD=_col.HexColor('#d1d5db'); WHITE=_col.white; BLACK=_col.black; GTXT=_col.HexColor('#6B7280')
-    W = A4[0] - 3.0*cm
-    ss = getSampleStyleSheet()
+    W=A4[0]-3.0*cm
+    ss=getSampleStyleSheet()
     def S(n,**k): return ParagraphStyle(n,parent=ss['Normal'],**k)
     N   =S('N',  fontSize=8.5,leading=11)
     B   =S('B',  fontSize=8.5,leading=11,fontName='Helvetica-Bold')
     SM  =S('SM', fontSize=7.5,leading=10,textColor=GTXT)
     CO  =S('CO', fontSize=11, leading=14,fontName='Helvetica-Bold')
     CL  =S('CL', fontSize=10, leading=13,fontName='Helvetica-Bold')
-    BIG =S('BIG',fontSize=14, leading=18,fontName='Helvetica-Bold')
+    BIG =S('BIG',fontSize=15, leading=19,fontName='Helvetica-Bold')
     TH  =S('TH', fontSize=8,  leading=10,fontName='Helvetica-BoldOblique',textColor=BLACK)
     THR =S('THR',fontSize=8,  leading=10,fontName='Helvetica-BoldOblique',textColor=BLACK,alignment=TA_RIGHT)
     TD  =S('TD', fontSize=8.5,leading=11)
@@ -407,98 +415,107 @@ def render_pdf(html_content: str) -> BytesIO:
     TV  =S('TV', fontSize=8.5,leading=11,fontName='Helvetica-Bold',alignment=TA_RIGHT)
     GL  =S('GL', fontSize=10, leading=13,fontName='Helvetica-Bold')
     GV  =S('GV', fontSize=10, leading=13,fontName='Helvetica-Bold',alignment=TA_RIGHT)
-    MLAB=S('MLAB',fontSize=7.5,leading=10,fontName='Helvetica-Bold',textColor=GTXT)
-    MVAL=S('MVAL',fontSize=8.5,leading=11)
-    FOOT=S('FOOT',fontSize=7,  leading=9, textColor=GTXT)
-    FOOTR=S('FOOTR',fontSize=7,leading=9, textColor=GTXT,alignment=TA_RIGHT)
+    ML  =S('ML', fontSize=7.5,leading=10,fontName='Helvetica-Bold',textColor=GTXT)
+    MV  =S('MV', fontSize=8.5,leading=11)
+    CLI =S('CLI',fontSize=8,  leading=10,fontName='Helvetica-Oblique',textColor=GTXT)
+    FT  =S('FT', fontSize=7,  leading=9, textColor=GTXT)
+    FTR =S('FTR',fontSize=7,  leading=9, textColor=GTXT,alignment=TA_RIGHT)
     BLB =S('BLB',fontSize=9,  leading=12,fontName='Helvetica-Bold',textColor=BLUE)
+    buf=BytesIO()
+    doc=SimpleDocTemplate(buf,pagesize=A4,rightMargin=1.5*cm,leftMargin=1.5*cm,topMargin=1.5*cm,bottomMargin=2.0*cm)
     els=[]
 
-    # 1 HEADER
-    co_boxes=tree.xpath("//div[@class='company-box']"); cl_boxes=tree.xpath("//div[@class='client-box']")
-    co_box=co_boxes[0] if co_boxes else None; cl_box=cl_boxes[0] if cl_boxes else None
-    imgs=tree.xpath('//img/@src'); logo=None
-    if imgs:
-        s=_img(imgs[0])
-        if s:
-            try: logo=Image(s,width=2.0*cm,height=1.0*cm)
-            except: pass
+    # 1 HEADER - prende SOLO il primo company-box e client-box
+    co_box=f1(root,".//td[@class='company-box']")
+    cl_box=f1(root,".//td[@class='client-box']")
+    logo=None
+    if co_box is not None:
+        srcs=co_box.xpath('.//img/@src')
+        if srcs:
+            s=_di(srcs[0])
+            if s:
+                try: logo=Image(s,width=2.0*cm,height=1.0*cm)
+                except: pass
     co_col=[]
     if logo: co_col.append(logo)
     if co_box is not None:
-        c_n=co_box.xpath(".//div[@class='company-name']"); c_d=co_box.xpath(".//div[@class='company-detail']")
-        if c_n: co_col.append(Paragraph(_t(c_n[0]),CO))
-        if c_d:
-            for line in _br_lines(c_d[0]): co_col.append(Paragraph(line,B if('P.IVA' in line or 'Cod.Fisc' in line) else SM))
-    CLI=S('CLI',fontSize=8,leading=10,fontName='Helvetica-Oblique',textColor=GTXT)
-    cl_paras=[Paragraph('Cliente',CLI)]
+        cn=f1(co_box,".//div[@class='company-name']"); cd=f1(co_box,".//div[@class='company-detail']")
+        if cn: co_col.append(Paragraph(_tx(cn),CO))
+        if cd:
+            for l in _bl(cd): co_col.append(Paragraph(l,B if('P.IVA' in l or 'Cod.Fisc' in l) else SM))
+    if not co_col: co_col=[Spacer(1,1)]
+    cl_col=[Paragraph('Cliente',CLI)]
     if cl_box is not None:
-        c_n=cl_box.xpath(".//div[@class='client-name']"); c_d=cl_box.xpath(".//div[@class='client-detail']")
-        if c_n: cl_paras.append(Paragraph(_t(c_n[0]),CL))
-        if c_d:
-            for line in _br_lines(c_d[0]): cl_paras.append(Paragraph(line,B if('P.IVA' in line or 'Cod.Fisc' in line) else SM))
-    hdr=Table([[co_col,cl_paras]],colWidths=[W*0.52,W*0.46])
+        cn=f1(cl_box,".//div[@class='client-name']"); cd=f1(cl_box,".//div[@class='client-detail']")
+        if cn: cl_col.append(Paragraph(_tx(cn),CL))
+        if cd:
+            for l in _bl(cd): cl_col.append(Paragraph(l,B if('P.IVA' in l or 'Cod.Fisc' in l) else SM))
+    hdr=Table([[co_col,cl_col]],colWidths=[W*0.52,W*0.46])
     hdr.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(0,0),0),
         ('RIGHTPADDING',(0,0),(0,0),6),('LEFTPADDING',(1,0),(1,0),8),('TOPPADDING',(1,0),(1,0),6),
         ('BOTTOMPADDING',(1,0),(1,0),6),('BACKGROUND',(1,0),(1,0),LGRAY),('BOX',(1,0),(1,0),0.5,BRD)]))
     els+=[hdr,Spacer(1,8)]
 
-    # 2 GRIGLIA META
-    title_div=tree.xpath("//div[@class='doc-title']")
-    meta_rows=tree.xpath("//table[@class='meta-table']//tr")
-    doc_title=''; doc_num=''
-    if title_div:
-        h1=title_div[0].xpath('.//h1'); dn=title_div[0].xpath(".//*[@class='doc-num']")
-        doc_title=_fix(h1[0].text_content()) if h1 else ''; doc_num=_fix(dn[0].text_content()) if dn else ''
-    meta_vals={}
-    for tr in meta_rows:
-        tds=tr.xpath('./td')
-        for i in range(0,len(tds)-1,2):
-            k=_fix(tds[i].text_content()).rstrip(':').strip(); v=_fix(tds[i+1].text_content()).strip()
-            if k and v: meta_vals[k]=v
+    # 2 META - prende SOLO la prima meta-table e il primo doc-title
+    td=f1(root,".//div[@class='doc-title']"); dt=''; dn=''
+    if td:
+        h1=f1(td,'.//h1'); dnx=f1(td,".//*[@class='doc-num']")
+        if h1: dt=_tx(h1)
+        if dnx: dn=_tx(dnx)
+    mt=f1(root,".//table[@class='meta-table']"); mv={}
+    if mt:
+        for tr in mt.xpath('.//tr'):
+            tds=tr.xpath('./td'); i=0
+            while i<len(tds)-1:
+                k=_tx(tds[i]).rstrip(':').strip(); v=_tx(tds[i+1]).strip()
+                if k and v: mv[k]=v
+                i+=2
     cl_piva=''
     if cl_box is not None:
-        c_d=cl_box.xpath(".//div[@class='client-detail']")
-        if c_d:
-            for line in _br_lines(c_d[0]):
-                if 'P.IVA' in line or 'Cod.Fisc' in line: cl_piva=line; break
-    grid=Table([[Paragraph(doc_title+' '+doc_num,BIG),Paragraph('DATA '+meta_vals.get('DATA',''),MLAB),Paragraph(cl_piva or '',MLAB)]],colWidths=[W*0.35,W*0.30,W*0.33])
-    grid.setStyle(TableStyle([('GRID',(0,0),(-1,-1),0.5,BRD),('BACKGROUND',(0,0),(0,0),LGRAY),
-        ('TOPPADDING',(0,0),(-1,-1),4),('BOTTOMPADDING',(0,0),(-1,-1),4),('LEFTPADDING',(0,0),(-1,-1),6),('VALIGN',(0,0),(-1,-1),'MIDDLE')]))
-    els.append(grid)
-    pag=meta_vals.get('Pagamento','')
-    if pag:
-        g2=Table([[Paragraph('Pagamento',MLAB),Paragraph(pag,MVAL),Paragraph('',N)]],colWidths=[W*0.20,W*0.45,W*0.33])
-        g2.setStyle(TableStyle([('GRID',(0,0),(-1,-1),0.5,BRD),('TOPPADDING',(0,0),(-1,-1),3),('BOTTOMPADDING',(0,0),(-1,-1),3),('LEFTPADDING',(0,0),(-1,-1),6),('FONTNAME',(0,0),(0,-1),'Helvetica-Bold')]))
+        cd=f1(cl_box,".//div[@class='client-detail']")
+        if cd:
+            for l in _bl(cd):
+                if 'P.IVA' in l or 'Cod.Fisc' in l: cl_piva=l; break
+    g1=Table([[Paragraph((dt+'  '+dn).strip(),BIG),Paragraph('DATA  '+mv.get('DATA',''),ML),Paragraph(cl_piva,SM)]],colWidths=[W*0.35,W*0.30,W*0.33])
+    g1.setStyle(TableStyle([('GRID',(0,0),(-1,-1),0.5,BRD),('BACKGROUND',(0,0),(0,0),LGRAY),
+        ('TOPPADDING',(0,0),(-1,-1),5),('BOTTOMPADDING',(0,0),(-1,-1),5),('LEFTPADDING',(0,0),(-1,-1),6),('VALIGN',(0,0),(-1,-1),'MIDDLE')]))
+    els.append(g1)
+    extra=[(k,v) for k,v in mv.items() if k!='DATA']
+    for i in range(0,len(extra),2):
+        k1,v1=extra[i]; k2,v2=extra[i+1] if i+1<len(extra) else ('','')
+        g2=Table([[Paragraph(k1+':',ML),Paragraph(v1,MV),Paragraph(k2+':' if k2 else '',ML),Paragraph(v2,MV)]],colWidths=[W*0.18,W*0.30,W*0.18,W*0.32])
+        g2.setStyle(TableStyle([('GRID',(0,0),(-1,-1),0.5,BRD),('TOPPADDING',(0,0),(-1,-1),3),('BOTTOMPADDING',(0,0),(-1,-1),3),
+            ('LEFTPADDING',(0,0),(-1,-1),6),('FONTNAME',(0,0),(0,-1),'Helvetica-Bold'),('FONTNAME',(2,0),(2,-1),'Helvetica-Bold'),('FONTSIZE',(0,0),(-1,-1),8)]))
         els.append(g2)
     els.append(Spacer(1,8))
 
     # 3 REF NOTE
-    for e in tree.xpath("//*[contains(@class,'ref-note')]"):
-        els+=[Paragraph(_fix(e.text_content()),N),Spacer(1,4)]
+    rn=root.xpath(".//*[contains(@class,'ref-note')]")
+    if rn: els+=[Paragraph(_tx(rn[0]),N),Spacer(1,4)]
 
-    # 4 TABELLA ARTICOLI
-    it_tbl=tree.xpath("//table[@class='items-table']")
-    if it_tbl:
-        ths=it_tbl[0].xpath('.//thead/tr/th'); trs=it_tbl[0].xpath('.//tbody/tr')
+    # 4 TABELLA ARTICOLI - SOLO la prima items-table
+    itx=f1(root,".//table[@class='items-table']")
+    if itx is not None:
+        thead=f1(itx,'.//thead'); tbody=f1(itx,'.//tbody')
+        ths=thead.xpath('.//th') if thead is not None else []
         n=len(ths) if ths else 8
         cw=[W*0.08,W*0.35,W*0.06,W*0.08,W*0.12,W*0.08,W*0.12,W*0.08][:n]
         while len(cw)<n: cw.append(W*0.09)
-        th_s=[TH,TH,TH,THR,THR,TH,THR,TH]
-        td_data=[[Paragraph(_fix(h.text_content()),th_s[i] if i<len(th_s) else TH) for i,h in enumerate(ths)]] if ths else []
-        for tr in trs:
-            tds=tr.xpath('./td'); row=[]
-            for j,td in enumerate(tds):
-                for br in td.findall('.//br'): br.tail='\n'+(br.tail or '')
-                txt=_fix(td.text_content())
-                if j==1: row.append(Paragraph(txt.replace('\n','<br/>'),TD))
-                elif j in(3,4,6): row.append(Paragraph(txt,TDR))
-                elif j in(2,5,7): row.append(Paragraph(txt,TDC))
-                else: row.append(Paragraph(txt,TD))
-            while len(row)<n: row.append(Paragraph('',TD))
-            td_data.append(row[:n])
-        if td_data:
-            it=Table(td_data,colWidths=cw)
+        ths_=[TH,TH,TH,THR,THR,TH,THR,TH]
+        td_d=[[Paragraph(_tx(h),ths_[i] if i<len(ths_) else TH) for i,h in enumerate(ths)]] if ths else []
+        if tbody is not None:
+            for tr in tbody.xpath('./tr'):
+                tds=tr.xpath('./td'); row=[]
+                for j,td in enumerate(tds):
+                    txt=_c('\n'.join(_bl(td)))
+                    if j==1: row.append(Paragraph(txt.replace('\n','<br/>'),TD))
+                    elif j in(3,4,6): row.append(Paragraph(txt,TDR))
+                    elif j in(2,5,7): row.append(Paragraph(txt,TDC))
+                    else: row.append(Paragraph(txt,TD))
+                while len(row)<n: row.append(Paragraph('',TD))
+                td_d.append(row[:n])
+        if td_d:
+            it=Table(td_d,colWidths=cw)
             ts=TableStyle([('LINEBELOW',(0,0),(-1,0),0.8,BLACK),('FONTNAME',(0,0),(-1,0),'Helvetica-BoldOblique'),
                 ('GRID',(0,1),(-1,-1),0.2,BRD),('ALIGN',(3,0),(-1,-1),'RIGHT'),
                 ('TOPPADDING',(0,0),(-1,-1),3),('BOTTOMPADDING',(0,0),(-1,-1),3),
@@ -507,66 +524,75 @@ def render_pdf(html_content: str) -> BytesIO:
             it.setStyle(ts); els+=[it,Spacer(1,6)]
 
     # 5 INFO BOX
-    for e in tree.xpath("//*[contains(@class,'info-box')]"):
-        txt=_fix(e.text_content())
-        if txt: els+=[Paragraph(txt,SM),Spacer(1,4)]
+    ibs=root.xpath(".//*[contains(@class,'info-box')]")
+    if ibs:
+        t=_tx(ibs[0])
+        if t: els+=[Paragraph(t,SM),Spacer(1,4)]
 
-    # 6 TOTALI stile Invoicex
-    tr_list=[]; gr=None
-    for tr in tree.xpath('.//tr'):
+    # 6 TOTALI - salta tr dentro items-table/meta-table/header-table
+    tr_l=[]; gr=None
+    SKIP={'items-table','meta-table','header-table'}
+    for tr in root.xpath('.//tr'):
+        skip=False; p=tr.getparent()
+        while p is not None:
+            if p.get('class','') in SKIP: skip=True; break
+            p=p.getparent()
+        if skip: continue
         tds=tr.xpath('./td')
         if len(tds)>=2:
-            lb=_fix(tds[0].text_content()).strip(); vl=_fix(tds[-1].text_content()).strip()
+            lb=_tx(tds[0]).strip(); vl=_tx(tds[-1]).strip()
             if not lb or not vl: continue
             if 'TOTALE' in lb.upper() and 'IVA' not in lb.upper(): gr=(lb,vl)
-            elif any(k in lb for k in ('Imponibile','IVA','Acconto','Da pagare','Sconto')): tr_list.append((lb,vl))
-    if tr_list or gr:
-        bl=Table([['Sconti','Spese di trasporto','Spese di incasso','Bolli']],colWidths=[W*0.15,W*0.20,W*0.15,W*0.12])
+            elif any(k in lb for k in ('Imponibile','IVA','Acconto','Da pagare','Sconto')):
+                if not any(r[0]==lb for r in tr_l): tr_l.append((lb,vl))
+    if tr_l or gr:
+        bl=Table([['Sconti','Spese di trasporto','Spese di incasso','Bolli']],colWidths=[W*0.15,W*0.22,W*0.18,W*0.12])
         bl.setStyle(TableStyle([('GRID',(0,0),(-1,-1),0.5,BRD),('FONTSIZE',(0,0),(-1,-1),7),
             ('TOPPADDING',(0,0),(-1,-1),3),('BOTTOMPADDING',(0,0),(-1,-1),3),('LEFTPADDING',(0,0),(-1,-1),4)]))
-        iva_rows=[['Codice','Descrizione','Imponibile','% IVA','Imposta']]
-        for lb,vl in tr_list:
-            if 'IVA' in lb.upper(): iva_rows.append(['22','Iva 22%','',lb.split('%')[0].split()[-1] if '%' in lb else '22',vl.replace('\u20ac','').strip()])
-        iva_t=Table(iva_rows,colWidths=[W*0.08,W*0.18,W*0.12,W*0.08,W*0.12])
-        iva_t.setStyle(TableStyle([('FONTSIZE',(0,0),(-1,-1),7.5),('GRID',(0,0),(-1,-1),0.3,BRD),
+        iva_r=[['Codice','Descrizione','Imponibile','% IVA','Imposta']]
+        for lb,vl in tr_l:
+            if 'IVA' in lb.upper():
+                m=_re.search(r'(\d+)\s*%',lb); aliq=m.group(1) if m else '22'
+                imp=''.join(v for k,v in tr_l if 'Imponibile' in k)
+                iva_r.append([aliq,f'Iva {aliq}%',imp.replace('\u20ac','').strip(),aliq,vl.replace('\u20ac','').strip()])
+        iv=Table(iva_r,colWidths=[W*0.08,W*0.18,W*0.14,W*0.08,W*0.12])
+        iv.setStyle(TableStyle([('FONTSIZE',(0,0),(-1,-1),7.5),('GRID',(0,0),(-1,-1),0.3,BRD),
             ('FONTNAME',(0,0),(-1,0),'Helvetica-Bold'),('TOPPADDING',(0,0),(-1,-1),2),('BOTTOMPADDING',(0,0),(-1,-1),2),('LEFTPADDING',(0,0),(-1,-1),3)]))
-        tot_d=[[Paragraph(lb.upper(),MLAB),Paragraph(vl,TV)] for lb,vl in tr_list]
+        tot_d=[[Paragraph(lb.upper(),TL),Paragraph(vl,TV)] for lb,vl in tr_l]
         if gr: tot_d.append([Paragraph(gr[0].upper(),GL),Paragraph(gr[1],GV)])
-        tot_t=Table(tot_d,colWidths=[W*0.20,W*0.18])
-        ts2=[('TOPPADDING',(0,0),(-1,-1),2),('BOTTOMPADDING',(0,0),(-1,-1),2),('LEFTPADDING',(0,0),(-1,-1),6),
-            ('RIGHTPADDING',(0,0),(-1,-1),6),('ALIGN',(1,0),(1,-1),'RIGHT'),('GRID',(0,0),(-1,-1),0.3,BRD)]
-        if gr: ts2+=[('FONTNAME',(0,len(tot_d)-1),(-1,len(tot_d)-1),'Helvetica-Bold'),('LINEABOVE',(0,len(tot_d)-1),(-1,len(tot_d)-1),0.8,BLACK)]
-        tot_t.setStyle(TableStyle(ts2))
-        bottom=Table([[iva_t,tot_t]],colWidths=[W*0.62,W*0.38])
-        bottom.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP')]))
-        els+=[bl,bottom,Spacer(1,8)]
+        ts2=[('TOPPADDING',(0,0),(-1,-1),2),('BOTTOMPADDING',(0,0),(-1,-1),2),
+            ('LEFTPADDING',(0,0),(-1,-1),6),('RIGHTPADDING',(0,0),(-1,-1),6),
+            ('ALIGN',(1,0),(1,-1),'RIGHT'),('GRID',(0,0),(-1,-1),0.3,BRD)]
+        if gr and tot_d: ts2+=[('FONTNAME',(0,len(tot_d)-1),(-1,len(tot_d)-1),'Helvetica-Bold'),('FONTSIZE',(0,len(tot_d)-1),(-1,len(tot_d)-1),10),('LINEABOVE',(0,len(tot_d)-1),(-1,len(tot_d)-1),0.8,BLACK)]
+        tt=Table(tot_d,colWidths=[W*0.22,W*0.18]); tt.setStyle(TableStyle(ts2))
+        bot=Table([[iv,tt]],colWidths=[W*0.62,W*0.40]); bot.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP')]))
+        els+=[bl,bot,Spacer(1,8)]
 
     # 7 BANCA
-    bk=tree.xpath("//*[contains(@class,'bank-info')]")
+    bk=f1(root,".//*[@class='bank-info']")
     if bk:
-        for br in bk[0].findall('.//br'): br.tail='\n'+(br.tail or '')
-        lb=[_fix(l) for l in bk[0].text_content().split('\n') if _fix(l)]
+        lb=[l for l in _bl(bk) if l]
         if lb:
             bt=Table([[Paragraph('  '.join(lb),SM)]],colWidths=[W])
             bt.setStyle(TableStyle([('GRID',(0,0),(0,0),0.3,BRD),('LEFTPADDING',(0,0),(0,0),6),('TOPPADDING',(0,0),(0,0),4),('BOTTOMPADDING',(0,0),(0,0),4)]))
             els+=[bt,Spacer(1,6)]
 
     # 8 FOOTER
-    ft=Table([[Paragraph('Generato da NormaFacile',FOOT),Paragraph('Pag. 1/1',FOOTR)]],colWidths=[W*0.6,W*0.4])
+    ft=Table([[Paragraph('Generato da NormaFacile',FT),Paragraph('Pag. 1/1',FTR)]],colWidths=[W*0.6,W*0.4])
     ft.setStyle(TableStyle([('LINEABOVE',(0,0),(-1,0),0.3,BRD),('TOPPADDING',(0,0),(-1,0),4)]))
     els+=[Spacer(1,10),ft]
 
     # 9 CONDIZIONI
-    ce=(tree.xpath("//*[contains(@style,'page-break')]") or tree.xpath("//*[contains(@class,'conditions-page')]"))
+    ce=None
+    for el in root.iter():
+        if 'page-break' in el.get('style','') or 'conditions-page' in el.get('class',''): ce=el; break
     if ce:
         els.append(PageBreak())
         els+=[Paragraph('CONDIZIONI GENERALI DI FORNITURA',BLB),HRFlowable(width='100%',thickness=1,color=BLUE,spaceAfter=6)]
-        for ln in _fix(ce[0].text_content()).split('\n'):
+        for ln in _c(ce.text_content() if hasattr(ce,'text_content') else '\n'.join(ce.itertext())).split('\n'):
             ln=ln.strip()
             if not ln or 'CONDIZIONI GENERALI' in ln.upper(): continue
             if _re.match(r'^\d+',ln): els+=[Spacer(1,4),Paragraph(ln,B)]
             else: els.append(Paragraph(ln,N))
 
-    doc.build(els)
-    buf.seek(0)
-    return buf
+    doc.build(els); buf.seek(0); return buf
