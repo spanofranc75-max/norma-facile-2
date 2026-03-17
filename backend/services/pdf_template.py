@@ -318,62 +318,206 @@ def build_conditions_html(company: dict, doc_number: str) -> str:
 
 
 def render_pdf(html_content: str) -> BytesIO:
-    """Render PDF usando ReportLab con layout professionale."""
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+    from bs4 import BeautifulSoup
+    from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table,
+        TableStyle, HRFlowable, PageBreak)
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
     from reportlab.lib import colors
-    from reportlab.lib.enums import TA_RIGHT, TA_CENTER, TA_LEFT
+    from reportlab.lib.enums import TA_RIGHT, TA_CENTER
     import re
 
-    # Pulisci HTML - estrai testo con struttura
-    def clean(text):
-        text = str(text or '')
-        text = re.sub(r'<brs*/?>', '\n', text, flags=re.IGNORECASE)
-        text = re.sub(r'<[^>]+>', '', text)
-        text = text.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>').replace('&euro;', '€').replace('&#39;', "'")
-        return text.strip()
+    BLUE=colors.HexColor('#0055FF'); DARK=colors.HexColor('#1E293B')
+    GRAY=colors.HexColor('#F8F9FA'); BORDER=colors.HexColor('#DEE2E6')
+    WHITE=colors.white; GRAY_TXT=colors.HexColor('#6B7280')
+    W=A4[0]-36*mm
 
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4,
-        rightMargin=18*mm, leftMargin=18*mm, topMargin=15*mm, bottomMargin=18*mm)
+    styles=getSampleStyleSheet()
+    def S(name,**kw): return ParagraphStyle(name,parent=styles['Normal'],**kw)
+    def cl(tag):
+        if tag is None: return ''
+        txt=tag.get_text(separator='\n') if hasattr(tag,'get_text') else str(tag)
+        return txt.strip()
+    def P(text,style):
+        t=(text or '').strip().replace('\n','<br/>')
+        return Paragraph(t,style) if t else Spacer(1,1)
 
-    BLUE = colors.HexColor('#0055FF')
-    DARK = colors.HexColor('#1E293B')
-    GRAY = colors.HexColor('#F8F9FA')
-    LIGHT = colors.HexColor('#E9ECEF')
+    N=S('N',fontSize=9,leading=13); B=S('B',fontSize=9,leading=13,fontName='Helvetica-Bold')
+    SM=S('SM',fontSize=8,leading=11,textColor=GRAY_TXT)
+    SMB=S('SMB',fontSize=8,leading=11,fontName='Helvetica-Bold',textColor=GRAY_TXT)
+    CO=S('CO',fontSize=12,leading=15,fontName='Helvetica-Bold',textColor=BLUE)
+    CL=S('CL',fontSize=11,leading=14,fontName='Helvetica-Bold',textColor=DARK)
+    BIG=S('BIG',fontSize=18,leading=22,fontName='Helvetica-Bold',textColor=BLUE,alignment=TA_CENTER)
+    TH=S('TH',fontSize=8.5,leading=11,fontName='Helvetica-Bold',textColor=WHITE)
+    THR=S('THR',fontSize=8.5,leading=11,fontName='Helvetica-Bold',textColor=WHITE,alignment=TA_RIGHT)
+    THC=S('THC',fontSize=8.5,leading=11,fontName='Helvetica-Bold',textColor=WHITE,alignment=TA_CENTER)
+    TD=S('TD',fontSize=8.5,leading=12); TDR=S('TDR',fontSize=8.5,leading=12,alignment=TA_RIGHT)
+    TDC=S('TDC',fontSize=8.5,leading=12,alignment=TA_CENTER)
+    TL=S('TL',fontSize=9,leading=13,textColor=GRAY_TXT)
+    TV=S('TV',fontSize=9,leading=13,alignment=TA_RIGHT,fontName='Helvetica-Bold')
+    GL=S('GL',fontSize=11,leading=14,fontName='Helvetica-Bold',textColor=WHITE)
+    GV=S('GV',fontSize=11,leading=14,fontName='Helvetica-Bold',textColor=WHITE,alignment=TA_RIGHT)
+    BLB=S('BLB',fontSize=10,leading=13,fontName='Helvetica-Bold',textColor=BLUE)
 
-    styles = getSampleStyleSheet()
-    story = []
+    soup=BeautifulSoup(html_content,'lxml')
+    story=[]; buf=BytesIO()
+    doc=SimpleDocTemplate(buf,pagesize=A4,rightMargin=18*mm,leftMargin=18*mm,topMargin=15*mm,bottomMargin=20*mm)
 
-    # Parse HTML in blocchi
-    lines = html_content.split('\n')
-    clean_lines = [clean(l) for l in lines if clean(l)]
+    # 1. HEADER
+    co_box=soup.find(class_='company-box'); cl_box=soup.find(class_='client-box')
+    if co_box or cl_box:
+        def parse_co(box):
+            paras=[]
+            if not box: return [Paragraph('',N)]
+            name=box.find(class_='company-name')
+            if name: paras.append(Paragraph(cl(name),CO))
+            detail=box.find(class_='company-detail')
+            if detail:
+                for line in cl(detail).split('\n'):
+                    line=line.strip()
+                    if not line: continue
+                    paras.append(Paragraph(line,B if 'P.IVA' in line or 'Cod.Fisc' in line else SM))
+            return paras or [Paragraph('',N)]
+        def parse_cl(box):
+            paras=[Paragraph('Spett.le',SMB)]
+            if not box: return paras
+            name=box.find(class_='client-name')
+            if name: paras.append(Paragraph(cl(name),CL))
+            detail=box.find(class_='client-detail')
+            if detail:
+                for line in cl(detail).split('\n'):
+                    line=line.strip()
+                    if not line: continue
+                    paras.append(Paragraph(line,B if 'P.IVA' in line or 'Cod.Fisc' in line else SM))
+            return paras
+        hdr=Table([[parse_co(co_box),parse_cl(cl_box)]],colWidths=[W*0.55,W*0.43])
+        hdr.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(0,0),0),
+            ('RIGHTPADDING',(0,0),(0,0),6),('LEFTPADDING',(1,0),(1,0),10),
+            ('TOPPADDING',(1,0),(1,0),6),('BOTTOMPADDING',(1,0),(1,0),6),
+            ('BACKGROUND',(1,0),(1,0),GRAY),('BOX',(1,0),(1,0),0.5,BORDER)]))
+        story.append(hdr)
+        story.append(HRFlowable(width='100%',thickness=0.5,color=BORDER,spaceAfter=6))
 
-    normal = ParagraphStyle('N', parent=styles['Normal'], fontSize=9, leading=13)
-    bold = ParagraphStyle('B', parent=styles['Normal'], fontSize=9, leading=13, fontName='Helvetica-Bold')
-    title = ParagraphStyle('T', parent=styles['Normal'], fontSize=14, leading=18, fontName='Helvetica-Bold', textColor=BLUE)
-    small = ParagraphStyle('S', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor('#555555'))
+    # 2. TITOLO
+    doc_title=soup.find(class_='doc-title')
+    if doc_title:
+        h1=doc_title.find('h1'); num=doc_title.find(class_='doc-num')
+        title_txt=cl(h1) if h1 else ''; num_txt=cl(num) if num else ''
+        if title_txt:
+            story.append(Paragraph(f"{title_txt}  {num_txt}".strip(),BIG))
+            story.append(Spacer(1,4))
 
-    for line in clean_lines:
-        if not line:
-            story.append(Spacer(1, 3*mm))
-        elif line.startswith('AZIENDA:'):
-            story.append(Paragraph(line.replace('AZIENDA:', '<b>').strip() + '</b>', title))
-        elif line.startswith('P.IVA:') or line.startswith('Cod.Fisc:') or line.startswith('Cod.SDI:'):
-            story.append(Paragraph(line, bold))
-        elif line.startswith('---'):
-            story.append(HRFlowable(width="100%", thickness=1, color=LIGHT))
-            story.append(Spacer(1, 3*mm))
-        elif line.startswith('Spett.le:'):
-            story.append(Paragraph(line.replace('Spett.le:', '<b>Spett.le:</b>'), bold))
-        elif line in ('PREVENTIVO', 'FATTURA', 'DDT', 'DOCUMENTO DI TRASPORTO'):
-            story.append(Spacer(1, 4*mm))
-            story.append(Paragraph(line, title))
-        else:
-            story.append(Paragraph(line, normal))
+    # 3. META TABLE
+    meta_tbl=soup.find('table',class_='meta-table')
+    if meta_tbl:
+        meta_data=[]
+        for row in meta_tbl.find_all('tr'):
+            cells=row.find_all('td')
+            if len(cells)>=2:
+                meta_data.append([Paragraph(cl(cells[0]),SMB),Paragraph(cl(cells[1]),N)])
+        if meta_data:
+            half=(len(meta_data)+1)//2
+            left=meta_data[:half]; right=meta_data[half:]
+            while len(right)<len(left): right.append([Paragraph('',N),Paragraph('',N)])
+            rows=[left[i]+[Spacer(4,1)]+right[i] for i in range(len(left))]
+            mt=Table(rows,colWidths=[W*0.17,W*0.30,W*0.06,W*0.17,W*0.30])
+            mt.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1),GRAY),('BOX',(0,0),(-1,-1),0.5,BORDER),
+                ('TOPPADDING',(0,0),(-1,-1),3),('BOTTOMPADDING',(0,0),(-1,-1),3),('LEFTPADDING',(0,0),(-1,-1),5)]))
+            story.append(mt); story.append(Spacer(1,6))
 
-    doc.build(story)
-    buffer.seek(0)
-    return buffer
+    # 4. REF NOTE
+    ref_note=soup.find(class_='ref-note')
+    if ref_note: story.append(Paragraph(cl(ref_note),N)); story.append(Spacer(1,4))
+
+    # 5. TABELLA RIGHE
+    items_tbl=soup.find('table',class_='items-table')
+    if items_tbl:
+        thead=items_tbl.find('thead'); tbody=items_tbl.find('tbody')
+        th_tags=thead.find_all('th') if thead else []
+        n=len(th_tags) if th_tags else 8
+        col_w=[W*0.08,W*0.36,W*0.06,W*0.08,W*0.12,W*0.08,W*0.12,W*0.08]
+        while len(col_w)<n: col_w.append(W*0.10)
+        col_w=col_w[:n]
+        th_styles=[TH,TH,THC,THR,THR,THC,THR,THC]
+        while len(th_styles)<n: th_styles.append(TH)
+        table_data=[[Paragraph(cl(th),th_styles[i]) for i,th in enumerate(th_tags)]] if th_tags else []
+        if tbody:
+            for tr in tbody.find_all('tr'):
+                cells=tr.find_all('td'); row=[]
+                for j,cell in enumerate(cells):
+                    txt=cl(cell).replace('\n','<br/>')
+                    if j==1: row.append(Paragraph(txt,TD))
+                    elif j in(3,4,6): row.append(Paragraph(txt,TDR))
+                    elif j in(2,5,7): row.append(Paragraph(txt,TDC))
+                    else: row.append(Paragraph(txt,TD))
+                while len(row)<n: row.append(Paragraph('',TD))
+                table_data.append(row[:n])
+        if table_data:
+            it=Table(table_data,colWidths=col_w)
+            it.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),DARK),('TEXTCOLOR',(0,0),(-1,0),WHITE),
+                ('TOPPADDING',(0,0),(-1,0),5),('BOTTOMPADDING',(0,0),(-1,0),5),
+                ('TOPPADDING',(0,1),(-1,-1),3),('BOTTOMPADDING',(0,1),(-1,-1),3),
+                ('LEFTPADDING',(0,0),(-1,-1),4),('RIGHTPADDING',(0,0),(-1,-1),4),
+                ('VALIGN',(0,0),(-1,-1),'TOP'),('LINEBELOW',(0,1),(-1,-1),0.3,BORDER),
+                ('ROWBACKGROUNDS',(0,1),(-1,-1),[WHITE,GRAY])]))
+            story.append(it); story.append(Spacer(1,6))
+
+    # 6. INFO BOX
+    info_box=soup.find(class_='info-box')
+    if info_box:
+        ib=Table([[Paragraph(cl(info_box),N)]],colWidths=[W])
+        ib.setStyle(TableStyle([('BACKGROUND',(0,0),(0,0),GRAY),('LINEBEFORE',(0,0),(0,0),3,BLUE),
+            ('LEFTPADDING',(0,0),(0,0),10),('TOPPADDING',(0,0),(0,0),6),('BOTTOMPADDING',(0,0),(0,0),6)]))
+        story.append(ib); story.append(Spacer(1,4))
+
+    # 7. TOTALI
+    totals_tbl=(soup.find(class_='totals-block') or soup.find('table',class_='totals-table') or soup.find(class_='totals-table'))
+    tot_data=[]; grand=None
+    if totals_tbl:
+        for tr in totals_tbl.find_all('tr'):
+            cells=tr.find_all('td')
+            if len(cells)>=2:
+                label=cl(cells[0]).strip(); value=cl(cells[-1]).strip()
+                if not label: continue
+                if 'TOTALE' in label.upper() and 'IVA' not in label.upper(): grand=(label,value)
+                else: tot_data.append([Paragraph(label,TL),Paragraph(value,TV)])
+    if not tot_data and not grand:
+        for m in re.finditer(r'(Imponibile|Totale senza IVA|IVA\s*\d+%|TOTALE|Acconto|Da pagare)[^<\n]*?([\d.,]+\s*€?)',html_content,re.IGNORECASE):
+            label,value=m.group(1).strip(),m.group(2).strip()
+            if 'TOTALE' in label.upper() and 'IVA' not in label.upper(): grand=(label,value+' €')
+            else: tot_data.append([Paragraph(label,TL),Paragraph(value+' €',TV)])
+    if tot_data:
+        tt=Table(tot_data,colWidths=[W*0.65,W*0.33],hAlign='RIGHT')
+        tt.setStyle(TableStyle([('ALIGN',(0,0),(-1,-1),'RIGHT'),('TOPPADDING',(0,0),(-1,-1),2),('BOTTOMPADDING',(0,0),(-1,-1),2)]))
+        story.append(tt)
+    if grand:
+        gt=Table([[Paragraph(grand[0],GL),Paragraph(grand[1],GV)]],colWidths=[W*0.65,W*0.33],hAlign='RIGHT')
+        gt.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1),BLUE),('TOPPADDING',(0,0),(-1,-1),6),
+            ('BOTTOMPADDING',(0,0),(-1,-1),6),('LEFTPADDING',(0,0),(-1,-1),8),('RIGHTPADDING',(0,0),(-1,-1),8)]))
+        story.append(Spacer(1,2)); story.append(gt)
+    story.append(Spacer(1,8))
+
+    # 8. BANCA
+    bank_div=soup.find(class_='bank-info')
+    if bank_div:
+        bank_txt='  '.join([l.strip() for l in cl(bank_div).split('\n') if l.strip()])
+        bt=Table([[Paragraph(bank_txt,B)]],colWidths=[W])
+        bt.setStyle(TableStyle([('LINEBEFORE',(0,0),(0,0),3,BLUE),('BACKGROUND',(0,0),(0,0),GRAY),
+            ('LEFTPADDING',(0,0),(0,0),10),('TOPPADDING',(0,0),(0,0),6),('BOTTOMPADDING',(0,0),(0,0),6)]))
+        story.append(bt); story.append(Spacer(1,6))
+
+    # 9. CONDIZIONI
+    cond_div=soup.find(style=lambda s: s and 'page-break' in s)
+    if cond_div:
+        story.append(PageBreak())
+        story.append(Paragraph('CONDIZIONI GENERALI DI FORNITURA',BLB))
+        story.append(HRFlowable(width='100%',thickness=1,color=BLUE,spaceAfter=6))
+        for line in cl(cond_div).split('\n'):
+            line=line.strip()
+            if not line or 'CONDIZIONI GENERALI' in line.upper(): continue
+            if re.match(r'^\d+\.',line): story.append(Spacer(1,3)); story.append(Paragraph(line,B))
+            else: story.append(Paragraph(line,N))
+
+    doc.build(story); buf.seek(0)
+    return buf
