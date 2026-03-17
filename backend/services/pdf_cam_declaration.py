@@ -11,7 +11,7 @@ from typing import Dict, List, Any
 logger = logging.getLogger(__name__)
 
 try:
-    from weasyprint import HTML
+    from services.pdf_template import render_pdf
     WEASYPRINT_AVAILABLE = True
 except ImportError:
     WEASYPRINT_AVAILABLE = False
@@ -117,9 +117,9 @@ def generate_cam_declaration_pdf(
 
     # Title
     title_html = f"""
-    <h1 class="doc-title">DICHIARAZIONE DI CONFORMITÀ CAM</h1>
+    <h1 class="doc-title">DICHIARAZIONE DI CONFORMITÃ CAM</h1>
     <p style="text-align: center; font-size: 9pt; color: #555; margin-top: -15px; margin-bottom: 15px;">
-        ai sensi del DM 23 giugno 2022 n. 256 — Criteri Ambientali Minimi per l'Edilizia
+        ai sensi del DM 23 giugno 2022 n. 256 â Criteri Ambientali Minimi per l'Edilizia
     </p>
     """
 
@@ -243,7 +243,7 @@ def generate_cam_declaration_pdf(
     # Normativa reference
     normativa_html = """
     <div class="normativa-ref">
-        <strong>Riferimento normativo:</strong> DM 23 giugno 2022 n. 256 — Criteri Ambientali Minimi per l'affidamento 
+        <strong>Riferimento normativo:</strong> DM 23 giugno 2022 n. 256 â Criteri Ambientali Minimi per l'affidamento 
         del servizio di progettazione di interventi edilizi, per l'affidamento dei lavori per interventi edilizi e per 
         l'affidamento congiunto di progettazione e lavori per interventi edilizi.<br/><br/>
         <strong>Requisiti acciaio strutturale:</strong> Il contenuto di materia recuperata o riciclata deve essere 
