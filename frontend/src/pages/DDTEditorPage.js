@@ -1,237 +1,4 @@
-/**
- * DDT Editor Ã¢ÂÂ Documento di Trasporto (Vendita / Conto Lavoro / Rientro).
- * Invoicex-style with sidebar tabs and Quick Fill from client.
- */
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { apiRequest, downloadPdfBlob } from '../lib/utils';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Textarea } from '../components/ui/textarea';
-import { Badge } from '../components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { Separator } from '../components/ui/separator';
-import { Checkbox } from '../components/ui/checkbox';
-import { toast } from 'sonner';
-import {
-    Plus, Trash2, Save, ArrowLeft, FileDown, Truck,
-    MapPin, CreditCard, StickyNote, Package, Weight, ArrowRightLeft, Mail, Printer,
-} from 'lucide-react';
-import DashboardLayout from '../components/DashboardLayout';
-import { PDFPreviewButton } from '../components/PDFPreviewModal';
-import { AutoExpandTextarea } from '../components/AutoExpandTextarea';
-import EmailPreviewDialog from '../components/EmailPreviewDialog';
-import { useConfirm } from '../components/ConfirmProvider';
-
-const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
-
-const emptyLine = () => ({
-    line_id: `ln_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-    codice_articolo: '', description: '', unit: 'pz', quantity: 0,
-    qta_fatturata: 0, unit_price: 0, sconto_1: 0, sconto_2: 0, vat_rate: '22', notes: '',
-});
-
-const CAUSALI = ['Vendita', 'Conto Lavoro', 'Reso Conto Lavoro', 'Conto Visione', 'Riparazione', 'Omaggio', 'Trasferimento'];
-const ASPETTI = ['Scatola', 'Busta', 'Pallet', 'Sfuso', 'Collo', 'Cassa', 'Altro'];
-const PORTI = ['Franco', 'Assegnato', 'Porto Affrancato'];
-const MEZZI = ['Mittente', 'Destinatario', 'Vettore'];
-
-const TYPE_OPTIONS = [
-    { value: 'vendita', label: 'DDT Vendita', causale: 'Vendita' },
-    { value: 'conto_lavoro', label: 'DDT Conto Lavoro', causale: 'Conto Lavoro' },
-    { value: 'rientro_conto_lavoro', label: 'DDT Rientro C/Lavoro', causale: 'Reso Conto Lavoro' },
-];
-
-const SIDEBAR_TABS = [
-    { key: 'trasporto', label: 'Trasporto', icon: Truck },
-    { key: 'destinazione', label: 'Destin.', icon: MapPin },
-    { key: 'pagamento', label: 'Pagam.', icon: CreditCard },
-    { key: 'note', label: 'Note', icon: StickyNote },
-];
-
-export default function DDTEditorPage() {
-    const confirm = useConfirm();
-    const navigate = useNavigate();
-    const { ddtId } = useParams();
-    const isNew = !ddtId || ddtId === 'new';
-
-    const [form, setForm] = useState({
-        ddt_type: 'vendita', client_id: '', subject: '',
-        destinazione: { ragione_sociale: '', indirizzo: '', cap: '', localita: '', provincia: '', telefono: '', cellulare: '', paese: 'IT' },
-        causale_trasporto: 'Vendita', aspetto_beni: '', vettore: '', mezzo_trasporto: 'Mittente', porto: 'Franco',
-        data_ora_trasporto: '', num_colli: 0, peso_lordo_kg: 0, peso_netto_kg: 0,
-        payment_type_id: '', payment_type_label: '', stampa_prezzi: true,
-        riferimento: '', acconto: 0, sconto_globale: 0, notes: '',
-        lines: [emptyLine()],
-    });
-    const [clients, setClients] = useState([]);
-    const [paymentTypes, setPaymentTypes] = useState([]);
-    const [saving, setSaving] = useState(false);
-    const [converting, setConverting] = useState(false);
-    const [sidebarTab, setSidebarTab] = useState('trasporto');
-    const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
-    const [ddtInfo, setDdtInfo] = useState({ number: null, status: 'non_fatturato', converted_to: null, commessa_id: null, commessa_numero: null });
-
-    useEffect(() => {
-        Promise.all([
-            apiRequest('/clients/').catch(() => ({ clients: [] })),
-            apiRequest('/payment-types/').catch(() => ({ items: [] })),
-        ]).then(([cl, pt]) => {
-            setClients(cl.clients || []);
-            setPaymentTypes(pt.items || []);
-        });
-    }, []);
-
-    useEffect(() => {
-        if (isNew) return;
-        apiRequest(`/ddt/${ddtId}`).then(data => {
-            setForm({
-                ddt_type: data.ddt_type || 'vendita',
-                client_id: data.client_id || '',
-                subject: data.subject || '',
-                destinazione: data.destinazione || { ragione_sociale: '', indirizzo: '', cap: '', localita: '', provincia: '', telefono: '', cellulare: '', paese: 'IT' },
-                causale_trasporto: data.causale_trasporto || 'Vendita',
-                aspetto_beni: data.aspetto_beni || '',
-                vettore: data.vettore || '',
-                mezzo_trasporto: data.mezzo_trasporto || 'Mittente',
-                porto: data.porto || 'Franco',
-                data_ora_trasporto: data.data_ora_trasporto || '',
-                num_colli: data.num_colli || 0,
-                peso_lordo_kg: data.peso_lordo_kg || 0,
-                peso_netto_kg: data.peso_netto_kg || 0,
-                payment_type_id: data.payment_type_id || '',
-                payment_type_label: data.payment_type_label || '',
-                stampa_prezzi: data.stampa_prezzi !== false,
-                riferimento: data.riferimento || '',
-                acconto: data.acconto || 0,
-                sconto_globale: data.sconto_globale || 0,
-                notes: data.notes || '',
-                lines: data.lines?.length ? data.lines : [emptyLine()],
-            });
-            setDdtInfo({ number: data.number, status: data.status || 'non_fatturato', converted_to: data.converted_to || null, commessa_id: data.commessa_id || null, commessa_numero: data.commessa_numero || null });
-        }).catch(() => toast.error('DDT non trovato'));
-    }, [ddtId, isNew]);
-
-    // Quick Fill from client
-    const handleClientChange = useCallback((clientId) => {
-        setForm(f => ({ ...f, client_id: clientId }));
-        if (!clientId) return;
-        const client = clients.find(c => c.client_id === clientId);
-        if (!client) return;
-        setForm(f => ({
-            ...f,
-            client_id: clientId,
-            destinazione: {
-                ragione_sociale: client.business_name || '',
-                indirizzo: client.address || '',
-                cap: client.cap || '',
-                localita: client.city || '',
-                provincia: client.province || '',
-                telefono: client.phone || '',
-                cellulare: client.cellulare || '',
-                paese: client.country || 'IT',
-            },
-            payment_type_id: f.payment_type_id || client.payment_type_id || '',
-            payment_type_label: f.payment_type_label || client.payment_type_label || '',
-        }));
-        toast.success(`Dati di ${client.business_name} importati`);
-    }, [clients]);
-
-    const handleTypeChange = (t) => {
-        const opt = TYPE_OPTIONS.find(o => o.value === t);
-        setForm(f => ({ ...f, ddt_type: t, causale_trasporto: opt?.causale || f.causale_trasporto }));
-    };
-
-    const updateLine = (idx, key, val) => setForm(f => {
-        const lines = [...f.lines];
-        lines[idx] = { ...lines[idx], [key]: val };
-        return { ...f, lines };
-    });
-    const addLine = () => setForm(f => ({ ...f, lines: [...f.lines, emptyLine()] }));
-    const removeLine = (idx) => setForm(f => ({ ...f, lines: f.lines.filter((_, i) => i !== idx) }));
-    const updateDest = (key, val) => setForm(f => ({ ...f, destinazione: { ...f.destinazione, [key]: val } }));
-
-    // Calculations
-    const lineNet = (l) => {
-        const p = parseFloat(l.unit_price) || 0;
-        return p * (1 - (parseFloat(l.sconto_1) || 0) / 100) * (1 - (parseFloat(l.sconto_2) || 0) / 100);
-    };
-    const lineTotal = (l) => (parseFloat(l.quantity) || 0) * lineNet(l);
-    const subtotal = form.lines.reduce((s, l) => s + lineTotal(l), 0);
-    const scontoVal = subtotal * (parseFloat(form.sconto_globale) || 0) / 100;
-    const imponibile = subtotal - scontoVal;
-    const totalVat = form.lines.reduce((s, l) => {
-        const base = lineTotal(l) * (1 - (parseFloat(form.sconto_globale) || 0) / 100);
-        return s + base * (parseFloat(l.vat_rate) || 0) / 100;
-    }, 0);
-    const totale = imponibile + totalVat;
-    const daPagare = totale - (parseFloat(form.acconto) || 0);
-
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            const payload = {
-                ...form,
-                client_id: form.client_id || null,
-                lines: form.lines.map(l => ({
-                    ...l, quantity: parseFloat(l.quantity) || 0, unit_price: parseFloat(l.unit_price) || 0,
-                    sconto_1: parseFloat(l.sconto_1) || 0, sconto_2: parseFloat(l.sconto_2) || 0,
-                    qta_fatturata: parseFloat(l.qta_fatturata) || 0,
-                })),
-                num_colli: parseInt(form.num_colli) || 0,
-                peso_lordo_kg: parseFloat(form.peso_lordo_kg) || 0,
-                peso_netto_kg: parseFloat(form.peso_netto_kg) || 0,
-                acconto: parseFloat(form.acconto) || 0,
-                sconto_globale: parseFloat(form.sconto_globale) || 0,
-            };
-            if (isNew) {
-                const res = await apiRequest('/ddt/', { method: 'POST', body: payload });
-                toast.success('DDT creato');
-                navigate(`/ddt/${res.ddt_id}`, { replace: true });
-            } else {
-                await apiRequest(`/ddt/${ddtId}`, { method: 'PUT', body: payload });
-                toast.success('DDT salvato');
-            }
-        } catch (e) { toast.error(e.message); } finally { setSaving(false); }
-    };
-
-    const handleDownloadPdf = () => {
-        if (isNew) return;
-        downloadPdfBlob(`/ddt/${ddtId}/pdf`, `DDT_${ddtInfo.number || ddtId}.pdf`).catch(e => toast.error(e.message));
-    };
-
-    const handleConvertToInvoice = async () => {
-        if (!(await confirm('Convertire questo DDT in Fattura? Le righe, il cliente e i totali verranno importati automaticamente.'))) return;
-        setConverting(true);
-        try {
-            const res = await apiRequest(`/ddt/${ddtId}/convert-to-invoice`, { method: 'POST' });
-            toast.success(res.message || 'DDT convertito in Fattura');
-            navigate(`/invoices/${res.invoice_id}`);
-        } catch (e) { toast.error(e.message); } finally { setConverting(false); }
-    };
-
-    const handlePaymentTypeChange = (ptId) => {
-        const pt = paymentTypes.find(p => p.payment_type_id === ptId);
-        setForm(f => ({
-            ...f,
-            payment_type_id: ptId === '__none__' ? '' : ptId,
-            payment_type_label: pt ? `${pt.codice} - ${pt.descrizione}` : '',
-        }));
-    };
-
-    const STATUS_LABELS = { non_fatturato: 'Non Fatturato', parzialmente_fatturato: 'Parz. Fatturato', fatturato: 'Fatturato' };
-    const TYPE_COLORS = { vendita: 'bg-blue-100 text-blue-800', conto_lavoro: 'bg-amber-100 text-amber-800', rientro_conto_lavoro: 'bg-emerald-100 text-emerald-800' };
-
-    return (
-        <DashboardLayout>
-            <div className="space-y-4" data-testid="ddt-editor">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <Button variant="ghost" size="sm" onClick={() => navigate('/ddt')}><ArrowLeft className="h-4 w-4" /></Button>
+<Button variant="outline" onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/ddt/${ddtId}/pdf?token=${localStorage.getItem('session_token')}`, '_blank')} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9 text-xs"><Eye className="h-3.5 w-3.5 mr-1.5" /> Anteprima</Button></Button>
                         <div>
                             <h1 className="font-sans text-xl font-bold text-[#1E293B]">{isNew ? 'Nuovo DDT' : 'Modifica DDT'}</h1>
                             <div className="flex items-center gap-2 mt-0.5">
@@ -280,7 +47,7 @@ export default function DDTEditorPage() {
 
                 {/* Main Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-4">
-                    {/* Ã¢ÂÂÃ¢ÂÂ Left Sidebar Ã¢ÂÂÃ¢ÂÂ */}
+                    {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Left Sidebar ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
                     <div className="space-y-3">
                         <Card className="border-gray-200">
                             <CardContent className="p-4 space-y-3">
@@ -367,7 +134,7 @@ export default function DDTEditorPage() {
                                         <div><Label className="text-xs">Indirizzo</Label><Input value={form.destinazione.indirizzo} onChange={e => updateDest('indirizzo', e.target.value)} className="h-8 text-xs" /></div>
                                         <div className="grid grid-cols-3 gap-2">
                                             <div><Label className="text-xs">CAP</Label><Input value={form.destinazione.cap} onChange={e => updateDest('cap', e.target.value)} className="h-8 text-xs" maxLength={5} /></div>
-                                            <div><Label className="text-xs">LocalitÃÂ </Label><Input value={form.destinazione.localita} onChange={e => updateDest('localita', e.target.value)} className="h-8 text-xs" /></div>
+                                            <div><Label className="text-xs">LocalitÃÂÃÂ </Label><Input value={form.destinazione.localita} onChange={e => updateDest('localita', e.target.value)} className="h-8 text-xs" /></div>
                                             <div><Label className="text-xs">Prov.</Label><Input value={form.destinazione.provincia} onChange={e => updateDest('provincia', e.target.value.toUpperCase())} className="h-8 text-xs" maxLength={2} /></div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-2">
@@ -401,7 +168,7 @@ export default function DDTEditorPage() {
                         </Card>
                     </div>
 
-                    {/* Ã¢ÂÂÃ¢ÂÂ Right Content Ã¢ÂÂÃ¢ÂÂ */}
+                    {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Right Content ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
                     <div className="space-y-4">
                         {/* Lines Table */}
                         <Card className="border-gray-200">
@@ -417,7 +184,7 @@ export default function DDTEditorPage() {
                                             <TableHead className="w-20 text-[10px]">Codice</TableHead>
                                             <TableHead className="min-w-[160px] text-[10px]">Descrizione</TableHead>
                                             <TableHead className="w-14 text-[10px]">UdM</TableHead>
-                                            <TableHead className="w-16 text-right text-[10px]">Q.tÃÂ </TableHead>
+                                            <TableHead className="w-16 text-right text-[10px]">Q.tÃÂÃÂ </TableHead>
                                             <TableHead className="w-20 text-right text-[10px]">Prezzo</TableHead>
                                             <TableHead className="w-14 text-right text-[10px]">Sc.1%</TableHead>
                                             <TableHead className="w-14 text-right text-[10px]">Sc.2%</TableHead>
