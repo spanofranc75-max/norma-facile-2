@@ -11,7 +11,7 @@ from services.pdf_template import COMMON_CSS, fmt_it, safe
 logger = logging.getLogger(__name__)
 
 try:
-    from weasyprint import HTML
+    from services.pdf_template import render_pdf
     WEASYPRINT_AVAILABLE = True
 except ImportError:
     WEASYPRINT_AVAILABLE = False
@@ -230,7 +230,7 @@ def generate_rdp_pdf(
                 <tr>
                     <th style="width: 8%;">#</th>
                     <th style="width: 62%;">DESCRIZIONE</th>
-                    <th style="width: 15%;">QUANTITÀ</th>
+                    <th style="width: 15%;">QUANTITÃ</th>
                     <th style="width: 15%;">U.M.</th>
                 </tr>
             </thead>
@@ -248,7 +248,7 @@ def generate_rdp_pdf(
                 <li>Prezzo unitario e totale per ogni voce</li>
                 <li>Tempi di consegna previsti</li>
                 <li>Eventuali costi di trasporto</li>
-                <li>Disponibilità certificati 3.1 ove richiesti</li>
+                <li>DisponibilitÃ  certificati 3.1 ove richiesti</li>
             </ul>
             <p style="margin-top: 15px;">
                 In attesa di cortese riscontro, porgiamo distinti saluti.<br/>
@@ -413,17 +413,17 @@ def generate_oda_pdf(
                 <tr>
                     <th style="width: 6%;">#</th>
                     <th style="width: 42%;">DESCRIZIONE</th>
-                    <th style="width: 12%;">Q.TÀ</th>
+                    <th style="width: 12%;">Q.TÃ</th>
                     <th style="width: 10%;">U.M.</th>
-                    <th style="width: 15%;">PREZZO €</th>
-                    <th style="width: 15%;">IMPORTO €</th>
+                    <th style="width: 15%;">PREZZO â¬</th>
+                    <th style="width: 15%;">IMPORTO â¬</th>
                 </tr>
             </thead>
             <tbody>
                 {rows_html}
                 <tr class="total-row">
                     <td colspan="5" style="text-align: right; font-weight: bold;">TOTALE ORDINE:</td>
-                    <td class="tr" style="font-weight: bold; color: #059669; font-size: 12pt;">€ {fmt_it(total_display)}</td>
+                    <td class="tr" style="font-weight: bold; color: #059669; font-size: 12pt;">â¬ {fmt_it(total_display)}</td>
                 </tr>
             </tbody>
         </table>
@@ -489,7 +489,7 @@ def generate_cl_pdf(
     if logo_url and (logo_url.startswith("data:image") or logo_url.startswith("http")):
         logo_html = f'<img src="{logo_url}" class="logo" style="max-width: 140px; max-height: 55px; margin-bottom: 6px;" />'
 
-    # Safe date formatting — handles str, datetime, None
+    # Safe date formatting â handles str, datetime, None
     try:
         if isinstance(created_at, datetime):
             data_fmt = created_at.strftime("%d/%m/%Y")
@@ -501,7 +501,7 @@ def generate_cl_pdf(
     except (ValueError, AttributeError, TypeError):
         data_fmt = datetime.now().strftime("%d/%m/%Y")
 
-    # Build rows — defensive: no crash on None/invalid values
+    # Build rows â defensive: no crash on None/invalid values
     rows_html = ""
     total_peso = 0
     for i, r in enumerate(righe, 1):
@@ -569,7 +569,7 @@ def generate_cl_pdf(
                     <div class="company-details">
                         {safe(company_address)}<br/>
                         P.IVA: {safe(company_piva)}<br/>
-                        Tel: {safe(company_phone)} — Email: {safe(company_email)}
+                        Tel: {safe(company_phone)} â Email: {safe(company_email)}
                     </div>
                 </td>
                 <td class="client-cell">
@@ -579,7 +579,7 @@ def generate_cl_pdf(
             </tr>
         </table>
 
-        <h1 class="doc-title">DDT CONTO LAVORO — {tipo_label}</h1>
+        <h1 class="doc-title">DDT CONTO LAVORO â {tipo_label}</h1>
 
         <div class="ref-box">
             <span class="ref-label">N. DDT:</span> <span class="ref-value">{safe(cl_id)}</span>
@@ -599,7 +599,7 @@ def generate_cl_pdf(
                 <tr>
                     <th style="width: 6%;">#</th>
                     <th style="width: 50%;">DESCRIZIONE</th>
-                    <th style="width: 14%;">QTÀ</th>
+                    <th style="width: 14%;">QTÃ</th>
                     <th style="width: 12%;">U.M.</th>
                     <th style="width: 18%;">PESO (kg)</th>
                 </tr>
