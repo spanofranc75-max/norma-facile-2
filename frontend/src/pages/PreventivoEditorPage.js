@@ -1,5 +1,5 @@
 /**
- * Preventivo Editor Ã¢ÂÂ Invoicex-style Smart Quote. v2
+ * Preventivo Editor ÃÂ¢ÃÂÃÂ Invoicex-style Smart Quote. v2
  * Features: Quick Fill from client, dual discounts, acconto, sidebar tabs.
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -21,7 +21,7 @@ import {
     Plus, Trash2, Save, ArrowLeft, FileDown, CheckCircle2, XCircle,
     Thermometer, ShieldCheck, Settings2, ArrowRightLeft, Euro,
     CreditCard, MapPin, FileText, StickyNote, Mail, Shield, Receipt,
-    Briefcase, Loader2, AlertTriangle, ArrowRight, Wrench, DoorOpen, ChevronDown, Package, Copy, Printer,
+    Briefcase, Loader2, AlertTriangle, ArrowRight, Wrench, DoorOpen, ChevronDown, Package, Copy, Printer, Eye,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import { PDFPreviewButton } from '../components/PDFPreviewModal';
@@ -89,7 +89,7 @@ export default function PreventivoEditorPage() {
 
     const isAccepted = workflow.status === 'accettato' || workflow.invoicing_progress > 0;
 
-    // Ã¢ÂÂÃ¢ÂÂ Auto-save form to sessionStorage Ã¢ÂÂÃ¢ÂÂ
+    // ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Auto-save form to sessionStorage ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ
     const STORAGE_KEY = `preventivo_draft_${prevId || 'new'}`;
     const isRestoredRef = useRef(false);
 
@@ -215,7 +215,7 @@ export default function PreventivoEditorPage() {
         }).catch(() => {});
     }, [prevId, isNew]);
 
-    // Quick Fill Ã¢ÂÂ auto-populate from client
+    // Quick Fill ÃÂ¢ÃÂÃÂ auto-populate from client
     const handleClientChange = useCallback((clientId) => {
         setForm(f => ({ ...f, client_id: clientId }));
         if (!clientId) return;
@@ -413,7 +413,7 @@ export default function PreventivoEditorPage() {
             // Step 1: Analyze preventivo for normativa conflicts
             const analysis = await apiRequest(`/commesse/analyze-preventivo/${prevId}`);
             if (analysis.conflict) {
-                // Mixed content detected Ã¢ÂÂ show split dialog
+                // Mixed content detected ÃÂ¢ÃÂÃÂ show split dialog
                 setSplitAnalysis(analysis);
                 setSplitGroups({
                     en_1090: analysis.groups.en_1090.map(i => i.index),
@@ -424,7 +424,7 @@ export default function PreventivoEditorPage() {
                 setCreatingCommessa(false);
                 return;
             }
-            // No conflict Ã¢ÂÂ create single commessa
+            // No conflict ÃÂ¢ÃÂÃÂ create single commessa
             const res = await apiRequest(`/commesse/from-preventivo/${prevId}`, { method: 'POST' });
             toast.success(`Commessa ${res.numero || ''} creata!`);
             setLinkedCommessa(res);
@@ -677,7 +677,7 @@ export default function PreventivoEditorPage() {
 
                 {/* Main Grid: Sidebar + Content */}
                 <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-4">
-                    {/* Ã¢ÂÂÃ¢ÂÂ Left Sidebar Ã¢ÂÂÃ¢ÂÂ */}
+                    {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Left Sidebar ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
                     <div className="space-y-3">
                         {/* Header Card */}
                         <Card className="border-gray-200">
@@ -697,7 +697,7 @@ export default function PreventivoEditorPage() {
                                     <Input data-testid="input-subject" value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} placeholder="Fornitura serramenti" className="h-9 text-sm" />
                                 </div>
                                 <div>
-                                    <Label className="text-xs">ValiditÃÂ  (gg)</Label>
+                                    <Label className="text-xs">ValiditÃÂÃÂ  (gg)</Label>
                                     <Input data-testid="input-validity" type="number" value={form.validity_days} onChange={e => setForm(f => ({ ...f, validity_days: parseInt(e.target.value) || 30 }))} className="h-9 text-sm font-mono" />
                                 </div>
                             </CardContent>
@@ -727,7 +727,7 @@ export default function PreventivoEditorPage() {
                                                 <option value="EN_1090">EN 1090 (Carpenteria strutturale)</option>
                                                 <option value="EN_13241">EN 13241 (Porte e cancelli)</option>
                                             </select>
-                                            <p className="text-[10px] text-slate-500 mt-0.5">Determina requisiti di tracciabilitÃÂ  materiali</p>
+                                            <p className="text-[10px] text-slate-500 mt-0.5">Determina requisiti di tracciabilitÃÂÃÂ  materiali</p>
                                         </div>
                                         <div><Label className="text-xs">N. Disegno</Label><Input value={form.numero_disegno} onChange={e => setForm(f => ({ ...f, numero_disegno: e.target.value }))} placeholder="es. STR-01" className="h-8 text-xs" data-testid="input-numero-disegno" /></div>
                                         <div><Label className="text-xs">Redatto dall'Ing.</Label><Input value={form.ingegnere_disegno} onChange={e => setForm(f => ({ ...f, ingegnere_disegno: e.target.value }))} placeholder="Nome Cognome" className="h-8 text-xs" data-testid="input-ingegnere-disegno" /></div>
@@ -781,11 +781,11 @@ export default function PreventivoEditorPage() {
                                                 <option value="">-- Seleziona conto --</option>
                                                 {bankAccounts.map((acc, i) => (
                                                     <option key={acc.account_id || i} value={acc.iban}>
-                                                        {acc.predefinito ? '\u2605 ' : ''}{acc.bank_name} Ã¢ÂÂ {acc.iban}
+                                                        {acc.predefinito ? '\u2605 ' : ''}{acc.bank_name} ÃÂ¢ÃÂÃÂ {acc.iban}
                                                     </option>
                                                 ))}
                                             </select>
-                                            {form.iban && <p className="text-[10px] font-mono text-slate-500 mt-0.5">{form.banca} Ã¢ÂÂ {form.iban}</p>}
+                                            {form.iban && <p className="text-[10px] font-mono text-slate-500 mt-0.5">{form.banca} ÃÂ¢ÃÂÃÂ {form.iban}</p>}
                                         </div>
                                         <div><Label className="text-xs">Note Pagamento</Label><Textarea value={form.note_pagamento || ''} onChange={e => setForm(f => ({ ...f, note_pagamento: e.target.value }))} rows={3} className="text-xs" /></div>
                                     </div>
@@ -800,7 +800,7 @@ export default function PreventivoEditorPage() {
                         </Card>
                     </div>
 
-                    {/* Ã¢ÂÂÃ¢ÂÂ Right Content Ã¢ÂÂÃ¢ÂÂ */}
+                    {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ Right Content ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
                     <div className="space-y-4">
                         {/* Lines Table */}
                         <Card className="border-gray-200">
@@ -814,7 +814,7 @@ export default function PreventivoEditorPage() {
                                         <TableRow className="bg-slate-50">
                                             <TableHead className="w-8 text-[10px]">#</TableHead>
                                             <TableHead className="text-[10px]">Descrizione</TableHead>
-                                            <TableHead className="w-[80px] text-right text-[10px]">Q.tÃÂ </TableHead>
+                                            <TableHead className="w-[80px] text-right text-[10px]">Q.tÃÂÃÂ </TableHead>
                                             <TableHead className="w-[60px] text-[10px]">UdM</TableHead>
                                             <TableHead className="w-[90px] text-right text-[10px]">Prezzo</TableHead>
                                             <TableHead className="w-[65px] text-right text-[10px]">Sc.%</TableHead>
@@ -884,9 +884,9 @@ export default function PreventivoEditorPage() {
                             </div>
                         </Card>
 
-                        {/* Totals Card Ã¢ÂÂ Invoicex style */}
+                        {/* Totals Card ÃÂ¢ÃÂÃÂ Invoicex style */}
 
-                        {/* Ã¢ÂÂÃ¢ÂÂ RdP Panel (Richieste Preventivo Fornitore) Ã¢ÂÂÃ¢ÂÂ */}
+                        {/* ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ RdP Panel (Richieste Preventivo Fornitore) ÃÂ¢ÃÂÃÂÃÂ¢ÃÂÃÂ */}
                         {!isNew && (
                             <Card className="border-gray-200">
                                 <CardContent className="p-4">
@@ -986,10 +986,10 @@ export default function PreventivoEditorPage() {
                     <DialogHeader><DialogTitle>Converti in Progetto FPC</DialogTitle></DialogHeader>
                     <p className="text-sm text-slate-500 mb-3">Seleziona la classe di esecuzione EN 1090 per questo progetto.</p>
                     <select data-testid="exc-class-select" value={excClass} onChange={e => setExcClass(e.target.value)} className="w-full border rounded px-3 py-2 text-sm">
-                        <option value="EXC1">EXC1 Ã¢ÂÂ Strutture semplici</option>
-                        <option value="EXC2">EXC2 Ã¢ÂÂ Strutture standard (pi&ugrave; comune)</option>
-                        <option value="EXC3">EXC3 Ã¢ÂÂ Strutture ad alta sollecitazione</option>
-                        <option value="EXC4">EXC4 Ã¢ÂÂ Strutture speciali / ponti</option>
+                        <option value="EXC1">EXC1 ÃÂ¢ÃÂÃÂ Strutture semplici</option>
+                        <option value="EXC2">EXC2 ÃÂ¢ÃÂÃÂ Strutture standard (pi&ugrave; comune)</option>
+                        <option value="EXC3">EXC3 ÃÂ¢ÃÂÃÂ Strutture ad alta sollecitazione</option>
+                        <option value="EXC4">EXC4 ÃÂ¢ÃÂÃÂ Strutture speciali / ponti</option>
                     </select>
                     <DialogFooter>
                         <Button data-testid="confirm-fpc-btn" onClick={handleConvertToProject} className="bg-emerald-600 hover:bg-emerald-500">Crea Progetto</Button>
@@ -1024,18 +1024,18 @@ export default function PreventivoEditorPage() {
                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
                         <p className="text-sm text-amber-800">
                             Questo preventivo contiene elementi soggetti a normative diverse.
-                            Un cancello non puÃÂ² stare nello stesso fascicolo di una tettoia.
+                            Un cancello non puÃÂÃÂ² stare nello stesso fascicolo di una tettoia.
                             <strong> Consigliamo di creare 2 commesse separate.</strong>
                         </p>
                     </div>
 
                     {splitAnalysis && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                            {/* Commessa A Ã¢ÂÂ EN 1090 */}
+                            {/* Commessa A ÃÂ¢ÃÂÃÂ EN 1090 */}
                             <div className="border border-blue-200 rounded-lg overflow-hidden" data-testid="split-group-1090">
                                 <div className="bg-blue-50 px-3 py-2 flex items-center gap-2 border-b border-blue-200">
                                     <Wrench className="h-4 w-4 text-blue-600" />
-                                    <span className="text-sm font-semibold text-blue-800">Commessa A Ã¢ÂÂ Strutture</span>
+                                    <span className="text-sm font-semibold text-blue-800">Commessa A ÃÂ¢ÃÂÃÂ Strutture</span>
                                     <Badge variant="outline" className="ml-auto text-[10px] border-blue-300 text-blue-600">EN 1090</Badge>
                                 </div>
                                 <div className="p-2 space-y-1.5 min-h-[80px]">
@@ -1070,11 +1070,11 @@ export default function PreventivoEditorPage() {
                                 </div>
                             </div>
 
-                            {/* Commessa B Ã¢ÂÂ EN 13241 */}
+                            {/* Commessa B ÃÂ¢ÃÂÃÂ EN 13241 */}
                             <div className="border border-amber-200 rounded-lg overflow-hidden" data-testid="split-group-13241">
                                 <div className="bg-amber-50 px-3 py-2 flex items-center gap-2 border-b border-amber-200">
                                     <DoorOpen className="h-4 w-4 text-amber-600" />
-                                    <span className="text-sm font-semibold text-amber-800">Commessa B Ã¢ÂÂ Cancelli</span>
+                                    <span className="text-sm font-semibold text-amber-800">Commessa B ÃÂ¢ÃÂÃÂ Cancelli</span>
                                     <Badge variant="outline" className="ml-auto text-[10px] border-amber-300 text-amber-600">EN 13241</Badge>
                                 </div>
                                 <div className="p-2 space-y-1.5 min-h-[80px]">
