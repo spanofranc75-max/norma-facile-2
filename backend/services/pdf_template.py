@@ -302,17 +302,43 @@ def build_totals_html(iva_data: dict, acconto: float = 0) -> str:
 
 
 def build_conditions_html(company: dict, doc_number: str) -> str:
+    """Build conditions page HTML usando condizioni_vendita dalle impostazioni aziendali."""
     company_name = safe((company or {}).get('business_name', ''))
-    return f"""
+    # Usa le condizioni reali dalle impostazioni, non testo generico
+    condizioni_testo = (company or {}).get('condizioni_vendita', '')
+    
+    if condizioni_testo and condizioni_testo.strip():
+        # Formatta le condizioni reali
+        lines_html = ''
+        for line in condizioni_testo.split('\n'):
+            line = line.strip()
+            if not line:
+                lines_html += '<br>'
+                continue
+            lines_html += f'<p style="margin:3px 0">{safe(line)}</p>'
+        return f"""
     <div style="page-break-before: always; padding: 10px; font-size: 9px;">
-        <h3 style="color: #0055FF; border-bottom: 2px solid #0055FF; padding-bottom: 5px;">CONDIZIONI GENERALI DI FORNITURA</h3>
-        <p><strong>Documento:</strong> {safe(doc_number)} &nbsp;&nbsp; <strong>Azienda:</strong> {company_name}</p>
-        <p><strong>1. VALIDIT&Agrave; DELL&#39;OFFERTA</strong><br>Il presente preventivo ha validit&agrave; come indicato nel documento dalla data di emissione.</p>
-        <p><strong>2. PREZZI</strong><br>I prezzi indicati si intendono IVA esclusa salvo diversa indicazione esplicita.</p>
-        <p><strong>3. TEMPI DI CONSEGNA</strong><br>I tempi di consegna decorrono dalla data di conferma dell&#39;ordine e ricevimento dell&#39;acconto.</p>
-        <p><strong>4. PAGAMENTO</strong><br>Il pagamento dovr&agrave; avvenire secondo le modalit&agrave; indicate nel preventivo.</p>
-        <p><strong>5. TRASPORTO</strong><br>La merce viaggia a rischio e pericolo del committente salvo diversa indicazione.</p>
-        <p><strong>6. FORO COMPETENTE</strong><br>Per qualsiasi controversia &egrave; competente il Foro del luogo ove ha sede il fornitore.</p>
+        <h3 style="color: #0055FF; border-bottom: 2px solid #0055FF; padding-bottom: 5px;">
+            CONDIZIONI GENERALI DI FORNITURA
+        </h3>
+        <p style="font-size:8px; color:#888">Documento: {safe(doc_number)} &nbsp;&nbsp; Azienda: {company_name}</p>
+        <div style="margin-top: 8px; line-height: 1.6;">
+            {lines_html}
+        </div>
+    </div>
+    """
+    else:
+        # Fallback: condizioni generiche se non impostate
+        return f"""
+    <div style="page-break-before: always; padding: 10px; font-size: 9px;">
+        <h3 style="color: #0055FF; border-bottom: 2px solid #0055FF; padding-bottom: 5px;">
+            CONDIZIONI GENERALI DI FORNITURA
+        </h3>
+        <p style="font-size:8px; color:#888">Documento: {safe(doc_number)} &nbsp;&nbsp; Azienda: {company_name}</p>
+        <div style="margin-top: 8px; line-height: 1.6;">
+            <p>Le condizioni di fornitura non sono state configurate.</p>
+            <p>Inserire le condizioni di vendita nelle Impostazioni aziendali.</p>
+        </div>
     </div>
     """
 
@@ -512,7 +538,7 @@ def render_pdf(html_content: str) -> BytesIO:
         if table_data:
             it = Table(table_data, colWidths=col_w)
             ts = TableStyle([
-                ('BACKGROUND',   (0,0),  (-1,0),  DARK),
+                ('BACKGROUND',   (0,0),  (-1,0),  BLUE),
                 ('TEXTCOLOR',    (0,0),  (-1,0),  WHITE),
                 ('TOPPADDING',   (0,0),  (-1,0),  5),
                 ('BOTTOMPADDING',(0,0),  (-1,0),  5),
