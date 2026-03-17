@@ -11,7 +11,7 @@ from typing import Dict, Any
 logger = logging.getLogger(__name__)
 
 try:
-    from weasyprint import HTML
+    from services.pdf_template import render_pdf
     WEASYPRINT_AVAILABLE = True
 except ImportError:
     WEASYPRINT_AVAILABLE = False
@@ -307,7 +307,7 @@ def generate_green_certificate(
     <div class="commessa-info">
         <div class="commessa-info-row">
             <div class="commessa-info-label">Commessa</div>
-            <div class="commessa-info-value"><strong>{numero}</strong> {f'— {titolo}' if titolo else ''}</div>
+            <div class="commessa-info-value"><strong>{numero}</strong> {f'â {titolo}' if titolo else ''}</div>
         </div>
         <div class="commessa-info-row">
             <div class="commessa-info-label">Cliente</div>
@@ -383,10 +383,10 @@ def generate_green_certificate(
     <div class="cert-footer">
         <div class="green-line-thin"></div>
         Certificato generato da <strong>{company_name}</strong>
-        {f' — {company_addr}, {company_city}' if company_addr else ''}
-        {f' — P.IVA {company_piva}' if company_piva else ''}<br/>
-        Fattori emissione: <strong>World Steel Association, 2023</strong> — EAF: 0,67 tCO2/t | BOF: 2,33 tCO2/t<br/>
-        Conformita ambientale secondo <strong>DM 23 giugno 2022 n. 256</strong> — Criteri Ambientali Minimi
+        {f' â {company_addr}, {company_city}' if company_addr else ''}
+        {f' â P.IVA {company_piva}' if company_piva else ''}<br/>
+        Fattori emissione: <strong>World Steel Association, 2023</strong> â EAF: 0,67 tCO2/t | BOF: 2,33 tCO2/t<br/>
+        Conformita ambientale secondo <strong>DM 23 giugno 2022 n. 256</strong> â Criteri Ambientali Minimi
     </div>
 </div>
 </body></html>"""
