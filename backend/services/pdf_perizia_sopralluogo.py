@@ -1,9 +1,9 @@
-"""PDF Perizia Professionale — Design "Pro" con Tachimetro Risk Score.
+"""PDF Perizia Professionale â Design "Pro" con Tachimetro Risk Score.
 
 Layout multi-pagina A4:
-- COPERTINA: Logo + tachimetro SVG conformità + dati sopralluogo + foto hero
+- COPERTINA: Logo + tachimetro SVG conformitÃ  + dati sopralluogo + foto hero
 - SEZIONE 1: Documentazione fotografica (griglia 2 colonne)
-- SEZIONE 2: Schede criticità PRO (problema + foto SX | soluzione + img esempio DX)
+- SEZIONE 2: Schede criticitÃ  PRO (problema + foto SX | soluzione + img esempio DX)
 - SEZIONE 3: Dispositivi sicurezza (presenti vs mancanti)
 - SEZIONE 4: Tabella materiali/interventi con prezzi
 - SEZIONE 5: Note e firme
@@ -18,12 +18,12 @@ from services.ref_images_library import get_ref_image_b64
 logger = logging.getLogger(__name__)
 
 try:
-    from weasyprint import HTML
+    from services.pdf_template import render_pdf
     WEASYPRINT_OK = True
 except ImportError:
     WEASYPRINT_OK = False
 
-# ── Brand Colors ──
+# ââ Brand Colors ââ
 NAVY = "#0B1F3A"
 NAVY_LIGHT = "#162d50"
 BLUE_ACCENT = "#0066FF"
@@ -45,7 +45,7 @@ def _esc(t):
 def _gauge_svg(pct: int) -> str:
     """Generate an inline SVG semicircular tachometer gauge for conformity %."""
     pct = max(0, min(100, pct))
-    # Arc geometry — semicircle from 180° to 0° (left to right)
+    # Arc geometry â semicircle from 180Â° to 0Â° (left to right)
     cx, cy, r = 100, 90, 72
     stroke_w = 14
     circumference = math.pi * r  # half-circle
@@ -162,7 +162,7 @@ CSS = f"""
 * {{ box-sizing: border-box; margin: 0; padding: 0; }}
 body {{ font-family: 'Segoe UI', Calibri, Arial, sans-serif; font-size: 9pt; color: #1a1a1a; line-height: 1.55; }}
 
-/* ══════════ COVER PAGE ══════════ */
+/* ââââââââââ COVER PAGE ââââââââââ */
 .cover {{ width: 210mm; height: 297mm; position: relative; overflow: hidden; page-break-after: always; }}
 .cover-bg {{ position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(165deg, {NAVY} 0%, {NAVY_LIGHT} 55%, #1a3f62 100%); }}
 .cover-accent-bar {{ position: absolute; top: 0; left: 0; width: 100%; height: 5mm; background: linear-gradient(90deg, {BLUE_ACCENT}, #00AAFF); }}
@@ -203,7 +203,7 @@ body {{ font-family: 'Segoe UI', Calibri, Arial, sans-serif; font-size: 9pt; col
 .cover-footer-text {{ font-size: 6.5pt; color: rgba(255,255,255,0.3); }}
 .cover-norms {{ display: inline-block; background: rgba(255,255,255,0.08); padding: 1.5mm 4mm; border-radius: 1.5mm; font-size: 7pt; color: rgba(255,255,255,0.5); }}
 
-/* ══════════ CONTENT PAGES ══════════ */
+/* ââââââââââ CONTENT PAGES ââââââââââ */
 .content-page {{ page: content; }}
 
 /* Professional header bar on content pages */
@@ -230,7 +230,7 @@ body {{ font-family: 'Segoe UI', Calibri, Arial, sans-serif; font-size: 9pt; col
 .photo-card img {{ width: 100%; height: 50mm; display: block; object-fit: cover; }}
 .photo-card-label {{ padding: 1.5mm 3mm; font-size: 7pt; font-weight: 700; color: #475569; background: {LIGHT_BG}; text-transform: uppercase; letter-spacing: 0.5px; border-top: 2px solid {BLUE_ACCENT}; }}
 
-/* ══════════ RISK CARDS PRO ══════════ */
+/* ââââââââââ RISK CARDS PRO ââââââââââ */
 .risk-card-pro {{ border: 1px solid #e2e8f0; border-radius: 2.5mm; margin-bottom: 5mm; overflow: hidden; page-break-inside: avoid; }}
 .risk-card-pro-header {{ display: table; width: 100%; }}
 .risk-card-pro-sidebar {{ display: table-cell; width: 6mm; }}
@@ -307,7 +307,7 @@ body {{ font-family: 'Segoe UI', Calibri, Arial, sans-serif; font-size: 9pt; col
 /* Disclaimer */
 .disclaimer {{ text-align: center; font-size: 6.5pt; color: #94a3b8; margin-top: 8mm; padding-top: 3mm; border-top: 1px solid #e2e8f0; }}
 
-/* ══════════ VARIANTS PAGE ══════════ */
+/* ââââââââââ VARIANTS PAGE ââââââââââ */
 .variant-box {{ border: 1.5px solid #e2e8f0; border-radius: 2.5mm; margin-bottom: 5mm; overflow: hidden; page-break-inside: avoid; }}
 .variant-box-recommended {{ border-color: {BLUE_ACCENT}; box-shadow: 0 0 0 0.5mm rgba(0,102,255,0.15); }}
 .variant-header {{ display: table; width: 100%; }}
@@ -339,7 +339,7 @@ body {{ font-family: 'Segoe UI', Calibri, Arial, sans-serif; font-size: 9pt; col
 .checklist-title {{ font-size: 8.5pt; font-weight: 700; color: #15803d; margin-bottom: 2mm; }}
 .checklist-item {{ font-size: 8pt; color: #166534; padding: 1mm 0 1mm 4mm; }}
 
-/* ══════════ LEGAL NOTES PAGE ══════════ */
+/* ââââââââââ LEGAL NOTES PAGE ââââââââââ */
 .legal-section {{ margin-bottom: 5mm; }}
 .legal-title {{ font-size: 10pt; font-weight: 700; color: {NAVY}; margin-bottom: 2mm; padding-bottom: 1.5mm; border-bottom: 1.5px solid {BLUE_ACCENT}; }}
 .legal-text {{ font-size: 8pt; color: #475569; line-height: 1.6; }}
@@ -360,9 +360,9 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
     tipo_perizia = sopralluogo.get("tipo_perizia", "cancelli")
     conformita = analisi.get("conformita_percentuale", 0)
     c_status_color = RED_RISK if conformita < 35 else AMBER_RISK if conformita < 65 else GREEN_OK
-    c_status = ("NON CONFORME — Intervento urgente" if conformita < 35
-                else "PARZIALMENTE CONFORME — Intervento consigliato" if conformita < 65
-                else "CONFORME — Manutenzione ordinaria")
+    c_status = ("NON CONFORME â Intervento urgente" if conformita < 35
+                else "PARZIALMENTE CONFORME â Intervento consigliato" if conformita < 65
+                else "CONFORME â Manutenzione ordinaria")
 
     # Dynamic titles and norms based on tipo_perizia
     PERIZIA_CONFIG = {
@@ -371,15 +371,15 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             "cover_subtitle": "Analisi di conformita UNI EN 12453 / EN 13241",
             "content_header_title": "Relazione Tecnica di Sopralluogo",
             "norms_badge": "EN 12453 &bull; EN 13241 &bull; Dir. 2006/42/CE",
-            "footer_norm_text": "Norma Facile 2.0 — Perizia Tecnica Professionale",
+            "footer_norm_text": "Norma Facile 2.0 â Perizia Tecnica Professionale",
             "legal_title": "Responsabilita del Proprietario / Amministratore",
             "legal_text_1": "Ai sensi della Direttiva Macchine 2006/42/CE e del D.Lgs. 17/2010, il proprietario o l'amministratore dell'immobile in cui e installata la chiusura automatica e responsabile della sicurezza dell'impianto e del suo mantenimento in conformita alle norme vigenti.",
             "legal_text_2": "La presente perizia tecnica evidenzia le non conformita riscontrate durante il sopralluogo. Il mancato adeguamento espone il proprietario a responsabilita civile e penale in caso di infortunio.",
             "legal_highlight": "<strong>Attenzione:</strong> In caso di incidente, l'assenza dei dispositivi di sicurezza obbligatori previsti dalla norma EN 12453 costituisce elemento di colpa grave ai sensi dell'art. 2051 C.C. (responsabilita per cose in custodia).",
-            "legal_norms": """<p><strong>UNI EN 12453:2017</strong> — Porte e cancelli industriali, commerciali e da garage. Sicurezza in uso di porte motorizzate.</p>
-                <p><strong>UNI EN 13241:2003+A2:2016</strong> — Porte e cancelli industriali, commerciali e da garage. Norma di prodotto.</p>
-                <p><strong>Direttiva Macchine 2006/42/CE</strong> — Requisiti essenziali di sicurezza per la progettazione di macchine.</p>
-                <p><strong>UNI EN 12978</strong> — Dispositivi di protezione per porte motorizzate.</p>""",
+            "legal_norms": """<p><strong>UNI EN 12453:2017</strong> â Porte e cancelli industriali, commerciali e da garage. Sicurezza in uso di porte motorizzate.</p>
+                <p><strong>UNI EN 13241:2003+A2:2016</strong> â Porte e cancelli industriali, commerciali e da garage. Norma di prodotto.</p>
+                <p><strong>Direttiva Macchine 2006/42/CE</strong> â Requisiti essenziali di sicurezza per la progettazione di macchine.</p>
+                <p><strong>UNI EN 12978</strong> â Dispositivi di protezione per porte motorizzate.</p>""",
             "checklist_items": [
                 "Misurazione forze d'impatto con strumento certificato (EN 12453 Allegato A)",
                 "Verifica funzionamento coste sensibili (test pressione e rilascio)",
@@ -393,18 +393,18 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
         },
         "barriere": {
             "cover_title": "RELAZIONE<br/>ACCESSIBILITA",
-            "cover_subtitle": "Analisi di conformita D.M. 236/1989 — Barriere Architettoniche",
+            "cover_subtitle": "Analisi di conformita D.M. 236/1989 â Barriere Architettoniche",
             "content_header_title": "Relazione Tecnica Accessibilita",
             "norms_badge": "D.M. 236/89 &bull; L. 13/89 &bull; D.P.R. 503/96",
-            "footer_norm_text": "Norma Facile 2.0 — Relazione Accessibilita",
+            "footer_norm_text": "Norma Facile 2.0 â Relazione Accessibilita",
             "legal_title": "Responsabilita del Proprietario / Amministratore",
             "legal_text_1": "Ai sensi della Legge 13/1989 e del D.M. 236/1989, il proprietario o l'amministratore dell'immobile e responsabile della garanzia dell'accessibilita e dell'eliminazione delle barriere architettoniche negli spazi comuni e negli accessi.",
             "legal_text_2": "La presente relazione tecnica evidenzia le non conformita riscontrate. Il mancato adeguamento puo costituire violazione della normativa vigente in materia di accessibilita.",
             "legal_highlight": "<strong>Attenzione:</strong> La mancata eliminazione delle barriere architettoniche negli edifici privati aperti al pubblico e negli spazi condominiali comuni puo comportare sanzioni amministrative e responsabilita civile ai sensi della L. 13/89 e del D.P.R. 503/96.",
-            "legal_norms": """<p><strong>D.M. 236/1989</strong> — Prescrizioni tecniche necessarie a garantire l'accessibilita, l'adattabilita e la visitabilita degli edifici.</p>
-                <p><strong>Legge 13/1989</strong> — Disposizioni per favorire il superamento e l'eliminazione delle barriere architettoniche.</p>
-                <p><strong>D.P.R. 503/1996</strong> — Regolamento per l'eliminazione delle barriere architettoniche negli edifici, spazi e servizi pubblici.</p>
-                <p><strong>UNI 11168</strong> — Criteri di progettazione per l'accessibilita delle scale fisse.</p>""",
+            "legal_norms": """<p><strong>D.M. 236/1989</strong> â Prescrizioni tecniche necessarie a garantire l'accessibilita, l'adattabilita e la visitabilita degli edifici.</p>
+                <p><strong>Legge 13/1989</strong> â Disposizioni per favorire il superamento e l'eliminazione delle barriere architettoniche.</p>
+                <p><strong>D.P.R. 503/1996</strong> â Regolamento per l'eliminazione delle barriere architettoniche negli edifici, spazi e servizi pubblici.</p>
+                <p><strong>UNI 11168</strong> â Criteri di progettazione per l'accessibilita delle scale fisse.</p>""",
             "checklist_items": [
                 "Verifica pendenza rampe (max 8%)",
                 "Misurazione larghezze percorsi e porte (min 80/90/150cm)",
@@ -421,16 +421,16 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             "cover_subtitle": "Analisi di conformita NTC 2018 / EN 1090",
             "content_header_title": "Relazione Diagnostica Strutturale",
             "norms_badge": "NTC 2018 &bull; EN 1090 &bull; EN 1993",
-            "footer_norm_text": "Norma Facile 2.0 — Diagnostica Strutturale",
+            "footer_norm_text": "Norma Facile 2.0 â Diagnostica Strutturale",
             "legal_title": "Responsabilita del Proprietario / Committente",
             "legal_text_1": "Ai sensi delle NTC 2018 (D.M. 17/01/2018, cap. 8), il proprietario o il committente e responsabile della sicurezza strutturale e della manutenzione delle opere in acciaio e delle strutture metalliche presenti nell'immobile.",
             "legal_text_2": "La presente relazione diagnostica evidenzia le criticita riscontrate. Il mancato intervento di consolidamento espone il proprietario a responsabilita civile e penale in caso di cedimento strutturale.",
             "legal_highlight": "<strong>Attenzione:</strong> Strutture metalliche esistenti non conformi alle NTC 2018 devono essere sottoposte a valutazione della sicurezza (cap. 8.3). L'omissione degli interventi di adeguamento necessari costituisce rischio per l'incolumita pubblica.",
-            "legal_norms": """<p><strong>NTC 2018 — D.M. 17/01/2018</strong> — Norme Tecniche per le Costruzioni (cap. 4.2 — Costruzioni in acciaio, cap. 8 — Costruzioni esistenti).</p>
-                <p><strong>Circolare 21/01/2019 n.7</strong> — Istruzioni per l'applicazione delle NTC 2018.</p>
-                <p><strong>UNI EN 1090-1/2</strong> — Esecuzione di strutture in acciaio e alluminio — Requisiti per la valutazione di conformita.</p>
-                <p><strong>UNI EN 1993 (Eurocodice 3)</strong> — Progettazione delle strutture in acciaio.</p>
-                <p><strong>UNI EN ISO 5817</strong> — Saldatura — Livelli di qualita delle imperfezioni.</p>""",
+            "legal_norms": """<p><strong>NTC 2018 â D.M. 17/01/2018</strong> â Norme Tecniche per le Costruzioni (cap. 4.2 â Costruzioni in acciaio, cap. 8 â Costruzioni esistenti).</p>
+                <p><strong>Circolare 21/01/2019 n.7</strong> â Istruzioni per l'applicazione delle NTC 2018.</p>
+                <p><strong>UNI EN 1090-1/2</strong> â Esecuzione di strutture in acciaio e alluminio â Requisiti per la valutazione di conformita.</p>
+                <p><strong>UNI EN 1993 (Eurocodice 3)</strong> â Progettazione delle strutture in acciaio.</p>
+                <p><strong>UNI EN ISO 5817</strong> â Saldatura â Livelli di qualita delle imperfezioni.</p>""",
             "checklist_items": [
                 "Ispezione visiva stato corrosione e trattamento protettivo",
                 "Verifica serraggio bulloneria critica (chiave dinamometrica)",
@@ -447,31 +447,31 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             "cover_subtitle": "Analisi di conformita UNI 11678 / NTC 2018",
             "content_header_title": "Relazione Tecnica Parapetti e Ringhiere",
             "norms_badge": "UNI 11678 &bull; NTC 2018 &bull; UNI 7697 &bull; UNI EN 12600",
-            "footer_norm_text": "Norma Facile 2.0 — Perizia Parapetti & Ringhiere",
+            "footer_norm_text": "Norma Facile 2.0 â Perizia Parapetti & Ringhiere",
             "legal_title": "Responsabilita del Proprietario / Amministratore",
             "legal_text_1": "Ai sensi delle NTC 2018 (D.M. 17/01/2018, par. 3.1.4) e della UNI 11678:2017, il proprietario o l'amministratore dell'immobile e responsabile della sicurezza dei parapetti, ringhiere e balaustre presenti nell'edificio, inclusi balconi, terrazze, scale e soppalchi.",
             "legal_text_2": "La presente perizia tecnica evidenzia le non conformita riscontrate. Il mancato adeguamento espone il proprietario a responsabilita civile e penale in caso di caduta dall'alto.",
             "legal_highlight": "<strong>Attenzione:</strong> L'assenza di un corrimano solidale nel sistema attuale configura un rischio di caduta nel vuoto non accettabile. Un parapetto in vetro non certificato e un rischio di responsabilita diretta per il tecnico firmatario e per il proprietario (art. 2051 C.C. custodia, art. 2053 C.C. rovina di edificio).",
-            "legal_norms": """<p><strong>UNI 11678:2017</strong> — Caduta nel vuoto — Elementi di protezione — Requisiti e metodi di prova per la verifica della sicurezza in uso.</p>
-                <p><strong>NTC 2018 — D.M. 17/01/2018</strong> — par. 3.1.4: Carichi variabili per parapetti (1,0 kN/m Cat. A residenziale, fino a 3,0 kN/m Cat. C/D pubblico).</p>
-                <p><strong>UNI EN 1991-1-1 (Eurocodice 1)</strong> — Azioni sulle strutture — Carichi su parapetti e balaustre.</p>
-                <p><strong>UNI 7697:2015</strong> — Criteri di sicurezza nelle applicazioni vetrarie (vetro stratificato obbligatorio per parapetti).</p>
-                <p><strong>UNI EN 12600</strong> — Vetro per edilizia — Prova del pendolo — Classe minima 1B1 per parapetti.</p>
-                <p><strong>UNI 11018</strong> — Rivestimenti e sistemi di ancoraggio per facciate ventilate (se applicabile).</p>
-                <p><strong>ETA (European Technical Assessment)</strong> — Opzione 1 per ancoranti chimici in calcestruzzo fessurato (bordo soletta).</p>""",
+            "legal_norms": """<p><strong>UNI 11678:2017</strong> â Caduta nel vuoto â Elementi di protezione â Requisiti e metodi di prova per la verifica della sicurezza in uso.</p>
+                <p><strong>NTC 2018 â D.M. 17/01/2018</strong> â par. 3.1.4: Carichi variabili per parapetti (1,0 kN/m Cat. A residenziale, fino a 3,0 kN/m Cat. C/D pubblico).</p>
+                <p><strong>UNI EN 1991-1-1 (Eurocodice 1)</strong> â Azioni sulle strutture â Carichi su parapetti e balaustre.</p>
+                <p><strong>UNI 7697:2015</strong> â Criteri di sicurezza nelle applicazioni vetrarie (vetro stratificato obbligatorio per parapetti).</p>
+                <p><strong>UNI EN 12600</strong> â Vetro per edilizia â Prova del pendolo â Classe minima 1B1 per parapetti.</p>
+                <p><strong>UNI 11018</strong> â Rivestimenti e sistemi di ancoraggio per facciate ventilate (se applicabile).</p>
+                <p><strong>ETA (European Technical Assessment)</strong> â Opzione 1 per ancoranti chimici in calcestruzzo fessurato (bordo soletta).</p>""",
             "checklist_items": [
-                "PROVA DI SPINTA: Applicazione carico lineare H a 1m di altezza — 1,0 kN/m (Cat. A) con martinetto idraulico e dinamometro",
-                "DEFORMAZIONE ELASTICA: Freccia massima sotto carico <= 30mm (o H/30 della quota di altezza) — comparatore centesimale su stativo esterno",
+                "PROVA DI SPINTA: Applicazione carico lineare H a 1m di altezza â 1,0 kN/m (Cat. A) con martinetto idraulico e dinamometro",
+                "DEFORMAZIONE ELASTICA: Freccia massima sotto carico <= 30mm (o H/30 della quota di altezza) â comparatore centesimale su stativo esterno",
                 "DEFORMAZIONE RESIDUA: Freccia dopo 15 min dalla rimozione carico <= 5% della deformazione elastica misurata",
-                "PROVA D'URTO DINAMICA: Corpo semimorbido (sacco) — energia d'impatto 250 Joule (UNI EN 12600 classe 1B1 minimo)",
+                "PROVA D'URTO DINAMICA: Corpo semimorbido (sacco) â energia d'impatto 250 Joule (UNI EN 12600 classe 1B1 minimo)",
                 "INTEGRITA POST-ROTTURA: Verifica che il parapetto mantenga capacita portante residua dopo rottura simulata di una lastra",
                 "SERRAGGIO BULLONERIA: Chiave dinamometrica tarata secondo specifica ancorante chimico (es. 40-60 Nm)",
                 "DISTANZA DAI BORDI: Interasse fori e distanza bordo soletta (C-min) conforme a scheda tecnica ancorante ETA Opzione 1",
                 "GIUNTI DILATAZIONE: Spazio 5-8mm tra lastre vetro per dilatazioni termiche senza tensioni parassite sulle staffe",
-                "SIGILLATURA BASE: Fori soffiati e puliti prima dell'iniezione resina — verifica tenuta strutturale",
-                "VERIFICA TIPO VETRO: Stratificato di sicurezza (8+8.2 o 10+10.4 con PVB/SGP) — ispezione bordi per conferma stratigrafia",
-                "VERIFICA CORRIMANO: Presenza corrimano strutturale continuo solidarizzato a tutte le lastre — ridondanza in caso di rottura",
-                "VERIFICA GUARNIZIONI: Distanziatori EPDM tra staffa e vetro — assenza contatto diretto acciaio-vetro",
+                "SIGILLATURA BASE: Fori soffiati e puliti prima dell'iniezione resina â verifica tenuta strutturale",
+                "VERIFICA TIPO VETRO: Stratificato di sicurezza (8+8.2 o 10+10.4 con PVB/SGP) â ispezione bordi per conferma stratigrafia",
+                "VERIFICA CORRIMANO: Presenza corrimano strutturale continuo solidarizzato a tutte le lastre â ridondanza in caso di rottura",
+                "VERIFICA GUARNIZIONI: Distanziatori EPDM tra staffa e vetro â assenza contatto diretto acciaio-vetro",
                 "RILASCIO CERTIFICATO DI COLLAUDO STRUTTURALE con parametri misurati e verbale di prova UNI 11678",
             ],
         },
@@ -481,7 +481,7 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
 
     # Company info
     c_name = _esc(company.get("company_name", ""))
-    c_addr = _esc(f'{company.get("address", "")} — {company.get("cap", "")} {company.get("city", "")} ({company.get("province", "")})')
+    c_addr = _esc(f'{company.get("address", "")} â {company.get("cap", "")} {company.get("city", "")} ({company.get("province", "")})')
     c_piva = _esc(company.get("partita_iva", ""))
     logo_url = company.get("logo_url", "")
 
@@ -503,7 +503,7 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
     n_dispositivi_mancanti = len(analisi.get("dispositivi_mancanti", []))
     n_materiali = len(analisi.get("materiali_suggeriti", []))
 
-    # ═══════════════ COVER PAGE ═══════════════
+    # âââââââââââââââ COVER PAGE âââââââââââââââ
     logo_html = f'<img src="{logo_url}" style="height:16mm;" />' if logo_url else f'<div class="cover-company-name">{c_name}</div>'
 
     cover_photo_html = ""
@@ -555,12 +555,12 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
                 <div class="cover-norms">{cfg["norms_badge"]}</div>
             </div>
             <div class="cover-footer-right">
-                <div class="cover-footer-text">Generato il {now_str} — Norma Facile 2.0</div>
+                <div class="cover-footer-text">Generato il {now_str} â Norma Facile 2.0</div>
             </div>
         </div>
     </div>"""
 
-    # ═══════════════ SUMMARY BOX ═══════════════
+    # âââââââââââââââ SUMMARY BOX âââââââââââââââ
     summary_html = f"""
     <div class="summary-box">
         <div class="summary-title">Riepilogo Ispezione</div>
@@ -588,14 +588,14 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
         </div>
     </div>"""
 
-    # ═══════════════ PHOTOS SECTION (2x2 Grid, no empty placeholders, unique labels) ═══════════════
+    # âââââââââââââââ PHOTOS SECTION (2x2 Grid, no empty placeholders, unique labels) âââââââââââââââ
     photos_html = ""
     if photos_b64:
         all_cards = []
         seen_labels = {}
         for idx, p in enumerate(photos_b64):
             raw_lbl = (p.get("label") or f"Foto {idx + 1}").strip().upper()
-            # Deduplicate labels: "PANORAMICA" → "PANORAMICA 1", "PANORAMICA 2"
+            # Deduplicate labels: "PANORAMICA" â "PANORAMICA 1", "PANORAMICA 2"
             if raw_lbl in seen_labels:
                 seen_labels[raw_lbl] += 1
                 lbl = f"{raw_lbl} {seen_labels[raw_lbl]}"
@@ -616,7 +616,7 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             {"".join(rows)}
         </div>"""
 
-    # ═══════════════ RISK CARDS PRO (2-COLUMN) ═══════════════
+    # âââââââââââââââ RISK CARDS PRO (2-COLUMN) âââââââââââââââ
     risks_html = ""
     if rischi:
         cards = []
@@ -675,7 +675,7 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             {"".join(cards)}
         </div>"""
 
-    # ═══════════════ DEVICES SECTION ═══════════════
+    # âââââââââââââââ DEVICES SECTION âââââââââââââââ
     presenti = analisi.get("dispositivi_presenti", [])
     mancanti = analisi.get("dispositivi_mancanti", [])
     devices_html = ""
@@ -691,10 +691,10 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             </div>
         </div>"""
 
-    # ═══════════════ MATERIALS TABLE — REMOVED from PDF (internal data only) ═══════════════
+    # âââââââââââââââ MATERIALS TABLE â REMOVED from PDF (internal data only) âââââââââââââââ
     # Section 04 rimossa: il cliente non deve vedere i costi materiali interni
 
-    # ═══════════════ GENERAL DESCRIPTION ═══════════════
+    # âââââââââââââââ GENERAL DESCRIPTION âââââââââââââââ
     desc_html = ""
     if desc_gen:
         desc_html = f"""
@@ -703,7 +703,7 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             <div class="notes-box">{desc_gen}</div>
         </div>"""
 
-    # ═══════════════ NOTES (solo note tecnico, no menzione AI) ═══════════════
+    # âââââââââââââââ NOTES (solo note tecnico, no menzione AI) âââââââââââââââ
     notes_html = ""
     note_utente = sopralluogo.get("note_tecnico", "")
     if note_utente:
@@ -713,7 +713,7 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             <div class="notes-box">{_esc(note_utente)}</div>
         </div>"""
 
-    # ═══════════════ SIGNATURES ═══════════════
+    # âââââââââââââââ SIGNATURES âââââââââââââââ
     signature_html = """
     <div class="signature-area">
         <div class="signature-col">
@@ -729,10 +729,10 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
     disclaimer = f"""
     <div class="disclaimer">
         Documento redatto con il supporto di strumenti di analisi assistita e validato e sottoscritto dal tecnico responsabile ai sensi delle normative vigenti.<br/>
-        Riferimenti: UNI EN 12453, UNI EN 13241, Direttiva Macchine 2006/42/CE, D.Lgs. 17/2010 — Generato il {now_str}
+        Riferimenti: UNI EN 12453, UNI EN 13241, Direttiva Macchine 2006/42/CE, D.Lgs. 17/2010 â Generato il {now_str}
     </div>"""
 
-    # ═══════════════ CONTENT PAGE HEADER ═══════════════
+    # âââââââââââââââ CONTENT PAGE HEADER âââââââââââââââ
     content_logo = f'<img src="{logo_url}" />' if logo_url else f'<div style="font-size:8pt;font-weight:800;color:white;">{c_name}</div>'
     content_header = f"""
     <div class="content-header">
@@ -741,7 +741,7 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
         <div class="content-header-doc">{doc_num}</div>
     </div>"""
 
-    # ═══════════════ VARIANTS PAGE ═══════════════
+    # âââââââââââââââ VARIANTS PAGE âââââââââââââââ
     varianti = analisi.get("varianti", {})
     variants_html = ""
     if varianti and any(varianti.get(k, {}).get("descrizione") for k in ("A", "B", "C")):
@@ -802,7 +802,7 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
                 {"".join(variant_cards)}
             </div>"""
 
-    # ═══════════════ RESIDUAL RISKS ═══════════════
+    # âââââââââââââââ RESIDUAL RISKS âââââââââââââââ
     rischi_residui = analisi.get("rischi_residui", [])
     residual_html = ""
     if rischi_residui:
@@ -814,7 +814,7 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
             {items}
         </div>"""
 
-    # ═══════════════ LEGAL NOTES PAGE ═══════════════
+    # âââââââââââââââ LEGAL NOTES PAGE âââââââââââââââ
     sec_legal = "06" if variants_html and notes_html else "05" if variants_html or notes_html else "04"
     checklist_items_html = "".join(f'<div class="checklist-item">&#9745; {_esc(item)}</div>' for item in cfg["checklist_items"])
     legal_html = f"""
@@ -869,7 +869,7 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
         </div>
     </div>"""
 
-    # ═══════════════ ASSEMBLE ═══════════════
+    # âââââââââââââââ ASSEMBLE âââââââââââââââ
     final_css = CSS.replace("__FOOTER_NORM_TEXT__", cfg["footer_norm_text"])
     html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>{final_css}</style></head><body>
     {cover}
@@ -889,4 +889,4 @@ def generate_perizia_pdf(sopralluogo: dict, company: dict, photos_b64: list = No
     </div>
     </body></html>"""
 
-    return HTML(string=html).write_pdf()
+    return render_pdf(html).getvalue()
