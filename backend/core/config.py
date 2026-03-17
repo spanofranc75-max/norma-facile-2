@@ -1,9 +1,7 @@
 import os
-
-from pydantic_settings import BaseSettings
-
 from typing import List
 from dotenv import load_dotenv
+from pydantic_settings import BaseSettings
 
 load_dotenv()
 
@@ -11,7 +9,7 @@ load_dotenv()
 class Settings(BaseSettings):
     mongo_url: str = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
     db_name: str = os.environ.get("DB_NAME", "test_database")
-    jwt_secret: str = os.environ.get("JWT_SECRET", "default-secret")
+    jwt_secret: str = os.environ.get("JWT_SECRET", "default-secret-change-in-production")
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
     session_expire_days: int = 7
