@@ -132,4 +132,4 @@ export function PDFPreviewButton({ pdfUrl, title, variant = 'outline', size = 's
             <PDFPreviewModal open={open} onClose={() => setOpen(false)} pdfUrl={pdfUrl} title={title} />
         </>
     );
-            }
+}

@@ -1,4 +1,4 @@
-"""Shared PDF template utilities â ReportLab only, no system deps."""
+"""Shared PDF template utilities — ReportLab only, no system deps."""
 from io import BytesIO
 from datetime import datetime, timezone
 import html as html_mod
@@ -138,7 +138,7 @@ def build_totals_html(iva_data: dict, acconto: float = 0) -> str:
 
 
 def render_pdf(html_content: str) -> BytesIO:
-    """Render PDF usando ReportLab â puro Python, zero dipendenze sistema."""
+    """Render PDF usando ReportLab — puro Python, zero dipendenze sistema."""
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.pagesizes import A4
@@ -194,36 +194,3 @@ def render_pdf(html_content: str) -> BytesIO:
     doc.build(story)
     buffer.seek(0)
     return buffer
-
-
-def format_date(date_str: str) -> str:
-    """Format date string to Italian format."""
-    if not date_str:
-        return ""
-    try:
-        from datetime import datetime
-        dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
-        return dt.strftime('%d/%m/%Y')
-    except Exception:
-        return str(date_str)[:10] if date_str else ""
-
-
-def build_conditions_html(company: dict, doc_number: str) -> str:
-    """Build conditions page HTML for preventivo PDF."""
-    company_name = safe(company.get('business_name', ''))
-    return f"""
-    <div class="page-break"></div>
-    <div class="conditions-page">
-        <h2>CONDIZIONI GENERALI DI FORNITURA</h2>
-        <p><strong>Documento:</strong> {safe(doc_number)}</p>
-        <p><strong>Azienda:</strong> {company_name}</p>
-        <div class="conditions-text">
-            <p>1. Il presente preventivo ha validit&#224; come indicato nel documento.</p>
-            <p>2. I prezzi indicati si intendono IVA esclusa salvo diversa indicazione.</p>
-            <p>3. I tempi di consegna decorrono dalla data di conferma dell'ordine e ricevimento dell'acconto.</p>
-            <p>4. Il pagamento dovr&#224; avvenire secondo le modalit&#224; indicate nel preventivo.</p>
-            <p>5. La merce viaggia a rischio e pericolo del committente.</p>
-            <p>6. Per qualsiasi controversia &#232; competente il Foro del luogo ove ha sede il fornitore.</p>
-        </div>
-    </div>
-    """

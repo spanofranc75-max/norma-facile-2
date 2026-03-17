@@ -18,7 +18,7 @@ async def exchange_google_code(code: str, redirect_uri: str) -> dict:
     Exchange Google OAuth authorization code for user data.
     Replaces the old Emergent exchange_session_id.
     """
-    async with httpx.AsyncClient(timeout=60.0) as client:   
+async with httpx.AsyncClient(timeout=60.0) as client:   
         # Step 1: Exchange code for tokens
         token_response = await client.post(
             GOOGLE_TOKEN_URL,

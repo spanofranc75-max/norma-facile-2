@@ -18,7 +18,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import { toast } from 'sonner';
 import {
     Plus, Trash2, Save, ArrowLeft, FileDown, Truck,
-    MapPin, CreditCard, StickyNote, Package, Weight, ArrowRightLeft, Mail, Printer,
+    MapPin, CreditCard, StickyNote, Package, Weight, ArrowRightLeft, Mail,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import { PDFPreviewButton } from '../components/PDFPreviewModal';
@@ -252,7 +252,6 @@ export default function DDTEditorPage() {
                     </div>
                     <div className="flex gap-2">
                         {!isNew && <Button data-testid="btn-download-pdf" variant="outline" onClick={handleDownloadPdf} className="border-[#0055FF] text-[#0055FF] hover:bg-blue-50 h-9 text-xs"><FileDown className="h-3.5 w-3.5 mr-1.5" /> PDF</Button>}
-                        {!isNew && <Button variant="outline" onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/ddt/${ddtId}/pdf?token=${localStorage.getItem('session_token')}`, '_blank')} className="border-purple-500 text-purple-600 hover:bg-purple-50 h-9 text-xs"><Printer className="h-3.5 w-3.5 mr-1.5" /> Stampa</Button>}
                         {!isNew && <PDFPreviewButton pdfUrl={`/ddt/${ddtId}/pdf`} title={`Anteprima DDT ${ddtInfo.number || ''}`} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9" />}
                         {!isNew && (
                             <Button
