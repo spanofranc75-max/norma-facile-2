@@ -103,4 +103,3 @@ webencodings==0.5.1
 websockets==15.0.1
 yarl==1.22.0
 qrcode[pil]==8.0.0
-xhtml2pdf==0.2.15
