@@ -39,7 +39,7 @@ import {
     Send,
     CheckCircle2,
     PanelRightOpen,
-} from 'lucide-react';
+, Eye, Printer } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import ArticleSearch from '../components/ArticleSearch';
 import { QuickFillModal } from '../components/QuickFillModal';
@@ -439,7 +439,8 @@ export default function InvoiceEditorPage() {
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        {isEditing && <PDFPreviewButton pdfUrl={`/invoices/${invoiceId}/pdf`} title="Anteprima Fattura" className="border-emerald-500 text-emerald-600 hover:bg-emerald-50" />}
+                        {isEditing && <Button variant="outline" onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/invoices/${invoiceId}/pdf?token=${localStorage.getItem('session_token')}`, '_blank')} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9 text-xs"><Eye className="h-3.5 w-3.5 mr-1.5" /> Anteprima</Button>}
+            {!isNew && <Button variant="outline" onClick={() => { const w = window.open(`${process.env.REACT_APP_BACKEND_URL}/api/invoices/${invoiceId}/pdf?token=${localStorage.getItem('session_token')}`, '_blank'); if(w) setTimeout(()=>w.print(),1500); }} className="border-purple-500 text-purple-600 hover:bg-purple-50 h-9 text-xs"><Printer className="h-3.5 w-3.5 mr-1.5" /> Stampa</Button>}
                         <Button
                             type="button"
                             variant="outline"
@@ -702,7 +703,7 @@ export default function InvoiceEditorPage() {
                                 <TableRow className="bg-[#1E293B] hover:bg-[#1E293B]">
                                     <TableHead className="text-white font-semibold w-[80px]">Cod.</TableHead>
                                     <TableHead className="text-white font-semibold">Descrizione</TableHead>
-                                    <TableHead className="text-white font-semibold w-[80px] text-right">Q.tà</TableHead>
+                                    <TableHead className="text-white font-semibold w-[80px] text-right">Q.tÃ </TableHead>
                                     <TableHead className="text-white font-semibold w-[100px] text-right">Prezzo</TableHead>
                                     <TableHead className="text-white font-semibold w-[70px] text-right">Sc.%</TableHead>
                                     <TableHead className="text-white font-semibold w-[90px] text-right">IVA</TableHead>
