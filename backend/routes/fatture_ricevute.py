@@ -23,7 +23,7 @@ router = APIRouter(prefix="/fatture-ricevute", tags=["fatture_ricevute"])
 
 
 
-# ââ Models âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# Ã¢ÂÂÃ¢ÂÂ Models Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 class FRStatus(str, Enum):
     DA_REGISTRARE = "da_registrare"
@@ -104,7 +104,7 @@ class FRResponse(BaseModel):
     payment_status: str = "non_pagata"
 
 
-# ââ FatturaPA XML Parser ââââââââââââââââââââââââââââââââââââââââ
+# Ã¢ÂÂÃ¢ÂÂ FatturaPA XML Parser Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 
 def _enrich_scadenze(scadenze_calc: list, origine: str) -> list:
@@ -248,7 +248,7 @@ def parse_fattura_xml(xml_content: str) -> dict:
     except ET.ParseError as e:
         raise ValueError(f"XML non valido: {str(e)}")
 
-    # Header â Fornitore (CedentePrestatore)
+    # Header Ã¢ÂÂ Fornitore (CedentePrestatore)
     cedente = find_elem(root, 'CedentePrestatore')
     fornitore_piva = find_text(cedente, 'IdFiscaleIVA/IdCodice') or find_text(cedente, 'IdCodice')
     fornitore_cf = find_text(cedente, 'CodiceFiscale')
@@ -261,7 +261,7 @@ def parse_fattura_xml(xml_content: str) -> dict:
     fornitore_sede = find_elem(cedente, 'Sede')
     fornitore_indirizzo = find_text(fornitore_sede, 'Indirizzo') if fornitore_sede else ""
 
-    # Body â DatiGeneraliDocumento
+    # Body Ã¢ÂÂ DatiGeneraliDocumento
     body = find_elem(root, 'FatturaElettronicaBody')
     dati_generali = find_elem(body, 'DatiGeneraliDocumento')
 
@@ -271,7 +271,7 @@ def parse_fattura_xml(xml_content: str) -> dict:
     numero_doc = find_text(dati_generali, 'Numero')
     importo_totale = find_text(dati_generali, 'ImportoTotaleDocumento')
 
-    # Lines â DettaglioLinee
+    # Lines Ã¢ÂÂ DettaglioLinee
     linee_xml = find_all(body, 'DettaglioLinee')
     linee = []
     for i, linea in enumerate(linee_xml):
@@ -319,7 +319,7 @@ def parse_fattura_xml(xml_content: str) -> dict:
         imponibile_tot += float(imp_str)
         imposta_tot += float(iva_str)
 
-    # Pagamento â extract ALL DettaglioPagamento entries
+    # Pagamento Ã¢ÂÂ extract ALL DettaglioPagamento entries
     dati_pagamento = find_elem(body, 'DatiPagamento')
     modalita = ""
     condizioni = ""
@@ -380,7 +380,7 @@ def parse_fattura_xml(xml_content: str) -> dict:
     }
 
 
-# ââ CRUD Endpoints ââââââââââââââââââââââââââââââââââââââââââââââ
+# Ã¢ÂÂÃ¢ÂÂ CRUD Endpoints Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 @router.get("/")
 async def list_fatture_ricevute(
@@ -564,7 +564,7 @@ async def delete_fattura_ricevuta(
     return {"message": "Fattura eliminata"}
 
 
-# ââ XML Import ââââââââââââââââââââââââââââââââââââââââââââââââââ
+# Ã¢ÂÂÃ¢ÂÂ XML Import Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 @router.post("/import-xml")
 async def import_xml_fattura(
@@ -578,7 +578,7 @@ async def import_xml_fattura(
 
     content = await file.read()
 
-    # Handle .p7m (PKCS#7 signed) â extract XML from the wrapper
+    # Handle .p7m (PKCS#7 signed) Ã¢ÂÂ extract XML from the wrapper
     if fname.endswith('.p7m'):
         xml_str = _extract_xml_from_p7m(content)
         if not xml_str:
@@ -594,7 +594,7 @@ async def import_xml_fattura(
     now = datetime.now(timezone.utc)
     fr_id = f"fr_{uuid.uuid4().hex[:12]}"
 
-    # Check for duplicate â robust: by (numero+piva+data) OR (piva+data+totale)
+    # Check for duplicate Ã¢ÂÂ robust: by (numero+piva+data) OR (piva+data+totale)
     dedup_or = []
     num_doc = parsed.get("numero_documento", "")
     piva = parsed.get("fornitore_piva", "")
@@ -613,7 +613,7 @@ async def import_xml_fattura(
     if existing:
         raise HTTPException(
             409,
-            f"Fattura giÃ  importata: n. {parsed.get('numero_documento', '') or existing.get('numero_documento', '')} del {data_doc} da {parsed.get('fornitore_nome', '')}"
+            f"Fattura giÃÂ  importata: n. {parsed.get('numero_documento', '') or existing.get('numero_documento', '')} del {data_doc} da {parsed.get('fornitore_nome', '')}"
         )
 
     # Try to match supplier by P.IVA or Codice Fiscale
@@ -728,7 +728,7 @@ async def import_xml_fattura(
         logger.warning(f"Consumable auto-import failed for XML {fr_id}: {e}")
 
     return {
-        "message": f"Fattura importata: {parsed.get('numero_documento', 'N/A')} da {parsed.get('fornitore_nome', 'N/A')} â {parsed.get('totale_documento', 0):.2f}â¬",
+        "message": f"Fattura importata: {parsed.get('numero_documento', 'N/A')} da {parsed.get('fornitore_nome', 'N/A')} Ã¢ÂÂ {parsed.get('totale_documento', 0):.2f}Ã¢ÂÂ¬",
         "fattura": created,
         "fornitore_trovato": fornitore_id is not None,
         "scadenze_origine": scadenze_origine,
@@ -766,7 +766,7 @@ async def import_xml_batch(
             results["errors"].append(f"{f.filename}: {str(e)}")
             continue
 
-        # Check duplicate â robust: by (numero+piva+data) OR (piva+data+totale)
+        # Check duplicate Ã¢ÂÂ robust: by (numero+piva+data) OR (piva+data+totale)
         dedup_or = []
         num_doc = parsed.get("numero_documento", "")
         b_piva = parsed.get("fornitore_piva", "")
@@ -787,9 +787,9 @@ async def import_xml_batch(
                 "numero": num_doc or "N/A",
                 "fornitore": parsed.get("fornitore_nome", ""),
                 "data": b_data,
-                "motivo": "giÃ  presente",
+                "motivo": "giÃÂ  presente",
             })
-            results["errors"].append(f"{f.filename}: giÃ  importata (n. {num_doc or 'N/A'} del {b_data})")
+            results["errors"].append(f"{f.filename}: giÃÂ  importata (n. {num_doc or 'N/A'} del {b_data})")
             continue
 
         now = datetime.now(timezone.utc)
@@ -894,7 +894,7 @@ async def import_xml_batch(
     }
 
 
-# ââ Parse XML Preview (no save) âââââââââââââââââââââââââââââââââ
+# Ã¢ÂÂÃ¢ÂÂ Parse XML Preview (no save) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 @router.post("/preview-xml")
 async def preview_xml_fattura(
@@ -968,7 +968,7 @@ async def preview_xml_fattura(
                 except (ValueError, TypeError):
                     pass
 
-    # Check for existing duplicate â robust
+    # Check for existing duplicate Ã¢ÂÂ robust
     existing = None
     dedup_or = []
     p_num = parsed.get("numero_documento", "")
@@ -994,7 +994,7 @@ async def preview_xml_fattura(
     }
 
 
-# ââ Extract Articles to Catalog âââââââââââââââââââââââââââââââââ
+# Ã¢ÂÂÃ¢ÂÂ Extract Articles to Catalog Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 @router.post("/{fr_id}/extract-articoli")
 async def extract_articoli(
@@ -1052,7 +1052,7 @@ async def extract_articoli(
                         "$push": {"storico_prezzi": {
                             "prezzo": prezzo,
                             "data": now.isoformat(),
-                            "fonte": f"Fatt. {fr.get('numero_documento', '')} â {fornitore_nome}"
+                            "fonte": f"Fatt. {fr.get('numero_documento', '')} Ã¢ÂÂ {fornitore_nome}"
                         }}
                     }
                 )
@@ -1072,7 +1072,7 @@ async def extract_articoli(
                 "fornitore_nome": fornitore_nome,
                 "fornitore_id": fr.get("fornitore_id"),
                 "note": f"Importato da fattura {fr.get('numero_documento', '')}",
-                "storico_prezzi": [{"prezzo": prezzo, "data": now.isoformat(), "fonte": f"Fatt. {fr.get('numero_documento', '')} â {fornitore_nome}"}],
+                "storico_prezzi": [{"prezzo": prezzo, "data": now.isoformat(), "fonte": f"Fatt. {fr.get('numero_documento', '')} Ã¢ÂÂ {fornitore_nome}"}],
                 "created_at": now,
                 "updated_at": now,
             }
@@ -1087,7 +1087,7 @@ async def extract_articoli(
     }
 
 
-# ââ Payment Tracking ââââââââââââââââââââââââââââââââââââââââââââ
+# Ã¢ÂÂÃ¢ÂÂ Payment Tracking Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 class FRPayment(BaseModel):
     importo: float = Field(..., gt=0)
@@ -1175,7 +1175,7 @@ async def record_fr_payment(
 
 
 
-# ââ Cost Imputation (Assign to Commessa or Magazzino) ââââââââââââ
+# Ã¢ÂÂÃ¢ÂÂ Cost Imputation (Assign to Commessa or Magazzino) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 class ImputazioneDestinazione(str, Enum):
     COMMESSA = "commessa"
@@ -1229,7 +1229,7 @@ async def imputa_costi(
         cost_entry = {
             "cost_id": f"cost_{uuid.uuid4().hex[:8]}",
             "tipo": "materiale",
-            "descrizione": f"Fatt. {fr.get('numero_documento', '')} â {fr.get('fornitore_nome', '')}",
+            "descrizione": f"Fatt. {fr.get('numero_documento', '')} Ã¢ÂÂ {fr.get('fornitore_nome', '')}",
             "fornitore": fr.get("fornitore_nome", ""),
             "importo": round(totale_imputato, 2),
             "data": now.isoformat(),
@@ -1265,7 +1265,7 @@ async def imputa_costi(
         )
 
         return {
-            "message": f"Costo di {totale_imputato:.2f}â¬ imputato alla commessa {commessa.get('numero', '')}",
+            "message": f"Costo di {totale_imputato:.2f}Ã¢ÂÂ¬ imputato alla commessa {commessa.get('numero', '')}",
             "destinazione": "commessa",
             "commessa_numero": commessa.get("numero", ""),
             "importo": round(totale_imputato, 2),
@@ -1313,7 +1313,7 @@ async def imputa_costi(
                         "$push": {"storico_prezzi": {
                             "prezzo": prezzo,
                             "data": now.isoformat(),
-                            "fonte": f"Fatt. {fr.get('numero_documento', '')} â {fr.get('fornitore_nome', '')}",
+                            "fonte": f"Fatt. {fr.get('numero_documento', '')} Ã¢ÂÂ {fr.get('fornitore_nome', '')}",
                             "quantita": qty,
                         }}
                     }
@@ -1338,7 +1338,7 @@ async def imputa_costi(
                     "fornitore_nome": fr.get("fornitore_nome", ""),
                     "fornitore_id": fr.get("fornitore_id"),
                     "storico_prezzi": [{"prezzo": prezzo, "data": now.isoformat(),
-                        "fonte": f"Fatt. {fr.get('numero_documento', '')} â {fr.get('fornitore_nome', '')}",
+                        "fonte": f"Fatt. {fr.get('numero_documento', '')} Ã¢ÂÂ {fr.get('fornitore_nome', '')}",
                         "quantita": qty}],
                     "created_at": now,
                     "updated_at": now,
@@ -1372,7 +1372,7 @@ async def imputa_costi(
 
 
 
-# ââ Annulla Imputazione (Undo cost assignment) ââââââââââââââââââ
+# Ã¢ÂÂÃ¢ÂÂ Annulla Imputazione (Undo cost assignment) Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 @router.post("/{fr_id}/annulla-imputazione")
 async def annulla_imputazione(
@@ -1435,14 +1435,14 @@ async def annulla_imputazione(
     )
     
     return {
-        "message": f"Imputazione annullata. La fattura non Ã¨ piÃ¹ collegata a {commessa_numero}.",
+        "message": f"Imputazione annullata. La fattura non ÃÂ¨ piÃÂ¹ collegata a {commessa_numero}.",
         "fr_id": fr_id,
         "previous_destinazione": destinazione,
         "previous_commessa_id": commessa_id,
     }
 
 
-# ââ FattureInCloud Sync âââââââââââââââââââââââââââââââââââââââââ
+# Ã¢ÂÂÃ¢ÂÂ FattureInCloud Sync Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 @router.post("/sync-fic")
 async def sync_fatture_from_fic(
@@ -1451,7 +1451,7 @@ async def sync_fatture_from_fic(
     """Sync received invoices from FattureInCloud API."""
     uid = user["user_id"]
     if uid in _import_locks:
-        raise HTTPException(429, "Import giÃ  in corso, attendi il completamento")
+        raise HTTPException(429, "Import giÃÂ  in corso, attendi il completamento")
     _import_locks.add(uid)
     try:
         return await _sync_fatture_from_fic_impl(user)
@@ -1479,7 +1479,7 @@ async def _sync_fatture_from_fic_impl(user: dict):
     errors = []
     page = 1
 
-    # PUNTO 1 â Leggi watermark ultima sync
+    # PUNTO 1 Ã¢ÂÂ Leggi watermark ultima sync
     sync_state = await db.sync_state.find_one(
         {"user_id": user["user_id"], "type": "fatture_ricevute"},
         {"_id": 0, "last_sync_at": 1}
@@ -1490,7 +1490,7 @@ async def _sync_fatture_from_fic_impl(user: dict):
 
     try:
         while True:
-            # PUNTO 2 â Filtra per data se watermark disponibile
+            # PUNTO 2 Ã¢ÂÂ Filtra per data se watermark disponibile
             extra_params = {}
             if last_sync_date:
                 extra_params["filter[date][from]"] = last_sync_date
@@ -1550,7 +1550,7 @@ async def _sync_fatture_from_fic_impl(user: dict):
                 amount_vat = float(doc_fic.get("amount_vat", 0))
                 amount_gross = float(doc_fic.get("amount_gross", amount_net + amount_vat))
 
-                # Payment info â extract all FIC payment entries
+                # Payment info Ã¢ÂÂ extract all FIC payment entries
                 payments_list = doc_fic.get("payments_list", []) or []
                 data_scadenza = ""
                 fic_scadenze = []
@@ -1671,7 +1671,7 @@ async def _sync_fatture_from_fic_impl(user: dict):
         if imported == 0:
             raise HTTPException(502, f"Errore comunicazione FattureInCloud: {str(e)}")
 
-    # PUNTO 3 â Salva watermark (solo se completato senza eccezioni fatali)
+    # PUNTO 3 Ã¢ÂÂ Salva watermark (solo se completato senza eccezioni fatali)
     await db.sync_state.update_one(
         {"user_id": user["user_id"], "type": "fatture_ricevute"},
         {"$set": {
@@ -1683,14 +1683,14 @@ async def _sync_fatture_from_fic_impl(user: dict):
     )
 
     return {
-        "message": f"Sincronizzazione completata: {imported} importate, {skipped} giÃ  presenti",
+        "message": f"Sincronizzazione completata: {imported} importate, {skipped} giÃÂ  presenti",
         "imported": imported,
         "skipped": skipped,
         "errors": errors,
     }
 
 
-# ââ Recalculate due dates for existing invoices âââââââââââââââââ
+# Ã¢ÂÂÃ¢ÂÂ Recalculate due dates for existing invoices Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 @router.post("/recalc-scadenze")
 async def recalc_scadenze(user: dict = Depends(get_current_user)):
@@ -1772,9 +1772,9 @@ async def recalc_scadenze(user: dict = Depends(get_current_user)):
                 common = set(fr_words) & set(s_words)
                 if common or not fr_words or not s_words:
                     return candidates[0]
-                # Name mismatch â try name-based instead
+                # Name mismatch Ã¢ÂÂ try name-based instead
             else:
-                # Multiple P.IVA matches â pick the one with best name match
+                # Multiple P.IVA matches Ã¢ÂÂ pick the one with best name match
                 best = None
                 best_score = -1
                 for cid in candidates:
@@ -1797,7 +1797,7 @@ async def recalc_scadenze(user: dict = Depends(get_current_user)):
             common = set(fr_words) & set(s_words)
             if common or not fr_words or not s_words:
                 return cid
-            # CF match but name mismatch â fall through to name matching
+            # CF match but name mismatch Ã¢ÂÂ fall through to name matching
         
         # Name match
         return find_best_name_match(fr_nome)
@@ -1891,7 +1891,7 @@ async def recalc_scadenze(user: dict = Depends(get_current_user)):
     }
 
 
-# ââ Recalculate single invoice scadenze ââââââââââââââââââââââââââ
+# Ã¢ÂÂÃ¢ÂÂ Recalculate single invoice scadenze Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 @router.post("/{fr_id}/recalc-scadenze")
 async def recalc_single_scadenze(fr_id: str, user: dict = Depends(get_current_user)):
@@ -1923,7 +1923,7 @@ async def recalc_single_scadenze(fr_id: str, user: dict = Depends(get_current_us
     return {"scadenze_pagamento": scadenze_calc, "data_scadenza_pagamento": scadenze_calc[-1]["data_scadenza"]}
 
 
-# ââ Update scadenze manually ââââââââââââââââââââââââââââââââââââ
+# Ã¢ÂÂÃ¢ÂÂ Update scadenze manually Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 class ScadenzaUpdate(BaseModel):
     rata: int
@@ -1952,7 +1952,7 @@ async def update_scadenze_pagamento(fr_id: str, scadenze: List[ScadenzaUpdate], 
     return {"scadenze_pagamento": scadenze_list}
 
 
-# ââ Scadenziario Dashboard ââââââââââââââââââââââââââââââââââââââ
+# Ã¢ÂÂÃ¢ÂÂ Scadenziario Dashboard Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 @router.get("/scadenziario/dashboard")
 async def get_scadenziario_dashboard(
@@ -2057,7 +2057,7 @@ async def get_scadenziario_dashboard(
                 "link": f"/commesse/{c.get('commessa_id')}",
             })
 
-    # 5. Incassi attesi â scadenze da fatture attive emesse
+    # 5. Incassi attesi Ã¢ÂÂ scadenze da fatture attive emesse
     incassi_scaduti = 0
     incassi_mese = 0
     seen_invoice_ids = set()
@@ -2094,7 +2094,7 @@ async def get_scadenziario_dashboard(
                 "rata": s.get("rata"),
             })
 
-    # 5b. Invoices WITHOUT scadenze_pagamento â use due_date as single payment
+    # 5b. Invoices WITHOUT scadenze_pagamento Ã¢ÂÂ use due_date as single payment
     async for inv in db.invoices.find(
         {"user_id": uid,
          "status": {"$in": ["emessa", "inviata_sdi", "accettata"]},
@@ -2191,9 +2191,9 @@ async def get_scadenziario_dashboard(
     }
 
 
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-# EXPORT SCADENZIARIO â XLSX + PDF
-# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+# EXPORT SCADENZIARIO Ã¢ÂÂ XLSX + PDF
+# Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
 
 @router.get("/scadenziario/export/xlsx")
 async def export_scadenziario_xlsx(
@@ -2244,7 +2244,7 @@ async def export_scadenziario_xlsx(
     scaduto_fill = PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid")
     warn_fill = PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid")
     ok_fill = PatternFill(start_color="ECFDF5", end_color="ECFDF5", fill_type="solid")
-    eur_fmt = '#,##0.00 â¬'
+    eur_fmt = '#,##0.00 Ã¢ÂÂ¬'
 
     for idx, item in enumerate(items, 1):
         row = idx + 1
@@ -2277,7 +2277,7 @@ async def export_scadenziario_xlsx(
                 stato_label = f"OK ({abs(days)}gg)"
                 fill = ok_fill
         else:
-            stato_label = "â"
+            stato_label = "Ã¢ÂÂ"
             fill = None
 
         c8 = ws.cell(row=row, column=8, value=stato_label)
@@ -2326,8 +2326,8 @@ async def export_scadenziario_pdf(
     totale = sum(i.get("importo", 0) or 0 for i in items)
 
     def fmt_eur(v):
-        if not v: return "â"
-        return f"{v:,.2f} â¬".replace(",", "X").replace(".", ",").replace("X", ".")
+        if not v: return "Ã¢ÂÂ"
+        return f"{v:,.2f} Ã¢ÂÂ¬".replace(",", "X").replace(".", ",").replace("X", ".")
 
     def fmt_date(d):
         if not d: return ""
@@ -2355,7 +2355,7 @@ async def export_scadenziario_pdf(
                 stato_label = f"{abs(days)}gg"
         else:
             bg = "#FFFFFF"
-            stato_label = "â"
+            stato_label = "Ã¢ÂÂ"
 
         tipo_label = "Uscita" if item["tipo"] == "pagamento" else "Entrata"
         rows_html += f"""<tr style="background:{bg}">
@@ -2384,7 +2384,7 @@ async def export_scadenziario_pdf(
         td {{ padding: 3px 6px; border-bottom: 1px solid #E2E8F0; font-size: 8px; }}
         .totale {{ font-weight: bold; font-size: 9px; margin-top: 8px; text-align: right; }}
     </style></head><body>
-    <h1>Scadenziario â {company.get('business_name', 'Azienda')}</h1>
+    <h1>Scadenziario Ã¢ÂÂ {company.get('business_name', 'Azienda')}</h1>
     <div class="meta">Generato il {fmt_date(today_d.isoformat())} | {len(items)} scadenze | Totale: {fmt_eur(totale)}</div>
     <table>
         <tr><th>#</th><th>Tipo</th><th>Scadenza</th><th>Importo</th><th>Documento</th><th>Data Doc.</th><th>Soggetto</th><th>Stato</th></tr>
@@ -2422,3 +2422,81 @@ def _filter_scadenze(scadenze, tipo, stato, data_dal, data_al):
             continue
         items.append(s)
     return items
+
+
+@router.post("/sync-fic")
+async def sync_fatture_from_fic(user: dict = Depends(get_current_user)):
+    """Importa fatture passive ricevute via SDI da FattureInCloud."""
+    import httpx, os
+    from datetime import date
+
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    co = company or {}
+
+    fic_token = co.get("fic_access_token") or os.environ.get("FIC_ACCESS_TOKEN")
+    fic_company_id = co.get("fic_company_id") or os.environ.get("FIC_COMPANY_ID")
+
+    if not fic_token or not fic_company_id:
+        raise HTTPException(400, "Configura le credenziali FattureInCloud nelle Impostazioni")
+
+    headers = {"Authorization": f"Bearer {fic_token}", "Content-Type": "application/json"}
+    base_url = f"https://api-v2.fattureincloud.it/c/{fic_company_id}"
+
+    imported = 0
+    errors = []
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        # Scarica fatture passive (received documents) da FIC
+        try:
+            resp = await client.get(
+                f"{base_url}/received_documents",
+                headers=headers,
+                params={"type": "invoice", "per_page": 50, "page": 1}
+            )
+            if resp.status_code == 401:
+                raise HTTPException(401, "Token FattureInCloud non valido o scaduto. Aggiorna il token nelle Impostazioni.")
+            if resp.status_code != 200:
+                raise HTTPException(502, f"Errore FattureInCloud: {resp.status_code} - {resp.text[:200]}")
+
+            data = resp.json()
+            docs = data.get("data", [])
+
+            for doc in docs:
+                fic_id = str(doc.get("id", ""))
+                # Controlla se già importata
+                existing = await db.fatture_ricevute.find_one({"fic_id": fic_id, "user_id": user["user_id"]})
+                if existing:
+                    continue
+
+                # Mappa campi FIC -> FatturaRicevuta
+                supplier = doc.get("entity", {}) or {}
+                fr = {
+                    "fr_id": f"fr_{uuid.uuid4().hex[:12]}",
+                    "user_id": user["user_id"],
+                    "fic_id": fic_id,
+                    "numero": doc.get("numeration", "") or doc.get("number", ""),
+                    "data_fattura": doc.get("date", ""),
+                    "fornitore_nome": supplier.get("name", ""),
+                    "fornitore_piva": supplier.get("vat_number", ""),
+                    "fornitore_cf": supplier.get("tax_code", ""),
+                    "importo_totale": float(doc.get("amount_net", 0) or 0) + float(doc.get("amount_vat", 0) or 0),
+                    "importo_netto": float(doc.get("amount_net", 0) or 0),
+                    "importo_iva": float(doc.get("amount_vat", 0) or 0),
+                    "status": "ricevuta",
+                    "sdi_id": doc.get("e_invoice_id", "") or "",
+                    "xml_raw": "",
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "note": "",
+                }
+                await db.fatture_ricevute.insert_one(fr)
+                imported += 1
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            errors.append(str(e))
+
+    if errors:
+        return {"imported": imported, "errors": errors, "message": f"Importate {imported} fatture con {len(errors)} errori"}
+
+    return {"imported": imported, "message": f"Importate {imported} nuove fatture passive da FattureInCloud"}
