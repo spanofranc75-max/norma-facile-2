@@ -47,7 +47,7 @@ async def create_gate_certification(
         {"commessa_id": data.commessa_id}, {"_id": 0, "cert_id": 1}
     )
     if existing:
-        raise HTTPException(409, "Certificazione cancello già esistente per questa commessa")
+        raise HTTPException(409, "Certificazione cancello giÃ  esistente per questa commessa")
 
     now = datetime.now(timezone.utc)
     cert_id = f"gate_{uuid.uuid4().hex[:12]}"
@@ -136,7 +136,7 @@ async def update_gate_certification(
     return {"message": "Aggiornato", "certification": updated}
 
 
-# ── PDF Generation ──────────────────────────────────────────────
+# ââ PDF Generation ââââââââââââââââââââââââââââââââââââââââââââââ
 
 def _gate_pdf_css():
     return """
@@ -189,10 +189,10 @@ async def generate_dop_pdf(commessa_id: str, user: dict = Depends(get_current_us
             <tr><td class="lbl">Tipo di prodotto:</td><td>{tipo_label}</td></tr>
             <tr><td class="lbl">Azionamento:</td><td>{cert.get("azionamento", "").title()}</td></tr>
             <tr><td class="lbl">Norma armonizzata:</td><td>EN 13241:2003+A2:2016</td></tr>
-            <tr><td class="lbl">Commessa:</td><td>{num} — {commessa.get("title", "") if commessa else ""}</td></tr>
-            <tr><td class="lbl">Cliente:</td><td>{client_name or "—"}</td></tr>
-            <tr><td class="lbl">Dimensioni:</td><td>{cert.get("larghezza_mm") or "—"} x {cert.get("altezza_mm") or "—"} mm</td></tr>
-            <tr><td class="lbl">Peso:</td><td>{cert.get("peso_kg") or "—"} kg</td></tr>
+            <tr><td class="lbl">Commessa:</td><td>{num} â {commessa.get("title", "") if commessa else ""}</td></tr>
+            <tr><td class="lbl">Cliente:</td><td>{client_name or "â"}</td></tr>
+            <tr><td class="lbl">Dimensioni:</td><td>{cert.get("larghezza_mm") or "â"} x {cert.get("altezza_mm") or "â"} mm</td></tr>
+            <tr><td class="lbl">Peso:</td><td>{cert.get("peso_kg") or "â"} kg</td></tr>
         </table>
 
         <h2>2. Fabbricante</h2>
@@ -261,7 +261,7 @@ async def generate_ce_label_pdf(commessa_id: str, user: dict = Depends(get_curre
             <table style="width:90%;margin:0 auto;font-size:8pt;border:none;">
                 <tr><td style="border:none;text-align:right;width:50%;font-weight:700;padding:1mm;">Tipo:</td><td style="border:none;text-align:left;padding:1mm;">{tipo_label}</td></tr>
                 <tr><td style="border:none;text-align:right;font-weight:700;padding:1mm;">Norma:</td><td style="border:none;text-align:left;padding:1mm;">EN 13241:2003+A2:2016</td></tr>
-                <tr><td style="border:none;text-align:right;font-weight:700;padding:1mm;">Dimensioni:</td><td style="border:none;text-align:left;padding:1mm;">{cert.get("larghezza_mm") or "—"} x {cert.get("altezza_mm") or "—"} mm</td></tr>
+                <tr><td style="border:none;text-align:right;font-weight:700;padding:1mm;">Dimensioni:</td><td style="border:none;text-align:left;padding:1mm;">{cert.get("larghezza_mm") or "â"} x {cert.get("altezza_mm") or "â"} mm</td></tr>
                 <tr><td style="border:none;text-align:right;font-weight:700;padding:1mm;">Vento:</td><td style="border:none;text-align:left;padding:1mm;">{cert.get("resistenza_vento", "NPD")}</td></tr>
                 <tr><td style="border:none;text-align:right;font-weight:700;padding:1mm;">Commessa:</td><td style="border:none;text-align:left;padding:1mm;">{num}</td></tr>
                 <tr><td style="border:none;text-align:right;font-weight:700;padding:1mm;">Anno:</td><td style="border:none;text-align:left;padding:1mm;">{datetime.now().year}</td></tr>
@@ -304,15 +304,15 @@ async def generate_maintenance_register_pdf(commessa_id: str, user: dict = Depen
     html = f"""<!DOCTYPE html><html><head><style>{_gate_pdf_css()}</style></head><body>
     <div class="page">
         <h1>REGISTRO DI MANUTENZIONE</h1>
-        <p style="font-size:8pt;color:#64748b;">Obbligatorio ai sensi della Direttiva Macchine 2006/42/CE — Cancelli motorizzati</p>
+        <p style="font-size:8pt;color:#64748b;">Obbligatorio ai sensi della Direttiva Macchine 2006/42/CE â Cancelli motorizzati</p>
 
         <h2>Dati Impianto</h2>
         <table class="info">
-            <tr><td class="lbl">Tipo:</td><td>{tipo_label} — {cert.get("azionamento", "").title()}</td></tr>
-            <tr><td class="lbl">Commessa:</td><td>{num} — {commessa.get("title", "") if commessa else ""}</td></tr>
-            <tr><td class="lbl">Cliente:</td><td>{client_name or "—"}</td></tr>
+            <tr><td class="lbl">Tipo:</td><td>{tipo_label} â {cert.get("azionamento", "").title()}</td></tr>
+            <tr><td class="lbl">Commessa:</td><td>{num} â {commessa.get("title", "") if commessa else ""}</td></tr>
+            <tr><td class="lbl">Cliente:</td><td>{client_name or "â"}</td></tr>
             <tr><td class="lbl">Installatore:</td><td>{company.get("business_name", "")}</td></tr>
-            <tr><td class="lbl">Motore:</td><td>{cert.get("motore_marca", "")} {cert.get("motore_modello", "")} — Matr. {cert.get("motore_matricola", "")}</td></tr>
+            <tr><td class="lbl">Motore:</td><td>{cert.get("motore_marca", "")} {cert.get("motore_modello", "")} â Matr. {cert.get("motore_matricola", "")}</td></tr>
             <tr><td class="lbl">Fotocellule:</td><td>{cert.get("fotocellule", "")}</td></tr>
             <tr><td class="lbl">Costa sensibile:</td><td>{cert.get("costola_sicurezza", "")}</td></tr>
             <tr><td class="lbl">Centralina:</td><td>{cert.get("centralina", "")}</td></tr>
@@ -365,7 +365,7 @@ async def generate_ce_declaration_pdf(commessa_id: str, user: dict = Depends(get
             risk_rows += f"""<tr>
                 <td>{r.get("id", "")}</td>
                 <td>{r.get("descrizione", "")}</td>
-                <td>{r.get("misura_adottata", "—")}</td>
+                <td>{r.get("misura_adottata", "â")}</td>
                 <td style="text-align:center;">{stato}</td>
             </tr>"""
 
@@ -375,8 +375,8 @@ async def generate_ce_declaration_pdf(commessa_id: str, user: dict = Depends(get
         stato = '<span class="ok">OK</span>' if p.get("conforme") else '<span class="ko">KO</span>'
         force_rows += f"""<tr>
             <td>{p.get("punto_misura", "").replace("_", " ").title()}</td>
-            <td>{p.get("forza_dinamica_n", "—")} N</td>
-            <td>{p.get("forza_statica_n", "—")} N</td>
+            <td>{p.get("forza_dinamica_n", "â")} N</td>
+            <td>{p.get("forza_statica_n", "â")} N</td>
             <td style="text-align:center;">{stato}</td>
         </tr>"""
 
@@ -389,9 +389,9 @@ async def generate_ce_declaration_pdf(commessa_id: str, user: dict = Depends(get
         <table class="info">
             <tr><td class="lbl">Tipo:</td><td>{tipo_label}</td></tr>
             <tr><td class="lbl">Azionamento:</td><td>{cert.get("azionamento", "").title()}</td></tr>
-            <tr><td class="lbl">Dimensioni:</td><td>{cert.get("larghezza_mm") or "—"} x {cert.get("altezza_mm") or "—"} mm — Peso: {cert.get("peso_kg") or "—"} kg</td></tr>
-            <tr><td class="lbl">Commessa:</td><td>{num} — {commessa.get("title", "") if commessa else ""}</td></tr>
-            <tr><td class="lbl">Cliente:</td><td>{client_name or "—"}</td></tr>
+            <tr><td class="lbl">Dimensioni:</td><td>{cert.get("larghezza_mm") or "â"} x {cert.get("altezza_mm") or "â"} mm â Peso: {cert.get("peso_kg") or "â"} kg</td></tr>
+            <tr><td class="lbl">Commessa:</td><td>{num} â {commessa.get("title", "") if commessa else ""}</td></tr>
+            <tr><td class="lbl">Cliente:</td><td>{client_name or "â"}</td></tr>
         </table>
 
         <h2>2. Fabbricante / Installatore</h2>
@@ -402,7 +402,7 @@ async def generate_ce_declaration_pdf(commessa_id: str, user: dict = Depends(get
 
         <h2>3. Componenti Installati</h2>
         <table class="info">
-            <tr><td class="lbl">Motore:</td><td>{cert.get("motore_marca", "")} {cert.get("motore_modello", "")} — Matr. {cert.get("motore_matricola", "")}</td></tr>
+            <tr><td class="lbl">Motore:</td><td>{cert.get("motore_marca", "")} {cert.get("motore_modello", "")} â Matr. {cert.get("motore_matricola", "")}</td></tr>
             <tr><td class="lbl">Fotocellule:</td><td>{cert.get("fotocellule", "")}</td></tr>
             <tr><td class="lbl">Costa sensibile:</td><td>{cert.get("costola_sicurezza", "")}</td></tr>
             <tr><td class="lbl">Centralina:</td><td>{cert.get("centralina", "")}</td></tr>
@@ -410,13 +410,13 @@ async def generate_ce_declaration_pdf(commessa_id: str, user: dict = Depends(get
 
         {"<h2>4. Analisi dei Rischi (EN 12453)</h2><table><thead><tr><th>ID</th><th>Rischio</th><th>Misura adottata</th><th>Esito</th></tr></thead><tbody>" + risk_rows + "</tbody></table>" if risk_rows else ""}
 
-        {"<h2>5. Prove di Forza (EN 12453)</h2><div class='note-box' style='margin-bottom:3mm;'>Limiti: Forza dinamica &lt; 400N — Forza statica residua &lt; 150N</div><table><thead><tr><th>Punto di misura</th><th>F. Dinamica</th><th>F. Statica</th><th>Esito</th></tr></thead><tbody>" + force_rows + "</tbody></table>" if force_rows else ""}
+        {"<h2>5. Prove di Forza (EN 12453)</h2><div class='note-box' style='margin-bottom:3mm;'>Limiti: Forza dinamica &lt; 400N â Forza statica residua &lt; 150N</div><table><thead><tr><th>Punto di misura</th><th>F. Dinamica</th><th>F. Statica</th><th>Esito</th></tr></thead><tbody>" + force_rows + "</tbody></table>" if force_rows else ""}
 
         <h2>{"6" if risk_rows or force_rows else "4"}. Norme applicate</h2>
         <table class="info">
             <tr><td class="lbl">Prodotto:</td><td>EN 13241:2003+A2:2016</td></tr>
-            {"<tr><td class='lbl'>Automazione:</td><td>EN 12453:2017 — EN 12445:2000</td></tr>" if cert.get("azionamento") == "motorizzato" else ""}
-            <tr><td class="lbl">Direttiva:</td><td>2006/42/CE (Macchine) — Reg. (UE) 305/2011 (CPR)</td></tr>
+            {"<tr><td class='lbl'>Automazione:</td><td>EN 12453:2017 â EN 12445:2000</td></tr>" if cert.get("azionamento") == "motorizzato" else ""}
+            <tr><td class="lbl">Direttiva:</td><td>2006/42/CE (Macchine) â Reg. (UE) 305/2011 (CPR)</td></tr>
         </table>
 
         <p style="margin-top:8mm;font-size:8pt;">
@@ -445,5 +445,5 @@ def _npd(val):
 
 def _render_gate_pdf(html: str) -> bytes:
     """Render HTML to PDF using WeasyPrint."""
-    from weasyprint import HTML
-    return HTML(string=html).write_pdf()
+    from services.pdf_template import render_pdf
+    return render_pdf(html).getvalue()
