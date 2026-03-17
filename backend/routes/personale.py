@@ -1,5 +1,5 @@
 """
-Personale Routes — Dipendenti, Presenze, Documenti, Report.
+Personale Routes â Dipendenti, Presenze, Documenti, Report.
 Prefix: /api/personale (registered via main.py include_router)
 """
 import io
@@ -25,7 +25,7 @@ MESI_IT = {
     "09": "Settembre", "10": "Ottobre", "11": "Novembre", "12": "Dicembre",
 }
 
-# ─── DIPENDENTI ──────────────────────────────────────────────────
+# âââ DIPENDENTI ââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 @router.get("/dipendenti")
 async def list_dipendenti(user: dict = Depends(get_current_user)):
@@ -76,7 +76,7 @@ async def delete_dipendente(dipendente_id: str, user: dict = Depends(get_current
     return {"ok": True}
 
 
-# ─── PRESENZE ────────────────────────────────────────────────────
+# âââ PRESENZE ââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 @router.get("/presenze")
 async def list_presenze(
@@ -195,7 +195,7 @@ async def delete_presenza(presenza_id: str, user: dict = Depends(get_current_use
     return {"ok": True}
 
 
-# ─── DOCUMENTI ───────────────────────────────────────────────────
+# âââ DOCUMENTI âââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 @router.get("/documenti")
 async def list_documenti(
@@ -283,7 +283,7 @@ async def download_documento(documento_id: str, user: dict = Depends(get_current
     )
 
 
-# ─── REPORT ──────────────────────────────────────────────────────
+# âââ REPORT ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 @router.get("/report/mensile")
 async def report_mensile(
@@ -354,7 +354,7 @@ async def report_mensile(
 
 def _generate_report_pdf(mese: str, report: list, company_name: str, logo_url: str = "") -> bytes:
     """Generate PDF report for presenze using WeasyPrint."""
-    from weasyprint import HTML
+    from services.pdf_template import render_pdf
 
     mm, yy = mese.split("-")[1], mese.split("-")[0]
     mese_label = f"{MESI_IT.get(mm, mm)} {yy}"
