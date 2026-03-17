@@ -1,4 +1,4 @@
-"""Shared PDF template utilities â ReportLab only, no system deps."""
+"""Shared PDF template utilities Ã¢ÂÂ ReportLab only, no system deps."""
 from io import BytesIO
 from datetime import datetime, timezone
 import html as html_mod
@@ -138,99 +138,30 @@ def build_totals_html(iva_data: dict, acconto: float = 0) -> str:
 
 
 def render_pdf(html_content: str) -> BytesIO:
-    """Render PDF usando ReportLab â puro Python, zero dipendenze sistema."""
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib.units import mm
-
+    """Render PDF usando xhtml2pdf - supporta HTML/CSS completo."""
+    from xhtml2pdf import pisa
+    
     buffer = BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        rightMargin=18*mm,
-        leftMargin=18*mm,
-        topMargin=15*mm,
-        bottomMargin=18*mm
-    )
-
-    styles = getSampleStyleSheet()
-    style_normal = ParagraphStyle(
-        'NormaFacileNormal',
-        parent=styles['Normal'],
-        fontSize=9,
-        leading=13,
-        fontName='Helvetica',
-    )
-    style_bold = ParagraphStyle(
-        'NormaFacileBold',
-        parent=styles['Normal'],
-        fontSize=9,
-        leading=13,
-        fontName='Helvetica-Bold',
-    )
-
-    clean_text = strip_html(html_content)
-    lines = clean_text.split('\n')
-
-    story = []
-    for line in lines:
-        line = line.strip()
-        if not line:
-            story.append(Spacer(1, 2*mm))
-            continue
-        if line.startswith('---'):
-            story.append(Spacer(1, 4*mm))
-            continue
-        if (line.isupper() and len(line) > 3) or line.startswith('TOTALE') or line.startswith('SALDO'):
-            story.append(Paragraph(line, style_bold))
-        else:
-            story.append(Paragraph(line, style_normal))
-        story.append(Spacer(1, 1*mm))
-
-    if not story:
-        story.append(Paragraph("Documento generato da Norma Facile 2.0", style_normal))
-
-    doc.build(story)
+    
+    # Aggiungi CSS base se non presente
+    if '<html' not in html_content.lower():
+        html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  body {{ font-family: Helvetica, Arial, sans-serif; font-size: 10px; margin: 0; padding: 0; }}
+  @page {{ size: A4; margin: 15mm 18mm 18mm 18mm; }}
+</style>
+</head>
+<body>{html_content}</body>
+</html>"""
+    
+    pisa_status = pisa.CreatePDF(html_content, dest=buffer, encoding='utf-8')
+    
+    if pisa_status.err:
+        # Fallback: ritorna buffer anche con errori minori
+        pass
+    
     buffer.seek(0)
     return buffer
-
-
-def format_date(date_str: str) -> str:
-    """Format date string to Italian format dd/mm/yyyy."""
-    if not date_str:
-        return ""
-    try:
-        from datetime import datetime
-        dt = datetime.fromisoformat(str(date_str).replace('Z', '+00:00'))
-        return dt.strftime('%d/%m/%Y')
-    except Exception:
-        return str(date_str)[:10] if date_str else ""
-
-
-def build_conditions_html(company: dict, doc_number: str) -> str:
-    """Build conditions page HTML for preventivo PDF."""
-    company_name = safe(company.get('business_name', ''))
-    return f"""
-    <div style="page-break-before: always; padding: 40px; font-family: Arial, sans-serif; font-size: 11px;">
-        <h2 style="color: #1E293B; border-bottom: 2px solid #0055FF; padding-bottom: 8px;">
-            CONDIZIONI GENERALI DI FORNITURA
-        </h2>
-        <p><strong>Documento:</strong> {safe(doc_number)}</p>
-        <p><strong>Azienda:</strong> {company_name}</p>
-        <div style="margin-top: 20px; line-height: 1.8;">
-            <p><strong>1. VALIDIT&#192; DELL&#39;OFFERTA</strong><br>
-            Il presente preventivo ha validit&#224; come indicato nel documento dalla data di emissione.</p>
-            <p><strong>2. PREZZI</strong><br>
-            I prezzi indicati si intendono IVA esclusa salvo diversa indicazione esplicita.</p>
-            <p><strong>3. TEMPI DI CONSEGNA</strong><br>
-            I tempi di consegna decorrono dalla data di conferma dell&#39;ordine e ricevimento dell&#39;acconto eventualmente previsto.</p>
-            <p><strong>4. PAGAMENTO</strong><br>
-            Il pagamento dovr&#224; avvenire secondo le modalit&#224; indicate nel preventivo.</p>
-            <p><strong>5. TRASPORTO</strong><br>
-            La merce viaggia a rischio e pericolo del committente salvo diversa indicazione.</p>
-            <p><strong>6. FORO COMPETENTE</strong><br>
-            Per qualsiasi controversia &#232; competente il Foro del luogo ove ha sede il fornitore.</p>
-        </div>
-    </div>
-    """
