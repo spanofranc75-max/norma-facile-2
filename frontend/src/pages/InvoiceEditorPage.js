@@ -292,7 +292,7 @@
                                 <TableRow className="bg-[#1E293B] hover:bg-[#1E293B]">
                                     <TableHead className="text-white font-semibold w-[80px]">Cod.</TableHead>
                                     <TableHead className="text-white font-semibold">Descrizione</TableHead>
-                                    <TableHead className="text-white font-semibold w-[80px] text-right">Q.tÃÂ </TableHead>
+                                    <TableHead className="text-white font-semibold w-[80px] text-right">Q.tÃÂÃÂ </TableHead>
                                     <TableHead className="text-white font-semibold w-[100px] text-right">Prezzo</TableHead>
                                     <TableHead className="text-white font-semibold w-[70px] text-right">Sc.%</TableHead>
                                     <TableHead className="text-white font-semibold w-[90px] text-right">IVA</TableHead>
