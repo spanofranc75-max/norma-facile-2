@@ -1,11 +1,11 @@
 """
-RdP — Richiesta di Preventivo a Fornitore (dal Preventivo Cliente)
+RdP â Richiesta di Preventivo a Fornitore (dal Preventivo Cliente)
 
 Flusso:
-1. L'utente seleziona righe del preventivo → sceglie fornitore → genera RdP
+1. L'utente seleziona righe del preventivo â sceglie fornitore â genera RdP
 2. Il fornitore risponde con un prezzo
-3. L'utente inserisce il prezzo e applica ricarico → aggiorna il preventivo cliente
-4. Quando il preventivo diventa commessa → converte RdP in OdA
+3. L'utente inserisce il prezzo e applica ricarico â aggiorna il preventivo cliente
+4. Quando il preventivo diventa commessa â converte RdP in OdA
 """
 import uuid
 import logging
@@ -24,7 +24,7 @@ COLL = "rdp_requests"
 PREV_COLL = "preventivi"
 
 
-# ── Models ──
+# ââ Models ââ
 
 class RdpLineItem(BaseModel):
     line_index: int  # index in preventivo.lines[]
@@ -50,7 +50,7 @@ class UpdatePreventivoPricesInput(BaseModel):
     markup_rules: List[dict]  # [{line_index, supplier_price, markup_pct}]
 
 
-# ── Endpoints ──
+# ââ Endpoints ââ
 
 @router.get("/{prev_id}/rdp")
 async def list_rdp(prev_id: str, user: dict = Depends(get_current_user)):
@@ -288,7 +288,7 @@ async def convert_rdp_to_oda(prev_id: str, rdp_id: str, user: dict = Depends(get
         "importo_totale": rdp.get("total_offered") or sum(
             (r.get("prezzo_unitario", 0) * r.get("quantita", 1)) for r in righe
         ),
-        "note": f"Convertito da RdP {rdp_id} — Preventivo {rdp.get('preventivo_number', '')}",
+        "note": f"Convertito da RdP {rdp_id} â Preventivo {rdp.get('preventivo_number', '')}",
         "riferimento_rdp_id": rdp_id,
         "stato": "emesso",
         "data_ordine": now.isoformat(),
@@ -335,7 +335,7 @@ async def delete_rdp(prev_id: str, rdp_id: str, user: dict = Depends(get_current
     return {"message": "RdP eliminata"}
 
 
-# ── PDF Generation ──
+# ââ PDF Generation ââ
 
 @router.get("/{prev_id}/rdp/{rdp_id}/pdf")
 async def download_rdp_pdf(prev_id: str, rdp_id: str, user: dict = Depends(get_current_user)):
@@ -363,7 +363,7 @@ async def download_rdp_pdf(prev_id: str, rdp_id: str, user: dict = Depends(get_c
 
 def _generate_rdp_pdf(rdp: dict, company: dict, preventivo: dict) -> bytes:
     """Generate professional RdP PDF."""
-    from weasyprint import HTML
+    from services.pdf_template import render_pdf
     import html as html_mod
 
     esc = html_mod.escape
@@ -504,7 +504,7 @@ table.items tbody td {{ padding:9px 8px; border-bottom:1px solid #e2e8f0; }}
     </div>
 </div>
 
-<div class="footer">{biz} — P.IVA {piva} — Documento generato da Norma Facile 2.0</div>
+<div class="footer">{biz} â P.IVA {piva} â Documento generato da Norma Facile 2.0</div>
 </body></html>"""
 
     from io import BytesIO
