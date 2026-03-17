@@ -11,16 +11,16 @@ from typing import Optional, List, Dict, Any
 logger = logging.getLogger(__name__)
 
 try:
-    from weasyprint import HTML
+    from services.pdf_template import render_pdf
     WEASYPRINT_AVAILABLE = True
 except ImportError:
     WEASYPRINT_AVAILABLE = False
     logger.warning("WeasyPrint not available - PDF generation disabled")
 
 
-# ══════════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 #  UNIFIED CSS TEMPLATE
-# ══════════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 UNIFIED_CSS = """
 @page {
@@ -342,9 +342,9 @@ def build_footer(company: Dict) -> str:
     """
 
 
-# ══════════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 #  DOCUMENT GENERATORS
-# ══════════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 def generate_rdp_pdf_v2(
     rdp: Dict,
@@ -414,7 +414,7 @@ def generate_rdp_pdf_v2(
         <thead>
             <tr>
                 <th style="width: 55%;">Descrizione Materiale</th>
-                <th class="tc" style="width: 15%;">Quantità</th>
+                <th class="tc" style="width: 15%;">QuantitÃ </th>
                 <th class="tc" style="width: 10%;">U.M.</th>
                 <th style="width: 20%;">Note</th>
             </tr>
@@ -548,7 +548,7 @@ def generate_oda_pdf_v2(
     rows_html += f"""
     <tr class="total-row">
         <td colspan="4" class="text-right bold">TOTALE ORDINE:</td>
-        <td class="tr bold">€ {fmt_it(total_display)}</td>
+        <td class="tr bold">â¬ {fmt_it(total_display)}</td>
         <td></td>
     </tr>
     """
@@ -558,10 +558,10 @@ def generate_oda_pdf_v2(
         <thead>
             <tr>
                 <th style="width: 40%;">Descrizione Materiale</th>
-                <th class="tc" style="width: 10%;">Q.tà</th>
+                <th class="tc" style="width: 10%;">Q.tÃ </th>
                 <th class="tc" style="width: 8%;">U.M.</th>
-                <th class="tr" style="width: 15%;">Prezzo €</th>
-                <th class="tr" style="width: 15%;">Importo €</th>
+                <th class="tr" style="width: 15%;">Prezzo â¬</th>
+                <th class="tr" style="width: 15%;">Importo â¬</th>
                 <th class="tc" style="width: 12%;">Cert.</th>
             </tr>
         </thead>
