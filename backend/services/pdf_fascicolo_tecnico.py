@@ -10,14 +10,14 @@ from typing import Dict, Any, List
 logger = logging.getLogger(__name__)
 
 try:
-    from weasyprint import HTML
+    from services.pdf_template import render_pdf
     WEASYPRINT_AVAILABLE = True
 except ImportError:
     WEASYPRINT_AVAILABLE = False
 
-# ══════════════════════════════════════════════════════════════
-# SHARED CSS — Stile fedele ai documenti originali
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# SHARED CSS â Stile fedele ai documenti originali
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 BASE_CSS = """
 @page { size: A4; margin: 12mm 15mm; }
 * { box-sizing: border-box; }
@@ -76,18 +76,18 @@ def _render(html_str):
 def _chk(val):
     return '<span class="chk chk-yes">&#9746;</span>' if val else '<span class="chk chk-no">&#9744;</span>'
 
-# ══════════════════════════════════════════════════════════════
-# HELPER: Proprietà materiali DINAMICHE dai lotti reali
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# HELPER: ProprietÃ  materiali DINAMICHE dai lotti reali
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 def _get_material_properties(lotti_cam: list) -> dict:
     """
-    Analizza i lotti materiali per determinare Saldabilità, Resilienza e Durabilità.
+    Analizza i lotti materiali per determinare SaldabilitÃ , Resilienza e DurabilitÃ .
     Legge i gradi acciaio dai lotti CAM/material_batches effettivi della commessa.
     """
     if not lotti_cam:
         return {
             "materiali_saldabilita": "Acciaio S275JR in accordo alla EN 10025-2",
-            "resilienza": "27J a 20°C (JR)",
+            "resilienza": "27J a 20Â°C (JR)",
             "durabilita": "NPD",
         }
 
@@ -100,13 +100,13 @@ def _get_material_properties(lotti_cam: list) -> dict:
             continue
         gradi.add(grado)
         if "K2" in grado:
-            sigle_resilienza[-20] = "40J a -20°C (K2)"
+            sigle_resilienza[-20] = "40J a -20Â°C (K2)"
         elif "J2" in grado:
-            sigle_resilienza[-20] = "27J a -20°C (J2)"
+            sigle_resilienza[-20] = "27J a -20Â°C (J2)"
         elif "J0" in grado:
-            sigle_resilienza[0] = "27J a 0°C (J0)"
+            sigle_resilienza[0] = "27J a 0Â°C (J0)"
         elif "JR" in grado:
-            sigle_resilienza[20] = "27J a 20°C (JR)"
+            sigle_resilienza[20] = "27J a 20Â°C (JR)"
 
     if gradi:
         materiali_str = f"Acciaio {' / '.join(sorted(gradi))} in accordo alla EN 10025-2"
@@ -117,7 +117,7 @@ def _get_material_properties(lotti_cam: list) -> dict:
         min_temp = min(sigle_resilienza.keys())
         resilienza_str = sigle_resilienza[min_temp]
     else:
-        resilienza_str = "27J a 20°C (JR)"
+        resilienza_str = "27J a 20Â°C (JR)"
 
     return {
         "materiali_saldabilita": materiali_str,
@@ -127,7 +127,7 @@ def _get_material_properties(lotti_cam: list) -> dict:
 
 
 def _get_durabilita(commessa: dict) -> str:
-    """Determina la durabilità in base ai trattamenti superficiali."""
+    """Determina la durabilitÃ  in base ai trattamenti superficiali."""
     trattamento = (commessa.get("trattamento_superficiale") or "").lower()
     if "zincatura" in trattamento or "zincat" in trattamento:
         return "Zincatura a caldo EN ISO 1461"
@@ -138,9 +138,9 @@ def _get_durabilita(commessa: dict) -> str:
     return "NPD"
 
 
-# ══════════════════════════════════════════════════════════════
-# 1. DOP — Dichiarazione di Prestazione
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# 1. DOP â Dichiarazione di Prestazione
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 def generate_dop_pdf(company: dict, commessa: dict, client_name: str, dop_data: dict) -> BytesIO:
     biz, addr, piva, phone, email, logo, firma = _co(company)
     comm_num = commessa.get("numero", "")
@@ -158,7 +158,7 @@ def generate_dop_pdf(company: dict, commessa: dict, client_name: str, dop_data: 
     cert_num = dop_data.get("certificato_numero", "") or company.get("certificato_en1090_numero", "")
     ente = dop_data.get("ente_notificato", "") or company.get("ente_certificatore", "")
     materiali_str = dop_data.get("materiali_saldabilita", "S355JR - S275JR in accordo alla EN 10025-2")
-    resilienza = dop_data.get("resilienza", "27J a 20°C (JR)")
+    resilienza = dop_data.get("resilienza", "27J a 20Â°C (JR)")
     durabilita = dop_data.get("durabilita", "NPD")
 
     chars = [
@@ -181,15 +181,15 @@ def generate_dop_pdf(company: dict, commessa: dict, client_name: str, dop_data: 
     <p style="text-align:center;font-size:9pt;margin:6px 0;">(Secondo Regolamento UE 574/2014)</p>
     <table class="info-table">
         <tr><td class="info-lbl">1. Codice prodotto-tipo:</td><td>{comm_num}</td></tr>
-        <tr><td class="info-lbl">2. Usi previsti:</td><td>{comm_title + (' — Rif. DDT n. ' + ddt_ref + ' del ' + ddt_data if ddt_ref else '')}</td></tr>
-        <tr><td class="info-lbl">3. Fabbricante:</td><td>{biz} — {addr}</td></tr>
+        <tr><td class="info-lbl">2. Usi previsti:</td><td>{comm_title + (' â Rif. DDT n. ' + ddt_ref + ' del ' + ddt_data if ddt_ref else '')}</td></tr>
+        <tr><td class="info-lbl">3. Fabbricante:</td><td>{biz} â {addr}</td></tr>
         <tr><td class="info-lbl">4. Mandatario:</td><td>{mandatario}</td></tr>
-        <tr><td class="info-lbl">5. Sistema valutazione:</td><td>Sistema 2+ — {ente}</td></tr>
-        <tr><td class="info-lbl">6. Norma armonizzata:</td><td>UNI EN 1090-1 — Certificato n. {cert_num}</td></tr>
+        <tr><td class="info-lbl">5. Sistema valutazione:</td><td>Sistema 2+ â {ente}</td></tr>
+        <tr><td class="info-lbl">6. Norma armonizzata:</td><td>UNI EN 1090-1 â Certificato n. {cert_num}</td></tr>
         <tr><td class="info-lbl">Classe di esecuzione:</td><td>{classe_exec}</td></tr>
         <tr><td class="info-lbl">Redatto da:</td><td>{redatto_da}</td></tr>
     </table>
-    <div class="section-title">7. Prestazione Dichiarata — EN 1090-2:2024 Appendice B6, B8</div>
+    <div class="section-title">7. Prestazione Dichiarata â EN 1090-2:2024 Appendice B6, B8</div>
     <table class="main">
         <thead><tr><th style="width:18%">UNI EN 1090-1</th><th style="width:45%">Caratteristiche Essenziali</th><th style="width:37%">Prestazione Dichiarata</th></tr></thead>
         <tbody>{rows}</tbody>
@@ -205,9 +205,9 @@ def generate_dop_pdf(company: dict, commessa: dict, client_name: str, dop_data: 
     return _render(html)
 
 
-# ══════════════════════════════════════════════════════════════
-# 2. CE — Marcatura CE (etichetta identica all'originale)
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# 2. CE â Marcatura CE (etichetta identica all'originale)
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 def generate_ce_pdf(company: dict, commessa: dict, client_name: str, ce_data: dict) -> BytesIO:
     biz, addr, piva, phone, email, logo, firma = _co(company)
     comm_num = commessa.get("numero", "")
@@ -220,7 +220,7 @@ def generate_ce_pdf(company: dict, commessa: dict, client_name: str, ce_data: di
     disegno = ce_data.get("disegno_riferimento", "") or ce_data.get("disegno_numero", "")
     ingegnere = ce_data.get("ingegnere_disegno", "")
     materiali = ce_data.get("materiali_saldabilita", ce_data.get("materiali", "S355JR - S275JR in accordo alla EN 10025-2"))
-    resilienza = ce_data.get("resilienza", "27J a 20°C (JR)")
+    resilienza = ce_data.get("resilienza", "27J a 20Â°C (JR)")
     durabilita = ce_data.get("durabilita", "NPD")
 
     # Build structural characteristics with engineer name
@@ -279,9 +279,9 @@ def generate_ce_pdf(company: dict, commessa: dict, client_name: str, ce_data: di
     return _render(html)
 
 
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 # 3. Piano di Controllo Qualita' (MOD. 02)
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 DEFAULT_PHASES = [
     {"fase": "Ricezione materiali e certificati", "doc_rif": "Ordini d'Acquisto / DDT / Certificati Marcatura CE IO 02", "applicabile": True},
     {"fase": "Movimentazione e stoccaggio", "doc_rif": "PRO 06 UNI EN 1090-2 (prosp. 8)", "applicabile": True},
@@ -363,9 +363,9 @@ def generate_piano_controllo_pdf(company: dict, commessa: dict, client_name: str
     return _render(html)
 
 
-# ══════════════════════════════════════════════════════════════
-# 4. Rapporto VT — Esame Visivo Dimensionale (MOD. 06)
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# 4. Rapporto VT â Esame Visivo Dimensionale (MOD. 06)
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 def generate_rapporto_vt_pdf(company: dict, commessa: dict, client_name: str, vt_data: dict) -> BytesIO:
     biz, addr, piva, phone, email, logo, firma = _co(company)
     comm_num = commessa.get("numero", "")
@@ -397,7 +397,7 @@ def generate_rapporto_vt_pdf(company: dict, commessa: dict, client_name: str, vt
         esito_str = o.get("esito", "")
         ogg_rows += f'<tr><td style="text-align:center;">{o.get("numero","")}</td><td>{o.get("disegno","")}</td><td>{o.get("marca","")}</td><td>{o.get("dimensioni","")}</td><td style="text-align:center;">{o.get("estensione_controllo","100")}%</td><td style="text-align:center;font-weight:600;">{esito_str}</td></tr>'
     if not oggetti:
-        ogg_rows = '<tr><td colspan="6" style="text-align:center;color:#999;padding:8px;">Nessun oggetto controllato — compilare manualmente</td></tr>'
+        ogg_rows = '<tr><td colspan="6" style="text-align:center;color:#999;padding:8px;">Nessun oggetto controllato â compilare manualmente</td></tr>'
 
     html = f"""<!DOCTYPE html><html><head><style>{BASE_CSS}
     .params {{ width:100%; border-collapse:collapse; margin:4px 0; }}
@@ -405,7 +405,7 @@ def generate_rapporto_vt_pdf(company: dict, commessa: dict, client_name: str, vt
     .params .plbl {{ font-weight:700; background:#f0f0f0; width:22%; }}
     </style></head><body>
     {_header_html(biz, addr, piva, phone, email, 'Rapporto di Esame Visivo - Dimensionale', 'MOD. 06 Rev. 0', logo)}
-    <p style="text-align:center;font-size:8pt;margin:2px 0;">Report VT N. {report_num} — Data: {report_data}</p>
+    <p style="text-align:center;font-size:8pt;margin:2px 0;">Report VT N. {report_num} â Data: {report_data}</p>
 
     <table class="params">
         <tr><td class="plbl">Cliente:</td><td>{client_name}</td><td class="plbl">Commessa / Ordine:</td><td>{comm_num}</td></tr>
@@ -450,9 +450,9 @@ def generate_rapporto_vt_pdf(company: dict, commessa: dict, client_name: str, vt
     return _render(html)
 
 
-# ══════════════════════════════════════════════════════════════
-# 5. Registro di Saldatura (MOD. 04) — Fedele all'originale
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# 5. Registro di Saldatura (MOD. 04) â Fedele all'originale
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 DEFAULT_SALDATURE = []
 
 def generate_registro_saldatura_pdf(company: dict, commessa: dict, client_name: str, rs_data: dict) -> BytesIO:
@@ -562,9 +562,9 @@ def generate_registro_saldatura_pdf(company: dict, commessa: dict, client_name: 
     return _render(html)
 
 
-# ══════════════════════════════════════════════════════════════
-# 6. Riesame Tecnico (MOD. 01) — Fedele all'originale (3 pagine)
-# ══════════════════════════════════════════════════════════════
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+# 6. Riesame Tecnico (MOD. 01) â Fedele all'originale (3 pagine)
+# ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 DEFAULT_REQUISITI = [
     {"requisito": "E' stata definita, in accordo con il Cliente, la classe di esecuzione della commessa?", "note_default": ""},
     {"requisito": "L'officina, per attrezzature e capacita' di lavoro, e' idonea per la commessa?", "note_default": ""},
