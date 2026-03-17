@@ -233,24 +233,25 @@ def build_header_html(company: dict, client: dict, no_client_border: bool = Fals
     cl_email = safe(cl.get("email", ""))
 
     return f"""
-    <table class="header-table">
+    <table class="header-table" style="width:100%; border-collapse:collapse; margin-bottom:12px;">
       <tr>
-        <td class="company-box">
-          <div class="company-name">{company_name}</div>
-          <div class="company-detail">
+        <td class="company-box" style="width:50%; vertical-align:top; padding-right:10px;">
+          {"<img src='" + safe(co.get('logo_url','')) + "' style='max-height:50px; max-width:120px; margin-bottom:6px;'><br>" if co.get('logo_url') else ""}
+          <div class="company-name" style="font-size:13px; font-weight:bold; color:#0055FF; margin-bottom:3px;">{company_name}</div>
+          <div class="company-detail" style="font-size:8.5px; color:#555; line-height:1.5;">
             {full_addr}<br>
-            {"<span class='piva-bold'>P.IVA: " + piva + "</span><br>" if piva else ""}
+            {"<b>P.IVA: " + piva + "</b><br>" if piva else ""}
             {"Cod.Fisc.: " + cf + "<br>" if cf else ""}
             {"Tel: " + phone + "<br>" if phone else ""}
             {"Email: " + email if email else ""}
           </div>
         </td>
-        <td class="client-box">
-          <div class="client-label">Destinatario</div>
-          <div class="client-name">{cl_name}</div>
-          <div class="client-detail">
+        <td class="client-box" style="width:50%; vertical-align:top; background:#f8f9fa; border:1px solid #dee2e6; padding:8px 10px;">
+          <div style="font-size:8px; color:#888; text-transform:uppercase; margin-bottom:4px;">Spett.le</div>
+          <div class="client-name" style="font-size:11px; font-weight:bold; color:#1E293B;">{cl_name}</div>
+          <div class="client-detail" style="font-size:8.5px; color:#555; line-height:1.5;">
             {cl_full}<br>
-            {"<span class='piva-bold'>P.IVA: " + cl_piva + "</span><br>" if cl_piva else ""}
+            {"<b>P.IVA: " + cl_piva + "</b><br>" if cl_piva else ""}
             {"Cod.Fisc.: " + cl_cf + "<br>" if cl_cf else ""}
             {"Cod.SDI: " + cl_sdi + "<br>" if cl_sdi else ""}
             {"PEC: " + cl_pec if cl_pec else ("Email: " + cl_email if cl_email else "")}
@@ -302,45 +303,23 @@ def build_totals_html(iva_data: dict, acconto: float = 0) -> str:
 
 
 def build_conditions_html(company: dict, doc_number: str) -> str:
-    """Build conditions page HTML usando condizioni_vendita dalle impostazioni aziendali."""
+    """Condizioni di fornitura reali dalle impostazioni aziendali."""
     company_name = safe((company or {}).get('business_name', ''))
-    # Usa le condizioni reali dalle impostazioni, non testo generico
-    condizioni_testo = (company or {}).get('condizioni_vendita', '')
+    condizioni = (company or {}).get('condizioni_vendita', '').strip()
     
-    if condizioni_testo and condizioni_testo.strip():
-        # Formatta le condizioni reali
-        lines_html = ''
-        for line in condizioni_testo.split('\n'):
-            line = line.strip()
-            if not line:
-                lines_html += '<br>'
-                continue
-            lines_html += f'<p style="margin:3px 0">{safe(line)}</p>'
-        return f"""
-    <div style="page-break-before: always; padding: 10px; font-size: 9px;">
-        <h3 style="color: #0055FF; border-bottom: 2px solid #0055FF; padding-bottom: 5px;">
-            CONDIZIONI GENERALI DI FORNITURA
-        </h3>
-        <p style="font-size:8px; color:#888">Documento: {safe(doc_number)} &nbsp;&nbsp; Azienda: {company_name}</p>
-        <div style="margin-top: 8px; line-height: 1.6;">
-            {lines_html}
-        </div>
-    </div>
-    """
+    if condizioni:
+        lines_html = ''.join(
+            f'<p style="margin:2px 0">{safe(l)}</p>' if l.strip() else '<br>'
+            for l in condizioni.split('\n')
+        )
     else:
-        # Fallback: condizioni generiche se non impostate
-        return f"""
-    <div style="page-break-before: always; padding: 10px; font-size: 9px;">
-        <h3 style="color: #0055FF; border-bottom: 2px solid #0055FF; padding-bottom: 5px;">
-            CONDIZIONI GENERALI DI FORNITURA
-        </h3>
-        <p style="font-size:8px; color:#888">Documento: {safe(doc_number)} &nbsp;&nbsp; Azienda: {company_name}</p>
-        <div style="margin-top: 8px; line-height: 1.6;">
-            <p>Le condizioni di fornitura non sono state configurate.</p>
-            <p>Inserire le condizioni di vendita nelle Impostazioni aziendali.</p>
-        </div>
-    </div>
-    """
+        lines_html = '<p>Le condizioni di vendita non sono state configurate nelle Impostazioni.</p>'
+    
+    return f"""<div style="page-break-before: always; padding: 10px; font-size: 9px; font-family: Helvetica, Arial, sans-serif;">
+        <h3 style="color: #0055FF; border-bottom: 2px solid #0055FF; padding-bottom: 5px; margin-bottom: 8px;">CONDIZIONI GENERALI DI FORNITURA</h3>
+        <p style="font-size:8px; color:#888; margin-bottom:8px">Documento: {safe(doc_number)} &mdash; Azienda: {company_name}</p>
+        <div style="line-height: 1.6;">{lines_html}</div>
+    </div>"""
 
 
 def render_pdf(html_content: str) -> BytesIO:
