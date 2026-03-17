@@ -110,12 +110,12 @@ async def create_client(
             if ex_type != new_type and ex_type != "cliente_fornitore":
                 raise HTTPException(
                     status_code=409,
-                    detail=f"La P.IVA {piva} è già registrata come '{existing.get('business_name', '')}' "
+                    detail=f"La P.IVA {piva} Ã¨ giÃ  registrata come '{existing.get('business_name', '')}' "
                            f"(tipo: {ex_type}). Puoi convertirlo in Cliente/Fornitore dalla sua scheda.",
                 )
             raise HTTPException(
                 status_code=400,
-                detail=f"Esiste già un record con questa Partita IVA: {existing.get('business_name', '')}"
+                detail=f"Esiste giÃ  un record con questa Partita IVA: {existing.get('business_name', '')}"
             )
 
     client_id = f"cli_{uuid.uuid4().hex[:12]}"
@@ -172,7 +172,7 @@ async def update_client(
         if duplicate:
             raise HTTPException(
                 status_code=400,
-                detail=f"Esiste già un record con questa Partita IVA: {duplicate.get('business_name', '')}"
+                detail=f"Esiste giÃ  un record con questa Partita IVA: {duplicate.get('business_name', '')}"
             )
     
     # Serialize contacts to dicts for MongoDB
@@ -251,7 +251,7 @@ async def promote_to_cliente_fornitore(
         raise HTTPException(status_code=404, detail="Record non trovato")
 
     if existing.get("client_type") == "cliente_fornitore":
-        return {"message": "Già di tipo Cliente/Fornitore", "client_id": client_id}
+        return {"message": "GiÃ  di tipo Cliente/Fornitore", "client_id": client_id}
 
     await db.clients.update_one(
         {"client_id": client_id},
@@ -262,7 +262,7 @@ async def promote_to_cliente_fornitore(
 
 
 
-# ── Email Log per Cliente ──
+# ââ Email Log per Cliente ââ
 
 @router.get("/{client_id}/email-log")
 async def get_client_email_log(client_id: str, user: dict = Depends(get_current_user)):
@@ -312,3 +312,47 @@ async def get_client_email_log(client_id: str, user: dict = Depends(get_current_
     emails.sort(key=lambda e: e.get("sent_at", ""), reverse=True)
 
     return {"emails": emails, "total": len(emails)}
+
+
+
+COUNTRY_MAP = {
+    "italia": "IT", "italy": "IT", "italie": "IT",
+    "france": "FR", "francia": "FR",
+    "germany": "DE", "germania": "DE",
+    "spain": "ES", "spagna": "ES",
+    "united kingdom": "GB", "regno unito": "GB",
+    "switzerland": "CH", "svizzera": "CH",
+    "austria": "AT",
+    "belgium": "BE", "belgio": "BE",
+    "netherlands": "NL", "paesi bassi": "NL",
+    "usa": "US", "united states": "US", "stati uniti": "US",
+}
+
+
+@router.post("/normalize-countries")
+async def normalize_client_countries(user: dict = Depends(get_current_user)):
+    """Normalizza il campo country di tutti i clienti al codice ISO 2 lettere."""
+    fixed = 0
+    skipped = 0
+    async for client in db.clients.find({"user_id": user["user_id"]}, {"_id": 0, "client_id": 1, "country": 1}):
+        country = (client.get("country") or "").strip()
+        if not country or len(country) == 2:
+            skipped += 1
+            continue
+        normalized = COUNTRY_MAP.get(country.lower())
+        if normalized:
+            await db.clients.update_one(
+                {"client_id": client["client_id"]},
+                {"$set": {"country": normalized}}
+            )
+            fixed += 1
+        else:
+            # Se non in mappa ma non è 2 lettere, prova a prendere le prime 2 lettere uppercase
+            # Solo se sembra un codice (es "ITA" -> "IT")
+            if len(country) == 3 and country.isalpha():
+                await db.clients.update_one(
+                    {"client_id": client["client_id"]},
+                    {"$set": {"country": country[:2].upper()}}
+                )
+                fixed += 1
+    return {"fixed": fixed, "skipped": skipped, "message": f"Normalizzati {fixed} clienti"}
