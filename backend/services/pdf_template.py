@@ -318,19 +318,62 @@ def build_conditions_html(company: dict, doc_number: str) -> str:
 
 
 def render_pdf(html_content: str) -> BytesIO:
-    """Render PDF usando xhtml2pdf - supporta HTML/CSS completo."""
-    from xhtml2pdf import pisa
+    """Render PDF usando ReportLab con layout professionale."""
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_RIGHT, TA_CENTER, TA_LEFT
+    import re
 
-    full_html = f"""<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<style>{CSS}</style>
-</head>
-<body>{html_content}</body>
-</html>"""
+    # Pulisci HTML - estrai testo con struttura
+    def clean(text):
+        text = str(text or '')
+        text = re.sub(r'<brs*/?>', '\n', text, flags=re.IGNORECASE)
+        text = re.sub(r'<[^>]+>', '', text)
+        text = text.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>').replace('&euro;', '€').replace('&#39;', "'")
+        return text.strip()
 
     buffer = BytesIO()
-    pisa.CreatePDF(full_html, dest=buffer, encoding='utf-8')
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+        rightMargin=18*mm, leftMargin=18*mm, topMargin=15*mm, bottomMargin=18*mm)
+
+    BLUE = colors.HexColor('#0055FF')
+    DARK = colors.HexColor('#1E293B')
+    GRAY = colors.HexColor('#F8F9FA')
+    LIGHT = colors.HexColor('#E9ECEF')
+
+    styles = getSampleStyleSheet()
+    story = []
+
+    # Parse HTML in blocchi
+    lines = html_content.split('\n')
+    clean_lines = [clean(l) for l in lines if clean(l)]
+
+    normal = ParagraphStyle('N', parent=styles['Normal'], fontSize=9, leading=13)
+    bold = ParagraphStyle('B', parent=styles['Normal'], fontSize=9, leading=13, fontName='Helvetica-Bold')
+    title = ParagraphStyle('T', parent=styles['Normal'], fontSize=14, leading=18, fontName='Helvetica-Bold', textColor=BLUE)
+    small = ParagraphStyle('S', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor('#555555'))
+
+    for line in clean_lines:
+        if not line:
+            story.append(Spacer(1, 3*mm))
+        elif line.startswith('AZIENDA:'):
+            story.append(Paragraph(line.replace('AZIENDA:', '<b>').strip() + '</b>', title))
+        elif line.startswith('P.IVA:') or line.startswith('Cod.Fisc:') or line.startswith('Cod.SDI:'):
+            story.append(Paragraph(line, bold))
+        elif line.startswith('---'):
+            story.append(HRFlowable(width="100%", thickness=1, color=LIGHT))
+            story.append(Spacer(1, 3*mm))
+        elif line.startswith('Spett.le:'):
+            story.append(Paragraph(line.replace('Spett.le:', '<b>Spett.le:</b>'), bold))
+        elif line in ('PREVENTIVO', 'FATTURA', 'DDT', 'DOCUMENTO DI TRASPORTO'):
+            story.append(Spacer(1, 4*mm))
+            story.append(Paragraph(line, title))
+        else:
+            story.append(Paragraph(line, normal))
+
+    doc.build(story)
     buffer.seek(0)
     return buffer
