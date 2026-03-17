@@ -1,5 +1,5 @@
 /**
- * DDT Editor â Documento di Trasporto (Vendita / Conto Lavoro / Rientro).
+ * DDT Editor Ã¢ÂÂ Documento di Trasporto (Vendita / Conto Lavoro / Rientro).
  * Invoicex-style with sidebar tabs and Quick Fill from client.
  */
 import { useState, useEffect, useCallback } from 'react';
@@ -252,7 +252,7 @@ export default function DDTEditorPage() {
                     </div>
                     <div className="flex gap-2">
                         {!isNew && <Button data-testid="btn-download-pdf" variant="outline" onClick={handleDownloadPdf} className="border-[#0055FF] text-[#0055FF] hover:bg-blue-50 h-9 text-xs"><FileDown className="h-3.5 w-3.5 mr-1.5" /> PDF</Button>}
-                        {!isNew && <PDFPreviewButton pdfUrl={`/ddt/${ddtId}/pdf`} title={`Anteprima DDT ${ddtInfo.number || ''}`} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9" />}
+                        {!isNew && <Button variant="outline" onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/ddt/${ddtId}/pdf?token=${localStorage.getItem('session_token')}`, '_blank')} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9 text-xs"><Eye className="h-3.5 w-3.5 mr-1.5" /> Anteprima</Button>}
                         {!isNew && (
                             <Button
                                 type="button"
@@ -280,7 +280,7 @@ export default function DDTEditorPage() {
 
                 {/* Main Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-4">
-                    {/* ââ Left Sidebar ââ */}
+                    {/* Ã¢ÂÂÃ¢ÂÂ Left Sidebar Ã¢ÂÂÃ¢ÂÂ */}
                     <div className="space-y-3">
                         <Card className="border-gray-200">
                             <CardContent className="p-4 space-y-3">
@@ -367,7 +367,7 @@ export default function DDTEditorPage() {
                                         <div><Label className="text-xs">Indirizzo</Label><Input value={form.destinazione.indirizzo} onChange={e => updateDest('indirizzo', e.target.value)} className="h-8 text-xs" /></div>
                                         <div className="grid grid-cols-3 gap-2">
                                             <div><Label className="text-xs">CAP</Label><Input value={form.destinazione.cap} onChange={e => updateDest('cap', e.target.value)} className="h-8 text-xs" maxLength={5} /></div>
-                                            <div><Label className="text-xs">LocalitÃ </Label><Input value={form.destinazione.localita} onChange={e => updateDest('localita', e.target.value)} className="h-8 text-xs" /></div>
+                                            <div><Label className="text-xs">LocalitÃÂ </Label><Input value={form.destinazione.localita} onChange={e => updateDest('localita', e.target.value)} className="h-8 text-xs" /></div>
                                             <div><Label className="text-xs">Prov.</Label><Input value={form.destinazione.provincia} onChange={e => updateDest('provincia', e.target.value.toUpperCase())} className="h-8 text-xs" maxLength={2} /></div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-2">
@@ -401,7 +401,7 @@ export default function DDTEditorPage() {
                         </Card>
                     </div>
 
-                    {/* ââ Right Content ââ */}
+                    {/* Ã¢ÂÂÃ¢ÂÂ Right Content Ã¢ÂÂÃ¢ÂÂ */}
                     <div className="space-y-4">
                         {/* Lines Table */}
                         <Card className="border-gray-200">
@@ -417,7 +417,7 @@ export default function DDTEditorPage() {
                                             <TableHead className="w-20 text-[10px]">Codice</TableHead>
                                             <TableHead className="min-w-[160px] text-[10px]">Descrizione</TableHead>
                                             <TableHead className="w-14 text-[10px]">UdM</TableHead>
-                                            <TableHead className="w-16 text-right text-[10px]">Q.tÃ </TableHead>
+                                            <TableHead className="w-16 text-right text-[10px]">Q.tÃÂ </TableHead>
                                             <TableHead className="w-20 text-right text-[10px]">Prezzo</TableHead>
                                             <TableHead className="w-14 text-right text-[10px]">Sc.1%</TableHead>
                                             <TableHead className="w-14 text-right text-[10px]">Sc.2%</TableHead>
