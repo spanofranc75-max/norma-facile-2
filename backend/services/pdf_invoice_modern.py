@@ -1,4 +1,4 @@
-"""Professional Invoice PDF generator â ReportLab.
+"""Professional Invoice PDF generator — ReportLab.
 
 Layout matches reference Fattura 7/2026:
 - Logo top-left, company name/details top-right
@@ -218,7 +218,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     cl = client or {}
     story = []
 
-    # ââ 1. HEADER: logo left, company right ââ
+    # ── 1. HEADER: logo left, company right ──
     company_name = _s(co.get("business_name"))
     addr = _s(co.get("address"))
     cap = _s(co.get("cap"))
@@ -276,7 +276,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     # Thin blue divider
     story.append(HRFlowable(width="100%", thickness=1.5, color=COL_ACCENT, spaceAfter=5*mm))
 
-    # ââ 2. DOC TITLE centered ââ
+    # ── 2. DOC TITLE centered ──
     doc_type = invoice.get("document_type", "FT")
     doc_title_text = DOC_TYPE_NAMES.get(doc_type, "DOCUMENTO")
     doc_number = _s(invoice.get("document_number", ""))
@@ -290,7 +290,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     story.append(Paragraph(f"{doc_title_text} N. {display_num}", S['doc_title']))
     story.append(Spacer(1, 4*mm))
 
-    # ââ 3. DATA | TIPO boxes side by side ââ
+    # ── 3. DATA | TIPO boxes side by side ──
     tipo_label = "COMPLETA"
     if doc_type == "PRV": tipo_label = "PREVENTIVO"
     elif doc_type == "DDT": tipo_label = "TRASPORTO"
@@ -330,7 +330,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     story.append(meta_row)
     story.append(Spacer(1, 5*mm))
 
-    # ââ 4. CLIENT: Spett.le + name + details, right side ââ
+    # ── 4. CLIENT: Spett.le + name + details, right side ──
     cl_name = _s(cl.get("business_name"))
     cl_parts = []
     cl_addr = _s(cl.get("address"))
@@ -349,7 +349,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     if cl_sdi: cl_parts.append(f"Cod. SDI {cl_sdi}")
     if cl_pec: cl_parts.append(f"PEC {cl_pec}")
 
-    # Left: Spett.le label + client name/address â left blue bar box
+    # Left: Spett.le label + client name/address — left blue bar box
     client_box = _left_bar_box([
         [Paragraph("Spett.le", S['spett'])],
         [Paragraph(cl_name, S['client_name'])],
@@ -359,12 +359,12 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     story.append(client_box)
     story.append(Spacer(1, 5*mm))
 
-    # ââ 5. ITEMS TABLE ââ
+    # ── 5. ITEMS TABLE ──
     lines = invoice.get("lines", [])
 
     table_data = [[
         Paragraph("Descrizione", S['th']),
-        Paragraph("Q.tÃ ", S['th_c']),
+        Paragraph("Q.tà", S['th_c']),
         Paragraph("Prezzo Unit.", S['th_r']),
         Paragraph("IVA", S['th_c']),
         Paragraph("Totale", S['th_r']),
@@ -388,9 +388,9 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         table_data.append([
             Paragraph(desc, S['td']),
             Paragraph(qty, S['td_c']),
-            Paragraph(f"â¬ {price}", S['td_r']),
+            Paragraph(f"€ {price}", S['td_r']),
             Paragraph(f"{vat}%", S['td_c']),
-            Paragraph(f"â¬ {total}", S['td_r']),
+            Paragraph(f"€ {total}", S['td_r']),
         ])
 
     cw = [PAGE_W*0.46, PAGE_W*0.08, PAGE_W*0.16, PAGE_W*0.10, PAGE_W*0.20]
@@ -415,23 +415,23 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     story.append(items_table)
     story.append(Spacer(1, 5*mm))
 
-    # ââ 6. TOTALS right-aligned ââ
+    # ── 6. TOTALS right-aligned ──
     from services.pdf_template import compute_iva_groups
     iva_data = compute_iva_groups(lines)
     totals_inv = invoice.get("totals", {})
     ritenuta = float(totals_inv.get("ritenuta", 0) or 0)
 
     subtotal_rows = [
-        [Paragraph("Imponibile:", S['total_label']), Paragraph(f"â¬ {_fmt(iva_data['imponibile'])}", S['total_value'])],
+        [Paragraph("Imponibile:", S['total_label']), Paragraph(f"€ {_fmt(iva_data['imponibile'])}", S['total_value'])],
     ]
     subtotal_rows.append([
         Paragraph("IVA:", S['total_label']),
-        Paragraph(f"â¬ {_fmt(iva_data['total_iva'])}", S['total_value']),
+        Paragraph(f"€ {_fmt(iva_data['total_iva'])}", S['total_value']),
     ])
     if ritenuta > 0:
         subtotal_rows.append([
             Paragraph("Ritenuta d'acconto:", S['total_label']),
-            Paragraph(f"-â¬ {_fmt(ritenuta)}", S['total_value']),
+            Paragraph(f"-€ {_fmt(ritenuta)}", S['total_value']),
         ])
 
     sub_table = Table(subtotal_rows, colWidths=[45*mm, 35*mm])
@@ -447,7 +447,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     netto = iva_data["total"] - ritenuta if ritenuta > 0 else iva_data["total"]
     grand_table = Table([
         [Paragraph("TOTALE:", S['grand_label']),
-         Paragraph(f"â¬ {_fmt(netto)}", S['grand_value'])],
+         Paragraph(f"€ {_fmt(netto)}", S['grand_value'])],
     ], colWidths=[45*mm, 35*mm])
     grand_table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), COL_NAVY),
@@ -477,7 +477,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     story.append(totals_row)
     story.append(Spacer(1, 6*mm))
 
-    # ââ 7. NOTE ââ
+    # ── 7. NOTE ──
     if invoice.get("notes"):
         notes_box = _left_bar_box([
             [Paragraph("NOTE", S['section_title'])],
@@ -486,7 +486,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         story.append(notes_box)
         story.append(Spacer(1, 3*mm))
 
-    # ââ 8. COORDINATE BANCARIE (left blue bar box) ââ
+    # ── 8. COORDINATE BANCARIE (left blue bar box) ──
     bank = co.get("bank_details", {}) or {}
     bank_name = _s(bank.get("bank_name", ""))
     bank_iban = _s(bank.get("iban", ""))
@@ -508,7 +508,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         story.append(bank_box)
         story.append(Spacer(1, 3*mm))
 
-    # ââ 9. SCADENZA PAGAMENTI (left blue bar box) ââ
+    # ── 9. SCADENZA PAGAMENTI (left blue bar box) ──
     payment_type_label = _s(invoice.get("payment_type_label", "")) or _s(payment_label)
     scad_parts = []
     if payment_type_label:
@@ -524,7 +524,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         story.append(scad_box)
         story.append(Spacer(1, 5*mm))
 
-    # ââ 10. FOOTER ââ
+    # ── 10. FOOTER ──
     story.append(HRFlowable(width="100%", thickness=0.5, color=COL_BORDER))
     story.append(Spacer(1, 2*mm))
 
@@ -542,11 +542,11 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     story.append(footer_row)
     story.append(Spacer(1, 1.5*mm))
     story.append(Paragraph(
-        "Azienda Certificata EN 1090-1 EXC3  â¢  ISO 3834-2  â¢  Centro di Trasformazione Acciaio",
+        "Azienda Certificata EN 1090-1 EXC3  •  ISO 3834-2  •  Centro di Trasformazione Acciaio",
         S['reg_footer']
     ))
 
-    # ââ CONDITIONS PAGE (solo Preventivi) ââ
+    # ── CONDITIONS PAGE (solo Preventivi) ──
     condizioni = co.get("condizioni_vendita", "") or ""
     if condizioni.strip() and doc_type == "PRV":
         story.append(PageBreak())
