@@ -64,7 +64,7 @@ body {
 .company-name {
     font-size: 13px;
     font-weight: bold;
-    color: #0055FF;
+    color: #1a56db;
     margin-bottom: 3px;
 }
 .company-detail {
@@ -93,7 +93,7 @@ body {
     line-height: 1.5;
 }
 .doc-title-bar {
-    background: #0055FF;
+    background: #1a56db;
     color: white;
     padding: 6px 12px;
     margin-bottom: 10px;
@@ -169,13 +169,13 @@ body {
 .total-final {
     font-size: 11px;
     font-weight: bold;
-    color: #0055FF;
-    border-top: 2px solid #0055FF;
+    color: #1a56db;
+    border-top: 2px solid #1a56db;
     padding-top: 3px;
 }
 .notes-box {
     background: #f8f9fa;
-    border-left: 3px solid #0055FF;
+    border-left: 3px solid #1a56db;
     padding: 6px 10px;
     font-size: 8.5px;
     margin-bottom: 10px;
@@ -192,7 +192,7 @@ body {
 .section-title {
     font-size: 9px;
     font-weight: bold;
-    color: #0055FF;
+    color: #1a56db;
     text-transform: uppercase;
     margin-bottom: 3px;
 }
@@ -237,7 +237,8 @@ def build_header_html(company: dict, client: dict, no_client_border: bool = Fals
       <tr>
         <td class="company-box" style="width:50%; vertical-align:top; padding-right:10px;">
           {"<img src='" + safe(co.get('logo_url','')) + "' style='max-height:50px; max-width:120px; margin-bottom:6px;'><br>" if co.get('logo_url') else ""}
-          <div class="company-name" style="font-size:13px; font-weight:bold; color:#0055FF; margin-bottom:3px;">{company_name}</div>
+                    {co.get('logo_url','').__len__() > 0 and '<img src="' + co.get('logo_url','') + '" style="max-height:50px; max-width:120px; margin-bottom:4px; display:block;">' or ''}
+          <div class="company-name" style="font-size:13px; font-weight:bold; color:#1a56db; margin-bottom:3px;">{company_name}</div>
           <div class="company-detail" style="font-size:8.5px; color:#555; line-height:1.5;">
             {full_addr}<br>
             {"<b>P.IVA: " + piva + "</b><br>" if piva else ""}
@@ -307,16 +308,37 @@ def build_conditions_html(company: dict, doc_number: str) -> str:
     company_name = safe((company or {}).get('business_name', ''))
     condizioni = (company or {}).get('condizioni_vendita', '').strip()
     
-    if condizioni:
-        lines_html = ''.join(
-            f'<p style="margin:2px 0">{safe(l)}</p>' if l.strip() else '<br>'
-            for l in condizioni.split('\n')
+    def fix_encoding(text):
+        """Corregge caratteri mal codificati."""
+        return (text
+            .replace('\u00e2\u0080\u0099', "'")
+            .replace('\u00e2\u0080\u009c', '"')
+            .replace('\u00e2\u0080\u009d', '"')
+            .replace('\u00e0', 'à').replace('\u00e8', 'è')
+            .replace('\u00e9', 'é').replace('\u00ec', 'ì')
+            .replace('\u00f2', 'ò').replace('\u00f9', 'ù')
+            .replace('\u00c0', 'À').replace('\u00c8', 'È')
+            .replace('Ã ', 'à').replace('Ã¨', 'è').replace('Ã©', 'é')
+            .replace('Ã¬', 'ì').replace('Ã²', 'ò').replace('Ã¹', 'ù')
+            .replace('â\x80\x99', "'").replace('â\x80\x9c', '"')
+            .replace('â\x80\x9d', '"').replace('â\x80\x93', '–')
+            .replace('\u2013', '–').replace('\u2014', '—')
         )
+    
+    if condizioni:
+        condizioni = fix_encoding(condizioni)
+        lines_html = ''
+        for line in condizioni.split('\n'):
+            line = line.strip()
+            if not line:
+                lines_html += '<p style="margin:2px 0">&nbsp;</p>'
+            else:
+                lines_html += f'<p style="margin:2px 0">{safe(line)}</p>'
     else:
         lines_html = '<p>Le condizioni di vendita non sono state configurate nelle Impostazioni.</p>'
     
     return f"""<div style="page-break-before: always; padding: 10px; font-size: 9px; font-family: Helvetica, Arial, sans-serif;">
-        <h3 style="color: #0055FF; border-bottom: 2px solid #0055FF; padding-bottom: 5px; margin-bottom: 8px;">CONDIZIONI GENERALI DI FORNITURA</h3>
+        <h3 style="color: #1a56db; border-bottom: 2px solid #1a56db; padding-bottom: 5px; margin-bottom: 8px;">CONDIZIONI GENERALI DI FORNITURA</h3>
         <p style="font-size:8px; color:#888; margin-bottom:8px">Documento: {safe(doc_number)} &mdash; Azienda: {company_name}</p>
         <div style="line-height: 1.6;">{lines_html}</div>
     </div>"""
@@ -334,7 +356,7 @@ def render_pdf(html_content: str) -> BytesIO:
     from reportlab.lib import colors
     from reportlab.lib.enums import TA_RIGHT, TA_CENTER, TA_LEFT
 
-    BLUE    = colors.HexColor('#0055FF')
+    BLUE    = colors.HexColor('#1a56db')
     DARK    = colors.HexColor('#1E293B')
     GRAY    = colors.HexColor('#F8F9FA')
     BORDER  = colors.HexColor('#DEE2E6')
