@@ -388,9 +388,9 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         table_data.append([
             Paragraph(desc, S['td']),
             Paragraph(qty, S['td_c']),
-            Paragraph(f"Ã¢ÂÂ¬ {price}", S['td_r']),
+            Paragraph(f"€ {price}", S['td_r']),
             Paragraph(f"{vat}%", S['td_c']),
-            Paragraph(f"Ã¢ÂÂ¬ {total}", S['td_r']),
+            Paragraph(f"€ {total}", S['td_r']),
         ])
 
     cw = [PAGE_W*0.46, PAGE_W*0.08, PAGE_W*0.16, PAGE_W*0.10, PAGE_W*0.20]
@@ -422,16 +422,16 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     ritenuta = float(totals_inv.get("ritenuta", 0) or 0)
 
     subtotal_rows = [
-        [Paragraph("Imponibile:", S['total_label']), Paragraph(f"Ã¢ÂÂ¬ {_fmt(iva_data['imponibile'])}", S['total_value'])],
+        [Paragraph("Imponibile:", S['total_label']), Paragraph(f"€ {_fmt(iva_data['imponibile'])}", S['total_value'])],
     ]
     subtotal_rows.append([
         Paragraph("IVA:", S['total_label']),
-        Paragraph(f"Ã¢ÂÂ¬ {_fmt(iva_data['total_iva'])}", S['total_value']),
+        Paragraph(f"€ {_fmt(iva_data['total_iva'])}", S['total_value']),
     ])
     if ritenuta > 0:
         subtotal_rows.append([
             Paragraph("Ritenuta d'acconto:", S['total_label']),
-            Paragraph(f"-Ã¢ÂÂ¬ {_fmt(ritenuta)}", S['total_value']),
+            Paragraph(f"-€ {_fmt(ritenuta)}", S['total_value']),
         ])
 
     sub_table = Table(subtotal_rows, colWidths=[45*mm, 35*mm])
@@ -447,7 +447,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     netto = iva_data["total"] - ritenuta if ritenuta > 0 else iva_data["total"]
     grand_table = Table([
         [Paragraph("TOTALE:", S['grand_label']),
-         Paragraph(f"Ã¢ÂÂ¬ {_fmt(netto)}", S['grand_value'])],
+         Paragraph(f"€ {_fmt(netto)}", S['grand_value'])],
     ], colWidths=[45*mm, 35*mm])
     grand_table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,-1), COL_NAVY),
@@ -542,7 +542,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     story.append(footer_row)
     story.append(Spacer(1, 1.5*mm))
     story.append(Paragraph(
-        "Azienda Certificata EN 1090-1 EXC3  Ã¢ÂÂ¢  ISO 3834-2  Ã¢ÂÂ¢  Centro di Trasformazione Acciaio",
+        "Azienda Certificata EN 1090-1 EXC3  •  ISO 3834-2  •  Centro di Trasformazione Acciaio",
         S['reg_footer']
     ))
 
