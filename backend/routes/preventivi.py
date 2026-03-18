@@ -1547,6 +1547,7 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
         <tr><td class="meta-label">DATA:</td><td>{doc_date}</td></tr>
         <tr><td class="meta-label">Pagamento:</td><td>{payment_label}</td></tr>
         <tr><td class="meta-label">Validit&agrave;:</td><td>{validity} giorni</td></tr>
+        {"<tr><td class=\"meta-label\">Note:</td><td>" + (riferimento + " " if riferimento else "") + (notes_text if notes_text else "") + "</td></tr>" if (notes_text or riferimento) else ""}
     </table>
 
     {ref_note_html}
