@@ -1456,6 +1456,17 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
 
     # ── Build line items HTML ──
     lines = prev.get("lines", [])
+
+    # Note box separato stile Invoicex
+    note_box_html = ""
+    if notes_text or riferimento:
+        note_content = ""
+        if riferimento:
+            note_content += safe(riferimento)
+        if notes_text:
+            note_content += (" " if note_content else "") + safe(notes_text)
+        note_box_html = f'<p class="ref-note"><strong>Note:</strong> {note_content}</p>'
+
     lines_html = ""
     for ln in lines:
         codice = safe(ln.get("codice_articolo") or "")
@@ -1540,18 +1551,18 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
     body = f"""
     {header}
     <div class="doc-title">
-        <h1>PREVENTIVO</h1>
-        <div class="doc-num">{safe(display_num)}</div>
+        <h1>PREVENTIVO N. {safe(display_num)}</h1>
     </div>
     <table class="meta-table">
         <tr><td class="meta-label">DATA:</td><td>{doc_date}</td></tr>
         <tr><td class="meta-label">Pagamento:</td><td>{payment_label}</td></tr>
         <tr><td class="meta-label">Validit&agrave;:</td><td>{validity} giorni</td></tr>
-        {"<tr><td class=\"meta-label\">Note:</td><td>" + (riferimento + " " if riferimento else "") + (notes_text if notes_text else "") + "</td></tr>" if (notes_text or riferimento) else ""}
+        {""}
     </table>
 
     {ref_note_html}
 
+    {note_box_html}
     <table class="items-table">
         <colgroup>
             <col style="width:8%"><col style="width:38%"><col style="width:6%">
