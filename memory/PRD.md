@@ -43,6 +43,14 @@ Applicazione gestionale per carpenteria metallica: gestione commesse, fatturazio
 - Super Fascicolo
 - Magazzino con tracciabilità
 
+### Ripristino PDF Fatture/Preventivi ReportLab — COMPLETATO 18/03/2026
+- `pdf_invoice_modern.py` riscritto da zero con ReportLab (era WeasyPrint)
+- Font: LiberationSans TTF per supporto Unicode completo (€, •, à, è, —)
+- Layout: logo+azienda, separatore blu, titolo centrato, box meta grigi, cliente con bordo blu, tabella navy, totali con box navy, banca/scadenze con bordo blu, footer certificazioni
+- Scadenze pagamento integrate nel PDF
+- Condizioni vendita per Preventivi (pagina 2)
+- 9/9 test pytest passati
+
 ## Backlog Prioritizzato
 
 ### P0 — Nessuno attivo

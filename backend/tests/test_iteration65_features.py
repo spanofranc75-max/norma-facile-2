@@ -11,7 +11,7 @@ import os
 import time
 from datetime import datetime, timezone
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://guided-survey.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://modern-invoice-gen.preview.emergentagent.com')
 
 # Test data tracking
 test_data = {}

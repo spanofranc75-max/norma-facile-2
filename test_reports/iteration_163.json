@@ -82,7 +82,7 @@
   "test_credentials": {
     "session_token": "test_dedup_1772991921856",
     "user_id": "user_97c773827822",
-    "api_url": "https://guided-survey.preview.emergentagent.com"
+    "api_url": "https://modern-invoice-gen.preview.emergentagent.com"
   },
   "retest_needed": false,
   "should_main_agent_self_test": false,
