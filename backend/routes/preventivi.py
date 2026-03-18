@@ -1615,7 +1615,7 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
     story.append(meta1)
 
     m2d=[Paragraph('Pagamento',S['meta_lbl']),Paragraph(payment_label,S['meta_val']),
-         Paragraph('Validit\u00e0:',S['meta_lbl']),Paragraph(f'{validity} giorni',S['meta_val'])]
+         Paragraph('Validità:',S['meta_lbl']),Paragraph(f'{validity} giorni',S['meta_val'])]
     meta2=Table([m2d],colWidths=[UW*0.12,UW*0.53,UW*0.12,UW*0.21])
     meta2.setStyle(TableStyle([('GRID',(0,0),(-1,-1),0.5,BGRAY),('TOPPADDING',(0,0),(-1,-1),3),
         ('BOTTOMPADDING',(0,0),(-1,-1),3),('LEFTPADDING',(0,0),(-1,-1),6),('VALIGN',(0,0),(-1,-1),'MIDDLE')]))
@@ -1626,7 +1626,7 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
     if riferimento.strip(): note_parts.append(f'Rif. {riferimento}')
     if notes_text.strip(): note_parts.append(notes_text)
     if note_parts:
-        nt='  \u2014  '.join(note_parts)
+        nt='  —  '.join(note_parts)
         nr=Table([[Paragraph('Note:',S['note_lbl']),Paragraph(nt.replace('\n',' '),S['note_val'])]],
                  colWidths=[UW*0.08,UW*0.90])
         nr.setStyle(TableStyle([('TOPPADDING',(0,0),(-1,-1),2),('BOTTOMPADDING',(0,0),(-1,-1),2),
@@ -1637,7 +1637,7 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
     # 4. TABELLA ARTICOLI
     CW=[UW*0.06,UW*0.36,UW*0.06,UW*0.08,UW*0.11,UW*0.07,UW*0.13,UW*0.07]
     td=[[Paragraph('Codice',S['th']),Paragraph('Descrizione',S['th']),Paragraph('u.m.',S['th_c']),
-         Paragraph('Quantit\u00e0',S['th_c']),Paragraph('Prezzo',S['th_r']),Paragraph('Sconti',S['th_c']),
+         Paragraph('Quantità',S['th_c']),Paragraph('Prezzo',S['th_r']),Paragraph('Sconti',S['th_c']),
          Paragraph('Importo',S['th_r']),Paragraph('Iva',S['th_c'])]]
     for ln in lines:
         codice=_s(ln.get('codice_articolo') or ''); desc=_s(ln.get('description') or '').replace('\n','<br/>')
@@ -1693,9 +1693,9 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
         ('ALIGN',(3,0),(3,-1),'CENTER'),('ALIGN',(4,0),(4,-1),'RIGHT')]))
 
     first_rate=list(iva_by.keys())[0] if iva_by else '22'
-    tot_d=[[Paragraph('IMPONIBILE',S['tot_lbl']),Paragraph(f'{_fmt(imp)} \u20ac',S['tot_val'])],
-           [Paragraph(f'IVA {first_rate}%',S['tot_lbl']),Paragraph(f'{_fmt(tiva)} \u20ac',S['tot_val'])],
-           [Paragraph('TOTALE',S['grand_lbl']),Paragraph(f'{_fmt(grand)} \u20ac',S['grand_val'])]]
+    tot_d=[[Paragraph('IMPONIBILE',S['tot_lbl']),Paragraph(f'{_fmt(imp)} €',S['tot_val'])],
+           [Paragraph(f'IVA {first_rate}%',S['tot_lbl']),Paragraph(f'{_fmt(tiva)} €',S['tot_val'])],
+           [Paragraph('TOTALE',S['grand_lbl']),Paragraph(f'{_fmt(grand)} €',S['grand_val'])]]
     tt=Table(tot_d,colWidths=[UW*0.22,UW*0.20])
     tt.setStyle(TableStyle([('GRID',(0,0),(-1,-1),0.3,BGRAY),
         ('TOPPADDING',(0,0),(-1,-1),2),('BOTTOMPADDING',(0,0),(-1,-1),2),
@@ -1728,18 +1728,18 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
                     t=t.encode('latin1').decode('utf-8',errors='replace')
             except Exception: pass
             for bad,good in [('\u00e2\u0080\u0099',"'"),('\u00e2\u0080\u009c','"'),
-                ('\u00e2\u0080\u009d','"'),('\u00e2\u0080\u0093','\u2013'),
-                ('\u00e2\u0080\u0094','\u2014'),('\ufffd','')]:
+                ('\u00e2\u0080\u009d','"'),('\u00e2\u0080\u0093','–'),
+                ('\u00e2\u0080\u0094','—'),('\ufffd','')]:
                 t=t.replace(bad,good)
             return t
         cf=_fix_enc(condizioni)
         for line in cf.split('\n'):
             line=line.strip()
             if not line: story.append(Spacer(1,1.5*mm)); continue
-            if _re.match(r'^\d+\s*[\-\u2013\u2014\.]',line):
+            if _re.match(r'^\d+\s*[\-–—\.]',line):
                 story+=[Spacer(1,2*mm),Paragraph(line,S['cond_n'])]
             elif _re.match(r'^[a-z]\)',line):
-                story.append(Paragraph('\u00a0\u00a0\u00a0'+line,S['cond_t']))
+                story.append(Paragraph('   '+line,S['cond_t']))
             else:
                 story.append(Paragraph(line,S['cond_t']))
 
