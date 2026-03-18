@@ -237,7 +237,7 @@ def build_header_html(company: dict, client: dict, no_client_border: bool = Fals
       <tr>
         <td class="company-box" style="width:50%; vertical-align:top; padding-right:10px;">
           {"<img src='" + safe(co.get('logo_url','')) + "' style='max-height:70px; max-width:180px; margin-bottom:6px;'><br>" if co.get('logo_url') else ""}
-                    {co.get('logo_url','').__len__() > 0 and '<img src="' + co.get('logo_url','') + '" style="max-height:50px; max-width:120px; margin-bottom:4px; display:block;">' or ''}
+                    {co.get('logo_url','').__len__() > 0 and '<img src="' + co.get('logo_url','') + '" style="max-height:70px; max-width:180px; margin-bottom:4px; display:block;">' or ''}
           <div class="company-name" style="font-size:13px; font-weight:bold; color:#1a56db; margin-bottom:3px;">{company_name}</div>
           <div class="company-detail" style="font-size:8.5px; color:#555; line-height:1.5;">
             {full_addr}<br>
@@ -309,21 +309,21 @@ def build_conditions_html(company: dict, doc_number: str) -> str:
     condizioni = (company or {}).get('condizioni_vendita', '').strip()
     
     def fix_encoding(text):
-        """Corregge caratteri mal codificati."""
-        return (text
-            .replace('\u00e2\u0080\u0099', "'")
-            .replace('\u00e2\u0080\u009c', '"')
-            .replace('\u00e2\u0080\u009d', '"')
-            .replace('\u00e0', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ ').replace('\u00e8', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨')
-            .replace('\u00e9', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©').replace('\u00ec', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¬')
-            .replace('\u00f2', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ²').replace('\u00f9', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¹')
-            .replace('\u00c0', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ').replace('\u00c8', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ')
-            .replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ ', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ ').replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨').replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©')
-            .replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¬', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¬').replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ²', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ²').replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¹', 'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¹')
-            .replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢\x80\x99', "'").replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢\x80\x9c', '"')
-            .replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢\x80\x9d', '"').replace('ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢\x80\x93', 'ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ')
-            .replace('\u2013', 'ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ').replace('\u2014', 'ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ')
-        )
+        """Corregge caratteri mal codificati (triple UTF-8 encoding)."""
+        if not text:
+            return text
+        try:
+            if "\u00c3" in text or "Ã" in text:
+                text = text.encode("latin1").decode("utf-8", errors="replace")
+        except Exception:
+            pass
+        try:
+            if "\u00c3" in text or "Ã" in text:
+                text = text.encode("latin1").decode("utf-8", errors="replace")
+        except Exception:
+            pass
+        return text
+
     
     if condizioni:
         condizioni = fix_encoding(condizioni)
