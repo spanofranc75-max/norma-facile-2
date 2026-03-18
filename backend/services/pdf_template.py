@@ -236,7 +236,7 @@ def build_header_html(company: dict, client: dict, no_client_border: bool = Fals
     <table class="header-table" style="width:100%; border-collapse:collapse; margin-bottom:12px;">
       <tr>
         <td class="company-box" style="width:50%; vertical-align:top; padding-right:10px;">
-          {"<img src='" + safe(co.get('logo_url','')) + "' style='max-height:50px; max-width:120px; margin-bottom:6px;'><br>" if co.get('logo_url') else ""}
+          {"<img src='" + safe(co.get('logo_url','')) + "' style='max-height:70px; max-width:180px; margin-bottom:6px;'><br>" if co.get('logo_url') else ""}
                     {co.get('logo_url','').__len__() > 0 and '<img src="' + co.get('logo_url','') + '" style="max-height:50px; max-width:120px; margin-bottom:4px; display:block;">' or ''}
           <div class="company-name" style="font-size:13px; font-weight:bold; color:#1a56db; margin-bottom:3px;">{company_name}</div>
           <div class="company-detail" style="font-size:8.5px; color:#555; line-height:1.5;">
@@ -249,7 +249,7 @@ def build_header_html(company: dict, client: dict, no_client_border: bool = Fals
         </td>
         <td class="client-box" style="width:50%; vertical-align:top; background:#f8f9fa; border:1px solid #dee2e6; padding:8px 10px;">
           <div style="font-size:8px; color:#888; text-transform:uppercase; margin-bottom:4px;">Spett.le</div>
-          <div class="client-name" style="font-size:11px; font-weight:bold; color:#1E293B;">{cl_name}</div>
+          <div class="client-name" style="font-size:11px; font-weight:bold; color:#1E293B;"><strong>{cl_name}</strong></div>
           <div class="client-detail" style="font-size:8.5px; color:#555; line-height:1.5;">
             {cl_full}<br>
             {"<b>P.IVA: " + cl_piva + "</b><br>" if cl_piva else ""}
