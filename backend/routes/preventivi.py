@@ -1653,8 +1653,7 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
                    Paragraph(qty,S['td_c']),Paragraph(price,S['td_r']),Paragraph(sc,S['td_c']),
                    Paragraph(total,S['td_rb']),Paragraph(vs,S['td_c'])])
     it=Table(td,colWidths=CW,repeatRows=1)
-    ts=TableStyle([('FONTNAME',(0,0),(-1,0),FNTB),('FONTSTYLE',(0,0),(-1,0),'italic'),
-        ('LINEBELOW',(0,0),(-1,0),0.8,BGRAY),('TOPPADDING',(0,0),(-1,0),4),('BOTTOMPADDING',(0,0),(-1,0),4),
+    ts=TableStyle([('FONTNAME',(0,0),(-1,0),FNTB),('LINEBELOW',(0,0),(-1,0),0.8,BGRAY),('TOPPADDING',(0,0),(-1,0),4),('BOTTOMPADDING',(0,0),(-1,0),4),
         ('TOPPADDING',(0,1),(-1,-1),3),('BOTTOMPADDING',(0,1),(-1,-1),3),
         ('LEFTPADDING',(0,0),(-1,-1),3),('RIGHTPADDING',(0,0),(-1,-1),3),
         ('VALIGN',(0,0),(-1,-1),'TOP'),('LINEBELOW',(0,1),(-1,-1),0.2,BGRAY),
