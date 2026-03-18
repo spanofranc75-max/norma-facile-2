@@ -1446,7 +1446,7 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
 
     # ── Document data ──
     doc_number = prev.get("number", "")
-    display_num = doc_number.replace("PRV-", "").replace("/", "-") if doc_number else ""
+    display_num = doc_number.replace("PRV-", "") if doc_number else ""
     doc_date = format_date(prev.get("created_at", ""))
     payment_label = safe(prev.get("payment_type_label"))
     validity = prev.get("validity_days", 30) or 30
@@ -1461,7 +1461,12 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
         codice = safe(ln.get("codice_articolo") or "")
         desc = safe(ln.get("description") or "").replace("\n", "<br>")
         um = safe(ln.get("unit", "pz"))
-        qty = fmt_it(ln.get("quantity", 1))
+        _qty_raw = ln.get("quantity", 1)
+        try:
+            _qty_val = float(_qty_raw or 0)
+            qty = str(int(_qty_val)) if _qty_val == int(_qty_val) else fmt_it(_qty_raw)
+        except:
+            qty = fmt_it(_qty_raw)
         price = fmt_it(ln.get("unit_price", 0))
         s1 = float(ln.get("sconto_1") or 0)
         s2 = float(ln.get("sconto_2") or 0)
@@ -1520,6 +1525,15 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
         bank_html += "</div>"
 
     # ── Conditions page ──
+    # Fix encoding condizioni di vendita prima di generare il PDF
+    _cond_raw = co.get("condizioni_vendita", "") or ""
+    if _cond_raw and ("Ã" in _cond_raw or "\x83" in _cond_raw):
+        try:
+            _cond_raw = _cond_raw.encode("latin1").decode("utf-8", errors="replace")
+            co = dict(co)
+            co["condizioni_vendita"] = _cond_raw
+        except Exception:
+            pass
     condizioni_html = build_conditions_html(co, doc_number)
 
     # ── Assemble ──
