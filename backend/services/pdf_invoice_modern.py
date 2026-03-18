@@ -413,12 +413,15 @@ def generate_modern_invoice_pdf(invoice, client, company):
     story.append(Spacer(1, 4 * mm))
 
     # 6. TOTALI
-    from services.pdf_template import compute_iva_groups
     sconto_globale = float(inv.get('sconto_globale') or 0)
-    iva_data    = compute_iva_groups(lines, sconto_globale)
-    imponibile  = iva_data.get('imponibile', 0)
-    total_iva   = iva_data.get('total_iva', 0)
-    grand_total = imponibile + total_iva
+    imponibile = 0.0; total_iva = 0.0
+    for ln in lines:
+        lt = float(ln.get('line_total') or ln.get('total') or float(ln.get('quantity',1))*float(ln.get('unit_price',0)))
+        try: vat_pct = float(str(ln.get('vat_rate') or ln.get('aliquota_iva') or '0').replace('%',''))/100
+        except: vat_pct = 0.0
+        if sconto_globale > 0: lt = lt*(1-sconto_globale/100)
+        imponibile += lt; total_iva += round(lt*vat_pct,2)
+    imponibile = round(imponibile,2); total_iva = round(total_iva,2); grand_total = round(imponibile+total_iva,2)
     ritenuta    = float((inv.get('totals') or {}).get('ritenuta', 0) or 0)
     sub_rows = [
         [Paragraph('Imponibile:', S['tot_label']),
