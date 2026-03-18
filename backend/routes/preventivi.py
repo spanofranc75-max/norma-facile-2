@@ -1433,128 +1433,315 @@ async def send_preventivo_email(prev_id: str, payload: dict = None, user: dict =
 # ── PDF Builder (WeasyPrint — shared template) ──────────────────
 
 def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_type: dict = None):
-    """Generate Preventivo PDF using the unified template."""
-    from services.pdf_template import (
-        fmt_it, safe, build_header_html, compute_iva_groups,
-        build_totals_html, build_conditions_html, render_pdf, format_date,
+    """Generate Preventivo PDF - layout Invoicex originale con ReportLab diretto."""
+    import base64
+    import re as _re
+    from io import BytesIO
+    from datetime import datetime, date
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm, pt
+    from reportlab.lib import colors
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
+    from reportlab.platypus import (
+        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+        HRFlowable, PageBreak, Image, KeepTogether
     )
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    import os
 
-    co = company or {}
-    cl = client or {}
+    FNT = 'Helvetica'; FNTB = 'Helvetica-Bold'; FNTI = 'Helvetica-Oblique'
+    for _p in ['/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+               '/usr/share/fonts/liberation/LiberationSans-Regular.ttf']:
+        if os.path.exists(_p):
+            try:
+                pdfmetrics.registerFont(TTFont('LibSans', _p))
+                pdfmetrics.registerFont(TTFont('LibSans-Bold', _p.replace('Regular','Bold')))
+                FNT = 'LibSans'; FNTB = 'LibSans-Bold'; break
+            except Exception: pass
 
-    header = build_header_html(co, cl)
+    NAVY=colors.HexColor('#1E293B'); BLUE=colors.HexColor('#2563EB')
+    LGRAY=colors.HexColor('#F1F5F9'); BGRAY=colors.HexColor('#CBD5E1')
+    DTXT=colors.HexColor('#1a1a2e'); STXT=colors.HexColor('#475569')
+    GTXT=colors.HexColor('#64748B'); WHITE=colors.white; ZEBRA=colors.HexColor('#F8FAFC')
 
-    # ── Document data ──
-    doc_number = prev.get("number", "")
-    display_num = doc_number.replace("PRV-", "").replace("/", "-") if doc_number else ""
-    doc_date = format_date(prev.get("created_at", ""))
-    payment_label = safe(prev.get("payment_type_label"))
-    validity = prev.get("validity_days", 30) or 30
-    riferimento = safe(prev.get("riferimento"))
-    subject = safe(prev.get("subject"))
-    notes_text = prev.get("notes", "") or ""
+    LM=16*mm; RM=16*mm; TM=14*mm; BM=22*mm
+    PW=A4[0]; PH=A4[1]; UW=PW-LM-RM
 
-    # ── Build line items HTML ──
-    lines = prev.get("lines", [])
-    lines_html = ""
+    def _fmt(n):
+        try:
+            val=float(n or 0)
+        except: return '0,00'
+        s=f'{val:,.2f}'; return s.replace(',','X').replace('.', ',').replace('X','.')
+
+    def _qty(n):
+        try:
+            val=float(n or 0)
+            if val==int(val): return str(int(val))
+            s=f'{val:,.2f}'; return s.replace(',','X').replace('.', ',').replace('X','.')
+        except: return '0'
+
+    def _s(v): return str(v or '')
+    def _d(v):
+        if not v: return ''
+        if isinstance(v,(date,datetime)): return v.strftime('%d/%m/%Y')
+        try: return datetime.fromisoformat(str(v)[:10]).strftime('%d/%m/%Y')
+        except: return str(v)[:10]
+
+    def _logo(url):
+        if not url: return None
+        try:
+            if url.startswith('data:'):
+                stream=BytesIO(base64.b64decode(url.split('base64,')[1]))
+            else:
+                import urllib.request
+                with urllib.request.urlopen(url,timeout=5) as r: stream=BytesIO(r.read())
+            img=Image(stream,width=180*pt,height=60*pt); img.hAlign='LEFT'; return img
+        except Exception as e:
+            logger.warning(f'Logo failed: {e}'); return None
+
+    def _sty(**kw):
+        base=dict(fontName=FNT,fontSize=8,leading=11,textColor=DTXT,spaceAfter=0,spaceBefore=0)
+        base.update(kw); return ParagraphStyle('_',**base)
+
+    S={
+        'co_name': _sty(fontName=FNTB,fontSize=10,leading=13),
+        'co_det':  _sty(fontSize=7.5,leading=10,textColor=STXT),
+        'cl_label':_sty(fontName=FNTI,fontSize=7.5,leading=10,textColor=GTXT),
+        'cl_name': _sty(fontName=FNTB,fontSize=10,leading=13),
+        'cl_det':  _sty(fontSize=7.5,leading=10,textColor=STXT),
+        'meta_big':_sty(fontName=FNTB,fontSize=13,leading=16,textColor=NAVY),
+        'meta_lbl':_sty(fontName=FNTB,fontSize=7,leading=9,textColor=GTXT),
+        'meta_val':_sty(fontName=FNTB,fontSize=8.5,leading=11),
+        'note_lbl':_sty(fontName=FNTB,fontSize=7.5,leading=10,textColor=GTXT),
+        'note_val':_sty(fontSize=7.5,leading=10),
+        'th':      _sty(fontName=FNTB,fontSize=7,leading=9,alignment=TA_LEFT),
+        'th_c':    _sty(fontName=FNTB,fontSize=7,leading=9,alignment=TA_CENTER),
+        'th_r':    _sty(fontName=FNTB,fontSize=7,leading=9,alignment=TA_RIGHT),
+        'td':      _sty(fontSize=7.5,leading=10),
+        'td_c':    _sty(fontSize=7.5,leading=10,alignment=TA_CENTER),
+        'td_r':    _sty(fontSize=7.5,leading=10,alignment=TA_RIGHT),
+        'td_rb':   _sty(fontName=FNTB,fontSize=7.5,leading=10,alignment=TA_RIGHT),
+        'tot_lbl': _sty(fontName=FNTB,fontSize=8,leading=11,textColor=GTXT),
+        'tot_val': _sty(fontName=FNTB,fontSize=8.5,leading=11,alignment=TA_RIGHT),
+        'grand_lbl':_sty(fontName=FNTB,fontSize=10,leading=13),
+        'grand_val':_sty(fontName=FNTB,fontSize=12,leading=15,alignment=TA_RIGHT),
+        'banca':   _sty(fontSize=7.5,leading=10,textColor=STXT),
+        'bancab':  _sty(fontName=FNTB,fontSize=7.5,leading=10,textColor=BLUE),
+        'foot':    _sty(fontSize=6.5,leading=8,textColor=GTXT),
+        'foot_r':  _sty(fontSize=6.5,leading=8,textColor=GTXT,alignment=TA_RIGHT),
+        'cond_h':  _sty(fontName=FNTB,fontSize=8.5,leading=11,textColor=NAVY),
+        'cond_n':  _sty(fontName=FNTB,fontSize=8,leading=11),
+        'cond_t':  _sty(fontSize=7.5,leading=11),
+    }
+
+    co=company or {}; cl=client or {}; p=prev or {}
+    doc_number=_s(p.get('number','')); doc_date=_d(p.get('created_at') or p.get('issue_date'))
+    payment_label=_s(p.get('payment_type_label') or ''); validity=p.get('validity_days',30) or 30
+    riferimento=_s(p.get('riferimento') or p.get('subject') or '')
+    notes_text=_s(p.get('notes') or ''); lines=p.get('lines',[]) or []
+    banca_nome=_s(p.get('banca') or ''); banca_iban=_s(p.get('iban') or '')
+    condizioni=_s(co.get('condizioni_vendita') or p.get('condizioni_vendita') or '')
+    co_name=_s(co.get('business_name') or ''); co_addr=_s(co.get('address') or '')
+    co_cap=_s(co.get('cap') or ''); co_city=_s(co.get('city') or ''); co_prov=_s(co.get('province') or '')
+    co_piva=_s(co.get('partita_iva') or ''); co_cf=_s(co.get('codice_fiscale') or '')
+    co_phone=_s(co.get('phone') or co.get('tel') or ''); co_fax=_s(co.get('fax') or '')
+    co_web=_s(co.get('website') or co.get('web') or ''); co_email=_s(co.get('email') or co.get('contact_email') or '')
+    cl_name=_s(cl.get('business_name') or ''); cl_addr=_s(cl.get('address') or '')
+    cl_cap=_s(cl.get('cap') or ''); cl_city=_s(cl.get('city') or ''); cl_prov=_s(cl.get('province') or '')
+    cl_piva=_s(cl.get('partita_iva') or ''); cl_cf=_s(cl.get('codice_fiscale') or '')
+    cl_sdi=_s(cl.get('codice_sdi') or cl.get('codice_destinatario') or ''); cl_pec=_s(cl.get('pec') or '')
+
+    buf=BytesIO()
+    total_pages=2 if condizioni.strip() else 1
+
+    def _footer(canvas,doc):
+        canvas.saveState()
+        y=BM-10*mm
+        canvas.setStrokeColor(BGRAY); canvas.setLineWidth(0.5)
+        canvas.line(LM,y+6*mm,PW-RM,y+6*mm)
+        canvas.setFont(FNT,6.5); canvas.setFillColor(GTXT)
+        canvas.drawString(LM,y+2*mm,'Generato da NormaFacile')
+        canvas.drawRightString(PW-RM,y+2*mm,f'Pag. {canvas.getPageNumber()}/{total_pages}')
+        canvas.restoreState()
+
+    doc=SimpleDocTemplate(buf,pagesize=A4,leftMargin=LM,rightMargin=RM,topMargin=TM,bottomMargin=BM)
+    story=[]
+
+    # 1. HEADER
+    logo=_logo(co.get('logo_url',''))
+    co_paras=[]
+    if logo: co_paras.append(logo)
+    co_paras.append(Paragraph(co_name,S['co_name']))
+    loc=[p for p in [co_cap,co_city,f'({co_prov})' if co_prov else ''] if p]
+    if co_addr: co_paras.append(Paragraph(co_addr,S['co_det']))
+    if loc: co_paras.append(Paragraph(' '.join(loc),S['co_det']))
+    if co_phone and co_fax: co_paras.append(Paragraph(f'Tel. {co_phone} / Fax {co_fax}',S['co_det']))
+    elif co_phone: co_paras.append(Paragraph(f'Tel. {co_phone}',S['co_det']))
+    if co_web and co_email: co_paras.append(Paragraph(f'{co_web} / {co_email}',S['co_det']))
+    elif co_email: co_paras.append(Paragraph(f'Email: {co_email}',S['co_det']))
+    pl=f'P.IVA {co_piva}'
+    if co_cf and co_cf!=co_piva: pl+=f' - Cod. Fiscale {co_cf}'
+    if co_piva: co_paras.append(Paragraph(pl,S['co_det']))
+
+    cl_rows=[[Paragraph('Cliente',S['cl_label'])]]
+    if cl_piva: cl_rows.append([Paragraph(f'P.IVA {cl_piva}  Cod. Fisc. {cl_cf}',S['cl_det'])])
+    cl_rows.append([Paragraph(cl_name,S['cl_name'])])
+    ap=[p for p in [cl_addr,cl_cap,cl_city,f'({cl_prov})' if cl_prov else ''] if p]
+    if ap: cl_rows.append([Paragraph(' '.join(ap),S['cl_det'])])
+    if cl_sdi: cl_rows.append([Paragraph(f'Cod. SDI: {cl_sdi}',S['cl_det'])])
+    if cl_pec: cl_rows.append([Paragraph(f'PEC: {cl_pec}',S['cl_det'])])
+    cl_inner=Table(cl_rows,colWidths=[UW*0.42])
+    cl_inner.setStyle(TableStyle([('LEFTPADDING',(0,0),(-1,-1),4),('RIGHTPADDING',(0,0),(-1,-1),4),
+        ('TOPPADDING',(0,0),(-1,-1),2),('BOTTOMPADDING',(0,0),(-1,-1),2),('VALIGN',(0,0),(-1,-1),'TOP')]))
+
+    hdr=Table([[co_paras,cl_inner]],colWidths=[UW*0.54,UW*0.44])
+    hdr.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP'),('LEFTPADDING',(0,0),(-1,-1),0),
+        ('RIGHTPADDING',(0,0),(-1,-1),0),('TOPPADDING',(0,0),(-1,-1),0),
+        ('BOTTOMPADDING',(0,0),(-1,-1),0),('BOX',(1,0),(1,0),0.5,BGRAY)]))
+    story+=[hdr,Spacer(1,3*mm)]
+
+    # 2. META
+    disp_num=doc_number.replace('PRV-','').replace('PRV','') if doc_number else ''
+    meta1=Table([[
+        Paragraph(f'PREVENTIVO  {disp_num}',S['meta_big']),
+        Paragraph(f'DATA {doc_date}',S['meta_lbl']),
+        Paragraph(f'P.IVA {cl_piva}  Cod. Fisc. {cl_cf}' if cl_piva else '',S['meta_lbl']),
+    ]],colWidths=[UW*0.38,UW*0.27,UW*0.33])
+    meta1.setStyle(TableStyle([('GRID',(0,0),(-1,-1),0.5,BGRAY),('BACKGROUND',(0,0),(-1,-1),LGRAY),
+        ('TOPPADDING',(0,0),(-1,-1),4),('BOTTOMPADDING',(0,0),(-1,-1),4),
+        ('LEFTPADDING',(0,0),(-1,-1),6),('VALIGN',(0,0),(-1,-1),'MIDDLE')]))
+    story.append(meta1)
+
+    m2d=[Paragraph('Pagamento',S['meta_lbl']),Paragraph(payment_label,S['meta_val']),
+         Paragraph('Validit\u00e0:',S['meta_lbl']),Paragraph(f'{validity} giorni',S['meta_val'])]
+    meta2=Table([m2d],colWidths=[UW*0.12,UW*0.53,UW*0.12,UW*0.21])
+    meta2.setStyle(TableStyle([('GRID',(0,0),(-1,-1),0.5,BGRAY),('TOPPADDING',(0,0),(-1,-1),3),
+        ('BOTTOMPADDING',(0,0),(-1,-1),3),('LEFTPADDING',(0,0),(-1,-1),6),('VALIGN',(0,0),(-1,-1),'MIDDLE')]))
+    story+=[meta2]
+
+    # 3. NOTE
+    note_parts=[]
+    if riferimento.strip(): note_parts.append(f'Rif. {riferimento}')
+    if notes_text.strip(): note_parts.append(notes_text)
+    if note_parts:
+        nt='  \u2014  '.join(note_parts)
+        nr=Table([[Paragraph('Note:',S['note_lbl']),Paragraph(nt.replace('\n',' '),S['note_val'])]],
+                 colWidths=[UW*0.08,UW*0.90])
+        nr.setStyle(TableStyle([('TOPPADDING',(0,0),(-1,-1),2),('BOTTOMPADDING',(0,0),(-1,-1),2),
+            ('LEFTPADDING',(0,0),(-1,-1),2),('VALIGN',(0,0),(-1,-1),'TOP')]))
+        story.append(nr)
+    story.append(Spacer(1,2*mm))
+
+    # 4. TABELLA ARTICOLI
+    CW=[UW*0.06,UW*0.36,UW*0.06,UW*0.08,UW*0.11,UW*0.07,UW*0.13,UW*0.07]
+    td=[[Paragraph('Codice',S['th']),Paragraph('Descrizione',S['th']),Paragraph('u.m.',S['th_c']),
+         Paragraph('Quantit\u00e0',S['th_c']),Paragraph('Prezzo',S['th_r']),Paragraph('Sconti',S['th_c']),
+         Paragraph('Importo',S['th_r']),Paragraph('Iva',S['th_c'])]]
     for ln in lines:
-        codice = safe(ln.get("codice_articolo") or "")
-        desc = safe(ln.get("description") or "").replace("\n", "<br>")
-        um = safe(ln.get("unit", "pz"))
-        qty = fmt_it(ln.get("quantity", 1))
-        price = fmt_it(ln.get("unit_price", 0))
-        s1 = float(ln.get("sconto_1") or 0)
-        s2 = float(ln.get("sconto_2") or 0)
-        sc = ""
-        if s1 > 0 and s2 > 0:
-            sc = f"{fmt_it(s1)}%+{fmt_it(s2)}%"
-        elif s1 > 0:
-            sc = f"{fmt_it(s1)}%"
-        elif s2 > 0:
-            sc = f"{fmt_it(s2)}%"
-        importo = fmt_it(ln.get("line_total", 0))
-        iva = safe(str(ln.get("vat_rate", "22")))
+        codice=_s(ln.get('codice_articolo') or ''); desc=_s(ln.get('description') or '').replace('\n','<br/>')
+        um=_s(ln.get('unit') or 'pz'); qty=_qty(ln.get('quantity',1)); price=_fmt(ln.get('unit_price',0))
+        s1=float(ln.get('sconto_1') or 0); s2=float(ln.get('sconto_2') or 0)
+        sc=f'{_fmt(s1)}%+{_fmt(s2)}%' if s1>0 and s2>0 else (f'{_fmt(s1)}%' if s1>0 else (f'{_fmt(s2)}%' if s2>0 else ''))
+        tv=float(ln.get('line_total') or ln.get('total') or float(ln.get('quantity',1))*float(ln.get('unit_price',0)))
+        total=_fmt(tv)
+        vr=ln.get('vat_rate') or ln.get('aliquota_iva') or '22'
+        try: vs=f'{float(str(vr).replace("%","")):.0f}%'
+        except: vs=str(vr)
+        td.append([Paragraph(codice,S['td']),Paragraph(desc,S['td']),Paragraph(um,S['td_c']),
+                   Paragraph(qty,S['td_c']),Paragraph(price,S['td_r']),Paragraph(sc,S['td_c']),
+                   Paragraph(total,S['td_rb']),Paragraph(vs,S['td_c'])])
+    it=Table(td,colWidths=CW,repeatRows=1)
+    ts=TableStyle([('FONTNAME',(0,0),(-1,0),FNTB),('FONTSTYLE',(0,0),(-1,0),'italic'),
+        ('LINEBELOW',(0,0),(-1,0),0.8,BGRAY),('TOPPADDING',(0,0),(-1,0),4),('BOTTOMPADDING',(0,0),(-1,0),4),
+        ('TOPPADDING',(0,1),(-1,-1),3),('BOTTOMPADDING',(0,1),(-1,-1),3),
+        ('LEFTPADDING',(0,0),(-1,-1),3),('RIGHTPADDING',(0,0),(-1,-1),3),
+        ('VALIGN',(0,0),(-1,-1),'TOP'),('LINEBELOW',(0,1),(-1,-1),0.2,BGRAY),
+        ('ALIGN',(2,1),(2,-1),'CENTER'),('ALIGN',(3,1),(3,-1),'CENTER'),
+        ('ALIGN',(4,1),(4,-1),'RIGHT'),('ALIGN',(5,1),(5,-1),'CENTER'),
+        ('ALIGN',(6,1),(6,-1),'RIGHT'),('ALIGN',(7,1),(7,-1),'CENTER'),('FONTNAME',(6,1),(6,-1),FNTB)])
+    it.setStyle(ts); story+=[it,Spacer(1,3*mm)]
 
-        lines_html += f"""<tr>
-            <td class="tc">{codice}</td>
-            <td class="desc-cell">{desc}</td>
-            <td class="tc">{um}</td>
-            <td class="tr">{qty}</td>
-            <td class="tr">{price}</td>
-            <td class="tc">{sc}</td>
-            <td class="tr">{importo}</td>
-            <td class="tc">{iva}%</td>
-        </tr>"""
+    # 5. TOTALI
+    imp=0.0; tiva=0.0; iva_by={}
+    for ln in lines:
+        lt=float(ln.get('line_total') or ln.get('total') or float(ln.get('quantity',1))*float(ln.get('unit_price',0)))
+        vr=ln.get('vat_rate') or ln.get('aliquota_iva') or '0'
+        try: vp=float(str(vr).replace('%',''))
+        except: vp=0.0
+        imp+=lt; ia=round(lt*vp/100,2); tiva+=ia
+        k=f'{vp:.0f}'; iva_by.setdefault(k,{'imp':0.0,'iva':0.0})
+        iva_by[k]['imp']+=lt; iva_by[k]['iva']+=ia
+    imp=round(imp,2); tiva=round(tiva,2); grand=round(imp+tiva,2)
 
-    # ── IVA / Totals ──
-    sconto_globale = float(prev.get("sconto_globale") or 0)
-    iva_data = compute_iva_groups(lines, sconto_globale)
-    totals_html = build_totals_html(iva_data, sconto_globale)
+    sr=Table([['Sconti','Spese di trasporto','Spese di incasso','Bolli']],
+             colWidths=[UW*0.14,UW*0.20,UW*0.15,UW*0.10])
+    sr.setStyle(TableStyle([('GRID',(0,0),(-1,-1),0.5,BGRAY),('FONTSIZE',(0,0),(-1,-1),7),
+        ('TOPPADDING',(0,0),(-1,-1),2),('BOTTOMPADDING',(0,0),(-1,-1),2),('LEFTPADDING',(0,0),(-1,-1),4)]))
 
-    # ── Notes ──
-    ref_note_html = ""
-    if riferimento:
-        ref_note_html = f'<p class="ref-note"><strong>Note:</strong> {riferimento}</p>'
-    elif subject:
-        ref_note_html = f'<p class="ref-note"><strong>Note:</strong> {subject}</p>'
+    iva_r=[[ Paragraph('Codice',S['th']),Paragraph('Descrizione',S['th']),
+             Paragraph('Imponibile',S['th_r']),Paragraph('% IVA',S['th_c']),Paragraph('Imposta',S['th_r'])]]
+    for rate,vals in sorted(iva_by.items()):
+        iva_r.append([Paragraph(rate,S['td']),Paragraph(f'Iva {rate}%',S['td']),
+                      Paragraph(_fmt(vals['imp']),S['td_r']),Paragraph(rate,S['td_c']),
+                      Paragraph(_fmt(vals['iva']),S['td_r'])])
+    div=Table(iva_r,colWidths=[UW*0.08,UW*0.17,UW*0.13,UW*0.07,UW*0.12])
+    div.setStyle(TableStyle([('FONTSIZE',(0,0),(-1,-1),7.5),('GRID',(0,0),(-1,-1),0.3,BGRAY),
+        ('FONTNAME',(0,0),(-1,0),FNTB),('TOPPADDING',(0,0),(-1,-1),2),('BOTTOMPADDING',(0,0),(-1,-1),2),
+        ('LEFTPADDING',(0,0),(-1,-1),3),('ALIGN',(2,0),(2,-1),'RIGHT'),
+        ('ALIGN',(3,0),(3,-1),'CENTER'),('ALIGN',(4,0),(4,-1),'RIGHT')]))
 
-    tech_notes_html = ""
-    if notes_text.strip():
-        tech_notes_html = f'<div class="info-box"><strong>Note:</strong> {safe(notes_text).replace(chr(10), "<br>")}</div>'
+    first_rate=list(iva_by.keys())[0] if iva_by else '22'
+    tot_d=[[Paragraph('IMPONIBILE',S['tot_lbl']),Paragraph(f'{_fmt(imp)} \u20ac',S['tot_val'])],
+           [Paragraph(f'IVA {first_rate}%',S['tot_lbl']),Paragraph(f'{_fmt(tiva)} \u20ac',S['tot_val'])],
+           [Paragraph('TOTALE',S['grand_lbl']),Paragraph(f'{_fmt(grand)} \u20ac',S['grand_val'])]]
+    tt=Table(tot_d,colWidths=[UW*0.22,UW*0.20])
+    tt.setStyle(TableStyle([('GRID',(0,0),(-1,-1),0.3,BGRAY),
+        ('TOPPADDING',(0,0),(-1,-1),2),('BOTTOMPADDING',(0,0),(-1,-1),2),
+        ('LEFTPADDING',(0,0),(-1,-1),4),('RIGHTPADDING',(0,0),(-1,-1),4),
+        ('ALIGN',(1,0),(1,-1),'RIGHT'),('FONTNAME',(0,2),(-1,2),FNTB),
+        ('FONTSIZE',(0,2),(-1,2),10),('LINEABOVE',(0,2),(-1,2),0.8,BGRAY)]))
 
-    # ── Bank details ──
-    bank_name = safe(prev.get("banca") or "")
-    bank_iban = safe(prev.get("iban") or "")
-    # Fallback to old bank_details if preventivo doesn't have specific bank
-    if not bank_name and not bank_iban:
-        bank = co.get("bank_details", {}) or {}
-        bank_name = safe(bank.get("bank_name") or "")
-        bank_iban = safe(bank.get("iban") or "")
-    bank_html = ""
-    if bank_name or bank_iban:
-        bank_html = '<div class="bank-info">'
-        if bank_name:
-            bank_html += f"<p><strong>Banca:</strong> {bank_name}</p>"
-        if bank_iban:
-            bank_html += f"<p><strong>IBAN:</strong> {bank_iban}</p>"
-        bank_html += "</div>"
+    bot=Table([[div,tt]],colWidths=[UW*0.59,UW*0.41])
+    bot.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP')]))
+    story+=[sr,bot,Spacer(1,3*mm)]
 
-    # ── Conditions page ──
-    condizioni_html = build_conditions_html(co, doc_number)
+    # 6. BANCA
+    if banca_nome or banca_iban:
+        bt=f'{banca_nome} IBAN: {banca_iban}' if banca_nome and banca_iban else banca_nome or f'IBAN: {banca_iban}'
+        bt_=Table([[Paragraph('Banca:',S['bancab']),Paragraph(bt,S['banca'])]],colWidths=[UW*0.10,UW*0.88])
+        bt_.setStyle(TableStyle([('BOX',(0,0),(-1,-1),0.5,BGRAY),('TOPPADDING',(0,0),(-1,-1),3),
+            ('BOTTOMPADDING',(0,0),(-1,-1),3),('LEFTPADDING',(0,0),(-1,-1),4),('VALIGN',(0,0),(-1,-1),'MIDDLE')]))
+        story+=[bt_,Spacer(1,3*mm)]
 
-    # ── Assemble ──
-    body = f"""
-    {header}
-    <div class="doc-title">
-        <h1>PREVENTIVO</h1>
-        <div class="doc-num">{safe(display_num)}</div>
-    </div>
-    <table class="meta-table">
-        <tr><td class="meta-label">DATA:</td><td>{doc_date}</td></tr>
-        <tr><td class="meta-label">Pagamento:</td><td>{payment_label}</td></tr>
-        <tr><td class="meta-label">Validit&agrave;:</td><td>{validity} giorni</td></tr>
-    </table>
+    # 7. CONDIZIONI
+    if condizioni.strip():
+        story.append(PageBreak())
+        story.append(Paragraph('CONDIZIONI GENERALI DI FORNITURA',S['cond_h']))
+        story.append(Spacer(1,2*mm))
+        story.append(HRFlowable(width=UW,thickness=0.8,color=BGRAY,spaceAfter=3*mm))
+        def _fix_enc(t):
+            if not t: return ''
+            try:
+                if 'Ã' in t or '\x83' in t:
+                    t=t.encode('latin1').decode('utf-8',errors='replace')
+            except Exception: pass
+            for bad,good in [('\u00e2\u0080\u0099',"'"),('\u00e2\u0080\u009c','"'),
+                ('\u00e2\u0080\u009d','"'),('\u00e2\u0080\u0093','\u2013'),
+                ('\u00e2\u0080\u0094','\u2014'),('\ufffd','')]:
+                t=t.replace(bad,good)
+            return t
+        cf=_fix_enc(condizioni)
+        for line in cf.split('\n'):
+            line=line.strip()
+            if not line: story.append(Spacer(1,1.5*mm)); continue
+            if _re.match(r'^\d+\s*[\-\u2013\u2014\.]',line):
+                story+=[Spacer(1,2*mm),Paragraph(line,S['cond_n'])]
+            elif _re.match(r'^[a-z]\)',line):
+                story.append(Paragraph('\u00a0\u00a0\u00a0'+line,S['cond_t']))
+            else:
+                story.append(Paragraph(line,S['cond_t']))
 
-    {ref_note_html}
-
-    <table class="items-table">
-        <colgroup>
-            <col style="width:8%"><col style="width:38%"><col style="width:6%">
-            <col style="width:8%"><col style="width:12%"><col style="width:8%">
-            <col style="width:12%"><col style="width:8%">
-        </colgroup>
-        <thead><tr>
-            <th>Codice</th><th>Descrizione</th><th>u.m.</th>
-            <th>Quantit&agrave;</th><th>Prezzo</th><th>Sconti</th>
-            <th>Importo</th><th>Iva</th>
-        </tr></thead>
-        <tbody>{lines_html}</tbody>
-    </table>
-
-    {tech_notes_html}
-    {totals_html}
-    {bank_html}
-    {condizioni_html}
-    """
-
-    return render_pdf(body)
+    doc.build(story,onFirstPage=_footer,onLaterPages=_footer)
+    buf.seek(0); return buf
