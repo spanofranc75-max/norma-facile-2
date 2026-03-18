@@ -307,7 +307,7 @@ def build_conditions_html(company: dict, doc_number: str) -> str:
     """Condizioni generali di fornitura - HTML hardcoded stile Invoicex."""
     company_name = (company or {}).get('business_name', 'Steel Project Design Srls')
     
-    return f'''<div style="page-break-before:always; font-family:Arial,sans-serif; font-size:9pt; color:#222; margin:0; padding:10px 15px;">
+    return f"""<div style="page-break-before:always; font-family:Arial,sans-serif; font-size:9pt; color:#222; margin:0; padding:10px 15px;">
 
 <h2 style="font-size:11pt; font-weight:bold; border-bottom:1px solid #ccc; padding-bottom:3px; margin-top:8px; margin-bottom:6px;">CONDIZIONI GENERALI DI FORNITURA</h2>
 
