@@ -307,41 +307,56 @@ def build_conditions_html(company: dict, doc_number: str) -> str:
     """Condizioni di fornitura reali dalle impostazioni aziendali."""
     company_name = safe((company or {}).get('business_name', ''))
     condizioni = (company or {}).get('condizioni_vendita', '').strip()
-    
-    def fix_encoding(text):
-        """Corregge caratteri mal codificati (triple UTF-8 encoding)."""
-        if not text:
-            return text
-        try:
-            if "\u00c3" in text or "Ã" in text:
-                text = text.encode("latin1").decode("utf-8", errors="replace")
-        except Exception:
-            pass
-        try:
-            if "\u00c3" in text or "Ã" in text:
-                text = text.encode("latin1").decode("utf-8", errors="replace")
-        except Exception:
-            pass
-        return text
 
-    
-    if condizioni:
-        condizioni = fix_encoding(condizioni)
-        lines_html = ''
-        for line in condizioni.split('\n'):
-            line = line.strip()
-            if not line:
-                lines_html += '<p style="margin:2px 0">&nbsp;</p>'
-            else:
-                lines_html += f'<p style="margin:2px 0">{safe(line)}</p>'
-    else:
-        lines_html = '<p>Le condizioni di vendita non sono state configurate nelle Impostazioni.</p>'
-    
-    return f"""<div style="page-break-before: always; padding: 10px; font-size: 9px; font-family: Helvetica, Arial, sans-serif;">
-        <h3 style="color: #1a56db; border-bottom: 2px solid #1a56db; padding-bottom: 5px; margin-bottom: 8px;">CONDIZIONI GENERALI DI FORNITURA</h3>
-        <p style="font-size:8px; color:#888; margin-bottom:8px">Documento: {safe(doc_number)} &mdash; Azienda: {company_name}</p>
-        <div style="line-height: 1.6;">{lines_html}</div>
-    </div>"""
+    if not condizioni:
+        return ''
+
+    # Fix encoding: se ci sono caratteri Ã decodifica latin1->utf8
+    try:
+        if '\u00c3' in condizioni or 'Ã' in condizioni:
+            condizioni = condizioni.encode('latin1').decode('utf-8', errors='replace')
+    except Exception:
+        pass
+    # Seconda passata se ancora corrotto
+    try:
+        if '\u00c3' in condizioni or 'Ã' in condizioni:
+            condizioni = condizioni.encode('latin1').decode('utf-8', errors='replace')
+    except Exception:
+        pass
+
+    # Costruisce HTML righe condizioni
+    lines_html = ''
+    for line in condizioni.split('\n'):
+        line = line.strip()
+        if not line:
+            lines_html += '<br>'
+            continue
+        lines_html += f'<p style="margin:2px 0; font-size:8px; font-weight:normal;">{safe(line)}</p>'
+
+    # Righe firma stile Invoicex
+    firma_html = '''
+<div style="margin-top:20px; border-top:1px solid #ccc; padding-top:10px;">
+  <p style="font-size:8px; font-weight:normal;">Firma e timbro per accettazione &nbsp;&nbsp;&nbsp; data di accettazione ___/___/___</p>
+  <p style="font-size:8px; font-weight:normal;">(legale rappresentante)</p>
+  <p style="font-size:8px; font-weight:normal; margin-top:15px;">__________________________</p>
+</div>
+<div style="margin-top:15px; font-size:8px; font-weight:normal;">
+  <p>Ai sensi e per gli effetti dell Art. 1341 e segg. del Codice Civile, il sottoscritto Acquirente dichiara di aver preso
+  specifica, precisa e dettagliata visione di tutte le disposizioni del contratto e di approvarle integralmente senza alcuna riserva.</p>
+  <br>
+  <p>_____________________, l&igrave; ______________________</p>
+  <p style="margin-top:15px;">Firma e timbro (il legale rappresentante)</p>
+  <p style="margin-top:5px;">_____________________________</p>
+</div>'''
+
+    return f'''<div style="page-break-before:always; padding:10px;">
+<h3 style="font-size:10px; font-weight:bold; border-bottom:1px solid #333; padding-bottom:4px;">CONDIZIONI GENERALI DI FORNITURA</h3>
+<p style="font-size:8px; font-weight:normal; color:#555;">Documento: {doc_number} — Azienda: {company_name}</p>
+<div style="margin-top:8px;">
+{lines_html}
+</div>
+{firma_html}
+</div>'''
 
 
 def render_pdf(html_content: str) -> BytesIO:
@@ -434,7 +449,7 @@ def render_pdf(html_content: str) -> BytesIO:
         if srcs:
             s=_di(srcs[0])
             if s:
-                try: logo=Image(s,width=2.0*cm,height=1.0*cm)
+                try: logo=Image(s,width=4.5*cm,height=1.8*cm)
                 except: pass
     co_col=[]
     if logo: co_col.append(logo)
