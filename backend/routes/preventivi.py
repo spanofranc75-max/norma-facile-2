@@ -1554,6 +1554,7 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
         <h1>PREVENTIVO N. {safe(display_num)}</h1>
     </div>
     <table class="meta-table">
+        <tr><td class="meta-label" style="font-weight:bold;font-size:11pt;">PREVENTIVO N.</td><td style="font-weight:bold;font-size:11pt;">{safe(display_num)}</td></tr>
         <tr><td class="meta-label">DATA:</td><td>{doc_date}</td></tr>
         <tr><td class="meta-label">Pagamento:</td><td>{payment_label}</td></tr>
         <tr><td class="meta-label">Validit&agrave;:</td><td>{validity} giorni</td></tr>
