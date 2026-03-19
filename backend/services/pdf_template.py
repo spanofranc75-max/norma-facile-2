@@ -39,7 +39,7 @@ COMMON_CSS = """
 body {
     font-family: Arial, Helvetica, "Liberation Sans", sans-serif;
     font-size: 9pt;
-    color: #555;
+    color: #111;
     line-height: 1.35;
 }
 .page-break { page-break-before: always; }
@@ -73,28 +73,28 @@ body {
 .company-name {
     font-size: 13pt;
     font-weight: bold;
-    color: #666;
+    color: #111;
     margin-bottom: 3px;
 }
 .company-details {
     font-size: 8pt;
-    color: #888;
+    color: #444;
     line-height: 1.55;
 }
 .cl-label {
     font-size: 8pt;
-    color: #888;
+    color: #555;
     font-weight: bold;
 }
 .cl-name {
     font-weight: bold;
     font-size: 10pt;
-    color: #555;
+    color: #111;
     margin: 2px 0;
 }
 .cl-details {
     font-size: 8pt;
-    color: #666;
+    color: #333;
     line-height: 1.55;
 }
 
@@ -108,14 +108,14 @@ body {
 .doc-title h1 {
     font-size: 16pt;
     font-weight: bold;
-    color: #666;
+    color: #111;
     letter-spacing: 2px;
     margin: 0 0 2px 0;
 }
 .doc-num {
     font-size: 13pt;
     font-weight: bold;
-    color: #777;
+    color: #222;
 }
 
 /* ── META TABLE ── */
@@ -129,13 +129,13 @@ body {
     border: none;
     padding: 1px 6px 1px 0;
     vertical-align: top;
-    color: #666;
+    color: #222;
 }
 .meta-label {
     font-weight: bold;
     white-space: nowrap;
     width: 110px;
-    color: #888;
+    color: #444;
 }
 .ref-note {
     margin: 8px 0;
@@ -143,7 +143,7 @@ body {
     background: #f7f7f7;
     border-left: 3px solid #aaa;
     font-size: 8.5pt;
-    color: #666;
+    color: #222;
 }
 
 /* ── ITEMS TABLE ── */
@@ -161,13 +161,13 @@ body {
     text-transform: uppercase;
     font-size: 7.5pt;
     text-align: center;
-    color: #666;
+    color: #111;
 }
 .items-table td {
     border: 1px solid #ddd;
     padding: 4px 4px;
     vertical-align: top;
-    color: #555;
+    color: #111;
 }
 .items-table .desc-cell {
     text-align: left;
@@ -184,13 +184,13 @@ body {
     border: 1px solid #ddd;
     font-size: 8pt;
     line-height: 1.4;
-    color: #666;
+    color: #222;
 }
 .info-box-title {
     font-weight: bold;
     margin-bottom: 3px;
     font-size: 8.5pt;
-    color: #777;
+    color: #111;
 }
 
 /* ── TOTALS ── */
@@ -212,12 +212,12 @@ body {
     font-size: 7.5pt;
     text-transform: uppercase;
     text-align: center;
-    color: #666;
+    color: #111;
 }
 .iva-table td {
     border: 1px solid #ddd;
     padding: 3px 5px;
-    color: #555;
+    color: #111;
 }
 .summary-table {
     width: 100%;
@@ -229,7 +229,7 @@ body {
 .summary-table td {
     padding: 2px 5px;
     border: none;
-    color: #555;
+    color: #111;
 }
 .summary-row td { font-size: 9pt; }
 .total-final td {
@@ -237,7 +237,7 @@ body {
     font-weight: bold;
     border-top: 1px solid #ccc;
     padding-top: 6px;
-    color: #555;
+    color: #111;
     background: #e8e8e8;
 }
 
@@ -248,7 +248,7 @@ body {
     border: 1px solid #ddd;
     font-size: 8pt;
     background: #f7f7f7;
-    color: #666;
+    color: #222;
 }
 
 /* ── PAYMENT SCHEDULE ── */
@@ -263,7 +263,7 @@ body {
     margin-bottom: 6px;
     text-transform: uppercase;
     letter-spacing: 0.3px;
-    color: #888;
+    color: #333;
 }
 .schedule-table {
     width: 100%;
@@ -276,12 +276,12 @@ body {
     padding: 3px 6px;
     font-weight: bold;
     text-align: center;
-    color: #666;
+    color: #111;
 }
 .schedule-table td {
     border: 1px solid #ddd;
     padding: 3px 6px;
-    color: #555;
+    color: #111;
 }
 
 /* ── TRANSPORT INFO (DDT) ── */
@@ -294,13 +294,13 @@ body {
 .transport-table td {
     border: 1px solid #ddd;
     padding: 3px 5px;
-    color: #555;
+    color: #111;
 }
 .transport-table .t-label {
     font-weight: bold;
     background: #f0f0f0;
     width: 22%;
-    color: #777;
+    color: #333;
 }
 
 /* ── SIGNATURE BLOCKS ── */
@@ -322,7 +322,7 @@ body {
     margin-top: 40px;
     padding-top: 4px;
     font-size: 7.5pt;
-    color: #888;
+    color: #444;
 }
 
 /* ── CONDITIONS (PAGE 2) ── */
@@ -332,13 +332,13 @@ body {
     text-align: center;
     margin-bottom: 12px;
     text-transform: uppercase;
-    color: #666;
+    color: #111;
 }
 .conditions-text {
     font-size: 7.5pt;
     line-height: 1.45;
     text-align: justify;
-    color: #555;
+    color: #222;
 }
 .acceptance-section { margin-top: 30px; }
 .sig-block { margin: 15px 0; }
@@ -348,7 +348,7 @@ body {
     height: 30px;
     margin: 4px 0;
 }
-.sig-label { font-size: 7.5pt; color: #888; }
+.sig-label { font-size: 7.5pt; color: #444; }
 .legal-notice {
     margin-top: 20px;
     font-size: 7pt;
@@ -356,13 +356,13 @@ body {
     border: 1px solid #ddd;
     padding: 6px 8px;
     background: #f7f7f7;
-    color: #666;
+    color: #333;
 }
 .doc-footer {
     margin-top: 40px;
     text-align: right;
     font-size: 8pt;
-    color: #888;
+    color: #555;
 }
 """
 
