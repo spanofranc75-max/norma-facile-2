@@ -85,14 +85,14 @@ def _fb():
     return _FONT_BOLD if _fonts_registered else "Helvetica-Bold"
 
 # ══════════════════════════════════════════════════════════════════
-# Colori
+# Colori — Palette MONOCROMATICA (scala di grigi)
 # ══════════════════════════════════════════════════════════════════
-NAVY = HexColor("#0F172A")
-BLUE = HexColor("#2563EB")
-GREY_BG = HexColor("#F1F5F9")
-GREY_TEXT = HexColor("#64748B")
-GREY_BORDER = HexColor("#CBD5E1")
-DARK_TEXT = HexColor("#1a1a2e")
+NAVY = HexColor("#333333")        # Header tabella (grigio scuro, non nero pieno)
+BLUE = HexColor("#555555")        # Bordi laterali (grigio medio)
+GREY_BG = HexColor("#F5F5F5")     # Sfondo box meta
+GREY_TEXT = HexColor("#666666")   # Testo secondario
+GREY_BORDER = HexColor("#CCCCCC") # Bordi sottili
+DARK_TEXT = HexColor("#222222")   # Testo principale
 WHITE = white
 
 # ══════════════════════════════════════════════════════════════════
@@ -136,7 +136,7 @@ STYLE_CLIENT_NAME = ParagraphStyle(
 )
 STYLE_CLIENT_DETAIL = ParagraphStyle(
     "ClientDetail", fontName=_fn(), fontSize=8, leading=11.5,
-    textColor=HexColor("#475569"),
+    textColor=HexColor("#444444"),
 )
 STYLE_TH = ParagraphStyle(
     "TableHeader", fontName=_fb(), fontSize=7, leading=9,
@@ -188,7 +188,7 @@ STYLE_SECTION_TITLE = ParagraphStyle(
 )
 STYLE_BANK_LINE = ParagraphStyle(
     "BankLine", fontName=_fn(), fontSize=8, leading=11.5,
-    textColor=HexColor("#475569"),
+    textColor=HexColor("#444444"),
 )
 STYLE_FOOTER = ParagraphStyle(
     "Footer", fontName=_fn(), fontSize=7, leading=9,
@@ -200,7 +200,7 @@ STYLE_CERT_FOOTER = ParagraphStyle(
 )
 STYLE_NOTES = ParagraphStyle(
     "Notes", fontName=_fn(), fontSize=7.5, leading=10.5,
-    textColor=HexColor("#475569"),
+    textColor=HexColor("#444444"),
 )
 STYLE_NOTES_TITLE = ParagraphStyle(
     "NotesTitle", fontName=_fb(), fontSize=7.5, leading=10,
@@ -217,7 +217,7 @@ STYLE_COND_TEXT = ParagraphStyle(
 )
 STYLE_COND_LEGAL = ParagraphStyle(
     "CondLegal", fontName=_fn(), fontSize=7, leading=9.5,
-    textColor=HexColor("#475569"),
+    textColor=HexColor("#555555"),
 )
 
 # ══════════════════════════════════════════════════════════════════
@@ -434,7 +434,31 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     logo_src = _decode_logo(co.get("logo_url", ""))
     if logo_src:
         try:
-            logo_img = Image(logo_src, width=150, height=50)
+            from PIL import Image as PILImage
+            # Calcola dimensioni proporzionali
+            pil_buf = BytesIO(logo_src.read()) if hasattr(logo_src, 'read') else BytesIO()
+            if hasattr(logo_src, 'read'):
+                logo_src.seek(0)  # reset per ReportLab
+            else:
+                pil_buf = BytesIO()
+            try:
+                if hasattr(logo_src, 'read'):
+                    pil_img = PILImage.open(BytesIO(logo_src.read()))
+                    logo_src.seek(0)
+                elif isinstance(logo_src, str):
+                    pil_img = None  # URL, skip proportion calc
+                else:
+                    pil_img = None
+            except Exception:
+                pil_img = None
+
+            max_w, max_h = 140, 55
+            if pil_img:
+                orig_w, orig_h = pil_img.size
+                ratio = min(max_w / orig_w, max_h / orig_h)
+                logo_img = Image(logo_src, width=orig_w * ratio, height=orig_h * ratio)
+            else:
+                logo_img = Image(logo_src, width=max_w, height=max_h)
             logo_img.hAlign = "LEFT"
         except Exception:
             logo_img = Paragraph("", STYLE_TD)
@@ -605,7 +629,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
 
     # Zebra striping
     for i in range(2, len(table_data), 2):
-        style_cmds.append(("BACKGROUND", (0, i), (-1, i), HexColor("#F8FAFC")))
+        style_cmds.append(("BACKGROUND", (0, i), (-1, i), HexColor("#F9F9F9")))
 
     items_table.setStyle(TableStyle(style_cmds))
     elements.append(items_table)
@@ -801,7 +825,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     if due_date and not scadenze:
         due_style = ParagraphStyle(
             "DueDate", fontName=_fb(), fontSize=9, leading=12,
-            textColor=HexColor("#991B1B"),
+            textColor=HexColor("#333333"),
         )
         due_content = [
             [Paragraph("SCADENZA PAGAMENTO", STYLE_SECTION_TITLE)],
@@ -825,7 +849,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     # ══════════════════════════════════════════════════════════════
     legal_style = ParagraphStyle(
         "Legal", fontName=_fn(), fontSize=6.5, leading=9,
-        textColor=HexColor("#94A3B8"),
+        textColor=HexColor("#999999"),
     )
     elements.append(Spacer(1, 2 * mm))
     elements.append(Paragraph(
@@ -838,8 +862,8 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     # ══════════════════════════════════════════════════════════════
     # 11. Pagina Condizioni (SOLO per Preventivi)
     # ══════════════════════════════════════════════════════════════
-    condizioni = co.get("condizioni_vendita", "") or ""
-    if condizioni.strip() and doc_type == "PRV":
+    condizioni = (co.get("condizioni_vendita", "") or "").strip().strip('"').strip()
+    if condizioni and doc_type == "PRV":
         from reportlab.platypus import PageBreak
         elements.append(PageBreak())
         elements.append(Paragraph("CONDIZIONI GENERALI DI VENDITA", STYLE_COND_TITLE))
@@ -851,27 +875,29 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
                 elements.append(Paragraph(p_text, STYLE_COND_TEXT))
                 elements.append(Spacer(1, 1.5 * mm))
 
-        elements.append(Spacer(1, 8 * mm))
-        elements.append(Paragraph("<b>Firma e timbro per accettazione</b>", STYLE_COND_TEXT))
-        elements.append(Spacer(1, 12 * mm))
-        elements.append(HRFlowable(width=180, thickness=0.5, color=black))
-        elements.append(Paragraph(
-            "Data di accettazione (legale rappresentante)", STYLE_COND_LEGAL))
+        # Solo se il testo condizioni NON contiene già la sezione firma
+        if "firma e timbro" not in condizioni.lower():
+            elements.append(Spacer(1, 8 * mm))
+            elements.append(Paragraph("<b>Firma e timbro per accettazione</b>", STYLE_COND_TEXT))
+            elements.append(Spacer(1, 12 * mm))
+            elements.append(HRFlowable(width=180, thickness=0.5, color=black))
+            elements.append(Paragraph(
+                "Data di accettazione (legale rappresentante)", STYLE_COND_LEGAL))
 
-        elements.append(Spacer(1, 6 * mm))
-        elements.append(Paragraph(
-            "Ai sensi e per gli effetti dell'Art. 1341 e segg. del Codice Civile, "
-            "il sottoscritto Acquirente dichiara di aver preso specifica, precisa e "
-            "dettagliata visione di tutte le disposizioni del contratto e di approvarle "
-            "integralmente senza alcuna riserva.",
-            STYLE_COND_LEGAL,
-        ))
-        elements.append(Spacer(1, 8 * mm))
-        elements.append(Paragraph("li _______________", STYLE_COND_TEXT))
-        elements.append(Spacer(1, 12 * mm))
-        elements.append(HRFlowable(width=180, thickness=0.5, color=black))
-        elements.append(Paragraph(
-            "Firma e timbro (il legale rappresentante)", STYLE_COND_LEGAL))
+            elements.append(Spacer(1, 6 * mm))
+            elements.append(Paragraph(
+                "Ai sensi e per gli effetti dell'Art. 1341 e segg. del Codice Civile, "
+                "il sottoscritto Acquirente dichiara di aver preso specifica, precisa e "
+                "dettagliata visione di tutte le disposizioni del contratto e di approvarle "
+                "integralmente senza alcuna riserva.",
+                STYLE_COND_LEGAL,
+            ))
+            elements.append(Spacer(1, 8 * mm))
+            elements.append(Paragraph("li _______________", STYLE_COND_TEXT))
+            elements.append(Spacer(1, 12 * mm))
+            elements.append(HRFlowable(width=180, thickness=0.5, color=black))
+            elements.append(Paragraph(
+                "Firma e timbro (il legale rappresentante)", STYLE_COND_LEGAL))
 
         elements.append(Spacer(1, 15 * mm))
         doc_footer_style = ParagraphStyle(

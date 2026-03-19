@@ -136,7 +136,7 @@ body {
     margin: 8px 0;
     padding: 5px 8px;
     background: #f5f5f5;
-    border-left: 3px solid #888;
+    border-left: 3px solid #666;
     font-size: 8.5pt;
 }
 
@@ -148,13 +148,14 @@ body {
     font-size: 8pt;
 }
 .items-table th {
-    background: #eee;
+    background: #e0e0e0;
     border: 1px solid #999;
     padding: 5px 4px;
     font-weight: bold;
     text-transform: uppercase;
     font-size: 7.5pt;
     text-align: center;
+    color: #222;
 }
 .items-table td {
     border: 1px solid #bbb;
@@ -196,12 +197,13 @@ body {
     margin-bottom: 6px;
 }
 .iva-table th {
-    background: #eee;
+    background: #e0e0e0;
     border: 1px solid #999;
     padding: 4px 5px;
     font-size: 7.5pt;
     text-transform: uppercase;
     text-align: center;
+    color: #222;
 }
 .iva-table td {
     border: 1px solid #bbb;
@@ -254,11 +256,12 @@ body {
     font-size: 8pt;
 }
 .schedule-table th {
-    background: #e8e8e8;
+    background: #e0e0e0;
     border: 1px solid #ccc;
     padding: 3px 6px;
     font-weight: bold;
     text-align: center;
+    color: #222;
 }
 .schedule-table td {
     border: 1px solid #ccc;
@@ -504,15 +507,18 @@ def build_totals_html(iva_data: dict, sconto_globale: float = 0, extra_rows: str
 def build_conditions_html(company: dict, doc_number: str) -> str:
     """Build the conditions page with acceptance section."""
     co = company or {}
-    condizioni = co.get("condizioni_vendita", "") or ""
-    if not condizioni.strip():
+    condizioni = (co.get("condizioni_vendita", "") or "").strip().strip('"').strip()
+    if not condizioni:
         return ""
 
     company_name = safe(co.get("business_name"))
-    return f"""
-    <div class="page-break"></div>
-    <h2 class="conditions-title">CONDIZIONI GENERALI DI VENDITA</h2>
-    <div class="conditions-text">{_esc(condizioni).replace(chr(10), "<br>")}</div>
+    
+    # Se il testo condizioni contiene già la sezione firma, non duplicarla
+    has_signature = "firma e timbro" in condizioni.lower()
+    
+    acceptance_html = ""
+    if not has_signature:
+        acceptance_html = """
     <div class="acceptance-section">
         <div class="sig-block">
             <p>Firma e timbro per accettazione</p>
@@ -531,7 +537,13 @@ def build_conditions_html(company: dict, doc_number: str) -> str:
             <div class="sig-line"></div>
             <p class="sig-label">Firma e timbro (il legale rappresentante)</p>
         </div>
-    </div>
+    </div>"""
+
+    return f"""
+    <div class="page-break"></div>
+    <h2 class="conditions-title">CONDIZIONI GENERALI DI VENDITA</h2>
+    <div class="conditions-text">{_esc(condizioni).replace(chr(10), "<br>")}</div>
+    {acceptance_html}
     <div class="doc-footer">
         <p>{company_name}</p>
         <p>Documento {safe(doc_number)}</p>
