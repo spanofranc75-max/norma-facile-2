@@ -118,6 +118,7 @@ async def send_invoice_email(
     filename: Optional[str] = None,
     user_id: Optional[str] = None,
     commessa_ref: Optional[str] = None,
+    cc: Optional[list] = None,
 ) -> bool:
     """Send invoice/document email with optional PDF attachment."""
     if not _init_resend():
@@ -162,6 +163,9 @@ async def send_invoice_email(
             "html": _email_wrapper(company, inner),
         }
 
+        if cc:
+            params["cc"] = [e for e in cc if e and e != to_email]
+
         if pdf_bytes and filename:
             import base64
             params["attachments"] = [{
@@ -171,7 +175,8 @@ async def send_invoice_email(
             }]
 
         resend.Emails.send(params)
-        logger.info(f"[EMAIL] {doc_label} {document_number} sent to {to_email}")
+        cc_info = f" + CC: {', '.join(cc)}" if cc else ""
+        logger.info(f"[EMAIL] {doc_label} {document_number} sent to {to_email}{cc_info}")
         return True
     except Exception as e:
         logger.error(f"[EMAIL ERROR] Invoice email to {to_email}: {e}")
@@ -186,6 +191,7 @@ async def send_ddt_email(
     pdf_bytes: Optional[bytes] = None,
     filename: Optional[str] = None,
     user_id: Optional[str] = None,
+    cc: Optional[list] = None,
 ) -> bool:
     """Send DDT email with optional PDF attachment."""
     if not _init_resend():
@@ -224,6 +230,9 @@ async def send_ddt_email(
             "html": _email_wrapper(company, inner),
         }
 
+        if cc:
+            params["cc"] = [e for e in cc if e and e != to_email]
+
         if pdf_bytes and filename:
             import base64
             params["attachments"] = [{
@@ -233,7 +242,8 @@ async def send_ddt_email(
             }]
 
         resend.Emails.send(params)
-        logger.info(f"[EMAIL] DDT {ddt_number} sent to {to_email}")
+        cc_info = f" + CC: {', '.join(cc)}" if cc else ""
+        logger.info(f"[EMAIL] DDT {ddt_number} sent to {to_email}{cc_info}")
         return True
     except Exception as e:
         logger.error(f"[EMAIL ERROR] DDT email to {to_email}: {e}")
@@ -371,8 +381,9 @@ async def send_email_with_attachment(
     pdf_bytes: Optional[bytes] = None,
     filename: Optional[str] = None,
     user_id: Optional[str] = None,
+    cc: Optional[list] = None,
 ) -> bool:
-    """Generic email sender with PDF attachment. Used for Conto Lavoro DDTs."""
+    """Generic email sender with PDF attachment. Supports CC recipients."""
     if not _init_resend():
         logger.info(f"[EMAIL SKIP] Generic email to {to_email} (Resend not configured)")
         return False
@@ -392,6 +403,9 @@ async def send_email_with_attachment(
             "html": _email_wrapper(company, inner),
         }
 
+        if cc:
+            params["cc"] = [e for e in cc if e and e != to_email]
+
         if pdf_bytes and filename:
             import base64 as b64
             params["attachments"] = [{
@@ -401,7 +415,8 @@ async def send_email_with_attachment(
             }]
 
         resend.Emails.send(params)
-        logger.info(f"[EMAIL] Generic email sent to {to_email}: {subject}")
+        cc_info = f" + CC: {', '.join(cc)}" if cc else ""
+        logger.info(f"[EMAIL] Generic email sent to {to_email}{cc_info}: {subject}")
         return True
     except Exception as e:
         logger.error(f"[EMAIL ERROR] Generic email to {to_email}: {e}")
