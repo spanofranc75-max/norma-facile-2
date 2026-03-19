@@ -10,6 +10,12 @@ L'app era instabile dopo migrazione a Vercel (frontend) e Railway (backend).
 
 ## Implementato
 
+### Fix Caratteri Corrotti (19/03/2026)
+- `PreventivoEditorPage.js` aveva triple-encoding UTF-8 su caratteri italiani (à, è, ò) e em-dash
+- Fix applicato con libreria `ftfy` su tutta la pagina preventivo
+- Corretto: "ValiditÃÂÃÂ" → "Validità", "Q.tÃÂÃÂ" → "Q.tà", "puÃÂÃÂ²" → "può", "EXC1 ÃÂÃÂ..." → "EXC1 —"
+- Lint zero errori dopo il fix
+
 ### Fix Bug P0: Invio Email RdP/OdA (19/03/2026)
 - `try/except` nella generazione PDF con messaggi di errore specifici invece di 500 generico
 - Supporto CC aggiunto a `send_rdp_email` e `send_oda_email` in `email_service.py`
