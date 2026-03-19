@@ -1148,7 +1148,7 @@ async def create_commessa_generica(preventivo_id: str, user: dict = Depends(get_
 
     doc = {
         "commessa_id": cid,
-        "numero": await generate_commessa_number(uid, normativa=None),
+        "numero": f"GEN-{prev.get('number', '')}",
         "user_id": uid,
         "title": title,
         "client_id": prev.get("client_id", ""),

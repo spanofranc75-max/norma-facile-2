@@ -967,7 +967,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                                 <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => handlePreviewRdpPdf(r.rdp_id)} title="Anteprima PDF">
                                     <FileSearch className="h-3.5 w-3.5 text-blue-600" />
                                 </Button>
-                                {!r.email_sent && (
+                                {!r.email_sent ? (
                                     <Button
                                         size="sm"
                                         variant="ghost"
@@ -977,6 +977,17 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                                         title="Invia Email"
                                     >
                                         {sendingEmail === r.rdp_id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5 text-amber-600" />}
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-6 w-6 p-0"
+                                        onClick={() => handleSendRdpEmail(r.rdp_id)}
+                                        disabled={sendingEmail === r.rdp_id}
+                                        title={`Rinvia Email (inviata a ${r.email_sent_to || '?'})`}
+                                    >
+                                        {sendingEmail === r.rdp_id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MailCheck className="h-3.5 w-3.5 text-emerald-600" />}
                                     </Button>
                                 )}
                                 {r.stato === 'inviata' && <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => handleUpdateRdP(r.rdp_id, 'ricevuta')}>Ricevuta</Button>}
@@ -1032,7 +1043,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                                 <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => handlePreviewOdaPdf(o.ordine_id)} title="Anteprima PDF">
                                     <FileSearch className="h-3.5 w-3.5 text-emerald-600" />
                                 </Button>
-                                {!o.email_sent && (
+                                {!o.email_sent ? (
                                     <Button
                                         size="sm"
                                         variant="ghost"
@@ -1042,6 +1053,17 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                                         title="Invia Email"
                                     >
                                         {sendingEmail === o.ordine_id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5 text-amber-600" />}
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-6 w-6 p-0"
+                                        onClick={() => handleSendOdaEmail(o.ordine_id)}
+                                        disabled={sendingEmail === o.ordine_id}
+                                        title={`Rinvia Email (inviata a ${o.email_sent_to || '?'})`}
+                                    >
+                                        {sendingEmail === o.ordine_id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MailCheck className="h-3.5 w-3.5 text-emerald-600" />}
                                     </Button>
                                 )}
                                 {o.stato === 'inviato' && <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => handleUpdateOrdine(o.ordine_id, 'confermato')}>Confermato</Button>}
@@ -2516,7 +2538,26 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                                 {pdfExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                             </Button>
                         </div>
-                        <DialogDescription>Verifica il documento prima di inviarlo via email</DialogDescription>
+                        <DialogDescription>
+                            Verifica il documento prima di inviarlo via email
+                            {(() => {
+                                const rdps = commessaData?.approvvigionamento?.richieste || [];
+                                const odas = commessaData?.approvvigionamento?.ordini_acquisto || [];
+                                let item = null;
+                                if (pdfPreviewUrl?.includes('/richieste/')) {
+                                    const rdpId = pdfPreviewUrl.split('/richieste/')[1]?.split('/')[0];
+                                    item = rdps.find(r => r.rdp_id === rdpId);
+                                } else if (pdfPreviewUrl?.includes('/ordini/')) {
+                                    const ordineId = pdfPreviewUrl.split('/ordini/')[1]?.split('/')[0];
+                                    item = odas.find(o => o.ordine_id === ordineId);
+                                }
+                                if (item?.email_sent) {
+                                    const date = item.email_sent_at ? new Date(item.email_sent_at).toLocaleString('it-IT') : '';
+                                    return ` — Ultima email inviata a ${item.email_sent_to || '?'} il ${date}`;
+                                }
+                                return '';
+                            })()}
+                        </DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 h-full min-h-0">
                         {pdfPreviewUrl && (
@@ -2543,7 +2584,18 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                                 setPdfExpanded(false);
                             }}
                         >
-                            <Mail className="h-4 w-4 mr-1" /> Invia Email
+                            <Mail className="h-4 w-4 mr-1" /> {(() => {
+                                const rdps = commessaData?.approvvigionamento?.richieste || [];
+                                const odas = commessaData?.approvvigionamento?.ordini_acquisto || [];
+                                if (pdfPreviewUrl?.includes('/richieste/')) {
+                                    const rdpId = pdfPreviewUrl.split('/richieste/')[1]?.split('/')[0];
+                                    if (rdps.find(r => r.rdp_id === rdpId)?.email_sent) return 'Rinvia Email';
+                                } else if (pdfPreviewUrl?.includes('/ordini/')) {
+                                    const ordineId = pdfPreviewUrl.split('/ordini/')[1]?.split('/')[0];
+                                    if (odas.find(o => o.ordine_id === ordineId)?.email_sent) return 'Rinvia Email';
+                                }
+                                return 'Invia Email';
+                            })()}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
