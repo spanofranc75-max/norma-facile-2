@@ -1409,7 +1409,8 @@ async def send_preventivo_email(prev_id: str, payload: dict = None, user: dict =
     prev_number = doc.get("number", prev_id)
     filename = f"preventivo_{prev_number.replace(' ', '_').replace('/', '_')}.pdf"
 
-    from services.email_service import send_invoice_email as _send, send_email_with_attachment
+    from services.email_service import send_invoice_email as _send, send_email_with_attachment, check_email_service
+    check_email_service()
     totals = doc.get("totals", {})
     total = totals.get("total_document") or totals.get("total", 0)
     cc_list = payload.get("cc", [])

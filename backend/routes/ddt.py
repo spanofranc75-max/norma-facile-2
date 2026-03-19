@@ -509,7 +509,8 @@ async def send_ddt_email(ddt_id: str, payload: dict = None, user: dict = Depends
     ddt_number = doc.get("number", ddt_id)
     filename = f"ddt_{ddt_number.replace('/', '_')}.pdf"
 
-    from services.email_service import send_ddt_email as _send, send_email_with_attachment
+    from services.email_service import send_ddt_email as _send, send_email_with_attachment, check_email_service
+    check_email_service()
     cc_list = payload.get("cc", [])
     if payload.get("custom_subject") or payload.get("custom_body"):
         custom_subject = payload.get("custom_subject") or f"DDT n. {ddt_number}"

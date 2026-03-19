@@ -28,6 +28,19 @@ def _init_resend():
     return True
 
 
+def check_email_service():
+    """Raise HTTPException 422 if Resend is not configured. Call at start of send-email endpoints."""
+    from fastapi import HTTPException
+    if not RESEND_AVAILABLE:
+        raise HTTPException(422, "Libreria Resend non installata. Esegui: pip install resend")
+    if not settings.resend_api_key:
+        raise HTTPException(
+            422,
+            "RESEND_API_KEY non configurata. "
+            "Vai su Railway → Il tuo servizio → Variables → aggiungi RESEND_API_KEY con la tua chiave Resend."
+        )
+
+
 async def _get_company_name(user_id: Optional[str] = None) -> str:
     """Fetch company name from DB settings. Falls back to config sender_name."""
     if user_id:

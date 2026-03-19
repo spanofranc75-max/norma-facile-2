@@ -691,7 +691,8 @@ async def send_rdp_email_endpoint(cid: str, rdp_id: str, payload: dict = None, u
     filename = f"RdP_{rdp_id}.pdf"
     
     # Send email
-    from services.email_service import send_rdp_email, send_email_with_attachment
+    from services.email_service import send_rdp_email, send_email_with_attachment, check_email_service
+    check_email_service()
     payload = payload or {}
     cc = payload.get("cc") or []
     num_righe = len(rdp.get("righe", []))
@@ -864,7 +865,8 @@ async def send_oda_email_endpoint(cid: str, ordine_id: str, payload: dict = None
     filename = f"OdA_{ordine_id}.pdf"
     
     # Send email
-    from services.email_service import send_oda_email, send_email_with_attachment
+    from services.email_service import send_oda_email, send_email_with_attachment, check_email_service
+    check_email_service()
     payload = payload or {}
     cc = payload.get("cc") or []
     importo_totale = oda.get("importo_totale", 0)

@@ -1328,7 +1328,8 @@ async def send_invoice_email(invoice_id: str, payload: dict = None, user: dict =
     filename = f"{doc_num}.pdf"
 
     # Send email
-    from services.email_service import send_invoice_email as _send, send_email_with_attachment
+    from services.email_service import send_invoice_email as _send, send_email_with_attachment, check_email_service
+    check_email_service()
     doc_type = invoice.get("document_type", "FT")
     total = invoice.get("totals", {}).get("total_document", 0)
     cc_list = payload.get("cc", [])
