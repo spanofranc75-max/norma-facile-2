@@ -689,6 +689,7 @@ async def send_rdp_email_endpoint(cid: str, rdp_id: str, payload: dict = None, u
     # Send email
     from services.email_service import send_rdp_email, send_email_with_attachment
     payload = payload or {}
+    cc_list = payload.get("cc", [])
     num_righe = len(rdp.get("righe", []))
     commessa_numero = doc.get("numero", "N/D")
 
@@ -698,6 +699,7 @@ async def send_rdp_email_endpoint(cid: str, rdp_id: str, payload: dict = None, u
         success = await send_email_with_attachment(
             to_email=to_email, subject=custom_subject, body=custom_body,
             pdf_bytes=pdf_bytes, filename=filename, user_id=user["user_id"],
+            cc=cc_list if cc_list else None,
         )
     else:
         success = await send_rdp_email(

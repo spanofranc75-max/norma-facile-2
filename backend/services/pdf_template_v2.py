@@ -468,8 +468,7 @@ def generate_rdp_pdf_v2(
     </html>
     """
     
-    pdf_buffer = BytesIO()
-    HTML(string=html_content).write_pdf(pdf_buffer)
+    pdf_buffer = render_pdf(html_content, company)
     return pdf_buffer.getvalue()
 
 
@@ -614,6 +613,5 @@ def generate_oda_pdf_v2(
     </html>
     """
     
-    pdf_buffer = BytesIO()
-    HTML(string=html_content).write_pdf(pdf_buffer)
+    pdf_buffer = render_pdf(html_content, company)
     return pdf_buffer.getvalue()
