@@ -1,914 +1,572 @@
-"""Professional Invoice PDF generator — ReportLab, layout NormaFacile 2.0.
+"""PDF Invoice/Preventivo generator - parametri esatti Emergent originale.
 
-Layout grigio chiaro monocromatico:
-  - Logo a sinistra (proporzionale) + dati azienda a destra
-  - Linea separatrice grigio chiaro sottile
-  - Titolo documento centrato
-  - Box DATA / TIPO sfondo grigio chiarissimo affiancati
-  - Box cliente con bordo sinistro grigio ("Spett.le")
-  - Tabella articoli: header grigio chiaro, testo grigio medio, 5 colonne
-  - Totali a destra con box grigio chiaro per TOTALE
-  - Coordinate bancarie con bordo sinistro grigio
-  - Scadenza pagamenti con bordo sinistro grigio
-  - Footer: generato da / data / pagina
-  - Footer certificazioni EN 1090-1 EXC3
-
-Encoding: UTF-8 diretto
+Layout Fattura 7/2026 (27/02/2026):
+- Logo sx, azienda dx
+- Linea blu separatrice
+- FATTURA N. X/XXXX centrata grande
+- DATA FATTURA | TIPO affiancati
+- Cliente con bordo sinistro blu
+- Tabella articoli: header navy, 5 colonne
+- Totali destra con box navy per TOTALE
+- Coordinate bancarie bordo blu
+- Scadenza pagamenti bordo blu
+- Footer doppio
 """
 from io import BytesIO
-import base64
+from datetime import datetime, date
 import logging
-from datetime import datetime, timezone
-
-from reportlab.platypus import (
-    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image,
-    KeepTogether,
-)
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import mm
-from reportlab.lib.colors import HexColor, white, black
-from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
-from reportlab.platypus.flowables import HRFlowable
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 import os
+import base64
 
 logger = logging.getLogger(__name__)
 
-# ══════════════════════════════════════════════════════════════════
-# Registrazione font TTF (Liberation Sans — supporto Unicode completo)
-# ══════════════════════════════════════════════════════════════════
-_FONT_DIR = "/usr/share/fonts/truetype/liberation"
-_FONT_NAME = "LiberationSans"
-_FONT_BOLD = "LiberationSans-Bold"
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.lib import colors
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
+from reportlab.platypus import (
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+    HRFlowable, PageBreak, Image, KeepTogether
+)
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
-_fonts_registered = False
+FONT_REGULAR = 'Helvetica'
+FONT_BOLD    = 'Helvetica-Bold'
 
-def _register_fonts():
-    global _fonts_registered
-    if _fonts_registered:
-        return
-    try:
-        regular = os.path.join(_FONT_DIR, "LiberationSans-Regular.ttf")
-        bold = os.path.join(_FONT_DIR, "LiberationSans-Bold.ttf")
-        italic = os.path.join(_FONT_DIR, "LiberationSans-Italic.ttf")
-        bold_italic = os.path.join(_FONT_DIR, "LiberationSans-BoldItalic.ttf")
-        if os.path.exists(regular):
-            pdfmetrics.registerFont(TTFont(_FONT_NAME, regular))
-            pdfmetrics.registerFont(TTFont(_FONT_BOLD, bold))
-            pdfmetrics.registerFont(TTFont("LiberationSans-Italic", italic))
-            pdfmetrics.registerFont(TTFont("LiberationSans-BoldItalic", bold_italic))
-            from reportlab.pdfbase.pdfmetrics import registerFontFamily
-            registerFontFamily(
-                _FONT_NAME,
-                normal=_FONT_NAME,
-                bold=_FONT_BOLD,
-                italic="LiberationSans-Italic",
-                boldItalic="LiberationSans-BoldItalic",
-            )
-            _fonts_registered = True
-            logger.info("Font LiberationSans registrato con successo")
-        else:
-            logger.warning("LiberationSans non trovato, uso Helvetica")
-    except Exception as e:
-        logger.warning(f"Impossibile registrare font TTF: {e}")
+_LIBERATION_PATHS = [
+    '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+    '/usr/share/fonts/liberation/LiberationSans-Regular.ttf',
+    '/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf',
+]
+for _p in _LIBERATION_PATHS:
+    if os.path.exists(_p):
+        try:
+            pdfmetrics.registerFont(TTFont('LiberationSans', _p))
+            pdfmetrics.registerFont(TTFont('LiberationSans-Bold',
+                _p.replace('Regular', 'Bold')))
+            FONT_REGULAR = 'LiberationSans'
+            FONT_BOLD    = 'LiberationSans-Bold'
+            break
+        except Exception:
+            pass
 
-_register_fonts()
+NAVY        = colors.HexColor('#E8E8E8')   # Header tabella (grigio chiaro)
+BLUE        = colors.HexColor('#AAAAAA')   # Bordi/accenti (grigio medio)
+GREY_BG     = colors.HexColor('#F7F7F7')   # Sfondo box meta
+GREY_TEXT   = colors.HexColor('#888888')   # Testo secondario
+GREY_BORDER = colors.HexColor('#D5D5D5')   # Bordi sottili
+DARK_TEXT   = colors.HexColor('#555555')   # Testo principale
+SEC_TEXT    = colors.HexColor('#777777')   # Testo dettagli
+ZEBRA       = colors.HexColor('#F9F9F9')   # Righe alternate
+WHITE       = colors.white
 
-def _fn():
-    """Font name normale."""
-    return _FONT_NAME if _fonts_registered else "Helvetica"
-
-def _fb():
-    """Font name bold."""
-    return _FONT_BOLD if _fonts_registered else "Helvetica-Bold"
-
-# ══════════════════════════════════════════════════════════════════
-# Colori — Palette GRIGIO CHIARO elegante
-# ══════════════════════════════════════════════════════════════════
-HEADER_BG = HexColor("#E8E8E8")    # Sfondo header tabella (grigio chiaro)
-ACCENT = HexColor("#AAAAAA")       # Bordi laterali, linee separatrici
-GREY_BG = HexColor("#F7F7F7")      # Sfondo box meta (quasi bianco)
-GREY_TEXT = HexColor("#888888")    # Testo secondario / etichette
-GREY_BORDER = HexColor("#D5D5D5")  # Bordi sottili
-BODY_TEXT = HexColor("#555555")    # Testo principale (grigio medio)
-TITLE_TEXT = HexColor("#666666")   # Titoli (grigio medio-scuro)
-TOTALE_BG = HexColor("#E0E0E0")    # Sfondo box TOTALE (grigio chiaro)
-WHITE = white
-
-# ══════════════════════════════════════════════════════════════════
-# Margini (in mm)
-# ══════════════════════════════════════════════════════════════════
-LEFT_MARGIN = 16 * mm
-RIGHT_MARGIN = 16 * mm
-TOP_MARGIN = 14 * mm
+LEFT_MARGIN   = 16 * mm
+RIGHT_MARGIN  = 16 * mm
+TOP_MARGIN    = 14 * mm
 BOTTOM_MARGIN = 22 * mm
 
-# ══════════════════════════════════════════════════════════════════
-# Stili paragrafo
-# ══════════════════════════════════════════════════════════════════
-STYLE_COMPANY_NAME = ParagraphStyle(
-    "CompanyName", fontName=_fb(), fontSize=13, leading=16,
-    textColor=TITLE_TEXT, alignment=TA_RIGHT,
-)
-STYLE_COMPANY_DETAIL = ParagraphStyle(
-    "CompanyDetail", fontName=_fn(), fontSize=7.5, leading=11,
-    textColor=GREY_TEXT, alignment=TA_RIGHT,
-)
-STYLE_DOC_TITLE = ParagraphStyle(
-    "DocTitle", fontName=_fb(), fontSize=18, leading=22,
-    textColor=TITLE_TEXT, alignment=TA_CENTER,
-)
-STYLE_META_LABEL = ParagraphStyle(
-    "MetaLabel", fontName=_fb(), fontSize=7, leading=10,
-    textColor=GREY_TEXT, alignment=TA_CENTER,
-)
-STYLE_META_VALUE = ParagraphStyle(
-    "MetaValue", fontName=_fb(), fontSize=9, leading=12,
-    textColor=BODY_TEXT, alignment=TA_CENTER,
-)
-STYLE_CLIENT_LABEL = ParagraphStyle(
-    "ClientLabel", fontName=_fn(), fontSize=7.5, leading=10,
-    textColor=GREY_TEXT,
-)
-STYLE_CLIENT_NAME = ParagraphStyle(
-    "ClientName", fontName=_fb(), fontSize=11, leading=14,
-    textColor=BODY_TEXT,
-)
-STYLE_CLIENT_DETAIL = ParagraphStyle(
-    "ClientDetail", fontName=_fn(), fontSize=8, leading=11.5,
-    textColor=BODY_TEXT,
-)
-STYLE_TH = ParagraphStyle(
-    "TableHeader", fontName=_fb(), fontSize=7, leading=9,
-    textColor=TITLE_TEXT,
-)
-STYLE_TH_R = ParagraphStyle(
-    "TableHeaderR", fontName=_fb(), fontSize=7, leading=9,
-    textColor=TITLE_TEXT, alignment=TA_RIGHT,
-)
-STYLE_TH_C = ParagraphStyle(
-    "TableHeaderC", fontName=_fb(), fontSize=7, leading=9,
-    textColor=TITLE_TEXT, alignment=TA_CENTER,
-)
-STYLE_TD = ParagraphStyle(
-    "TableCell", fontName=_fn(), fontSize=8, leading=11,
-    textColor=BODY_TEXT,
-)
-STYLE_TD_R = ParagraphStyle(
-    "TableCellR", fontName=_fn(), fontSize=8, leading=11,
-    textColor=BODY_TEXT, alignment=TA_RIGHT,
-)
-STYLE_TD_C = ParagraphStyle(
-    "TableCellC", fontName=_fn(), fontSize=8, leading=11,
-    textColor=BODY_TEXT, alignment=TA_CENTER,
-)
-STYLE_TD_BOLD_R = ParagraphStyle(
-    "TableCellBoldR", fontName=_fb(), fontSize=8, leading=11,
-    textColor=BODY_TEXT, alignment=TA_RIGHT,
-)
-STYLE_TOTALS_LABEL = ParagraphStyle(
-    "TotalsLabel", fontName=_fn(), fontSize=8.5, leading=12,
-    textColor=GREY_TEXT, alignment=TA_RIGHT,
-)
-STYLE_TOTALS_VALUE = ParagraphStyle(
-    "TotalsValue", fontName=_fb(), fontSize=8.5, leading=12,
-    textColor=BODY_TEXT, alignment=TA_RIGHT,
-)
-STYLE_GRAND_LABEL = ParagraphStyle(
-    "GrandLabel", fontName=_fb(), fontSize=11, leading=14,
-    textColor=TITLE_TEXT, alignment=TA_RIGHT,
-)
-STYLE_GRAND_VALUE = ParagraphStyle(
-    "GrandValue", fontName=_fb(), fontSize=14, leading=17,
-    textColor=BODY_TEXT, alignment=TA_RIGHT,
-)
-STYLE_SECTION_TITLE = ParagraphStyle(
-    "SectionTitle", fontName=_fb(), fontSize=7.5, leading=10,
-    textColor=GREY_TEXT, spaceAfter=2 * mm,
-)
-STYLE_BANK_LINE = ParagraphStyle(
-    "BankLine", fontName=_fn(), fontSize=8, leading=11.5,
-    textColor=BODY_TEXT,
-)
-STYLE_FOOTER = ParagraphStyle(
-    "Footer", fontName=_fn(), fontSize=7, leading=9,
-    textColor=GREY_TEXT, alignment=TA_CENTER,
-)
-STYLE_CERT_FOOTER = ParagraphStyle(
-    "CertFooter", fontName=_fb(), fontSize=7, leading=9,
-    textColor=GREY_TEXT, alignment=TA_CENTER,
-)
-STYLE_NOTES = ParagraphStyle(
-    "Notes", fontName=_fn(), fontSize=7.5, leading=10.5,
-    textColor=BODY_TEXT,
-)
-STYLE_NOTES_TITLE = ParagraphStyle(
-    "NotesTitle", fontName=_fb(), fontSize=7.5, leading=10,
-    textColor=GREY_TEXT,
-)
-# Stili per pagina condizioni
-STYLE_COND_TITLE = ParagraphStyle(
-    "CondTitle", fontName=_fb(), fontSize=11, leading=14,
-    textColor=TITLE_TEXT, alignment=TA_CENTER, spaceAfter=4 * mm,
-)
-STYLE_COND_TEXT = ParagraphStyle(
-    "CondText", fontName=_fn(), fontSize=7.5, leading=10.5,
-    textColor=BODY_TEXT, alignment=TA_LEFT,
-)
-STYLE_COND_LEGAL = ParagraphStyle(
-    "CondLegal", fontName=_fn(), fontSize=7, leading=9.5,
-    textColor=GREY_TEXT,
-)
+PAGE_W   = A4[0]
+PAGE_H   = A4[1]
+USABLE_W = PAGE_W - LEFT_MARGIN - RIGHT_MARGIN
 
-# ══════════════════════════════════════════════════════════════════
-# Tipo documento
-# ══════════════════════════════════════════════════════════════════
-DOC_TYPE_NAMES = {
-    "FT": "FATTURA",
-    "PRV": "PREVENTIVO",
-    "DDT": "DOCUMENTO DI TRASPORTO",
-    "NC": "NOTA DI CREDITO",
-}
-
-PAYMENT_METHOD_NAMES = {
-    "bonifico": "Bonifico Bancario",
-    "contanti": "Contanti",
-    "carta": "Carta di Credito",
-    "assegno": "Assegno",
-    "riba": "RiBa",
-    "altro": "Altro",
-}
+COL_DESC  = USABLE_W * 0.44
+COL_QTY   = USABLE_W * 0.10
+COL_PRICE = USABLE_W * 0.18
+COL_VAT   = USABLE_W * 0.10
+COL_TOTAL = USABLE_W * 0.18
 
 
-# ══════════════════════════════════════════════════════════════════
-# Utility
-# ══════════════════════════════════════════════════════════════════
-def _fmt(n) -> str:
-    """Formatta numero stile italiano: 1.234,56"""
+def _fmt(n):
     try:
         val = float(n or 0)
     except (ValueError, TypeError):
-        return "0,00"
-    s = f"{val:,.2f}"
-    return s.replace(",", "X").replace(".", ",").replace("X", ".")
+        return '0,00'
+    s = f'{val:,.2f}'
+    return s.replace(',', 'X').replace('.', ',').replace('X', '.')
 
 
-def _s(val) -> str:
-    """Safe string."""
-    return str(val or "").strip()
+def _s(val):
+    return str(val or '')
 
 
-def _date(d) -> str:
-    """Formatta data in dd/mm/yyyy."""
-    if isinstance(d, datetime):
-        return d.strftime("%d/%m/%Y")
-    if isinstance(d, str):
-        for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f",
-                     "%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%S.%f%z"):
-            try:
-                return datetime.strptime(d.replace("Z", "+00:00").split("+")[0].split("Z")[0], fmt.split("%z")[0]).strftime("%d/%m/%Y")
-            except (ValueError, IndexError):
-                continue
-        # fallback: try fromisoformat
-        try:
-            return datetime.fromisoformat(d.replace("Z", "+00:00")).strftime("%d/%m/%Y")
-        except Exception:
-            return d
-    return ""
+def _date(d):
+    if not d:
+        return ''
+    if isinstance(d, (date, datetime)):
+        return d.strftime('%d/%m/%Y')
+    try:
+        return datetime.fromisoformat(str(d)[:10]).strftime('%d/%m/%Y')
+    except Exception:
+        return str(d)[:10]
 
 
-def _decode_logo(logo_url: str):
-    """Decode base64 data URI to BytesIO for ReportLab Image."""
+def _load_logo(logo_url):
     if not logo_url:
         return None
     try:
-        if logo_url.startswith("data:image"):
-            header, b64data = logo_url.split(",", 1)
-            img_bytes = base64.b64decode(b64data)
-            buf = BytesIO(img_bytes)
-            buf.seek(0)
-            return buf
-        # Se \u00e8 un URL HTTP, ReportLab pu\u00f2 gestirlo direttamente
-        if logo_url.startswith("http"):
-            return logo_url
-    except Exception as e:
-        logger.warning(f"Impossibile decodificare logo: {e}")
-    return None
-
-
-class _BlueBorderBox:
-    """Flowable: box con bordo sinistro blu e padding interno."""
-
-    def __init__(self, content_flowables, border_color=ACCENT, border_width=2,
-                 padding=8, bg_color=None, available_width=None):
-        self.content = content_flowables
-        self.border_color = border_color
-        self.border_width = border_width
-        self.padding = padding
-        self.bg_color = bg_color
-        self._available_width = available_width
-
-    def wrap(self, available_width, available_height):
-        self._available_width = self._available_width or available_width
-        inner_w = self._available_width - self.padding * 2 - self.border_width
-        self._content_heights = []
-        total_h = 0
-        for f in self.content:
-            w, h = f.wrap(inner_w, available_height - total_h)
-            self._content_heights.append(h)
-            total_h += h
-        self._total_h = total_h + self.padding * 2
-        return self._available_width, self._total_h
-
-    def draw(self, canvas, doc_unused=None):
-        # Non usato direttamente; usiamo Table per simulare
-        pass
-
-
-# ══════════════════════════════════════════════════════════════════
-# Generatore principale
-# ══════════════════════════════════════════════════════════════════
-def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> bytes:
-    """Genera PDF fattura/preventivo professionale con ReportLab."""
-    buf = BytesIO()
-    co = company or {}
-    cl = client or {}
-
-    # ── Dati azienda ──
-    company_name = _s(co.get("business_name"))
-    addr = _s(co.get("address"))
-    cap = _s(co.get("cap"))
-    city = _s(co.get("city"))
-    prov = _s(co.get("province"))
-    addr_parts = [addr]
-    loc_parts = [p for p in [cap, city, f"({prov})" if prov else ""] if p]
-    if loc_parts:
-        addr_parts.append(" ".join(loc_parts))
-    addr_line = " - ".join([p for p in addr_parts if p])
-
-    piva = _s(co.get("partita_iva"))
-    cf = _s(co.get("codice_fiscale"))
-    phone = _s(co.get("phone") or co.get("tel"))
-    email = _s(co.get("email") or co.get("contact_email"))
-
-    # ── Dati documento ──
-    doc_type = invoice.get("document_type", "FT")
-    doc_title = DOC_TYPE_NAMES.get(doc_type, "DOCUMENTO")
-    doc_number = _s(invoice.get("document_number", ""))
-    display_num = doc_number
-    for prefix in ("FT-", "NC-", "PRV-"):
-        display_num = display_num.replace(prefix, "")
-    issue_date = _date(invoice.get("issue_date", ""))
-    payment_label = invoice.get("payment_type_label") or invoice.get("payment_terms") or PAYMENT_METHOD_NAMES.get(
-        invoice.get("payment_method", ""), invoice.get("payment_method", "")
-    )
-
-    # ── Dati cliente ──
-    cl_name = _s(cl.get("business_name"))
-    cl_addr = _s(cl.get("address"))
-    cl_cap = _s(cl.get("cap"))
-    cl_city = _s(cl.get("city"))
-    cl_prov = _s(cl.get("province"))
-    cl_loc_parts = [p for p in [cl_cap, cl_city, f"({cl_prov})" if cl_prov else ""] if p]
-    cl_full = cl_addr
-    if cl_loc_parts:
-        cl_full += (" - " if cl_addr else "") + " ".join(cl_loc_parts)
-    cl_piva = _s(cl.get("partita_iva"))
-    cl_cf = _s(cl.get("codice_fiscale"))
-    cl_sdi = _s(cl.get("codice_sdi"))
-    cl_pec = _s(cl.get("pec"))
-
-    # ── Page size ──
-    page_w, page_h = A4
-    usable_w = page_w - LEFT_MARGIN - RIGHT_MARGIN
-
-    # Contatore pagine per footer
-    page_info = {"total": 0}
-
-    def _footer(canvas, doc):
-        """Footer su ogni pagina."""
-        canvas.saveState()
-        page_info["total"] = max(page_info["total"], doc.page)
-        # Linea sottile sopra footer
-        y_line = BOTTOM_MARGIN - 4 * mm
-        canvas.setStrokeColor(GREY_BORDER)
-        canvas.setLineWidth(0.5)
-        canvas.line(LEFT_MARGIN, y_line, page_w - RIGHT_MARGIN, y_line)
-
-        # Riga 1: Generato da
-        canvas.setFont(_fn(), 6.5)
-        canvas.setFillColor(GREY_TEXT)
-        y_text = y_line - 3.5 * mm
-        canvas.drawCentredString(page_w / 2, y_text,
-                                 f"Generato da {company_name} - NormaFacile")
-
-        # Riga 2: Data generazione
-        now_str = datetime.now(timezone.utc).strftime("%d/%m/%Y alle %H:%M")
-        y_text2 = y_text - 3 * mm
-        canvas.drawCentredString(page_w / 2, y_text2,
-                                 f"Documento generato il {now_str}")
-
-        # Riga 3: Pagina
-        y_text3 = y_text2 - 3 * mm
-        canvas.drawCentredString(page_w / 2, y_text3,
-                                 f"Pagina {doc.page}")
-
-        # Riga 4: Certificazioni
-        y_cert = y_text3 - 3.5 * mm
-        canvas.setFont(_fb(), 6.5)
-        canvas.drawCentredString(page_w / 2, y_cert,
-                                 "Azienda Certificata EN 1090-1 EXC3 \u2022 ISO 3834-2 \u2022 Centro di Trasformazione Acciaio")
-        canvas.restoreState()
-
-    doc = SimpleDocTemplate(
-        buf, pagesize=A4,
-        leftMargin=LEFT_MARGIN, rightMargin=RIGHT_MARGIN,
-        topMargin=TOP_MARGIN, bottomMargin=BOTTOM_MARGIN,
-    )
-
-    elements = []
-
-    # ══════════════════════════════════════════════════════════════
-    # 1. HEADER: Logo a sinistra + Azienda a destra
-    # ══════════════════════════════════════════════════════════════
-    logo_src = _decode_logo(co.get("logo_url", ""))
-    if logo_src:
+        if logo_url.startswith('data:'):
+            b64 = logo_url.split('base64,')[1]
+            stream = BytesIO(base64.b64decode(b64))
+        else:
+            import urllib.request
+            with urllib.request.urlopen(logo_url, timeout=5) as r:
+                stream = BytesIO(r.read())
+        # Ridimensionamento proporzionale
+        raw = stream.read()
+        stream.seek(0)
+        max_w, max_h = 120, 60
+        img_w, img_h = max_w, max_h
         try:
-            # Leggi i bytes grezzi per PIL e poi resetta per ReportLab
-            if hasattr(logo_src, 'read'):
-                raw_bytes = logo_src.read()
-                logo_src.seek(0)
-            else:
-                raw_bytes = None
-
-            max_w, max_h = 120, 60  # Bounding box più generoso
-            img_w, img_h = max_w, max_h
-
-            if raw_bytes:
-                try:
-                    from PIL import Image as PILImage
-                    pil_img = PILImage.open(BytesIO(raw_bytes))
-                    orig_w, orig_h = pil_img.size
-                    ratio = min(max_w / orig_w, max_h / orig_h)
-                    img_w = orig_w * ratio
-                    img_h = orig_h * ratio
-                except Exception as e:
-                    logger.warning(f"PIL fallback per logo: {e}")
-
-            logo_img = Image(logo_src, width=img_w, height=img_h)
-            logo_img.hAlign = "LEFT"
+            from PIL import Image as PILImage
+            pil_img = PILImage.open(BytesIO(raw))
+            ow, oh = pil_img.size
+            ratio = min(max_w / ow, max_h / oh)
+            img_w = ow * ratio
+            img_h = oh * ratio
         except Exception:
-            logo_img = Paragraph("", STYLE_TD)
-    else:
-        logo_img = Paragraph("", STYLE_TD)
+            pass
+        img = Image(stream, width=img_w, height=img_h)
+        img.hAlign = 'LEFT'
+        return img
+    except Exception as e:
+        logger.warning(f'Logo load failed: {e}')
+        return None
 
-    company_detail_lines = [addr_line]
-    if piva:
-        company_detail_lines.append(f"P.IVA {piva}")
-    if cf:
-        company_detail_lines.append(f"C.F. {cf}")
-    if phone:
-        company_detail_lines.append(f"Tel. {phone}")
-    if email:
-        company_detail_lines.append(email)
 
-    header_data = [[
-        logo_img,
-        [
-            Paragraph(company_name, STYLE_COMPANY_NAME),
-            Paragraph("<br/>".join(company_detail_lines), STYLE_COMPANY_DETAIL),
-        ]
-    ]]
-    header_table = Table(header_data, colWidths=[usable_w * 0.40, usable_w * 0.60])
-    header_table.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING", (0, 0), (-1, -1), 0),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+def _sty(**kw):
+    base = dict(fontName=FONT_REGULAR, fontSize=8, leading=11,
+                textColor=DARK_TEXT, spaceAfter=0, spaceBefore=0)
+    base.update(kw)
+    return ParagraphStyle('_', **base)
+
+
+S = {
+    'co_name':     _sty(fontName=FONT_BOLD, fontSize=13, leading=16, textColor=DARK_TEXT),
+    'co_detail':   _sty(fontSize=7.5, leading=11, textColor=SEC_TEXT),
+    'doc_title':   _sty(fontName=FONT_BOLD, fontSize=18, leading=22,
+                        textColor=colors.HexColor('#666666'), alignment=TA_CENTER),
+    'meta_label':  _sty(fontName=FONT_BOLD, fontSize=7, leading=10, textColor=GREY_TEXT),
+    'meta_value':  _sty(fontName=FONT_BOLD, fontSize=9, leading=12, textColor=DARK_TEXT),
+    'cl_spett':    _sty(fontSize=7.5, leading=10, textColor=GREY_TEXT),
+    'cl_name':     _sty(fontName=FONT_BOLD, fontSize=11, leading=14, textColor=DARK_TEXT),
+    'cl_detail':   _sty(fontSize=8, leading=11.5, textColor=SEC_TEXT),
+    'th':          _sty(fontName=FONT_BOLD, fontSize=7, leading=9,
+                        textColor=colors.HexColor('#666666'), alignment=TA_LEFT),
+    'th_c':        _sty(fontName=FONT_BOLD, fontSize=7, leading=9,
+                        textColor=colors.HexColor('#666666'), alignment=TA_CENTER),
+    'th_r':        _sty(fontName=FONT_BOLD, fontSize=7, leading=9,
+                        textColor=colors.HexColor('#666666'), alignment=TA_RIGHT),
+    'td':          _sty(fontSize=8, leading=11),
+    'td_r':        _sty(fontSize=8, leading=11, alignment=TA_RIGHT),
+    'td_c':        _sty(fontSize=8, leading=11, alignment=TA_CENTER),
+    'td_b':        _sty(fontName=FONT_BOLD, fontSize=8, leading=11, alignment=TA_RIGHT),
+    'tot_label':   _sty(fontSize=8.5, leading=12, textColor=GREY_TEXT),
+    'tot_value':   _sty(fontName=FONT_BOLD, fontSize=8.5, leading=12,
+                        textColor=DARK_TEXT, alignment=TA_RIGHT),
+    'grand_label': _sty(fontName=FONT_BOLD, fontSize=11, leading=14,
+                        textColor=colors.HexColor('#555555')),
+    'grand_value': _sty(fontName=FONT_BOLD, fontSize=14, leading=17,
+                        textColor=colors.HexColor('#555555'), alignment=TA_RIGHT),
+    'sec_title':   _sty(fontName=FONT_BOLD, fontSize=7.5, leading=10, textColor=GREY_TEXT),
+    'sec_text':    _sty(fontSize=8, leading=11.5, textColor=DARK_TEXT),
+    'sec_bold':    _sty(fontName=FONT_BOLD, fontSize=8, leading=11.5, textColor=DARK_TEXT),
+    'note':        _sty(fontSize=7.5, leading=10.5, textColor=SEC_TEXT),
+}
+
+PAYMENT_METHOD_NAMES = {
+    'bonifico': 'Bonifico Bancario', 'contanti': 'Contanti',
+    'carta': 'Carta di Credito', 'assegno': 'Assegno',
+    'riba': 'RiBa', 'altro': 'Altro',
+}
+
+DOC_TYPE_DISPLAY = {
+    'FT': 'FATTURA', 'PRV': 'PREVENTIVO',
+    'NC': 'NOTA DI CREDITO', 'ND': 'NOTA DI DEBITO',
+    'DDT': 'DOCUMENTO DI TRASPORTO',
+}
+
+
+def _box_section(content_rows, title=''):
+    rows = []
+    if title:
+        rows.append([Paragraph(title, S['sec_title'])])
+    for row in content_rows:
+        rows.append([row if isinstance(row, Paragraph)
+                     else Paragraph(_s(row), S['sec_text'])])
+    t = Table(rows, colWidths=[USABLE_W - 8 * mm])
+    t.setStyle(TableStyle([
+        ('LEFTPADDING',   (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 4),
+        ('TOPPADDING',    (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LINEBEFORE',    (0, 0), (0, -1),  2.5, BLUE),
+        ('BACKGROUND',    (0, 0), (-1, -1), WHITE),
+        ('VALIGN',        (0, 0), (-1, -1), 'TOP'),
     ]))
-    elements.append(header_table)
-    elements.append(Spacer(1, 3 * mm))
+    return t
 
-    # ══════════════════════════════════════════════════════════════
-    # 2. Linea separatrice grigio chiaro sottile
-    # ══════════════════════════════════════════════════════════════
-    elements.append(HRFlowable(
-        width="100%", thickness=1, color=ACCENT,
-        spaceBefore=1 * mm, spaceAfter=4 * mm,
-    ))
 
-    # ══════════════════════════════════════════════════════════════
-    # 3. Titolo documento centrato grande
-    # ══════════════════════════════════════════════════════════════
-    elements.append(Paragraph(f"{doc_title} N. {display_num}", STYLE_DOC_TITLE))
-    elements.append(Spacer(1, 4 * mm))
-
-    # ══════════════════════════════════════════════════════════════
-    # 4. Box DATA / TIPO affiancati con sfondo grigio chiaro
-    # ══════════════════════════════════════════════════════════════
-    tipo_label = doc_title.title()
-    meta_data = [[
-        [Paragraph("DATA DOCUMENTO", STYLE_META_LABEL),
-         Paragraph(issue_date, STYLE_META_VALUE)],
-        [Paragraph("TIPO", STYLE_META_LABEL),
-         Paragraph(tipo_label, STYLE_META_VALUE)],
-    ]]
-    meta_table = Table(meta_data, colWidths=[usable_w * 0.50, usable_w * 0.50])
-    meta_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), GREY_BG),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("TOPPADDING", (0, 0), (-1, -1), 6),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-        ("LEFTPADDING", (0, 0), (-1, -1), 8),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-        ("LINEAFTER", (0, 0), (0, -1), 0.5, GREY_BORDER),
-        ("BOX", (0, 0), (-1, -1), 0.5, GREY_BORDER),
-    ]))
-    elements.append(meta_table)
-    elements.append(Spacer(1, 4 * mm))
-
-    # ══════════════════════════════════════════════════════════════
-    # 5. Box cliente con bordo sinistro blu
-    # ══════════════════════════════════════════════════════════════
-    client_lines = []
-    if cl_full:
-        client_lines.append(cl_full)
-    if cl_piva:
-        client_lines.append(f"P.IVA {cl_piva}")
-    if cl_cf:
-        client_lines.append(f"C.F. {cl_cf}")
-    if cl_sdi:
-        client_lines.append(f"Cod. SDI: {cl_sdi}")
-    if cl_pec:
-        client_lines.append(f"PEC: {cl_pec}")
-
-    client_content = [
-        [Paragraph("Spett.le", STYLE_CLIENT_LABEL)],
-        [Paragraph(cl_name, STYLE_CLIENT_NAME)],
-        [Paragraph("<br/>".join(client_lines), STYLE_CLIENT_DETAIL)],
-    ]
-    client_table = Table(client_content, colWidths=[usable_w - 4 * mm])
-    client_table.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 10),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        ("TOPPADDING", (0, 0), (0, 0), 6),
-        ("BOTTOMPADDING", (-1, -1), (-1, -1), 6),
-        ("TOPPADDING", (0, 1), (-1, -1), 1),
-        ("BOTTOMPADDING", (0, 0), (-1, -2), 1),
-        ("LINEBEFORE", (0, 0), (0, -1), 2, ACCENT),
-    ]))
-    elements.append(client_table)
-    elements.append(Spacer(1, 5 * mm))
-
-    # ══════════════════════════════════════════════════════════════
-    # 6. Tabella articoli
-    # ══════════════════════════════════════════════════════════════
-    lines = invoice.get("lines", [])
-
-    # Header
-    th_row = [
-        Paragraph("DESCRIZIONE", STYLE_TH),
-        Paragraph("Q.T\u00c0", STYLE_TH_C),
-        Paragraph("PREZZO UNIT.", STYLE_TH_R),
-        Paragraph("IVA", STYLE_TH_C),
-        Paragraph("TOTALE", STYLE_TH_R),
-    ]
-
-    # Colonne: Descrizione 44%, Qty 10%, Prezzo 18%, IVA 10%, Totale 18%
-    col_widths = [
-        usable_w * 0.44,
-        usable_w * 0.10,
-        usable_w * 0.18,
-        usable_w * 0.10,
-        usable_w * 0.18,
-    ]
-
-    table_data = [th_row]
-    for ln in lines:
-        desc = _s(ln.get("description") or "").replace("\n", "<br/>")
-        qty = _fmt(ln.get("quantity", 0))
-        price = _fmt(ln.get("unit_price", 0))
-        vat = _s(str(ln.get("vat_rate", "22")))
-        total = _fmt(ln.get("line_total", 0))
-
-        table_data.append([
-            Paragraph(desc, STYLE_TD),
-            Paragraph(qty, STYLE_TD_C),
-            Paragraph(f"\u20ac {price}", STYLE_TD_R),
-            Paragraph(f"{vat}%", STYLE_TD_C),
-            Paragraph(f"\u20ac {total}", STYLE_TD_BOLD_R),
-        ])
-
-    items_table = Table(table_data, colWidths=col_widths, repeatRows=1)
-    style_cmds = [
-        # Header grigio chiaro con testo scuro
-        ("BACKGROUND", (0, 0), (-1, 0), HEADER_BG),
-        ("TEXTCOLOR", (0, 0), (-1, 0), TITLE_TEXT),
-        ("FONTNAME", (0, 0), (-1, 0), _fb()),
-        # Padding
-        ("TOPPADDING", (0, 0), (-1, 0), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
-        ("TOPPADDING", (0, 1), (-1, -1), 7),
-        ("BOTTOMPADDING", (0, 1), (-1, -1), 7),
-        ("LEFTPADDING", (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        # Bordi righe
-        ("LINEBELOW", (0, 0), (-1, 0), 1, GREY_BORDER),
-        ("LINEBELOW", (0, -1), (-1, -1), 1, GREY_BORDER),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-    ]
-    # Bordi sottili tra righe body
-    for i in range(1, len(table_data) - 1):
-        style_cmds.append(("LINEBELOW", (0, i), (-1, i), 0.5, GREY_BORDER))
-
-    # Zebra striping
-    for i in range(2, len(table_data), 2):
-        style_cmds.append(("BACKGROUND", (0, i), (-1, i), GREY_BG))
-
-    items_table.setStyle(TableStyle(style_cmds))
-    elements.append(items_table)
-    elements.append(Spacer(1, 4 * mm))
-
-    # ══════════════════════════════════════════════════════════════
-    # 7. Note (se presenti)
-    # ══════════════════════════════════════════════════════════════
-    if invoice.get("notes"):
-        notes_content = _s(invoice["notes"]).replace("\n", "<br/>")
-        notes_data = [
-            [Paragraph("NOTE", STYLE_NOTES_TITLE)],
-            [Paragraph(notes_content, STYLE_NOTES)],
-        ]
-        notes_table = Table(notes_data, colWidths=[usable_w])
-        notes_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), GREY_BG),
-            ("BOX", (0, 0), (-1, -1), 0.5, GREY_BORDER),
-            ("LEFTPADDING", (0, 0), (-1, -1), 8),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-            ("TOPPADDING", (0, 0), (-1, -1), 5),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-        ]))
-        elements.append(notes_table)
-        elements.append(Spacer(1, 4 * mm))
-
-    # ══════════════════════════════════════════════════════════════
-    # 8. Totali a destra + Banca a sinistra (side by side)
-    # ══════════════════════════════════════════════════════════════
-    from services.pdf_template import compute_iva_groups
-    iva_data = compute_iva_groups(lines)
-
-    # --- Blocco totali ---
-    totals_rows = []
-    totals_rows.append([
-        Paragraph("Imponibile:", STYLE_TOTALS_LABEL),
-        Paragraph(f"\u20ac {_fmt(iva_data['imponibile'])}", STYLE_TOTALS_VALUE),
-    ])
-    for rate_str, grp in sorted(iva_data["groups"].items()):
-        totals_rows.append([
-            Paragraph(f"IVA {rate_str}% su \u20ac {_fmt(grp['base'])}:", STYLE_TOTALS_LABEL),
-            Paragraph(f"\u20ac {_fmt(grp['tax'])}", STYLE_TOTALS_VALUE),
-        ])
-    totals_rows.append([
-        Paragraph("Totale IVA:", STYLE_TOTALS_LABEL),
-        Paragraph(f"\u20ac {_fmt(iva_data['total_vat'])}", STYLE_TOTALS_VALUE),
-    ])
-
-    totals_col_w = usable_w * 0.52
-    totals_inner = [totals_col_w * 0.55, totals_col_w * 0.45]
-
-    totals_table = Table(totals_rows, colWidths=totals_inner)
-    totals_table.setStyle(TableStyle([
-        ("TOPPADDING", (0, 0), (-1, -1), 3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ("LEFTPADDING", (0, 0), (-1, -1), 4),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-        ("LINEBELOW", (0, -1), (-1, -1), 0.5, GREY_BORDER),
-    ]))
-
-    # Riga TOTALE con sfondo navy
-    grand_row = [[
-        Paragraph("TOTALE", STYLE_GRAND_LABEL),
-        Paragraph(f"\u20ac {_fmt(iva_data['total'])}", STYLE_GRAND_VALUE),
-    ]]
-    grand_table = Table(grand_row, colWidths=totals_inner)
-    grand_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), TOTALE_BG),
-        ("TOPPADDING", (0, 0), (-1, -1), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-        ("LEFTPADDING", (0, 0), (-1, -1), 8),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-        ("BOX", (0, 0), (-1, -1), 0.5, GREY_BORDER),
-    ]))
-
-    # Ritenuta d'acconto (se presente)
-    totals_obj = invoice.get("totals", {})
-    ritenuta = float(totals_obj.get("ritenuta", 0) or 0)
-    ritenuta_elements = []
-    if ritenuta > 0:
-        netto = iva_data["total"] - ritenuta
-        rit_rows = [
-            [Paragraph("Ritenuta d'acconto:", STYLE_TOTALS_LABEL),
-             Paragraph(f"- \u20ac {_fmt(ritenuta)}", STYLE_TOTALS_VALUE)],
-            [Paragraph("<b>NETTO A PAGARE:</b>", STYLE_TOTALS_LABEL),
-             Paragraph(f"\u20ac {_fmt(netto)}", STYLE_TOTALS_VALUE)],
-        ]
-        rit_table = Table(rit_rows, colWidths=totals_inner)
-        rit_table.setStyle(TableStyle([
-            ("TOPPADDING", (0, 0), (-1, -1), 3),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-            ("LEFTPADDING", (0, 0), (-1, -1), 4),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-            ("LINEABOVE", (0, 0), (-1, 0), 0.5, GREY_BORDER),
-        ]))
-        ritenuta_elements.append(rit_table)
-
-    # --- Blocco banca con bordo sinistro blu ---
-    bank = co.get("bank_details", {}) or {}
-    bank_name = _s(bank.get("bank_name", ""))
-    bank_iban = _s(bank.get("iban", ""))
-    bank_bic = _s(bank.get("bic_swift", ""))
-
-    payment_cond_label = _s(payment_label)
-    payment_type_label = _s(invoice.get("payment_type_label", ""))
-    if payment_type_label:
-        payment_cond_label = payment_type_label
-
-    bank_lines_content = []
-    bank_lines_content.append(Paragraph("COORDINATE BANCARIE", STYLE_SECTION_TITLE))
-    if payment_cond_label:
-        bank_lines_content.append(Paragraph(
-            f"<b>Pagamento:</b> {payment_cond_label}", STYLE_BANK_LINE))
-    if bank_name:
-        bank_lines_content.append(Paragraph(f"<b>Banca:</b> {bank_name}", STYLE_BANK_LINE))
-    if bank_iban:
-        bank_lines_content.append(Paragraph(f"<b>IBAN:</b> {bank_iban}", STYLE_BANK_LINE))
-    if bank_bic:
-        bank_lines_content.append(Paragraph(f"<b>BIC/SWIFT:</b> {bank_bic}", STYLE_BANK_LINE))
-
-    bank_col_w = usable_w * 0.46
-    bank_rows = [[content] for content in bank_lines_content]
-    bank_table = Table(bank_rows, colWidths=[bank_col_w - 4 * mm])
-    bank_table.setStyle(TableStyle([
-        ("LEFTPADDING", (0, 0), (-1, -1), 10),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-        ("TOPPADDING", (0, 0), (-1, -1), 2),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
-        ("TOPPADDING", (0, 0), (0, 0), 6),
-        ("BOTTOMPADDING", (0, -1), (0, -1), 6),
-        ("LINEBEFORE", (0, 0), (0, -1), 2, ACCENT),
-    ]))
-
-    # Assemblaggio footer row: banca a sinistra, totali a destra
-    right_elements = [totals_table, Spacer(1, 1 * mm), grand_table]
-    right_elements.extend(ritenuta_elements)
-
-    # Creo una table contenitore per i totali
-    right_container_rows = [[el] for el in right_elements]
-    right_container = Table(right_container_rows, colWidths=[totals_col_w])
-    right_container.setStyle(TableStyle([
-        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING", (0, 0), (-1, -1), 0),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-    ]))
-
-    footer_row_data = [[bank_table, right_container]]
-    footer_row_table = Table(footer_row_data, colWidths=[bank_col_w, totals_col_w + 2 * mm])
-    footer_row_table.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING", (0, 0), (-1, -1), 0),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-    ]))
-    elements.append(footer_row_table)
-    elements.append(Spacer(1, 4 * mm))
-
-    # ══════════════════════════════════════════════════════════════
-    # 9. Scadenze pagamento con bordo sinistro blu
-    # ══════════════════════════════════════════════════════════════
-    scadenze = invoice.get("scadenze_pagamento", [])
-    if scadenze:
-        scad_content = [Paragraph("SCADENZA PAGAMENTI", STYLE_SECTION_TITLE)]
-        for sc in scadenze:
-            rata = sc.get("rata", "")
-            data_sc = _date(sc.get("data_scadenza", ""))
-            importo = _fmt(sc.get("importo", 0))
-            pagata = sc.get("pagata", False)
-            stato = " (Pagata)" if pagata else ""
-            scad_content.append(Paragraph(
-                f"<b>Rata {rata}:</b> {data_sc} - \u20ac {importo}{stato}",
-                STYLE_BANK_LINE,
-            ))
-
-        scad_rows = [[c] for c in scad_content]
-        scad_table = Table(scad_rows, colWidths=[usable_w - 4 * mm])
-        scad_table.setStyle(TableStyle([
-            ("LEFTPADDING", (0, 0), (-1, -1), 10),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-            ("TOPPADDING", (0, 0), (-1, -1), 2),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
-            ("TOPPADDING", (0, 0), (0, 0), 6),
-            ("BOTTOMPADDING", (0, -1), (0, -1), 6),
-            ("LINEBEFORE", (0, 0), (0, -1), 2, ACCENT),
-        ]))
-        elements.append(scad_table)
-        elements.append(Spacer(1, 3 * mm))
-
-    # Due date prominente (se non ci sono scadenze ma c'è due_date)
-    due_date = invoice.get("due_date")
-    if due_date and not scadenze:
-        due_style = ParagraphStyle(
-            "DueDate", fontName=_fb(), fontSize=9, leading=12,
-            textColor=BODY_TEXT,
-        )
-        due_content = [
-            [Paragraph("SCADENZA PAGAMENTO", STYLE_SECTION_TITLE)],
-            [Paragraph(f"{_date(due_date)}", due_style)],
-        ]
-        due_table = Table(due_content, colWidths=[usable_w - 4 * mm])
-        due_table.setStyle(TableStyle([
-            ("LEFTPADDING", (0, 0), (-1, -1), 10),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-            ("TOPPADDING", (0, 0), (-1, -1), 2),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
-            ("TOPPADDING", (0, 0), (0, 0), 6),
-            ("BOTTOMPADDING", (0, -1), (0, -1), 6),
-            ("LINEBEFORE", (0, 0), (0, -1), 2, ACCENT),
-        ]))
-        elements.append(due_table)
-        elements.append(Spacer(1, 3 * mm))
-
-    # ══════════════════════════════════════════════════════════════
-    # 10. Note legali
-    # ══════════════════════════════════════════════════════════════
-    legal_style = ParagraphStyle(
-        "Legal", fontName=_fn(), fontSize=6.5, leading=9,
-        textColor=GREY_TEXT,
+def _footer_canvas(canvas, doc):
+    canvas.saveState()
+    co = getattr(doc, '_company', {}) or {}
+    now_str = datetime.now().strftime('%d/%m/%Y %H:%M')
+    co_name = co.get('business_name', '') or ''
+    cert = co.get('certificazioni') or (
+        'Azienda Certificata EN 1090-1 EXC3 • ISO 3834-2 • '
+        'Centro di Trasformazione Acciaio'
     )
-    elements.append(Spacer(1, 2 * mm))
-    elements.append(Paragraph(
-        "Condizioni Generali di Vendita: Riserva di propriet\u00e0 ex art. 1523 C.C. \u2014 "
-        "Interessi moratori ex D.Lgs 231/02 \u2014 "
-        "Foro competente esclusivo quello della sede legale del venditore.",
-        legal_style,
-    ))
+    page_num = canvas.getPageNumber()
+    y_base = BOTTOM_MARGIN - 14 * mm
+    canvas.setStrokeColor(GREY_BORDER)
+    canvas.setLineWidth(0.5)
+    canvas.line(LEFT_MARGIN, y_base + 10 * mm,
+                PAGE_W - RIGHT_MARGIN, y_base + 10 * mm)
+    canvas.setFont(FONT_REGULAR, 6.5)
+    canvas.setFillColor(GREY_TEXT)
+    canvas.drawString(LEFT_MARGIN, y_base + 6 * mm,
+                      f'Generato da {co_name} - NormaFacile')
+    canvas.drawRightString(PAGE_W - RIGHT_MARGIN, y_base + 6 * mm,
+                           f'Documento generato il {now_str}')
+    canvas.setFont(FONT_BOLD, 6.5)
+    canvas.setFillColor(GREY_TEXT)
+    canvas.drawCentredString(PAGE_W / 2, y_base + 2 * mm, cert)
+    canvas.setFont(FONT_REGULAR, 6.5)
+    canvas.setFillColor(GREY_TEXT)
+    canvas.drawCentredString(PAGE_W / 2, y_base - 2 * mm,
+                             f'Pagina {page_num} di 1')
+    canvas.restoreState()
 
-    # ══════════════════════════════════════════════════════════════
-    # 11. Pagina Condizioni (SOLO per Preventivi)
-    # ══════════════════════════════════════════════════════════════
-    condizioni = (co.get("condizioni_vendita", "") or "").strip().strip('"').strip()
-    if condizioni and doc_type == "PRV":
-        from reportlab.platypus import PageBreak
-        elements.append(PageBreak())
-        elements.append(Paragraph("CONDIZIONI GENERALI DI VENDITA", STYLE_COND_TITLE))
-        elements.append(Spacer(1, 2 * mm))
 
-        for paragraph in condizioni.split("\n"):
-            p_text = paragraph.strip()
-            if p_text:
-                elements.append(Paragraph(p_text, STYLE_COND_TEXT))
-                elements.append(Spacer(1, 1.5 * mm))
+def generate_modern_invoice_pdf(invoice, client, company):
+    """Genera PDF fattura/preventivo con layout Emergent originale."""
+    inv = invoice or {}
+    cl  = client  or {}
+    co  = company or {}
 
-        # Solo se il testo condizioni NON contiene già la sezione firma
-        if "firma e timbro" not in condizioni.lower():
-            elements.append(Spacer(1, 8 * mm))
-            elements.append(Paragraph("<b>Firma e timbro per accettazione</b>", STYLE_COND_TEXT))
-            elements.append(Spacer(1, 12 * mm))
-            elements.append(HRFlowable(width=180, thickness=0.5, color=black))
-            elements.append(Paragraph(
-                "Data di accettazione (legale rappresentante)", STYLE_COND_LEGAL))
+    buf = BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                            leftMargin=LEFT_MARGIN, rightMargin=RIGHT_MARGIN,
+                            topMargin=TOP_MARGIN, bottomMargin=BOTTOM_MARGIN)
+    doc._company = co
+    doc._invoice = inv
+    story = []
 
-            elements.append(Spacer(1, 6 * mm))
-            elements.append(Paragraph(
-                "Ai sensi e per gli effetti dell'Art. 1341 e segg. del Codice Civile, "
-                "il sottoscritto Acquirente dichiara di aver preso specifica, precisa e "
-                "dettagliata visione di tutte le disposizioni del contratto e di approvarle "
-                "integralmente senza alcuna riserva.",
-                STYLE_COND_LEGAL,
-            ))
-            elements.append(Spacer(1, 8 * mm))
-            elements.append(Paragraph("li _______________", STYLE_COND_TEXT))
-            elements.append(Spacer(1, 12 * mm))
-            elements.append(HRFlowable(width=180, thickness=0.5, color=black))
-            elements.append(Paragraph(
-                "Firma e timbro (il legale rappresentante)", STYLE_COND_LEGAL))
+    # 1. HEADER — Logo+Azienda a SINISTRA, Cliente a DESTRA (stessa riga)
+    logo = _load_logo(co.get('logo_url', ''))
+    co_name  = co.get('business_name', '') or ''
+    co_addr  = co.get('address', '') or ''
+    co_cap   = co.get('cap', '') or ''
+    co_city  = co.get('city', '') or ''
+    co_prov  = co.get('province', '') or ''
+    co_piva  = co.get('partita_iva', '') or ''
+    co_cf    = co.get('codice_fiscale', '') or ''
+    co_phone = co.get('phone') or co.get('tel', '') or ''
+    co_email = co.get('email') or co.get('contact_email', '') or ''
+    loc_parts = [p for p in [co_cap, co_city,
+                              f'({co_prov})' if co_prov else ''] if p]
 
-        elements.append(Spacer(1, 15 * mm))
-        doc_footer_style = ParagraphStyle(
-            "DocFooterCond", fontName=_fn(), fontSize=8, leading=10,
-            textColor=HexColor("#555555"), alignment=TA_RIGHT,
-        )
-        elements.append(Paragraph(company_name, doc_footer_style))
-        elements.append(Paragraph(f"Documento {display_num}", doc_footer_style))
+    # Colonna sinistra: logo + azienda
+    left_col = []
+    if logo:
+        left_col.append(logo)
+        left_col.append(Spacer(1, 2 * mm))
+    left_col.append(Paragraph(co_name, S['co_name']))
+    if co_addr.strip():
+        left_col.append(Paragraph(co_addr, S['co_detail']))
+    if loc_parts:
+        left_col.append(Paragraph(' '.join(loc_parts), S['co_detail']))
+    if co_piva:
+        left_col.append(Paragraph(f'P.IVA: {co_piva}', S['co_detail']))
+    if co_cf and co_cf != co_piva:
+        left_col.append(Paragraph(f'Cod. Fisc.: {co_cf}', S['co_detail']))
+    if co_phone:
+        left_col.append(Paragraph(f'Tel: {co_phone}', S['co_detail']))
+    if co_email:
+        left_col.append(Paragraph(f'Email: {co_email}', S['co_detail']))
 
-    # ══════════════════════════════════════════════════════════════
-    # BUILD
-    # ══════════════════════════════════════════════════════════════
-    doc.build(elements, onFirstPage=_footer, onLaterPages=_footer)
+    # Colonna destra: cliente
+    cl_name = cl.get('business_name', '') or ''
+    cl_addr = cl.get('address', '') or ''
+    cl_cap  = cl.get('cap', '') or ''
+    cl_city = cl.get('city', '') or ''
+    cl_prov = cl.get('province', '') or ''
+    cl_piva = cl.get('partita_iva', '') or ''
+    cl_cf   = cl.get('codice_fiscale', '') or ''
+    cl_sdi  = cl.get('codice_sdi') or cl.get('codice_destinatario', '') or ''
+    cl_pec  = cl.get('pec', '') or ''
+    right_col = []
+    right_col.append(Paragraph('Spett.le', S['cl_spett']))
+    right_col.append(Paragraph(cl_name, S['cl_name']))
+    addr_parts = [p for p in [cl_addr, cl_cap, cl_city,
+                               f'({cl_prov})' if cl_prov else ''] if p]
+    if addr_parts:
+        right_col.append(Paragraph(' '.join(addr_parts), S['cl_detail']))
+    if cl_piva:
+        right_col.append(Paragraph(f'P.IVA {cl_piva}', S['cl_detail']))
+    if cl_cf and cl_cf != cl_piva:
+        right_col.append(Paragraph(f'C.F. {cl_cf}', S['cl_detail']))
+    if cl_sdi:
+        right_col.append(Paragraph(f'Cod. SDI {cl_sdi}', S['cl_detail']))
+    if cl_pec:
+        right_col.append(Paragraph(f'PEC: {cl_pec}', S['cl_detail']))
+
+    hdr = Table([[left_col, right_col]],
+                colWidths=[USABLE_W * 0.55, USABLE_W * 0.45])
+    hdr.setStyle(TableStyle([
+        ('VALIGN',        (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 0),
+        ('TOPPADDING',    (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    story.append(hdr)
+    story.append(Spacer(1, 3 * mm))
+    story.append(HRFlowable(width=USABLE_W, thickness=1,
+                            color=BLUE, spaceAfter=4 * mm))
+
+    # 2. TITOLO
+    doc_type  = inv.get('document_type') or inv.get('doc_type', 'FT')
+    doc_label = DOC_TYPE_DISPLAY.get(doc_type, 'FATTURA')
+    doc_num   = inv.get('document_number') or inv.get('number', '')
+    disp_num  = doc_num
+    for pfx in ('FT-', 'NC-', 'PRV-', 'DDT-'):
+        if disp_num.startswith(pfx):
+            disp_num = disp_num[len(pfx):]
+            break
+    title_text = f'{doc_label} N. {disp_num}' if disp_num else doc_label
+    story.append(Paragraph(title_text, S['doc_title']))
+    story.append(Spacer(1, 4 * mm))
+
+    # 3. META BOX
+    issue_date = _date(inv.get('issue_date') or inv.get('created_at'))
+    inv_type   = (inv.get('invoice_type_label') or
+                  inv.get('tipo_label') or 'COMPLETA')
+    meta = Table([[
+        Table([[Paragraph('DATA FATTURA', S['meta_label'])],
+               [Paragraph(issue_date, S['meta_value'])]],
+              colWidths=[USABLE_W * 0.5 - 2 * mm]),
+        Table([[Paragraph('TIPO', S['meta_label'])],
+               [Paragraph(_s(inv_type).upper(), S['meta_value'])]],
+              colWidths=[USABLE_W * 0.5 - 2 * mm]),
+    ]], colWidths=[USABLE_W * 0.5, USABLE_W * 0.5])
+    meta.setStyle(TableStyle([
+        ('BACKGROUND',    (0, 0), (-1, -1), GREY_BG),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 4),
+        ('TOPPADDING',    (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('LINEAFTER',     (0, 0), (0, -1),  0.5, GREY_BORDER),
+        ('BOX',           (0, 0), (-1, -1), 0.5, GREY_BORDER),
+        ('VALIGN',        (0, 0), (-1, -1), 'TOP'),
+    ]))
+    story.append(meta)
+    story.append(Spacer(1, 4 * mm))
+
+    # 4. (CLIENTE ora nell'header — rimosso da qui)
+
+    # 5. TABELLA ARTICOLI
+    lines = inv.get('lines', []) or inv.get('items', []) or []
+    table_data = [[
+        Paragraph('Descrizione',  S['th']),
+        Paragraph('Q.tà',    S['th_c']),
+        Paragraph('Prezzo Unit.', S['th_r']),
+        Paragraph('IVA',          S['th_c']),
+        Paragraph('Totale',       S['th_r']),
+    ]]
+    for i, ln in enumerate(lines):
+        desc  = _s(ln.get('description') or '').replace('\n', '<br/>')
+        qty   = _fmt(ln.get('quantity', 0))
+        price = _fmt(ln.get('unit_price', 0))
+        disc  = float(ln.get('discount_percent') or ln.get('sconto_1') or 0)
+        disc2 = float(ln.get('sconto_2') or 0)
+        vat_r = ln.get('vat_rate') or ln.get('aliquota_iva') or '22'
+        vat_s = (f'{float(vat_r):.0f}%'
+                 if str(vat_r).replace('.', '').isdigit() else str(vat_r))
+        total = _fmt(ln.get('line_total') or ln.get('total') or
+                     float(ln.get('quantity', 1)) * float(ln.get('unit_price', 0)))
+        if disc > 0:
+            desc += (f"<br/><font size='7' color='#888888'>"
+                     f"Sconto {_fmt(disc)}%")
+            if disc2 > 0:
+                desc += f' + {_fmt(disc2)}%'
+            desc += '</font>'
+        table_data.append([
+            Paragraph(desc,                    S['td']),
+            Paragraph(qty,                     S['td_c']),
+            Paragraph(f'€ {price}',       S['td_r']),
+            Paragraph(vat_s,                   S['td_c']),
+            Paragraph(f'€ {total}',       S['td_b']),
+        ])
+    it = Table(table_data,
+               colWidths=[COL_DESC, COL_QTY, COL_PRICE, COL_VAT, COL_TOTAL],
+               repeatRows=1)
+    ts = TableStyle([
+        ('BACKGROUND',    (0, 0), (-1, 0),  NAVY),
+        ('TEXTCOLOR',     (0, 0), (-1, 0),  colors.HexColor('#666666')),
+        ('TOPPADDING',    (0, 0), (-1, 0),  6),
+        ('BOTTOMPADDING', (0, 0), (-1, 0),  6),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 4),
+        ('TOPPADDING',    (0, 1), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
+        ('VALIGN',        (0, 0), (-1, -1), 'TOP'),
+        ('LINEBELOW',     (0, 0), (-1, -1), 0.3, GREY_BORDER),
+        ('ALIGN',         (1, 1), (1, -1),  'CENTER'),
+        ('ALIGN',         (2, 1), (2, -1),  'RIGHT'),
+        ('ALIGN',         (3, 1), (3, -1),  'CENTER'),
+        ('ALIGN',         (4, 1), (4, -1),  'RIGHT'),
+    ])
+    for i in range(1, len(table_data)):
+        if i % 2 == 0:
+            ts.add('BACKGROUND', (0, i), (-1, i), ZEBRA)
+    it.setStyle(ts)
+    story.append(it)
+    story.append(Spacer(1, 4 * mm))
+
+    # 6. TOTALI
+    sconto_globale = float(inv.get('sconto_globale') or 0)
+    imponibile = 0.0; total_iva = 0.0
+    for ln in lines:
+        lt = float(ln.get('line_total') or ln.get('total') or float(ln.get('quantity',1))*float(ln.get('unit_price',0)))
+        try: vat_pct = float(str(ln.get('vat_rate') or ln.get('aliquota_iva') or '0').replace('%',''))/100
+        except: vat_pct = 0.0
+        if sconto_globale > 0: lt = lt*(1-sconto_globale/100)
+        imponibile += lt; total_iva += round(lt*vat_pct,2)
+    imponibile = round(imponibile,2); total_iva = round(total_iva,2); grand_total = round(imponibile+total_iva,2)
+    ritenuta    = float((inv.get('totals') or {}).get('ritenuta', 0) or 0)
+    sub_rows = [
+        [Paragraph('Imponibile:', S['tot_label']),
+         Paragraph(f'€ {_fmt(imponibile)}', S['tot_value'])],
+        [Paragraph('IVA:', S['tot_label']),
+         Paragraph(f'€ {_fmt(total_iva)}', S['tot_value'])],
+    ]
+    if ritenuta > 0:
+        netto = grand_total - ritenuta
+        sub_rows.append([
+            Paragraph("Ritenuta d'acconto:", S['tot_label']),
+            Paragraph(f'-€ {_fmt(ritenuta)}', S['tot_value'])])
+        sub_rows.append([
+            Paragraph('NETTO A PAGARE:', S['tot_label']),
+            Paragraph(f'€ {_fmt(netto)}', S['tot_value'])])
+    sub_t = Table(sub_rows, colWidths=[45 * mm, 35 * mm])
+    sub_t.setStyle(TableStyle([
+        ('ALIGN',         (1, 0), (1, -1), 'RIGHT'),
+        ('TOPPADDING',    (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 2),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 2),
+    ]))
+    grand_t = Table(
+        [[Paragraph('TOTALE:', S['grand_label']),
+          Paragraph(f'€ {_fmt(grand_total)}', S['grand_value'])]],
+        colWidths=[45 * mm, 35 * mm])
+    grand_t.setStyle(TableStyle([
+        ('BACKGROUND',    (0, 0), (-1, -1), colors.HexColor('#E0E0E0')),
+        ('TOPPADDING',    (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 6),
+        ('ALIGN',         (1, 0), (1, -1),  'RIGHT'),
+        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOX',           (0, 0), (-1, -1), 0.5, GREY_BORDER),
+    ]))
+    wrapper = Table(
+        [[Spacer(1, 1), sub_t],
+         [Spacer(1, 1), grand_t]],
+        colWidths=[USABLE_W - 80 * mm, 80 * mm])
+    wrapper.setStyle(TableStyle([
+        ('ALIGN',         (1, 0), (1, -1), 'RIGHT'),
+        ('VALIGN',        (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING',   (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING',  (0, 0), (-1, -1), 0),
+        ('TOPPADDING',    (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    story.append(wrapper)
+    story.append(Spacer(1, 5 * mm))
+
+    # 7. NOTE
+    note_text = _s(inv.get('notes') or inv.get('note') or '')
+    rif_text  = _s(inv.get('riferimento') or inv.get('subject') or '')
+    if note_text.strip() or rif_text.strip():
+        nc = []
+        if rif_text.strip():
+            nc.append(Paragraph(f'Rif. {rif_text}', S['note']))
+        if note_text.strip():
+            nc.append(Paragraph(note_text.replace('\n', '<br/>'), S['note']))
+        story.append(_box_section(nc, 'NOTE'))
+        story.append(Spacer(1, 3 * mm))
+
+    # 8. BANCA
+    bank_name = _s(inv.get('banca') or '')
+    bank_iban = _s(inv.get('iban') or '')
+    if not bank_name and not bank_iban:
+        bank_d    = co.get('bank_details', {}) or {}
+        bank_accs = co.get('bank_accounts', []) or []
+        if bank_accs:
+            bank_name = _s(bank_accs[0].get('bank_name', ''))
+            bank_iban = _s(bank_accs[0].get('iban', ''))
+        else:
+            bank_name = _s(bank_d.get('bank_name', ''))
+            bank_iban = _s(bank_d.get('iban', ''))
+    if bank_name or bank_iban:
+        bt = (f'{bank_name} - IBAN {bank_iban}'
+              if bank_name and bank_iban
+              else bank_name or f'IBAN {bank_iban}')
+        story.append(_box_section(
+            [Paragraph(f'<b>Coordinate Bancarie:</b> {bt}', S['sec_text'])]))
+        story.append(Spacer(1, 3 * mm))
+
+    # 9. SCADENZE
+    scadenze = inv.get('scadenze_pagamento') or inv.get('scadenze') or []
+    payment_label = _s(
+        inv.get('payment_type_label') or
+        PAYMENT_METHOD_NAMES.get(inv.get('payment_method', ''), '') or
+        inv.get('payment_terms', ''))
+    if scadenze or payment_label:
+        sc_rows = []
+        if payment_label:
+            sc_rows.append(
+                Paragraph(f'<b>Condizioni:</b> {payment_label}', S['sec_text']))
+        for sc in scadenze:
+            d_sc = _date(sc.get('data_scadenza') or sc.get('due_date'))
+            imp  = _fmt(sc.get('importo') or sc.get('amount') or 0)
+            pag  = ' (PAGATA)' if (sc.get('pagata') or sc.get('paid')) else ''
+            sc_rows.append(Paragraph(
+                f'<b>Scadenza:</b> {d_sc} &mdash; € {imp}{pag}',
+                S['sec_text']))
+        if not scadenze and inv.get('due_date'):
+            sc_rows.append(Paragraph(
+                f'<b>Scadenza:</b> {_date(inv["due_date"])}', S['sec_text']))
+        story.append(_box_section(sc_rows, 'SCADENZA PAGAMENTI'))
+        story.append(Spacer(1, 3 * mm))
+
+    # 10. CONDIZIONI (solo PRV)
+    if doc_type == 'PRV':
+        cond = _s(co.get('condizioni_vendita', '') or
+                  inv.get('condizioni_vendita', ''))
+        if cond.strip():
+            import re as _re
+            story.append(PageBreak())
+            story.append(Paragraph('CONDIZIONI GENERALI DI VENDITA',
+                                   S['sec_title']))
+            story.append(Spacer(1, 3 * mm))
+            story.append(HRFlowable(width=USABLE_W, thickness=1,
+                                    color=GREY_BORDER, spaceAfter=3 * mm))
+            for line in cond.split('\n'):
+                line = line.strip()
+                if not line:
+                    story.append(Spacer(1, 2 * mm))
+                    continue
+                if _re.match(r'^\d+[.-)]', line):
+                    story.append(Paragraph(line, S['sec_bold']))
+                else:
+                    story.append(Paragraph(line, S['sec_text']))
+
+    doc.build(story,
+              onFirstPage=_footer_canvas,
+              onLaterPages=_footer_canvas)
     buf.seek(0)
     return buf.getvalue()
