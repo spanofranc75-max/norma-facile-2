@@ -1,4 +1,426 @@
-, Eye }tline" onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/invoices/${invoiceId}/pdf?token=${localStorage.getItem('session_token')}`, '_blank')} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9 text-xs"><Eye className="h-3.5 w-3.5 mr-1.5" /> Anteprima</Button>
+/**
+ * Invoice Editor Page - Creazione/Modifica Fattura (Invoicex Style)
+ * Dense table layout with clear visual hierarchy.
+ */
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { apiRequest, formatDateIT } from '../lib/utils';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Textarea } from '../components/ui/textarea';
+import { Checkbox } from '../components/ui/checkbox';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '../components/ui/select';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '../components/ui/table';
+import { Separator } from '../components/ui/separator';
+import { toast } from 'sonner';
+import {
+    Plus,
+    Trash2,
+    Save,
+    FileText,
+    ArrowLeft,
+    Calculator,
+    Mail,
+    Send,
+    CheckCircle2,
+    PanelRightOpen,
+    Eye,
+    Printer,
+} from 'lucide-react';
+import DashboardLayout from '../components/DashboardLayout';
+import ArticleSearch from '../components/ArticleSearch';
+import { QuickFillModal } from '../components/QuickFillModal';
+import { useConfirm } from '../components/ConfirmProvider';
+
+import { LivePDFPreview } from '../components/LivePDFPreview';
+import { AutoExpandTextarea } from '../components/AutoExpandTextarea';
+import EmailPreviewDialog from '../components/EmailPreviewDialog';
+
+const DOC_TYPES = [
+    { value: 'FT', label: 'Fattura' },
+    { value: 'PRV', label: 'Preventivo' },
+    { value: 'DDT', label: 'DDT' },
+    { value: 'NC', label: 'Nota di Credito' },
+];
+
+const PAYMENT_METHODS = [
+    { value: 'bonifico', label: 'Bonifico Bancario' },
+    { value: 'contanti', label: 'Contanti' },
+    { value: 'carta', label: 'Carta di Credito' },
+    { value: 'assegno', label: 'Assegno' },
+    { value: 'riba', label: 'RiBa' },
+    { value: 'altro', label: 'Altro' },
+];
+
+const PAYMENT_TERMS = [
+    { value: 'immediato', label: 'Immediato' },
+    { value: '30gg', label: '30 giorni' },
+    { value: '60gg', label: '60 giorni' },
+    { value: '90gg', label: '90 giorni' },
+    { value: '30-60gg', label: '30/60 giorni' },
+    { value: '30-60-90gg', label: '30/60/90 giorni' },
+    { value: 'fine_mese', label: 'Fine mese' },
+    { value: 'fm+30', label: 'Fine mese + 30' },
+];
+
+const VAT_RATES = [
+    { value: '22', label: '22%' },
+    { value: '10', label: '10%' },
+    { value: '4', label: '4%' },
+    { value: '0', label: '0%' },
+    { value: 'N4', label: 'Esente (N4)' },
+    { value: 'N3', label: 'Non imponibile (N3)' },
+];
+
+const emptyLine = {
+    code: '',
+    description: '',
+    quantity: '',
+    unit_price: '',
+    discount_percent: '',
+    vat_rate: '22',
+};
+
+const formatCurrency = (value) => {
+    return new Intl.NumberFormat('it-IT', {
+        style: 'currency',
+        currency: 'EUR',
+    }).format(value || 0);
+};
+
+export default function InvoiceEditorPage() {
+    const navigate = useNavigate();
+    const { invoiceId } = useParams();
+    const isEditing = !!invoiceId;
+    const confirm = useConfirm();
+
+    const [loading, setLoading] = useState(isEditing);
+    const [saving, setSaving] = useState(false);
+    const [clients, setClients] = useState([]);
+    const [quickFillOpen, setQuickFillOpen] = useState(false);
+    
+    const [formData, setFormData] = useState({
+        document_type: 'FT',
+        document_number: '',
+        client_id: '',
+        issue_date: new Date().toISOString().split('T')[0],
+        due_date: '',
+        payment_method: 'bonifico',
+        payment_terms: '30gg',
+        notes: '',
+        internal_notes: '',
+        cup: '',
+        cig: '',
+        cuc: '',
+        tax_settings: {
+            apply_rivalsa_inps: false,
+            rivalsa_inps_rate: 4,
+            apply_cassa: false,
+            cassa_type: '',
+            cassa_rate: 4,
+            apply_ritenuta: false,
+            ritenuta_rate: 20,
+            ritenuta_base: 'imponibile',
+        },
+        lines: [{ ...emptyLine }],
+    });
+
+    const [totals, setTotals] = useState({
+        subtotal: 0,
+        vat_breakdown: {},
+        total_vat: 0,
+        rivalsa_inps: 0,
+        cassa: 0,
+        ritenuta: 0,
+        total_document: 0,
+        total_to_pay: 0,
+    });
+
+    const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
+    const [paymentTypes, setPaymentTypes] = useState([]);
+    const [showLivePreview, setShowLivePreview] = useState(false);
+
+    // Calculate due date from issue_date and payment type
+    const calcDueDate = (issueDate, pt) => {
+        if (!issueDate || !pt) return '';
+        const quote = pt.quote || [];
+        if (quote.length === 0) return '';
+        // Use the last installment's giorni for the final due date
+        const maxGiorni = Math.max(...quote.map(q => q.giorni || 0));
+        if (maxGiorni < 0) return issueDate; // "a fine lavori" = same day
+        const d = new Date(issueDate);
+        d.setDate(d.getDate() + maxGiorni);
+        if (pt.fine_mese) {
+            // Move to end of month
+            d.setMonth(d.getMonth() + 1, 0);
+            // Add extra days after end of month (e.g. FM+10)
+            if (pt.extra_days) {
+                d.setDate(d.getDate() + pt.extra_days);
+            }
+        }
+        return d.toISOString().split('T')[0];
+    };
+
+    // Fetch clients and payment types on mount
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [cl, pt] = await Promise.all([
+                    apiRequest('/clients/?limit=100'),
+                    apiRequest('/payment-types/').catch(() => ({ items: [] })),
+                ]);
+                setClients(cl.clients);
+                setPaymentTypes(pt.items || []);
+            } catch (error) {
+                toast.error('Errore caricamento dati');
+            }
+        };
+        fetchData();
+    }, []);
+
+    // Reload invoice data from API
+    const fetchInvoice = async () => {
+        try {
+            const data = await apiRequest(`/invoices/${invoiceId}`);
+            setFormData({
+                document_type: data.document_type,
+                document_number: data.document_number || '',
+                client_id: data.client_id,
+                issue_date: data.issue_date,
+                due_date: data.due_date || '',
+                payment_method: data.payment_method,
+                payment_terms: data.payment_terms,
+                notes: data.notes || '',
+                internal_notes: data.internal_notes || '',
+                cup: data.cup || '',
+                cig: data.cig || '',
+                cuc: data.cuc || '',
+                tax_settings: data.tax_settings || formData.tax_settings,
+                lines: data.lines.length > 0 ? data.lines : [{ ...emptyLine }],
+                status: data.status || 'bozza',
+            });
+            setTotals(data.totals);
+        } catch (error) {
+            toast.error('Documento non trovato');
+            navigate('/invoices');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Fetch invoice if editing
+    useEffect(() => {
+        if (!isEditing) return;
+        fetchInvoice();
+    }, [invoiceId, isEditing]);
+
+    // Calculate totals when lines or tax settings change
+    useEffect(() => {
+        calculateTotals();
+    }, [formData.lines, formData.tax_settings]);
+
+    const calculateTotals = () => {
+        let subtotal = 0;
+        let totalVat = 0;
+        const vatBreakdown = {};
+
+        formData.lines.forEach(line => {
+            const qty = parseFloat(line.quantity) || 0;
+            const price = parseFloat(line.unit_price) || 0;
+            const disc = parseFloat(line.discount_percent) || 0;
+            const gross = qty * price;
+            const discount = gross * (disc / 100);
+            const net = gross - discount;
+            
+            let vatRate = 0;
+            if (!['N3', 'N4'].includes(line.vat_rate)) {
+                vatRate = parseFloat(line.vat_rate) || 0;
+            }
+            const vatAmount = net * (vatRate / 100);
+
+            subtotal += net;
+            totalVat += vatAmount;
+
+            if (!vatBreakdown[line.vat_rate]) {
+                vatBreakdown[line.vat_rate] = { imponibile: 0, imposta: 0 };
+            }
+            vatBreakdown[line.vat_rate].imponibile += net;
+            vatBreakdown[line.vat_rate].imposta += vatAmount;
+        });
+
+        // Additional taxes
+        let rivalsaInps = 0;
+        let cassa = 0;
+        let ritenuta = 0;
+
+        if (formData.tax_settings.apply_rivalsa_inps) {
+            rivalsaInps = subtotal * (formData.tax_settings.rivalsa_inps_rate / 100);
+        }
+        if (formData.tax_settings.apply_cassa) {
+            cassa = subtotal * (formData.tax_settings.cassa_rate / 100);
+        }
+
+        const totalDocument = subtotal + totalVat + rivalsaInps + cassa;
+
+        if (formData.tax_settings.apply_ritenuta) {
+            const base = formData.tax_settings.ritenuta_base === 'imponibile' ? subtotal : totalDocument;
+            ritenuta = base * (formData.tax_settings.ritenuta_rate / 100);
+        }
+
+        const totalToPay = totalDocument - ritenuta;
+
+        setTotals({
+            subtotal: Math.round(subtotal * 100) / 100,
+            vat_breakdown: vatBreakdown,
+            total_vat: Math.round(totalVat * 100) / 100,
+            rivalsa_inps: Math.round(rivalsaInps * 100) / 100,
+            cassa: Math.round(cassa * 100) / 100,
+            ritenuta: Math.round(ritenuta * 100) / 100,
+            total_document: Math.round(totalDocument * 100) / 100,
+            total_to_pay: Math.round(totalToPay * 100) / 100,
+        });
+    };
+
+    const updateField = (field, value) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const updateTaxSetting = (field, value) => {
+        setFormData(prev => ({
+            ...prev,
+            tax_settings: { ...prev.tax_settings, [field]: value },
+        }));
+    };
+
+    const updateLine = (index, field, value) => {
+        setFormData(prev => {
+            const newLines = [...prev.lines];
+            newLines[index] = { ...newLines[index], [field]: value };
+            return { ...prev, lines: newLines };
+        });
+    };
+
+    const addLine = () => {
+        setFormData(prev => ({
+            ...prev,
+            lines: [...prev.lines, { ...emptyLine }],
+        }));
+    };
+
+    const removeLine = (index) => {
+        if (formData.lines.length <= 1) return;
+        setFormData(prev => ({
+            ...prev,
+            lines: prev.lines.filter((_, i) => i !== index),
+        }));
+    };
+
+    const handleQuickFill = (source) => {
+        // Map lines from preventivo/DDT into invoice format
+        const mappedLines = (source.lines || []).map(line => ({
+            code: line.codice_articolo || line.code || '',
+            description: line.description || '',
+            quantity: parseFloat(line.quantity) || 1,
+            unit_price: parseFloat(line.prezzo_netto || line.unit_price) || 0,
+            discount_percent: 0,
+            vat_rate: line.vat_rate || '22',
+        }));
+
+        if (mappedLines.length === 0) {
+            toast.error('Nessuna riga trovata nel documento');
+            return;
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            client_id: source.client_id || prev.client_id,
+            cup: source.cup || prev.cup,
+            cig: source.cig || prev.cig,
+            cuc: source.cuc || prev.cuc,
+            lines: mappedLines,
+            notes: prev.notes
+                ? `${prev.notes}\nRif. ${source.source_type === 'preventivo' ? 'Preventivo' : 'DDT'} ${source.number}`
+                : `Rif. ${source.source_type === 'preventivo' ? 'Preventivo' : 'DDT'} ${source.number}`,
+        }));
+        toast.success(`${mappedLines.length} righe importate da ${source.number}`);
+    };
+
+    const handleSave = async () => {
+        if (!formData.client_id) {
+            toast.error('Seleziona un cliente');
+            return;
+        }
+        if (formData.lines.every(l => !l.description.trim())) {
+            toast.error('Inserisci almeno una riga');
+            return;
+        }
+
+        try {
+            setSaving(true);
+
+            if (isEditing) {
+                let payload;
+                if (formData.status && formData.status !== 'bozza') {
+                    // Non-draft: only send metadata fields
+                    payload = {
+                        payment_method: formData.payment_method,
+                        payment_terms: formData.payment_terms,
+                        due_date: formData.due_date || undefined,
+                        notes: formData.notes,
+                        internal_notes: formData.internal_notes,
+                    };
+                } else {
+                    payload = {
+                        ...formData,
+                        lines: formData.lines.filter(l => l.description.trim()),
+                    };
+                }
+                await apiRequest(`/invoices/${invoiceId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload),
+                });
+                toast.success('Documento aggiornato');
+            } else {
+                const payload = {
+                    ...formData,
+                    lines: formData.lines.filter(l => l.description.trim()),
+                };
+                const result = await apiRequest('/invoices/', {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                });
+                toast.success(`Documento ${result.document_number} creato`);
+                navigate(`/invoices/${result.invoice_id}`);
+            }
+        } catch (error) {
+            toast.error(error.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const selectedClient = clients.find(c => c.client_id === formData.client_id);
+
+    if (loading) {
+        return (
+            <DashboardLayout>
+                <div className="flex items-center justify-center h-64">
+                    <div className="w-8 h-8 loading-spinner" />
                 </div>
             </DashboardLayout>
         );
@@ -29,7 +451,7 @@
                     </div>
                     <div className="flex gap-2">
                         {isEditing && <Button variant="outline" onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/invoices/${invoiceId}/pdf?token=${localStorage.getItem('session_token')}`, '_blank')} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9 text-xs"><Eye className="h-3.5 w-3.5 mr-1.5" /> Anteprima</Button>}
-            {!isNew && <Button variant="outline" onClick={() => { const w = window.open(`${process.env.REACT_APP_BACKEND_URL}/api/invoices/${invoiceId}/pdf?token=${localStorage.getItem('session_token')}`, '_blank'); if(w) setTimeout(()=>w.print(),1500); }} className="border-purple-500 text-purple-600 hover:bg-purple-50 h-9 text-xs"><Printer className="h-3.5 w-3.5 mr-1.5" /> Stampa</Button>}
+                        {isEditing && <Button variant="outline" onClick={() => { const w = window.open(`${process.env.REACT_APP_BACKEND_URL}/api/invoices/${invoiceId}/pdf?token=${localStorage.getItem('session_token')}`, '_blank'); if(w) setTimeout(()=>w.print(),1500); }} className="border-purple-500 text-purple-600 hover:bg-purple-50 h-9 text-xs"><Printer className="h-3.5 w-3.5 mr-1.5" /> Stampa</Button>}
                         <Button
                             type="button"
                             variant="outline"
@@ -292,7 +714,7 @@
                                 <TableRow className="bg-[#1E293B] hover:bg-[#1E293B]">
                                     <TableHead className="text-white font-semibold w-[80px]">Cod.</TableHead>
                                     <TableHead className="text-white font-semibold">Descrizione</TableHead>
-                                    <TableHead className="text-white font-semibold w-[80px] text-right">Q.tÃÂÃÂ </TableHead>
+                                    <TableHead className="text-white font-semibold w-[80px] text-right">Q.tà</TableHead>
                                     <TableHead className="text-white font-semibold w-[100px] text-right">Prezzo</TableHead>
                                     <TableHead className="text-white font-semibold w-[70px] text-right">Sc.%</TableHead>
                                     <TableHead className="text-white font-semibold w-[90px] text-right">IVA</TableHead>
@@ -406,81 +828,46 @@
                     </CardContent>
                 </Card>
 
-                {/* Tax Settings & Totals */}
+                {/* Notes, CUP/CIG/CUC & Totals */}
                 <div className="grid grid-cols-2 gap-6">
-                    {/* Tax Settings */}
+                    {/* Notes & Public Tender Codes */}
                     <Card className="border-gray-200">
                         <CardHeader className="pb-4 bg-blue-50 border-b border-gray-200">
-                            <CardTitle className="text-lg font-semibold">Impostazioni Fiscali</CardTitle>
+                            <CardTitle className="text-lg font-semibold">Note e Riferimenti</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
-                                        id="rivalsa"
-                                        checked={formData.tax_settings.apply_rivalsa_inps}
-                                        onCheckedChange={(v) => updateTaxSetting('apply_rivalsa_inps', v)}
+                            <div className="grid grid-cols-3 gap-3">
+                                <div>
+                                    <Label className="text-xs text-slate-500">CUP</Label>
+                                    <Input
+                                        data-testid="input-cup"
+                                        value={formData.cup || ''}
+                                        onChange={(e) => updateField('cup', e.target.value.toUpperCase())}
+                                        placeholder="Codice CUP"
+                                        className="h-8 text-sm font-mono"
                                     />
-                                    <Label htmlFor="rivalsa" className="text-sm">Rivalsa INPS</Label>
                                 </div>
-                                {formData.tax_settings.apply_rivalsa_inps && (
-                                    <div className="flex items-center gap-2">
-                                        <Input
-                                            type="number"
-                                            value={formData.tax_settings.rivalsa_inps_rate}
-                                            onChange={(e) => updateTaxSetting('rivalsa_inps_rate', parseFloat(e.target.value) || 0)}
-                                            className="w-20 h-8 text-sm text-right"
-                                        />
-                                        <span className="text-sm text-slate-500">%</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
-                                        id="cassa"
-                                        checked={formData.tax_settings.apply_cassa}
-                                        onCheckedChange={(v) => updateTaxSetting('apply_cassa', v)}
+                                <div>
+                                    <Label className="text-xs text-slate-500">CIG</Label>
+                                    <Input
+                                        data-testid="input-cig"
+                                        value={formData.cig || ''}
+                                        onChange={(e) => updateField('cig', e.target.value.toUpperCase())}
+                                        placeholder="Codice CIG"
+                                        className="h-8 text-sm font-mono"
                                     />
-                                    <Label htmlFor="cassa" className="text-sm">Cassa Previdenza</Label>
                                 </div>
-                                {formData.tax_settings.apply_cassa && (
-                                    <div className="flex items-center gap-2">
-                                        <Input
-                                            type="number"
-                                            value={formData.tax_settings.cassa_rate}
-                                            onChange={(e) => updateTaxSetting('cassa_rate', parseFloat(e.target.value) || 0)}
-                                            className="w-20 h-8 text-sm text-right"
-                                        />
-                                        <span className="text-sm text-slate-500">%</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
-                                        id="ritenuta"
-                                        checked={formData.tax_settings.apply_ritenuta}
-                                        onCheckedChange={(v) => updateTaxSetting('apply_ritenuta', v)}
+                                <div>
+                                    <Label className="text-xs text-slate-500">CUC</Label>
+                                    <Input
+                                        data-testid="input-cuc"
+                                        value={formData.cuc || ''}
+                                        onChange={(e) => updateField('cuc', e.target.value.toUpperCase())}
+                                        placeholder="Codice CUC"
+                                        className="h-8 text-sm font-mono"
                                     />
-                                    <Label htmlFor="ritenuta" className="text-sm">Ritenuta d'Acconto</Label>
                                 </div>
-                                {formData.tax_settings.apply_ritenuta && (
-                                    <div className="flex items-center gap-2">
-                                        <Input
-                                            type="number"
-                                            value={formData.tax_settings.ritenuta_rate}
-                                            onChange={(e) => updateTaxSetting('ritenuta_rate', parseFloat(e.target.value) || 0)}
-                                            className="w-20 h-8 text-sm text-right"
-                                        />
-                                        <span className="text-sm text-slate-500">%</span>
-                                    </div>
-                                )}
                             </div>
-
-                            <Separator />
 
                             <div>
                                 <Label>Note Documento</Label>

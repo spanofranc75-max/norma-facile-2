@@ -179,6 +179,9 @@ async def get_quick_fill_sources(
                 "acconto": p.get("acconto", 0),
                 "payment_type_id": p.get("payment_type_id"),
                 "payment_type_label": p.get("payment_type_label"),
+                "cup": p.get("cup", ""),
+                "cig": p.get("cig", ""),
+                "cuc": p.get("cuc", ""),
             })
 
     # Fetch DDT (non fatturato)
@@ -339,6 +342,9 @@ async def create_invoice_from_preventivo(
         },
         "notes": f"Rif. Preventivo {prev.get('number', preventivo_id)}. {prev.get('notes', '') or ''}".strip(),
         "internal_notes": None,
+        "cup": prev.get("cup", ""),
+        "cig": prev.get("cig", ""),
+        "cuc": prev.get("cuc", ""),
         "created_at": now,
         "updated_at": now,
         "converted_from": preventivo_id,

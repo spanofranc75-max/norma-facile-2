@@ -487,6 +487,22 @@ def generate_modern_invoice_pdf(invoice, client, company):
     story.append(wrapper)
     story.append(Spacer(1, 5 * mm))
 
+    # 6b. CUP / CIG / CUC
+    cup = _s(inv.get('cup') or '')
+    cig = _s(inv.get('cig') or '')
+    cuc = _s(inv.get('cuc') or '')
+    codes = []
+    if cup.strip():
+        codes.append(f'<b>CUP:</b> {cup}')
+    if cig.strip():
+        codes.append(f'<b>CIG:</b> {cig}')
+    if cuc.strip():
+        codes.append(f'<b>CUC:</b> {cuc}')
+    if codes:
+        codes_text = '&nbsp;&nbsp;&nbsp;&nbsp;'.join(codes)
+        story.append(_box_section([Paragraph(codes_text, S['sec_text'])], 'RIFERIMENTI'))
+        story.append(Spacer(1, 3 * mm))
+
     # 7. NOTE
     note_text = _s(inv.get('notes') or inv.get('note') or '')
     rif_text  = _s(inv.get('riferimento') or inv.get('subject') or '')

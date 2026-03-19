@@ -61,6 +61,7 @@ export default function PreventivoEditorPage() {
         iban: '', banca: '', note_pagamento: '', riferimento: '',
         acconto: 0, sconto_globale: 0, normativa: '',
         numero_disegno: '', ingegnere_disegno: '', classe_esecuzione: '', giorni_consegna: '',
+        cup: '', cig: '', cuc: '',
     });
     const [clients, setClients] = useState([]);
     const [paymentTypes, setPaymentTypes] = useState([]);
@@ -187,6 +188,9 @@ export default function PreventivoEditorPage() {
                 ingegnere_disegno: data.ingegnere_disegno || f.ingegnere_disegno || '',
                 classe_esecuzione: data.classe_esecuzione || f.classe_esecuzione || '',
                 giorni_consegna: data.giorni_consegna || f.giorni_consegna || '',
+                cup: data.cup || f.cup || '',
+                cig: data.cig || f.cig || '',
+                cuc: data.cuc || f.cuc || '',
             }));
             if (data.compliance_detail) setCompliance(data.compliance_detail);
             setWorkflow({
@@ -303,6 +307,9 @@ export default function PreventivoEditorPage() {
                 ingegnere_disegno: form.ingegnere_disegno || null,
                 classe_esecuzione: form.classe_esecuzione || null,
                 giorni_consegna: form.giorni_consegna ? parseInt(form.giorni_consegna) : null,
+                cup: form.cup || null,
+                cig: form.cig || null,
+                cuc: form.cuc || null,
                 lines: form.lines.map(l => ({
                     line_id: l.line_id,
                     description: l.description || '',
@@ -794,7 +801,23 @@ export default function PreventivoEditorPage() {
                                     <div><Label className="text-xs">Destinazione Merce</Label><Textarea value={form.destinazione_merce || ''} onChange={e => setForm(f => ({ ...f, destinazione_merce: e.target.value }))} rows={4} placeholder="Indirizzo consegna..." className="text-xs" /></div>
                                 )}
                                 {sidebarTab === 'note_extra' && (
-                                    <div><Label className="text-xs">Note Generali</Label><Textarea data-testid="input-notes" value={form.notes || ''} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={6} className="text-xs" /></div>
+                                    <div className="space-y-3">
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <div>
+                                                <Label className="text-xs text-slate-500">CUP</Label>
+                                                <Input data-testid="input-cup" value={form.cup || ''} onChange={e => setForm(f => ({ ...f, cup: e.target.value.toUpperCase() }))} placeholder="Codice CUP" className="h-7 text-xs font-mono" />
+                                            </div>
+                                            <div>
+                                                <Label className="text-xs text-slate-500">CIG</Label>
+                                                <Input data-testid="input-cig" value={form.cig || ''} onChange={e => setForm(f => ({ ...f, cig: e.target.value.toUpperCase() }))} placeholder="Codice CIG" className="h-7 text-xs font-mono" />
+                                            </div>
+                                            <div>
+                                                <Label className="text-xs text-slate-500">CUC</Label>
+                                                <Input data-testid="input-cuc" value={form.cuc || ''} onChange={e => setForm(f => ({ ...f, cuc: e.target.value.toUpperCase() }))} placeholder="Codice CUC" className="h-7 text-xs font-mono" />
+                                            </div>
+                                        </div>
+                                        <div><Label className="text-xs">Note Generali</Label><Textarea data-testid="input-notes" value={form.notes || ''} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={6} className="text-xs" /></div>
+                                    </div>
                                 )}
                             </CardContent>
                         </Card>
