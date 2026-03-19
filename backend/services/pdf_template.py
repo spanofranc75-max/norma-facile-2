@@ -408,6 +408,7 @@ def render_pdf(html_content: str) -> BytesIO:
     from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,
         Paragraph, Spacer, Image, PageBreak, HRFlowable)
     from reportlab.lib.units import cm
+from reportlab.lib.utils import ImageReader
     from reportlab.lib.enums import TA_RIGHT, TA_CENTER, TA_LEFT
 
     def _di(s):
@@ -486,7 +487,9 @@ def render_pdf(html_content: str) -> BytesIO:
         if srcs:
             s=_di(srcs[0])
             if s:
-                try: logo=Image(s,width=5.0*cm,height=1.6*cm)
+                try: _ir = ImageReader(s); _iw, _ih = _ir.getSize(); s.seek(0)
+                    _tw = 5.0*cm; _th = _tw * _ih / _iw
+                    logo = Image(s, width=_tw, height=_th)
                 except: pass
     co_col=[]
     if logo: co_col.append(logo)
