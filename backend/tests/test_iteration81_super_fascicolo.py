@@ -14,7 +14,7 @@ import uuid
 from datetime import datetime
 
 # Use the public URL for testing
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://modern-invoice-gen.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://preventivo-stable.preview.emergentagent.com').rstrip('/')
 
 
 @pytest.fixture(scope="module")
