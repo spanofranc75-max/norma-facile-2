@@ -1,19 +1,19 @@
 """Professional Invoice PDF generator — ReportLab, layout NormaFacile 2.0.
 
-Layout:
-  - Logo a sinistra + dati azienda a destra
-  - Linea separatrice blu sottile
-  - Titolo documento centrato grande
-  - Box DATA / TIPO sfondo grigio chiaro affiancati
-  - Box cliente con bordo sinistro blu ("Spett.le")
-  - Tabella articoli: header navy scuro, 5 colonne
-  - Totali a destra con box navy per TOTALE
-  - Coordinate bancarie con bordo sinistro blu
-  - Scadenza pagamenti con bordo sinistro blu
+Layout grigio chiaro monocromatico:
+  - Logo a sinistra (proporzionale) + dati azienda a destra
+  - Linea separatrice grigio chiaro sottile
+  - Titolo documento centrato
+  - Box DATA / TIPO sfondo grigio chiarissimo affiancati
+  - Box cliente con bordo sinistro grigio ("Spett.le")
+  - Tabella articoli: header grigio chiaro, testo grigio medio, 5 colonne
+  - Totali a destra con box grigio chiaro per TOTALE
+  - Coordinate bancarie con bordo sinistro grigio
+  - Scadenza pagamenti con bordo sinistro grigio
   - Footer: generato da / data / pagina
   - Footer certificazioni EN 1090-1 EXC3
 
-Encoding: UTF-8 diretto (€, \u2022, \u00e0, \u00e8, ecc.)
+Encoding: UTF-8 diretto
 """
 from io import BytesIO
 import base64

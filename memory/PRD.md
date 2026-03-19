@@ -19,46 +19,39 @@ Applicazione gestionale per carpenteria metallica: gestione commesse, fatturazio
 
 ## Cosa è stato implementato
 
-### Fix PDF Monocromatico e Layout — COMPLETATO 19/03/2026
-- **Palette monocromatica:** Sostituiti tutti i colori (NAVY #0F172A → #333333, BLUE #2563EB → #555555) in `pdf_invoice_modern.py`
-- **Logo proporzionale:** Implementato ridimensionamento proporzionale con PIL (era fisso 150x50) 
-- **Condizioni vendita:** Strip virgolette letterali, nessun blocco firma duplicato se già presente nel testo
-- **Header tabella:** Colore più chiaro (#e0e0e0) in tutti i CSS WeasyPrint
-- **API Anteprima/Scarica:** Endpoint `POST /api/invoices/preview-pdf` e `GET /api/invoices/{id}/pdf` verificati funzionanti
-- **DDT PDF:** Usa template condiviso WeasyPrint con stile monocromatico coerente
-- 15/15 test pytest passati (iteration 169)
+### Redesign PDF Grigio Chiaro — COMPLETATO 19/03/2026
+- **Palette grigio chiaro completa**: Tutti i colori sostituiti con scala di grigi elegante
+  - Header tabella: #E8E8E8 sfondo + #666666 testo (era navy/bianco)
+  - Box TOTALE: #E0E0E0 sfondo (era navy scuro)
+  - Bordi/accenti: #AAAAAA (era blu #2563EB)
+  - Testo corpo: #555555, titoli: #666666, secondario: #888888
+- **Logo proporzionale**: PIL calcola dimensioni corrette (bounding box 120x60), era forzato 150x50
+- **Condizioni vendita**: Nessun blocco firma duplicato se già presente nel testo
+- **CSS WeasyPrint aggiornato**: Stessa palette grigio per preventivi e DDT
+- **Tutti i colori blu/navy/neri rimossi** da tutti i 3 generatori PDF
+- 16/16 test passati (iteration 170)
+
+### Fix PDF Monocromatico e Layout — 19/03/2026
+- Fix errori di sintassi e import
+- API Anteprima/Scarica funzionanti
+- 15/15 test passati (iteration 169)
 
 ### Rilievo Guidato (Steps 1-8) — COMPLETATO 09/03/2026
-- Backend: modello esteso (tipologia, misure, elementi, vista_3d_config)
-- Endpoint `POST /api/rilievi/{id}/calcola-materiali` per 6 tipologie
+- Backend: modello esteso, endpoint calcolo materiali per 6 tipologie
 - Frontend: TipologiaSelector, FormMisure dinamico, RilievoViewer3D (Three.js)
-- Screenshot 3D → upload come foto
-- **PDF aggiornato**: sezioni Tipologia, Misure Rilevate, Vista 3D, Lista Materiali Calcolata
-- Test e2e per tutte 6 tipologie: PASSATO
-
-### Fix Critico SDI — 09/03/2026
-- `default=str` aggiunto a `json.dumps` in `fattureincloud_api.py` (riga 67)
-- Risolve crash su tipi non JSON-serializzabili
 
 ### Ripristino PDF Fatture/Preventivi ReportLab — COMPLETATO 18/03/2026
-- `pdf_invoice_modern.py` riscritto da zero con ReportLab (era WeasyPrint)
-- Font: LiberationSans TTF per supporto Unicode completo (€, •, à, è, —)
-- Layout: logo+azienda, separatore, titolo centrato, box meta grigi, cliente con bordo, tabella, totali, banca/scadenze, footer certificazioni
-- Scadenze pagamento integrate nel PDF
-- Condizioni vendita per Preventivi (pagina 2)
-- 9/9 test pytest passati
+- `pdf_invoice_modern.py` riscritto con ReportLab
+- Font LiberationSans TTF per supporto Unicode
 
-### Altre Feature Completate (sessioni precedenti)
+### Altre Feature Completate
 - Fatturazione completa (FT, NC, proforma)
 - Validazione pre-invio SDI
-- PDF worker fix (CDN path)
 - Object Storage integration
-- Gestione clienti/fornitori
-- Preventivi con varianti
-- DDT e consegne
-- Modulo saldatori/certificazioni
-- Super Fascicolo
+- Gestione clienti/fornitori, Preventivi, DDT
+- Modulo saldatori/certificazioni, Super Fascicolo
 - Magazzino con tracciabilità
+- Sistema backup asincrono
 
 ## Backlog Prioritizzato
 
@@ -66,17 +59,17 @@ Applicazione gestionale per carpenteria metallica: gestione commesse, fatturazio
 
 ### P1
 - Conferma fix SDI in produzione
-- Rimuovere logging diagnostico in `routes/invoices.py`
-- Verifica sync fatture ricevute (`POST /api/fatture-ricevute/sync-fic`)
+- Verifica sync fatture ricevute (sync-fic)
+- Rimuovere logging diagnostico in routes/invoices.py
 
 ### P2
-- Permessi/Ruoli Granulari (RBAC)
+- RBAC (permessi/ruoli)
 - Script migrazione Base64 → Object Storage
-- Refactoring unificazione servizi PDF (ReportLab unico per tutti)
+- Refactoring unificazione servizi PDF
 
 ### P3
 - Firma digitale PDF Perizia
 - Portale cliente read-only
 - AI Copilot per preventivi
-- Refactoring CommessaOpsPanel.js (monolite)
-- Refactoring RilievoEditorPage.js (1200+ righe)
+- Refactoring CommessaOpsPanel.js
+- Refactoring RilievoEditorPage.js
