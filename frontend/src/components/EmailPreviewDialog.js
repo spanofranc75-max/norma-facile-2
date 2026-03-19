@@ -43,7 +43,7 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
             setCcEmails([]);
             setCcInput('');
             setShowCc(false);
-            fetch(`${API}${previewUrl}`, { headers: getAuthHeaders() })
+            fetch(`${API}${previewUrl}`, { headers: getAuthHeaders(), credentials: 'include' })
                 .then(r => {
                     if (!r.ok) throw new Error('Errore caricamento anteprima');
                     return r.json();
@@ -106,6 +106,7 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
             const res = await fetch(`${API}${sendUrl}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                credentials: 'include',
                 body: JSON.stringify(body),
             });
             if (!res.ok) {

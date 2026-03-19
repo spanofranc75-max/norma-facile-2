@@ -259,6 +259,7 @@ async def send_rdp_email(
     num_righe: int,
     pdf_bytes: Optional[bytes] = None,
     filename: Optional[str] = None,
+    cc: Optional[list] = None,
 ) -> bool:
     """Send Request for Quote (RdP) email to supplier with PDF attachment."""
     if not _init_resend():
@@ -296,6 +297,9 @@ async def send_rdp_email(
             "html": _email_wrapper(company_name, inner),
         }
 
+        if cc:
+            params["cc"] = [e for e in cc if e and e != to_email]
+
         if pdf_bytes and filename:
             import base64
             params["attachments"] = [{
@@ -305,7 +309,8 @@ async def send_rdp_email(
             }]
 
         resend.Emails.send(params)
-        logger.info(f"[EMAIL] RdP {rdp_id} sent to {to_email}")
+        cc_info = f" + CC: {', '.join(cc)}" if cc else ""
+        logger.info(f"[EMAIL] RdP {rdp_id} sent to {to_email}{cc_info}")
         return True
     except Exception as e:
         logger.error(f"[EMAIL ERROR] RdP email to {to_email}: {e}")
@@ -321,6 +326,7 @@ async def send_oda_email(
     importo_totale: float,
     pdf_bytes: Optional[bytes] = None,
     filename: Optional[str] = None,
+    cc: Optional[list] = None,
 ) -> bool:
     """Send Purchase Order (OdA) email to supplier with PDF attachment."""
     if not _init_resend():
@@ -358,6 +364,9 @@ async def send_oda_email(
             "html": _email_wrapper(company_name, inner, accent_color="#059669"),
         }
 
+        if cc:
+            params["cc"] = [e for e in cc if e and e != to_email]
+
         if pdf_bytes and filename:
             import base64
             params["attachments"] = [{
@@ -367,7 +376,8 @@ async def send_oda_email(
             }]
 
         resend.Emails.send(params)
-        logger.info(f"[EMAIL] OdA {ordine_id} sent to {to_email}")
+        cc_info = f" + CC: {', '.join(cc)}" if cc else ""
+        logger.info(f"[EMAIL] OdA {ordine_id} sent to {to_email}{cc_info}")
         return True
     except Exception as e:
         logger.error(f"[EMAIL ERROR] OdA email to {to_email}: {e}")

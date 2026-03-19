@@ -683,12 +683,17 @@ async def send_rdp_email_endpoint(cid: str, rdp_id: str, payload: dict = None, u
     
     # Generate PDF using V2 template
     from services.pdf_template_v2 import generate_rdp_pdf_v2
-    pdf_bytes = generate_rdp_pdf_v2(rdp, doc, company, fornitore_doc)
+    try:
+        pdf_bytes = generate_rdp_pdf_v2(rdp, doc, company, fornitore_doc)
+    except Exception as pdf_err:
+        logger.error(f"PDF generation failed for RdP {rdp_id}: {pdf_err}")
+        raise HTTPException(500, f"Generazione PDF fallita: {pdf_err}")
     filename = f"RdP_{rdp_id}.pdf"
     
     # Send email
     from services.email_service import send_rdp_email, send_email_with_attachment
     payload = payload or {}
+    cc = payload.get("cc") or []
     num_righe = len(rdp.get("righe", []))
     commessa_numero = doc.get("numero", "N/D")
 
@@ -698,6 +703,7 @@ async def send_rdp_email_endpoint(cid: str, rdp_id: str, payload: dict = None, u
         success = await send_email_with_attachment(
             to_email=to_email, subject=custom_subject, body=custom_body,
             pdf_bytes=pdf_bytes, filename=filename, user_id=user["user_id"],
+            cc=cc if cc else None,
         )
     else:
         success = await send_rdp_email(
@@ -709,10 +715,11 @@ async def send_rdp_email_endpoint(cid: str, rdp_id: str, payload: dict = None, u
             num_righe=num_righe,
             pdf_bytes=pdf_bytes,
             filename=filename,
+            cc=cc if cc else None,
         )
     
     if not success:
-        raise HTTPException(500, "Invio email fallito. Verifica la configurazione Resend in Impostazioni.")
+        raise HTTPException(500, "Invio email fallito. Verifica la chiave API Resend nelle Impostazioni Azienda.")
     
     # Track email sent on the RdP
     await db[COLL].update_one(
@@ -849,12 +856,17 @@ async def send_oda_email_endpoint(cid: str, ordine_id: str, payload: dict = None
     
     # Generate PDF using V2 template
     from services.pdf_template_v2 import generate_oda_pdf_v2
-    pdf_bytes = generate_oda_pdf_v2(oda, doc, company, fornitore_doc)
+    try:
+        pdf_bytes = generate_oda_pdf_v2(oda, doc, company, fornitore_doc)
+    except Exception as pdf_err:
+        logger.error(f"PDF generation failed for OdA {ordine_id}: {pdf_err}")
+        raise HTTPException(500, f"Generazione PDF fallita: {pdf_err}")
     filename = f"OdA_{ordine_id}.pdf"
     
     # Send email
     from services.email_service import send_oda_email, send_email_with_attachment
     payload = payload or {}
+    cc = payload.get("cc") or []
     importo_totale = oda.get("importo_totale", 0)
     commessa_numero = doc.get("numero", "N/D")
 
@@ -864,6 +876,7 @@ async def send_oda_email_endpoint(cid: str, ordine_id: str, payload: dict = None
         success = await send_email_with_attachment(
             to_email=to_email, subject=custom_subject, body=custom_body,
             pdf_bytes=pdf_bytes, filename=filename, user_id=user["user_id"],
+            cc=cc if cc else None,
         )
     else:
         success = await send_oda_email(
@@ -875,10 +888,11 @@ async def send_oda_email_endpoint(cid: str, ordine_id: str, payload: dict = None
             importo_totale=importo_totale,
             pdf_bytes=pdf_bytes,
             filename=filename,
+            cc=cc if cc else None,
         )
     
     if not success:
-        raise HTTPException(500, "Invio email fallito. Verifica la configurazione Resend in Impostazioni.")
+        raise HTTPException(500, "Invio email fallito. Verifica la chiave API Resend nelle Impostazioni Azienda.")
     
     # Track email sent on the OdA
     await db[COLL].update_one(

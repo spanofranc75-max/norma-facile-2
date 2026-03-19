@@ -16,7 +16,7 @@ from datetime import datetime
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://invoice-standardize.preview.emergentagent.com"
+    BASE_URL = "https://facile-email-fix.preview.emergentagent.com"
 
 
 class TestExtraDaysPaymentTerms:
