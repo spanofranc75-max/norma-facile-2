@@ -186,4 +186,4 @@ def generate_ddt_pdf(doc: dict, company: dict = None) -> BytesIO:
     {signatures_html}
     """
 
-    return render_pdf(body)
+    return render_pdf(body, company=co)

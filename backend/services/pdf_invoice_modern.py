@@ -554,4 +554,4 @@ def generate_modern_invoice_pdf(invoice, client, company):
               onFirstPage=_footer_canvas,
               onLaterPages=_footer_canvas)
     buf.seek(0)
-    return buf
+    return buf.getvalue()

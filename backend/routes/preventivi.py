@@ -1584,4 +1584,4 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
     {condizioni_html}
     """
 
-    return render_pdf(body)
+    return render_pdf(body, company=co)
