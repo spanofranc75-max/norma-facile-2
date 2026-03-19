@@ -85,14 +85,16 @@ def _fb():
     return _FONT_BOLD if _fonts_registered else "Helvetica-Bold"
 
 # ══════════════════════════════════════════════════════════════════
-# Colori — Palette MONOCROMATICA (scala di grigi)
+# Colori — Palette GRIGIO CHIARO elegante
 # ══════════════════════════════════════════════════════════════════
-NAVY = HexColor("#333333")        # Header tabella (grigio scuro, non nero pieno)
-BLUE = HexColor("#555555")        # Bordi laterali (grigio medio)
-GREY_BG = HexColor("#F5F5F5")     # Sfondo box meta
-GREY_TEXT = HexColor("#666666")   # Testo secondario
-GREY_BORDER = HexColor("#CCCCCC") # Bordi sottili
-DARK_TEXT = HexColor("#222222")   # Testo principale
+HEADER_BG = HexColor("#E8E8E8")    # Sfondo header tabella (grigio chiaro)
+ACCENT = HexColor("#AAAAAA")       # Bordi laterali, linee separatrici
+GREY_BG = HexColor("#F7F7F7")      # Sfondo box meta (quasi bianco)
+GREY_TEXT = HexColor("#888888")    # Testo secondario / etichette
+GREY_BORDER = HexColor("#D5D5D5")  # Bordi sottili
+BODY_TEXT = HexColor("#555555")    # Testo principale (grigio medio)
+TITLE_TEXT = HexColor("#666666")   # Titoli (grigio medio-scuro)
+TOTALE_BG = HexColor("#E0E0E0")    # Sfondo box TOTALE (grigio chiaro)
 WHITE = white
 
 # ══════════════════════════════════════════════════════════════════
@@ -108,15 +110,15 @@ BOTTOM_MARGIN = 22 * mm
 # ══════════════════════════════════════════════════════════════════
 STYLE_COMPANY_NAME = ParagraphStyle(
     "CompanyName", fontName=_fb(), fontSize=13, leading=16,
-    textColor=DARK_TEXT, alignment=TA_RIGHT,
+    textColor=TITLE_TEXT, alignment=TA_RIGHT,
 )
 STYLE_COMPANY_DETAIL = ParagraphStyle(
     "CompanyDetail", fontName=_fn(), fontSize=7.5, leading=11,
     textColor=GREY_TEXT, alignment=TA_RIGHT,
 )
 STYLE_DOC_TITLE = ParagraphStyle(
-    "DocTitle", fontName=_fb(), fontSize=20, leading=24,
-    textColor=NAVY, alignment=TA_CENTER,
+    "DocTitle", fontName=_fb(), fontSize=18, leading=22,
+    textColor=TITLE_TEXT, alignment=TA_CENTER,
 )
 STYLE_META_LABEL = ParagraphStyle(
     "MetaLabel", fontName=_fb(), fontSize=7, leading=10,
@@ -124,7 +126,7 @@ STYLE_META_LABEL = ParagraphStyle(
 )
 STYLE_META_VALUE = ParagraphStyle(
     "MetaValue", fontName=_fb(), fontSize=9, leading=12,
-    textColor=DARK_TEXT, alignment=TA_CENTER,
+    textColor=BODY_TEXT, alignment=TA_CENTER,
 )
 STYLE_CLIENT_LABEL = ParagraphStyle(
     "ClientLabel", fontName=_fn(), fontSize=7.5, leading=10,
@@ -132,39 +134,39 @@ STYLE_CLIENT_LABEL = ParagraphStyle(
 )
 STYLE_CLIENT_NAME = ParagraphStyle(
     "ClientName", fontName=_fb(), fontSize=11, leading=14,
-    textColor=DARK_TEXT,
+    textColor=BODY_TEXT,
 )
 STYLE_CLIENT_DETAIL = ParagraphStyle(
     "ClientDetail", fontName=_fn(), fontSize=8, leading=11.5,
-    textColor=HexColor("#444444"),
+    textColor=BODY_TEXT,
 )
 STYLE_TH = ParagraphStyle(
     "TableHeader", fontName=_fb(), fontSize=7, leading=9,
-    textColor=WHITE,
+    textColor=TITLE_TEXT,
 )
 STYLE_TH_R = ParagraphStyle(
     "TableHeaderR", fontName=_fb(), fontSize=7, leading=9,
-    textColor=WHITE, alignment=TA_RIGHT,
+    textColor=TITLE_TEXT, alignment=TA_RIGHT,
 )
 STYLE_TH_C = ParagraphStyle(
     "TableHeaderC", fontName=_fb(), fontSize=7, leading=9,
-    textColor=WHITE, alignment=TA_CENTER,
+    textColor=TITLE_TEXT, alignment=TA_CENTER,
 )
 STYLE_TD = ParagraphStyle(
     "TableCell", fontName=_fn(), fontSize=8, leading=11,
-    textColor=DARK_TEXT,
+    textColor=BODY_TEXT,
 )
 STYLE_TD_R = ParagraphStyle(
     "TableCellR", fontName=_fn(), fontSize=8, leading=11,
-    textColor=DARK_TEXT, alignment=TA_RIGHT,
+    textColor=BODY_TEXT, alignment=TA_RIGHT,
 )
 STYLE_TD_C = ParagraphStyle(
     "TableCellC", fontName=_fn(), fontSize=8, leading=11,
-    textColor=DARK_TEXT, alignment=TA_CENTER,
+    textColor=BODY_TEXT, alignment=TA_CENTER,
 )
 STYLE_TD_BOLD_R = ParagraphStyle(
     "TableCellBoldR", fontName=_fb(), fontSize=8, leading=11,
-    textColor=DARK_TEXT, alignment=TA_RIGHT,
+    textColor=BODY_TEXT, alignment=TA_RIGHT,
 )
 STYLE_TOTALS_LABEL = ParagraphStyle(
     "TotalsLabel", fontName=_fn(), fontSize=8.5, leading=12,
@@ -172,15 +174,15 @@ STYLE_TOTALS_LABEL = ParagraphStyle(
 )
 STYLE_TOTALS_VALUE = ParagraphStyle(
     "TotalsValue", fontName=_fb(), fontSize=8.5, leading=12,
-    textColor=DARK_TEXT, alignment=TA_RIGHT,
+    textColor=BODY_TEXT, alignment=TA_RIGHT,
 )
 STYLE_GRAND_LABEL = ParagraphStyle(
     "GrandLabel", fontName=_fb(), fontSize=11, leading=14,
-    textColor=WHITE, alignment=TA_RIGHT,
+    textColor=TITLE_TEXT, alignment=TA_RIGHT,
 )
 STYLE_GRAND_VALUE = ParagraphStyle(
     "GrandValue", fontName=_fb(), fontSize=14, leading=17,
-    textColor=WHITE, alignment=TA_RIGHT,
+    textColor=BODY_TEXT, alignment=TA_RIGHT,
 )
 STYLE_SECTION_TITLE = ParagraphStyle(
     "SectionTitle", fontName=_fb(), fontSize=7.5, leading=10,
@@ -188,7 +190,7 @@ STYLE_SECTION_TITLE = ParagraphStyle(
 )
 STYLE_BANK_LINE = ParagraphStyle(
     "BankLine", fontName=_fn(), fontSize=8, leading=11.5,
-    textColor=HexColor("#444444"),
+    textColor=BODY_TEXT,
 )
 STYLE_FOOTER = ParagraphStyle(
     "Footer", fontName=_fn(), fontSize=7, leading=9,
@@ -200,7 +202,7 @@ STYLE_CERT_FOOTER = ParagraphStyle(
 )
 STYLE_NOTES = ParagraphStyle(
     "Notes", fontName=_fn(), fontSize=7.5, leading=10.5,
-    textColor=HexColor("#444444"),
+    textColor=BODY_TEXT,
 )
 STYLE_NOTES_TITLE = ParagraphStyle(
     "NotesTitle", fontName=_fb(), fontSize=7.5, leading=10,
@@ -209,15 +211,15 @@ STYLE_NOTES_TITLE = ParagraphStyle(
 # Stili per pagina condizioni
 STYLE_COND_TITLE = ParagraphStyle(
     "CondTitle", fontName=_fb(), fontSize=11, leading=14,
-    textColor=DARK_TEXT, alignment=TA_CENTER, spaceAfter=4 * mm,
+    textColor=TITLE_TEXT, alignment=TA_CENTER, spaceAfter=4 * mm,
 )
 STYLE_COND_TEXT = ParagraphStyle(
     "CondText", fontName=_fn(), fontSize=7.5, leading=10.5,
-    textColor=DARK_TEXT, alignment=TA_LEFT,
+    textColor=BODY_TEXT, alignment=TA_LEFT,
 )
 STYLE_COND_LEGAL = ParagraphStyle(
     "CondLegal", fontName=_fn(), fontSize=7, leading=9.5,
-    textColor=HexColor("#555555"),
+    textColor=GREY_TEXT,
 )
 
 # ══════════════════════════════════════════════════════════════════
@@ -299,7 +301,7 @@ def _decode_logo(logo_url: str):
 class _BlueBorderBox:
     """Flowable: box con bordo sinistro blu e padding interno."""
 
-    def __init__(self, content_flowables, border_color=BLUE, border_width=2.5,
+    def __init__(self, content_flowables, border_color=ACCENT, border_width=2,
                  padding=8, bg_color=None, available_width=None):
         self.content = content_flowables
         self.border_color = border_color
@@ -434,31 +436,28 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     logo_src = _decode_logo(co.get("logo_url", ""))
     if logo_src:
         try:
-            from PIL import Image as PILImage
-            # Calcola dimensioni proporzionali
-            pil_buf = BytesIO(logo_src.read()) if hasattr(logo_src, 'read') else BytesIO()
+            # Leggi i bytes grezzi per PIL e poi resetta per ReportLab
             if hasattr(logo_src, 'read'):
-                logo_src.seek(0)  # reset per ReportLab
+                raw_bytes = logo_src.read()
+                logo_src.seek(0)
             else:
-                pil_buf = BytesIO()
-            try:
-                if hasattr(logo_src, 'read'):
-                    pil_img = PILImage.open(BytesIO(logo_src.read()))
-                    logo_src.seek(0)
-                elif isinstance(logo_src, str):
-                    pil_img = None  # URL, skip proportion calc
-                else:
-                    pil_img = None
-            except Exception:
-                pil_img = None
+                raw_bytes = None
 
-            max_w, max_h = 140, 55
-            if pil_img:
-                orig_w, orig_h = pil_img.size
-                ratio = min(max_w / orig_w, max_h / orig_h)
-                logo_img = Image(logo_src, width=orig_w * ratio, height=orig_h * ratio)
-            else:
-                logo_img = Image(logo_src, width=max_w, height=max_h)
+            max_w, max_h = 120, 60  # Bounding box più generoso
+            img_w, img_h = max_w, max_h
+
+            if raw_bytes:
+                try:
+                    from PIL import Image as PILImage
+                    pil_img = PILImage.open(BytesIO(raw_bytes))
+                    orig_w, orig_h = pil_img.size
+                    ratio = min(max_w / orig_w, max_h / orig_h)
+                    img_w = orig_w * ratio
+                    img_h = orig_h * ratio
+                except Exception as e:
+                    logger.warning(f"PIL fallback per logo: {e}")
+
+            logo_img = Image(logo_src, width=img_w, height=img_h)
             logo_img.hAlign = "LEFT"
         except Exception:
             logo_img = Paragraph("", STYLE_TD)
@@ -494,10 +493,10 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     elements.append(Spacer(1, 3 * mm))
 
     # ══════════════════════════════════════════════════════════════
-    # 2. Linea separatrice blu sottile
+    # 2. Linea separatrice grigio chiaro sottile
     # ══════════════════════════════════════════════════════════════
     elements.append(HRFlowable(
-        width="100%", thickness=1.5, color=BLUE,
+        width="100%", thickness=1, color=ACCENT,
         spaceBefore=1 * mm, spaceAfter=4 * mm,
     ))
 
@@ -561,7 +560,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         ("BOTTOMPADDING", (-1, -1), (-1, -1), 6),
         ("TOPPADDING", (0, 1), (-1, -1), 1),
         ("BOTTOMPADDING", (0, 0), (-1, -2), 1),
-        ("LINEBEFORE", (0, 0), (0, -1), 2.5, BLUE),
+        ("LINEBEFORE", (0, 0), (0, -1), 2, ACCENT),
     ]))
     elements.append(client_table)
     elements.append(Spacer(1, 5 * mm))
@@ -607,9 +606,9 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
 
     items_table = Table(table_data, colWidths=col_widths, repeatRows=1)
     style_cmds = [
-        # Header navy
-        ("BACKGROUND", (0, 0), (-1, 0), NAVY),
-        ("TEXTCOLOR", (0, 0), (-1, 0), WHITE),
+        # Header grigio chiaro con testo scuro
+        ("BACKGROUND", (0, 0), (-1, 0), HEADER_BG),
+        ("TEXTCOLOR", (0, 0), (-1, 0), TITLE_TEXT),
         ("FONTNAME", (0, 0), (-1, 0), _fb()),
         # Padding
         ("TOPPADDING", (0, 0), (-1, 0), 8),
@@ -619,8 +618,8 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         ("LEFTPADDING", (0, 0), (-1, -1), 6),
         ("RIGHTPADDING", (0, 0), (-1, -1), 6),
         # Bordi righe
-        ("LINEBELOW", (0, 0), (-1, 0), 1.5, NAVY),
-        ("LINEBELOW", (0, -1), (-1, -1), 1.5, GREY_BORDER),
+        ("LINEBELOW", (0, 0), (-1, 0), 1, GREY_BORDER),
+        ("LINEBELOW", (0, -1), (-1, -1), 1, GREY_BORDER),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ]
     # Bordi sottili tra righe body
@@ -629,7 +628,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
 
     # Zebra striping
     for i in range(2, len(table_data), 2):
-        style_cmds.append(("BACKGROUND", (0, i), (-1, i), HexColor("#F9F9F9")))
+        style_cmds.append(("BACKGROUND", (0, i), (-1, i), GREY_BG))
 
     items_table.setStyle(TableStyle(style_cmds))
     elements.append(items_table)
@@ -646,7 +645,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         ]
         notes_table = Table(notes_data, colWidths=[usable_w])
         notes_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), HexColor("#FAFAFA")),
+            ("BACKGROUND", (0, 0), (-1, -1), GREY_BG),
             ("BOX", (0, 0), (-1, -1), 0.5, GREY_BORDER),
             ("LEFTPADDING", (0, 0), (-1, -1), 8),
             ("RIGHTPADDING", (0, 0), (-1, -1), 8),
@@ -697,12 +696,12 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     ]]
     grand_table = Table(grand_row, colWidths=totals_inner)
     grand_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), NAVY),
+        ("BACKGROUND", (0, 0), (-1, -1), TOTALE_BG),
         ("TOPPADDING", (0, 0), (-1, -1), 8),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
         ("LEFTPADDING", (0, 0), (-1, -1), 8),
         ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-        ("BOX", (0, 0), (-1, -1), 0, NAVY),
+        ("BOX", (0, 0), (-1, -1), 0.5, GREY_BORDER),
     ]))
 
     # Ritenuta d'acconto (se presente)
@@ -760,7 +759,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
         ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
         ("TOPPADDING", (0, 0), (0, 0), 6),
         ("BOTTOMPADDING", (0, -1), (0, -1), 6),
-        ("LINEBEFORE", (0, 0), (0, -1), 2.5, BLUE),
+        ("LINEBEFORE", (0, 0), (0, -1), 2, ACCENT),
     ]))
 
     # Assemblaggio footer row: banca a sinistra, totali a destra
@@ -815,7 +814,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
             ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
             ("TOPPADDING", (0, 0), (0, 0), 6),
             ("BOTTOMPADDING", (0, -1), (0, -1), 6),
-            ("LINEBEFORE", (0, 0), (0, -1), 2.5, BLUE),
+            ("LINEBEFORE", (0, 0), (0, -1), 2, ACCENT),
         ]))
         elements.append(scad_table)
         elements.append(Spacer(1, 3 * mm))
@@ -825,7 +824,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     if due_date and not scadenze:
         due_style = ParagraphStyle(
             "DueDate", fontName=_fb(), fontSize=9, leading=12,
-            textColor=HexColor("#333333"),
+            textColor=BODY_TEXT,
         )
         due_content = [
             [Paragraph("SCADENZA PAGAMENTO", STYLE_SECTION_TITLE)],
@@ -839,7 +838,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
             ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
             ("TOPPADDING", (0, 0), (0, 0), 6),
             ("BOTTOMPADDING", (0, -1), (0, -1), 6),
-            ("LINEBEFORE", (0, 0), (0, -1), 2.5, BLUE),
+            ("LINEBEFORE", (0, 0), (0, -1), 2, ACCENT),
         ]))
         elements.append(due_table)
         elements.append(Spacer(1, 3 * mm))
@@ -849,7 +848,7 @@ def generate_modern_invoice_pdf(invoice: dict, client: dict, company: dict) -> b
     # ══════════════════════════════════════════════════════════════
     legal_style = ParagraphStyle(
         "Legal", fontName=_fn(), fontSize=6.5, leading=9,
-        textColor=HexColor("#999999"),
+        textColor=GREY_TEXT,
     )
     elements.append(Spacer(1, 2 * mm))
     elements.append(Paragraph(

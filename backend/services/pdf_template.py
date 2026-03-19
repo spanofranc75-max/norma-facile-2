@@ -39,7 +39,7 @@ COMMON_CSS = """
 body {
     font-family: Arial, Helvetica, "Liberation Sans", sans-serif;
     font-size: 9pt;
-    color: #222;
+    color: #555;
     line-height: 1.35;
 }
 .page-break { page-break-before: always; }
@@ -66,34 +66,35 @@ body {
     font-size: 8.5pt;
 }
 .logo {
-    max-width: 140px;
-    max-height: 55px;
+    max-width: 120px;
+    max-height: 60px;
     margin-bottom: 6px;
 }
 .company-name {
     font-size: 13pt;
     font-weight: bold;
-    color: #222;
+    color: #666;
     margin-bottom: 3px;
 }
 .company-details {
     font-size: 8pt;
-    color: #333;
+    color: #888;
     line-height: 1.55;
 }
 .cl-label {
     font-size: 8pt;
-    color: #555;
+    color: #888;
     font-weight: bold;
 }
 .cl-name {
     font-weight: bold;
     font-size: 10pt;
+    color: #555;
     margin: 2px 0;
 }
 .cl-details {
     font-size: 8pt;
-    color: #333;
+    color: #666;
     line-height: 1.55;
 }
 
@@ -101,18 +102,20 @@ body {
 .doc-title {
     text-align: center;
     margin: 14px 0 6px 0;
+    border-top: 1px solid #ccc;
+    padding-top: 12px;
 }
 .doc-title h1 {
-    font-size: 18pt;
+    font-size: 16pt;
     font-weight: bold;
-    color: #222;
+    color: #666;
     letter-spacing: 2px;
     margin: 0 0 2px 0;
 }
 .doc-num {
-    font-size: 14pt;
+    font-size: 13pt;
     font-weight: bold;
-    color: #333;
+    color: #777;
 }
 
 /* ── META TABLE ── */
@@ -126,18 +129,21 @@ body {
     border: none;
     padding: 1px 6px 1px 0;
     vertical-align: top;
+    color: #666;
 }
 .meta-label {
     font-weight: bold;
     white-space: nowrap;
     width: 110px;
+    color: #888;
 }
 .ref-note {
     margin: 8px 0;
     padding: 5px 8px;
-    background: #f5f5f5;
-    border-left: 3px solid #666;
+    background: #f7f7f7;
+    border-left: 3px solid #aaa;
     font-size: 8.5pt;
+    color: #666;
 }
 
 /* ── ITEMS TABLE ── */
@@ -148,19 +154,20 @@ body {
     font-size: 8pt;
 }
 .items-table th {
-    background: #e0e0e0;
-    border: 1px solid #999;
+    background: #e8e8e8;
+    border: 1px solid #ccc;
     padding: 5px 4px;
     font-weight: bold;
     text-transform: uppercase;
     font-size: 7.5pt;
     text-align: center;
-    color: #222;
+    color: #666;
 }
 .items-table td {
-    border: 1px solid #bbb;
+    border: 1px solid #ddd;
     padding: 4px 4px;
     vertical-align: top;
+    color: #555;
 }
 .items-table .desc-cell {
     text-align: left;
@@ -173,15 +180,17 @@ body {
 .info-box {
     margin: 8px 0;
     padding: 6px 8px;
-    background: #fafafa;
+    background: #f7f7f7;
     border: 1px solid #ddd;
     font-size: 8pt;
     line-height: 1.4;
+    color: #666;
 }
 .info-box-title {
     font-weight: bold;
     margin-bottom: 3px;
     font-size: 8.5pt;
+    color: #777;
 }
 
 /* ── TOTALS ── */
@@ -197,17 +206,18 @@ body {
     margin-bottom: 6px;
 }
 .iva-table th {
-    background: #e0e0e0;
-    border: 1px solid #999;
+    background: #e8e8e8;
+    border: 1px solid #ccc;
     padding: 4px 5px;
     font-size: 7.5pt;
     text-transform: uppercase;
     text-align: center;
-    color: #222;
+    color: #666;
 }
 .iva-table td {
-    border: 1px solid #bbb;
+    border: 1px solid #ddd;
     padding: 3px 5px;
+    color: #555;
 }
 .summary-table {
     width: 100%;
@@ -219,29 +229,33 @@ body {
 .summary-table td {
     padding: 2px 5px;
     border: none;
+    color: #555;
 }
 .summary-row td { font-size: 9pt; }
 .total-final td {
     font-size: 13pt;
     font-weight: bold;
-    border-top: 2px solid #333;
+    border-top: 1px solid #ccc;
     padding-top: 6px;
+    color: #555;
+    background: #e8e8e8;
 }
 
 /* ── BANK / PAYMENT INFO ── */
 .bank-info {
     margin-top: 12px;
     padding: 6px 8px;
-    border: 1px solid #ccc;
+    border: 1px solid #ddd;
     font-size: 8pt;
-    background: #fafafa;
+    background: #f7f7f7;
+    color: #666;
 }
 
 /* ── PAYMENT SCHEDULE ── */
 .payment-schedule {
     margin-top: 12px;
     padding: 8px;
-    border: 1px solid #999;
+    border: 1px solid #ccc;
     background: #f9f9f9;
 }
 .schedule-title {
@@ -249,6 +263,7 @@ body {
     margin-bottom: 6px;
     text-transform: uppercase;
     letter-spacing: 0.3px;
+    color: #888;
 }
 .schedule-table {
     width: 100%;
@@ -256,16 +271,17 @@ body {
     font-size: 8pt;
 }
 .schedule-table th {
-    background: #e0e0e0;
+    background: #e8e8e8;
     border: 1px solid #ccc;
     padding: 3px 6px;
     font-weight: bold;
     text-align: center;
-    color: #222;
+    color: #666;
 }
 .schedule-table td {
-    border: 1px solid #ccc;
+    border: 1px solid #ddd;
     padding: 3px 6px;
+    color: #555;
 }
 
 /* ── TRANSPORT INFO (DDT) ── */
@@ -276,13 +292,15 @@ body {
     margin: 6px 0;
 }
 .transport-table td {
-    border: 1px solid #ccc;
+    border: 1px solid #ddd;
     padding: 3px 5px;
+    color: #555;
 }
 .transport-table .t-label {
     font-weight: bold;
-    background: #f5f5f5;
+    background: #f0f0f0;
     width: 22%;
+    color: #777;
 }
 
 /* ── SIGNATURE BLOCKS ── */
@@ -300,11 +318,11 @@ body {
     padding: 0 10px;
 }
 .sig-line-center {
-    border-top: 1px solid #333;
+    border-top: 1px solid #aaa;
     margin-top: 40px;
     padding-top: 4px;
     font-size: 7.5pt;
-    color: #555;
+    color: #888;
 }
 
 /* ── CONDITIONS (PAGE 2) ── */
@@ -314,34 +332,37 @@ body {
     text-align: center;
     margin-bottom: 12px;
     text-transform: uppercase;
+    color: #666;
 }
 .conditions-text {
     font-size: 7.5pt;
     line-height: 1.45;
     text-align: justify;
+    color: #555;
 }
 .acceptance-section { margin-top: 30px; }
 .sig-block { margin: 15px 0; }
 .sig-line {
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid #aaa;
     width: 250px;
     height: 30px;
     margin: 4px 0;
 }
-.sig-label { font-size: 7.5pt; color: #666; }
+.sig-label { font-size: 7.5pt; color: #888; }
 .legal-notice {
     margin-top: 20px;
     font-size: 7pt;
     line-height: 1.4;
-    border: 1px solid #ccc;
+    border: 1px solid #ddd;
     padding: 6px 8px;
-    background: #fafafa;
+    background: #f7f7f7;
+    color: #666;
 }
 .doc-footer {
     margin-top: 40px;
     text-align: right;
     font-size: 8pt;
-    color: #555;
+    color: #888;
 }
 """
 
