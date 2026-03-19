@@ -2538,26 +2538,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                                 {pdfExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                             </Button>
                         </div>
-                        <DialogDescription>
-                            Verifica il documento prima di inviarlo via email
-                            {(() => {
-                                const rdps = approv?.richieste || [];
-                                const odas = approv?.ordini_acquisto || [];
-                                let item = null;
-                                if (pdfPreviewUrl?.includes('/richieste/')) {
-                                    const rdpId = pdfPreviewUrl.split('/richieste/')[1]?.split('/')[0];
-                                    item = rdps.find(r => r.rdp_id === rdpId);
-                                } else if (pdfPreviewUrl?.includes('/ordini/')) {
-                                    const ordineId = pdfPreviewUrl.split('/ordini/')[1]?.split('/')[0];
-                                    item = odas.find(o => o.ordine_id === ordineId);
-                                }
-                                if (item?.email_sent) {
-                                    const date = item.email_sent_at ? new Date(item.email_sent_at).toLocaleString('it-IT') : '';
-                                    return ` — Ultima email inviata a ${item.email_sent_to || '?'} il ${date}`;
-                                }
-                                return '';
-                            })()}
-                        </DialogDescription>
+                        <DialogDescription>Verifica il documento prima di inviarlo via email</DialogDescription>
                     </DialogHeader>
                     <div className="flex-1 h-full min-h-0">
                         {pdfPreviewUrl && (
@@ -2584,18 +2565,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                                 setPdfExpanded(false);
                             }}
                         >
-                            <Mail className="h-4 w-4 mr-1" /> {(() => {
-                                const rdps = approv?.richieste || [];
-                                const odas = approv?.ordini_acquisto || [];
-                                if (pdfPreviewUrl?.includes('/richieste/')) {
-                                    const rdpId = pdfPreviewUrl.split('/richieste/')[1]?.split('/')[0];
-                                    if (rdps.find(r => r.rdp_id === rdpId)?.email_sent) return 'Rinvia Email';
-                                } else if (pdfPreviewUrl?.includes('/ordini/')) {
-                                    const ordineId = pdfPreviewUrl.split('/ordini/')[1]?.split('/')[0];
-                                    if (odas.find(o => o.ordine_id === ordineId)?.email_sent) return 'Rinvia Email';
-                                }
-                                return 'Invia Email';
-                            })()}
+                            <Mail className="h-4 w-4 mr-1" /> Invia Email
                         </Button>
                     </DialogFooter>
                 </DialogContent>
