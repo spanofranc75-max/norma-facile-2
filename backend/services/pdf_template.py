@@ -306,64 +306,94 @@ def build_totals_html(iva_data: dict, acconto: float = 0) -> str:
 def build_conditions_html(company: dict, doc_number: str) -> str:
     """Condizioni generali di fornitura - HTML hardcoded stile Invoicex."""
     company_name = (company or {}).get('business_name', 'Steel Project Design Srls')
-    
-    return f"""<div style="page-break-before:always; font-family:Arial,sans-serif; font-size:9pt; color:#222; margin:0; padding:10px 15px;">
 
-<h2 style="font-size:11pt; font-weight:bold; border-bottom:1px solid #ccc; padding-bottom:3px; margin-top:8px; margin-bottom:6px;">CONDIZIONI GENERALI DI FORNITURA</h2>
+    return (
+        "<div style='page-break-before:always; font-family:Arial,sans-serif;"
+        " font-size:9pt; color:#222; margin:0; padding:10px 15px;'>"
+        "<h2 style='font-size:11pt; font-weight:bold; border-bottom:1px solid #ccc;"
+        " padding-bottom:3px; margin-top:8px; margin-bottom:6px;'>"
+        "CONDIZIONI GENERALI DI FORNITURA</h2>"
 
-<h3 style="font-size:9.5pt; font-weight:bold; margin-top:10px; margin-bottom:2px;">1 - Premessa</h3>
-<p style="margin:2px 0 6px 0; font-weight:normal; text-align:justify;">Ai fini del presente contratto i termini elencati qui di seguito avranno il seguente significato: Steel Project Design Srls: Steel Project Design Srls con sede legale in via dei Pioppi n. 11 - 40010 Padulle BO). Acquirente: ogni persona fisica o giuridica o altro ente che acquisti o si impegni ad acquistare dalla Steel Project Design Srls i propri prodotti. Prodotti: ogni bene che sia commercializzato dalla Steel Project Design Srls.</p>
+        "<h3 style='font-size:9.5pt; font-weight:bold; margin-top:10px; margin-bottom:2px;'>1 - Premessa</h3>"
+        "<p style='margin:2px 0 6px 0; font-weight:normal; text-align:justify;'>"
+        "Ai fini del presente contratto i termini elencati qui di seguito avranno il seguente significato: "
+        "Steel Project Design Srls: Steel Project Design Srls con sede legale in via dei Pioppi n. 11 - "
+        "40010 Padulle BO). Acquirente: ogni persona fisica o giuridica o altro ente che acquisti o si "
+        "impegni ad acquistare dalla Steel Project Design Srls i propri prodotti. Prodotti: ogni bene "
+        "che sia commercializzato dalla Steel Project Design Srls.</p>"
 
-<h3 style="font-size:9.5pt; font-weight:bold; margin-top:10px; margin-bottom:2px;">2 - Condizioni di fornitura</h3>
-<p style="margin:2px 0 2px 0; font-weight:normal;">a) Merce resa f.co Vs. cantiere/abitazione</p>
-<p style="margin:2px 0 2px 0; font-weight:normal;">b) Posa in opera: come descritto</p>
-<p style="margin:2px 0 2px 0; font-weight:normal;">c) Consegna: 75/90 giorni dalla data di accettazione (il termine di consegna decorre dalla data di versamento dell'acconto).</p>
-<p style="margin:2px 0 2px 0; font-weight:normal;">d) I tempi di consegna sono indicativi e la mancata o ritardata consegna, di parte o di tutta la commessa, non potr&agrave; per nessun motivo dar luogo a rivalsa, n&eacute; diritto ad esigere indennizzi, salvo diverse condizioni scritte ed accettate dalla societ&agrave;.</p>
-<p style="margin:2px 0 2px 0; font-weight:normal;">e) Finitura: come descritto</p>
-<p style="margin:2px 0 2px 0; font-weight:normal;">f) Pagamento: Acconto del 40% all'ordine - saldo a fine lavori entro 7 giorni.</p>
-<p style="margin:2px 0 6px 0; font-weight:normal;">g) Validit&agrave; offerta: 15 giorni dalla data di emissione per l'intero importo dei lavori (no frazionati)</p>
+        "<h3 style='font-size:9.5pt; font-weight:bold; margin-top:10px; margin-bottom:2px;'>2 - Condizioni di fornitura</h3>"
+        "<p style='margin:2px 0 2px 0; font-weight:normal;'>a) Merce resa f.co Vs. cantiere/abitazione</p>"
+        "<p style='margin:2px 0 2px 0; font-weight:normal;'>b) Posa in opera: come descritto</p>"
+        "<p style='margin:2px 0 2px 0; font-weight:normal;'>c) Consegna: 75/90 giorni dalla data di accettazione.</p>"
+        "<p style='margin:2px 0 2px 0; font-weight:normal;'>d) I tempi di consegna sono indicativi e la mancata "
+        "consegna non potr&agrave; dar luogo a rivalsa, n&eacute; diritto ad esigere indennizzi.</p>"
+        "<p style='margin:2px 0 2px 0; font-weight:normal;'>e) Finitura: come descritto</p>"
+        "<p style='margin:2px 0 2px 0; font-weight:normal;'>f) Pagamento: Acconto del 40% all&#39;ordine - "
+        "saldo a fine lavori entro 7 giorni.</p>"
+        "<p style='margin:2px 0 6px 0; font-weight:normal;'>g) Validit&agrave; offerta: 15 giorni dalla "
+        "data di emissione per l&#39;intero importo dei lavori (no frazionati)</p>"
 
-<h3 style="font-size:9.5pt; font-weight:bold; margin-top:10px; margin-bottom:2px;">3 - Oneri a carico del cliente</h3>
-<p style="margin:2px 0 2px 0; font-weight:normal;">a) Verifica dettagliata dei prodotti offerti</p>
-<p style="margin:2px 0 6px 0; font-weight:normal;">b) Verifica presso gli enti di competenza della necessit&agrave; di autorizzazione per l'installazione</p>
+        "<h3 style='font-size:9.5pt; font-weight:bold; margin-top:10px; margin-bottom:2px;'>3 - Oneri a carico del cliente</h3>"
+        "<p style='margin:2px 0 2px 0; font-weight:normal;'>a) Verifica dettagliata dei prodotti offerti</p>"
+        "<p style='margin:2px 0 6px 0; font-weight:normal;'>b) Verifica presso gli enti di competenza "
+        "della necessit&agrave; di autorizzazione per l&#39;installazione</p>"
 
-<h3 style="font-size:9.5pt; font-weight:bold; margin-top:10px; margin-bottom:2px;">4 - Esclusioni dal preventivo</h3>
-<p style="margin:2px 0 2px 0; font-weight:normal;">Sono da ritenersi escluse dal preventivo di montaggio, le ore di fermo cantiere dovute ad imprevisti quali: Trasporto se non espressamente indicato, Scarico e smistamento ai piani, Eventuale scarico e distribuzione ai piani del materiale se non espressamente indicato, Eventuali opere murarie, Eventuali modifiche alle posizioni successive alla conferma d'ordine, Eventuale necessit&agrave; di fornitura di coprifili, Eventuali variazioni della luce foro, Impalcature ponteggi e mezzi di sollevamento, Energia elettrica e forza motrice, Agibilit&agrave; nella zona di lavoro, Protezione di eventuali impianti adiacenti, Oneri per occupazione suolo pubblico, Oneri per eventuali permessi accesso centro storico, Custodia dei materiali in cantiere, Pulizia degli infissi, La posa se non espressamente indicata, Eventuale smontaggio e smaltimento infissi esistenti, Ogni altro servizio e materiale non espressamente indicato, Smaltimento di imballi e materiali di risulta.</p>
+        "<h3 style='font-size:9.5pt; font-weight:bold; margin-top:10px; margin-bottom:2px;'>4 - Esclusioni dal preventivo</h3>"
+        "<p style='margin:2px 0 6px 0; font-weight:normal;'>Sono da ritenersi escluse: Trasporto se non "
+        "espressamente indicato, Scarico e smistamento, Opere murarie, Modifiche successive alla conferma "
+        "d&#39;ordine, Impalcature e ponteggi, Energia elettrica, Agibilit&agrave; nella zona di lavoro, "
+        "Oneri per suolo pubblico, Custodia materiali, Pulizia infissi, Smaltimento imballi.</p>"
 
-<h3 style="font-size:9.5pt; font-weight:bold; margin-top:10px; margin-bottom:2px;">5 - Pagamenti</h3>
-<p style="margin:2px 0 2px 0; font-weight:normal;">a) La mancata effettuazione di un pagamento, anche parziale, entro i termini concordati, autorizza la Steel Project Design Srls a sospendere ogni consegna, anche se gi&agrave; in corso.</p>
-<p style="margin:2px 0 2px 0; font-weight:normal;">b) Il mancato rispetto dei termini di pagamento determiner&agrave; l'automatica risoluzione del contratto per responsabilit&agrave; dell'acquirente.</p>
-<p style="margin:2px 0 2px 0; font-weight:normal;">c) In caso di pagamento dilazionato, la merce si intende di propriet&agrave; della Ditta venditrice sino al completo pagamento (art. 1523 C.C.).</p>
-<p style="margin:2px 0 2px 0; font-weight:normal;">d) In caso di ritardo di pagamento l'Acquirente riconoscer&agrave; gli interessi maturati in base alla Direttiva Europea n. 2000/35 (D.L. n. 231/2002).</p>
-<p style="margin:2px 0 6px 0; font-weight:normal;">e) Se per responsabilit&agrave; del cliente la merce non verr&agrave; ritirata entro 5 gg dalla data prevista saranno addebitati per lo stoccaggio euro 15,00 +IVA a bancale per ogni giorno di ritardo.</p>
+        "<h3 style='font-size:9.5pt; font-weight:bold; margin-top:10px; margin-bottom:2px;'>5 - Pagamenti</h3>"
+        "<p style='margin:2px 0 2px 0; font-weight:normal;'>a) La mancata effettuazione di un pagamento "
+        "autorizza la Steel Project Design Srls a sospendere ogni consegna.</p>"
+        "<p style='margin:2px 0 2px 0; font-weight:normal;'>b) Il mancato rispetto dei termini di pagamento "
+        "determiner&agrave; l&#39;automatica risoluzione del contratto.</p>"
+        "<p style='margin:2px 0 2px 0; font-weight:normal;'>c) In caso di pagamento dilazionato, la merce "
+        "si intende di propriet&agrave; della Ditta venditrice sino al completo pagamento (art. 1523 C.C.).</p>"
+        "<p style='margin:2px 0 2px 0; font-weight:normal;'>d) In caso di ritardo l&#39;Acquirente "
+        "riconoscer&agrave; gli interessi (Direttiva Europea n. 2000/35 - D.L. n. 231/2002).</p>"
+        "<p style='margin:2px 0 6px 0; font-weight:normal;'>e) Se per responsabilit&agrave; del cliente "
+        "la merce non verr&agrave; ritirata entro 5 gg saranno addebitati euro 15,00 +IVA a bancale/giorno.</p>"
 
-<h3 style="font-size:9.5pt; font-weight:bold; margin-top:10px; margin-bottom:2px;">6 - Garanzia</h3>
-<p style="margin:2px 0 6px 0; font-weight:normal;">a) &Egrave; esclusa la garanzia per i vizi dei prodotti venduti. Eventuali contestazioni o reclami vanno comunicati per iscritto entro otto giorni dal ricevimento/montaggio della merce. Difformit&agrave; o vizi della merce, solo se espressamente riconosciuti ed autorizzati per iscritto, attribuiscono all'acquirente il solo diritto alla restituzione merce effettivamente difettosa.</p>
+        "<h3 style='font-size:9.5pt; font-weight:bold; margin-top:10px; margin-bottom:2px;'>6 - Garanzia</h3>"
+        "<p style='margin:2px 0 6px 0; font-weight:normal;'>&Egrave; esclusa la garanzia per i vizi dei "
+        "prodotti venduti. Eventuali contestazioni vanno comunicate per iscritto entro otto giorni dal "
+        "ricevimento/montaggio della merce.</p>"
 
-<h3 style="font-size:9.5pt; font-weight:bold; margin-top:10px; margin-bottom:2px;">7 - Varianti in corso d'opera</h3>
-<p style="margin:2px 0 6px 0; font-weight:normal;">b) Le merci o le varianti richieste in corso d'opera verranno preventivate ed eseguite dopo conferma scritta del Committente.</p>
+        "<h3 style='font-size:9.5pt; font-weight:bold; margin-top:10px; margin-bottom:2px;'>7 - Varianti in corso d&#39;opera</h3>"
+        "<p style='margin:2px 0 6px 0; font-weight:normal;'>Le varianti richieste in corso d&#39;opera "
+        "verranno preventivate ed eseguite dopo conferma scritta del Committente.</p>"
 
-<h3 style="font-size:9.5pt; font-weight:bold; margin-top:10px; margin-bottom:2px;">8 - Controversie</h3>
-<p style="margin:2px 0 6px 0; font-weight:normal;">Luogo dell'adempimento dell'obbligazione &egrave; sempre la sede della Steel Project Design Srls. Ogni controversia che dovesse insorgere fra le parti in ordine alla validit&agrave;, interpretazione applicazione ed esecuzione del presente contratto.</p>
+        "<h3 style='font-size:9.5pt; font-weight:bold; margin-top:10px; margin-bottom:2px;'>8 - Controversie</h3>"
+        "<p style='margin:2px 0 6px 0; font-weight:normal;'>Luogo dell&#39;adempimento &egrave; sempre "
+        "la sede della Steel Project Design Srls.</p>"
 
-<h3 style="font-size:9.5pt; font-weight:bold; margin-top:10px; margin-bottom:2px;">9 - Foro competente</h3>
-<p style="margin:2px 0 6px 0; font-weight:normal;">Foro competente Bologna (BO)</p>
+        "<h3 style='font-size:9.5pt; font-weight:bold; margin-top:10px; margin-bottom:2px;'>9 - Foro competente</h3>"
+        "<p style='margin:2px 0 6px 0; font-weight:normal;'>Foro competente Bologna (BO)</p>"
 
-<div style="margin-top:25px; border-top:1px solid #aaa; padding-top:12px;">
-  <p style="font-weight:normal; margin-bottom:20px;">Firma e timbro per accettazione &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; data di accettazione ___/___/___</p>
-  <p style="font-weight:normal;">(legale rappresentante)</p>
-  <p style="font-weight:normal; margin-top:5px;">__________________________</p>
-</div>
+        "<div style='margin-top:25px; border-top:1px solid #aaa; padding-top:12px;'>"
+        "<p style='font-weight:normal; margin-bottom:20px;'>Firma e timbro per accettazione"
+        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; data di accettazione ___/___/___</p>"
+        "<p style='font-weight:normal;'>(legale rappresentante)</p>"
+        "<p style='font-weight:normal; margin-top:5px;'>__________________________</p>"
+        "</div>"
 
-<div style="margin-top:20px; border:1px solid #ccc; padding:8px; background:#f9f9f9; font-size:8.5pt; font-style:italic; font-weight:normal;">
-  Ai sensi e per gli effetti dell'Art. 1341 e segg. del Codice Civile, il sottoscritto Acquirente dichiara di aver preso specifica, precisa e dettagliata visione di tutte le disposizioni del contratto qui di seguito riportate: 1 Premessa; 2 Condizioni di fornitura; 3 Oneri a carico del cliente; 4 Esclusioni dal preventivo; 5 Pagamenti; 6 Garanzia; 7 Varianti in corso d'opera; 8 Controversie e di approvarle integralmente senza alcuna riserva.
-</div>
+        "<div style='margin-top:20px; border:1px solid #ccc; padding:8px; background:#f9f9f9;"
+        " font-size:8.5pt; font-style:italic; font-weight:normal;'>"
+        "Ai sensi e per gli effetti dell&#39;Art. 1341 e segg. del Codice Civile, il sottoscritto "
+        "Acquirente dichiara di aver preso specifica, precisa e dettagliata visione di tutte le "
+        "disposizioni del contratto: 1 Premessa; 2 Condizioni di fornitura; 3 Oneri a carico del "
+        "cliente; 4 Esclusioni dal preventivo; 5 Pagamenti; 6 Garanzia; 7 Varianti in corso "
+        "d&#39;opera; 8 Controversie e di approvarle integralmente senza alcuna riserva."
+        "</div>"
 
-<p style="margin-top:20px; font-weight:normal;">_____________________, l&igrave; ______________________</p>
-<p style="font-weight:normal; margin-top:5px;"><strong>Firma e timbro (il legale rappresentante)</strong></p>
-<p style="font-weight:normal; margin-top:5px;">_____________________________</p>
-
-</div>'''
+        "<p style='margin-top:20px; font-weight:normal;'>_____________________, l&igrave; ______________________</p>"
+        "<p style='font-weight:normal; margin-top:5px;'><strong>Firma e timbro (il legale rappresentante)</strong></p>"
+        "<p style='font-weight:normal; margin-top:5px;'>_____________________________</p>"
+        "</div>"
+    )
 
 
 def render_pdf(html_content: str) -> BytesIO:
