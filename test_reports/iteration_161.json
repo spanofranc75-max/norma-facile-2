@@ -99,7 +99,7 @@
   "test_credentials": {
     "session_token": "e2Sh0HIDOg2kyY8fq-R9a3s9FfrxWvFBqKGhyPQM4XA",
     "user_id": "user_97c773827822",
-    "api_url": "https://preventivo-stable.preview.emergentagent.com"
+    "api_url": "https://invoice-standardize.preview.emergentagent.com"
   },
   "retest_needed": false,
   "should_main_agent_self_test": false,

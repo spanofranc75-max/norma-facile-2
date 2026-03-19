@@ -1494,7 +1494,23 @@ async def _sync_fatture_from_fic_impl(user: dict):
             extra_params = {}
             if last_sync_date:
                 extra_params["filter[date][from]"] = last_sync_date
-            resp = await client.list_received_invoices(page=page, per_page=50, **extra_params)
+            try:
+                resp = await client.list_received_invoices(page=page, per_page=50, **extra_params)
+            except Exception as api_err:
+                status_code = getattr(getattr(api_err, 'response', None), 'status_code', None)
+                if status_code == 401:
+                    raise HTTPException(
+                        401,
+                        "Token FattureInCloud scaduto o non valido. "
+                        "Genera un nuovo token API dal tuo account FattureInCloud "
+                        "(Impostazioni > App > Token API) e aggiornalo nelle impostazioni."
+                    )
+                if status_code == 403:
+                    raise HTTPException(
+                        403,
+                        "Accesso negato a FattureInCloud. Verifica i permessi del token API."
+                    )
+                raise
             data_list = resp.get("data", [])
             if not data_list:
                 break
@@ -1666,8 +1682,18 @@ async def _sync_fatture_from_fic_impl(user: dict):
                 break
             page += 1
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"FIC sync error: {e}")
+        status_code = getattr(getattr(e, 'response', None), 'status_code', None)
+        if status_code == 401:
+            raise HTTPException(
+                401,
+                "Token FattureInCloud scaduto o non valido. "
+                "Genera un nuovo token API dal tuo account FattureInCloud "
+                "(Impostazioni > App > Token API) e aggiornalo nelle impostazioni."
+            )
         if imported == 0:
             raise HTTPException(502, f"Errore comunicazione FattureInCloud: {str(e)}")
 

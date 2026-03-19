@@ -9,7 +9,7 @@
 **Tipo**: SaaS CRM/ERP per fabbri e carpenterie metalliche italiane
 **Target**: Aziende metalliche che producono serramenti, cancelli, scale, ringhiere in acciaio
 **Lingua UI**: Italiano
-**URL Preview**: `https://preventivo-stable.preview.emergentagent.com`
+**URL Preview**: `https://invoice-standardize.preview.emergentagent.com`
 
 ### Stack Tecnologico
 | Layer | Tecnologia | Versione |
