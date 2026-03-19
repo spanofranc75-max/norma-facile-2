@@ -202,10 +202,23 @@ def build_event(tipo, user, note="", payload=None):
     }
 
 
-async def generate_commessa_number(uid):
-    """Generate sequential commessa number: NF-YYYY-NNNNNN — atomic counter."""
+async def generate_commessa_number(uid, normativa=None):
+    """Generate sequential commessa number with separate counters per normativa.
+    
+    EN_1090:  NF-YYYY-NNNNNN  (counter: commessa_{uid}_{year}_1090)
+    EN_13241: NFC-YYYY-NNNNNN (counter: commessa_{uid}_{year}_13241)
+    Generic:  GEN-YYYY-NNNNNN (counter: commessa_{uid}_{year}_gen)
+    """
     year = datetime.now(timezone.utc).year
-    counter_id = f"commessa_{uid}_{year}"
+    if normativa == "EN_1090":
+        counter_id = f"commessa_{uid}_{year}_1090"
+        prefix = "NF"
+    elif normativa == "EN_13241":
+        counter_id = f"commessa_{uid}_{year}_13241"
+        prefix = "NFC"
+    else:
+        counter_id = f"commessa_{uid}_{year}_gen"
+        prefix = "GEN"
     result = await db.counters.find_one_and_update(
         {"_id": counter_id},
         {"$inc": {"seq": 1}},
@@ -213,7 +226,7 @@ async def generate_commessa_number(uid):
         return_document=True,
     )
     seq = result["seq"]
-    return f"NF-{year}-{seq:06d}"
+    return f"{prefix}-{year}-{seq:06d}"
 
 
 # ── CRUD ─────────────────────────────────────────────────────────
@@ -257,7 +270,7 @@ async def create_commessa(data: CommessaCreate, user: dict = Depends(get_current
     uid = user["user_id"]
     now = datetime.now(timezone.utc)
     cid = f"com_{uuid.uuid4().hex[:12]}"
-    numero = await generate_commessa_number(uid)
+    numero = await generate_commessa_number(uid, normativa=data.normativa_tipo)
 
     client_name = data.client_name or ""
     if data.client_id and not client_name:
@@ -978,7 +991,7 @@ async def _create_single_commessa(preventivo, user, normativa_override=None, ite
 
     now = datetime.now(timezone.utc)
     cid = f"com_{uuid.uuid4().hex[:12]}"
-    numero = await generate_commessa_number(uid)
+    numero = await generate_commessa_number(uid, normativa=detected_normativa)
     if suffix:
         numero = f"{numero}-{suffix}"
 
@@ -1135,7 +1148,7 @@ async def create_commessa_generica(preventivo_id: str, user: dict = Depends(get_
 
     doc = {
         "commessa_id": cid,
-        "numero": f"GEN-{prev.get('number', '')}",
+        "numero": await generate_commessa_number(uid, normativa=None),
         "user_id": uid,
         "title": title,
         "client_id": prev.get("client_id", ""),

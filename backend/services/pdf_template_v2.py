@@ -352,123 +352,88 @@ def generate_rdp_pdf_v2(
     company: Dict,
     fornitore: Optional[Dict] = None,
 ) -> bytes:
-    """Generate PDF for Richiesta di Preventivo (RdP) - V2 format."""
-    if not WEASYPRINT_AVAILABLE:
-        raise RuntimeError("WeasyPrint not available")
-
-    # Extract data
-    rdp_id = rdp.get("rdp_id", "")
-    fornitore_nome = rdp.get("fornitore_nome", "N/D")
-    righe = rdp.get("righe", [])
-    note = rdp.get("note", "")
-    data_richiesta = rdp.get("data_richiesta", "")
-    
-    commessa_numero = commessa.get("numero", "N/D")
-    
-    # Get fornitore address if available
-    fornitore_address = ""
-    fornitore_piva = ""
-    if fornitore:
-        fornitore_address = f"{fornitore.get('address', '')}<br/>{fornitore.get('cap', '')} {fornitore.get('city', '')}"
-        fornitore_piva = fornitore.get('vat_number', '')
-    
-    # Build header
-    header_html = build_header(company, fornitore_nome, fornitore_address, fornitore_piva)
-    
-    # Document title
-    doc_number = f"RDA-{commessa_numero}-{rdp_id[-4:]}" if rdp_id else f"RDA-{commessa_numero}"
-    title_html = f'<h1 class="doc-title">RICHIESTA DI PREVENTIVO N. {safe(doc_number)}</h1>'
-    
-    # Info boxes
-    info_html = build_info_boxes(
-        "DATA", fmt_date(data_richiesta),
-        "RIF. COMMESSA", commessa_numero
+    """Generate PDF for Richiesta di Preventivo (RdP) - same layout as preventivo."""
+    from services.pdf_template import (
+        safe, fmt_it, build_header_html, render_pdf, format_date,
     )
-    
-    # Oggetto
-    oggetto_html = f'<p class="oggetto-line"><span class="oggetto-label">Oggetto:</span> Fornitura materiali {commessa_numero}</p>'
-    
-    # Build table rows
-    rows_html = ""
+
+    co = company or {}
+    fornitore_as_client = {}
+    if fornitore:
+        fornitore_as_client = dict(fornitore)
+    else:
+        fornitore_as_client = {"business_name": rdp.get("fornitore_nome", "N/D")}
+
+    header = build_header_html(co, fornitore_as_client)
+
+    rdp_id = rdp.get("rdp_id", "")
+    commessa_numero = commessa.get("numero", "N/D")
+    doc_number = f"RDA-{commessa_numero}-{rdp_id[-4:]}" if rdp_id else f"RDA-{commessa_numero}"
+    doc_date = format_date(rdp.get("data_richiesta", ""))
+    note = rdp.get("note", "")
+    righe = rdp.get("righe", [])
+
+    lines_html = ""
     has_cert_31 = False
     for riga in righe:
-        desc = safe(riga.get("descrizione", ""))
+        desc = safe(riga.get("descrizione", "")).replace("\n", "<br>")
         qty = fmt_it(riga.get("quantita", 1))
         um = safe(riga.get("unita_misura", "pz"))
         cert = riga.get("richiede_cert_31", False)
         if cert:
             has_cert_31 = True
         note_riga = "Cert. 3.1" if cert else ""
-        
-        rows_html += f"""
-        <tr>
-            <td>{desc}</td>
+        lines_html += f"""<tr>
+            <td class="desc-cell">{desc}</td>
             <td class="tc">{qty}</td>
             <td class="tc">{um}</td>
-            <td>{note_riga}</td>
-        </tr>
-        """
-    
-    table_html = f"""
+            <td class="tc">{note_riga}</td>
+        </tr>"""
+
+    ref_note_html = ""
+    note_parts = []
+    if commessa_numero:
+        note_parts.append(f"Rif. Commessa: {commessa_numero}")
+    if note:
+        note_parts.append(safe(note))
+    if note_parts:
+        ref_note_html = f'<p class="ref-note"><strong>Note:</strong> {" - ".join(note_parts)}</p>'
+
+    cert_html = ""
+    if has_cert_31:
+        cert_html = '<div class="info-box"><strong>CERTIFICATO RICHIESTO:</strong> Si richiede certificato materiale tipo 3.1 (EN 10204)</div>'
+
+    body = f"""
+    {header}
+    <div class="doc-title">
+        <h1>RICHIESTA DI PREVENTIVO N. {safe(doc_number)}</h1>
+    </div>
+    <table class="meta-table">
+        <tr><td class="meta-label" style="font-weight:bold;font-size:11pt;">RDP N.</td><td style="font-weight:bold;font-size:11pt;">{safe(doc_number)}</td></tr>
+        <tr><td class="meta-label">DATA:</td><td>{doc_date}</td></tr>
+        <tr><td class="meta-label">Rif. Commessa:</td><td>{commessa_numero}</td></tr>
+    </table>
+
+    {ref_note_html}
+
     <table class="items-table">
         <thead>
             <tr>
                 <th style="width: 55%;">Descrizione Materiale</th>
-                <th class="tc" style="width: 15%;">QuantitÃ </th>
+                <th class="tc" style="width: 15%;">Quantit&agrave;</th>
                 <th class="tc" style="width: 10%;">U.M.</th>
-                <th style="width: 20%;">Note</th>
+                <th class="tc" style="width: 20%;">Note</th>
             </tr>
         </thead>
         <tbody>
-            {rows_html}
+            {lines_html}
         </tbody>
     </table>
+
+    {cert_html}
     """
-    
-    # Certificate alert box
-    cert_html = ""
-    if has_cert_31:
-        cert_html = """
-        <div class="alert-box warning">
-            <span class="alert-label">CERTIFICATO RICHIESTO:</span>
-            Si richiede certificato materiale tipo 3.1 (EN 10204)
-        </div>
-        """
-    
-    # Notes box
-    notes_html = ""
-    if note:
-        notes_html = f"""
-        <div class="alert-box info">
-            <span class="alert-label">Note:</span> {safe(note)}
-        </div>
-        """
-    
-    # Footer
-    footer_html = build_footer(company)
-    
-    # Assemble HTML
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <style>{UNIFIED_CSS}</style>
-    </head>
-    <body>
-        {header_html}
-        {title_html}
-        {info_html}
-        {oggetto_html}
-        {table_html}
-        {cert_html}
-        {notes_html}
-        {footer_html}
-    </body>
-    </html>
-    """
-    
-    pdf_buffer = render_pdf(html_content, company)
+
+    pdf_buffer = render_pdf(body, co, doc_title=f"RdP {doc_number}")
     return pdf_buffer.getvalue()
 
 
