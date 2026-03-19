@@ -253,7 +253,7 @@ def generate_modern_invoice_pdf(invoice, client, company):
     doc._invoice = inv
     story = []
 
-    # 1. HEADER
+    # 1. HEADER — Logo+Azienda a SINISTRA, Cliente a DESTRA (stessa riga)
     logo = _load_logo(co.get('logo_url', ''))
     co_name  = co.get('business_name', '') or ''
     co_addr  = co.get('address', '') or ''
@@ -261,34 +261,68 @@ def generate_modern_invoice_pdf(invoice, client, company):
     co_city  = co.get('city', '') or ''
     co_prov  = co.get('province', '') or ''
     co_piva  = co.get('partita_iva', '') or ''
+    co_cf    = co.get('codice_fiscale', '') or ''
     co_phone = co.get('phone') or co.get('tel', '') or ''
     co_email = co.get('email') or co.get('contact_email', '') or ''
     loc_parts = [p for p in [co_cap, co_city,
                               f'({co_prov})' if co_prov else ''] if p]
-    co_paras = [Paragraph(co_name, S['co_name'])]
+
+    # Colonna sinistra: logo + azienda
+    left_col = []
+    if logo:
+        left_col.append(logo)
+        left_col.append(Spacer(1, 2 * mm))
+    left_col.append(Paragraph(co_name, S['co_name']))
     if co_addr.strip():
-        co_paras.append(Paragraph(co_addr, S['co_detail']))
+        left_col.append(Paragraph(co_addr, S['co_detail']))
     if loc_parts:
-        co_paras.append(Paragraph(' '.join(loc_parts), S['co_detail']))
+        left_col.append(Paragraph(' '.join(loc_parts), S['co_detail']))
     if co_piva:
-        co_paras.append(Paragraph(f'P.IVA: {co_piva}', S['co_detail']))
+        left_col.append(Paragraph(f'P.IVA: {co_piva}', S['co_detail']))
+    if co_cf and co_cf != co_piva:
+        left_col.append(Paragraph(f'Cod. Fisc.: {co_cf}', S['co_detail']))
     if co_phone:
-        co_paras.append(Paragraph(f'Tel: {co_phone}', S['co_detail']))
+        left_col.append(Paragraph(f'Tel: {co_phone}', S['co_detail']))
     if co_email:
-        co_paras.append(Paragraph(f'Email: {co_email}', S['co_detail']))
-    logo_cell = [logo] if logo else [Spacer(1, 1)]
-    hdr = Table([[logo_cell, co_paras]],
-                colWidths=[155, USABLE_W - 155])
+        left_col.append(Paragraph(f'Email: {co_email}', S['co_detail']))
+
+    # Colonna destra: cliente
+    cl_name = cl.get('business_name', '') or ''
+    cl_addr = cl.get('address', '') or ''
+    cl_cap  = cl.get('cap', '') or ''
+    cl_city = cl.get('city', '') or ''
+    cl_prov = cl.get('province', '') or ''
+    cl_piva = cl.get('partita_iva', '') or ''
+    cl_cf   = cl.get('codice_fiscale', '') or ''
+    cl_sdi  = cl.get('codice_sdi') or cl.get('codice_destinatario', '') or ''
+    cl_pec  = cl.get('pec', '') or ''
+    right_col = []
+    right_col.append(Paragraph('Spett.le', S['cl_spett']))
+    right_col.append(Paragraph(cl_name, S['cl_name']))
+    addr_parts = [p for p in [cl_addr, cl_cap, cl_city,
+                               f'({cl_prov})' if cl_prov else ''] if p]
+    if addr_parts:
+        right_col.append(Paragraph(' '.join(addr_parts), S['cl_detail']))
+    if cl_piva:
+        right_col.append(Paragraph(f'P.IVA {cl_piva}', S['cl_detail']))
+    if cl_cf and cl_cf != cl_piva:
+        right_col.append(Paragraph(f'C.F. {cl_cf}', S['cl_detail']))
+    if cl_sdi:
+        right_col.append(Paragraph(f'Cod. SDI {cl_sdi}', S['cl_detail']))
+    if cl_pec:
+        right_col.append(Paragraph(f'PEC: {cl_pec}', S['cl_detail']))
+
+    hdr = Table([[left_col, right_col]],
+                colWidths=[USABLE_W * 0.55, USABLE_W * 0.45])
     hdr.setStyle(TableStyle([
-        ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
+        ('VALIGN',        (0, 0), (-1, -1), 'TOP'),
         ('LEFTPADDING',   (0, 0), (-1, -1), 0),
         ('RIGHTPADDING',  (0, 0), (-1, -1), 0),
         ('TOPPADDING',    (0, 0), (-1, -1), 0),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-        ('VALIGN',        (1, 0), (1, 0),   'TOP'),
     ]))
     story.append(hdr)
-    story.append(Spacer(1, 4 * mm))
+    story.append(Spacer(1, 3 * mm))
     story.append(HRFlowable(width=USABLE_W, thickness=1,
                             color=BLUE, spaceAfter=4 * mm))
 
@@ -330,42 +364,7 @@ def generate_modern_invoice_pdf(invoice, client, company):
     story.append(meta)
     story.append(Spacer(1, 4 * mm))
 
-    # 4. CLIENTE
-    cl_name = cl.get('business_name', '') or ''
-    cl_addr = cl.get('address', '') or ''
-    cl_cap  = cl.get('cap', '') or ''
-    cl_city = cl.get('city', '') or ''
-    cl_prov = cl.get('province', '') or ''
-    cl_piva = cl.get('partita_iva', '') or ''
-    cl_cf   = cl.get('codice_fiscale', '') or ''
-    cl_sdi  = cl.get('codice_sdi') or cl.get('codice_destinatario', '') or ''
-    cl_pec  = cl.get('pec', '') or ''
-    addr_parts = [p for p in [cl_addr, cl_cap, cl_city,
-                               f'({cl_prov})' if cl_prov else ''] if p]
-    cl_rows = [[Paragraph('Spett.le', S['cl_spett'])],
-               [Paragraph(cl_name, S['cl_name'])]]
-    if addr_parts:
-        cl_rows.append([Paragraph(' '.join(addr_parts), S['cl_detail'])])
-    if cl_piva:
-        cl_rows.append([Paragraph(f'P.IVA {cl_piva}', S['cl_detail'])])
-    if cl_cf and cl_cf != cl_piva:
-        cl_rows.append([Paragraph(f'C.F. {cl_cf}', S['cl_detail'])])
-    if cl_sdi:
-        cl_rows.append([Paragraph(f'Cod. SDI {cl_sdi}', S['cl_detail'])])
-    if cl_pec:
-        cl_rows.append([Paragraph(f'PEC: {cl_pec}', S['cl_detail'])])
-    cl_tbl = Table(cl_rows, colWidths=[USABLE_W - 8 * mm])
-    cl_tbl.setStyle(TableStyle([
-        ('LEFTPADDING',   (0, 0), (-1, -1), 8),
-        ('RIGHTPADDING',  (0, 0), (-1, -1), 4),
-        ('TOPPADDING',    (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
-        ('LINEBEFORE',    (0, 0), (0, -1),  2.5, BLUE),
-        ('BACKGROUND',    (0, 0), (-1, -1), WHITE),
-        ('VALIGN',        (0, 0), (-1, -1), 'TOP'),
-    ]))
-    story.append(cl_tbl)
-    story.append(Spacer(1, 5 * mm))
+    # 4. (CLIENTE ora nell'header — rimosso da qui)
 
     # 5. TABELLA ARTICOLI
     lines = inv.get('lines', []) or inv.get('items', []) or []
