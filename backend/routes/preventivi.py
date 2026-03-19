@@ -1341,6 +1341,19 @@ async def preview_preventivo_email(prev_id: str, user: dict = Depends(get_curren
         total=total,
         company_name=company_name,
     )
+
+    suggested_contacts = []
+    if client:
+        for field, label in [("pec", "PEC"), ("email", "Email")]:
+            val = client.get(field)
+            if val and val != to_email:
+                suggested_contacts.append({"email": val, "name": f"{client_name} ({label})"})
+        for contact in client.get("contacts", []):
+            c_email = contact.get("email")
+            if c_email and c_email != to_email and not any(s["email"] == c_email for s in suggested_contacts):
+                c_name = contact.get("name") or contact.get("role") or c_email
+                suggested_contacts.append({"email": c_email, "name": c_name})
+
     return {
         "to_email": to_email,
         "to_name": client_name,
@@ -1348,6 +1361,7 @@ async def preview_preventivo_email(prev_id: str, user: dict = Depends(get_curren
         "html_body": preview["html_body"],
         "has_attachment": True,
         "attachment_name": f"Preventivo_{prev_number}.pdf",
+        "suggested_contacts": suggested_contacts,
     }
 
 
