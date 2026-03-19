@@ -1400,7 +1400,11 @@ async def send_preventivo_email(prev_id: str, payload: dict = None, user: dict =
             {"payment_type_id": doc["payment_type_id"], "user_id": user["user_id"]}, {"_id": 0}
         )
 
-    pdf_buffer = generate_preventivo_pdf(doc, company, client, payment_type)
+    try:
+        pdf_buffer = generate_preventivo_pdf(doc, company, client, payment_type)
+    except Exception as pdf_err:
+        logger.error(f"PDF generation failed for preventivo {prev_id}: {pdf_err}")
+        raise HTTPException(500, f"Generazione PDF fallita: {pdf_err}")
     pdf_bytes = pdf_buffer.getvalue()
     prev_number = doc.get("number", prev_id)
     filename = f"preventivo_{prev_number.replace(' ', '_').replace('/', '_')}.pdf"

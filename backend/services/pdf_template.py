@@ -575,7 +575,12 @@ def build_conditions_html(company: dict, doc_number: str) -> str:
 
 def render_pdf(body_html: str) -> BytesIO:
     """Wrap body HTML with common CSS and render to PDF via WeasyPrint."""
-    from weasyprint import HTML
+    try:
+        from weasyprint import HTML
+    except ImportError as e:
+        raise RuntimeError(
+            f"WeasyPrint non disponibile. Verifica le librerie di sistema (libcairo2, libpango). Dettaglio: {e}"
+        )
 
     full_html = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8">
@@ -583,7 +588,10 @@ def render_pdf(body_html: str) -> BytesIO:
 </head><body>{body_html}</body></html>"""
 
     buf = BytesIO()
-    HTML(string=full_html).write_pdf(buf)
+    try:
+        HTML(string=full_html).write_pdf(buf)
+    except Exception as e:
+        raise RuntimeError(f"Errore generazione PDF WeasyPrint: {e}")
     buf.seek(0)
     return buf
 
