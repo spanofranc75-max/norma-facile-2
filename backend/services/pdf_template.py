@@ -525,7 +525,7 @@ def _add_items_table(story, headers, rows):
     elif n == 5:
         cw = [UW*w for w in [0.44, 0.10, 0.18, 0.10, 0.18]]
     elif n == 4:
-        cw = [UW*w for w in [0.10, 0.55, 0.15, 0.20]]
+        cw = [UW*w for w in [0.55, 0.15, 0.10, 0.20]]
     else:
         cw = [UW/n]*n
 
