@@ -70,7 +70,9 @@
   "scripts": {
     "start": "craco start",
     "build": "craco build",
-    "test": "craco test"
+    "test": "craco test",
+    "check:encoding": "node scripts/check-encoding.js",
+    "fix:encoding": "node scripts/check-encoding.js --fix"
   },
   "browserslist": {
     "production": [

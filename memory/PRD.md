@@ -10,7 +10,13 @@ L'app era instabile dopo migrazione a Vercel (frontend) e Railway (backend).
 
 ## Implementato
 
-### Fix Caratteri Corrotti (19/03/2026)
+### Protezione Encoding Anti-Mojibake (19/03/2026)
+- `.editorconfig` alla root del progetto: forza UTF-8 + LF su tutti i file JS/JSX/TS/TSX/Python
+- `frontend/scripts/check-encoding.js`: scansione automatica di 131 file sorgente per pattern mojibake
+- Comandi npm: `yarn check:encoding` (check) e `yarn fix:encoding` (auto-fix con ftfy)
+- Testato: rilevamento e correzione automatica verificati con file test
+
+
 - `PreventivoEditorPage.js` aveva triple-encoding UTF-8 su caratteri italiani (à, è, ò) e em-dash
 - Fix applicato con libreria `ftfy` su tutta la pagina preventivo
 - Corretto: "ValiditÃÂÃÂ" → "Validità", "Q.tÃÂÃÂ" → "Q.tà", "puÃÂÃÂ²" → "può", "EXC1 ÃÂÃÂ..." → "EXC1 —"
