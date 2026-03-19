@@ -105,7 +105,7 @@ def format_date(date_str) -> str:
 
 
 def _sty(**kw):
-    base = dict(fontName=FONT_R, fontSize=8, leading=11, textColor=TEXT_MAIN)
+    base = dict(fontName=FONT_R, fontSize=8.5, leading=12, textColor=TEXT_MAIN)
     base.update(kw)
     return ParagraphStyle('_', **base)
 
@@ -504,7 +504,7 @@ def _add_meta(story, meta_rows):
 def _add_items_table(story, headers, rows):
     n = len(headers)
     # Header
-    th = [Paragraph(h, _sty(fontName=FONT_B, fontSize=7, leading=9, textColor=TITLE_CLR,
+    th = [Paragraph(h, _sty(fontName=FONT_B, fontSize=7.5, leading=10, textColor=TITLE_CLR,
           alignment=TA_CENTER if h.lower() in ('codice','u.m.','iva','sconti') else
                     TA_RIGHT if h.lower() in ('prezzo','importo','totale','quantit\u00e0','q.t\u00e0') else TA_LEFT))
           for h in headers]
@@ -515,7 +515,7 @@ def _add_items_table(story, headers, rows):
             h = headers[i].lower() if i < len(headers) else ''
             al = (TA_CENTER if h in ('codice','u.m.','iva','sconti') else
                   TA_RIGHT if h in ('prezzo','importo','totale','quantit\u00e0','q.t\u00e0') else TA_LEFT)
-            cells.append(Paragraph(cell, _sty(fontSize=7.5, leading=10, alignment=al)))
+            cells.append(Paragraph(cell, _sty(fontSize=8.5, leading=11.5, alignment=al)))
         while len(cells) < n:
             cells.append(Paragraph('', _sty()))
         data.append(cells)
@@ -533,12 +533,12 @@ def _add_items_table(story, headers, rows):
     ts = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), HEADER_BG),
         ('TEXTCOLOR', (0, 0), (-1, 0), TITLE_CLR),
-        ('TOPPADDING', (0, 0), (-1, 0), 5),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 5),
-        ('LEFTPADDING', (0, 0), (-1, -1), 4),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-        ('TOPPADDING', (0, 1), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 1), (-1, -1), 3),
+        ('TOPPADDING', (0, 0), (-1, 0), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 1), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ('LINEBELOW', (0, 0), (-1, -1), 0.3, BORDER),
         ('BOX', (0, 0), (-1, -1), 0.5, BORDER),
@@ -631,8 +631,8 @@ def _add_transport(story, transport_rows):
     for pairs in transport_rows:
         row = []
         for label, val in pairs:
-            row.append(Paragraph(f'<b>{label}</b>', _sty(fontSize=7.5)))
-            row.append(Paragraph(val, _sty(fontSize=7.5)))
+            row.append(Paragraph(f'<b>{label}</b>', _sty(fontSize=8)))
+            row.append(Paragraph(val, _sty(fontSize=8.5)))
         rows.append(row)
     if rows:
         nc = max(len(r) for r in rows)
