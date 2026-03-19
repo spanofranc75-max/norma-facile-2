@@ -21,7 +21,7 @@ import base64
 logger = logging.getLogger(__name__)
 
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import mm, pt
+from reportlab.lib.units import mm
 from reportlab.lib import colors
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
@@ -113,7 +113,7 @@ def _load_logo(logo_url):
             import urllib.request
             with urllib.request.urlopen(logo_url, timeout=5) as r:
                 stream = BytesIO(r.read())
-        img = Image(stream, width=150 * pt, height=50 * pt)
+        img = Image(stream, width=150, height=50)
         img.hAlign = 'LEFT'
         return img
     except Exception as e:
@@ -263,7 +263,7 @@ def generate_modern_invoice_pdf(invoice, client, company):
         co_paras.append(Paragraph(f'Email: {co_email}', S['co_detail']))
     logo_cell = [logo] if logo else [Spacer(1, 1)]
     hdr = Table([[logo_cell, co_paras]],
-                colWidths=[155 * pt, USABLE_W - 155 * pt])
+                colWidths=[155, USABLE_W - 155])
     hdr.setStyle(TableStyle([
         ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
         ('LEFTPADDING',   (0, 0), (-1, -1), 0),
@@ -362,8 +362,7 @@ def generate_modern_invoice_pdf(invoice, client, company):
         Paragraph('Totale',       S['th_r']),
     ]]
     for i, ln in enumerate(lines):
-        desc  = _s(ln.get('description') or '').replace('
-', '<br/>')
+        desc  = _s(ln.get('description') or '').replace('\n', '<br/>')
         qty   = _fmt(ln.get('quantity', 0))
         price = _fmt(ln.get('unit_price', 0))
         disc  = float(ln.get('discount_percent') or ln.get('sconto_1') or 0)
@@ -481,8 +480,7 @@ def generate_modern_invoice_pdf(invoice, client, company):
         if rif_text.strip():
             nc.append(Paragraph(f'Rif. {rif_text}', S['note']))
         if note_text.strip():
-            nc.append(Paragraph(note_text.replace('
-', '<br/>'), S['note']))
+            nc.append(Paragraph(note_text.replace('\n', '<br/>'), S['note']))
         story.append(_box_section(nc, 'NOTE'))
         story.append(Spacer(1, 3 * mm))
 
@@ -542,13 +540,12 @@ def generate_modern_invoice_pdf(invoice, client, company):
             story.append(Spacer(1, 3 * mm))
             story.append(HRFlowable(width=USABLE_W, thickness=1,
                                     color=BLUE, spaceAfter=3 * mm))
-            for line in cond.split('
-'):
+            for line in cond.split('\n'):
                 line = line.strip()
                 if not line:
                     story.append(Spacer(1, 2 * mm))
                     continue
-                if _re.match(r'^d+[.-)]', line):
+                if _re.match(r'^\d+[.-)]', line):
                     story.append(Paragraph(line, S['sec_bold']))
                 else:
                     story.append(Paragraph(line, S['sec_text']))
