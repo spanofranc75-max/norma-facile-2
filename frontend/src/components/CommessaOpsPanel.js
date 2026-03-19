@@ -2541,8 +2541,8 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                         <DialogDescription>
                             Verifica il documento prima di inviarlo via email
                             {(() => {
-                                const rdps = commessaData?.approvvigionamento?.richieste || [];
-                                const odas = commessaData?.approvvigionamento?.ordini_acquisto || [];
+                                const rdps = approv?.richieste || [];
+                                const odas = approv?.ordini_acquisto || [];
                                 let item = null;
                                 if (pdfPreviewUrl?.includes('/richieste/')) {
                                     const rdpId = pdfPreviewUrl.split('/richieste/')[1]?.split('/')[0];
@@ -2585,8 +2585,8 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                             }}
                         >
                             <Mail className="h-4 w-4 mr-1" /> {(() => {
-                                const rdps = commessaData?.approvvigionamento?.richieste || [];
-                                const odas = commessaData?.approvvigionamento?.ordini_acquisto || [];
+                                const rdps = approv?.richieste || [];
+                                const odas = approv?.ordini_acquisto || [];
                                 if (pdfPreviewUrl?.includes('/richieste/')) {
                                     const rdpId = pdfPreviewUrl.split('/richieste/')[1]?.split('/')[0];
                                     if (rdps.find(r => r.rdp_id === rdpId)?.email_sent) return 'Rinvia Email';
