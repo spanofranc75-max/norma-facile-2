@@ -252,7 +252,7 @@ async def create_preventivo_from_distinta(
     max_existing = max_doc[0]["num"] if max_doc else 0
     existing_counter = await db.document_counters.find_one({"counter_id": counter_id})
     current_counter = existing_counter.get("counter", 0) if existing_counter else 0
-    if current_counter > max_existing:
+    if current_counter != max_existing:
         await db.document_counters.update_one(
             {"counter_id": counter_id},
             {"$set": {"counter": max_existing}},
@@ -474,8 +474,8 @@ async def create_preventivo(data: PreventivoCreate, user: dict = Depends(get_cur
     existing_counter = await db.document_counters.find_one({"counter_id": counter_id})
     current_counter = existing_counter.get("counter", 0) if existing_counter else 0
 
-    # If counter is ahead of reality (due to deletions), reset it
-    if current_counter > max_existing:
+    # If counter is out of sync, reset it
+    if current_counter != max_existing:
         await db.document_counters.update_one(
             {"counter_id": counter_id},
             {"$set": {"counter": max_existing}},
@@ -667,7 +667,7 @@ async def clone_preventivo(prev_id: str, user: dict = Depends(get_current_user))
     max_existing = max_doc[0]["num"] if max_doc else 0
     existing_counter = await db.document_counters.find_one({"counter_id": counter_id})
     current_counter = existing_counter.get("counter", 0) if existing_counter else 0
-    if current_counter > max_existing:
+    if current_counter != max_existing:
         await db.document_counters.update_one(
             {"counter_id": counter_id},
             {"$set": {"counter": max_existing}},
@@ -1394,6 +1394,7 @@ async def send_preventivo_email(prev_id: str, payload: dict = None, user: dict =
     from services.email_service import send_invoice_email as _send, send_email_with_attachment
     totals = doc.get("totals", {})
     total = totals.get("total_document") or totals.get("total", 0)
+    cc_list = payload.get("cc", [])
 
     if payload.get("custom_subject") or payload.get("custom_body"):
         custom_subject = payload.get("custom_subject") or f"Preventivo n. {prev_number}"
@@ -1401,6 +1402,7 @@ async def send_preventivo_email(prev_id: str, payload: dict = None, user: dict =
         success = await send_email_with_attachment(
             to_email=to_email, subject=custom_subject, body=custom_body,
             pdf_bytes=pdf_bytes, filename=filename, user_id=user["user_id"],
+            cc=cc_list if cc_list else None,
         )
     else:
         success = await _send(
@@ -1412,21 +1414,23 @@ async def send_preventivo_email(prev_id: str, payload: dict = None, user: dict =
             pdf_bytes=pdf_bytes,
             filename=filename,
             user_id=user["user_id"],
+            cc=cc_list if cc_list else None,
         )
 
     if not success:
         raise HTTPException(500, "Invio email fallito. Verifica la configurazione Resend.")
 
+    all_recipients = [to_email] + (cc_list or [])
     await db.preventivi.update_one(
         {"preventivo_id": prev_id},
         {"$set": {
             "email_sent": True,
-            "email_sent_to": to_email,
+            "email_sent_to": ", ".join(all_recipients),
             "email_sent_at": datetime.now(timezone.utc).isoformat(),
         }}
     )
 
-    return {"message": f"Preventivo inviato via email a {to_email}", "to": to_email}
+    return {"message": f"Preventivo inviato via email a {', '.join(all_recipients)}", "to": to_email, "cc": cc_list}
 
 
 
@@ -1446,7 +1450,7 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
 
     # ── Document data ──
     doc_number = prev.get("number", "")
-    display_num = doc_number.replace("PRV-", "").replace("/", "-") if doc_number else ""
+    display_num = doc_number.replace("PRV-", "") if doc_number else ""
     doc_date = format_date(prev.get("created_at", ""))
     payment_label = safe(prev.get("payment_type_label"))
     validity = prev.get("validity_days", 30) or 30
@@ -1456,12 +1460,28 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
 
     # ── Build line items HTML ──
     lines = prev.get("lines", [])
+
+    # Note box separato stile Invoicex
+    note_box_html = ""
+    if notes_text or riferimento:
+        note_content = ""
+        if riferimento:
+            note_content += safe(riferimento)
+        if notes_text:
+            note_content += (" " if note_content else "") + safe(notes_text)
+        note_box_html = f'<p class="ref-note"><strong>Note:</strong> {note_content}</p>'
+
     lines_html = ""
     for ln in lines:
         codice = safe(ln.get("codice_articolo") or "")
         desc = safe(ln.get("description") or "").replace("\n", "<br>")
         um = safe(ln.get("unit", "pz"))
-        qty = fmt_it(ln.get("quantity", 1))
+        _qty_raw = ln.get("quantity", 1)
+        try:
+            _qty_val = float(_qty_raw or 0)
+            qty = str(int(_qty_val)) if _qty_val == int(_qty_val) else fmt_it(_qty_raw)
+        except:
+            qty = fmt_it(_qty_raw)
         price = fmt_it(ln.get("unit_price", 0))
         s1 = float(ln.get("sconto_1") or 0)
         s2 = float(ln.get("sconto_2") or 0)
@@ -1520,23 +1540,34 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
         bank_html += "</div>"
 
     # ── Conditions page ──
+    # Fix encoding condizioni di vendita prima di generare il PDF
+    _cond_raw = co.get("condizioni_vendita", "") or ""
+    if _cond_raw and ("Ã" in _cond_raw or "\x83" in _cond_raw):
+        try:
+            _cond_raw = _cond_raw.encode("latin1").decode("utf-8", errors="replace")
+            co = dict(co)
+            co["condizioni_vendita"] = _cond_raw
+        except Exception:
+            pass
     condizioni_html = build_conditions_html(co, doc_number)
 
     # ── Assemble ──
     body = f"""
     {header}
     <div class="doc-title">
-        <h1>PREVENTIVO</h1>
-        <div class="doc-num">{safe(display_num)}</div>
+        <h1>PREVENTIVO N. {safe(display_num)}</h1>
     </div>
     <table class="meta-table">
+        <tr><td class="meta-label" style="font-weight:bold;font-size:11pt;">PREVENTIVO N.</td><td style="font-weight:bold;font-size:11pt;">{safe(display_num)}</td></tr>
         <tr><td class="meta-label">DATA:</td><td>{doc_date}</td></tr>
         <tr><td class="meta-label">Pagamento:</td><td>{payment_label}</td></tr>
         <tr><td class="meta-label">Validit&agrave;:</td><td>{validity} giorni</td></tr>
+        {""}
     </table>
 
     {ref_note_html}
 
+    {note_box_html}
     <table class="items-table">
         <colgroup>
             <col style="width:8%"><col style="width:38%"><col style="width:6%">
@@ -1557,4 +1588,4 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
     {condizioni_html}
     """
 
-    return render_pdf(body)
+    return render_pdf(body, company=co)

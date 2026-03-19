@@ -496,12 +496,14 @@ async def send_ddt_email(ddt_id: str, payload: dict = None, user: dict = Depends
     filename = f"ddt_{ddt_number.replace('/', '_')}.pdf"
 
     from services.email_service import send_ddt_email as _send, send_email_with_attachment
+    cc_list = payload.get("cc", [])
     if payload.get("custom_subject") or payload.get("custom_body"):
         custom_subject = payload.get("custom_subject") or f"DDT n. {ddt_number}"
         custom_body = payload.get("custom_body") or ""
         success = await send_email_with_attachment(
             to_email=to_email, subject=custom_subject, body=custom_body,
             pdf_bytes=pdf_bytes, filename=filename, user_id=user["user_id"],
+            cc=cc_list if cc_list else None,
         )
     else:
         success = await _send(
@@ -512,21 +514,23 @@ async def send_ddt_email(ddt_id: str, payload: dict = None, user: dict = Depends
             pdf_bytes=pdf_bytes,
             filename=filename,
             user_id=user["user_id"],
+            cc=cc_list if cc_list else None,
         )
 
     if not success:
         raise HTTPException(500, "Invio email fallito. Verifica la configurazione Resend.")
 
+    all_recipients = [to_email] + (cc_list or [])
     await db[COLLECTION].update_one(
         {"ddt_id": ddt_id},
         {"$set": {
             "email_sent": True,
-            "email_sent_to": to_email,
+            "email_sent_to": ", ".join(all_recipients),
             "email_sent_at": datetime.now(timezone.utc).isoformat(),
         }}
     )
 
-    return {"message": f"DDT inviato via email a {to_email}", "to": to_email}
+    return {"message": f"DDT inviato via email a {', '.join(all_recipients)}", "to": to_email, "cc": cc_list}
 
 
 

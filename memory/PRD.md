@@ -12,36 +12,28 @@ Obiettivo principale: stabilizzare e standardizzare la generazione PDF.
 
 ## Implementato
 
-### Layout PDF Unificato (commit cf4dbdb - 19/03/2026)
-- Tutti i documenti (Fattura, Preventivo, DDT) hanno la stessa struttura:
-  - Logo + Azienda a SINISTRA | Cliente a DESTRA (stessa riga)
-  - Titolo + Numero centrato
-  - Tabella articoli con header grigio chiaro #E8E8E8
-  - Totali con box grigio #E0E0E0
-- DDT riscritto: ReportLab diretto, pagina singola, numero DDT, cliente visibile
-- Fattura: cliente spostato nell'header
+### Destinatari Multipli Email (commit 5029e7d - 19/03/2026)
+- Campo CC nel dialog EmailPreviewDialog per aggiungere destinatari aggiuntivi
+- Supporto per input multipli (separati da virgola o invio)
+- Validazione email, prevenzione duplicati
+- Backend: tutti e 3 gli endpoint (fatture, preventivi, DDT) accettano parametro `cc`
+- Email service Resend aggiornato con supporto CC
+- Tracking destinatari multipli nel database
 
-### Fix PDF Viewer (commit aab6f27 - 19/03/2026)
-- pdfjs-dist aggiornato a 5.4.296 (match react-pdf@10.4.1)
-- Worker URL corretto (unpkg.com)
+### Fix sync-fic FattureInCloud (commits 199697f, 278211d, 23acf97 - 19/03/2026)
+- Token FattureInCloud aggiornato con nuovo token valido
+- Error handling migliorato: messaggio chiaro per token scaduto (401)
+- Rimosso filtro data `filter[date][from]` incompatibile con API v2 FattureInCloud (causava 422)
 
-### Palette Grigio Chiaro (commit b1e53f8 - 19/03/2026)
-- Zero colori navy/blu/neri, tutto grigio professionale
+### Layout PDF Unificato (commit cf4dbdb)
+- Tutti i documenti (Fattura, Preventivo, DDT) con stessa struttura header
+- DDT riscritto con ReportLab
+- Palette grigio chiaro professionale
 - Logo proporzionale con PIL
 
-### Fix Error Handling sync-fic (commit 199697f - 19/03/2026)
-- Gestione specifica errore 401 (token scaduto) con messaggio chiaro
-- L'utente riceve istruzioni su come generare nuovo token FattureInCloud
-- Gestione errore 403 (permessi) aggiunta
-
-## In Corso / Bloccati
-### P0 - Token FattureInCloud scaduto
-- L'endpoint /api/fatture-ricevute/sync-fic restituisce 401
-- BLOCCATO: serve un nuovo token API dall'utente
-- Error handling migliorato: messaggio chiaro
-
-### P1 - Verifica PDF post-deploy
-- Layout unificato pushato, in attesa verifica utente su Railway
+### Fix PDF Viewer (commit aab6f27)
+- pdfjs-dist aggiornato a 5.4.296
+- Worker URL corretto
 
 ## Backlog
 ### P1
