@@ -3,48 +3,39 @@
 ## Problema Originale
 Applicazione gestionale per carpenteria metallica (CRM/ERP per Fabbri).
 L'app era instabile dopo migrazione a Vercel (frontend) e Railway (backend).
-Obiettivo principale: stabilizzare e standardizzare la generazione PDF.
 
 ## Architettura
 - Frontend: React (Vercel) | Backend: FastAPI + MongoDB Atlas (Railway)
 - Repo: spanofranc75-max/norma-facile-2 (GitHub)
-- Directory produzione: /tmp/norma-facile-2-push/
 
 ## Implementato
 
-### Destinatari Multipli Email (commit 5029e7d - 19/03/2026)
-- Campo CC nel dialog EmailPreviewDialog per aggiungere destinatari aggiuntivi
-- Supporto per input multipli (separati da virgola o invio)
-- Validazione email, prevenzione duplicati
-- Backend: tutti e 3 gli endpoint (fatture, preventivi, DDT) accettano parametro `cc`
-- Email service Resend aggiornato con supporto CC
-- Tracking destinatari multipli nel database
+### CUP/CIG/CUC + Rimozione Impostazioni Fiscali (commit 526f3ba - 19/03/2026)
+- Campi CUP, CIG, CUC aggiunti nel form fattura e preventivo
+- Propagazione automatica da preventivo a fattura (QuickFill + create_from_preventivo)
+- CUP/CIG/CUC visibili nei PDF (fattura con ReportLab, preventivo con HTML)
+- Rimossa sezione Impostazioni Fiscali (Rivalsa INPS, Cassa Previdenza, Ritenuta d'Acconto) 
+- Mantenute Note Documento e ripristinato InvoiceEditorPage.js (era troncato)
+
+### Destinatari Multipli Email + Rubrica (commit e932f80 - 19/03/2026)
+- Campo CC nel dialog EmailPreviewDialog con rubrica contatti rapida
+- Backend: tutti e 3 gli endpoint (fatture, preventivi, DDT) accettano CC
+- Contatti suggeriti dal database cliente (PEC, email, referenti)
 
 ### Fix sync-fic FattureInCloud (commits 199697f, 278211d, 23acf97 - 19/03/2026)
-- Token FattureInCloud aggiornato con nuovo token valido
-- Error handling migliorato: messaggio chiaro per token scaduto (401)
-- Rimosso filtro data `filter[date][from]` incompatibile con API v2 FattureInCloud (causava 422)
+- Token aggiornato + error handling 401 + rimosso filtro data incompatibile API v2
 
-### Layout PDF Unificato (commit cf4dbdb)
-- Tutti i documenti (Fattura, Preventivo, DDT) con stessa struttura header
-- DDT riscritto con ReportLab
-- Palette grigio chiaro professionale
-- Logo proporzionale con PIL
-
-### Fix PDF Viewer (commit aab6f27)
-- pdfjs-dist aggiornato a 5.4.296
-- Worker URL corretto
+### Layout PDF Unificato + Fix Viewer (commits precedenti)
+- Header unificato, palette grigia, logo proporzionale, pdfjs-dist aggiornato
 
 ## Backlog
 ### P1
-- Verifica visiva PDF dopo deploy Railway/Vercel
+- Verifica visiva CUP/CIG/CUC e CC in produzione dopo deploy
 
 ### P2
 - Unificazione servizi PDF (pdf_invoice_modern.py + pdf_template.py)
-- Sistema RBAC (controllo accessi basato su ruoli)
+- Sistema RBAC
 - Migrazione immagini legacy Base64
 
 ### P3
-- Firma digitale sui report PDF
-- Portale cliente in sola lettura
-- AI Copilot
+- Firma digitale PDF, Portale cliente, AI Copilot

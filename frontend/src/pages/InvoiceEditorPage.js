@@ -39,12 +39,14 @@ import {
     Send,
     CheckCircle2,
     PanelRightOpen,
+    Eye,
+    Printer,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import ArticleSearch from '../components/ArticleSearch';
 import { QuickFillModal } from '../components/QuickFillModal';
 import { useConfirm } from '../components/ConfirmProvider';
-import { PDFPreviewButton } from '../components/PDFPreviewModal';
+
 import { LivePDFPreview } from '../components/LivePDFPreview';
 import { AutoExpandTextarea } from '../components/AutoExpandTextarea';
 import EmailPreviewDialog from '../components/EmailPreviewDialog';
@@ -122,6 +124,9 @@ export default function InvoiceEditorPage() {
         payment_terms: '30gg',
         notes: '',
         internal_notes: '',
+        cup: '',
+        cig: '',
+        cuc: '',
         tax_settings: {
             apply_rivalsa_inps: false,
             rivalsa_inps_rate: 4,
@@ -202,6 +207,9 @@ export default function InvoiceEditorPage() {
                 payment_terms: data.payment_terms,
                 notes: data.notes || '',
                 internal_notes: data.internal_notes || '',
+                cup: data.cup || '',
+                cig: data.cig || '',
+                cuc: data.cuc || '',
                 tax_settings: data.tax_settings || formData.tax_settings,
                 lines: data.lines.length > 0 ? data.lines : [{ ...emptyLine }],
                 status: data.status || 'bozza',
@@ -341,6 +349,9 @@ export default function InvoiceEditorPage() {
         setFormData(prev => ({
             ...prev,
             client_id: source.client_id || prev.client_id,
+            cup: source.cup || prev.cup,
+            cig: source.cig || prev.cig,
+            cuc: source.cuc || prev.cuc,
             lines: mappedLines,
             notes: prev.notes
                 ? `${prev.notes}\nRif. ${source.source_type === 'preventivo' ? 'Preventivo' : 'DDT'} ${source.number}`
@@ -439,7 +450,8 @@ export default function InvoiceEditorPage() {
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        {isEditing && <PDFPreviewButton pdfUrl={`/invoices/${invoiceId}/pdf`} title="Anteprima Fattura" className="border-emerald-500 text-emerald-600 hover:bg-emerald-50" />}
+                        {isEditing && <Button variant="outline" onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/invoices/${invoiceId}/pdf?token=${localStorage.getItem('session_token')}`, '_blank')} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9 text-xs"><Eye className="h-3.5 w-3.5 mr-1.5" /> Anteprima</Button>}
+                        {isEditing && <Button variant="outline" onClick={() => { const w = window.open(`${process.env.REACT_APP_BACKEND_URL}/api/invoices/${invoiceId}/pdf?token=${localStorage.getItem('session_token')}`, '_blank'); if(w) setTimeout(()=>w.print(),1500); }} className="border-purple-500 text-purple-600 hover:bg-purple-50 h-9 text-xs"><Printer className="h-3.5 w-3.5 mr-1.5" /> Stampa</Button>}
                         <Button
                             type="button"
                             variant="outline"
@@ -816,81 +828,46 @@ export default function InvoiceEditorPage() {
                     </CardContent>
                 </Card>
 
-                {/* Tax Settings & Totals */}
+                {/* Notes, CUP/CIG/CUC & Totals */}
                 <div className="grid grid-cols-2 gap-6">
-                    {/* Tax Settings */}
+                    {/* Notes & Public Tender Codes */}
                     <Card className="border-gray-200">
                         <CardHeader className="pb-4 bg-blue-50 border-b border-gray-200">
-                            <CardTitle className="text-lg font-semibold">Impostazioni Fiscali</CardTitle>
+                            <CardTitle className="text-lg font-semibold">Note e Riferimenti</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
-                                        id="rivalsa"
-                                        checked={formData.tax_settings.apply_rivalsa_inps}
-                                        onCheckedChange={(v) => updateTaxSetting('apply_rivalsa_inps', v)}
+                            <div className="grid grid-cols-3 gap-3">
+                                <div>
+                                    <Label className="text-xs text-slate-500">CUP</Label>
+                                    <Input
+                                        data-testid="input-cup"
+                                        value={formData.cup || ''}
+                                        onChange={(e) => updateField('cup', e.target.value.toUpperCase())}
+                                        placeholder="Codice CUP"
+                                        className="h-8 text-sm font-mono"
                                     />
-                                    <Label htmlFor="rivalsa" className="text-sm">Rivalsa INPS</Label>
                                 </div>
-                                {formData.tax_settings.apply_rivalsa_inps && (
-                                    <div className="flex items-center gap-2">
-                                        <Input
-                                            type="number"
-                                            value={formData.tax_settings.rivalsa_inps_rate}
-                                            onChange={(e) => updateTaxSetting('rivalsa_inps_rate', parseFloat(e.target.value) || 0)}
-                                            className="w-20 h-8 text-sm text-right"
-                                        />
-                                        <span className="text-sm text-slate-500">%</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
-                                        id="cassa"
-                                        checked={formData.tax_settings.apply_cassa}
-                                        onCheckedChange={(v) => updateTaxSetting('apply_cassa', v)}
+                                <div>
+                                    <Label className="text-xs text-slate-500">CIG</Label>
+                                    <Input
+                                        data-testid="input-cig"
+                                        value={formData.cig || ''}
+                                        onChange={(e) => updateField('cig', e.target.value.toUpperCase())}
+                                        placeholder="Codice CIG"
+                                        className="h-8 text-sm font-mono"
                                     />
-                                    <Label htmlFor="cassa" className="text-sm">Cassa Previdenza</Label>
                                 </div>
-                                {formData.tax_settings.apply_cassa && (
-                                    <div className="flex items-center gap-2">
-                                        <Input
-                                            type="number"
-                                            value={formData.tax_settings.cassa_rate}
-                                            onChange={(e) => updateTaxSetting('cassa_rate', parseFloat(e.target.value) || 0)}
-                                            className="w-20 h-8 text-sm text-right"
-                                        />
-                                        <span className="text-sm text-slate-500">%</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
-                                        id="ritenuta"
-                                        checked={formData.tax_settings.apply_ritenuta}
-                                        onCheckedChange={(v) => updateTaxSetting('apply_ritenuta', v)}
+                                <div>
+                                    <Label className="text-xs text-slate-500">CUC</Label>
+                                    <Input
+                                        data-testid="input-cuc"
+                                        value={formData.cuc || ''}
+                                        onChange={(e) => updateField('cuc', e.target.value.toUpperCase())}
+                                        placeholder="Codice CUC"
+                                        className="h-8 text-sm font-mono"
                                     />
-                                    <Label htmlFor="ritenuta" className="text-sm">Ritenuta d'Acconto</Label>
                                 </div>
-                                {formData.tax_settings.apply_ritenuta && (
-                                    <div className="flex items-center gap-2">
-                                        <Input
-                                            type="number"
-                                            value={formData.tax_settings.ritenuta_rate}
-                                            onChange={(e) => updateTaxSetting('ritenuta_rate', parseFloat(e.target.value) || 0)}
-                                            className="w-20 h-8 text-sm text-right"
-                                        />
-                                        <span className="text-sm text-slate-500">%</span>
-                                    </div>
-                                )}
                             </div>
-
-                            <Separator />
 
                             <div>
                                 <Label>Note Documento</Label>

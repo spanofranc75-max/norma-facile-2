@@ -1565,6 +1565,21 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
             pass
     condizioni_html = build_conditions_html(co, doc_number)
 
+    # CUP / CIG / CUC
+    cup = safe(prev.get("cup") or "")
+    cig = safe(prev.get("cig") or "")
+    cuc = safe(prev.get("cuc") or "")
+    codes_html = ""
+    codes_parts = []
+    if cup.strip():
+        codes_parts.append(f"<strong>CUP:</strong> {cup}")
+    if cig.strip():
+        codes_parts.append(f"<strong>CIG:</strong> {cig}")
+    if cuc.strip():
+        codes_parts.append(f"<strong>CUC:</strong> {cuc}")
+    if codes_parts:
+        codes_html = f'<p class="ref-note">{"&nbsp;&nbsp;&nbsp;&nbsp;".join(codes_parts)}</p>'
+
     # ── Assemble ──
     body = f"""
     {header}
@@ -1578,6 +1593,8 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
         <tr><td class="meta-label">Validit&agrave;:</td><td>{validity} giorni</td></tr>
         {""}
     </table>
+
+    {codes_html}
 
     {ref_note_html}
 
