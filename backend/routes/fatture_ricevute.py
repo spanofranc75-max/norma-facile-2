@@ -1492,8 +1492,6 @@ async def _sync_fatture_from_fic_impl(user: dict):
         while True:
             # PUNTO 2 — Filtra per data se watermark disponibile
             extra_params = {}
-            if last_sync_date:
-                extra_params["filter[date][from]"] = last_sync_date
             try:
                 resp = await client.list_received_invoices(page=page, per_page=50, **extra_params)
             except Exception as api_err:
