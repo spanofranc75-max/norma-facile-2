@@ -408,7 +408,7 @@ def render_pdf(html_content: str) -> BytesIO:
     from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,
         Paragraph, Spacer, Image, PageBreak, HRFlowable)
     from reportlab.lib.units import cm
-from reportlab.lib.utils import ImageReader
+    from reportlab.lib.utils import ImageReader
     from reportlab.lib.enums import TA_RIGHT, TA_CENTER, TA_LEFT
 
     def _di(s):
