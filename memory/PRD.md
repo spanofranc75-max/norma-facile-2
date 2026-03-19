@@ -5,32 +5,46 @@ Applicazione gestionale per carpenteria metallica (CRM/ERP per Fabbri).
 L'app era instabile dopo migrazione a Vercel (frontend) e Railway (backend).
 
 ## Architettura
-- Frontend: React (Vercel) | Backend: FastAPI + MongoDB Atlas (Railway)
-- Repo: spanofranc75-max/norma-facile-2 (GitHub)
+- Frontend: React (Emergent Preview) | Backend: FastAPI + MongoDB (Emergent)
+- Preview URL: https://facile-email-fix.preview.emergentagent.com
 
 ## Implementato
 
-### CUP/CIG/CUC + Rimozione Impostazioni Fiscali (commit 526f3ba - 19/03/2026)
-- Campi CUP, CIG, CUC aggiunti nel form fattura e preventivo
-- Propagazione automatica da preventivo a fattura (QuickFill + create_from_preventivo)
-- CUP/CIG/CUC visibili nei PDF (fattura con ReportLab, preventivo con HTML)
-- Rimossa sezione Impostazioni Fiscali (Rivalsa INPS, Cassa Previdenza, Ritenuta d'Acconto) 
-- Mantenute Note Documento e ripristinato InvoiceEditorPage.js (era troncato)
+### Fix Bug P0: Invio Email RdP/OdA (19/03/2026)
+- `try/except` nella generazione PDF con messaggi di errore specifici invece di 500 generico
+- Supporto CC aggiunto a `send_rdp_email` e `send_oda_email` in `email_service.py`
+- `credentials: 'include'` aggiunto alle fetch di `EmailPreviewDialog.js` (preview + send)
+- Fix endpoint: CC ora passato correttamente anche senza custom_subject/body
+- **Testato: 19/19 test passati (100%)**
 
-### Destinatari Multipli Email + Rubrica (commit e932f80 - 19/03/2026)
+### CUP/CIG/CUC + Rimozione Impostazioni Fiscali
+- Campi CUP, CIG, CUC aggiunti nel form fattura e preventivo
+- Propagazione automatica da preventivo a fattura
+- CUP/CIG/CUC visibili nei PDF
+- Rimossa sezione Impostazioni Fiscali legacy
+
+### Destinatari Multipli Email + Rubrica
 - Campo CC nel dialog EmailPreviewDialog con rubrica contatti rapida
-- Backend: tutti e 3 gli endpoint (fatture, preventivi, DDT) accettano CC
+- Backend: tutti gli endpoint (fatture, preventivi, DDT, RdP, OdA) accettano CC
 - Contatti suggeriti dal database cliente (PEC, email, referenti)
 
-### Fix sync-fic FattureInCloud (commits 199697f, 278211d, 23acf97 - 19/03/2026)
+### Fix sync-fic FattureInCloud
 - Token aggiornato + error handling 401 + rimosso filtro data incompatibile API v2
 
-### Layout PDF Unificato + Fix Viewer (commits precedenti)
+### Layout PDF Unificato + Fix Viewer
 - Header unificato, palette grigia, logo proporzionale, pdfjs-dist aggiornato
+
+### Numerazione Commesse Separata
+- Contatori separati per EN_1090, EN_13241 e generiche
+- Commesse generiche usano il numero del preventivo
+
+### Indicatori Email Inviata RdP/OdA
+- Icona check-mark su RdP/OdA già inviati
+- Possibilità di reinvio
 
 ## Backlog
 ### P1
-- Verifica visiva CUP/CIG/CUC e CC in produzione dopo deploy
+- Verifica completa utente di tutte le feature recenti in produzione
 
 ### P2
 - Unificazione servizi PDF (pdf_invoice_modern.py + pdf_template.py)
