@@ -52,14 +52,16 @@ for _p in _LIB_PATHS:
         except Exception:
             pass
 
-# ── Colors (monocromatico) ──
-DARK = HexColor('#1E293B')
-BORDER = HexColor('#94A3B8')
-LIGHT_BG = HexColor('#F1F5F9')
-TEXT_MAIN = HexColor('#1a1a2e')
-TEXT_SEC = HexColor('#475569')
-TEXT_GREY = HexColor('#64748B')
-ZEBRA_BG = HexColor('#F8FAFC')
+# ── Colors (grigio chiaro elegante) ──
+DARK = HexColor('#AAAAAA')       # Accenti/bordi
+BORDER = HexColor('#D5D5D5')     # Bordi sottili
+LIGHT_BG = HexColor('#F0F0F0')   # Sfondo box totale
+TEXT_MAIN = HexColor('#555555')   # Testo principale
+TEXT_SEC = HexColor('#777777')    # Testo secondario
+TEXT_GREY = HexColor('#888888')   # Etichette
+ZEBRA_BG = HexColor('#F9F9F9')   # Righe alternate
+HEADER_BG = HexColor('#E8E8E8')  # Sfondo header tabella
+TITLE_CLR = HexColor('#666666')  # Titoli
 
 # ── Page ──
 PAGE_W, PAGE_H = A4
@@ -277,7 +279,7 @@ def render_pdf(html_content: str, company: dict = None, doc_title: str = '') -> 
     # 3. Titolo
     if sections.get('title'):
         story.append(Paragraph(sections['title'],
-                     _sty(fontName=FONT_B, fontSize=14, leading=18, textColor=DARK)))
+                     _sty(fontName=FONT_B, fontSize=14, leading=18, textColor=TITLE_CLR)))
         story.append(Spacer(1, 3*mm))
 
     # 4. Meta
@@ -449,7 +451,7 @@ def _add_header(story, sections, co):
             continue
         if line.startswith('AZIENDA:'):
             name = line.replace('AZIENDA:', '').strip()
-            left.append(Paragraph(name, _sty(fontName=FONT_B, fontSize=11, leading=14, textColor=DARK)))
+            left.append(Paragraph(name, _sty(fontName=FONT_B, fontSize=11, leading=14, textColor=TITLE_CLR)))
         else:
             left.append(Paragraph(line, _sty(fontSize=7.5, leading=10, textColor=TEXT_SEC)))
 
@@ -462,7 +464,7 @@ def _add_header(story, sections, co):
         if line.startswith('CLIENTE:'):
             name = line.replace('CLIENTE:', '').strip()
             right.append(Paragraph('Cliente', _sty(fontSize=7, leading=9, textColor=TEXT_GREY)))
-            right.append(Paragraph(name, _sty(fontName=FONT_B, fontSize=10, leading=13, textColor=DARK)))
+            right.append(Paragraph(name, _sty(fontName=FONT_B, fontSize=10, leading=13, textColor=TITLE_CLR)))
         else:
             right.append(Paragraph(line, _sty(fontSize=7.5, leading=10, textColor=TEXT_SEC)))
 
@@ -482,12 +484,12 @@ def _add_meta(story, meta_rows):
     rows = []
     for label, value in meta_rows:
         rows.append([
-            Paragraph(label, _sty(fontName=FONT_B, fontSize=7.5, leading=10, textColor=DARK)),
+            Paragraph(label, _sty(fontName=FONT_B, fontSize=7.5, leading=10, textColor=TEXT_GREY)),
             Paragraph(value, _sty(fontSize=8, leading=11, textColor=TEXT_MAIN)),
         ])
     t = Table(rows, colWidths=[UW * 0.25, UW * 0.75])
     t.setStyle(TableStyle([
-        ('BOX', (0, 0), (-1, -1), 0.5, DARK),
+        ('BOX', (0, 0), (-1, -1), 0.5, BORDER),
         ('LINEBELOW', (0, 0), (-1, -2), 0.3, BORDER),
         ('LEFTPADDING', (0, 0), (-1, -1), 6),
         ('RIGHTPADDING', (0, 0), (-1, -1), 6),
@@ -502,7 +504,7 @@ def _add_meta(story, meta_rows):
 def _add_items_table(story, headers, rows):
     n = len(headers)
     # Header
-    th = [Paragraph(h, _sty(fontName=FONT_B, fontSize=7, leading=9, textColor=white,
+    th = [Paragraph(h, _sty(fontName=FONT_B, fontSize=7, leading=9, textColor=TITLE_CLR,
           alignment=TA_CENTER if h.lower() in ('codice','u.m.','iva','sconti') else
                     TA_RIGHT if h.lower() in ('prezzo','importo','totale','quantit\u00e0','q.t\u00e0') else TA_LEFT))
           for h in headers]
@@ -529,8 +531,8 @@ def _add_items_table(story, headers, rows):
 
     t = Table(data, colWidths=cw, repeatRows=1)
     ts = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), DARK),
-        ('TEXTCOLOR', (0, 0), (-1, 0), white),
+        ('BACKGROUND', (0, 0), (-1, 0), HEADER_BG),
+        ('TEXTCOLOR', (0, 0), (-1, 0), TITLE_CLR),
         ('TOPPADDING', (0, 0), (-1, 0), 5),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 5),
         ('LEFTPADDING', (0, 0), (-1, -1), 4),
@@ -539,8 +541,8 @@ def _add_items_table(story, headers, rows):
         ('BOTTOMPADDING', (0, 1), (-1, -1), 3),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ('LINEBELOW', (0, 0), (-1, -1), 0.3, BORDER),
-        ('BOX', (0, 0), (-1, -1), 0.5, DARK),
-        ('INNERGRID', (0, 0), (-1, 0), 0.3, HexColor('#475569')),
+        ('BOX', (0, 0), (-1, -1), 0.5, BORDER),
+        ('INNERGRID', (0, 0), (-1, 0), 0.3, BORDER),
     ])
     for i in range(2, len(data), 2):
         ts.add('BACKGROUND', (0, i), (-1, i), ZEBRA_BG)
@@ -602,10 +604,10 @@ def _add_totals(story, totals_text):
         grand_idx = len(all_rows) - 1 if not saldo else len(all_rows) - 2
         if grand_idx >= 0:
             cmds.append(('BACKGROUND', (0, grand_idx), (-1, grand_idx), LIGHT_BG))
-            cmds.append(('BOX', (0, grand_idx), (-1, grand_idx), 0.5, DARK))
+            cmds.append(('BOX', (0, grand_idx), (-1, grand_idx), 0.5, BORDER))
         if saldo:
             cmds.append(('BACKGROUND', (0, -1), (-1, -1), LIGHT_BG))
-            cmds.append(('BOX', (0, -1), (-1, -1), 0.5, DARK))
+            cmds.append(('BOX', (0, -1), (-1, -1), 0.5, BORDER))
         t.setStyle(TableStyle(cmds))
 
         wrapper = Table([[Spacer(1, 1), t]], colWidths=[UW - tw, tw])
@@ -623,7 +625,7 @@ def _add_totals(story, totals_text):
 
 def _add_transport(story, transport_rows):
     story.append(Paragraph('DATI TRASPORTO',
-                 _sty(fontName=FONT_B, fontSize=8, leading=11, textColor=DARK)))
+                 _sty(fontName=FONT_B, fontSize=8, leading=11, textColor=TEXT_GREY)))
     story.append(Spacer(1, 2*mm))
     rows = []
     for pairs in transport_rows:
@@ -636,7 +638,7 @@ def _add_transport(story, transport_rows):
         nc = max(len(r) for r in rows)
         t = Table(rows, colWidths=[UW/nc]*nc)
         t.setStyle(TableStyle([
-            ('BOX', (0, 0), (-1, -1), 0.5, DARK),
+            ('BOX', (0, 0), (-1, -1), 0.5, BORDER),
             ('INNERGRID', (0, 0), (-1, -1), 0.3, BORDER),
             ('LEFTPADDING', (0, 0), (-1, -1), 4),
             ('RIGHTPADDING', (0, 0), (-1, -1), 4),
@@ -655,7 +657,7 @@ def _add_signatures(story):
           Paragraph('<b>Firma destinatario</b>', _sty(alignment=TA_CENTER))]],
         colWidths=[UW/3]*3)
     t.setStyle(TableStyle([
-        ('LINEBELOW', (0, 0), (-1, -1), 0.5, DARK),
+        ('LINEBELOW', (0, 0), (-1, -1), 0.5, BORDER),
         ('TOPPADDING', (0, 0), (-1, -1), 20),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ('VALIGN', (0, 0), (-1, -1), 'BOTTOM'),
@@ -667,9 +669,9 @@ def _add_conditions(story, co):
     """Pagina condizioni generali di vendita."""
     story.append(PageBreak())
     story.append(Paragraph('CONDIZIONI GENERALI DI FORNITURA',
-                 _sty(fontName=FONT_B, fontSize=14, leading=18, textColor=DARK, alignment=TA_CENTER)))
+                 _sty(fontName=FONT_B, fontSize=14, leading=18, textColor=TITLE_CLR, alignment=TA_CENTER)))
     story.append(Spacer(1, 2*mm))
-    story.append(HRFlowable(width=UW, thickness=0.5, color=DARK, spaceAfter=4*mm))
+    story.append(HRFlowable(width=UW, thickness=0.5, color=BORDER, spaceAfter=4*mm))
 
     cond = co.get('condizioni_vendita', '') or ''
     if cond.strip():
@@ -704,7 +706,7 @@ def _add_conditions(story, co):
     story.append(Paragraph('<b>Firma e timbro per accettazione</b>',
                  _sty(fontSize=8, leading=11)))
     story.append(Spacer(1, 8*mm))
-    story.append(HRFlowable(width=180, thickness=0.5, color=DARK))
+    story.append(HRFlowable(width=180, thickness=0.5, color=BORDER))
     story.append(Paragraph('Data ___/___/___  (legale rappresentante)',
                  _sty(fontSize=7, leading=9, textColor=TEXT_GREY)))
     story.append(Spacer(1, 6*mm))
@@ -718,6 +720,6 @@ def _add_conditions(story, co):
     story.append(Paragraph('_____________________, li ______________________',
                  _sty(fontSize=8)))
     story.append(Spacer(1, 8*mm))
-    story.append(HRFlowable(width=180, thickness=0.5, color=DARK))
+    story.append(HRFlowable(width=180, thickness=0.5, color=BORDER))
     story.append(Paragraph('Firma e timbro (il legale rappresentante)',
                  _sty(fontSize=7, leading=9, textColor=TEXT_GREY)))

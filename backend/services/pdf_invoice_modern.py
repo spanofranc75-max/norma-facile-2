@@ -52,14 +52,14 @@ for _p in _LIBERATION_PATHS:
         except Exception:
             pass
 
-NAVY        = colors.HexColor('#0F172A')
-BLUE        = colors.HexColor('#2563EB')
-GREY_BG     = colors.HexColor('#F1F5F9')
-GREY_TEXT   = colors.HexColor('#64748B')
-GREY_BORDER = colors.HexColor('#CBD5E1')
-DARK_TEXT   = colors.HexColor('#1a1a2e')
-SEC_TEXT    = colors.HexColor('#475569')
-ZEBRA       = colors.HexColor('#F8FAFC')
+NAVY        = colors.HexColor('#E8E8E8')   # Header tabella (grigio chiaro)
+BLUE        = colors.HexColor('#AAAAAA')   # Bordi/accenti (grigio medio)
+GREY_BG     = colors.HexColor('#F7F7F7')   # Sfondo box meta
+GREY_TEXT   = colors.HexColor('#888888')   # Testo secondario
+GREY_BORDER = colors.HexColor('#D5D5D5')   # Bordi sottili
+DARK_TEXT   = colors.HexColor('#555555')   # Testo principale
+SEC_TEXT    = colors.HexColor('#777777')   # Testo dettagli
+ZEBRA       = colors.HexColor('#F9F9F9')   # Righe alternate
 WHITE       = colors.white
 
 LEFT_MARGIN   = 16 * mm
@@ -113,7 +113,21 @@ def _load_logo(logo_url):
             import urllib.request
             with urllib.request.urlopen(logo_url, timeout=5) as r:
                 stream = BytesIO(r.read())
-        img = Image(stream, width=150, height=50)
+        # Ridimensionamento proporzionale
+        raw = stream.read()
+        stream.seek(0)
+        max_w, max_h = 120, 60
+        img_w, img_h = max_w, max_h
+        try:
+            from PIL import Image as PILImage
+            pil_img = PILImage.open(BytesIO(raw))
+            ow, oh = pil_img.size
+            ratio = min(max_w / ow, max_h / oh)
+            img_w = ow * ratio
+            img_h = oh * ratio
+        except Exception:
+            pass
+        img = Image(stream, width=img_w, height=img_h)
         img.hAlign = 'LEFT'
         return img
     except Exception as e:
@@ -129,21 +143,21 @@ def _sty(**kw):
 
 
 S = {
-    'co_name':     _sty(fontName=FONT_BOLD, fontSize=13, leading=16, textColor=BLUE),
+    'co_name':     _sty(fontName=FONT_BOLD, fontSize=13, leading=16, textColor=DARK_TEXT),
     'co_detail':   _sty(fontSize=7.5, leading=11, textColor=SEC_TEXT),
-    'doc_title':   _sty(fontName=FONT_BOLD, fontSize=20, leading=24,
-                        textColor=NAVY, alignment=TA_CENTER),
+    'doc_title':   _sty(fontName=FONT_BOLD, fontSize=18, leading=22,
+                        textColor=colors.HexColor('#666666'), alignment=TA_CENTER),
     'meta_label':  _sty(fontName=FONT_BOLD, fontSize=7, leading=10, textColor=GREY_TEXT),
     'meta_value':  _sty(fontName=FONT_BOLD, fontSize=9, leading=12, textColor=DARK_TEXT),
     'cl_spett':    _sty(fontSize=7.5, leading=10, textColor=GREY_TEXT),
     'cl_name':     _sty(fontName=FONT_BOLD, fontSize=11, leading=14, textColor=DARK_TEXT),
     'cl_detail':   _sty(fontSize=8, leading=11.5, textColor=SEC_TEXT),
     'th':          _sty(fontName=FONT_BOLD, fontSize=7, leading=9,
-                        textColor=WHITE, alignment=TA_LEFT),
+                        textColor=colors.HexColor('#666666'), alignment=TA_LEFT),
     'th_c':        _sty(fontName=FONT_BOLD, fontSize=7, leading=9,
-                        textColor=WHITE, alignment=TA_CENTER),
+                        textColor=colors.HexColor('#666666'), alignment=TA_CENTER),
     'th_r':        _sty(fontName=FONT_BOLD, fontSize=7, leading=9,
-                        textColor=WHITE, alignment=TA_RIGHT),
+                        textColor=colors.HexColor('#666666'), alignment=TA_RIGHT),
     'td':          _sty(fontSize=8, leading=11),
     'td_r':        _sty(fontSize=8, leading=11, alignment=TA_RIGHT),
     'td_c':        _sty(fontSize=8, leading=11, alignment=TA_CENTER),
@@ -151,10 +165,11 @@ S = {
     'tot_label':   _sty(fontSize=8.5, leading=12, textColor=GREY_TEXT),
     'tot_value':   _sty(fontName=FONT_BOLD, fontSize=8.5, leading=12,
                         textColor=DARK_TEXT, alignment=TA_RIGHT),
-    'grand_label': _sty(fontName=FONT_BOLD, fontSize=11, leading=14, textColor=WHITE),
+    'grand_label': _sty(fontName=FONT_BOLD, fontSize=11, leading=14,
+                        textColor=colors.HexColor('#555555')),
     'grand_value': _sty(fontName=FONT_BOLD, fontSize=14, leading=17,
-                        textColor=WHITE, alignment=TA_RIGHT),
-    'sec_title':   _sty(fontName=FONT_BOLD, fontSize=7.5, leading=10, textColor=BLUE),
+                        textColor=colors.HexColor('#555555'), alignment=TA_RIGHT),
+    'sec_title':   _sty(fontName=FONT_BOLD, fontSize=7.5, leading=10, textColor=GREY_TEXT),
     'sec_text':    _sty(fontSize=8, leading=11.5, textColor=DARK_TEXT),
     'sec_bold':    _sty(fontName=FONT_BOLD, fontSize=8, leading=11.5, textColor=DARK_TEXT),
     'note':        _sty(fontSize=7.5, leading=10.5, textColor=SEC_TEXT),
@@ -215,7 +230,7 @@ def _footer_canvas(canvas, doc):
     canvas.drawRightString(PAGE_W - RIGHT_MARGIN, y_base + 6 * mm,
                            f'Documento generato il {now_str}')
     canvas.setFont(FONT_BOLD, 6.5)
-    canvas.setFillColor(BLUE)
+    canvas.setFillColor(GREY_TEXT)
     canvas.drawCentredString(PAGE_W / 2, y_base + 2 * mm, cert)
     canvas.setFont(FONT_REGULAR, 6.5)
     canvas.setFillColor(GREY_TEXT)
@@ -274,7 +289,7 @@ def generate_modern_invoice_pdf(invoice, client, company):
     ]))
     story.append(hdr)
     story.append(Spacer(1, 4 * mm))
-    story.append(HRFlowable(width=USABLE_W, thickness=1.5,
+    story.append(HRFlowable(width=USABLE_W, thickness=1,
                             color=BLUE, spaceAfter=4 * mm))
 
     # 2. TITOLO
@@ -373,7 +388,7 @@ def generate_modern_invoice_pdf(invoice, client, company):
         total = _fmt(ln.get('line_total') or ln.get('total') or
                      float(ln.get('quantity', 1)) * float(ln.get('unit_price', 0)))
         if disc > 0:
-            desc += (f"<br/><font size='7' color='#64748B'>"
+            desc += (f"<br/><font size='7' color='#888888'>"
                      f"Sconto {_fmt(disc)}%")
             if disc2 > 0:
                 desc += f' + {_fmt(disc2)}%'
@@ -390,9 +405,9 @@ def generate_modern_invoice_pdf(invoice, client, company):
                repeatRows=1)
     ts = TableStyle([
         ('BACKGROUND',    (0, 0), (-1, 0),  NAVY),
-        ('TEXTCOLOR',     (0, 0), (-1, 0),  WHITE),
-        ('TOPPADDING',    (0, 0), (-1, 0),  5),
-        ('BOTTOMPADDING', (0, 0), (-1, 0),  5),
+        ('TEXTCOLOR',     (0, 0), (-1, 0),  colors.HexColor('#666666')),
+        ('TOPPADDING',    (0, 0), (-1, 0),  6),
+        ('BOTTOMPADDING', (0, 0), (-1, 0),  6),
         ('LEFTPADDING',   (0, 0), (-1, -1), 4),
         ('RIGHTPADDING',  (0, 0), (-1, -1), 4),
         ('TOPPADDING',    (0, 1), (-1, -1), 4),
@@ -449,13 +464,14 @@ def generate_modern_invoice_pdf(invoice, client, company):
           Paragraph(f'€ {_fmt(grand_total)}', S['grand_value'])]],
         colWidths=[45 * mm, 35 * mm])
     grand_t.setStyle(TableStyle([
-        ('BACKGROUND',    (0, 0), (-1, -1), NAVY),
+        ('BACKGROUND',    (0, 0), (-1, -1), colors.HexColor('#E0E0E0')),
         ('TOPPADDING',    (0, 0), (-1, -1), 6),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
         ('LEFTPADDING',   (0, 0), (-1, -1), 6),
         ('RIGHTPADDING',  (0, 0), (-1, -1), 6),
         ('ALIGN',         (1, 0), (1, -1),  'RIGHT'),
         ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOX',           (0, 0), (-1, -1), 0.5, GREY_BORDER),
     ]))
     wrapper = Table(
         [[Spacer(1, 1), sub_t],
@@ -539,7 +555,7 @@ def generate_modern_invoice_pdf(invoice, client, company):
                                    S['sec_title']))
             story.append(Spacer(1, 3 * mm))
             story.append(HRFlowable(width=USABLE_W, thickness=1,
-                                    color=BLUE, spaceAfter=3 * mm))
+                                    color=GREY_BORDER, spaceAfter=3 * mm))
             for line in cond.split('\n'):
                 line = line.strip()
                 if not line:
