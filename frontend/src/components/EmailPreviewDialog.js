@@ -102,7 +102,14 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
         try {
             const body = {};
             if (editMode) { body.custom_subject = editSubject; body.custom_body = editBody; }
-            if (ccEmails.length > 0) body.cc = ccEmails;
+
+            // Auto-confirm any email still typed in the CC input (user forgot to press Enter)
+            let finalCc = [...ccEmails];
+            if (ccInput.trim()) {
+                const pendingEmails = ccInput.trim().split(/[,;]\s*/).map(e => e.trim()).filter(e => isValidEmail(e));
+                pendingEmails.forEach(e => { if (!finalCc.includes(e)) finalCc.push(e); });
+            }
+            if (finalCc.length > 0) body.cc = finalCc;
             const res = await fetch(`${API}${sendUrl}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
