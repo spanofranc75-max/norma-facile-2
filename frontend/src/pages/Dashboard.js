@@ -52,6 +52,7 @@ export default function Dashboard() {
     const [semaforo, setSemaforo] = useState(null);
     const [briefing, setBriefing] = useState(null);
     const [alertCount, setAlertCount] = useState(0);
+    const [ncAlerts, setNcAlerts] = useState([]);
     const currentUser = user || location.state?.user;
 
     useEffect(() => {
@@ -69,6 +70,11 @@ export default function Dashboard() {
                 // Fetch officina quality alerts
                 const alerts = await apiRequest(`/officina/alerts/count?admin_id=${currentUser.user_id}`).catch(() => ({ count: 0 }));
                 setAlertCount(alerts.count || 0);
+                // Fetch recent unread NC alerts for dashboard banner
+                if (alerts.count > 0) {
+                    const alertsList = await apiRequest(`/officina/alerts?admin_id=${currentUser.user_id}&limit=10`).catch(() => ({ alerts: [] }));
+                    setNcAlerts((alertsList.alerts || []).filter(a => !a.letto).slice(0, 5));
+                }
             } catch (e) {
                 console.error('Dashboard stats error:', e);
             } finally {
@@ -138,7 +144,7 @@ export default function Dashboard() {
                     </div>
                     {alertCount > 0 && (
                         <button
-                            onClick={() => navigate('/notifications')}
+                            onClick={() => navigate('/notifiche')}
                             className="relative flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors"
                             data-testid="quality-alert-badge"
                         >
@@ -152,6 +158,34 @@ export default function Dashboard() {
 
                 {/* Morning Briefing */}
                 {briefing && <MorningBriefing data={briefing} navigate={navigate} />}
+
+                {/* NC Alert Banner — Avviso immediato Non Conformità */}
+                {ncAlerts.length > 0 && (
+                    <Card className="border-red-200 bg-red-50/80 shadow-sm" data-testid="nc-alert-banner">
+                        <CardContent className="py-3 px-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <AlertTriangle className="h-4 w-4 text-red-600" />
+                                <span className="text-sm font-bold text-red-700">Non Conformità Aperte ({ncAlerts.length})</span>
+                            </div>
+                            <div className="space-y-1.5">
+                                {ncAlerts.map(a => (
+                                    <div key={a.alert_id} className="flex items-center justify-between bg-white/80 rounded-lg px-3 py-2 border border-red-100" data-testid={`nc-alert-${a.alert_id}`}>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-xs font-medium text-red-800 truncate">{a.messaggio}</p>
+                                            <p className="text-[10px] text-red-500">{a.commessa_numero} {a.operatore_nome && `— ${a.operatore_nome}`}</p>
+                                        </div>
+                                        <Button size="sm" variant="ghost"
+                                            className="text-[10px] text-red-600 hover:text-red-800 shrink-0 h-7"
+                                            onClick={() => navigate(`/commesse/${a.commessa_id}`)}
+                                            data-testid={`nc-alert-goto-${a.alert_id}`}>
+                                            Vai <ArrowRight className="h-3 w-3 ml-1" />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* KPI Cards — Gradient */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

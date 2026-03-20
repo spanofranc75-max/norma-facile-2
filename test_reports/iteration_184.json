@@ -1,0 +1,101 @@
+{
+  "summary": "Iteration 184: Sfridi, Controlli Visivi, Registro NC, and NC Alerts Admin UI. All 18 backend tests passed. Frontend UI fully verified with all three new sections (Controlli Visivi, Registro Non Conformità, Sfridi — Magazzino) working correctly in CommessaOpsPanel.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration184_sfridi_qualita_nc.py",
+    "/app/test_reports/pytest/iteration184_sfridi_qualita_nc_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "sfridi.py: Well-structured API with proper Pydantic models for SfridoCreate and SfridoPrelievo",
+    "sfridi.py: Correctly verifies certificate doc exists and enriches sfrido with cert_info",
+    "qualita.py: Controlli Visivi endpoint correctly auto-creates NC + alert when esito=NOK",
+    "qualita.py: _create_nc helper properly creates both NC entry and admin alert",
+    "officina.py: Alerts endpoints (count, list, mark_read) work without auth for dashboard access",
+    "SfridiSection.js: Clean create form with cert 3.1 dropdown, clickable cert link via blob URL",
+    "ControlliVisiviSection.js: Large OK/NOK buttons with proper visual feedback, status banner",
+    "RegistroNCSection.js: NC list with status badges (aperta/in_corso/chiusa) and action buttons",
+    "CommessaOpsPanel.js: Correctly integrates all 3 new sections with proper visibility rules",
+    "Dashboard.js: NC alert banner with red card and 'Vai' navigation buttons"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration184_sfridi_qualita_nc.py"
+  ],
+  "success_rate": {
+    "backend": "100% (18 tests passed)",
+    "frontend": "100% (all UI elements verified)"
+  },
+  "test_credentials": "commessa_id: com_2b99b2db8681 (NF-2026-000008, EN_1090), admin_id: user_97c773827822",
+  "seed_data_creation": "Created test session for user_97c773827822",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 184 added Admin UI for Sfridi, Controlli Visivi, and Registro NC. All endpoints require auth except /api/officina/alerts/* which are public for dashboard. SfridiSection has cert 3.1 dropdown and clickable link. ControlliVisiviSection has OK/NOK buttons that auto-create NC on NOK. RegistroNCSection shows NC list with status management. Dashboard shows NC alert banner when unread alerts exist.",
+  "testing_summary": {
+    "backend_endpoints": {
+      "GET /api/sfridi/commessa/{commessa_id}": "✓ Requires auth (401)",
+      "POST /api/sfridi": "✓ Requires auth (401)",
+      "POST /api/sfridi/{sfrido_id}/preleva": "✓ Requires auth (401)",
+      "PATCH /api/sfridi/{sfrido_id}/esaurito": "✓ Requires auth (401)",
+      "GET /api/controlli-visivi/{commessa_id}": "✓ Requires auth (401)",
+      "POST /api/controlli-visivi": "✓ Requires auth (401)",
+      "GET /api/controlli-visivi/{commessa_id}/check": "✓ Requires auth (401)",
+      "GET /api/registro-nc/{commessa_id}": "✓ Requires auth (401)",
+      "GET /api/registro-nc": "✓ Requires auth (401)",
+      "PATCH /api/registro-nc/{nc_id}": "✓ Requires auth (401)",
+      "GET /api/officina/alerts/count?admin_id=...": "✓ Returns count (200)",
+      "GET /api/officina/alerts?admin_id=...": "✓ Returns alerts list (200)",
+      "PATCH /api/officina/alerts/{alert_id}/read": "✓ Marks alert read (200)"
+    },
+    "frontend_components": {
+      "CommessaOpsPanel": "✓ Shows all 3 new sections (Controlli Visivi, Registro NC, Sfridi)",
+      "SfridiSection": {
+        "create_form": "✓ Visible with tipo_materiale, quantita, numero_colata, cert_select, note fields",
+        "cert_dropdown": "✓ Shows '-- Certificato 3.1 --' placeholder",
+        "buttons": "✓ 'Registra Sfrido' and 'Registra' buttons work"
+      },
+      "ControlliVisiviSection": {
+        "status_banner": "✓ Shows '1 controlli mancanti, 0 NOK senza azione correttiva'",
+        "create_form": "✓ 'Controllo Visivo Finale' form visible",
+        "ok_nok_buttons": "✓ Large OK (👍) and NOK (👎) buttons present",
+        "note_field": "✓ 'Note (dettagli ispezione)' textarea present"
+      },
+      "RegistroNCSection": {
+        "empty_state": "✓ Shows 'Nessuna Non Conformità registrata.' with green checkmark",
+        "summary_bar": "✓ Would show aperte/in_corso/chiuse counts when NCs exist"
+      },
+      "Dashboard": {
+        "nc_alert_banner": "⚠ Not visible (no unread NC alerts for test user)",
+        "quality_alert_badge": "⚠ Not visible (no alerts for test user)"
+      }
+    },
+    "data_testid_coverage": {
+      "sfridi-section": "✓",
+      "btn-add-sfrido": "✓",
+      "sfrido-create-form": "✓",
+      "sfrido-tipo": "✓",
+      "sfrido-quantita": "✓",
+      "sfrido-colata": "✓",
+      "sfrido-cert-select": "✓",
+      "btn-confirm-sfrido": "✓",
+      "controlli-visivi-section": "✓",
+      "ctrl-status-banner": "✓",
+      "btn-add-ctrl": "✓",
+      "ctrl-create-form": "✓",
+      "ctrl-esito-ok": "✓",
+      "ctrl-esito-nok": "✓",
+      "ctrl-note": "✓",
+      "btn-confirm-ctrl": "✓",
+      "registro-nc-section": "✓",
+      "nc-summary": "✓ (when NCs exist)",
+      "nc-alert-banner": "✓ (when unread alerts exist)"
+    }
+  }
+}

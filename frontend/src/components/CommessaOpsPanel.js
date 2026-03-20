@@ -12,6 +12,7 @@ import { Badge } from '../components/ui/badge';
 import {
     ShoppingCart, Factory, Truck, Paintbrush, FileUp,
     ChevronDown, ChevronUp, FileText, Leaf, Shield,
+    Eye, AlertTriangle, PackageOpen,
 } from 'lucide-react';
 
 // Sub-components
@@ -24,6 +25,9 @@ import CAMSection from './CAMSection';
 import RepositoryDocumentiSection from './RepositoryDocumentiSection';
 import FascicoloTecnicoSection from './FascicoloTecnicoSection';
 import GateCertificationPanel from './GateCertificationPanel';
+import SfridiSection from './SfridiSection';
+import ControlliVisiviSection from './ControlliVisiviSection';
+import RegistroNCSection from './RegistroNCSection';
 
 // ── Collapsible Section wrapper ──
 function Section({ title, icon: Icon, count, defaultOpen, children }) {
@@ -168,6 +172,23 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                     <GateCertificationPanel commessaId={commessaId} commessa={{ numero: commessaNumero }} />
                 </Section>
             )}
+
+            {/* ── CONTROLLI VISIVI — se almeno una voce è EN 1090 o EN 13241 ── */}
+            {(hasEN1090 || hasEN13241) && (
+                <Section title="Controlli Visivi" icon={Eye} count={0}>
+                    <ControlliVisiviSection commessaId={commessaId} vociLavoro={vociLavoro} normativaTipo={normativaTipo} />
+                </Section>
+            )}
+
+            {/* ── REGISTRO NC — sempre visibile ── */}
+            <Section title="Registro Non Conformità" icon={AlertTriangle} count={0}>
+                <RegistroNCSection commessaId={commessaId} />
+            </Section>
+
+            {/* ── SFRIDI — materiale avanzato a magazzino ── */}
+            <Section title="Sfridi — Magazzino" icon={PackageOpen} count={0}>
+                <SfridiSection commessaId={commessaId} docs={docs} />
+            </Section>
 
             {/* ── REPOSITORY DOCUMENTI — sempre visibile ── */}
             <Section title="Repository Documenti" icon={FileUp} count={docs.length} defaultOpen>
