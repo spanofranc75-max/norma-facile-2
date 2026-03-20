@@ -1938,8 +1938,11 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
 
     except HTTPException:
         raise
+    except ImportError as ie:
+        logger.error(f"Certificate parsing import error: {ie}")
+        raise HTTPException(500, f"Libreria mancante per analisi certificato: {str(ie)}")
     except Exception as e:
-        logger.error(f"Certificate parsing error: {e}")
+        logger.error(f"Certificate parsing error: {type(e).__name__}: {e}", exc_info=True)
         raise HTTPException(500, f"Errore analisi certificato: {str(e)}")
 
 
