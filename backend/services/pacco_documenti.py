@@ -504,6 +504,27 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
     voci_13241 = [v for v in all_voci if v.get("normativa_tipo") == "EN_13241"]
     voci_gen = [v for v in all_voci if v.get("normativa_tipo") == "GENERICA"]
 
+    # ── BLOCCO CONTROLLI VISIVI: verifica che siano stati completati ──
+    voci_che_richiedono_ctrl = [v for v in all_voci if v.get("normativa_tipo") in ("EN_1090", "EN_13241")]
+    if voci_che_richiedono_ctrl:
+        controlli = await db.controlli_visivi.find(
+            {"commessa_id": commessa_id}, {"_id": 0}
+        ).to_list(200)
+
+        mancanti = []
+        for voce_req in voci_che_richiedono_ctrl:
+            vid = voce_req["voce_id"]
+            voce_ctrls = [c for c in controlli if c.get("voce_id", "") == vid or
+                          (vid == "__principale__" and not c.get("voce_id"))]
+            if not voce_ctrls:
+                desc = voce_req.get("descrizione", vid)
+                mancanti.append(desc)
+        if mancanti:
+            raise ValueError(
+                f"Controllo Visivo mancante per: {', '.join(mancanti)}. "
+                "Completare tutti i controlli visivi obbligatori prima di generare il Pacco Documenti."
+            )
+
     # Documents (with base64 for photos)
     docs = await db.commessa_documents.find(
         {"commessa_id": commessa_id}, {"_id": 0}

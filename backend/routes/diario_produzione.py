@@ -321,3 +321,50 @@ async def delete_operatore(cid: str, op_id: str, user: dict = Depends(get_curren
     if result.deleted_count == 0:
         raise HTTPException(404, "Operatore non trovato")
     return {"message": "Operatore eliminato"}
+
+
+
+# ── PATENTINI OPERATORI ──────────────────────────────────────────
+
+class PatentinoInput(BaseModel):
+    tipo: str               # es. "Saldatura EN ISO 9606-1", "Brasatura"
+    numero: Optional[str] = ""
+    scadenza: str           # YYYY-MM-DD
+    ente: Optional[str] = ""  # es. "IIS", "TÜV"
+
+
+@router.post("/{cid}/operatori/{op_id}/patentini", tags=["operatori"])
+async def add_patentino(cid: str, op_id: str, data: PatentinoInput, user: dict = Depends(get_current_user)):
+    """Add a welding certificate to an operator."""
+    admin_id = await _get_team_admin_id(user)
+    pat_id = f"pat_{uuid.uuid4().hex[:8]}"
+
+    patentino = {
+        "pat_id": pat_id,
+        "tipo": data.tipo,
+        "numero": data.numero or "",
+        "scadenza": data.scadenza,
+        "ente": data.ente or "",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    result = await db[OPERATORI_COLL].update_one(
+        {"op_id": op_id, "admin_id": admin_id},
+        {"$push": {"patentini": patentino}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(404, "Operatore non trovato")
+    return {"message": "Patentino aggiunto", "patentino": patentino}
+
+
+@router.delete("/{cid}/operatori/{op_id}/patentini/{pat_id}", tags=["operatori"])
+async def remove_patentino(cid: str, op_id: str, pat_id: str, user: dict = Depends(get_current_user)):
+    """Remove a welding certificate from an operator."""
+    admin_id = await _get_team_admin_id(user)
+    result = await db[OPERATORI_COLL].update_one(
+        {"op_id": op_id, "admin_id": admin_id},
+        {"$pull": {"patentini": {"pat_id": pat_id}}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(404, "Operatore non trovato")
+    return {"message": "Patentino rimosso"}

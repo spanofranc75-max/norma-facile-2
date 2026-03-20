@@ -205,6 +205,26 @@ async def timer_action(commessa_id: str, data: TimerAction, voce_id: str = ""):
     if data.action == "start":
         if active:
             raise HTTPException(400, "Timer già attivo")
+
+        # ── BLOCCO PATENTINI: EN 1090 richiede patentino saldatura valido ──
+        if normativa == "EN_1090":
+            operatore = await db.operatori.find_one(
+                {"op_id": data.operatore_id},
+                {"_id": 0, "patentini": 1, "nome": 1}
+            )
+            patentini = operatore.get("patentini", []) if operatore else []
+            has_valid = False
+            for pat in patentini:
+                scadenza = pat.get("scadenza", "")
+                if scadenza and scadenza >= now.strftime("%Y-%m-%d"):
+                    has_valid = True
+                    break
+            if not has_valid and patentini:
+                raise HTTPException(
+                    403,
+                    "Patentino scaduto — impossibile lavorare su voci EN 1090. Contattare il responsabile."
+                )
+
         timer_id = f"tmr_{uuid.uuid4().hex[:10]}"
         doc = {
             "timer_id": timer_id,
@@ -411,12 +431,15 @@ async def submit_checklist(commessa_id: str, data: ChecklistSubmit, voce_id: str
     await db[CHECKLIST_COLL].insert_one(doc)
     doc.pop("_id", None)
 
-    # ── CABLAGGIO: create alerts for failed items (👎) ──
+    # ── CABLAGGIO: create alerts + NC entries for failed items (👎) ──
     failed = [item for item in data.items if not item.esito]
     if failed:
         config_map = {c["codice"]: c for c in CHECKLIST_CONFIG.get(normativa, [])}
+        nc_coll = "registro_nc"
         for item in failed:
             label = config_map.get(item.codice, {}).get("label_admin", item.codice)
+
+            # Create alert
             alert = {
                 "alert_id": f"alert_{uuid.uuid4().hex[:10]}",
                 "admin_id": commessa["user_id"],
@@ -424,8 +447,8 @@ async def submit_checklist(commessa_id: str, data: ChecklistSubmit, voce_id: str
                 "commessa_numero": commessa.get("numero", ""),
                 "voce_id": voce_id or "",
                 "voce_desc": voce_desc,
-                "tipo": "qualita_nok",
-                "messaggio": f"Controllo '{label}' NON superato",
+                "tipo": "non_conformita",
+                "messaggio": f"NC: Controllo '{label}' NON superato",
                 "operatore_nome": data.operatore_nome,
                 "normativa": normativa,
                 "checklist_id": checklist_id,
@@ -434,7 +457,31 @@ async def submit_checklist(commessa_id: str, data: ChecklistSubmit, voce_id: str
             }
             await db[ALERT_COLL].insert_one(alert)
             alert.pop("_id", None)
-            logger.warning(f"[OFFICINA] Alert qualità: {label} NOK — commessa {commessa.get('numero', commessa_id)}")
+
+            # Create NC entry in Registro Non Conformità
+            nc_id = f"nc_{uuid.uuid4().hex[:10]}"
+            nc_doc = {
+                "nc_id": nc_id,
+                "commessa_id": commessa_id,
+                "commessa_numero": commessa.get("numero", ""),
+                "admin_id": commessa["user_id"],
+                "voce_id": voce_id or "",
+                "tipo": "checklist_nok",
+                "descrizione": f"Controllo '{label}' NON superato",
+                "operatore_nome": data.operatore_nome,
+                "normativa": normativa,
+                "source_id": checklist_id,
+                "stato": "aperta",
+                "azione_correttiva": "",
+                "chiusa_da": "",
+                "note_chiusura": "",
+                "created_at": now.isoformat(),
+                "updated_at": now.isoformat(),
+            }
+            await db[nc_coll].insert_one(nc_doc)
+            nc_doc.pop("_id", None)
+
+            logger.warning(f"[OFFICINA] NC + Alert: {label} NOK — commessa {commessa.get('numero', commessa_id)}")
 
     return {
         "checklist_id": checklist_id,
