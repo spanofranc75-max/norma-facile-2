@@ -12,32 +12,35 @@ Gestionale per carpenteria metallica conforme EN 1090, EN 13241, ISO 3834.
 - Timer START/PAUSA/STOP, Foto smart routing, Checklist thumbs up/down, Blocco Dati, PIN + QR
 
 ### Pulsante Magico + Smistatore Intelligente
-- PDF con CAP. 1 (EN 1090), CAP. 2 (EN 13241), CAP. 3 (Relazione Tecnica)
+- PDF con CAP. 1 (EN 1090), CAP. 2 (EN 13241), CAP. 3 (Relazione Tecnica), CAP. 4 (Relazione di Montaggio)
 - AI Vision per ritaglio certificati multi-pagina, regola consumabili
 - Automazione verbali: ESITO POSITIVO/NEGATIVO
 
 ### Casi Reali d'Officina (20/03/2026)
-- **Gestione Sfridi**: Materiale avanzato con link certificato 3.1. CRUD + prelievo + stato esaurito.
+- **Gestione Sfridi**: CRUD + prelievo + stato esaurito + link certificato 3.1 cliccabile
 - **Blocco Patentini**: EN 1090 richiede patentino valido. Scaduto = 403.
 - **Controlli Visivi obbligatori**: EN 1090 e EN 13241 richiedono controllo visivo finale.
-- **Registro Non Conformita'**: Ogni thumbs down crea NC + alert admin.
-- Test: 100% backend (26/26 — iteration_182)
+- **Registro Non Conformita'**: Ogni thumbs down crea NC + alert immediato dashboard admin.
+
+### Admin UI per Sfridi, Controlli Visivi, Registro NC (20/03/2026)
+- **SfridiSection**: Form creazione con dropdown certificato 3.1, link cliccabile al PDF certificato, prelievo, esaurito
+- **ControlliVisiviSection**: Banner stato completezza, form OK/NOK con note, auto-creazione NC su NOK
+- **RegistroNCSection**: Lista NC con badge stato (aperta/in_corso/chiusa), azione correttiva, chiusura NC
+- Integrati in **CommessaOpsPanel** come sezioni collassabili
+- **Dashboard NC Alert Banner**: Card rossa con lista NC non lette e navigazione diretta alla commessa
+- Test: 100% backend (18/18) + 100% frontend — iteration_184
 
 ### Fase 4: Montaggio e Tracciabilita' (20/03/2026)
-- **Tracciabilita' Bulloneria**: AI Vision (GPT-4o) analizza foto DDT fornitori, estrae Diametro/Classe/Lotto. Dati associati a Commessa/Voce.
-- **Serraggio Intelligente**: Tabella ISO 898-1 (60 coppie: 12 diametri x 5 classi). Auto-calcolo coppia Nm. Checklist conferma SI/NO + chiave dinamometrica.
-- **Gestione Cantiere**: Check fondazioni OK/NOK. Upload obbligatorio foto giunti serrati e ancoraggi.
-- **Firma Digitale Cliente**: Canvas touch per verbale fine lavori con nome + firma.
-- **Relazione di Montaggio (CAP. 4)**: Nuovo capitolo nel Pulsante Magico con tabella bulloni, serraggi, foto, firma cliente.
-- Backend: 9 endpoint in `routes/montaggio.py`, servizio in `services/montaggio_service.py`
-- Frontend: Nuovo tab MONTAGGIO in OfficinaPage con 4 sotto-step (DDT, SERRAGGIO, CANTIERE, FIRMA)
-- Collezioni DB: `bulloneria_ddt`, `diario_montaggio`
-- Test: 100% backend (14/14) + 100% frontend (iteration_183)
+- **Tracciabilita' Bulloneria**: AI Vision (GPT-4o) analizza DDT, estrae Diametro/Classe/Lotto
+- **Serraggio Intelligente**: Tabella ISO 898-1 (60 coppie), auto-calcolo coppia Nm, checklist SI/NO
+- **Gestione Cantiere**: Check fondazioni, upload foto giunti/ancoraggi obbligatorie
+- **Firma Digitale Cliente**: Canvas touch per verbale fine lavori
+- **Relazione di Montaggio (CAP. 4)**: Nuovo capitolo nel Pulsante Magico
+- Test: 100% backend (14/14) + 100% frontend — iteration_183
 
 ## Backlog
 
 ### P1
-- Frontend per Sfridi, Controlli Visivi, Registro NC (UI nelle pagine admin)
 - Trigger UI "Analizza con AI" per Smistatore Intelligente
 - Split SettingsPage.js (>1700 righe)
 
