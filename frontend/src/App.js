@@ -61,6 +61,8 @@ import NotificationsPage from './pages/NotificationsPage';
 import SettingsPage from './pages/SettingsPage';
 import ActivityLogPage from './pages/ActivityLogPage';
 import OfficinaPage from './pages/OfficinaPage';
+import AttrezzaturePage from './pages/AttrezzaturePage';
+import ArchivioStoricoPage from './pages/ArchivioStoricoPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './App.css';
@@ -258,6 +260,8 @@ function AppRouter() {
             <Route path="/quality-hub" element={<ProtectedRoute><QualityHubPage /></ProtectedRoute>} />
             <Route path="/notifiche" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
             <Route path="/registro-attivita" element={<ProtectedRoute><ActivityLogPage /></ProtectedRoute>} />
+            <Route path="/attrezzature" element={<ProtectedRoute><AttrezzaturePage /></ProtectedRoute>} />
+            <Route path="/archivio-storico" element={<ProtectedRoute><ArchivioStoricoPage /></ProtectedRoute>} />
         </Routes>
     );
 }

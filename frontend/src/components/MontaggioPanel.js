@@ -16,6 +16,7 @@ const API = process.env.REACT_APP_BACKEND_URL;
 const STEPS = [
     { id: 'ddt', label: 'DDT', icon: '📋' },
     { id: 'serraggio', label: 'SERRAGGIO', icon: '🔧' },
+    { id: 'varianti', label: 'VARIANTI', icon: '📝' },
     { id: 'cantiere', label: 'CANTIERE', icon: '🏗️' },
     { id: 'firma', label: 'FIRMA', icon: '✍️' },
 ];
@@ -30,6 +31,7 @@ export default function MontaggioPanel({ commessaId, voceId, selectedOp, normati
     const [fotoGiunti, setFotoGiunti] = useState([]);
     const [fotoAncoraggi, setFotoAncoraggi] = useState([]);
     const [firmaCompleta, setFirmaCompleta] = useState(false);
+    const [varianti, setVarianti] = useState([]);
 
     // Load existing DDTs for this commessa/voce
     useEffect(() => {
@@ -84,6 +86,16 @@ export default function MontaggioPanel({ commessaId, voceId, selectedOp, normati
                     serraggi={serraggi}
                     setSerraggi={setSerraggi}
                     savedDdts={savedDdts}
+                    onNext={() => setStep('varianti')}
+                />
+            )}
+            {step === 'varianti' && (
+                <VariantiSection
+                    commessaId={commessaId}
+                    voceId={voceId}
+                    selectedOp={selectedOp}
+                    varianti={varianti}
+                    setVarianti={setVarianti}
                     onNext={() => setStep('cantiere')}
                 />
             )}
@@ -360,6 +372,8 @@ function DDTSection({ commessaId, voceId, selectedOp, ddtData, setDdtData, saved
 // ══════════════════════════════════════════════════════════════
 
 function SerraggioSection({ serraggi, setSerraggi, savedDdts, onNext }) {
+    const [taraturaAlert, setTaraturaAlert] = useState(null);
+
     // Auto-populate from saved DDTs if serraggi is empty
     useEffect(() => {
         if (serraggi.length === 0 && savedDdts.length > 0) {
@@ -379,6 +393,22 @@ function SerraggioSection({ serraggi, setSerraggi, savedDdts, onNext }) {
         }
     }, [savedDdts, serraggi.length, setSerraggi]);
 
+    // Check torque wrench calibration
+    useEffect(() => {
+        const check = async () => {
+            try {
+                const res = await fetch(`${API}/api/attrezzature/check-taratura`, { credentials: 'include' });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (!data.tutte_valide) {
+                        setTaraturaAlert(data);
+                    }
+                }
+            } catch { /* non-blocking */ }
+        };
+        check();
+    }, []);
+
     const toggleField = (idx, field) => {
         setSerraggi(prev => prev.map((s, i) => i === idx ? { ...s, [field]: !s[field] } : s));
     };
@@ -388,6 +418,17 @@ function SerraggioSection({ serraggi, setSerraggi, savedDdts, onNext }) {
     return (
         <div data-testid="serraggio-section">
             <p className="text-slate-400 text-center text-base mb-4 font-medium">Serraggio Intelligente</p>
+
+            {/* Taratura alert */}
+            {taraturaAlert && taraturaAlert.scadute?.length > 0 && (
+                <div className="bg-red-500/10 border-2 border-red-500/30 rounded-2xl p-3 mb-4" data-testid="taratura-alert-serraggio">
+                    <p className="text-red-400 text-sm font-bold mb-1">TARATURA SCADUTA</p>
+                    {taraturaAlert.scadute.map((c, i) => (
+                        <p key={i} className="text-red-300 text-xs">{c.modello} (S/N: {c.numero_serie || 'N/D'}) — scaduta da {Math.abs(c.giorni_rimasti)}gg</p>
+                    ))}
+                    <p className="text-red-500/60 text-xs mt-1">Avvisare l'Admin per rinnovo taratura.</p>
+                </div>
+            )}
 
             {serraggi.length === 0 ? (
                 <div className="text-center py-10">
@@ -454,6 +495,163 @@ function SerraggioSection({ serraggi, setSerraggi, savedDdts, onNext }) {
                 data-testid="btn-next-cantiere"
                 onClick={onNext}
                 className="w-full h-14 mt-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg transition-all active:scale-95"
+            >
+                Avanti: Cantiere →
+            </button>
+        </div>
+    );
+}
+
+
+// ══════════════════════════════════════════════════════════════
+//  SEZIONE 2.5: VARIANTI (note di variante con foto obbligatoria)
+// ══════════════════════════════════════════════════════════════
+
+function VariantiSection({ commessaId, voceId, selectedOp, varianti, setVarianti, onNext }) {
+    const [descrizione, setDescrizione] = useState('');
+    const [uploading, setUploading] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [fotoDocId, setFotoDocId] = useState(null);
+    const fileRef = useRef(null);
+
+    // Load existing varianti
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const res = await fetch(`${API}/api/montaggio/varianti/${commessaId}?voce_id=${voceId || ''}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setVarianti(data.varianti || []);
+                }
+            } catch { /* ignore */ }
+        };
+        load();
+    }, [commessaId, voceId, setVarianti]);
+
+    const handleUploadFoto = async (file) => {
+        setUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('voce_id', voceId || '');
+            formData.append('operatore_id', selectedOp.op_id);
+            formData.append('operatore_nome', selectedOp.nome);
+            formData.append('tipo_foto', 'variante');
+
+            const res = await fetch(`${API}/api/montaggio/foto/${commessaId}`, {
+                method: 'POST',
+                body: formData,
+            });
+            if (!res.ok) throw new Error('Upload fallito');
+            const data = await res.json();
+            setFotoDocId(data.doc_id);
+            toast.success('Foto variante caricata');
+        } catch (e) {
+            toast.error(e.message);
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleSave = async () => {
+        if (!descrizione.trim()) { toast.error('Descrizione obbligatoria'); return; }
+        if (!fotoDocId) { toast.error('Foto obbligatoria per la variante'); return; }
+        setSaving(true);
+        try {
+            const res = await fetch(`${API}/api/montaggio/variante`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    commessa_id: commessaId,
+                    voce_id: voceId || '',
+                    operatore_id: selectedOp.op_id,
+                    operatore_nome: selectedOp.nome,
+                    descrizione: descrizione.trim(),
+                    foto_doc_id: fotoDocId,
+                }),
+            });
+            if (!res.ok) throw new Error('Salvataggio fallito');
+            const saved = await res.json();
+            setVarianti(prev => [saved, ...prev]);
+            setDescrizione('');
+            setFotoDocId(null);
+            toast.success('Nota di variante salvata');
+        } catch (e) {
+            toast.error(e.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div data-testid="varianti-section">
+            <p className="text-slate-400 text-center text-base mb-4 font-medium">Note di Variante</p>
+
+            {/* New variant form */}
+            <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-2xl p-4 mb-4" data-testid="variante-form">
+                <p className="text-amber-400 text-sm font-bold mb-3">Nuova Variante</p>
+
+                <textarea
+                    data-testid="variante-descrizione"
+                    value={descrizione}
+                    onChange={e => setDescrizione(e.target.value)}
+                    placeholder="Descrivi la variante rispetto al progetto originale..."
+                    className="w-full h-24 bg-slate-800 border-2 border-slate-700 rounded-xl px-4 py-3 text-white text-sm placeholder-slate-600 focus:border-amber-500 focus:outline-none resize-none"
+                />
+
+                <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUploadFoto(f); if (fileRef.current) fileRef.current.value = ''; }}
+                    data-testid="variante-foto-input"
+                />
+
+                <div className="flex gap-2 mt-3">
+                    <button
+                        data-testid="btn-foto-variante"
+                        onClick={() => fileRef.current?.click()}
+                        disabled={uploading}
+                        className={`flex-1 h-12 rounded-xl font-bold transition-all active:scale-95
+                            ${fotoDocId ? 'bg-green-600 text-white' : uploading ? 'bg-blue-500/20 text-blue-400 animate-pulse' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                    >
+                        {uploading ? 'Caricamento...' : fotoDocId ? '📷 Foto OK' : '📷 Foto (obbligatoria)'}
+                    </button>
+                    <button
+                        data-testid="btn-save-variante"
+                        onClick={handleSave}
+                        disabled={saving || !descrizione.trim() || !fotoDocId}
+                        className={`flex-1 h-12 rounded-xl font-bold transition-all active:scale-95
+                            ${descrizione.trim() && fotoDocId ? 'bg-amber-500 text-slate-900 hover:bg-amber-400' : 'bg-slate-700 text-slate-500'}`}
+                    >
+                        {saving ? 'Salvataggio...' : 'Salva Variante'}
+                    </button>
+                </div>
+            </div>
+
+            {/* Existing varianti */}
+            {varianti.length > 0 && (
+                <div className="space-y-2 mb-4" data-testid="varianti-list">
+                    <p className="text-slate-500 text-xs font-bold">Varianti registrate ({varianti.length})</p>
+                    {varianti.map(v => (
+                        <div key={v.variante_id} className="bg-slate-800 rounded-xl p-3 border border-amber-500/20">
+                            <div className="flex items-start gap-2">
+                                <span className="text-amber-400 text-lg">📝</span>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-white text-sm">{v.descrizione}</p>
+                                    <p className="text-slate-500 text-xs mt-1">{v.operatore_nome} — {new Date(v.created_at).toLocaleDateString('it-IT')}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {varianti.length === 0 && (
+                <p className="text-slate-600 text-xs text-center mb-4">Nessuna variante. Se non ci sono modifiche, prosegui.</p>
+            )}
+
+            <button
+                data-testid="btn-next-cantiere-from-varianti"
+                onClick={onNext}
+                className="w-full h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg transition-all active:scale-95"
             >
                 Avanti: Cantiere →
             </button>

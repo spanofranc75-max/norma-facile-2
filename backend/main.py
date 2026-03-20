@@ -70,6 +70,8 @@ from routes.smistatore import router as smistatore_router
 from routes.sfridi import router as sfridi_router
 from routes.qualita import router as qualita_router
 from routes.montaggio import router as montaggio_router
+from routes.attrezzature import router as attrezzature_router
+from routes.archivio import router as archivio_router
 
 # Configure logging
 logging.basicConfig(
@@ -184,6 +186,8 @@ app.include_router(smistatore_router, prefix="/api")
 app.include_router(sfridi_router, prefix="/api")
 app.include_router(qualita_router, prefix="/api")
 app.include_router(montaggio_router, prefix="/api")
+app.include_router(attrezzature_router, prefix="/api")
+app.include_router(archivio_router, prefix="/api")
 
 
 @app.on_event("startup")

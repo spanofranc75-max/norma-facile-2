@@ -24,7 +24,7 @@ import {
     BarChart3, BoxIcon, FileInput, Camera, ChevronDown,
     Briefcase, Wrench, Award, ShoppingCart, FileText, LayoutGrid,
     CreditCard, TrendingUp, ClipboardCheck, Calendar, CircleDollarSign,
-    User, LogOut, Bell, Flame, Calculator, ScrollText, Menu, X,
+    User, LogOut, Bell, Flame, Calculator, ScrollText, Menu, X, Archive,
 } from 'lucide-react';
 
 // ── Navigation Structure ────────────────────────────────────────
@@ -97,6 +97,7 @@ const NAV_GROUPS = [
             { path: '/saldatori', label: 'Saldatori', icon: Users },
             { path: '/wps', label: 'WPS (Procedure)', icon: Flame },
             { path: '/audit', label: 'Audit & NC', icon: ClipboardCheck },
+            { path: '/attrezzature', label: 'Scadenzario Attrezzature', icon: Wrench },
         ],
     },
     {
@@ -141,6 +142,7 @@ const NAV_GROUPS = [
             { path: '/settings', label: 'Dati Azienda', icon: Settings },
             { path: '/impostazioni/pagamenti', label: 'Tipi Pagamento', icon: CreditCard },
             { path: '/registro-attivita', label: 'Registro Attivita', icon: ScrollText },
+            { path: '/archivio-storico', label: 'Archivio Storico', icon: Archive },
         ],
     },
 ];

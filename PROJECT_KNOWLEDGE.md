@@ -433,6 +433,28 @@ si DEVE proporre di spezzarlo.
 }
 ```
 
+### FASE 4B — Modulo Varianti, Scadenzario Attrezzature, Archivio Storico (COMPLETATA)
+
+#### 4B.1 Modulo Varianti
+- Nel Diario di Montaggio, nuovo sotto-step "VARIANTI"
+- Note di variante con foto obbligatoria
+- Le varianti vengono evidenziate nel Pacco Documenti (CAP. 4, sezione 4.6)
+- Collezione DB: `varianti_montaggio` { variante_id, commessa_id, voce_id, descrizione, foto_doc_id, ... }
+
+#### 4B.2 Scadenzario Attrezzature
+- CRUD per saldatrici e chiavi dinamometriche con date di taratura
+- Se taratura scaduta → alert automatico admin (stessa collection `officina_alerts`)
+- Endpoint check-taratura collegato al modulo serraggio: se la chiave e' scaduta, mostra alert nell'interfaccia operaio
+- Collezione DB: `attrezzature` { attr_id, tipo, modello, numero_serie, marca, data_taratura, prossima_taratura }
+- Pagina admin: `/attrezzature` con card per ogni attrezzatura + badge scadenza
+
+#### 4B.3 Archivio Storico
+- Esportazione massiva per anno e/o cliente
+- Genera ZIP con struttura: /{Anno}/{Cliente}/{Commessa}/
+- Include: info_commessa.txt, Foto/, Certificati/, Documenti/, diario_produzione.csv, diario_montaggio.json
+- Pagina admin: `/archivio-storico` con filtri anno/cliente + statistiche + storico export
+- Collezione DB: `archivio_exports` per tracciare le esportazioni
+
 ### FASE 5 — Smistatore Intelligente Avanzato (PROSSIMO)
 - Certificati cumulativi: AI analizza ogni pagina, matching per numero colata
 - DDT Multi-Commessa: spacchettamento automatico per commessa/voce

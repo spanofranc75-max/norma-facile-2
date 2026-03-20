@@ -82,6 +82,15 @@ class FirmaClienteRequest(BaseModel):
     firma_nome: str
 
 
+class VarianteCreate(BaseModel):
+    commessa_id: str
+    voce_id: str = ""
+    operatore_id: str
+    operatore_nome: str
+    descrizione: str
+    foto_doc_id: str  # mandatory photo
+
+
 # ── DDT ANALYSIS (AI Vision) ────────────────────────────────
 
 @router.post("/ddt/analyze")
@@ -340,3 +349,58 @@ async def save_firma_cliente(data: FirmaClienteRequest):
         "firma_nome": data.firma_nome,
         "firma_data": now.isoformat(),
     }
+
+
+VARIANTI_COLL = "varianti_montaggio"
+
+
+# ── VARIANTI DI MONTAGGIO ────────────────────────────────────
+
+@router.post("/variante")
+async def create_variante(data: VarianteCreate):
+    """Save a variant note with mandatory photo for the assembly diary."""
+    if not data.foto_doc_id:
+        raise HTTPException(400, "Foto obbligatoria per la nota di variante")
+    if not data.descrizione.strip():
+        raise HTTPException(400, "Descrizione obbligatoria")
+
+    now = datetime.now(timezone.utc)
+
+    # Get admin_id
+    commessa = await db.commesse.find_one(
+        {"commessa_id": data.commessa_id}, {"_id": 0, "user_id": 1, "numero": 1}
+    )
+    admin_id = commessa["user_id"] if commessa else ""
+
+    var_id = f"var_{uuid.uuid4().hex[:10]}"
+    doc = {
+        "variante_id": var_id,
+        "commessa_id": data.commessa_id,
+        "voce_id": data.voce_id or "",
+        "admin_id": admin_id,
+        "operatore_id": data.operatore_id,
+        "operatore_nome": data.operatore_nome,
+        "descrizione": data.descrizione.strip(),
+        "foto_doc_id": data.foto_doc_id,
+        "created_at": now.isoformat(),
+    }
+
+    await db[VARIANTI_COLL].insert_one(doc)
+    doc.pop("_id", None)
+
+    logger.info(f"[MONTAGGIO] Variante creata: {var_id} — {data.descrizione[:50]}")
+    return doc
+
+
+@router.get("/varianti/{commessa_id}")
+async def list_varianti(commessa_id: str, voce_id: str = ""):
+    """List variant notes for a commessa."""
+    query = {"commessa_id": commessa_id}
+    if voce_id:
+        query["voce_id"] = voce_id
+
+    varianti = await db[VARIANTI_COLL].find(
+        query, {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+
+    return {"varianti": varianti, "count": len(varianti)}

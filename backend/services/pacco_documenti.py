@@ -475,8 +475,28 @@ def _build_parte_d(commessa_id: str, voci_all: list, data: dict) -> str:
     html += f'<h3>4.5 — Foto Ancoraggi ({len(foto_ancoraggi)})</h3>'
     html += _foto_html(foto_ancoraggi)
 
-    # 4.6 — Firma Cliente (Verbale Fine Lavori)
-    html += '<h3>4.6 — Verbale di Fine Lavori — Firma Cliente</h3>'
+    # 4.6 — Note di Variante (evidenziate)
+    varianti = data.get("varianti", [])
+    html += f'<h3>4.6 — Note di Variante ({len(varianti)})</h3>'
+    if varianti:
+        for var in varianti:
+            html += f"""
+            <div class="note" style="border-left:4px solid #e67e22; background:#fef9f0; padding:10px; margin-bottom:8px;">
+                <p style="font-weight:700; color:#e67e22; margin-bottom:4px;">VARIANTE</p>
+                <p style="font-size:10pt; margin-bottom:4px;">{_s(var.get("descrizione", ""))}</p>
+                <p style="font-size:8pt; color:#888;">Operatore: {_s(var.get("operatore_nome", ""))} — {_s(var.get("created_at", "")[:10])}</p>
+            </div>"""
+            # Include variant photo if available
+            foto_id = var.get("foto_doc_id", "")
+            if foto_id:
+                foto_docs = [d for d in data.get("docs", []) if d.get("doc_id") == foto_id]
+                if foto_docs:
+                    html += _foto_html(foto_docs)
+    else:
+        html += '<p style="font-size:9pt;color:#888;font-style:italic;">Nessuna variante registrata.</p>'
+
+    # 4.7 — Firma Cliente (Verbale Fine Lavori)
+    html += '<h3>4.7 — Verbale di Fine Lavori — Firma Cliente</h3>'
     firma_trovata = False
     for entry in montaggio_entries:
         firma_b64 = entry.get("firma_cliente_base64", "")
@@ -658,6 +678,10 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
         {"commessa_id": commessa_id}, {"_id": 0}
     ).to_list(100)
 
+    varianti = await db.varianti_montaggio.find(
+        {"commessa_id": commessa_id}, {"_id": 0}
+    ).to_list(100)
+
     # Shared data context
     ctx = {
         "docs": docs,
@@ -667,6 +691,7 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
         "page_index": page_index,
         "montaggio": montaggio,
         "bulloneria_ddt": bulloneria_ddt,
+        "varianti": varianti,
     }
 
     # ── 2. BUILD INDEX (which parts to include) ──
@@ -690,11 +715,11 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
             "titolo": "RELAZIONE TECNICA",
             "subtitle": "Riepilogo ore e materiali",
         })
-    if montaggio or bulloneria_ddt:
+    if montaggio or bulloneria_ddt or varianti:
         parti.append({
             "lettera": "CAP. 4",
             "titolo": "RELAZIONE DI MONTAGGIO",
-            "subtitle": "Bulloneria, serraggi, foto cantiere, firma cliente",
+            "subtitle": "Bulloneria, serraggi, varianti, foto cantiere, firma cliente",
         })
 
     # ── 3. GENERATE HTML ──
@@ -710,8 +735,8 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
     if all_voci_for_relazione or voci_1090 or voci_13241:
         html_body += _build_parte_c(all_voci_for_relazione, ctx)
 
-    # CAP. 4: Relazione di Montaggio (Fase 4) — bulloni, serraggi, foto, firma
-    if montaggio or bulloneria_ddt:
+    # CAP. 4: Relazione di Montaggio (Fase 4) — bulloni, serraggi, varianti, foto, firma
+    if montaggio or bulloneria_ddt or varianti:
         html_body += _build_parte_d(commessa_id, all_voci, ctx)
 
     # ── 4. RENDER PDF ──
