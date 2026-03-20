@@ -814,7 +814,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
             toast.info('Analisi AI del certificato in corso...');
             
             // Parse the certificate with AI OCR
-            const parseRes = await apiRequest(`/commesse/${commessaId}/documenti/${docId}/parse-certificate`, { method: 'POST' });
+            const parseRes = await apiRequest(`/commesse/${commessaId}/documenti/${docId}/parse-certificato`, { method: 'POST' });
             
             // Link the certificate to the material with extracted data
             const linkForm = new FormData();
