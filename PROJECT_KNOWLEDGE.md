@@ -22,14 +22,14 @@ Il software gestisce l'intero ciclo di vita di una commessa: dal preventivo alla
 
 ---
 
-## 2. Le 3 Categorie di Lavoro
+## 2. Le 3 Categorie di Lavoro (I "3 Binari")
 
-Ogni commessa appartiene a UNA di queste categorie. La scelta avviene alla creazione e determina cosa il software mostra e cosa nasconde.
+Ogni voce di lavoro all'interno di una commessa segue UNO di questi binari:
 
 ### A. STRUTTURALE (EN 1090)
 **Campo DB:** `normativa_tipo: "EN_1090"`
 **Quando si usa:** Scale, balconi, soppalchi, capannoni, strutture portanti
-**Cosa richiede:**
+**Cosa attiva:**
 - Tracciabilità lotti ferro con certificati 3.1 (numero colata, acciaieria)
 - Patentini saldatori (EN ISO 9606)
 - WPS/WPQR (procedure di saldatura qualificate)
@@ -37,72 +37,140 @@ Ogni commessa appartiene a UNA di queste categorie. La scelta avviene alla creaz
 - Generazione DoP (Dichiarazione di Prestazione)
 - Etichetta CE
 - CAM — Criteri Ambientali Minimi (DM 256/2022) per appalti pubblici
-**Sezioni operative visibili:** TUTTE (8 sezioni)
+**Sezioni operative:** TUTTE (8 sezioni)
+**Output documentale:** Fascicolo Tecnico (DoP + CE + Piano QC + Certificati 3.1 + WPS)
 
 ### B. CANCELLO (EN 13241)
 **Campo DB:** `normativa_tipo: "EN_13241"`
 **Quando si usa:** Cancelli scorrevoli/battenti, portoni industriali, porte pedonali, barriere
-**Cosa richiede:**
+**Cosa attiva:**
 - Kit sicurezza (fotocellule, coste sensibili, lampeggiante)
 - Foto delle installazioni di sicurezza
 - Verbale collaudo forze (EN 12453)
 - Manuale d'Uso e Manutenzione
 - Certificazione cancello con test specifici
-**Sezioni operative visibili:** 6 (include Certificazione Cancello, esclude Tracciabilità/CAM/Fascicolo Tecnico EN 1090)
+**Sezioni operative:** 6 (include Certificazione Cancello, esclude Tracciabilità/CAM/Fascicolo Tecnico EN 1090)
+**Output documentale:** Libretto Manutenzione (Scheda tecnica + Verbale collaudo forze + Manuale d'Uso)
 
 ### C. GENERICA (Nessuna Marcatura CE)
 **Campo DB:** `normativa_tipo: "GENERICA"`
 **Quando si usa:** Riparazioni, manutenzioni, piccoli lavori, lavori su misura senza obbligo CE
-**Cosa richiede:**
+**Cosa attiva:**
 - Solo registrazione ore lavorate
 - Solo registrazione materiali utilizzati
 - Riepilogo costi per controllo margine
 - NESSUN obbligo burocratico o documentale
-**Sezioni operative visibili:** Solo 3 (Produzione, Conto Lavoro, Repository Documenti)
+**Sezioni operative:** Solo 3 (Produzione, Conto Lavoro, Repository Documenti)
+**Output documentale:** Riepilogo Costi (ore lavorate + materiali usati + margine)
 
-### REGOLA CANTIERI MISTI
+---
 
-> Una singola commessa PUO' contenere più **Voci di Lavoro** con normative diverse.
+## 3. STRUTTURA MATRIOSKA — Cantieri Misti
 
-**Esempio reale:** Il cliente Bianchi ordina per lo stesso cantiere:
-- Voce 1: "Soppalco capannone" → EN 1090 (EXC2)
-- Voce 2: "Cancello carraio" → EN 13241
-- Voce 3: "Riparazione ringhiera" → GENERICA
+> **REGOLA FONDAMENTALE:** Una Commessa non è un blocco unico. E' un "Fascicolo di Cantiere"
+> che puo' contenere diverse **Voci di Lavoro**, ognuna con la sua identità normativa.
 
-**Come funziona nel software:**
+### Perche' serve
+Il cliente Bianchi ordina per lo stesso cantiere:
+- **Voce A:** "Soppalco capannone" → EN 1090 (EXC2) → attiva tracciabilità ferro, patentini, DoP
+- **Voce B:** "Cancello carraio" → EN 13241 → attiva foto sicurezza, collaudo forze, Libretto Manutenzione
+- **Voce C:** "Riparazione ringhiera" → GENERICA → solo ore e materiali, nessuna burocrazia
 
-1. **Alla creazione** della commessa si sceglie la categoria principale (come oggi)
-2. **Dopo la creazione**, nella scheda della commessa si possono aggiungere "Voci di Lavoro" extra con categorie diverse
-3. **Il pannello operativo** mostra le sezioni di TUTTE le categorie presenti nelle voci (unione)
-4. **Il Diario di Produzione** chiede all'operaio "Su quale voce stai lavorando?" e filtra le domande:
-   - Se lavora sulla voce EN 1090 → chiede certificati, colata, WPS
-   - Se lavora sulla voce EN 13241 → chiede foto fotocellule, note collaudo
-   - Se lavora sulla voce GENERICA → chiede solo ore e materiali
-5. **Il "Pulsante Magico"** genera un **Fascicolo di Cantiere unico** che raggruppa:
-   - Fascicolo Tecnico per le voci EN 1090
-   - Libretto Manutenzione per le voci EN 13241
-   - Riepilogo Costi per le voci GENERICHE
+Senza la Matrioska, bisognerebbe creare 3 commesse separate. Tre numeri, tre cartelle, tre contabilità. Un casino.
 
-**Schema DB delle Voci di Lavoro:**
+### Come funziona nel software
+
+1. **Alla creazione** della commessa si sceglie la categoria principale
+2. **Dopo la creazione**, nella scheda della commessa si possono aggiungere "Voci di Lavoro" extra
+3. **Ogni voce** ha: descrizione, categoria normativa, e i campi specifici della sua categoria
+4. **Il pannello operativo** mostra le sezioni di TUTTE le categorie presenti nelle voci (unione)
+5. **Il Diario di Produzione** chiede all'operaio "Su quale voce stai lavorando?" e filtra le domande
+6. **Il "Pulsante Magico"** genera un Fascicolo di Cantiere unico che raggruppa tutto
+
+### Schema DB
+
 ```
 // Nuova collezione: voci_lavoro
 {
   voce_id: "voce_abc123",
   commessa_id: "com_xyz789",
   descrizione: "Soppalco capannone",
-  normativa_tipo: "EN_1090",        // categoria specifica della voce
+  normativa_tipo: "EN_1090",
   classe_exc: "EXC2",               // solo per EN_1090
   tipologia_chiusura: "",            // solo per EN_13241
-  ordine: 1,                         // ordine di visualizzazione
+  ordine: 1,
   created_at: "2026-03-20T...",
 }
 ```
 
-**Regola di retrocompatibilità:** Le commesse esistenti (senza voci) continuano a funzionare come prima — il campo `normativa_tipo` della commessa vale come "voce unica implicita".
+### Retrocompatibilita'
+Le commesse gia' esistenti (senza voci) funzionano ESATTAMENTE come prima.
+Il campo `normativa_tipo` della commessa vale come "voce unica implicita".
 
 ---
 
-## 3. Architettura del Codice
+## 4. DIARIO DI PRODUZIONE ADATTIVO (Mobile-First)
+
+> L'operaio accede dal telefono (tramite QR o link rapido).
+> Il diario si adatta alla voce di lavoro selezionata.
+
+### Regole ferree
+
+**ZERO CONTABILITA':** Nascondere SEMPRE costi orari, margini e prezzi.
+L'operaio vede solo il "Cosa fare", mai il "Quanto costa".
+
+**FILTRO INTELLIGENTE per voce selezionata:**
+| Voce selezionata | Cosa chiede il Diario |
+|---|---|
+| EN 1090 | Ore + materiali + certificato 3.1 + numero colata + WPS usata |
+| EN 13241 | Ore + materiali + foto fotocellula + foto coste + note collaudo |
+| GENERICA | Solo Start/Stop tempo + materiali usati |
+
+**FLUSSO OPERAIO:**
+1. Apre il diario dal cellulare
+2. Seleziona la commessa (o la trova gia' preselezionata dal QR)
+3. Se la commessa ha piu' voci, sceglie "Su quale voce stai lavorando?"
+4. Il diario mostra SOLO i campi pertinenti a quella voce
+5. Salva con un bottone grande e chiaro
+
+---
+
+## 5. IL PULSANTE MAGICO (Output Documentale)
+
+> Un unico bottone nella scheda commessa che genera il "Pacco Documenti Cantiere".
+
+### Output per tipo
+
+**EN 1090 → Fascicolo Tecnico:**
+- Dichiarazione di Prestazione (DoP)
+- Etichetta CE
+- Piano di Controllo Qualita'
+- Certificati materiali 3.1
+- WPS/WPQR
+- Scheda Rintracciabilita' Materiali
+- CAM (se applicabile)
+
+**EN 13241 → Libretto Manutenzione:**
+- Scheda tecnica prodotto
+- Verbale collaudo forze (EN 12453)
+- Foto kit sicurezza (fotocellule, coste, lampeggiante)
+- Manuale d'Uso e Manutenzione
+- Dichiarazione di Prestazione (DoP)
+
+**GENERICA → Riepilogo Lavorazioni:**
+- Ore lavorate per operaio
+- Materiali utilizzati
+- Riepilogo costi (solo per il titolare, MAI per l'operaio)
+
+### Per Cantieri Misti (Matrioska)
+Il Pulsante Magico genera un **unico file PDF** (o cartella ZIP) che separa ordinatamente:
+1. Sezione "Documenti Strutturali (EN 1090)" — per ogni voce strutturale
+2. Sezione "Documenti Sicurezza Cancelli (EN 13241)" — per ogni voce cancello
+3. Sezione "Riepilogo Lavorazioni Generiche" — per le voci senza marcatura
+
+---
+
+## 6. Architettura del Codice
 
 ### Stack Tecnologico
 - **Frontend:** React 18 + TailwindCSS + Shadcn/UI
@@ -150,63 +218,65 @@ Ogni commessa appartiene a UNA di queste categorie. La scelta avviene alla creaz
             └── ...
 ```
 
-### Regola sui "File Monster"
-Il progetto aveva file enormi che rendevano impossibile manutenere il codice:
-- `commessa_ops.py` (3.430 righe) → **SPEZZATO** in 6 moduli + wrapper
-- `CommessaOpsPanel.js` (2.964 righe) → **SPEZZATO** in 8 sotto-componenti + orchestratore
-- `SettingsPage.js` (1.731 righe) → **DA FARE** — prossimo candidato allo split
+### Regole di Manutenzione Codice
 
-**Regola:** Nessun file deve superare le 500 righe. Se cresce troppo, si spezza chirurgicamente in moduli autonomi con interfacce pulite (props/callback per il frontend, router separati per il backend).
+**SOGLIA 800 RIGHE:** Ogni volta che un Service o Route supera le 800 righe,
+si DEVE proporre di spezzarlo in file piu' piccoli (es. `service_1090.py`, `service_13241.py`, `service_generica.py`).
+
+**File gia' spezzati:**
+- `commessa_ops.py` (3.430 righe) → **FATTO** → 6 moduli + wrapper
+- `CommessaOpsPanel.js` (2.964 righe) → **FATTO** → 8 sotto-componenti + orchestratore
+
+**File da spezzare:**
+- `SettingsPage.js` (1.731 righe)
+- `commesse.py` (1.330 righe)
+
+**Non eliminare dati esistenti.** Se la struttura cambia, mappare i dati vecchi verso la nuova struttura a 3 binari.
 
 ---
 
-## 4. UX Officina — Regole di Design
+## 7. UX Officina — Regole di Design
 
 ### Bottoni Grandi e Chiari
-Il titolare e gli operai usano l'app con le **mani sporche di ferro** e spesso **di fretta**. Le regole sono:
+Il titolare e gli operai usano l'app con le **mani sporche di ferro** e spesso **di fretta**:
 - Bottoni grandi (min h-11, testo leggibile)
-- Colori distintivi per ogni azione (blu = strutturale, ambra = cancello, grigio = generico)
+- Colori distintivi: blu = strutturale, ambra = cancello, grigio = generico
 - Icone sempre presenti accanto al testo
 - Touch target minimo 44x44px per mobile
 
 ### Accesso Separato per Operai
-Gli operai NON devono vedere:
-- Dati contabili (preventivi, fatture, margini, prezzi)
-- Impostazioni aziendali
-- Anagrafica clienti/fornitori
+**L'operaio NON deve MAI vedere:** costi orari, margini, prezzi, preventivi, fatture, impostazioni, anagrafica clienti/fornitori.
+**L'operaio DEVE vedere solo:** Diario di Produzione, Fasi di lavorazione, Foto del lavoro.
 
-Gli operai DEVONO vedere solo:
-- Diario di Produzione (registrazione ore)
-- Fasi di lavorazione (avanzamento)
-- Foto del lavoro in corso
-
-> **Vista Officina** (da implementare): un'interfaccia semplificata mobile-first per gli operai, accessibile con PIN o QR code, che mostra solo le commesse attive e il diario di produzione.
+> **Vista Officina** (da implementare): interfaccia mobile-first, accessibile con PIN o QR code,
+> che mostra solo le commesse attive e il diario di produzione.
 
 ### Responsive Mobile
-Tutte le pagine devono funzionare su mobile (375px). Pattern usati:
+Pattern TailwindCSS usati su tutte le pagine:
 - `flex-col sm:flex-row` per header con bottoni
 - `hidden md:table-cell` per colonne secondarie nelle tabelle
 - `overflow-x-auto` wrapper attorno alle tabelle
-- `w-full sm:w-auto` per bottoni che diventano full-width su mobile
+- `w-full sm:w-auto` per bottoni full-width su mobile
 - `grid-cols-1 sm:grid-cols-N` per form nei dialog
 
 ---
 
-## 5. Database — Regole
+## 8. Database — Regole
 
-- **NON modificare** tabelle/collezioni esistenti per aggiungere funzionalità
-- **Creare nuove collezioni** se servono dati nuovi (es. `kit_sicurezza_13241`)
-- Tutti i campi ID usano prefissi: `com_` (commesse), `user_` (utenti), `rdp_` (richieste preventivo)
-- `_id` di MongoDB **MAI** esposto nelle API REST — sempre escluso nelle proiezioni
+- **NON modificare** tabelle/collezioni esistenti per aggiungere funzionalita'
+- **Creare nuove collezioni** se servono dati nuovi (es. `voci_lavoro`, `kit_sicurezza_13241`)
+- Tutti i campi ID usano prefissi: `com_` (commesse), `user_` (utenti), `voce_` (voci di lavoro)
+- `_id` di MongoDB **MAI** esposto nelle API REST
 - Date sempre in UTC con `datetime.now(timezone.utc)`
 
 ### Collezioni Principali
 | Collezione | Scopo | Note |
 |---|---|---|
-| `commesse` | Commesse di lavoro | Campo chiave: `normativa_tipo` |
+| `commesse` | Fascicoli di cantiere | Campo chiave: `normativa_tipo` (categoria principale) |
+| `voci_lavoro` | Voci di lavoro dentro una commessa | **NUOVA** — Struttura Matrioska |
 | `preventivi` | Preventivi clienti | Possono generare commesse |
 | `articoli` | Catalogo articoli/materiali | Con giacenza magazzino |
-| `diario_produzione` | Registrazioni ore operai | Per commessa |
+| `diario_produzione` | Registrazioni ore operai | Per commessa + voce |
 | `material_batches` | Lotti materiale tracciati | Solo EN 1090 |
 | `cam_lotti` | Lotti CAM per DM 256/2022 | Solo EN 1090 |
 | `fatture` | Fatture emesse | Collegabili a commesse |
@@ -215,7 +285,7 @@ Tutte le pagine devono funzionare su mobile (375px). Pattern usati:
 
 ---
 
-## 6. Log delle Modifiche
+## 9. Log delle Modifiche
 
 ### 20 Marzo 2026 — Sessione di Stabilizzazione
 
@@ -244,30 +314,35 @@ Tutte le pagine devono funzionare su mobile (375px). Pattern usati:
 - `NORMATIVA_CONFIG` aggiornato con la voce GENERICA nel `CommessaHubPage`
 - Test: 100% backend (13/13) + frontend (iteration_177)
 
+**Master Plan integrato nel PROJECT_KNOWLEDGE.md**
+- Aggiunta regola Cantieri Misti (Struttura Matrioska)
+- Aggiunta specifica Diario Produzione Adattivo (sezione 4)
+- Aggiunta specifica Pulsante Magico (sezione 5)
+- Aggiunta regola 800 righe per manutenzione codice
+
 ---
 
-## 7. Prossimi Passi (Roadmap)
+## 10. Prossimi Passi (Roadmap)
 
-### In Coda — Flusso Categorie
-- **FASE 1.5 (NUOVA):** Voci di Lavoro per Cantieri Misti
-  - Nuova collezione `voci_lavoro` + API CRUD
-  - Sezione "Voci di Lavoro" nella scheda commessa
-  - CommessaOpsPanel mostra sezioni basate su unione delle categorie delle voci
-  - Retrocompatibilità: commesse senza voci funzionano come prima
-- **FASE 2:** Diario Produzione adattivo per categoria/voce
-  - Operaio seleziona la voce su cui lavora
-  - GENERICA: solo ore e materiali
-  - EN 13241: aggiunge foto collaudo
-  - EN 1090: mostra tutto (certificati, WPS, tracciabilità)
-- **FASE 3:** "Pulsante Magico" per generare il Fascicolo di Cantiere
-  - Raggruppa automaticamente le certificazioni per ogni voce
-  - EN 1090 → Fascicolo Tecnico (DoP + CE + Piano QC + Certificati + WPS)
-  - EN 13241 → Libretto Manutenzione (Scheda tecnica + Verbale collaudo + Manuale d'Uso)
-  - GENERICA → Riepilogo Costi (ore + materiali + margine)
+### Fase 1.5 — Voci di Lavoro (Cantieri Misti)
+- Backend: Nuova collezione `voci_lavoro` + API CRUD
+- Frontend: Sezione "Voci di Lavoro" nella scheda commessa
+- CommessaOpsPanel mostra sezioni basate su unione delle categorie delle voci
+- Retrocompatibilita': commesse senza voci funzionano come prima
+
+### Fase 2 — Diario Produzione Adattivo
+- Operaio seleziona la voce su cui lavora
+- Filtro intelligente: EN 1090 → certificati | EN 13241 → foto collaudo | GENERICA → solo Start/Stop
+- Zero contabilita' per l'operaio
+
+### Fase 3 — Pulsante Magico
+- Genera Fascicolo di Cantiere unico (PDF o ZIP)
+- Separazione automatica: Strutturali | Cancelli | Generiche
 
 ### Backlog Tecnico
 - Split `SettingsPage.js` (1.731 righe)
-- Vista Officina mobile-first per operai
+- Split `commesse.py` (1.330 righe)
+- Vista Officina mobile-first per operai (QR + PIN)
 - Responsive restanti pagine
 - Onboarding Wizard per nuovi utenti
 
