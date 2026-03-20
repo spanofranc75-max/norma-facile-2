@@ -455,7 +455,58 @@ si DEVE proporre di spezzarlo.
 - Pagina admin: `/archivio-storico` con filtri anno/cliente + statistiche + storico export
 - Collezione DB: `archivio_exports` per tracciare le esportazioni
 
-### FASE 5 — Smistatore Intelligente Avanzato (PROSSIMO)
+### FASE 5 — SICUREZZA & PNRR + WORKFLOW ENGINE (COMPLETATA)
+
+#### 5.1 Profilo Sicurezza Operatore (D.Lgs 81/08)
+- Scadenzario corsi sicurezza obbligatori (formazione base/specifica, primo soccorso, antincendio, lavori quota, PLE)
+- Corsi salvati in `operatori.corsi_sicurezza[]`
+- **WORKFLOW GATE**: Check all'avvio timer START → se corsi base scaduti/mancanti, 403 BLOCCATO
+- Endpoint: `GET /sicurezza/check-operatore/{op_id}`, `POST /sicurezza/operatore/{op_id}/corsi`
+
+#### 5.2 Archivio DNSH / PNRR (Requisiti Ambientali)
+- AI Vision (GPT-4o) analizza certificati/DDT cercando: % riciclato, EPD, ISO 14001, CAM, EAF, carbon footprint
+- Sezione "Requisiti Ambientali DNSH" nel CommessaOpsPanel
+- **WORKFLOW → PULSANTE MAGICO**: I dati DNSH finiscono nel CAP. 5 "Sostenibilita'" del PDF
+- Collezione DB: `dnsh_data`
+
+#### 5.3 Diario Sicurezza Cantiere
+- Checklist obbligatoria PRIMA del montaggio: "Area delimitata?", "DPI indossati?", "Attrezzature verificate?"
+- Foto panoramica cantiere obbligatoria
+- Nuovo primo step "SICUREZZA" nel MontaggioPanel (6 step totali)
+- Collezione DB: `sicurezza_cantiere`
+
+#### 5.4 Cartella Documentale CSE
+- Tasto "Esporta Documentazione Sicurezza" nel CommessaOpsPanel
+- Genera ZIP: DURC, POS, Attestati operai (CSV + PDF), Certificati macchine, Checklist cantiere
+- Endpoint: `POST /sicurezza/export-cse/{commessa_id}`
+
+#### 5.5 WORKFLOW ENGINE — I Fili Conduttori (State Machine)
+
+```
+DDT ──→ PRODUZIONE
+  AI convalida DDT → Voce "Pronto per Produzione" → Notifica tablet
+
+SICUREZZA ──→ DIARIO
+  Timer START bloccato se corsi D.Lgs 81/08 o patentini scaduti → 403
+
+ACQUISTI ──→ CANTIERE
+  DDT bulloneria → auto-lookup diametro/classe → coppia serraggio Nm
+  Blocco verbale senza conferma chiave dinamometrica
+
+QUALITA' ──→ PULSANTE MAGICO
+  Dati DNSH estratti da AI → CAP. 5 "Sostenibilita'" nel PDF finale
+  Sicurezza cantiere → inclusa nel PDF
+
+FIRMA ──→ SERVICE
+  Firma cliente → AUTO-genera:
+    1. Targa CE con QR Code (collection: targhe_ce)
+    2. Scadenzario Manutenzioni 12/24 mesi (collection: scadenzario_manutenzioni)
+```
+
+Collezioni nuove: `sicurezza_cantiere`, `dnsh_data`, `targhe_ce`, `scadenzario_manutenzioni`
+Pacco Documenti: CAP. 1-5 (EN 1090, EN 13241, Relazione Tecnica, Montaggio, Sostenibilita')
+
+### FASE 6 — Smistatore Intelligente Avanzato (PROSSIMO)
 - Certificati cumulativi: AI analizza ogni pagina, matching per numero colata
 - DDT Multi-Commessa: spacchettamento automatico per commessa/voce
 - Consumabili auto: filo >= 1.0mm → EN 1090, filo < 1.0mm → EN 13241/Generiche

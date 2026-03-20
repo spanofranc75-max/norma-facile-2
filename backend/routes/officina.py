@@ -206,6 +206,17 @@ async def timer_action(commessa_id: str, data: TimerAction, voce_id: str = ""):
         if active:
             raise HTTPException(400, "Timer già attivo")
 
+        # ── WORKFLOW GATE: SICUREZZA → DIARIO ──
+        # Check safety courses (D.Lgs 81/08) + patentini
+        from routes.sicurezza import check_sicurezza_operatore
+        sic_check = await check_sicurezza_operatore(data.operatore_id)
+        if sic_check["bloccato"]:
+            motivi = "; ".join(sic_check["motivi"])
+            raise HTTPException(
+                403,
+                f"ACCESSO BLOCCATO — Profilo Sicurezza non conforme: {motivi}"
+            )
+
         # ── BLOCCO PATENTINI: EN 1090 richiede patentino saldatura valido ──
         if normativa == "EN_1090":
             operatore = await db.operatori.find_one(

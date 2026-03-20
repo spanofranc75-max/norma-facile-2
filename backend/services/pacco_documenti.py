@@ -524,6 +524,59 @@ def _build_parte_d(commessa_id: str, voci_all: list, data: dict) -> str:
 
 
 # ══════════════════════════════════════════════════════════════
+#  PARTE E — SOSTENIBILITÀ E DNSH (CAP. 5)
+# ══════════════════════════════════════════════════════════════
+
+def _build_parte_e(commessa_id: str, data: dict) -> str:
+    """Build CAP. 5: Sustainability and DNSH compliance data from AI analysis."""
+    dnsh = data.get("dnsh_data", [])
+    if not dnsh:
+        return ""
+
+    html = '<div class="page-break"></div>'
+    html += '<h2><span class="badge badge-ok">DNSH</span> CAP. 5: SOSTENIBILITÀ E REQUISITI AMBIENTALI</h2>'
+
+    html += '<h3>5.1 — Dati DNSH Estratti</h3>'
+    html += '<table class="data"><tr><th>Voce</th><th>Riciclato</th><th>Certificazioni</th><th>CAM</th><th>Note</th></tr>'
+
+    for d in dnsh:
+        certs = ", ".join(d.get("certificazioni_ambientali", [])) or "—"
+        riciclato = _s(d.get("percentuale_riciclato", "")) or "—"
+        cam = '<span class="badge badge-ok">SI</span>' if d.get("conformita_cam") else '<span class="badge badge-nok">NO</span>'
+        note = _s(d.get("note", ""))[:100]
+        html += f'<tr><td>{_s(d.get("voce_id", "Principale"))}</td><td style="font-weight:700;">{riciclato}</td><td>{certs}</td><td>{cam}</td><td style="font-size:8pt;">{note}</td></tr>'
+
+    html += '</table>'
+
+    # Summary of sustainability keywords found
+    all_diciture = []
+    for d in dnsh:
+        all_diciture.extend(d.get("diciture_sostenibilita", []))
+    if all_diciture:
+        html += '<h3>5.2 — Diciture di Sostenibilità Rilevate</h3>'
+        html += '<ul style="font-size:10pt;">'
+        for dic in set(all_diciture):
+            html += f'<li>{_s(dic)}</li>'
+        html += '</ul>'
+
+    # Sicurezza cantiere data
+    sic_data = data.get("sicurezza_cantiere", [])
+    if sic_data:
+        html += '<h3>5.3 — Checklist Sicurezza Cantiere</h3>'
+        for sc in sic_data:
+            op = _s(sc.get("operatore_nome", ""))
+            data_str = _s(sc.get("created_at", "")[:10])
+            html += f'<p style="font-size:9pt; font-weight:700;">Operatore: {op} — {data_str}</p>'
+            html += '<table class="data"><tr><th>Controllo</th><th>Esito</th></tr>'
+            for item in sc.get("checklist", []):
+                esito = '<span class="badge badge-ok">OK</span>' if item.get("esito") else '<span class="badge badge-nok">NOK</span>'
+                html += f'<tr><td>{_s(item.get("label", item.get("codice", "")))}</td><td>{esito}</td></tr>'
+            html += '</table>'
+
+    return html
+
+
+# ══════════════════════════════════════════════════════════════
 #  MATCHING HELPERS — Filtro Beltrami
 # ══════════════════════════════════════════════════════════════
 
@@ -682,6 +735,14 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
         {"commessa_id": commessa_id}, {"_id": 0}
     ).to_list(100)
 
+    dnsh_data = await db.dnsh_data.find(
+        {"commessa_id": commessa_id}, {"_id": 0}
+    ).to_list(50)
+
+    sicurezza_cantiere = await db.sicurezza_cantiere.find(
+        {"commessa_id": commessa_id}, {"_id": 0}
+    ).to_list(20)
+
     # Shared data context
     ctx = {
         "docs": docs,
@@ -692,6 +753,8 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
         "montaggio": montaggio,
         "bulloneria_ddt": bulloneria_ddt,
         "varianti": varianti,
+        "dnsh_data": dnsh_data,
+        "sicurezza_cantiere": sicurezza_cantiere,
     }
 
     # ── 2. BUILD INDEX (which parts to include) ──
@@ -721,6 +784,12 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
             "titolo": "RELAZIONE DI MONTAGGIO",
             "subtitle": "Bulloneria, serraggi, varianti, foto cantiere, firma cliente",
         })
+    if dnsh_data:
+        parti.append({
+            "lettera": "CAP. 5",
+            "titolo": "SOSTENIBILITÀ E DNSH",
+            "subtitle": "Requisiti ambientali PNRR, materiale riciclato, certificazioni",
+        })
 
     # ── 3. GENERATE HTML ──
 
@@ -735,9 +804,13 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
     if all_voci_for_relazione or voci_1090 or voci_13241:
         html_body += _build_parte_c(all_voci_for_relazione, ctx)
 
-    # CAP. 4: Relazione di Montaggio (Fase 4) — bulloni, serraggi, varianti, foto, firma
+    # CAP. 4: Relazione di Montaggio
     if montaggio or bulloneria_ddt or varianti:
         html_body += _build_parte_d(commessa_id, all_voci, ctx)
+
+    # CAP. 5: Sostenibilità e DNSH
+    if dnsh_data:
+        html_body += _build_parte_e(commessa_id, ctx)
 
     # ── 4. RENDER PDF ──
 

@@ -12,7 +12,7 @@ import { Badge } from '../components/ui/badge';
 import {
     ShoppingCart, Factory, Truck, Paintbrush, FileUp,
     ChevronDown, ChevronUp, FileText, Leaf, Shield,
-    Eye, AlertTriangle, PackageOpen,
+    Eye, AlertTriangle, PackageOpen, Download,
 } from 'lucide-react';
 
 // Sub-components
@@ -28,6 +28,7 @@ import GateCertificationPanel from './GateCertificationPanel';
 import SfridiSection from './SfridiSection';
 import ControlliVisiviSection from './ControlliVisiviSection';
 import RegistroNCSection from './RegistroNCSection';
+import DNSHSection from './DNSHSection';
 
 // ── Collapsible Section wrapper ──
 function Section({ title, icon: Icon, count, defaultOpen, children }) {
@@ -190,10 +191,72 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                 <SfridiSection commessaId={commessaId} docs={docs} />
             </Section>
 
+            {/* ── DNSH / PNRR — Requisiti Ambientali ── */}
+            <Section title="Requisiti Ambientali DNSH" icon={Leaf} count={0}>
+                <DNSHSection commessaId={commessaId} />
+            </Section>
+
+            {/* ── CSE EXPORT — Cartella Documentale Sicurezza ── */}
+            <Section title="Documentazione Sicurezza CSE" icon={Shield} count={0}>
+                <CSEExportButton commessaId={commessaId} />
+            </Section>
+
             {/* ── REPOSITORY DOCUMENTI — sempre visibile ── */}
             <Section title="Repository Documenti" icon={FileUp} count={docs.length} defaultOpen>
                 <RepositoryDocumentiSection commessaId={commessaId} docs={docs} onRefresh={handleRefreshWithCam} onCamRefresh={fetchCamData} />
             </Section>
+        </div>
+    );
+}
+
+
+const API = process.env.REACT_APP_BACKEND_URL;
+
+function CSEExportButton({ commessaId }) {
+    const [exporting, setExporting] = useState(false);
+
+    const handleExport = async () => {
+        setExporting(true);
+        try {
+            const res = await fetch(`${API}/api/sicurezza/export-cse/${commessaId}`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+            if (!res.ok) throw new Error('Export fallito');
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `CSE_${commessaId}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            toast.success('Cartella CSE scaricata');
+        } catch (e) {
+            toast.error(e.message);
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    return (
+        <div data-testid="cse-export-section">
+            <p className="text-xs text-slate-500 mb-3">
+                Genera un file ZIP con: DURC, POS, Attestati operai e Certificati macchine.
+            </p>
+            <button
+                onClick={handleExport}
+                disabled={exporting}
+                className="w-full flex items-center justify-center gap-2 h-10 rounded-lg bg-slate-800 text-white font-medium text-sm hover:bg-slate-700 transition-all disabled:opacity-50"
+                data-testid="btn-export-cse"
+            >
+                {exporting ? (
+                    <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Generazione...</>
+                ) : (
+                    <><Download className="h-4 w-4" /> Esporta Documentazione Sicurezza</>
+                )}
+            </button>
         </div>
     );
 }

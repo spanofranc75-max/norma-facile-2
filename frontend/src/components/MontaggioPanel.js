@@ -14,6 +14,7 @@ const API = process.env.REACT_APP_BACKEND_URL;
 
 // ── Sub-step navigation ──
 const STEPS = [
+    { id: 'sicurezza', label: 'SICUREZZA', icon: '🛡️' },
     { id: 'ddt', label: 'DDT', icon: '📋' },
     { id: 'serraggio', label: 'SERRAGGIO', icon: '🔧' },
     { id: 'varianti', label: 'VARIANTI', icon: '📝' },
@@ -22,7 +23,8 @@ const STEPS = [
 ];
 
 export default function MontaggioPanel({ commessaId, voceId, selectedOp, normativa }) {
-    const [step, setStep] = useState('ddt');
+    const [step, setStep] = useState('sicurezza');
+    const [sicurezzaDone, setSicurezzaDone] = useState(false);
     const [ddtData, setDdtData] = useState(null);
     const [savedDdts, setSavedDdts] = useState([]);
     const [montaggioId, setMontaggioId] = useState(null);
@@ -68,6 +70,16 @@ export default function MontaggioPanel({ commessaId, voceId, selectedOp, normati
             </div>
 
             {/* Step content */}
+            {step === 'sicurezza' && (
+                <SicurezzaCantiereSection
+                    commessaId={commessaId}
+                    voceId={voceId}
+                    selectedOp={selectedOp}
+                    sicurezzaDone={sicurezzaDone}
+                    setSicurezzaDone={setSicurezzaDone}
+                    onNext={() => setStep('ddt')}
+                />
+            )}
             {step === 'ddt' && (
                 <DDTSection
                     commessaId={commessaId}
@@ -128,6 +140,169 @@ export default function MontaggioPanel({ commessaId, voceId, selectedOp, normati
                     setFirmaCompleta={setFirmaCompleta}
                 />
             )}
+        </div>
+    );
+}
+
+
+// ══════════════════════════════════════════════════════════════
+//  SEZIONE 0: SICUREZZA CANTIERE (checklist + foto panoramica)
+// ══════════════════════════════════════════════════════════════
+
+function SicurezzaCantiereSection({ commessaId, voceId, selectedOp, sicurezzaDone, setSicurezzaDone, onNext }) {
+    const [checks, setChecks] = useState([
+        { codice: 'area_delimitata', label: 'Area delimitata?', esito: false },
+        { codice: 'dpi_indossati', label: 'DPI indossati?', esito: false },
+        { codice: 'attrezzature_verificate', label: 'Attrezzature verificate?', esito: false },
+    ]);
+    const [fotoDocId, setFotoDocId] = useState(null);
+    const [uploading, setUploading] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const fileRef = useRef(null);
+
+    // Check if already completed
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const res = await fetch(`${API}/api/sicurezza/cantiere/${commessaId}?voce_id=${voceId || ''}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.sicurezza && data.sicurezza.all_ok) {
+                        setSicurezzaDone(true);
+                    }
+                }
+            } catch { /* ignore */ }
+        };
+        load();
+    }, [commessaId, voceId, setSicurezzaDone]);
+
+    const toggleCheck = (idx) => {
+        setChecks(prev => prev.map((c, i) => i === idx ? { ...c, esito: !c.esito } : c));
+    };
+
+    const handleUploadFoto = async (file) => {
+        setUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('voce_id', voceId || '');
+            formData.append('operatore_id', selectedOp.op_id);
+            formData.append('operatore_nome', selectedOp.nome);
+            formData.append('tipo_foto', 'sicurezza_cantiere');
+
+            const res = await fetch(`${API}/api/montaggio/foto/${commessaId}`, {
+                method: 'POST',
+                body: formData,
+            });
+            if (!res.ok) throw new Error('Upload fallito');
+            const data = await res.json();
+            setFotoDocId(data.doc_id);
+            toast.success('Foto panoramica caricata');
+        } catch (e) {
+            toast.error(e.message);
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleSave = async () => {
+        if (!checks.every(c => c.esito)) { toast.error('Tutti i controlli devono essere confermati'); return; }
+        if (!fotoDocId) { toast.error('Foto panoramica obbligatoria'); return; }
+        setSaving(true);
+        try {
+            const res = await fetch(`${API}/api/sicurezza/cantiere`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    commessa_id: commessaId,
+                    voce_id: voceId || '',
+                    operatore_id: selectedOp.op_id,
+                    operatore_nome: selectedOp.nome,
+                    checklist: checks,
+                    foto_panoramica_doc_id: fotoDocId,
+                }),
+            });
+            if (!res.ok) throw new Error('Salvataggio fallito');
+            setSicurezzaDone(true);
+            toast.success('Sicurezza cantiere confermata');
+        } catch (e) {
+            toast.error(e.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (sicurezzaDone) {
+        return (
+            <div data-testid="sicurezza-done" className="text-center py-8">
+                <span className="text-6xl block mb-3">🛡️</span>
+                <p className="text-green-400 text-xl font-bold">Cantiere in Sicurezza</p>
+                <p className="text-slate-500 text-sm mt-2">Checklist completata. Puoi procedere.</p>
+                <button onClick={onNext} data-testid="btn-next-from-sicurezza"
+                    className="mt-4 w-full h-14 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg transition-all active:scale-95">
+                    Avanti: DDT →
+                </button>
+            </div>
+        );
+    }
+
+    const allChecked = checks.every(c => c.esito);
+    const canSave = allChecked && fotoDocId;
+
+    return (
+        <div data-testid="sicurezza-cantiere-section">
+            <p className="text-slate-400 text-center text-base mb-4 font-medium">Sicurezza Cantiere</p>
+            <p className="text-red-400 text-xs text-center mb-4 font-bold">OBBLIGATORIO — Completa prima di procedere</p>
+
+            {/* Checklist */}
+            <div className="space-y-2 mb-4">
+                {checks.map((c, idx) => (
+                    <button
+                        key={c.codice}
+                        data-testid={`sic-check-${c.codice}`}
+                        onClick={() => toggleCheck(idx)}
+                        className={`w-full h-14 rounded-2xl flex items-center justify-between px-5 transition-all active:scale-[0.98]
+                            ${c.esito ? 'bg-green-600 text-white shadow-lg shadow-green-600/30' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border-2 border-slate-700'}`}
+                    >
+                        <span className="font-bold text-sm">{c.label}</span>
+                        <span className="text-xl">{c.esito ? '✓ SI' : 'NO'}</span>
+                    </button>
+                ))}
+            </div>
+
+            {/* Mandatory panoramic photo */}
+            <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUploadFoto(f); if (fileRef.current) fileRef.current.value = ''; }}
+                data-testid="sic-foto-input"
+            />
+            <button
+                data-testid="btn-foto-panoramica"
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                className={`w-full h-16 rounded-2xl font-bold text-lg mb-4 transition-all active:scale-95
+                    ${fotoDocId ? 'bg-green-600 text-white' : uploading ? 'bg-blue-500/20 text-blue-400 animate-pulse' : 'bg-slate-800 text-slate-300 border-2 border-dashed border-slate-600 hover:border-blue-500'}`}
+            >
+                {uploading ? 'Caricamento...' : fotoDocId ? '📷 Foto Panoramica OK' : '📷 Foto Panoramica Cantiere (obbligatoria)'}
+            </button>
+
+            {!canSave && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-center mb-3">
+                    <p className="text-red-400 text-xs font-bold">
+                        {!allChecked && 'Conferma tutti i controlli sicurezza. '}
+                        {!fotoDocId && 'Serve la foto panoramica del cantiere.'}
+                    </p>
+                </div>
+            )}
+
+            <button
+                data-testid="btn-conferma-sicurezza"
+                onClick={handleSave}
+                disabled={!canSave || saving}
+                className={`w-full h-14 rounded-2xl font-bold text-lg transition-all active:scale-95
+                    ${canSave ? 'bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-600/30' : 'bg-slate-700 text-slate-500'}`}
+            >
+                {saving ? 'Salvataggio...' : 'Conferma Sicurezza e Prosegui'}
+            </button>
         </div>
     );
 }

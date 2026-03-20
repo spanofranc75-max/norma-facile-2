@@ -342,6 +342,15 @@ async def save_firma_cliente(data: FirmaClienteRequest):
     if result.matched_count == 0:
         raise HTTPException(404, "Diario montaggio non trovato")
 
+    # ── WORKFLOW: FIRMA → Targa CE + Scadenzario Manutenzioni ──
+    try:
+        from routes.sicurezza import generate_targa_ce, create_manutenzione_schedule
+        await generate_targa_ce({"commessa_id": data.commessa_id, "montaggio_id": data.montaggio_id})
+        await create_manutenzione_schedule({"commessa_id": data.commessa_id, "montaggio_id": data.montaggio_id})
+        logger.info(f"[WORKFLOW] Firma → Targa CE + Manutenzioni 12/24 mesi per {data.commessa_id}")
+    except Exception as e:
+        logger.warning(f"[WORKFLOW] Post-firma triggers partial failure: {e}")
+
     logger.info(f"[MONTAGGIO] Firma cliente salvata: {data.montaggio_id} — {data.firma_nome}")
     return {
         "montaggio_id": data.montaggio_id,
