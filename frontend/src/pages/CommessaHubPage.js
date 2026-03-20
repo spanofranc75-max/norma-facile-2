@@ -718,43 +718,38 @@ export default function CommessaHubPage() {
                     </DialogContent>
                 </Dialog>
 
-                {/* QR Code Dialog */}
+                {/* QR Code Dialog — with Officina links */}
                 <Dialog open={qrOpen} onOpenChange={setQrOpen}>
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
                                 <QrCode className="h-5 w-5 text-[#0055FF]" />
-                                QR Code Commessa
+                                QR Code Officina
                             </DialogTitle>
                         </DialogHeader>
-                        <div className="flex flex-col items-center gap-4 py-4">
-                            <div className="bg-white border-2 border-slate-200 rounded-xl p-4">
-                                <img
-                                    src={`${API}/api/qrcode/commessa/${commessaId}`}
-                                    alt="QR Code Commessa"
-                                    className="w-48 h-48"
-                                    data-testid="qr-code-image"
+                        <div className="flex flex-col gap-3 py-3">
+                            <p className="text-xs text-slate-500 text-center">Genera QR per l'accesso operai (Vista Officina blindata)</p>
+                            {/* Main commessa officina link */}
+                            <QrLinkCard
+                                label={`Commessa ${c.numero}`}
+                                subtitle={c.title}
+                                color="bg-blue-50 border-blue-200"
+                                url={`${window.location.origin}/officina/${commessaId}`}
+                                testId="qr-principale"
+                            />
+                            {/* Links per voce */}
+                            {vociLavoro.length > 0 && vociLavoro.map(v => (
+                                <QrLinkCard
+                                    key={v.voce_id}
+                                    label={v.descrizione}
+                                    subtitle={v.normativa_tipo === 'EN_1090' ? 'Strutturale' : v.normativa_tipo === 'EN_13241' ? 'Cancello' : 'Generica'}
+                                    color={v.normativa_tipo === 'EN_1090' ? 'bg-blue-50 border-blue-200' : v.normativa_tipo === 'EN_13241' ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'}
+                                    url={`${window.location.origin}/officina/${commessaId}/${v.voce_id}`}
+                                    testId={`qr-voce-${v.voce_id}`}
                                 />
-                            </div>
-                            <div className="text-center">
-                                <p className="text-sm font-semibold text-slate-700">{c.numero}</p>
-                                <p className="text-xs text-slate-500">{c.title}</p>
-                                <p className="text-[10px] text-slate-400 mt-1">
-                                    Scansiona per aprire questa commessa nell'app
-                                </p>
-                            </div>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                data-testid="btn-download-qr"
-                                onClick={async () => {
-                                    try {
-                                        await downloadPdfBlob(`/qrcode/commessa/${commessaId}`, `qr_commessa_${c.numero || commessaId}.png`);
-                                    } catch (e) { toast.error(e.message); }
-                                }}
-                            >
-                                <Download className="h-3.5 w-3.5 mr-1.5" /> Scarica QR
-                            </Button>
+                            ))}
+                            <Separator />
+                            <p className="text-[10px] text-slate-400 text-center">L'operaio accede con il PIN a 4 cifre impostato nelle impostazioni</p>
                         </div>
                     </DialogContent>
                 </Dialog>
@@ -821,5 +816,31 @@ function ModuleCard({ icon: Icon, label, linked, detail, onClick }) {
             </div>
             {linked && <ChevronRight className="h-3.5 w-3.5 text-slate-400" />}
         </button>
+    );
+}
+
+function QrLinkCard({ label, subtitle, color, url, testId }) {
+    const [copied, setCopied] = useState(false);
+    const handleCopy = () => {
+        navigator.clipboard.writeText(url).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        });
+    };
+    return (
+        <div className={`p-3 rounded-lg border ${color} flex items-center gap-3`} data-testid={testId}>
+            <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-800 truncate">{label}</p>
+                <p className="text-[10px] text-slate-500">{subtitle}</p>
+                <p className="text-[9px] text-slate-400 truncate mt-0.5 font-mono">{url}</p>
+            </div>
+            <button
+                onClick={handleCopy}
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${copied ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`}
+                data-testid={`${testId}-copy`}
+            >
+                {copied ? 'Copiato' : 'Copia'}
+            </button>
+        </div>
     );
 }

@@ -60,6 +60,7 @@ import QualityHubPage from './pages/QualityHubPage';
 import NotificationsPage from './pages/NotificationsPage';
 import SettingsPage from './pages/SettingsPage';
 import ActivityLogPage from './pages/ActivityLogPage';
+import OfficinaPage from './pages/OfficinaPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './App.css';
@@ -85,6 +86,9 @@ function AppRouter() {
         <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
+            {/* Officina: NO ProtectedRoute — uses PIN auth */}
+            <Route path="/officina/:commessaId" element={<OfficinaPage />} />
+            <Route path="/officina/:commessaId/:voceId" element={<OfficinaPage />} />
             <Route
                 path="/dashboard"
                 element={

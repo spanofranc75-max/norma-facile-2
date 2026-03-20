@@ -51,6 +51,7 @@ export default function Dashboard() {
     const [loadingStats, setLoadingStats] = useState(true);
     const [semaforo, setSemaforo] = useState(null);
     const [briefing, setBriefing] = useState(null);
+    const [alertCount, setAlertCount] = useState(0);
     const currentUser = user || location.state?.user;
 
     useEffect(() => {
@@ -65,6 +66,9 @@ export default function Dashboard() {
                 setStats(data);
                 setSemaforo(sem);
                 setBriefing(brief);
+                // Fetch officina quality alerts
+                const alerts = await apiRequest(`/officina/alerts/count?admin_id=${currentUser.user_id}`).catch(() => ({ count: 0 }));
+                setAlertCount(alerts.count || 0);
             } catch (e) {
                 console.error('Dashboard stats error:', e);
             } finally {
@@ -125,11 +129,25 @@ export default function Dashboard() {
         <DashboardLayout>
             <div className="space-y-6" data-testid="workshop-dashboard">
                 {/* Header */}
-                <div>
-                    <h1 className="font-sans text-2xl font-bold text-[#1E293B]">
-                        Bentornato, {currentUser.name?.split(' ')[0]}
-                    </h1>
-                    <p className="text-sm text-slate-500 mt-1">Cruscotto Officina</p>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="font-sans text-2xl font-bold text-[#1E293B]">
+                            Bentornato, {currentUser.name?.split(' ')[0]}
+                        </h1>
+                        <p className="text-sm text-slate-500 mt-1">Cruscotto Officina</p>
+                    </div>
+                    {alertCount > 0 && (
+                        <button
+                            onClick={() => navigate('/notifications')}
+                            className="relative flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition-colors"
+                            data-testid="quality-alert-badge"
+                        >
+                            <CircleAlert className="h-5 w-5 text-red-600" />
+                            <span className="text-sm font-bold text-red-700">{alertCount}</span>
+                            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping" />
+                            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
+                        </button>
+                    )}
                 </div>
 
                 {/* Morning Briefing */}

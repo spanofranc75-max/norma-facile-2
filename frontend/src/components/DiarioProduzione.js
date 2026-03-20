@@ -60,6 +60,8 @@ export default function DiarioProduzione({ commessaId, fasi = [], vociLavoro = [
     const [showRiepilogo, setShowRiepilogo] = useState(false);
     const [newOpName, setNewOpName] = useState('');
     const [addingOp, setAddingOp] = useState(false);
+    const [pinEditing, setPinEditing] = useState(null);
+    const [pinValue, setPinValue] = useState('');
 
     // Build the effective list of selectable voci (parent category + child voci)
     const selectableVoci = buildSelectableVoci(normativaTipo, vociLavoro);
@@ -156,6 +158,20 @@ export default function DiarioProduzione({ commessaId, fasi = [], vociLavoro = [
             setOperatori(prev => prev.filter(o => o.op_id !== opId));
             setForm(f => ({ ...f, selectedOps: f.selectedOps.filter(id => id !== opId) }));
             toast.success('Operatore rimosso');
+        } catch (e) { toast.error(e.message); }
+    };
+
+    const handleSetPin = async (opId) => {
+        if (pinValue.length !== 4 || !/^\d{4}$/.test(pinValue)) { toast.error('PIN: 4 cifre'); return; }
+        try {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            await apiRequest(`/officina/pin/set`, {
+                method: 'POST',
+                body: JSON.stringify({ operatore_id: opId, pin: pinValue, admin_id: user.user_id }),
+            });
+            toast.success('PIN impostato');
+            setPinEditing(null);
+            setPinValue('');
         } catch (e) { toast.error(e.message); }
     };
 
@@ -551,18 +567,47 @@ export default function DiarioProduzione({ commessaId, fasi = [], vociLavoro = [
                                         <p className="text-xs text-slate-400 italic py-2 text-center">Nessun operatore. Aggiungine uno sopra.</p>
                                     )}
                                     {operatori.map(op => (
-                                        <label key={op.op_id} className="flex items-center gap-2 p-2 sm:p-1.5 rounded hover:bg-slate-50 cursor-pointer group">
-                                            <Checkbox
-                                                checked={form.selectedOps.includes(op.op_id)}
-                                                onCheckedChange={() => toggleOperatore(op.op_id)}
-                                            />
-                                            <span className="text-sm flex-1">{op.nome}</span>
-                                            {op.mansione && <span className="text-[9px] text-slate-400">{op.mansione}</span>}
-                                            <Button size="sm" variant="ghost" className="h-6 w-6 sm:h-5 sm:w-5 p-0 opacity-0 group-hover:opacity-100 sm:opacity-0"
+                                        <div key={op.op_id} className="flex items-center gap-2 p-2 sm:p-1.5 rounded hover:bg-slate-50 group">
+                                            <label className="flex items-center gap-2 flex-1 cursor-pointer min-w-0">
+                                                <Checkbox
+                                                    checked={form.selectedOps.includes(op.op_id)}
+                                                    onCheckedChange={() => toggleOperatore(op.op_id)}
+                                                />
+                                                <span className="text-sm truncate">{op.nome}</span>
+                                                {op.mansione && <span className="text-[9px] text-slate-400">{op.mansione}</span>}
+                                            </label>
+                                            {/* PIN management */}
+                                            {pinEditing === op.op_id ? (
+                                                <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                                                    <Input
+                                                        value={pinValue}
+                                                        onChange={e => setPinValue(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                                        placeholder="PIN"
+                                                        className="h-6 w-14 text-[10px] text-center font-mono"
+                                                        maxLength={4}
+                                                        inputMode="numeric"
+                                                        autoFocus
+                                                        onKeyDown={e => { if (e.key === 'Enter') handleSetPin(op.op_id); }}
+                                                        data-testid={`pin-input-${op.op_id}`}
+                                                    />
+                                                    <Button size="sm" variant="ghost" className="h-6 px-1 text-[9px] text-green-600" onClick={() => handleSetPin(op.op_id)}>OK</Button>
+                                                    <Button size="sm" variant="ghost" className="h-6 px-1 text-[9px]" onClick={() => { setPinEditing(null); setPinValue(''); }}>X</Button>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    className="shrink-0 text-[9px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-700 transition-colors"
+                                                    onClick={e => { e.stopPropagation(); setPinEditing(op.op_id); setPinValue(''); }}
+                                                    title="Imposta PIN officina"
+                                                    data-testid={`pin-btn-${op.op_id}`}
+                                                >
+                                                    PIN
+                                                </button>
+                                            )}
+                                            <Button size="sm" variant="ghost" className="h-6 w-6 sm:h-5 sm:w-5 p-0 opacity-0 group-hover:opacity-100 sm:opacity-0 shrink-0"
                                                 onClick={e => { e.preventDefault(); handleDeleteOperatore(op.op_id); }}>
                                                 <Trash2 className="h-3 w-3 text-red-300" />
                                             </Button>
-                                        </label>
+                                        </div>
                                     ))}
                                 </div>
                             </div>
