@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import MontaggioPanel from '../components/MontaggioPanel';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -372,6 +373,7 @@ export default function OfficinaPage() {
                     { id: 'timer', label: 'TEMPI', icon: '⏱️' },
                     { id: 'foto', label: 'FOTO', icon: '📷' },
                     { id: 'qualita', label: 'QUALITÀ', icon: '✓' },
+                    { id: 'montaggio', label: 'MONTAGGIO', icon: '🔧' },
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -412,6 +414,14 @@ export default function OfficinaPage() {
                         onSubmit={handleCheckSubmit}
                         submitting={checkSubmitting}
                         done={checkDone}
+                    />
+                )}
+                {activeTab === 'montaggio' && (
+                    <MontaggioPanel
+                        commessaId={commessaId}
+                        voceId={voceId}
+                        selectedOp={selectedOp}
+                        normativa={normativa}
                     />
                 )}
             </div>

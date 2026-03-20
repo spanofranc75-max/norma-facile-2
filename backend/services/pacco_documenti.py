@@ -401,6 +401,109 @@ def _build_riepilogo_ore(entries: list) -> str:
 
 
 # ══════════════════════════════════════════════════════════════
+#  PARTE D — RELAZIONE DI MONTAGGIO (Fase 4)
+# ══════════════════════════════════════════════════════════════
+
+def _build_parte_d(commessa_id: str, voci_all: list, data: dict) -> str:
+    """Build CAP. 4: Assembly Report — bolts used, torque values, photos, client signature."""
+    montaggio_entries = data.get("montaggio", [])
+    ddt_entries = data.get("bulloneria_ddt", [])
+
+    if not montaggio_entries and not ddt_entries:
+        return ""  # No assembly data, skip this chapter
+
+    html = '<div class="page-break"></div>'
+    html += '<h2><span class="badge badge-1090">MONTAGGIO</span> CAP. 4: RELAZIONE DI MONTAGGIO</h2>'
+
+    # 4.1 — Tabella Bulloni Usati (da DDT)
+    html += '<h3>4.1 — Bulloneria Utilizzata (dati da DDT)</h3>'
+    if ddt_entries:
+        html += '<table class="data"><tr><th>Fornitore</th><th>DDT N.</th><th>Diametro</th><th>Classe</th><th>Lotto</th><th>Quantita\'</th><th>Coppia (Nm)</th></tr>'
+        for ddt in ddt_entries:
+            fornitore = _s(ddt.get("fornitore", ""))
+            n_ddt = _s(ddt.get("numero_ddt", ""))
+            for b in ddt.get("bulloni", []):
+                html += f'<tr><td>{fornitore}</td><td>{n_ddt}</td><td><strong>{_s(b.get("diametro", ""))}</strong></td><td>{_s(b.get("classe", ""))}</td><td>{_s(b.get("lotto", ""))}</td><td>{_s(b.get("quantita", ""))}</td><td style="text-align:right;font-weight:700;">{b.get("coppia_nm", "—")}</td></tr>'
+        html += '</table>'
+    else:
+        html += '<p style="font-size:9pt;color:#888;font-style:italic;">Nessun DDT bulloneria registrato.</p>'
+
+    # 4.2 — Serraggi Applicati
+    html += '<h3>4.2 — Coppie di Serraggio Applicate</h3>'
+    has_serraggi = False
+    for entry in montaggio_entries:
+        serraggi = entry.get("serraggi", [])
+        if serraggi:
+            has_serraggi = True
+            op_nome = _s(entry.get("operatore_nome", ""))
+            html += f'<h4>Operatore: {op_nome}</h4>'
+            html += '<table class="data"><tr><th>Diametro</th><th>Classe</th><th>Coppia Prescritta (Nm)</th><th>Confermato</th><th>Chiave Dinamometrica</th></tr>'
+            for s in serraggi:
+                conf_badge = '<span class="badge badge-ok">SI</span>' if s.get("confermato") else '<span class="badge badge-nok">NO</span>'
+                chiave_badge = '<span class="badge badge-ok">SI</span>' if s.get("chiave_dinamometrica") else '<span class="badge badge-nok">NO</span>'
+                html += f'<tr><td><strong>{_s(s.get("diametro", ""))}</strong></td><td>{_s(s.get("classe", ""))}</td><td style="text-align:right;font-weight:700;">{s.get("coppia_nm", "—")}</td><td>{conf_badge}</td><td>{chiave_badge}</td></tr>'
+            html += '</table>'
+
+    if not has_serraggi:
+        html += '<p style="font-size:9pt;color:#888;font-style:italic;">Nessun serraggio registrato.</p>'
+
+    # 4.3 — Controllo Fondazioni
+    html += '<h3>4.3 — Controllo Fondazioni / Appoggi</h3>'
+    fondazioni_registrate = False
+    for entry in montaggio_entries:
+        fond = entry.get("fondazioni_ok")
+        if fond is not None:
+            fondazioni_registrate = True
+            op_nome = _s(entry.get("operatore_nome", ""))
+            badge = '<span class="badge badge-ok">IDONEO</span>' if fond else '<span class="badge badge-nok">NON IDONEO</span>'
+            html += f'<table class="info"><tr><td class="lbl">Operatore</td><td>{op_nome}</td></tr><tr><td class="lbl">Esito</td><td>{badge}</td></tr></table>'
+            if not fond:
+                html += '<div class="note">ATTENZIONE: Fondazioni/appoggi giudicati NON IDONEI dall\'operatore.</div>'
+
+    if not fondazioni_registrate:
+        html += '<p style="font-size:9pt;color:#888;font-style:italic;">Nessun controllo fondazioni registrato.</p>'
+
+    # 4.4 — Foto Montaggio
+    foto_montaggio = [d for d in data.get("docs", [])
+                      if (d.get("metadata_estratti") or {}).get("source") == "montaggio"]
+    foto_giunti = [d for d in foto_montaggio if (d.get("metadata_estratti") or {}).get("tipo_foto") == "giunti"]
+    foto_ancoraggi = [d for d in foto_montaggio if (d.get("metadata_estratti") or {}).get("tipo_foto") == "ancoraggi"]
+
+    html += f'<h3>4.4 — Foto Giunti Serrati ({len(foto_giunti)})</h3>'
+    html += _foto_html(foto_giunti)
+
+    html += f'<h3>4.5 — Foto Ancoraggi ({len(foto_ancoraggi)})</h3>'
+    html += _foto_html(foto_ancoraggi)
+
+    # 4.6 — Firma Cliente (Verbale Fine Lavori)
+    html += '<h3>4.6 — Verbale di Fine Lavori — Firma Cliente</h3>'
+    firma_trovata = False
+    for entry in montaggio_entries:
+        firma_b64 = entry.get("firma_cliente_base64", "")
+        firma_nome = entry.get("firma_cliente_nome", "")
+        firma_data = entry.get("firma_cliente_data", "")
+        if firma_b64 and firma_nome:
+            firma_trovata = True
+            html += f"""
+            <table class="info">
+                <tr><td class="lbl">Cliente</td><td><strong>{_s(firma_nome)}</strong></td></tr>
+                <tr><td class="lbl">Data Firma</td><td>{_s(firma_data[:10] if firma_data else "")}</td></tr>
+                <tr><td class="lbl">Firma</td><td><img src="{firma_b64}" style="max-height:60px;max-width:250px;" /></td></tr>
+            </table>
+            <div class="sign-area">
+                <div class="sign-box">
+                    <div class="sign-label">Il Cliente dichiara di accettare i lavori eseguiti.</div>
+                    <div class="sign-disclaimer">Firma apposta digitalmente su dispositivo mobile.</div>
+                </div>
+            </div>
+            """
+    if not firma_trovata:
+        html += '<p style="font-size:9pt;color:#888;font-style:italic;">Nessuna firma cliente registrata.</p>'
+
+    return html
+
+
+# ══════════════════════════════════════════════════════════════
 #  MATCHING HELPERS — Filtro Beltrami
 # ══════════════════════════════════════════════════════════════
 
@@ -546,6 +649,15 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
         {"_id": 0, "page_pdf_b64": 0}
     ).to_list(500)
 
+    # Montaggio data (Fase 4)
+    montaggio = await db.diario_montaggio.find(
+        {"commessa_id": commessa_id}, {"_id": 0}
+    ).to_list(100)
+
+    bulloneria_ddt = await db.bulloneria_ddt.find(
+        {"commessa_id": commessa_id}, {"_id": 0}
+    ).to_list(100)
+
     # Shared data context
     ctx = {
         "docs": docs,
@@ -553,6 +665,8 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
         "checklists": checklists,
         "company": company,
         "page_index": page_index,
+        "montaggio": montaggio,
+        "bulloneria_ddt": bulloneria_ddt,
     }
 
     # ── 2. BUILD INDEX (which parts to include) ──
@@ -576,6 +690,12 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
             "titolo": "RELAZIONE TECNICA",
             "subtitle": "Riepilogo ore e materiali",
         })
+    if montaggio or bulloneria_ddt:
+        parti.append({
+            "lettera": "CAP. 4",
+            "titolo": "RELAZIONE DI MONTAGGIO",
+            "subtitle": "Bulloneria, serraggi, foto cantiere, firma cliente",
+        })
 
     # ── 3. GENERATE HTML ──
 
@@ -589,6 +709,10 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
     all_voci_for_relazione = voci_gen if voci_gen else []
     if all_voci_for_relazione or voci_1090 or voci_13241:
         html_body += _build_parte_c(all_voci_for_relazione, ctx)
+
+    # CAP. 4: Relazione di Montaggio (Fase 4) — bulloni, serraggi, foto, firma
+    if montaggio or bulloneria_ddt:
+        html_body += _build_parte_d(commessa_id, all_voci, ctx)
 
     # ── 4. RENDER PDF ──
 

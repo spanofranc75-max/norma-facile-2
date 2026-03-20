@@ -356,14 +356,84 @@ si DEVE proporre di spezzarlo.
 
 ## 10. Prossimi Passi (Roadmap)
 
-### FASE 3 — Pulsante Magico (IN CORSO)
+### FASE 3 — Pulsante Magico (COMPLETATA)
 - Servizio backend `services/pacco_documenti.py`
-- Copertina + Indice + Parte A (1090) + Parte B (13241) + Parte C (Generica)
+- Copertina + Indice + CAP. 1 (1090) + CAP. 2 (13241) + CAP. 3 (Relazione Tecnica)
 - Filtro Beltrami: pesca solo documenti pertinenti alla voce
 - Automazione: checklist OK → verbale "Conforme" auto-firmato
 - Minimalismo: salta parti per categorie non presenti
 
-### FASE 4 — Smistatore Intelligente (PROSSIMO)
+### FASE 4 — Montaggio e Tracciabilita' (IN CORSO)
+
+#### 4.1 Tracciabilita' Bulloneria
+- AI Vision (GPT-4o) legge foto DDT fornitori per bulloni, dadi, rondelle
+- Estrae: Diametro, Classe (8.8, 10.9), Numero Lotto
+- Dati associati alla Commessa + Voce di Lavoro corrispondente
+- Nel "Diario di Montaggio", l'operaio scatta foto della scatola bulloni → il sistema mostra i dati estratti dal DDT per confronto visivo
+
+#### 4.2 Modulo Serraggio Intelligente
+- Nuova sezione "Diario di Montaggio" nell'interfaccia operaio (OfficinaPage)
+- In base a Classe e Diametro letti dal DDT, il diario mostra automaticamente la coppia di serraggio in Nm
+- Tabella interna basata su ISO 898-1
+- L'operaio conferma il corretto serraggio e l'uso della chiave dinamometrica tramite checklist [SI/NO]
+
+#### 4.3 Gestione Montaggio Esterno (Cantiere)
+- Il Diario di Montaggio include un check sull'idoneita' delle fondazioni/appoggi [OK/NOK]
+- Upload obbligatorio foto giunti serrati e ancoraggi
+- Firma digitale del cliente su "verbale di fine lavori" direttamente da tablet/smartphone (canvas touch)
+
+#### 4.4 Pacco Documenti Aggiornato
+- Il Pulsante Magico genera una nuova "Relazione di Montaggio" (CAP. 4)
+- Contenuto: tabella bulloni usati (da DDT), coppie di serraggio applicate, foto montaggio, firma cliente
+
+#### 4.5 Schema DB Montaggio
+```
+// Collezione: bulloneria_ddt
+{
+  ddt_id: "bdt_abc123",
+  commessa_id: "com_xyz789",
+  voce_id: "voce_abc123",
+  admin_id: "user_xxx",
+  bulloni: [
+    { diametro: "M16", classe: "10.9", lotto: "LOT-2026-001", quantita: "50 pz" }
+  ],
+  foto_ddt_doc_id: "doc_yyy",       // Riferimento alla foto DDT caricata
+  analyzed_at: "2026-...",
+  source: "ai_vision" | "manuale"
+}
+
+// Collezione: diario_montaggio
+{
+  montaggio_id: "mtg_abc123",
+  commessa_id: "com_xyz789",
+  voce_id: "voce_abc123",
+  admin_id: "user_xxx",
+  operatore_id: "op_xxx",
+  operatore_nome: "Ahmed",
+
+  // Serraggio
+  serraggi: [
+    { diametro: "M16", classe: "10.9", coppia_nm: 225, confermato: true, chiave_dinamometrica: true }
+  ],
+
+  // Fondazioni
+  fondazioni_ok: true | false | null,
+
+  // Foto obbligatorie
+  foto_giunti_doc_ids: ["doc_a", "doc_b"],
+  foto_ancoraggi_doc_ids: ["doc_c"],
+
+  // Firma cliente
+  firma_cliente_base64: "data:image/png;base64,...",
+  firma_cliente_nome: "Mario Rossi",
+  firma_cliente_data: "2026-03-21T...",
+
+  created_at: "2026-...",
+  updated_at: "2026-..."
+}
+```
+
+### FASE 5 — Smistatore Intelligente Avanzato (PROSSIMO)
 - Certificati cumulativi: AI analizza ogni pagina, matching per numero colata
 - DDT Multi-Commessa: spacchettamento automatico per commessa/voce
 - Consumabili auto: filo >= 1.0mm → EN 1090, filo < 1.0mm → EN 13241/Generiche
@@ -374,7 +444,8 @@ si DEVE proporre di spezzarlo.
 - Split `commesse.py` (1.330 righe)
 
 ### Backlog Funzionale
-- RBAC, Export Excel, Unificazione PDF, Firme digitali, Portale clienti, WhatsApp
+- UI Admin per Sfridi, Controlli Visivi, Registro NC
+- RBAC, Export Excel, Unificazione PDF, Portale clienti, WhatsApp
 
 ---
 
