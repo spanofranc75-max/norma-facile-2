@@ -356,25 +356,35 @@ export default function PreventivoEditorPage() {
     };
 
     const handleDownloadPdf = async () => {
-    if (isNew) return;
-    try {
-        const token = localStorage.getItem('session_token');
-        const API_BASE = `${process.env.REACT_APP_BACKEND_URL}/api`;
-        const res = await fetch(`${API_BASE}/preventivi/${prevId}/pdf`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!res.ok) throw new Error('Errore PDF: ' + res.status);
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `preventivo_${prevId}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    } catch (e) { toast.error(e.message); }
-};
+        if (isNew) return;
+        try {
+            const res = await apiRequest(`/preventivi/${prevId}/pdf`, { rawResponse: true });
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `preventivo_${prevId}.pdf`;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); URL.revokeObjectURL(url);
+        } catch (e) { toast.error(e.message); }
+    };
+
+    // Auto-save silently, then open PDF
+    const handleOpenPDF = async (printAfter = false) => {
+        if (isNew) return;
+        setSaving(true);
+        try {
+            const payload = { ...form, client_id: form.client_id || null, giorni_consegna: form.giorni_consegna ? parseInt(form.giorni_consegna) : null, lines: form.lines.map(l => ({ ...l, quantity: parseFloat(l.quantity) || 1, unit_price: parseFloat(l.unit_price) || 0 })) };
+            await apiRequest(`/preventivi/${prevId}`, { method: 'PUT', body: payload });
+            toast.success('Documento salvato');
+        } catch (e) {
+            toast.error('Errore salvataggio: ' + e.message);
+            setSaving(false); return;
+        }
+        setSaving(false);
+        const pdfUrl = `${process.env.REACT_APP_BACKEND_URL}/api/preventivi/${prevId}/pdf`;
+        const w = window.open(pdfUrl, '_blank');
+        if (printAfter && w) setTimeout(() => w.print(), 1800);
+    };
 
     const handleClone = async () => {
         if (isNew) return;
@@ -555,8 +565,8 @@ export default function PreventivoEditorPage() {
                         {/* Always visible: technical tools */}
                         {!isNew && <Button data-testid="btn-download-pdf" variant="outline" onClick={handleDownloadPdf} className="border-[#0055FF] text-[#0055FF] hover:bg-blue-50 h-9 text-xs"><FileDown className="h-3.5 w-3.5 mr-1.5" /> PDF</Button>}
                         
-                        {!isNew && <Button variant="outline" onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/preventivi/${prevId}/pdf?token=${localStorage.getItem('session_token')}`, '_blank')} className="border-purple-500 text-purple-600 hover:bg-purple-50 h-9 text-xs"><Printer className="h-3.5 w-3.5 mr-1.5" /> Stampa</Button>}
-                        {!isNew && <Button variant="outline" onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/preventivi/${prevId}/pdf?token=${localStorage.getItem('session_token')}`, '_blank')} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9 text-xs"><Eye className="h-3.5 w-3.5 mr-1.5" /> Anteprima</Button>}
+                        {!isNew && <Button variant="outline" onClick={() => handleOpenPDF(true)} disabled={saving} className="border-purple-500 text-purple-600 hover:bg-purple-50 h-9 text-xs"><Printer className="h-3.5 w-3.5 mr-1.5" /> Stampa</Button>}
+                        {!isNew && <Button variant="outline" onClick={() => handleOpenPDF(false)} disabled={saving} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9 text-xs"><Eye className="h-3.5 w-3.5 mr-1.5" /> Anteprima</Button>}
                         {!isNew && (
                             <Button data-testid="btn-clone-preventivo" variant="outline" onClick={handleClone} disabled={cloning}
                                 className="border-amber-400 text-amber-700 hover:bg-amber-50 h-9 text-xs">

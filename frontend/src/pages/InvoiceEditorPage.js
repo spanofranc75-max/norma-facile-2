@@ -414,6 +414,27 @@ export default function InvoiceEditorPage() {
         }
     };
 
+    // Auto-save then open PDF (preview or print)
+    const handleOpenPDF = async (printAfter = false) => {
+        if (!isEditing) return;
+        try {
+            setSaving(true);
+            const payload = formData.status && formData.status !== 'bozza'
+                ? { payment_method: formData.payment_method, payment_terms: formData.payment_terms, due_date: formData.due_date || undefined, notes: formData.notes, internal_notes: formData.internal_notes }
+                : { ...formData, lines: formData.lines.filter(l => l.description.trim()) };
+            await apiRequest(`/invoices/${invoiceId}`, { method: 'PUT', body: JSON.stringify(payload) });
+            toast.success('Documento salvato');
+        } catch (e) {
+            toast.error('Errore salvataggio: ' + e.message);
+            setSaving(false);
+            return;
+        }
+        setSaving(false);
+        const pdfUrl = `${process.env.REACT_APP_BACKEND_URL}/api/invoices/${invoiceId}/pdf`;
+        const w = window.open(pdfUrl, '_blank');
+        if (printAfter && w) setTimeout(() => w.print(), 1800);
+    };
+
     const selectedClient = clients.find(c => c.client_id === formData.client_id);
 
     if (loading) {
@@ -450,8 +471,8 @@ export default function InvoiceEditorPage() {
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        {isEditing && <Button variant="outline" onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/invoices/${invoiceId}/pdf?token=${localStorage.getItem('session_token')}`, '_blank')} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9 text-xs"><Eye className="h-3.5 w-3.5 mr-1.5" /> Anteprima</Button>}
-                        {isEditing && <Button variant="outline" onClick={() => { const w = window.open(`${process.env.REACT_APP_BACKEND_URL}/api/invoices/${invoiceId}/pdf?token=${localStorage.getItem('session_token')}`, '_blank'); if(w) setTimeout(()=>w.print(),1500); }} className="border-purple-500 text-purple-600 hover:bg-purple-50 h-9 text-xs"><Printer className="h-3.5 w-3.5 mr-1.5" /> Stampa</Button>}
+                        {isEditing && <Button variant="outline" onClick={() => handleOpenPDF(false)} disabled={saving} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9 text-xs"><Eye className="h-3.5 w-3.5 mr-1.5" /> Anteprima</Button>}
+                        {isEditing && <Button variant="outline" onClick={() => handleOpenPDF(true)} disabled={saving} className="border-purple-500 text-purple-600 hover:bg-purple-50 h-9 text-xs"><Printer className="h-3.5 w-3.5 mr-1.5" /> Stampa</Button>}
                         <Button
                             type="button"
                             variant="outline"
