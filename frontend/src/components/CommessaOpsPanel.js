@@ -814,7 +814,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
             toast.info('Analisi AI del certificato in corso...');
             
             // Parse the certificate with AI OCR
-            const parseRes = await apiRequest(`/commesse/${commessaId}/documenti/${docId}/parse-certificate`, { method: 'POST' });
+            const parseRes = await apiRequest(`/commesse/${commessaId}/documenti/${docId}/parse-certificato`, { method: 'POST' });
             
             // Link the certificate to the material with extracted data
             const linkForm = new FormData();
@@ -2065,12 +2065,12 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="bg-amber-50">
-                                            <TableHead className="w-[28%] text-xs">Descrizione</TableHead>
-                                            <TableHead className="w-[10%] text-xs text-center">Q.tà</TableHead>
-                                            <TableHead className="w-[8%] text-xs text-center">U.M.</TableHead>
-                                            <TableHead className="w-[12%] text-xs text-center">€/unità</TableHead>
-                                            <TableHead className="w-[12%] text-xs text-center" title="Lascia vuoto se usi tutto. Se ne usi solo una parte, indica la quantità usata per la commessa. Il resto andrà in magazzino.">Q.tà Usata</TableHead>
-                                            <TableHead className="w-[17%] text-xs">Rif. Ordine</TableHead>
+                                            <TableHead className="w-[24%] text-xs">Descrizione</TableHead>
+                                            <TableHead className="w-[12%] text-xs text-center">Q.tà</TableHead>
+                                            <TableHead className="w-[9%] text-xs text-center">U.M.</TableHead>
+                                            <TableHead className="w-[14%] text-xs text-center">€/unità</TableHead>
+                                            <TableHead className="w-[14%] text-xs text-center" title="Lascia vuoto se usi tutto. Se ne usi solo una parte, indica la quantità usata per la commessa. Il resto andrà in magazzino.">Q.tà Usata</TableHead>
+                                            <TableHead className="w-[14%] text-xs">Rif. Ordine</TableHead>
                                             <TableHead className="w-[5%] text-xs text-center">3.1</TableHead>
                                             <TableHead className="w-[5%]"></TableHead>
                                         </TableRow>
@@ -2082,7 +2082,6 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                                                     <Input
                                                         value={mat.descrizione}
                                                         onChange={e => updateArrivoMat(idx, 'descrizione', e.target.value)}
-                                                        placeholder="es. Trave IPE 200"
                                                         className="h-8 text-sm"
                                                     />
                                                 </TableCell>
@@ -2117,7 +2116,6 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                                                         className="h-8 text-sm text-center"
                                                         min="0"
                                                         step="0.01"
-                                                        placeholder="0.00"
                                                         data-testid={`arrivo-mat-${idx}-prezzo`}
                                                     />
                                                 </TableCell>
@@ -2129,7 +2127,6 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                                                         className="h-8 text-sm text-center"
                                                         min="0"
                                                         step="0.01"
-                                                        placeholder="Tutto"
                                                         title="Lascia vuoto se usi tutto. Indica qui la quantità effettivamente usata per la commessa."
                                                         data-testid={`arrivo-mat-${idx}-qty-usata`}
                                                     />
@@ -2137,7 +2134,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                                                 <TableCell className="p-1">
                                                     <Select value={mat.ordine_id || '__none__'} onValueChange={v => updateArrivoMat(idx, 'ordine_id', v === '__none__' ? '' : v)}>
                                                         <SelectTrigger className="h-8 text-xs">
-                                                            <SelectValue placeholder="N/D" />
+                                                            <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             <SelectItem value="__none__">Nessuno</SelectItem>
@@ -2175,9 +2172,6 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                             </div>
                             <p className="text-xs text-muted-foreground mt-1">
                                 ☑️ 3.1 = richiede certificato materiale. Collegherai i certificati dopo la registrazione.
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                💡 <strong>Q.tà Usata:</strong> Se usi solo parte del materiale ordinato, indica qui la quantità reale per la commessa. Il resto torna in giacenza magazzino.
                             </p>
                         </div>
 

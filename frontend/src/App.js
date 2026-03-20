@@ -71,15 +71,20 @@ import './App.css';
 function AppRouter() {
     const location = useLocation();
 
-    // Check URL fragment for session_id synchronously during render
-    // This prevents race conditions by processing new session_id FIRST
+    // Check URL fragment for session_id (Emergent Auth) synchronously during render
     if (location.hash?.includes('session_id=')) {
+        return <AuthCallback />;
+    }
+
+    // Check URL params for code (Google OAuth) synchronously during render
+    if (location.search?.includes('code=')) {
         return <AuthCallback />;
     }
 
     return (
         <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route
                 path="/dashboard"
                 element={
