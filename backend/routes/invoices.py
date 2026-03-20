@@ -1533,21 +1533,27 @@ async def _handle_fic_409(fic, invoice: dict, fic_data: dict) -> int:
     so the caller can proceed with the SDI send (which will trigger auto-recovery).
     """
     doc_num_raw = invoice.get("document_number", "")
+    doc_type = invoice.get("document_type", "FT")
+    fic_type = "credit_note" if doc_type == "NC" else "invoice"
+
+    # Extract numeric part: "NC-2/2026" → 2, "16/2026" → 16
     try:
-        num_int = int(str(doc_num_raw).split("/")[0])
+        num_part = str(doc_num_raw).split("/")[0]
+        num_part = num_part.split("-")[-1] if "-" in num_part else num_part
+        num_int = int(num_part)
     except (ValueError, IndexError):
         raise HTTPException(409, f"Numero documento '{doc_num_raw}' non valido per la ricerca su FIC")
 
-    logger.info(f"Document {doc_num_raw} already exists on FIC, searching for number={num_int}...")
+    logger.info(f"Document {doc_num_raw} already exists on FIC (type={fic_type}), searching for number={num_int}...")
     try:
         search_result = await fic._request("GET", "/issued_documents", params={
-            "type": "invoice", "q": f"number = {num_int}", "per_page": 10,
+            "type": fic_type, "q": f"number = {num_int}", "per_page": 10,
             "fields": "id,number,date,ei_status",
         })
         docs = search_result.get("data", [])
     except Exception as se:
         logger.error(f"FIC search failed: {se}")
-        raise HTTPException(409, f"Documento n.{num_int} esiste gia' su FIC. Ricerca fallita: {str(se)[:100]}")
+        raise HTTPException(409, f"Documento n.{num_int} ({fic_type}) esiste gia' su FIC. Ricerca fallita: {str(se)[:100]}")
 
     existing_id = None
     for doc in docs:
