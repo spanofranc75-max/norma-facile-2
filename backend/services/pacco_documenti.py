@@ -4,18 +4,16 @@ Pacco Documenti Cantiere — "Pulsante Magico"
 Genera un PDF unificato per l'intera commessa (Cantiere Misto / Matrioska).
 Struttura:
   - Copertina + Indice
-  - PARTE A: Strutture EN 1090   (se presenti)
-  - PARTE B: Cancelli EN 13241   (se presenti)
-  - PARTE C: Lavorazioni Generiche (se presenti)
-
-Ogni parte include: dati voce, documenti/foto pertinenti, verbale collaudo
-(auto-compilato da checklist officina), riepilogo ore.
+  - CAP. 1: Strutture EN 1090   (se presenti) — DoP, Certificati 3.1, WPS, Foto
+  - CAP. 2: Cancelli EN 13241   (se presenti) — Dichiarazione Conformità, Foto Sicurezze, Manuale
+  - CAP. 3: Relazione Tecnica                  — Riepilogo ore e materiali
 
 Regole:
-  - Filtro Beltrami: pesca solo documenti legati alla voce (via metadata_estratti.voce_id)
-  - Automazione: checklist tutti OK → verbale "CONFORME" (firmato tecnicamente)
-  - Minimalismo: non genera parti per categorie non presenti
-  - Ordine: A (1090) → B (13241) → C (Generiche)
+  - Filtro Beltrami: pesca solo documenti/pagine legati alla voce (via metadata + doc_page_index)
+  - Automazione: checklist tutti OK → ESITO POSITIVO / con NOK → ESITO NEGATIVO
+  - Consumabili: filo ≥1.0mm → EN 1090, <1.0mm → EN 13241, gas → EN 1090
+  - Minimalismo: non genera capitoli per categorie non presenti
+  - Ordine: CAP. 1 (1090) → CAP. 2 (13241) → CAP. 3 (Relazione Tecnica)
 """
 import logging
 import base64
