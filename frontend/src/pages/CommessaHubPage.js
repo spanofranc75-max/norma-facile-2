@@ -262,29 +262,31 @@ export default function CommessaHubPage() {
         <DashboardLayout title={`Commessa ${c.numero || ''}`}>
             <div className="max-w-5xl mx-auto space-y-4" data-testid="commessa-hub">
                 {/* Header */}
-                <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="sm" onClick={() => navigate('/planning')} data-testid="btn-back">
-                        <ArrowLeft className="h-4 w-4 mr-1" /> Planning
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                    <Button variant="ghost" size="sm" onClick={() => navigate('/planning')} data-testid="btn-back" className="text-xs sm:text-sm">
+                        <ArrowLeft className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Planning</span>
                     </Button>
                     <div className="flex-1" />
-                    <Button variant="outline" size="sm" onClick={() => { setLinkOpen(true); fetchAvailableModules(linkType); }} data-testid="btn-link-module">
-                        <Link2 className="h-3.5 w-3.5 mr-1.5" /> Collega Modulo
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} data-testid="btn-qr-code">
-                        <QrCode className="h-3.5 w-3.5 mr-1.5" /> QR Code
-                    </Button>
-                    <Button size="sm" onClick={handleDownloadDossier} className="bg-[#0055FF] text-white hover:bg-[#0044CC]" data-testid="btn-dossier">
-                        <Download className="h-3.5 w-3.5 mr-1.5" /> Dossier PDF
-                    </Button>
+                    <div className="flex gap-1.5 sm:gap-2">
+                        <Button variant="outline" size="sm" onClick={() => { setLinkOpen(true); fetchAvailableModules(linkType); }} data-testid="btn-link-module" className="text-xs px-2 sm:px-3">
+                            <Link2 className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Collega Modulo</span>
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} data-testid="btn-qr-code" className="text-xs px-2 sm:px-3">
+                            <QrCode className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">QR Code</span>
+                        </Button>
+                        <Button size="sm" onClick={handleDownloadDossier} className="bg-[#0055FF] text-white hover:bg-[#0044CC] text-xs px-2 sm:px-3" data-testid="btn-dossier">
+                            <Download className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Dossier PDF</span>
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Commessa Info Card */}
                 <Card className="border-gray-200" data-testid="commessa-info">
-                    <CardContent className="p-5">
-                        <div className="flex items-start justify-between">
+                    <CardContent className="p-3 sm:p-5">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                             <div>
                                 <p className="font-mono text-xs text-slate-400">{c.numero}</p>
-                                <h1 className="text-xl font-bold text-[#1E293B] mt-1">{c.title}</h1>
+                                <h1 className="text-lg sm:text-xl font-bold text-[#1E293B] mt-1">{c.title}</h1>
                                 <p className="text-sm text-slate-500 mt-1">{c.client_name || 'Nessun cliente'}</p>
                                 {c.riferimento && <p className="text-xs text-slate-400 mt-0.5">Rif: {c.riferimento}</p>}
                                 {(c.classe_exc || c.tipologia_chiusura) && (
@@ -294,13 +296,13 @@ export default function CommessaHubPage() {
                                     </div>
                                 )}
                             </div>
-                            <div className="text-right space-y-1.5">
+                            <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-1.5 sm:text-right">
                                 <Badge className={`${statoStyle.bg} ${statoStyle.text} text-xs px-2.5`} data-testid="stato-badge">
                                     <span className={`w-1.5 h-1.5 rounded-full ${statoStyle.dot} inline-block mr-1.5`} />
                                     {statoStyle.label}
                                 </Badge>
                                 <p className="font-mono text-lg font-bold text-[#0055FF]">{fmtEur(c.value)}</p>
-                                {c.deadline && <p className="text-xs text-slate-400 flex items-center gap-1 justify-end"><CalendarDays className="h-3 w-3" /> {c.deadline}</p>}
+                                {c.deadline && <p className="text-xs text-slate-400 flex items-center gap-1"><CalendarDays className="h-3 w-3" /> {c.deadline}</p>}
                             </div>
                         </div>
 
@@ -500,19 +502,19 @@ export default function CommessaHubPage() {
                                 </CardHeader>
                                 <CardContent className="px-4 pb-3 space-y-3">
                                     {/* KPIs */}
-                                    <div className="grid grid-cols-3 gap-3">
-                                        <div className="text-center p-2 bg-blue-50 rounded-lg">
-                                            <p className="text-[10px] text-slate-500">Ricavo</p>
-                                            <p className="text-sm font-bold text-[#0055FF]">{fmtEur(costAnalysis.ricavo)}</p>
+                                    <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                                        <div className="text-center p-1.5 sm:p-2 bg-blue-50 rounded-lg">
+                                            <p className="text-[9px] sm:text-[10px] text-slate-500">Ricavo</p>
+                                            <p className="text-xs sm:text-sm font-bold text-[#0055FF]">{fmtEur(costAnalysis.ricavo)}</p>
                                         </div>
-                                        <div className="text-center p-2 bg-red-50 rounded-lg">
-                                            <p className="text-[10px] text-slate-500">Costi Totali</p>
-                                            <p className="text-sm font-bold text-red-600">{fmtEur(costAnalysis.costo_totale)}</p>
+                                        <div className="text-center p-1.5 sm:p-2 bg-red-50 rounded-lg">
+                                            <p className="text-[9px] sm:text-[10px] text-slate-500">Costi</p>
+                                            <p className="text-xs sm:text-sm font-bold text-red-600">{fmtEur(costAnalysis.costo_totale)}</p>
                                         </div>
-                                        <div className={`text-center p-2 rounded-lg ${costAnalysis.margine >= 0 ? 'bg-emerald-50' : 'bg-red-50'}`}>
-                                            <p className="text-[10px] text-slate-500">Margine</p>
-                                            <p className={`text-sm font-bold ${costAnalysis.margine >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                                {fmtEur(costAnalysis.margine)} <span className="text-[10px] font-normal">({costAnalysis.margine_pct}%)</span>
+                                        <div className={`text-center p-1.5 sm:p-2 rounded-lg ${costAnalysis.margine >= 0 ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                                            <p className="text-[9px] sm:text-[10px] text-slate-500">Margine</p>
+                                            <p className={`text-xs sm:text-sm font-bold ${costAnalysis.margine >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                {fmtEur(costAnalysis.margine)} <span className="text-[9px] sm:text-[10px] font-normal">({costAnalysis.margine_pct}%)</span>
                                             </p>
                                         </div>
                                     </div>

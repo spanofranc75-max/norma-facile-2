@@ -206,12 +206,12 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
                 return (
                     <div key={f.tipo} className={`rounded-lg border ${colors.bg} overflow-hidden`} data-testid={`fase-card-${f.tipo}`}>
                         {/* Phase header */}
-                        <div className="flex items-center gap-2 p-3 cursor-pointer select-none" onClick={() => toggleExpand(f.tipo)}>
+                        <div className="flex items-center gap-1.5 sm:gap-2 p-2.5 sm:p-3 cursor-pointer select-none" onClick={() => toggleExpand(f.tipo)}>
                             {isExpanded ? <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" /> : <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />}
-                            <span className="font-semibold text-sm flex-1">{f.label || f.tipo}</span>
+                            <span className="font-semibold text-xs sm:text-sm flex-1 truncate">{f.label || f.tipo}</span>
 
                             {totOre > 0 && (
-                                <div className="flex items-center gap-1.5 mr-2">
+                                <div className="hidden sm:flex items-center gap-1.5 mr-2">
                                     <Clock className="h-3 w-3 text-slate-400" />
                                     <span className={`text-xs font-mono font-bold ${isOver ? 'text-red-600' : 'text-slate-700'}`}>{totOre}h</span>
                                     {orePrev > 0 && (
@@ -224,11 +224,15 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
                                     )}
                                 </div>
                             )}
+                            {/* Mobile: compact hours badge */}
+                            {totOre > 0 && (
+                                <span className={`sm:hidden text-[10px] font-bold px-1.5 py-0.5 rounded ${isOver ? 'bg-red-100 text-red-700' : 'bg-white/70 text-slate-700'}`}>{totOre}h</span>
+                            )}
 
-                            {faseEntries.length > 0 && <span className="text-[10px] text-slate-400 mr-1">{faseEntries.length} sessioni</span>}
+                            <span className="hidden sm:inline text-[10px] text-slate-400 mr-1">{faseEntries.length > 0 && `${faseEntries.length} sess.`}</span>
                             <StatoBadge stato={f.stato} />
 
-                            <div className="flex gap-1 ml-1" onClick={e => e.stopPropagation()}>
+                            <div className="hidden sm:flex gap-1 ml-1" onClick={e => e.stopPropagation()}>
                                 {f.stato === 'da_fare' && (
                                     <Button size="sm" variant="ghost" className="h-7 text-[10px] text-blue-600 hover:bg-blue-100" onClick={() => handleStartFase(f.tipo)}>
                                         <Play className="h-3 w-3 mr-0.5" /> Avvia
@@ -236,7 +240,7 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
                                 )}
                                 {(f.stato === 'in_corso' || f.stato === 'da_fare') && (
                                     <Button size="sm" variant="ghost" className="h-7 text-[10px] text-emerald-600 hover:bg-emerald-100" onClick={() => openNewSession(f)}>
-                                        <Plus className="h-3 w-3 mr-0.5" /> Registra Lavoro
+                                        <Plus className="h-3 w-3 mr-0.5" /> Registra
                                     </Button>
                                 )}
                                 {f.stato === 'in_corso' && (
@@ -249,7 +253,36 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
 
                         {/* Expanded: work sessions */}
                         {isExpanded && (
-                            <div className="px-3 pb-3 space-y-2">
+                            <div className="px-2.5 sm:px-3 pb-3 space-y-2">
+                                {/* Mobile action buttons */}
+                                <div className="flex sm:hidden gap-1.5 flex-wrap" onClick={e => e.stopPropagation()}>
+                                    {f.stato === 'da_fare' && (
+                                        <Button size="sm" variant="outline" className="h-8 text-[11px] text-blue-600 flex-1" onClick={() => handleStartFase(f.tipo)}>
+                                            <Play className="h-3.5 w-3.5 mr-1" /> Avvia Fase
+                                        </Button>
+                                    )}
+                                    {(f.stato === 'in_corso' || f.stato === 'da_fare') && (
+                                        <Button size="sm" className="h-8 text-[11px] bg-[#0055FF] text-white flex-1" onClick={() => openNewSession(f)}>
+                                            <Plus className="h-3.5 w-3.5 mr-1" /> Registra Lavoro
+                                        </Button>
+                                    )}
+                                    {f.stato === 'in_corso' && (
+                                        <Button size="sm" variant="outline" className="h-8 text-[11px] text-emerald-700 flex-1" onClick={() => handleCompleteFase(f.tipo)}>
+                                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Completa
+                                        </Button>
+                                    )}
+                                </div>
+
+                                {/* Mobile hours progress */}
+                                {totOre > 0 && orePrev > 0 && (
+                                    <div className="sm:hidden flex items-center gap-2 text-[10px] text-slate-500">
+                                        <span>{totOre}h / {orePrev}h prev.</span>
+                                        <div className="flex-1 bg-slate-200 rounded-full h-1.5">
+                                            <div className={`h-1.5 rounded-full ${isOver ? 'bg-red-500' : colors.bar}`} style={{ width: `${pct}%` }} />
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="flex items-center gap-2 text-[10px] text-slate-500 mb-1">
                                     <span>Ore preventivate:</span>
                                     <Input type="number" className="h-6 w-20 text-[11px] text-center" value={f.ore_preventivate || ''} placeholder="—"
@@ -258,19 +291,19 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
                                 </div>
 
                                 {faseEntries.length === 0 ? (
-                                    <p className="text-xs text-slate-400 italic py-3 text-center">Nessuna sessione registrata. Clicca "Registra Lavoro" per iniziare.</p>
+                                    <p className="text-xs text-slate-400 italic py-3 text-center">Nessuna sessione registrata.</p>
                                 ) : (
                                     <div className="space-y-1.5">
                                         {faseEntries.map(e => (
                                             <div key={e.entry_id} className="flex items-start gap-2 p-2 bg-white/70 rounded border border-white text-xs">
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-0.5">
+                                                    <div className="flex items-center gap-2 flex-wrap mb-0.5">
                                                         <span className="font-medium text-slate-700">
                                                             {new Date(e.data + 'T00:00').toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })}
                                                         </span>
                                                         <span className="font-bold text-slate-800"><Clock className="h-3 w-3 inline mr-0.5" />{e.ore}h</span>
                                                         {(e.operatori || []).length > 1 && (
-                                                            <span className="text-[10px] text-slate-400">({e.ore_totali || e.ore}h persona)</span>
+                                                            <span className="text-[10px] text-slate-400">({e.ore_totali || e.ore}h pers.)</span>
                                                         )}
                                                     </div>
                                                     <div className="flex items-center gap-1 flex-wrap">
@@ -279,11 +312,11 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
                                                             <Badge key={i} variant="secondary" className="text-[9px] px-1 py-0 bg-slate-100">{op.nome}</Badge>
                                                         ))}
                                                     </div>
-                                                    {e.note && <p className="text-[10px] text-slate-400 mt-0.5 italic">{e.note}</p>}
+                                                    {e.note && <p className="text-[10px] text-slate-400 mt-0.5 italic truncate">{e.note}</p>}
                                                 </div>
                                                 <div className="flex gap-0.5 shrink-0">
-                                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => openEditSession(e)}><Edit2 className="h-3 w-3 text-slate-400" /></Button>
-                                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => handleDelete(e.entry_id)}><Trash2 className="h-3 w-3 text-red-400" /></Button>
+                                                    <Button size="sm" variant="ghost" className="h-7 w-7 sm:h-6 sm:w-6 p-0" onClick={() => openEditSession(e)}><Edit2 className="h-3.5 sm:h-3 w-3.5 sm:w-3 text-slate-400" /></Button>
+                                                    <Button size="sm" variant="ghost" className="h-7 w-7 sm:h-6 sm:w-6 p-0" onClick={() => handleDelete(e.entry_id)}><Trash2 className="h-3.5 sm:h-3 w-3.5 sm:w-3 text-red-400" /></Button>
                                                 </div>
                                             </div>
                                         ))}
@@ -308,8 +341,8 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
             </Button>
 
             {showRiepilogo && riepilogo && (
-                <div className="p-3 bg-slate-50 rounded-lg border space-y-3">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="p-2.5 sm:p-3 bg-slate-50 rounded-lg border space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
                         <StatCard label="Ore Persona" value={`${riepilogo.totale_ore_totali}h`} color="blue" />
                         <StatCard label="Preventivate" value={riepilogo.totale_ore_preventivate > 0 ? `${riepilogo.totale_ore_preventivate}h` : '—'} color="slate" />
                         <StatCard label="Costo Effettivo" value={`€ ${riepilogo.costo_effettivo.toLocaleString('it-IT')}`} color="amber" />
@@ -333,30 +366,32 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
                 </div>
             )}
 
-            {/* Session Dialog */}
+            {/* Session Dialog - Full screen on mobile */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-md w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle className="text-base">
-                            {editEntry ? 'Modifica Sessione' : 'Registra Sessione di Lavoro'}
+                        <DialogTitle className="text-sm sm:text-base">
+                            {editEntry ? 'Modifica Sessione' : 'Registra Lavoro'}
                             {targetFase && <Badge className={`ml-2 text-[10px] ${(FASE_COLORS[targetFase.tipo] || FASE_COLORS.taglio).badge}`}>{targetFase.label || targetFase.tipo}</Badge>}
                         </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-3 py-2">
-                        <div>
-                            <label className="text-xs font-medium text-slate-600 mb-1 block">Data</label>
-                            <Input type="date" value={form.data} onChange={e => setForm(f => ({ ...f, data: e.target.value }))} className="h-9" />
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="text-xs font-medium text-slate-600 mb-1 block">Data</label>
+                                <Input type="date" value={form.data} onChange={e => setForm(f => ({ ...f, data: e.target.value }))} className="h-10 sm:h-9 text-base sm:text-sm" data-testid="session-date" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-medium text-slate-600 mb-1 block">Ore lavorate</label>
+                                <Input type="number" step="0.5" min="0" max="24" value={form.ore} inputMode="decimal"
+                                    onChange={e => setForm(f => ({ ...f, ore: e.target.value }))} className="h-10 sm:h-9 text-base sm:text-sm" data-testid="session-hours" />
+                            </div>
                         </div>
-                        <div>
-                            <label className="text-xs font-medium text-slate-600 mb-1 block">Ore lavorate (durata sessione)</label>
-                            <Input type="number" step="0.5" min="0" max="24" value={form.ore}
-                                onChange={e => setForm(f => ({ ...f, ore: e.target.value }))} className="h-9" />
-                            {form.ore && form.selectedOps.length > 1 && (
-                                <p className="text-[10px] text-blue-600 mt-1">
-                                    {form.ore}h x {form.selectedOps.length} operatori = {(parseFloat(form.ore) * form.selectedOps.length).toFixed(1)}h persona
-                                </p>
-                            )}
-                        </div>
+                        {form.ore && form.selectedOps.length > 1 && (
+                            <p className="text-[11px] text-blue-600 -mt-1">
+                                {form.ore}h x {form.selectedOps.length} operatori = {(parseFloat(form.ore) * form.selectedOps.length).toFixed(1)}h persona
+                            </p>
+                        )}
                         <div>
                             <label className="text-xs font-medium text-slate-600 mb-1 block">
                                 Operatori ({form.selectedOps.length} selezionati)
@@ -368,30 +403,30 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
                                     <Input
                                         value={newOpName}
                                         onChange={e => setNewOpName(e.target.value)}
-                                        placeholder="Aggiungi operatore (scrivi nome)..."
-                                        className="h-7 text-xs border-0 bg-transparent shadow-none focus-visible:ring-0"
+                                        placeholder="Nuovo operatore..."
+                                        className="h-8 sm:h-7 text-sm sm:text-xs border-0 bg-transparent shadow-none focus-visible:ring-0"
                                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddOperatore(); } }}
                                         data-testid="new-op-input"
                                     />
-                                    <Button size="sm" variant="ghost" className="h-7 text-[10px] text-[#0055FF] shrink-0 px-2"
+                                    <Button size="sm" variant="ghost" className="h-8 sm:h-7 text-[11px] sm:text-[10px] text-[#0055FF] shrink-0 px-2"
                                         onClick={handleAddOperatore} disabled={addingOp || !newOpName.trim()}>
                                         <Plus className="h-3 w-3" /> Aggiungi
                                     </Button>
                                 </div>
                                 {/* Operator list */}
-                                <div className="max-h-40 overflow-y-auto p-1.5 space-y-0.5">
+                                <div className="max-h-48 sm:max-h-40 overflow-y-auto p-1.5 space-y-0.5">
                                     {operatori.length === 0 && (
                                         <p className="text-xs text-slate-400 italic py-2 text-center">Nessun operatore. Aggiungine uno sopra.</p>
                                     )}
                                     {operatori.map(op => (
-                                        <label key={op.op_id} className="flex items-center gap-2 p-1.5 rounded hover:bg-slate-50 cursor-pointer group">
+                                        <label key={op.op_id} className="flex items-center gap-2 p-2 sm:p-1.5 rounded hover:bg-slate-50 cursor-pointer group">
                                             <Checkbox
                                                 checked={form.selectedOps.includes(op.op_id)}
                                                 onCheckedChange={() => toggleOperatore(op.op_id)}
                                             />
                                             <span className="text-sm flex-1">{op.nome}</span>
                                             {op.mansione && <span className="text-[9px] text-slate-400">{op.mansione}</span>}
-                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100"
+                                            <Button size="sm" variant="ghost" className="h-6 w-6 sm:h-5 sm:w-5 p-0 opacity-0 group-hover:opacity-100 sm:opacity-0"
                                                 onClick={e => { e.preventDefault(); handleDeleteOperatore(op.op_id); }}>
                                                 <Trash2 className="h-3 w-3 text-red-300" />
                                             </Button>
@@ -402,15 +437,15 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
                         </div>
                         <div>
                             <label className="text-xs font-medium text-slate-600 mb-1 block">Note (opzionale)</label>
-                            <Input value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} className="h-9"
-                                placeholder="Es: Taglio travi IPE 200..." />
+                            <Input value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} className="h-10 sm:h-9 text-base sm:text-sm"
+                                placeholder="Es: Taglio travi IPE 200..." data-testid="session-notes" />
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" size="sm" onClick={() => setDialogOpen(false)}>Annulla</Button>
-                        <Button size="sm" className="bg-[#0055FF]" onClick={handleSave}
-                            disabled={loading || form.selectedOps.length === 0 || !form.ore}>
-                            {editEntry ? 'Salva Modifiche' : 'Registra Sessione'}
+                    <DialogFooter className="flex-row gap-2">
+                        <Button variant="outline" size="sm" className="flex-1 sm:flex-none h-10 sm:h-9" onClick={() => setDialogOpen(false)}>Annulla</Button>
+                        <Button size="sm" className="bg-[#0055FF] flex-1 sm:flex-none h-10 sm:h-9" onClick={handleSave}
+                            disabled={loading || form.selectedOps.length === 0 || !form.ore} data-testid="session-save-btn">
+                            {editEntry ? 'Salva' : 'Registra'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
