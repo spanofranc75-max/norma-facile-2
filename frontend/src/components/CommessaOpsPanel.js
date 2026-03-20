@@ -108,51 +108,65 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
     const handleRefresh = () => { fetchData(); onRefresh?.(); };
     const handleRefreshWithCam = () => { fetchData(); fetchCamData(); onRefresh?.(); };
 
+    const isGenerica = normativaTipo === 'GENERICA';
+    const isEN1090 = normativaTipo === 'EN_1090';
+    const isEN13241 = normativaTipo === 'EN_13241';
+
     return (
         <div className="space-y-3" data-testid="commessa-ops">
-            {/* ── APPROVVIGIONAMENTO ── */}
-            <Section title="Approvvigionamento" icon={ShoppingCart} count={(approv.richieste?.length || 0) + (approv.ordini?.length || 0)} defaultOpen>
-                <ApprovvigionamentoSection commessaId={commessaId} commessaNumero={commessaNumero} approv={approv} fornitori={fornitori} onRefresh={handleRefresh} />
-            </Section>
+            {/* ── APPROVVIGIONAMENTO — visibile per tutti tranne GENERICA ── */}
+            {!isGenerica && (
+                <Section title="Approvvigionamento" icon={ShoppingCart} count={(approv.richieste?.length || 0) + (approv.ordini?.length || 0)} defaultOpen>
+                    <ApprovvigionamentoSection commessaId={commessaId} commessaNumero={commessaNumero} approv={approv} fornitori={fornitori} onRefresh={handleRefresh} />
+                </Section>
+            )}
 
-            {/* ── PRODUZIONE ── */}
-            <Section title="Produzione" icon={Factory} count={fasi.length}>
+            {/* ── PRODUZIONE — sempre visibile ── */}
+            <Section title="Produzione" icon={Factory} count={fasi.length} defaultOpen={isGenerica}>
                 <ProduzioneSection commessaId={commessaId} commessaNumero={commessaNumero} fasi={fasi} progPct={progPct} normativaTipo={normativaTipo} onRefresh={handleRefresh} />
             </Section>
 
-            {/* ── CONSEGNE ── */}
-            <Section title="Consegne al Cliente" icon={Truck} count={consegne.length}>
-                <ConsegneSection commessaId={commessaId} commessaNumero={commessaNumero} consegne={consegne} onRefresh={handleRefresh} />
-            </Section>
+            {/* ── CONSEGNE — visibile per tutti tranne GENERICA ── */}
+            {!isGenerica && (
+                <Section title="Consegne al Cliente" icon={Truck} count={consegne.length}>
+                    <ConsegneSection commessaId={commessaId} commessaNumero={commessaNumero} consegne={consegne} onRefresh={handleRefresh} />
+                </Section>
+            )}
 
-            {/* ── CONTO LAVORO ── */}
+            {/* ── CONTO LAVORO — visibile per tutti (verniciatura/zincatura serve sempre) ── */}
             <Section title="Conto Lavoro" icon={Paintbrush} count={cl.length}>
                 <ContoLavoroSection commessaId={commessaId} commessaNumero={commessaNumero} cl={cl} fornitori={fornitori} onRefresh={handleRefresh} />
             </Section>
 
-            {/* ── TRACCIABILITÀ MATERIALI ── */}
-            <Section title="Tracciabilità Materiali" icon={FileText} count={materialBatches.length + docs.filter(d => d.metadata_estratti?.numero_colata).length}>
-                <TracciabilitaSection commessaId={commessaId} materialBatches={materialBatches} docs={docs} onRefresh={handleRefresh} />
-            </Section>
+            {/* ── TRACCIABILITÀ MATERIALI — solo EN 1090 ── */}
+            {isEN1090 && (
+                <Section title="Tracciabilità Materiali" icon={FileText} count={materialBatches.length + docs.filter(d => d.metadata_estratti?.numero_colata).length}>
+                    <TracciabilitaSection commessaId={commessaId} materialBatches={materialBatches} docs={docs} onRefresh={handleRefresh} />
+                </Section>
+            )}
 
-            {/* ── CAM ── */}
-            <Section title="CAM - Criteri Ambientali Minimi" icon={Leaf} count={camLotti.length}>
-                <CAMSection commessaId={commessaId} commessaNumero={commessaNumero} camLotti={camLotti} camCalcolo={camCalcolo} docs={docs} onRefreshCam={handleRefreshWithCam} />
-            </Section>
+            {/* ── CAM — solo EN 1090 ── */}
+            {isEN1090 && (
+                <Section title="CAM - Criteri Ambientali Minimi" icon={Leaf} count={camLotti.length}>
+                    <CAMSection commessaId={commessaId} commessaNumero={commessaNumero} camLotti={camLotti} camCalcolo={camCalcolo} docs={docs} onRefreshCam={handleRefreshWithCam} />
+                </Section>
+            )}
 
-            {/* ── FASCICOLO TECNICO EN 1090 ── */}
-            <Section title="Fascicolo Tecnico EN 1090" icon={FileText} count={6}>
-                <FascicoloTecnicoSection commessaId={commessaId} />
-            </Section>
+            {/* ── FASCICOLO TECNICO — solo EN 1090 ── */}
+            {isEN1090 && (
+                <Section title="Fascicolo Tecnico EN 1090" icon={FileText} count={6}>
+                    <FascicoloTecnicoSection commessaId={commessaId} />
+                </Section>
+            )}
 
-            {/* ── CERTIFICAZIONE CANCELLI EN 13241 ── */}
-            {normativaTipo === 'EN_13241' && (
+            {/* ── CERTIFICAZIONE CANCELLI — solo EN 13241 ── */}
+            {isEN13241 && (
                 <Section title="Certificazione Cancello EN 13241" icon={Shield} count={0}>
                     <GateCertificationPanel commessaId={commessaId} commessa={{ numero: commessaNumero }} />
                 </Section>
             )}
 
-            {/* ── REPOSITORY DOCUMENTI ── */}
+            {/* ── REPOSITORY DOCUMENTI — sempre visibile ── */}
             <Section title="Repository Documenti" icon={FileUp} count={docs.length} defaultOpen>
                 <RepositoryDocumentiSection commessaId={commessaId} docs={docs} onRefresh={handleRefreshWithCam} onCamRefresh={fetchCamData} />
             </Section>

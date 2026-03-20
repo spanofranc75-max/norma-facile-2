@@ -587,15 +587,48 @@ function CommessaCard({ item, colors, isDragging, onDragStart, onDragEnd, onCard
 
 // ── Create Commessa Modal ────────────────────────────────────────
 
+const CATEGORIA_LAVORO = [
+    {
+        value: 'EN_1090',
+        label: 'Strutturale',
+        subtitle: 'EN 1090',
+        desc: 'Scale, balconi, soppalchi, capannoni',
+        color: 'border-blue-400 bg-blue-50 text-blue-900 ring-blue-400',
+        selectedColor: 'border-blue-500 bg-blue-100 ring-2 ring-blue-500 shadow-lg shadow-blue-100',
+        iconBg: 'bg-blue-600',
+    },
+    {
+        value: 'EN_13241',
+        label: 'Cancello',
+        subtitle: 'EN 13241',
+        desc: 'Cancelli, portoni, chiusure industriali',
+        color: 'border-amber-400 bg-amber-50 text-amber-900 ring-amber-400',
+        selectedColor: 'border-amber-500 bg-amber-100 ring-2 ring-amber-500 shadow-lg shadow-amber-100',
+        iconBg: 'bg-amber-600',
+    },
+    {
+        value: 'GENERICA',
+        label: 'Generica',
+        subtitle: 'No marcatura',
+        desc: 'Riparazioni, manutenzioni, piccoli lavori',
+        color: 'border-slate-300 bg-slate-50 text-slate-800 ring-slate-300',
+        selectedColor: 'border-slate-500 bg-slate-100 ring-2 ring-slate-500 shadow-lg shadow-slate-100',
+        iconBg: 'bg-slate-600',
+    },
+];
+
 function CreateCommessaModal({ open, onOpenChange, clients, onCreated }) {
     const [form, setForm] = useState({
         title: '', client_id: '', description: '',
         value: '', deadline: '', priority: 'media',
-        classe_exc: '', tipologia_chiusura: '',
+        normativa_tipo: '', classe_exc: '', tipologia_chiusura: '',
     });
     const [saving, setSaving] = useState(false);
 
+    const selectedCat = CATEGORIA_LAVORO.find(c => c.value === form.normativa_tipo);
+
     const handleSubmit = async () => {
+        if (!form.normativa_tipo) { toast.error('Scegli il tipo di lavoro'); return; }
         if (!form.title.trim()) { toast.error('Inserire un titolo'); return; }
         setSaving(true);
         try {
@@ -609,7 +642,7 @@ function CreateCommessaModal({ open, onOpenChange, clients, onCreated }) {
             });
             toast.success('Commessa creata');
             onOpenChange(false);
-            setForm({ title: '', client_id: '', description: '', value: '', deadline: '', priority: 'media', classe_exc: '', tipologia_chiusura: '' });
+            setForm({ title: '', client_id: '', description: '', value: '', deadline: '', priority: 'media', normativa_tipo: '', classe_exc: '', tipologia_chiusura: '' });
             onCreated();
         } catch (e) {
             toast.error(e.message || 'Errore creazione');
@@ -620,123 +653,179 @@ function CreateCommessaModal({ open, onOpenChange, clients, onCreated }) {
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-lg max-w-[95vw]">
                 <DialogHeader>
                     <DialogTitle className="text-lg font-bold text-[#1E293B]">Nuova Commessa</DialogTitle>
-                    <p className="text-sm text-slate-500">Crea una nuova commessa per il planning cantieri</p>
+                    <p className="text-sm text-slate-500">Scegli il tipo di lavoro, poi compila i dettagli</p>
                 </DialogHeader>
-                <div className="space-y-3 mt-2">
+                <div className="space-y-4 mt-2">
+                    {/* ── STEP 1: Category Selection ── */}
                     <div>
-                        <Label className="text-xs">Titolo *</Label>
-                        <Input
-                            data-testid="input-commessa-title"
-                            value={form.title}
-                            onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                            placeholder="es. Cancello carraio Villa Rossi"
-                            className="h-9"
-                        />
-                    </div>
-                    <div>
-                        <Label className="text-xs">Cliente</Label>
-                        <Select value={form.client_id || '__none__'} onValueChange={v => setForm(f => ({ ...f, client_id: v === '__none__' ? '' : v }))}>
-                            <SelectTrigger data-testid="select-client" className="h-9"><SelectValue placeholder="Seleziona..." /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="__none__">-- Nessuno --</SelectItem>
-                                {clients.map(c => (
-                                    <SelectItem key={c.client_id} value={c.client_id}>{c.business_name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <Label className="text-xs">Valore (EUR)</Label>
-                            <Input
-                                data-testid="input-commessa-value"
-                                type="number"
-                                value={form.value}
-                                onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
-                                placeholder="0.00"
-                                className="h-9"
-                            />
-                        </div>
-                        <div>
-                            <Label className="text-xs">Scadenza</Label>
-                            <Input
-                                data-testid="input-commessa-deadline"
-                                type="date"
-                                value={form.deadline}
-                                onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))}
-                                className="h-9"
-                            />
+                        <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Tipo di Lavoro *</Label>
+                        <div className="grid grid-cols-3 gap-2 mt-2">
+                            {CATEGORIA_LAVORO.map(cat => {
+                                const isSelected = form.normativa_tipo === cat.value;
+                                return (
+                                    <button
+                                        key={cat.value}
+                                        type="button"
+                                        data-testid={`btn-cat-${cat.value.toLowerCase()}`}
+                                        onClick={() => setForm(f => ({
+                                            ...f,
+                                            normativa_tipo: cat.value,
+                                            classe_exc: cat.value !== 'EN_1090' ? '' : f.classe_exc,
+                                            tipologia_chiusura: cat.value !== 'EN_13241' ? '' : f.tipologia_chiusura,
+                                        }))}
+                                        className={`relative rounded-xl border-2 p-3 text-left transition-all duration-200 cursor-pointer
+                                            ${isSelected ? cat.selectedColor : cat.color + ' hover:shadow-md'}`}
+                                    >
+                                        <div className={`w-8 h-8 rounded-lg ${cat.iconBg} flex items-center justify-center mb-2`}>
+                                            {cat.value === 'EN_1090' && <Hammer className="h-4 w-4 text-white" />}
+                                            {cat.value === 'EN_13241' && <LayoutGrid className="h-4 w-4 text-white" />}
+                                            {cat.value === 'GENERICA' && <Clock className="h-4 w-4 text-white" />}
+                                        </div>
+                                        <p className="font-bold text-sm leading-tight">{cat.label}</p>
+                                        <p className="text-[10px] font-semibold opacity-70 mt-0.5">{cat.subtitle}</p>
+                                        <p className="text-[10px] opacity-60 mt-1 leading-tight">{cat.desc}</p>
+                                        {isSelected && (
+                                            <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-white shadow flex items-center justify-center">
+                                                <div className="w-3 h-3 rounded-full bg-current" />
+                                            </div>
+                                        )}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
-                    <div>
-                        <Label className="text-xs">Priorità</Label>
-                        <Select value={form.priority} onValueChange={v => setForm(f => ({ ...f, priority: v }))}>
-                            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="alta">Alta</SelectItem>
-                                <SelectItem value="media">Media</SelectItem>
-                                <SelectItem value="bassa">Bassa</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <Label className="text-xs">Classe EXC (EN 1090)</Label>
-                            <select
-                                value={form.classe_exc}
-                                onChange={e => setForm(f => ({ ...f, classe_exc: e.target.value }))}
-                                className="w-full h-9 text-sm rounded-md border border-input bg-transparent px-2 shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                                data-testid="select-classe-exc"
+
+                    {/* ── STEP 2: Details (shown only after category) ── */}
+                    {form.normativa_tipo && (
+                        <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div>
+                                <Label className="text-xs">Titolo *</Label>
+                                <Input
+                                    data-testid="input-commessa-title"
+                                    value={form.title}
+                                    onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                                    placeholder={
+                                        form.normativa_tipo === 'EN_1090' ? 'es. Soppalco capannone Bianchi' :
+                                        form.normativa_tipo === 'EN_13241' ? 'es. Cancello carraio Villa Rossi' :
+                                        'es. Riparazione ringhiera condominio'
+                                    }
+                                    className="h-9"
+                                />
+                            </div>
+
+                            <div>
+                                <Label className="text-xs">Cliente</Label>
+                                <Select value={form.client_id || '__none__'} onValueChange={v => setForm(f => ({ ...f, client_id: v === '__none__' ? '' : v }))}>
+                                    <SelectTrigger data-testid="select-client" className="h-9"><SelectValue placeholder="Seleziona..." /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__none__">-- Nessuno --</SelectItem>
+                                        {clients.map(c => (
+                                            <SelectItem key={c.client_id} value={c.client_id}>{c.business_name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <Label className="text-xs">Valore (EUR)</Label>
+                                    <Input data-testid="input-commessa-value" type="number" value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))} placeholder="0.00" className="h-9" />
+                                </div>
+                                <div>
+                                    <Label className="text-xs">Scadenza</Label>
+                                    <Input data-testid="input-commessa-deadline" type="date" value={form.deadline} onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} className="h-9" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <Label className="text-xs">Priorità</Label>
+                                <Select value={form.priority} onValueChange={v => setForm(f => ({ ...f, priority: v }))}>
+                                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="alta">Alta</SelectItem>
+                                        <SelectItem value="media">Media</SelectItem>
+                                        <SelectItem value="bassa">Bassa</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* ── Campi specifici per EN 1090 ── */}
+                            {form.normativa_tipo === 'EN_1090' && (
+                                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2 animate-in fade-in duration-200">
+                                    <p className="text-xs font-semibold text-blue-800">Dettagli Strutturali</p>
+                                    <div>
+                                        <Label className="text-xs text-blue-700">Classe di Esecuzione (EXC)</Label>
+                                        <select
+                                            value={form.classe_exc}
+                                            onChange={e => setForm(f => ({ ...f, classe_exc: e.target.value }))}
+                                            className="w-full h-9 text-sm rounded-md border border-blue-200 bg-white px-2 shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                            data-testid="select-classe-exc"
+                                        >
+                                            <option value="">-- Non specificata --</option>
+                                            <option value="EXC1">EXC1 — Strutture leggere</option>
+                                            <option value="EXC2">EXC2 — Standard (la maggior parte)</option>
+                                            <option value="EXC3">EXC3 — Strutture critiche</option>
+                                            <option value="EXC4">EXC4 — Strutture eccezionali</option>
+                                        </select>
+                                    </div>
+                                    <p className="text-[10px] text-blue-600">Attiva: tracciabilità lotti ferro, patentini saldatori, WPS, DoP e Etichetta CE</p>
+                                </div>
+                            )}
+
+                            {/* ── Campi specifici per EN 13241 ── */}
+                            {form.normativa_tipo === 'EN_13241' && (
+                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg space-y-2 animate-in fade-in duration-200">
+                                    <p className="text-xs font-semibold text-amber-800">Dettagli Chiusura</p>
+                                    <div>
+                                        <Label className="text-xs text-amber-700">Tipologia</Label>
+                                        <select
+                                            value={form.tipologia_chiusura}
+                                            onChange={e => setForm(f => ({ ...f, tipologia_chiusura: e.target.value }))}
+                                            className="w-full h-9 text-sm rounded-md border border-amber-200 bg-white px-2 shadow-sm focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                            data-testid="select-tipologia-chiusura"
+                                        >
+                                            <option value="">-- Non specificata --</option>
+                                            <option value="cancello">Cancello scorrevole/battente</option>
+                                            <option value="portone">Portone industriale/sezionale</option>
+                                            <option value="porta">Porta pedonale</option>
+                                            <option value="barriera">Barriera stradale</option>
+                                            <option value="altro">Altro</option>
+                                        </select>
+                                    </div>
+                                    <p className="text-[10px] text-amber-600">Attiva: kit sicurezza, foto fotocellule/coste, verbale collaudo, Manuale d'Uso</p>
+                                </div>
+                            )}
+
+                            {/* ── Info per GENERICA ── */}
+                            {form.normativa_tipo === 'GENERICA' && (
+                                <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg animate-in fade-in duration-200">
+                                    <p className="text-xs font-semibold text-slate-700">Lavoro senza marcatura CE</p>
+                                    <p className="text-[10px] text-slate-500 mt-1">Solo gestione ore e materiali per controllo costi. Nessun obbligo burocratico.</p>
+                                </div>
+                            )}
+
+                            <div>
+                                <Label className="text-xs">Descrizione</Label>
+                                <Textarea data-testid="input-commessa-desc" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Dettagli sulla commessa..." rows={2} className="text-sm" />
+                            </div>
+
+                            <Button
+                                data-testid="btn-save-commessa"
+                                onClick={handleSubmit}
+                                disabled={saving}
+                                className={`w-full text-white font-semibold h-11 ${
+                                    form.normativa_tipo === 'EN_1090' ? 'bg-blue-600 hover:bg-blue-700' :
+                                    form.normativa_tipo === 'EN_13241' ? 'bg-amber-600 hover:bg-amber-700' :
+                                    'bg-slate-700 hover:bg-slate-800'
+                                }`}
                             >
-                                <option value="">-- Non spec. --</option>
-                                <option value="EXC1">EXC1</option>
-                                <option value="EXC2">EXC2</option>
-                                <option value="EXC3">EXC3</option>
-                                <option value="EXC4">EXC4</option>
-                            </select>
+                                {saving ? 'Salvataggio...' : `Crea Commessa ${selectedCat?.label || ''}`}
+                            </Button>
                         </div>
-                        <div>
-                            <Label className="text-xs">Tipologia Chiusura</Label>
-                            <select
-                                value={form.tipologia_chiusura}
-                                onChange={e => setForm(f => ({ ...f, tipologia_chiusura: e.target.value }))}
-                                className="w-full h-9 text-sm rounded-md border border-input bg-transparent px-2 shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                                data-testid="select-tipologia-chiusura"
-                            >
-                                <option value="">-- Non spec. --</option>
-                                <option value="cancello">Cancello</option>
-                                <option value="ringhiera">Ringhiera</option>
-                                <option value="porta">Porta</option>
-                                <option value="scala">Scala</option>
-                                <option value="struttura">Struttura</option>
-                                <option value="recinzione">Recinzione</option>
-                                <option value="pensilina">Pensilina</option>
-                                <option value="altro">Altro</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div>
-                        <Label className="text-xs">Descrizione</Label>
-                        <Textarea
-                            data-testid="input-commessa-desc"
-                            value={form.description}
-                            onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                            placeholder="Dettagli sulla commessa..."
-                            rows={2}
-                            className="text-sm"
-                        />
-                    </div>
-                    <Button
-                        data-testid="btn-save-commessa"
-                        onClick={handleSubmit}
-                        disabled={saving}
-                        className="w-full bg-[#0055FF] hover:bg-[#0044CC] text-white"
-                    >
-                        {saving ? 'Salvataggio...' : 'Crea Commessa'}
-                    </Button>
+                    )}
                 </div>
             </DialogContent>
         </Dialog>

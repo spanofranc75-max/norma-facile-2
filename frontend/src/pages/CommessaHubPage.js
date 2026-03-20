@@ -21,7 +21,7 @@ import {
     Ruler, Package, Play, Pause, CheckCircle2, XCircle,
     Clock, User, ChevronRight, Download, Plus, Link2,
     AlertTriangle, Loader2, BookOpen, CalendarDays, TrendingUp,
-    CircleDollarSign, Tag, Wrench as WrenchIcon, QrCode,
+    CircleDollarSign, Tag, Wrench as WrenchIcon, QrCode, Hammer,
 } from 'lucide-react';
 import CommessaOpsPanel from '../components/CommessaOpsPanel';
 import { DisabledTooltip } from '../components/DisabledTooltip';
@@ -65,6 +65,17 @@ const NORMATIVA_CONFIG = {
             { key: 'test_carichi', label: 'Test carichi / resistenza vento' },
             { key: 'dop_13241', label: 'Dichiarazione di Prestazione (DoP)' },
             { key: 'marcatura_ce', label: 'Marcatura CE' },
+        ],
+    },
+    GENERICA: {
+        label: 'Commessa Generica — Senza marcatura CE',
+        bg: 'bg-slate-50 border-slate-300',
+        text: 'text-slate-700',
+        icon: Hammer,
+        checklist: [
+            { key: 'ore_registrate', label: 'Ore lavorate registrate' },
+            { key: 'materiali_tracciati', label: 'Materiali utilizzati' },
+            { key: 'riepilogo_costi', label: 'Riepilogo costi' },
         ],
     },
 };
