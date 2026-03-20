@@ -18,7 +18,7 @@ import os
 import uuid
 from datetime import datetime
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://italiano-staging.preview.emergentagent.com")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://mixed-jobs-dev.preview.emergentagent.com")
 if not BASE_URL.startswith("http"):
     BASE_URL = f"https://{BASE_URL}"
 

@@ -24,6 +24,7 @@ import {
     CircleDollarSign, Tag, Wrench as WrenchIcon, QrCode, Hammer,
 } from 'lucide-react';
 import CommessaOpsPanel from '../components/CommessaOpsPanel';
+import VociLavoroSection from '../components/VociLavoroSection';
 import { DisabledTooltip } from '../components/DisabledTooltip';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -126,6 +127,7 @@ export default function CommessaHubPage() {
     const [closeSimpleNote, setCloseSimpleNote] = useState('');
     const [closingSimple, setClosingSimple] = useState(false);
     const [checklistStato, setChecklistStato] = useState({});
+    const [vociLavoro, setVociLavoro] = useState([]);
 
     const fetchHub = useCallback(async () => {
         try {
@@ -575,8 +577,15 @@ export default function CommessaHubPage() {
                             </Card>
                         )}
 
+                        {/* Voci di Lavoro — Cantieri Misti */}
+                        <Card className="border-gray-200">
+                            <CardContent className="p-4">
+                                <VociLavoroSection commessaId={commessaId} onVociChange={setVociLavoro} />
+                            </CardContent>
+                        </Card>
+
                         {/* Operational Panels: Approvvigionamento, Produzione, C/L, Repository */}
-                        <CommessaOpsPanel commessaId={commessaId} commessaNumero={c?.numero} normativaTipo={c?.normativa_tipo} onRefresh={fetchHub} />
+                        <CommessaOpsPanel commessaId={commessaId} commessaNumero={c?.numero} normativaTipo={c?.normativa_tipo} vociLavoro={vociLavoro} onRefresh={fetchHub} />
                     </div>
 
                     {/* Right: Timeline */}

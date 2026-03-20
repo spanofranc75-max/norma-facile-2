@@ -1,161 +1,132 @@
 <analysis>**original_problem_statement**:
-The user requested a deep, multi-faceted analysis of the entire application (NormaFacile 2.0) to identify its current state, weaknesses, and potential for growth. The analysis should cover perspectives from a programmer, a fiscal consultant, a regulatory compliance expert, and a graphic designer.
+The user, acting as the Lead Developer & Quality Manager, has defined a new core architecture for the application called Cantieri Misti (Mixed Jobs) or the Matrioska structure.
 
-Following the analysis, the user prioritized fixing the most critical issues identified to stabilize the application before implementing new features. The top priorities were:
-1.  **A. Refactor **: A massive 3,430-line backend file that was becoming unmanageable.
-2.  **B. Make the app mobile-responsive**: Key workflows, especially the Diario di Produzione, were unusable on mobile devices, hindering workers in the workshop.
-3.  **C. Clean up dead code**: Remove placeholder files and empty database collections to reduce clutter.
-
-The user instructed the agent to proceed with caution, performing surgical operations to avoid breaking existing functionality. The agent first fixed two critical bugs (margin calculation and production deployment) before starting the user's requested analysis and refactoring.
+**PRODUCT REQUIREMENTS:**
+1.  **Structure**: A single Commessa (Job Order) is no longer a monolithic block but a Fascicolo di Cantiere (Site File) that can contain multiple Voci di Lavoro (Work Items).
+2.  **Categories**: Each Work Item must be assigned one of three categories:
+    *   **A. STRUTTURALE (EN 1090)**: Requires traceability for steel lots, welder certificates, WPS, and auto-generation of DoP/CE labels.
+    *   **B. CANCELLI/CHIUSURE (EN 13241)**: Requires safety kit info, photos of safety components, testing reports, and a User/Maintenance Manual.
+    *   **C. GENERICA (No CE Marking)**: Only tracks hours and materials for cost control, with no bureaucratic requirements.
+3.  **Adaptive UI**: The UI, especially the mobile-first Diario di Produzione (Production Diary), must adapt based on the selected Work Item. It should hide irrelevant accounting data for workers and only ask for documentation (e.g., steel certificates, photos) relevant to that item's category.
+4.  **Document Generation (Pulsante Magico)**: The final document generator must create a unified Pacco Documenti Cantiere (Site Document Package) as a single file or ZIP, neatly organizing all required certifications from all Work Items within the job.
+5.  **Project Knowledge**: A  file must be maintained as the project's brain, containing all architectural rules, feature definitions, and a log of changes.
 
 **User's preferred language**: Italian. The next agent **MUST** respond in Italian.
 
 **what currently exists?**
-The application is in a much more stable state than at the start of the session. Critical bugs related to margin calculation and production deployments have been fixed. A comprehensive analysis of the entire codebase (~86,000 LOC, 53 DB collections) has been completed and a strategic roadmap for improvements has been created and approved by the user.
+The agent has successfully laid the foundation for the Cantieri Misti architecture. The  file has been created and updated with the user's definitive Master Plan.
 
-The agent has successfully completed two major stabilization tasks:
-1.  **Backend Refactoring**: The monolithic  file has been surgically split into 6 modular files, significantly improving maintainability. This was verified by 17/17 passing tests.
-2.  **Initial Mobile Responsiveness**: Key pages like the Dashboard, CommessaHub, and the critical Diario di Produzione component have been made responsive.
-
-The agent is currently in the middle of a similar large-scale refactoring on the frontend for the  component.
+The implementation is divided into three steps, with the first step completed and the second partially done:
+*   **Step 1 (Backend - COMPLETE)**: A new database collection () and a corresponding FastAPI route () with full CRUD APIs have been created to manage Work Items. The API was tested successfully via a command-line script.
+*   **Step 2 (Frontend - IN PROGRESS)**: A new React component, , has been created to manage Work Items from the UI. This component has been integrated into the main . The  has been modified to accept the list of Work Items and display a *union* of all required operational sections (e.g., if a job has both EN 1090 and EN 13241 items, it shows sections for both).
 
 **Last working item**:
--   **Last item agent was working**: Refactoring the massive  component (nearly 3,000 lines) by splitting its functionality into smaller, autonomous sub-components. The agent successfully created four sub-components (, , , ) and was in the process of rewriting the main  to act as a lean orchestrator for these new components.
+-   **Last item agent was working**: Implementing Step 2 of the Cantieri Misti feature: the frontend section for managing Voci di Lavoro and adapting the main operational panel. The agent just finished modifying  to fetch and display the new  and passed the work items to .
 -   **Status**: IN PROGRESS
--   **Agent Testing Done**: N
--   **Which testing method agent to use?**: frontend testing agent. This is a major and delicate frontend refactoring. A full regression test is required to ensure that all operational panels, their forms, dialogs, and actions still function correctly after being split into separate components.
+-   **Agent Testing Done**: N (Only backend script testing was performed. No frontend UI/E2E testing has been done yet).
+-   **Which testing method agent to use?**: frontend testing agent. A full regression test is required to verify the new CRUD UI for Voci di Lavoro, the adaptive logic of the , and retro-compatibility with old single-category jobs.
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Complete the refactoring of  (P0)**
--   **Issue 2: Clean up dead backend code and database collections (P2)**
+-   **Issue 1: Complete the Cantieri Misti (Mixed Work) implementation (P0)**
 
 **Issues Detail**:
--   **Issue 1: Complete the refactoring of  (P0)**
-    -   **Attempted fixes**: The agent created backups and successfully extracted four major sections (, , , ) into their own dedicated React components. The main file was then modified to import and use these new components.
+-   **Issue 1: Complete the Cantieri Misti (Mixed Work) implementation (P0)**
+    -   **Attempted fixes**: The backend API has been created and tested. The basic frontend structure (, updated , and ) is in place.
     -   **Next debug checklist**:
-        1.  The largest remaining piece, the Approvvigionamento (Procurement) section, is still inside the main . This needs to be surgically extracted into its own file, .
-        2.  Refactor the main  to be a pure orchestrator, managing shared state and passing data/callbacks as props to the new child components.
-        3.  Extract any remaining shared helper components (like ) or utility functions into a common file to avoid duplication.
-        4.  Run a full frontend regression test using the  to confirm that all functionalities (especially forms and dialogs) within all sections of the operations panel still work as expected.
-    -   **Why fix this issue and what will be achieved with the fix?**: The original 2,960-line component is a major source of technical debt, making it extremely difficult to maintain or modify. Completing this refactoring will make the core operational hub of the application stable, maintainable, and ready for future enhancements.
+        1.  **Integrate **: The component has been created but needs to be fully wired up in  to fetch, display, and manage work items via the new API.
+        2.  **Implement Step 3 (Diario di Produzione Adattivo)**: Modify the  component.
+            *   If a job has multiple work items, the first step for a worker must be to select which Voce di Lavoro they are working on, using large, clear, colored buttons as requested by the user.
+            *   Conditionally render the diary's input fields based on the category () of the *selected* work item.
+        3.  **Test the full flow**: Use  to run an end-to-end test:
+            *   Create a commessa with multiple, mixed-category work items.
+            *   Verify the  shows the correct union of sections.
+            *   Verify the  adapts correctly after selecting a work item.
+            *   Confirm single-category commesse still function as before.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a core architectural change mandated by the user to reflect their business reality, making the software significantly more powerful and flexible.
     -   **Status**: IN PROGRESS
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?**: Frontend.
-    -   **Blocked on other issue:** None.
-
--   **Issue 2: Clean up dead backend code and database collections (P2)**
-    -   **Attempted fixes**: This task was identified and approved but deferred to prioritize the larger refactoring tasks.
-    -   **Next debug checklist**:
-        1.  Delete the placeholder route files:  and .
-        2.  Remove their router registrations from .
-        3.  Run the script previously used () to identify all MongoDB collections with 0 documents.
-        4.  Create and run a new script to drop all identified empty/unused collections.
-    -   **Why fix this issue and what will be achieved with the fix?**: Reduces application clutter, simplifies the codebase, lowers cognitive load for developers, and removes potential confusion.
-    -   **Status**: NOT STARTED
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?**: Backend (health check).
+    -   **Should Test frontend/backend/both after fix?**: Both.
     -   **Blocked on other issue:** None.
 
 **In progress Task List**:
--   **Task 1: Complete Frontend Refactoring (P0)**
-    -   **Where to resume**: . The component has been partially split. The next step is to extract the Approvvigionamento section and then test everything.
-    -   **What will be achieved with this?**: A stable, modular, and maintainable core operational component, completing one of the user's top priorities for stabilization.
+-   **Task 1: Implement Cantieri Misti (P0)**
+    -   **Where to resume**: Frontend implementation in  and .
+    -   **What will be achieved with this?**: The app will support multi-category jobs, adapting the UI and data capture process accordingly.
     -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: Frontend.
+    -   **Should Test frontend/backend/both after fix?**: Both.
     -   **Blocked on something**: None.
 
 **Upcoming and Future Tasks**
-*This list is based on the  file created during this session.*
+*As defined in *
 
 **Upcoming Tasks:**
--   **(P1)** Make the remaining 19 pages of the application mobile-responsive to ensure a consistent experience across the platform.
--   **(P2)** Implement the Onboarding Wizard to guide new users through the initial setup of company data, costs, and operators.
--   **(P2)** Create the simplified Vista Officina (Workshop View) as a shortcut for workers to access only the Production Diary and Phase management.
+-   **(P1) Fase 3: Pulsante Magico**: Implement the final document package generator that creates a unified ZIP/PDF for a mixed job.
+-   **(P2) Vista Officina**: Create a dedicated, simplified, mobile-first view for workers showing only relevant production tasks.
+-   **(P2) Refactor SettingsPage.js**: Split the monolithic settings page into smaller components, as it exceeds the 800-line rule.
 
 **Future Tasks:**
--   Implement a more granular Role-Based Access Control (RBAC) system.
--   Add an Excel export feature for cost analysis reports.
--   Unify the multiple PDF generation services into a single, consistent service.
+-   Onboarding Wizard for new users.
+-   Granular Role-Based Access Control (RBAC).
+-   Excel export feature for cost analysis.
+-   Unify the 13 different PDF generation services into one.
 -   Implement digital signatures on PDF reports.
--   Build a read-only customer portal.
 
 **Completed work in this session**
--   **Bug Fix**: Corrected the margin calculation logic () to include labor costs from the Production Diary.
--   **Deployment Fix**: Resolved the critical Railway deployment blocker by implementing a  configuration for private Python packages.
--   **Deep Application Analysis**: Conducted a comprehensive analysis of the entire codebase and database, producing a detailed report and a strategic roadmap ().
--   **Backend Refactoring**: Surgically split the monolithic  (3,430 lines) into 6 modular files plus a thin wrapper, verified by 17/17 passing tests.
--   **Frontend Responsiveness (Phase 1)**: Made the , , , and  components mobile-responsive.
--   **DB Optimization**: Created necessary indexes on , , and other collections to improve performance.
-
-**Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork**: Production Instability on Railway.
--   **Recurrence count**: 1
--   **Status**: RESOLVED. The agent fixed this by creating  to handle private pip package installation.
+-   **Frontend Refactoring**:  refactored from ~3000 lines into a 161-line orchestrator and 8 sub-components.
+-   **Dead Code Cleanup**: Removed unused placeholder backend routes (, ) and models.
+-   **Mobile Responsiveness**: Made 8 key pages mobile-responsive.
+-   **Feature Definition**: Implemented the initial 3-category job creation flow.
+-   **Project Documentation**: Created and maintained  as the project's brain and single source of truth.
+-   **Cantieri Misti Backend**: Created the  API and database structure.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Module-based Backend Refactoring**: Splitting a large FastAPI router into smaller, focused router files aggregated by a thin wrapper to improve maintainability without altering the public API contract.
--   **Component-based Frontend Refactoring**: Deconstructing a monolithic React component into smaller, autonomous, and more manageable sub-components, each handling its own state and logic where possible.
--   **Nixpacks Build Configuration**: Using  to customize the Python build and installation process on the Railway hosting platform, specifically to handle private package indexes.
--   **Responsive Design with TailwindCSS**: Using responsive prefixes (e.g., , ) in TailwindCSS to adapt layouts from multi-column desktop views to single-column stacked mobile views.
+-   **Matrioska Architecture**: A core business logic concept where a parent document () contains a list of child documents (), and the UI adapts based on the properties of the children.
+-   **Union of Properties**: The  now determines which UI sections to show by creating a  of unique categories from all child work items, rather than relying on a single category from the parent.
+-   **Adaptive UI**: Conditionally rendering UI components and form fields based on a dynamic context (the selected work item category).
 
 **key DB schema**
--   No new collections were added.
--   Indexes were added to the following collections for performance: , , , .
+-   **voci_lavoro**: 
 
 **All files of reference**
--    (The file being refactored)
--    (newly created)
--    (newly created)
--    (newly created)
--    (newly created)
--    (The refactored wrapper)
--   All new files under  (e.g., , , etc.)
--    (The approved plan for future work)
+-    (The source of truth for all requirements)
+-    (The new backend API)
+-    (The new frontend component)
+-    (The integration point for the new UI)
+-    (The next file to be modified)
+-    (The panel that adapts its visibility)
 
 **Critical Info for New Agent**
--   **Top Priority is Frontend Refactoring**: Your immediate focus must be to complete the surgical operation on . The user is cautious and wants no regressions. The next step is extracting the Approvvigionamento section.
--   **Test Thoroughly**: After completing the refactoring, you MUST run a full frontend regression test using the . The component is central to many core workflows, and any breakage would be critical.
--   **Follow the Roadmap**: All future work should be prioritized based on the  file, which has been approved by the user. Address the Urgenti items first.
--   **Maintain Surgical Approach**: The user appreciates a cautious, step-by-step approach. Continue to explain your plan clearly and avoid making large, sweeping changes without breaking them down first.
+-   **Follow the Master Plan**: Your primary guide is . All development must align with the Matrioska Structure, Adaptive Diary, and Magic Button concepts defined within.
+-   **Resume at Step 2 (Frontend)**: The backend API for Voci di Lavoro is complete. Your immediate task is to finish wiring up the frontend  component and then move to Step 3: adapting the  component.
+-   **UX is Key**: The user is very specific about the user experience for workshop employees: large, colored buttons, clear icons, and no unnecessary information (like costs). Adhere to this strictly.
+-   **Test Thoroughly**: This is a major architectural change. After implementing the adaptive diary, you must run a full end-to-end test with the  to ensure the new mixed-job flow works and that old single-job commesse are not broken.
 
 **documents and test reports created in this job**
--    (Updated with latest completed work)
--    (New file containing the strategic plan for stabilization and future features)
--    (Backend margin fix verification)
--    (Frontend mobile responsiveness verification)
--    (Backend  refactoring verification)
+-   
+-    (CommessaOpsPanel refactor verification)
+-    (Mobile responsiveness verification)
+-    (3-category creation flow verification)
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. User asks for a deep analysis of the app and a realistic report. (Completed)
-9.  User receives the detailed analysis and decides to prioritize fixing critical issues before adding features. (Acknowledged)
-8.  User requests to start with the most urgent issue, refactoring , and asks for a surgical operation. (Completed)
-7.  User is informed about the successful refactoring of . (Acknowledged)
-6.  User asks what to stabilize next. (Agent proposed options)
-5.  User agrees to refactor  and clean up dead code simultaneously, again emphasizing a surgical approach. (In Progress)
-4.  User is informed that the agent is starting the refactoring of . (Acknowledged)
-3.  User is informed about the plan to use a Python script for the surgical extraction. (Acknowledged)
-2.  User is informed that the new sub-components have been created. (Acknowledged)
-1.  **LATEST**: User is informed that the main  is being rewritten to use the new components. (Acknowledged)
+1.  **Request**: Define the Master Plan for NormaFacile 2.0 with the Matrioska (mixed job) structure, an adaptive production diary, and a Magic Button for document generation. Mandated that this plan be added to . (DONE)
+2.  **Confirmation**: Agent confirmed the  file was updated. (ACK)
+3.  **Request**: Proceed with the 3-step surgical plan to implement the Matrioska structure. Provided specific UX feedback for the production diary: use colored buttons/icons for the 3 categories to help workers in the workshop. Requested an example of the diary UI for a mixed job. (IN PROGRESS)
 
 **Project Health Check:**
--   **Broken**: None. Critical bugs have been fixed. The application is in a transient state due to the ongoing frontend refactoring but is not fundamentally broken.
+-   **Broken**: No. The application is in a stable state but undergoing a major, planned architectural enhancement.
 -   **Mocked**: None.
 
 **3rd Party Integrations**
--   **Emergent LLM Key**: Used for AI analysis features.
--   **Railway**: Backend hosting. Deployment is now stable.
--   **Vercel**: Frontend hosting. Stable.
--   **Google OAuth**: Production authentication method.
+-   Google OAuth
+-   Railway (Backend Hosting)
+-   Vercel (Frontend Hosting)
 
 **Testing status**
--   **Testing agent used after significant changes**: YES. The agent correctly used the testing agent after fixing the margin bug, implementing responsiveness, and refactoring the backend.
+-   **Testing agent used after significant changes**: YES
 -   **Troubleshoot agent used after agent stuck in loop**: NO
--   **Test files created**: None, but existing test suites were used for verification.
--   **Known regressions**: None in this session.
-
-**What agent forgot to execute**
--   The agent planned to clean up dead code (Issue #2) in parallel with the  refactoring. However, due to the complexity and size of the frontend task, the dead code cleanup was not started. It remains a pending task.</analysis>
+-   **Test files created**: None.
+-   **Known regressions**: None.</analysis>

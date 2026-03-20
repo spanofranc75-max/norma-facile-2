@@ -118,7 +118,7 @@
   "test_credentials": {
     "admin_session_token": "audit_session_1772995719136",
     "admin_user_id": "test-audit-1772995719136",
-    "api_url": "https://italiano-staging.preview.emergentagent.com"
+    "api_url": "https://mixed-jobs-dev.preview.emergentagent.com"
   },
   "retest_needed": false,
   "should_main_agent_self_test": false,

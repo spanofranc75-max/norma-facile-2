@@ -43,7 +43,7 @@ function Section({ title, icon: Icon, count, defaultOpen, children }) {
     );
 }
 
-export default function CommessaOpsPanel({ commessaId, commessaNumero, normativaTipo, onRefresh }) {
+export default function CommessaOpsPanel({ commessaId, commessaNumero, normativaTipo, vociLavoro = [], onRefresh }) {
     const [ops, setOps] = useState(null);
     const [docs, setDocs] = useState([]);
     const [materialBatches, setMaterialBatches] = useState([]);
@@ -51,6 +51,13 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
     const [fornitori, setFornitori] = useState([]);
     const [camLotti, setCamLotti] = useState([]);
     const [camCalcolo, setCamCalcolo] = useState(null);
+
+    // Calcola le categorie effettive (unione della commessa + voci)
+    const allCategorie = new Set([normativaTipo]);
+    vociLavoro.forEach(v => { if (v.normativa_tipo) allCategorie.add(v.normativa_tipo); });
+    const hasEN1090 = allCategorie.has('EN_1090');
+    const hasEN13241 = allCategorie.has('EN_13241');
+    const isOnlyGenerica = allCategorie.size === 1 && allCategorie.has('GENERICA');
 
     // Load fornitori from anagrafica
     useEffect(() => {

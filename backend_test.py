@@ -9,7 +9,7 @@ import sys
 from datetime import datetime
 
 class DistinteAPITester:
-    def __init__(self, base_url="https://italiano-staging.preview.emergentagent.com"):
+    def __init__(self, base_url="https://mixed-jobs-dev.preview.emergentagent.com"):
         self.base_url = base_url
         self.session_token = "test_session_1772177028714"  # From auth setup
         self.user_id = "test-user-1772177028714"

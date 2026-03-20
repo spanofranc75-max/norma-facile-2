@@ -18,7 +18,7 @@ import time
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = 'https://italiano-staging.preview.emergentagent.com'
+    BASE_URL = 'https://mixed-jobs-dev.preview.emergentagent.com'
 
 
 # ── Fixtures ───────────────────────────────────────────────────────
