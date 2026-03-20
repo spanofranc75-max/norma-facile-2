@@ -230,6 +230,14 @@ export default function CommessaHubPage() {
         } catch (e) { toast.error(e.message); }
     };
 
+    const handleDownloadPacco = async () => {
+        try {
+            toast.info('Generazione Pacco Documenti in corso...');
+            await downloadPdfBlob(`/commesse/${commessaId}/pacco-documenti`, `Pacco_Documenti_${hub?.commessa?.numero || commessaId}.pdf`);
+            toast.success('Pacco Documenti generato');
+        } catch (e) { toast.error(e.message); }
+    };
+
     const handleCloseSimple = async () => {
         setClosingSimple(true);
         try {
@@ -289,6 +297,9 @@ export default function CommessaHubPage() {
                         </Button>
                         <Button size="sm" onClick={handleDownloadDossier} className="bg-[#0055FF] text-white hover:bg-[#0044CC] text-xs px-2 sm:px-3" data-testid="btn-dossier">
                             <Download className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Dossier PDF</span>
+                        </Button>
+                        <Button size="sm" onClick={handleDownloadPacco} className="bg-emerald-600 text-white hover:bg-emerald-700 text-xs px-2 sm:px-3 shadow-lg shadow-emerald-600/20" data-testid="btn-pacco-magico">
+                            <FileText className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Pacco Documenti</span>
                         </Button>
                     </div>
                 </div>

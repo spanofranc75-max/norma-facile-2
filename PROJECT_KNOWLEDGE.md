@@ -357,22 +357,52 @@ si DEVE proporre di spezzarlo.
 ## 10. Prossimi Passi (Roadmap)
 
 ### FASE 3 — Pulsante Magico (IN CORSO)
-- Servizio backend `services/pacco_documenti.py` che raccoglie tutti i dati
-- Generazione PDF con WeasyPrint: Copertina + Parte A (1090) + Parte B (13241) + Parte C (Generica)
-- Endpoint API: `GET /api/commesse/{id}/pacco-documenti`
-- Bottone nel CommessaHubPage
-- Automazione: checklist OK → verbale "Approvato"
+- Servizio backend `services/pacco_documenti.py`
+- Copertina + Indice + Parte A (1090) + Parte B (13241) + Parte C (Generica)
+- Filtro Beltrami: pesca solo documenti pertinenti alla voce
+- Automazione: checklist OK → verbale "Conforme" auto-firmato
 - Minimalismo: salta parti per categorie non presenti
+
+### FASE 4 — Smistatore Intelligente (PROSSIMO)
+- Certificati cumulativi: AI analizza ogni pagina, matching per numero colata
+- DDT Multi-Commessa: spacchettamento automatico per commessa/voce
+- Consumabili auto: filo >= 1.0mm → EN 1090, filo < 1.0mm → EN 13241/Generiche
+- Magazzino Scorte: materiali non assegnati → scorta con certificato pronto
 
 ### Backlog Tecnico
 - Split `SettingsPage.js` (1.731 righe)
 - Split `commesse.py` (1.330 righe)
-- Responsive restanti pagine
 
 ### Backlog Funzionale
-- RBAC granulare (ruoli personalizzati)
-- Export Excel per analisi costi
-- Unificazione 13 servizi PDF
-- Firme digitali su PDF
-- Portale clienti read-only
-- Notifiche WhatsApp scadenze
+- RBAC, Export Excel, Unificazione PDF, Firme digitali, Portale clienti, WhatsApp
+
+---
+
+## 11. SMISTATORE INTELLIGENTE DOCUMENTI — Logiche Ferree
+
+> Regole per l'automazione documentale avanzata (Fase 4).
+
+### 11.1 Gestione Certificati Cumulativi (es. Beltrami)
+1. AI Vision analizza OGNI PAGINA del PDF multi-pagina
+2. Estrae: numero colata, tipo acciaio, dimensioni
+3. **MATCHING** con materiali del DDT associato → solo pagine pertinenti alla commessa
+4. **SURPLUS** → "scorte documentali inattive" nel DB (non nel fascicolo)
+5. Architettura: metadati in `commessa_documents.metadata_estratti` con `matching_status`
+
+### 11.2 DDT Multi-Commessa & Magazzino
+1. AI Vision analizza righe DDT → confronto con OdP/OdA aperti
+2. Spacchettamento automatico per commessa/voce
+3. Materiale non assegnato → `magazzino_scorte` con certificato pronto
+
+### 11.3 Regola Consumabili (Filo & Gas)
+| Consumabile | Condizione | Destinazione |
+|---|---|---|
+| Filo >= 1.0 mm | Diametro >= 1.0 | Tutte EN 1090 attive nel periodo |
+| Filo < 1.0 mm | Diametro < 1.0 | EN 13241 e Generiche |
+| Gas | Tutti | Tutte EN 1090 del periodo |
+
+### 11.4 Architettura: Metadati + Indice Invertito (NO vettoriale)
+- PDF cumulativo salvato UNA SOLA VOLTA
+- Indice invertito `doc_page_index`: `numero_colata → [doc_id, pagina, commessa]`
+- Il Pulsante Magico pesca solo le pagine giuste via indice
+- Zero duplicazione file, ricerca rapida per numero colata
