@@ -18,7 +18,7 @@ Il software gestisce l'intero ciclo di vita di una commessa: dal preventivo alla
 - Il **titolare** (Francesco) — vede tutto, crea preventivi, controlla margini
 - Il **responsabile produzione** — gestisce fasi, diario produzione, operatori
 - Il **responsabile qualità** — fascicolo tecnico, certificati 3.1, WPS, tracciabilità
-- Gli **operai in officina** — registrano ore e avanzamento dal cellulare (bottoni grandi, zero burocrazia)
+- Gli **operai in officina** — interfaccia blindata con Timer/Foto/Checklist (Vista Officina)
 
 ---
 
@@ -65,7 +65,7 @@ Ogni voce di lavoro all'interno di una commessa segue UNO di questi binari:
 
 ---
 
-## 3. STRUTTURA MATRIOSKA — Cantieri Misti
+## 3. STRUTTURA MATRIOSKA — Cantieri Misti (IMPLEMENTATA)
 
 > **REGOLA FONDAMENTALE:** Una Commessa non è un blocco unico. E' un "Fascicolo di Cantiere"
 > che puo' contenere diverse **Voci di Lavoro**, ognuna con la sua identità normativa.
@@ -76,10 +76,7 @@ Il cliente Bianchi ordina per lo stesso cantiere:
 - **Voce B:** "Cancello carraio" → EN 13241 → attiva foto sicurezza, collaudo forze, Libretto Manutenzione
 - **Voce C:** "Riparazione ringhiera" → GENERICA → solo ore e materiali, nessuna burocrazia
 
-Senza la Matrioska, bisognerebbe creare 3 commesse separate. Tre numeri, tre cartelle, tre contabilità. Un casino.
-
 ### Come funziona nel software
-
 1. **Alla creazione** della commessa si sceglie la categoria principale
 2. **Dopo la creazione**, nella scheda della commessa si possono aggiungere "Voci di Lavoro" extra
 3. **Ogni voce** ha: descrizione, categoria normativa, e i campi specifici della sua categoria
@@ -88,16 +85,15 @@ Senza la Matrioska, bisognerebbe creare 3 commesse separate. Tre numeri, tre car
 6. **Il "Pulsante Magico"** genera un Fascicolo di Cantiere unico che raggruppa tutto
 
 ### Schema DB
-
 ```
-// Nuova collezione: voci_lavoro
+// Collezione: voci_lavoro
 {
   voce_id: "voce_abc123",
   commessa_id: "com_xyz789",
   descrizione: "Soppalco capannone",
   normativa_tipo: "EN_1090",
-  classe_exc: "EXC2",               // solo per EN_1090
-  tipologia_chiusura: "",            // solo per EN_13241
+  classe_exc: "EXC2",
+  tipologia_chiusura: "",
   ordine: 1,
   created_at: "2026-03-20T...",
 }
@@ -109,10 +105,60 @@ Il campo `normativa_tipo` della commessa vale come "voce unica implicita".
 
 ---
 
-## 4. DIARIO DI PRODUZIONE ADATTIVO (Mobile-First)
+## 4. VISTA OFFICINA — Interfaccia Operai Blindata (IMPLEMENTATA)
 
-> L'operaio accede dal telefono (tramite QR o link rapido).
-> Il diario si adatta alla voce di lavoro selezionata.
+> Gli operai sono extracomunitari e hanno poca dimestichezza con la tecnologia.
+> Il tempo sottratto alla produzione deve essere quasi zero.
+
+### Accesso
+- **QR Code** stampato sulla commessa → porta direttamente alla voce di lavoro specifica
+- **PIN 4 cifre** per autenticare l'operaio (impostato dall'admin nel Diario Produzione)
+- Rotta: `/officina/:commessaId/:voceId`
+- NESSUN Google Auth richiesto
+
+### I 4 Ponti di Collegamento
+
+#### PONTE 1: DIARIO (Timer Tempi)
+- 3 bottoni grandi: **START** (verde), **PAUSA** (giallo), **STOP** (rosso)
+- Timer visivo che scorre — l'operaio vede solo il tempo
+- Al STOP → minuti salvati automaticamente nel `diario_produzione` della commessa
+- Stato timer persistito in DB (`officina_timers`) — sopravvive a refresh browser
+- **Zero numeri di costo visibili**
+
+#### PONTE 2: FOTO (Certificati/Collaudi)
+- Singolo bottone **FOTO** grande circolare
+- Routing intelligente basato sulla Voce attiva:
+  - **EN 1090** → `tipo: "certificato_31"` (Repository certificati 3.1)
+  - **EN 13241** → `tipo: "foto"` (Fascicolo tecnico)
+  - **GENERICA** → `tipo: "foto"` (Repository documenti)
+- Nome file chiaro: `FOTO_{normativa}_{numero_commessa}_{timestamp}.jpg`
+- Usato dal Pulsante Magico per assemblare il fascicolo
+
+#### PONTE 3: QUALITA' (Checklist)
+- Icone + **👍/👎** per ogni punto di controllo (nessun testo lungo)
+- Checklist per categoria:
+  - EN 1090: Saldature Pulite, Dimensioni OK, Materiale OK
+  - EN 13241: Sicurezze OK, Movimento OK
+  - GENERICA: Lavoro Completato
+- **👎 → crea alert automatico per Admin** (badge rosso nella Dashboard)
+- Risultati popolano automaticamente il verbale di collaudo finale
+
+#### PONTE 4: BLOCCO DATI
+- Operaio intrappolato in `/officina` — tema dark, nessuna navigazione
+- Nessun menu laterale, nessun link a fatture/clienti/fornitori
+- Solo: Timer + Foto + Checklist + info commessa
+
+### Schema DB
+```
+// Collezioni:
+officina_timers: { timer_id, commessa_id, voce_id, status, started_at, pauses[], total_minutes }
+officina_checklist: { checklist_id, commessa_id, voce_id, items[{codice, esito}], all_ok }
+officina_alerts: { alert_id, admin_id, commessa_id, tipo: "qualita_nok", messaggio, letto }
+```
+
+---
+
+## 5. DIARIO DI PRODUZIONE ADATTIVO (Mobile-First) (IMPLEMENTATO)
 
 ### Regole ferree
 
@@ -128,223 +174,200 @@ L'operaio vede solo il "Cosa fare", mai il "Quanto costa".
 
 **FLUSSO OPERAIO:**
 1. Apre il diario dal cellulare
-2. Seleziona la commessa (o la trova gia' preselezionata dal QR)
-3. Se la commessa ha piu' voci, sceglie "Su quale voce stai lavorando?"
-4. Il diario mostra SOLO i campi pertinenti a quella voce
-5. Salva con un bottone grande e chiaro
+2. Se la commessa ha piu' voci, sceglie "Su quale voce stai lavorando?" (bottoni colorati)
+3. Il diario mostra SOLO i campi pertinenti a quella voce
+4. Salva con un bottone grande e chiaro
 
 ---
 
-## 5. IL PULSANTE MAGICO (Output Documentale)
+## 6. IL PULSANTE MAGICO — Documentazione Unificata (FASE 3)
 
 > Un unico bottone nella scheda commessa che genera il "Pacco Documenti Cantiere".
 
-### Output per tipo
+### Logica di Generazione
 
-**EN 1090 → Fascicolo Tecnico:**
-- Dichiarazione di Prestazione (DoP)
-- Etichetta CE
-- Piano di Controllo Qualita'
-- Certificati materiali 3.1
-- WPS/WPQR
-- Scheda Rintracciabilita' Materiali
-- CAM (se applicabile)
+**RACCOLTA DATI (dietro le quinte):**
+Il sistema raccoglie automaticamente da ogni Voce di Lavoro:
+1. **Documenti caricati** → `commessa_documents` (filtrati per `metadata_estratti.voce_id`)
+2. **Foto officina** → `commessa_documents` con `metadata_estratti.source: "officina"`
+3. **Checklist qualità** → `officina_checklist` (esiti 👍/👎 per voce)
+4. **Ore lavorate** → `diario_produzione` (per voce, con source `officina_timer`)
+5. **Tracciabilità materiali** → `material_batches` (solo EN 1090)
+6. **Checklist CAM** → `cam_lotti` (solo EN 1090)
 
-**EN 13241 → Libretto Manutenzione:**
-- Scheda tecnica prodotto
-- Verbale collaudo forze (EN 12453)
-- Foto kit sicurezza (fotocellule, coste, lampeggiante)
-- Manuale d'Uso e Manutenzione
-- Dichiarazione di Prestazione (DoP)
+**REGOLA AUTOMAZIONE COLLAUDO:**
+Se l'operaio ha messo **👍 (OK)** su tutti i punti della checklist qualità,
+il Verbale di Collaudo risulta **"Approvato"** automaticamente (firmato tecnicamente).
+Se anche un solo **👎 (NOK)**, il verbale mostra "Non Conforme" con dettaglio problemi.
 
-**GENERICA → Riepilogo Lavorazioni:**
-- Ore lavorate per operaio
-- Materiali utilizzati
-- Riepilogo costi (solo per il titolare, MAI per l'operaio)
+**REGOLA MINIMALISMO:**
+NON generare sezioni per categorie non usate nel cantiere.
+Se il cantiere ha solo EN 1090 → nessuna "Parte B: Cancelli".
 
-### Per Cantieri Misti (Matrioska)
-Il Pulsante Magico genera un **unico file PDF** (o cartella ZIP) che separa ordinatamente:
-1. Sezione "Documenti Strutturali (EN 1090)" — per ogni voce strutturale
-2. Sezione "Documenti Sicurezza Cancelli (EN 13241)" — per ogni voce cancello
-3. Sezione "Riepilogo Lavorazioni Generiche" — per le voci senza marcatura
+### Struttura PDF Finale
+
+```
+PACCO DOCUMENTI CANTIERE — Commessa N. 2025/123
+
+INDICE
+├── Copertina (Dati commessa, cliente, date)
+│
+├── PARTE A: STRUTTURE (EN 1090)       ← solo se almeno 1 voce EN 1090
+│   ├── A.1 Dati Generali Voce
+│   ├── A.2 Certificati Materiali 3.1
+│   ├── A.3 Foto Lavorazione
+│   ├── A.4 Verbale Collaudo Qualità (auto-compilato da checklist)
+│   └── A.5 Riepilogo Ore Lavorate
+│
+├── PARTE B: SICUREZZA CANCELLI (EN 13241)  ← solo se almeno 1 voce EN 13241
+│   ├── B.1 Dati Generali Voce
+│   ├── B.2 Foto Kit Sicurezza
+│   ├── B.3 Verbale Collaudo (auto-compilato da checklist)
+│   └── B.4 Riepilogo Ore Lavorate
+│
+└── PARTE C: LAVORAZIONI GENERICHE     ← solo se almeno 1 voce GENERICA
+    └── C.1 Riepilogo Ore e Materiali
+```
+
+### Tecnologia
+- **WeasyPrint** — già installato e usato in 13+ servizi PDF del progetto
+- **pypdf** — per merge di pagine se necessario
+- Pattern: HTML template (Jinja-style string format) → CSS @page A4 → WeasyPrint → BytesIO → PDF
+- File di riferimento per lo stile: `services/pdf_super_fascicolo.py` (stesso pattern)
 
 ---
 
-## 6. Architettura del Codice
+## 7. Architettura del Codice
 
 ### Stack Tecnologico
 - **Frontend:** React 18 + TailwindCSS + Shadcn/UI
 - **Backend:** Python FastAPI + MongoDB
-- **Auth:** Google OAuth via Emergent Platform
+- **Auth:** Google OAuth (admin) + PIN 4 cifre (operai/Vista Officina)
 - **Hosting:** Railway (backend) + Vercel (frontend)
 - **AI:** Emergent LLM Key (analisi certificati, OCR)
+- **PDF:** WeasyPrint + pypdf
 
 ### Struttura Cartelle
 ```
 /app/
 ├── backend/
-│   ├── main.py                     # Entry point FastAPI
+│   ├── main.py
 │   ├── core/
-│   │   ├── database.py             # MongoDB connection
-│   │   └── security.py             # Auth, session, cookies
+│   │   ├── database.py
+│   │   └── security.py
 │   ├── routes/
 │   │   ├── commesse.py             # CRUD commesse (~1330 righe)
-│   │   ├── commessa_ops.py         # Wrapper sottile per ops
-│   │   ├── commessa_ops_common.py  # Helper condivisi
-│   │   ├── approvvigionamento.py   # RdP, OdA, Arrivi
-│   │   ├── produzione_ops.py       # Fasi produzione
-│   │   ├── conto_lavoro.py         # Verniciatura, zincatura
-│   │   ├── consegne_ops.py         # DDT, consegne
-│   │   └── documenti_ops.py        # Repository documenti
+│   │   ├── voci_lavoro.py          # CRUD voci di lavoro (Matrioska)
+│   │   ├── officina.py             # Vista Officina: PIN, Timer, Foto, Checklist, Alerts
+│   │   ├── commessa_ops.py
+│   │   ├── approvvigionamento.py
+│   │   ├── produzione_ops.py
+│   │   ├── conto_lavoro.py
+│   │   ├── consegne_ops.py
+│   │   └── documenti_ops.py
 │   └── services/
-│       ├── margin_service.py       # Calcolo margini
+│       ├── pdf_super_fascicolo.py   # Fascicolo Tecnico EN 1090 (1050 righe)
+│       ├── commessa_dossier.py      # Dossier singola commessa
+│       ├── pdf_template_v2.py       # Template PDF unificato
+│       ├── margin_service.py
 │       └── ...
 └── frontend/
     └── src/
         ├── components/
-        │   ├── CommessaOpsPanel.js         # Orchestratore (161 righe)
-        │   ├── ApprovvigionamentoSection.js # RdP, OdA, Arrivi (568 righe)
-        │   ├── ProduzioneSection.js         # Fasi + Diario (120 righe)
-        │   ├── ConsegneSection.js           # DDT + DoP (149 righe)
-        │   ├── ContoLavoroSection.js        # Vern/Zinc/Sabb (358 righe)
-        │   ├── TracciabilitaSection.js      # Lotti EN 1090 (113 righe)
-        │   ├── CAMSection.js                # Criteri Ambientali (243 righe)
-        │   ├── RepositoryDocumentiSection.js # Upload + AI (369 righe)
-        │   └── DiarioProduzione.js          # Diario ore operai
+        │   ├── CommessaOpsPanel.js   # Orchestratore (usa UNIONE categorie)
+        │   ├── VociLavoroSection.js  # UI Voci di Lavoro
+        │   ├── DiarioProduzione.js   # Diario adattivo + gestione PIN
+        │   └── ...
         └── pages/
-            ├── CommessaHubPage.js   # Hub singola commessa
-            ├── PlanningPage.js      # Planning + CreateCommessaModal
-            ├── SettingsPage.js      # ⚠️ 1.731 righe — DA SPEZZARE
-            └── ...
+            ├── CommessaHubPage.js    # Hub commessa + QR Officina
+            ├── OfficinaPage.js       # Vista operai blindata (4 Ponti)
+            ├── Dashboard.js          # + Badge alert qualità
+            └── SettingsPage.js       # ⚠️ 1.731 righe — DA SPEZZARE
 ```
 
 ### Regole di Manutenzione Codice
-
 **SOGLIA 800 RIGHE:** Ogni volta che un Service o Route supera le 800 righe,
-si DEVE proporre di spezzarlo in file piu' piccoli (es. `service_1090.py`, `service_13241.py`, `service_generica.py`).
+si DEVE proporre di spezzarlo.
 
-**File gia' spezzati:**
-- `commessa_ops.py` (3.430 righe) → **FATTO** → 6 moduli + wrapper
-- `CommessaOpsPanel.js` (2.964 righe) → **FATTO** → 8 sotto-componenti + orchestratore
+**File spezzati:**
+- `commessa_ops.py` (3.430 righe) → 6 moduli + wrapper
+- `CommessaOpsPanel.js` (2.964 righe) → 8 sotto-componenti + orchestratore
 
 **File da spezzare:**
 - `SettingsPage.js` (1.731 righe)
 - `commesse.py` (1.330 righe)
 
-**Non eliminare dati esistenti.** Se la struttura cambia, mappare i dati vecchi verso la nuova struttura a 3 binari.
-
----
-
-## 7. UX Officina — Regole di Design
-
-### Bottoni Grandi e Chiari
-Il titolare e gli operai usano l'app con le **mani sporche di ferro** e spesso **di fretta**:
-- Bottoni grandi (min h-11, testo leggibile)
-- Colori distintivi: blu = strutturale, ambra = cancello, grigio = generico
-- Icone sempre presenti accanto al testo
-- Touch target minimo 44x44px per mobile
-
-### Accesso Separato per Operai
-**L'operaio NON deve MAI vedere:** costi orari, margini, prezzi, preventivi, fatture, impostazioni, anagrafica clienti/fornitori.
-**L'operaio DEVE vedere solo:** Diario di Produzione, Fasi di lavorazione, Foto del lavoro.
-
-> **Vista Officina** (da implementare): interfaccia mobile-first, accessibile con PIN o QR code,
-> che mostra solo le commesse attive e il diario di produzione.
-
-### Responsive Mobile
-Pattern TailwindCSS usati su tutte le pagine:
-- `flex-col sm:flex-row` per header con bottoni
-- `hidden md:table-cell` per colonne secondarie nelle tabelle
-- `overflow-x-auto` wrapper attorno alle tabelle
-- `w-full sm:w-auto` per bottoni full-width su mobile
-- `grid-cols-1 sm:grid-cols-N` per form nei dialog
-
 ---
 
 ## 8. Database — Regole
 
-- **NON modificare** tabelle/collezioni esistenti per aggiungere funzionalita'
-- **Creare nuove collezioni** se servono dati nuovi (es. `voci_lavoro`, `kit_sicurezza_13241`)
-- Tutti i campi ID usano prefissi: `com_` (commesse), `user_` (utenti), `voce_` (voci di lavoro)
+- **NON modificare** collezioni esistenti per aggiungere funzionalita'
+- **Creare nuove collezioni** se servono dati nuovi
+- Tutti i campi ID usano prefissi: `com_`, `user_`, `voce_`, `tmr_`, `chk_`, `alert_`
 - `_id` di MongoDB **MAI** esposto nelle API REST
 - Date sempre in UTC con `datetime.now(timezone.utc)`
 
-### Collezioni Principali
-| Collezione | Scopo | Note |
-|---|---|---|
-| `commesse` | Fascicoli di cantiere | Campo chiave: `normativa_tipo` (categoria principale) |
-| `voci_lavoro` | Voci di lavoro dentro una commessa | **NUOVA** — Struttura Matrioska |
-| `preventivi` | Preventivi clienti | Possono generare commesse |
-| `articoli` | Catalogo articoli/materiali | Con giacenza magazzino |
-| `diario_produzione` | Registrazioni ore operai | Per commessa + voce |
-| `material_batches` | Lotti materiale tracciati | Solo EN 1090 |
-| `cam_lotti` | Lotti CAM per DM 256/2022 | Solo EN 1090 |
-| `fatture` | Fatture emesse | Collegabili a commesse |
-| `fatture_ricevute` | Fatture fornitori | Per calcolo costi |
-| `clients` | Clienti + fornitori | Campo `client_type` distingue |
+### Collezioni
+| Collezione | Scopo |
+|---|---|
+| `commesse` | Fascicoli di cantiere |
+| `voci_lavoro` | Voci di lavoro (Matrioska) |
+| `preventivi` | Preventivi clienti |
+| `articoli` | Catalogo articoli/materiali |
+| `diario_produzione` | Registrazioni ore operai |
+| `operatori` | Anagrafica operai + PIN |
+| `material_batches` | Lotti materiale tracciati (EN 1090) |
+| `cam_lotti` | Lotti CAM (EN 1090) |
+| `commessa_documents` | Repository documenti + foto officina |
+| `officina_timers` | Timer START/PAUSA/STOP |
+| `officina_checklist` | Esiti checklist qualità |
+| `officina_alerts` | Alert qualità per admin |
+| `fatture` | Fatture emesse |
+| `fatture_ricevute` | Fatture fornitori |
+| `clients` | Clienti + fornitori |
 
 ---
 
 ## 9. Log delle Modifiche
 
-### 20 Marzo 2026 — Sessione di Stabilizzazione
+### 20 Marzo 2026 — Fork 1: Cantieri Misti
+- **Fase 1.5 — Voci di Lavoro:** Backend CRUD (`voci_lavoro.py`) + Frontend (`VociLavoroSection.js`)
+- **CommessaOpsPanel:** Ora usa UNIONE categorie (hasEN1090, hasEN13241, isOnlyGenerica)
+- **Diario Adattivo:** Selettore voce con bottoni grandi colorati + campi specifici per categoria
+- **Backend Diario:** Nuovi campi opzionali (voce_id, numero_colata, wps_usata, note_collaudo)
+- Test: 100% backend (19/19) + 100% frontend (iteration_178)
 
-**Refactoring Backend (completato nelle sessioni precedenti)**
-- `commessa_ops.py` (3.430 righe) → 6 moduli separati + wrapper sottile
-- Verificato con 17/17 test passati
+### 20 Marzo 2026 — Fork 2: Vista Officina (4 Ponti)
+- **Backend `officina.py`:** PIN management, Timer START/PAUSA/RESUME/STOP, Foto smart routing, Checklist con alerts
+- **Frontend `OfficinaPage.js`:** Tema dark, 3 tab (Timer/Foto/Qualità), nessuna navigazione
+- **`CommessaHubPage.js`:** QR dialog con link officina per voce
+- **`DiarioProduzione.js`:** Gestione PIN inline per operatori
+- **`Dashboard.js`:** Badge rosso alert qualità
+- Test: 100% backend (16/16) + 100% frontend (iteration_179)
 
-**Refactoring Frontend CommessaOpsPanel**
-- `CommessaOpsPanel.js` da 2.964 → 161 righe (orchestratore)
-- Creati 3 nuovi componenti: `ApprovvigionamentoSection.js`, `TracciabilitaSection.js`, `CAMSection.js`
-- Si aggiungono ai 4 esistenti: `ProduzioneSection`, `ConsegneSection`, `ContoLavoroSection`, `RepositoryDocumentiSection`
-- Test: 100% backend + frontend (iteration_175)
-
-**Pulizia Codice Morto**
-- Eliminati `chat.py`, `documents.py` (route placeholder) + relativi model
-- Rimossi import da `__init__.py` di routes e models
-
-**Responsive Fase 2**
-- Rese responsive 8 pagine: PreventiviPage, ClientsPage, FornitoriPage, ArticoliPage, InvoicesPage, ScadenziarioPage, MarginAnalysisPage, CostControlPage
-- Test: 100% desktop + mobile (iteration_176)
-
-**FASE 1 — Categorie di Lavoro (completata)**
-- 3 bottoni grandi nel `CreateCommessaModal` (PlanningPage.js)
-- Campi condizionali: Classe EXC per EN 1090, Tipologia per EN 13241, solo info per Generica
-- `CommessaOpsPanel` nasconde sezioni non pertinenti alla categoria scelta
-- `NORMATIVA_CONFIG` aggiornato con la voce GENERICA nel `CommessaHubPage`
-- Test: 100% backend (13/13) + frontend (iteration_177)
-
-**Master Plan integrato nel PROJECT_KNOWLEDGE.md**
-- Aggiunta regola Cantieri Misti (Struttura Matrioska)
-- Aggiunta specifica Diario Produzione Adattivo (sezione 4)
-- Aggiunta specifica Pulsante Magico (sezione 5)
-- Aggiunta regola 800 righe per manutenzione codice
+### Sessioni Precedenti
+- Refactoring Backend: commessa_ops.py → 6 moduli (17/17 test)
+- Refactoring Frontend: CommessaOpsPanel → 8 sotto-componenti (iteration_175)
+- Pulizia codice morto: chat.py, documents.py eliminati
+- Responsive 8 pagine (iteration_176)
+- Categorie di Lavoro — 3 bottoni nel CreateCommessaModal (iteration_177)
 
 ---
 
 ## 10. Prossimi Passi (Roadmap)
 
-### Fase 1.5 — Voci di Lavoro (Cantieri Misti)
-- Backend: Nuova collezione `voci_lavoro` + API CRUD
-- Frontend: Sezione "Voci di Lavoro" nella scheda commessa
-- CommessaOpsPanel mostra sezioni basate su unione delle categorie delle voci
-- Retrocompatibilita': commesse senza voci funzionano come prima
-
-### Fase 2 — Diario Produzione Adattivo
-- Operaio seleziona la voce su cui lavora
-- Filtro intelligente: EN 1090 → certificati | EN 13241 → foto collaudo | GENERICA → solo Start/Stop
-- Zero contabilita' per l'operaio
-
-### Fase 3 — Pulsante Magico
-- Genera Fascicolo di Cantiere unico (PDF o ZIP)
-- Separazione automatica: Strutturali | Cancelli | Generiche
+### FASE 3 — Pulsante Magico (IN CORSO)
+- Servizio backend `services/pacco_documenti.py` che raccoglie tutti i dati
+- Generazione PDF con WeasyPrint: Copertina + Parte A (1090) + Parte B (13241) + Parte C (Generica)
+- Endpoint API: `GET /api/commesse/{id}/pacco-documenti`
+- Bottone nel CommessaHubPage
+- Automazione: checklist OK → verbale "Approvato"
+- Minimalismo: salta parti per categorie non presenti
 
 ### Backlog Tecnico
 - Split `SettingsPage.js` (1.731 righe)
 - Split `commesse.py` (1.330 righe)
-- Vista Officina mobile-first per operai (QR + PIN)
 - Responsive restanti pagine
-- Onboarding Wizard per nuovi utenti
 
 ### Backlog Funzionale
 - RBAC granulare (ruoli personalizzati)
