@@ -2010,7 +2010,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
 
             {/* Arrivo Dialog - Enhanced with material tracking */}
             <Dialog open={arrivoOpen} onOpenChange={setArrivoOpen}>
-                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Package className="h-5 w-5 text-amber-600" />
@@ -2076,38 +2076,38 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="bg-amber-50">
-                                            <TableHead className="w-[24%] text-xs">Descrizione</TableHead>
-                                            <TableHead className="w-[12%] text-xs text-center">Q.tà</TableHead>
-                                            <TableHead className="w-[9%] text-xs text-center">U.M.</TableHead>
-                                            <TableHead className="w-[14%] text-xs text-center">€/unità</TableHead>
-                                            <TableHead className="w-[14%] text-xs text-center" title="Lascia vuoto se usi tutto. Se ne usi solo una parte, indica la quantità usata per la commessa. Il resto andrà in magazzino.">Q.tà Usata</TableHead>
-                                            <TableHead className="w-[14%] text-xs">Rif. Ordine</TableHead>
+                                            <TableHead className="w-[25%] text-xs">Descrizione</TableHead>
+                                            <TableHead className="w-[8%] text-xs text-center">Q.tà</TableHead>
+                                            <TableHead className="w-[7%] text-xs text-center">U.M.</TableHead>
+                                            <TableHead className="w-[10%] text-xs text-center">€/unità</TableHead>
+                                            <TableHead className="w-[10%] text-xs text-center" title="Lascia vuoto se usi tutto. Se ne usi solo una parte, indica la quantità usata per la commessa. Il resto andrà in magazzino.">Q.tà Usata</TableHead>
+                                            <TableHead className="w-[28%] text-xs">Rif. Ordine</TableHead>
                                             <TableHead className="w-[5%] text-xs text-center">3.1</TableHead>
-                                            <TableHead className="w-[5%]"></TableHead>
+                                            <TableHead className="w-[4%]"></TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {arrivoForm.materiali.map((mat, idx) => (
                                             <TableRow key={mat.id || idx}>
-                                                <TableCell className="p-1">
+                                                <TableCell className="p-1.5">
                                                     <Input
                                                         value={mat.descrizione}
                                                         onChange={e => updateArrivoMat(idx, 'descrizione', e.target.value)}
-                                                        className="h-8 text-sm"
+                                                        className="h-9 text-sm"
                                                     />
                                                 </TableCell>
-                                                <TableCell className="p-1">
+                                                <TableCell className="p-1.5">
                                                     <Input
                                                         type="number"
                                                         value={mat.quantita}
                                                         onChange={e => updateArrivoMat(idx, 'quantita', e.target.value)}
-                                                        className="h-8 text-sm text-center"
+                                                        className="h-9 text-sm text-center"
                                                         min="0"
                                                     />
                                                 </TableCell>
-                                                <TableCell className="p-1">
+                                                <TableCell className="p-1.5">
                                                     <Select value={mat.unita_misura} onValueChange={v => updateArrivoMat(idx, 'unita_misura', v)}>
-                                                        <SelectTrigger className="h-8 text-xs">
+                                                        <SelectTrigger className="h-9 text-sm">
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -2119,32 +2119,32 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                                                         </SelectContent>
                                                     </Select>
                                                 </TableCell>
-                                                <TableCell className="p-1">
+                                                <TableCell className="p-1.5">
                                                     <Input
                                                         type="number"
                                                         value={mat.prezzo_unitario || ''}
                                                         onChange={e => updateArrivoMat(idx, 'prezzo_unitario', e.target.value)}
-                                                        className="h-8 text-sm text-center"
+                                                        className="h-9 text-sm text-center"
                                                         min="0"
                                                         step="0.01"
                                                         data-testid={`arrivo-mat-${idx}-prezzo`}
                                                     />
                                                 </TableCell>
-                                                <TableCell className="p-1">
+                                                <TableCell className="p-1.5">
                                                     <Input
                                                         type="number"
                                                         value={mat.quantita_utilizzata}
                                                         onChange={e => updateArrivoMat(idx, 'quantita_utilizzata', e.target.value)}
-                                                        className="h-8 text-sm text-center"
+                                                        className="h-9 text-sm text-center"
                                                         min="0"
                                                         step="0.01"
                                                         title="Lascia vuoto se usi tutto. Indica qui la quantità effettivamente usata per la commessa."
                                                         data-testid={`arrivo-mat-${idx}-qty-usata`}
                                                     />
                                                 </TableCell>
-                                                <TableCell className="p-1">
+                                                <TableCell className="p-1.5">
                                                     <Select value={mat.ordine_id || '__none__'} onValueChange={v => updateArrivoMat(idx, 'ordine_id', v === '__none__' ? '' : v)}>
-                                                        <SelectTrigger className="h-8 text-xs">
+                                                        <SelectTrigger className="h-9 text-sm">
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
