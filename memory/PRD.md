@@ -1,79 +1,74 @@
 # NormaFacile 2.0 — PRD
 
 ## Problema Originale
-Gestionale per carpenterie metalliche conforme EN 1090, EN 13241, ISO 3834. Gestione commesse, produzione, certificazioni, fatturazione, preventivi, qualità.
+Gestionale per carpenterie metalliche conforme EN 1090, EN 13241, ISO 3834. Gestione commesse, produzione, certificazioni, fatturazione, preventivi, qualita.
 
 ## Utenti
 - Titolari/Admin di carpenterie metalliche
 - Ufficio tecnico, officina, amministrazione
 
 ## Architettura
-- **Frontend**: React + Tailwind + Shadcn/UI → Vercel
-- **Backend**: FastAPI + MongoDB → Railway
+- **Frontend**: React + Tailwind + Shadcn/UI -> Vercel
+- **Backend**: FastAPI + MongoDB -> Railway
 - **Auth**: Google OAuth diretto (produzione) + Emergent Auth (preview)
 - **Integrazioni**: FattureInCloud, Resend (email), WeasyPrint (PDF)
 
-## Implementato (Sessione Corrente - 20 Mar 2026)
+## Implementato
 
 ### Fix Deployment Vercel
 - `.npmrc` con `legacy-peer-deps=true`
 - `.nvmrc` con Node 20 LTS
 - `vercel.json` con `yarn install` + `CI=false yarn build`
-- `.env.production` con URL backend corretto
-- `package.json` engines field
 
 ### Fix Login Produzione
 - Supporto dual auth: Google OAuth diretto (produzione) + Emergent Auth (preview)
-- Backend: aggiunto `POST /api/auth/callback` per Google OAuth code exchange
+- Backend: `POST /api/auth/callback` per Google OAuth code exchange
 - Frontend: AuthContext rileva automaticamente quale sistema usare
-- Frontend: AuthCallback gestisce sia `?code=` (Google) che `#session_id=` (Emergent)
 
 ### Fix AI Certificati 3.1
-- Backend: corretto URL endpoint da `parse-certificate` a `parse-certificato` (fix 404)
-- Backend: aggiunto `--extra-index-url` in requirements.txt per `emergentintegrations`
-- Backend: aggiunto `apt-packages.txt` nella cartella backend
-- Backend: migliore error handling con ImportError separato
+- Backend: corretto URL endpoint
+- Backend: aggiunto `apt-packages.txt` e dipendenze necessarie
 
 ### UI Miglioramenti
-- Celle allargate: Q.tà (12%), U.M. (9%), €/unità (14%), Q.tà Usata (14%)
+- Celle allargate nella tabella materiali
 - Rimossi spinner arrows (CSS globale)
-- Rimossi placeholder di esempio
-- Rimosso testo suggerimento sotto tabella
+- Dialog "Registra Arrivo Materiale" quasi full-screen
 
-### Diario di Produzione (NUOVO)
+### Diario di Produzione
 - Backend: `routes/diario_produzione.py` — CRUD + riepilogo
 - Frontend: `components/DiarioProduzione.js` — Calendario + registrazione ore
-- Registrazione: data, operatore, fase, ore lavorate, note
-- Vista Calendario mensile con evidenziazione giorni con attività
-- Vista Riepilogo: ore effettive vs preventivate, costo effettivo, scostamento, per fase e per operatore
-- Ore preventivate configurabili per fase di produzione
-- Barre progresso colorate per fase con indicazione sforamento
+- Multi-operatore, multi-sessione per fase
+- Vista Calendario mensile + Vista Riepilogo
+- Anagrafica operatori semplificata (solo nome, no email)
 
-## Sessione Precedente — Fix Completati
-- Fix email preventivi (TypeError 500)
-- Fix encoding mojibake (ftfy + CI check)
-- Fix stale PDF previews (auto-save)
-- Fix PDF text readability (grey → black)
-- Fix email CC bug
-- Fix FattureInCloud 409 credit note
-- WeasyPrint dependencies in apt-packages.txt
-- Robust RESEND_API_KEY handling
+### Fix Calcolo Margini con Diario (20 Mar 2026)
+- `margin_service.py`: `get_all_margins()` ora pre-fetch ore dal `diario_produzione` 
+- `margin_service.py`: `get_commessa_margin_full()` gia includeva ore diario
+- Testato con 12 test backend: tutti PASSATI
+
+### Fix Deployment Railway (20 Mar 2026)
+- Rimosso `--extra-index-url` da `requirements.txt` (causava build failure)
+- Creato `nixpacks.toml` con config corretta per Railway:
+  - `[phases.install]` usa `pip install -r requirements.txt --extra-index-url ...`
+  - `[phases.setup]` include apt packages per WeasyPrint e poppler-utils
+
+## Endpoint API Chiave
+- `POST /api/auth/callback` — Google OAuth code exchange
+- `POST /api/auth/session` — Emergent Auth session exchange
+- `GET /api/commesse/{cid}/diario` — Lista voci diario
+- `POST /api/commesse/{cid}/diario` — Crea voce diario
+- `PUT /api/commesse/{cid}/diario/{entry_id}` — Modifica voce
+- `DELETE /api/commesse/{cid}/diario/{entry_id}` — Elimina voce
+- `GET /api/commesse/{cid}/diario/riepilogo` — Riepilogo ore/costi
+- `GET /api/costs/commessa/{cid}/margin-full` — Margine completo singola commessa
+- `GET /api/costs/margin-full` — Margine completo tutte le commesse
 
 ## Backlog / Prossimi Task
-- P0: Deploy e test del Diario di Produzione in produzione
-- P0: Test completo analisi AI certificato 3.1 dopo deploy Railway
-- P1: Unificare servizi PDF (pdf_invoice_modern.py, pdf_template.py)
-- P2: Sistema RBAC (controllo accessi basato su ruoli)
+- P1: Test completo in produzione del Diario di Produzione + margini (dopo deploy Railway)
+- P1: Verifica fix errore 500 analisi AI certificati (dopo deploy Railway)
+- P2: Unificare servizi PDF
+- P2: Sistema RBAC
 - P2: Script migrazione dati per immagini Base64 legacy
 - P3: Firme digitali su PDF
 - P3: Portale cliente read-only
-
-## Endpoint API Chiave
-- `POST /api/auth/callback` — Google OAuth code exchange (NUOVO)
-- `POST /api/auth/session` — Emergent Auth session exchange
-- `GET /api/commesse/{cid}/diario` — Lista voci diario (NUOVO)
-- `POST /api/commesse/{cid}/diario` — Crea voce diario (NUOVO)
-- `PUT /api/commesse/{cid}/diario/{entry_id}` — Modifica voce (NUOVO)
-- `DELETE /api/commesse/{cid}/diario/{entry_id}` — Elimina voce (NUOVO)
-- `GET /api/commesse/{cid}/diario/riepilogo` — Riepilogo ore/costi (NUOVO)
-- `PUT /api/commesse/{cid}/produzione/{fase}/ore-preventivate` — Ore stimate (NUOVO)
+- P3: Report mensile automatico costi via email
