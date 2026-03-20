@@ -51,6 +51,7 @@ Include: commesse, preventivi, fatture, FPC, saldatori, controllo qualita, produ
 - Safety Gate: blocco diary se corsi scaduti
 - Post-Sales: firma -> Targa CE + QR + Manutenzione programmata
 - Pulsante Magico: pacchetto PDF completo
+- Blocco DoP se C/L non rientrati
 
 ### Amministrazione
 - Backup & Restore (manuale + automatico)
@@ -61,24 +62,46 @@ Include: commesse, preventivi, fatture, FPC, saldatori, controllo qualita, produ
 - Archivio Storico con export ZIP
 
 ### Refactoring Completato (2026-03-20)
-- **SettingsPage.js**: Da 1732 righe a ~185 righe. Estratti 11 componenti tab in `/components/settings/`:
-  - CompanyTab, BankTab, LogoTab, CondizioniTab, IntegrazioniTab
-  - CertificazioniTab, MigrazioneTab, TeamTab, BackupTab, DeployTab, NotificheTab
+- **SettingsPage.js**: Da 1732 righe a ~185 righe. 11 componenti tab in `/components/settings/`
 
 ### AI Vision per Disegni Tecnici (2026-03-20)
-- **POST /api/smistatore/analyze-drawing/{doc_id}**: Analizza disegni tecnici (PDF/immagini) con GPT-4o Vision
-  - Estrae bulloneria: diametro, classe, quantita, tipo, norma
-  - Supporta multi-pagina con deduplicazione
-- **POST /api/smistatore/drawing-to-rdp/{doc_id}**: Crea RdP automatica dalla bulloneria estratta
-- Frontend: pulsante "Analizza Disegno" nel Repository Documenti con dialog di conferma e selezione
+- Analisi disegni tecnici (PDF/immagini) con GPT-4o Vision
+- Estrazione bulloneria: diametro, classe, quantita, tipo, norma
+- Proposta RdP automatica dalla bulloneria estratta
+
+### DoP Frazionata (2026-03-20)
+- Generazione DoP multiple per commessa con suffissi (/A, /B, /C)
+- Ogni DoP traccia solo i materiali dei DDT specifici
+- PDF DoP professionale con dichiarazione EN 1090
+- Blocco generazione PDF se conto lavoro non rientrato
+
+### SAL e Acconti (2026-03-20)
+- Calcolo SAL automatico da: ore lavorate (50%), fasi produzione (30%), conto lavoro (20%)
+- Creazione acconti con percentuale
+- Generazione fattura acconto automatica con IVA
+- Storico SAL per commessa
+
+### Circuito Conto Lavoro Migliorato (2026-03-20)
+- DDT Out (invio a terzisti) e DDT In (rientro)
+- Upload certificato trattamento obbligatorio al rientro
+- Certificato salvato automaticamente nel repository commessa
+- Nuovo capitolo "Trattamenti Superficiali" nel Pulsante Magico
+- Monitoraggio materiale fuori sede
+
+### Report Evoluzione Sistema
+- Documento comparativo REPORT_EVOLUZIONE.md con tabella before/after
+- Diagramma completo State Machine dei workflow
 
 ## Backlog Prioritizzato
 
-### P0 (Fatto)
+### P0 (Tutto completato)
 - [x] Refactoring SettingsPage.js
 - [x] AI Vision per disegni tecnici (DWG/PDF -> RdP)
 - [x] Workflow Engine completo
 - [x] Safety Gate operatori
+- [x] DoP Frazionata
+- [x] SAL e Acconti
+- [x] Circuito Conto Lavoro completo
 
 ### P2 (Prossimi)
 - [ ] RBAC granulare (Role-Based Access Control)
@@ -100,6 +123,8 @@ Include: commesse, preventivi, fatture, FPC, saldatori, controllo qualita, produ
 - attrezzature, manutenzioni_programmate, targhe_ce
 - commessa_documents, doc_page_index
 - archivio_exports
+- **dop_frazionate**: DoP con suffissi, materiali, cert_pages
+- **sal_acconti**: acconti SAL con percentuale, importo, fattura_id
 
 ## Credenziali Test
 - Operatori Officina: Ahmed (PIN 1234), Karim (PIN 5678)
