@@ -1098,73 +1098,22 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                         <Play className="h-3.5 w-3.5 mr-1.5" /> Inizializza Fasi Produzione
                     </Button>
                 ) : (
-                    <div className="space-y-1.5">
+                    <div className="space-y-3">
                         {/* Progress bar */}
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2">
                             <div className="flex-1 bg-slate-200 rounded-full h-2">
                                 <div className="bg-[#0055FF] h-2 rounded-full transition-all" style={{ width: `${progPct}%` }} />
                             </div>
                             <span className="text-xs font-mono font-semibold text-[#0055FF]">{progPct}%</span>
                         </div>
-                        {fasi.map(f => {
-                            const isLate = f.data_prevista && f.stato !== 'completato' && new Date(f.data_prevista) < new Date();
-                            const daysLate = f.data_prevista && f.stato !== 'completato' ? Math.floor((new Date() - new Date(f.data_prevista)) / 86400000) : 0;
-                            return (
-                            <div key={f.tipo} className={`flex items-center gap-2 p-2 rounded text-xs ${isLate ? 'bg-red-50 border border-red-200' : 'bg-slate-50'}`} data-testid={`fase-${f.tipo}`}>
-                                <span className={`font-medium flex-1 ${isLate ? 'text-red-700' : ''}`}>{f.label || f.tipo}</span>
-                                {f.data_prevista && f.stato !== 'completato' && (
-                                    <span className={`text-[9px] ${isLate ? 'text-red-500 font-semibold' : 'text-slate-400'}`}>
-                                        {isLate ? `${daysLate}gg ritardo` : `entro ${new Date(f.data_prevista).toLocaleDateString('it-IT')}`}
-                                    </span>
-                                )}
-                                {f.data_prevista && (
-                                    <input
-                                        type="date"
-                                        className="text-[9px] border rounded px-1 py-0.5 w-24 bg-white"
-                                        value={f.data_prevista || ''}
-                                        data-testid={`fase-data-prevista-${f.tipo}`}
-                                        onChange={e => handleUpdateFase(f.tipo, f.stato, { data_prevista: e.target.value })}
-                                    />
-                                )}
-                                {!f.data_prevista && f.stato !== 'completato' && (
-                                    <input
-                                        type="date"
-                                        className="text-[9px] border rounded px-1 py-0.5 w-24 bg-white text-slate-400"
-                                        placeholder="Data prev."
-                                        data-testid={`fase-data-prevista-${f.tipo}`}
-                                        onChange={e => handleUpdateFase(f.tipo, f.stato, { data_prevista: e.target.value })}
-                                    />
-                                )}
-                                <StatoBadge stato={f.stato} />
-                                {f.stato === 'completato' && f.completed_at && (
-                                    <span className="text-[9px] text-slate-400">{new Date(f.completed_at).toLocaleDateString('it-IT')}</span>
-                                )}
-                                {f.stato === 'completato' && f.operator_name && (
-                                    <span className="text-[9px] text-slate-400 italic">{f.operator_name}</span>
-                                )}
-                                {f.stato === 'da_fare' && (
-                                    <Button size="sm" variant="ghost" className="h-6 text-[10px] text-blue-600" onClick={() => handleUpdateFase(f.tipo, 'in_corso')} data-testid={`fase-avvia-${f.tipo}`}>
-                                        <Play className="h-3 w-3 mr-0.5" /> Avvia
-                                    </Button>
-                                )}
-                                {f.stato === 'in_corso' && (
-                                    <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => openFaseCompletaModal(f)} data-testid={`fase-completa-${f.tipo}`}>
-                                        <CheckCircle2 className="h-3 w-3 mr-0.5" /> Completa
-                                    </Button>
-                                )}
-                            </div>
-                            );
-                        })}
-                    </div>
-                )}
 
-                {/* Diario di Produzione */}
-                {fasi.length > 0 && (
-                    <div className="mt-4 pt-4 border-t">
-                        <h4 className="text-xs font-semibold text-slate-700 mb-3 flex items-center gap-1.5">
-                            <Clock className="h-3.5 w-3.5 text-[#0055FF]" /> Diario di Produzione
-                        </h4>
-                        <DiarioProduzione commessaId={commessaId} fasi={fasi} />
+                        {/* Fasi con diario integrato */}
+                        <DiarioProduzione
+                            commessaId={commessaId}
+                            fasi={fasi}
+                            onUpdateFase={handleUpdateFase}
+                            onRefresh={() => { fetchData(); onRefresh?.(); }}
+                        />
                     </div>
                 )}
             </Section>
