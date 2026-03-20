@@ -1,59 +1,57 @@
 <analysis>**original_problem_statement**:
-The user, acting as the Lead Developer & Quality Manager, has defined a new core architecture for the application called Cantieri Misti (Mixed Jobs) or the Matrioska structure.
+The user has requested the implementation of Fase 4: Montaggio e Tracciabilità (Assembly and Traceability). This new, large feature requires:
 
 **PRODUCT REQUIREMENTS:**
-1.  **Structure**: A single Commessa (Job Order) is no longer a monolithic block but a Fascicolo di Cantiere (Site File) that can contain multiple Voci di Lavoro (Work Items).
-2.  **Categories**: Each Work Item must be assigned one of three categories:
-    *   **A. STRUTTURALE (EN 1090)**: Requires traceability for steel lots, welder certificates, WPS, and auto-generation of DoP/CE labels.
-    *   **B. CANCELLI/CHIUSURE (EN 13241)**: Requires safety kit info, photos of safety components, testing reports, and a User/Maintenance Manual.
-    *   **C. GENERICA (No CE Marking)**: Only tracks hours and materials for cost control, with no bureaucratic requirements.
-3.  **Adaptive UI**: The UI, especially the mobile-first Diario di Produzione (Production Diary), must adapt based on the selected Work Item. It should hide irrelevant accounting data for workers and only ask for documentation (e.g., steel certificates, photos) relevant to that item's category.
-4.  **Document Generation (Pulsante Magico)**: The final document generator must create a unified Pacco Documenti Cantiere (Site Document Package) as a single file or ZIP, neatly organizing all required certifications from all Work Items within the job.
-5.  **Project Knowledge**: A  file must be maintained as the project's brain, containing all architectural rules, feature definitions, and a log of changes.
+
+1.  **Tracciabilità Bulloneria (Fastener Traceability)**:
+    *   Use AI Vision to read supplier Delivery Notes (DDTs) for bolts, nuts, and washers.
+    *   Extract key data: Diameter, Class (e.g., 8.8, 10.9), and Lot Number.
+    *   Associate the extracted data with the corresponding Job Order () and Work Item ().
+    *   In a new Assembly Diary UI, the worker must take a photo of the fastener box. The system should display the data extracted from the DDT for a quick visual comparison and verification.
+
+2.  **Modulo Serraggio Intelligente (Smart Tightening Module)**:
+    *   Implement a new Diario di Montaggio (Assembly Diary) section in the worker UI.
+    *   Based on the Class and Diameter read from the DDT, the diary must automatically display the required tightening torque value in Nm, referencing an internal table based on ISO 898-1.
+    *   The worker must confirm the correct tightening and the use of a torque wrench via a simple [YES/NO] checklist.
+
+3.  **Gestione Montaggio Esterno (On-Site Assembly Management)**:
+    *   The Assembly Diary must include a check for the suitability of the support/foundations [👍/👎].
+    *   It must be mandatory for the worker to upload photos of the tightened joints and fixing anchors.
+    *   Implement a feature for the client to provide a digital signature on a work completion report directly on a tablet or smartphone to confirm acceptance.
+
+4.  **Pacco Documenti Aggiornato (Updated Document Package)**:
+    *   The final Pulsante Magico (Magic Button) output must be enhanced to include a new Relazione di Montaggio (Assembly Report).
+    *   This report must contain: a table of the bolts used (from DDT data), the applied tightening values, photos of the assembly, and the client-signed completion report.
+
+5.  **Documentation**:
+    *   Before starting development, the  file must be updated to reflect this new DDT + Cantiere logic.
 
 **User's preferred language**: Italian. The next agent **MUST** respond in Italian.
 
 **what currently exists?**
-The agent has successfully laid the foundation for the Cantieri Misti architecture. The  file has been created and updated with the user's definitive Master Plan.
+The application is in a robust state. All major architectural features requested by the user up to this point have been implemented and tested.
 
-The implementation is divided into three steps, with the first step completed and the second partially done:
-*   **Step 1 (Backend - COMPLETE)**: A new database collection () and a corresponding FastAPI route () with full CRUD APIs have been created to manage Work Items. The API was tested successfully via a command-line script.
-*   **Step 2 (Frontend - IN PROGRESS)**: A new React component, , has been created to manage Work Items from the UI. This component has been integrated into the main . The  has been modified to accept the list of Work Items and display a *union* of all required operational sections (e.g., if a job has both EN 1090 and EN 13241 items, it shows sections for both).
+*   **Cantieri Misti (Mixed Jobs)**: The core Matrioska architecture is fully functional, with a backend API and an adaptive frontend UI that handles jobs with multiple work items of different categories.
+*   **Vista Officina (Locked Worker View)**: A dedicated, PIN-protected mobile interface for workers is complete. It includes the four key bridges: a visual timer (), a smart photo uploader (), an icon-based quality checklist (), and a locked-down navigation system ().
+*   **Pulsante Magico & Smistatore Intelligente**: The PDF document generator is highly advanced. It uses an AI service () to analyze multi-page certificates with GPT-4o Vision, index only the relevant pages based on material lot numbers, and generate a final, unified PDF package structured into clear chapters (CAP. 1, 2, 3).
+*   **Advanced Workshop Logic**: The backend enforces critical business rules, including scrap material management (), blocking work for workers with expired welder certificates (), requiring final visual inspections, and automatically creating Non-Conformance records with immediate admin notifications.
+*   **Documentation**:  serves as the project's brain and has been kept up-to-date with all completed work and architectural decisions.
 
 **Last working item**:
--   **Last item agent was working**: Implementing Step 2 of the Cantieri Misti feature: the frontend section for managing Voci di Lavoro and adapting the main operational panel. The agent just finished modifying  to fetch and display the new  and passed the work items to .
--   **Status**: IN PROGRESS
--   **Agent Testing Done**: N (Only backend script testing was performed. No frontend UI/E2E testing has been done yet).
--   **Which testing method agent to use?**: frontend testing agent. A full regression test is required to verify the new CRUD UI for Voci di Lavoro, the adaptive logic of the , and retro-compatibility with old single-category jobs.
+-   **Last item agent was working**: Analyzing the user's new request for Fase 4: Montaggio e Tracciabilità and preparing to update the  file as the first step.
+-   **Status**: NOT STARTED
+-   **Agent Testing Done**: Y (for all previously completed features)
+-   **Which testing method agent to use?**: both. This is a large new feature requiring full-stack implementation and testing. Start with backend API tests, then move to a full E2E test with the frontend testing agent.
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Complete the Cantieri Misti (Mixed Work) implementation (P0)**
-
-**Issues Detail**:
--   **Issue 1: Complete the Cantieri Misti (Mixed Work) implementation (P0)**
-    -   **Attempted fixes**: The backend API has been created and tested. The basic frontend structure (, updated , and ) is in place.
-    -   **Next debug checklist**:
-        1.  **Integrate **: The component has been created but needs to be fully wired up in  to fetch, display, and manage work items via the new API.
-        2.  **Implement Step 3 (Diario di Produzione Adattivo)**: Modify the  component.
-            *   If a job has multiple work items, the first step for a worker must be to select which Voce di Lavoro they are working on, using large, clear, colored buttons as requested by the user.
-            *   Conditionally render the diary's input fields based on the category () of the *selected* work item.
-        3.  **Test the full flow**: Use  to run an end-to-end test:
-            *   Create a commessa with multiple, mixed-category work items.
-            *   Verify the  shows the correct union of sections.
-            *   Verify the  adapts correctly after selecting a work item.
-            *   Confirm single-category commesse still function as before.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a core architectural change mandated by the user to reflect their business reality, making the software significantly more powerful and flexible.
-    -   **Status**: IN PROGRESS
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?**: Both.
-    -   **Blocked on other issue:** None.
+There are no pending bugs or issues. The focus is entirely on the new feature request.
 
 **In progress Task List**:
--   **Task 1: Implement Cantieri Misti (P0)**
-    -   **Where to resume**: Frontend implementation in  and .
-    -   **What will be achieved with this?**: The app will support multi-category jobs, adapting the UI and data capture process accordingly.
-    -   **Status**: IN PROGRESS
+-   **Task 1: Implement Fase 4: Montaggio e Tracciabilità (P0)**
+    -   **Where to resume**: Start by updating  to document the new Fase 4 requirements as requested by the user.
+    -   **What will be achieved with this?**: This will add a complete, digitally traceable workflow for on-site assembly, from automated DDT analysis to client sign-off, making the final document package even more comprehensive.
+    -   **Status**: NOT STARTED
     -   **Should Test frontend/backend/both after fix?**: Both.
     -   **Blocked on something**: None.
 
@@ -61,72 +59,83 @@ The implementation is divided into three steps, with the first step completed an
 *As defined in *
 
 **Upcoming Tasks:**
--   **(P1) Fase 3: Pulsante Magico**: Implement the final document package generator that creates a unified ZIP/PDF for a mixed job.
--   **(P2) Vista Officina**: Create a dedicated, simplified, mobile-first view for workers showing only relevant production tasks.
--   **(P2) Refactor SettingsPage.js**: Split the monolithic settings page into smaller components, as it exceeds the 800-line rule.
+-   **(P1) Admin UI for Workshop Features**: Create frontend interfaces for admins to manage  (scrap),  (certificates), and the .
+-   **(P1) Smistatore UI Trigger**: Add an Analizza con AI button to the document repository UI to manually trigger the  on uploaded PDFs.
+-   **(P2) Code Refactoring**: Split large files like , , and  into smaller, more maintainable components.
 
 **Future Tasks:**
--   Onboarding Wizard for new users.
 -   Granular Role-Based Access Control (RBAC).
 -   Excel export feature for cost analysis.
--   Unify the 13 different PDF generation services into one.
--   Implement digital signatures on PDF reports.
+-   Unify the 13 different legacy PDF generation services.
+-   Read-only client portal.
 
 **Completed work in this session**
--   **Frontend Refactoring**:  refactored from ~3000 lines into a 161-line orchestrator and 8 sub-components.
--   **Dead Code Cleanup**: Removed unused placeholder backend routes (, ) and models.
--   **Mobile Responsiveness**: Made 8 key pages mobile-responsive.
--   **Feature Definition**: Implemented the initial 3-category job creation flow.
--   **Project Documentation**: Created and maintained  as the project's brain and single source of truth.
--   **Cantieri Misti Backend**: Created the  API and database structure.
+-   **Cantieri Misti Frontend**: Completed the adaptive UI for mixed-category jobs in .
+-   **Vista Officina (Locked Worker View)**: Created the entire PIN-protected worker UI () and its backend APIs (), including the 4 Ponti (Timer, Photo, Quality, Lock-in).
+-   **Pulsante Magico Enhancement**: Re-structured the final PDF into chapters (CAP. 1/2/3) and integrated the Smistatore Intelligente.
+-   **Smistatore Intelligente Service**: Built a new AI service () using GPT-4o Vision to analyze and index multi-page certificates.
+-   **4 Advanced Workshop Rules**: Implemented backend logic for scrap management (), welder certificate validation (), mandatory visual checks, and automatic Non-Conformance () logging with admin notifications.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Matrioska Architecture**: A core business logic concept where a parent document () contains a list of child documents (), and the UI adapts based on the properties of the children.
--   **Union of Properties**: The  now determines which UI sections to show by creating a  of unique categories from all child work items, rather than relying on a single category from the parent.
--   **Adaptive UI**: Conditionally rendering UI components and form fields based on a dynamic context (the selected work item category).
+-   **AI Vision for Document Analysis (Smistatore Intelligente)**: Uses  with GPT-4o Vision to convert PDF pages to images (), analyze them for specific text like lot numbers, and create a searchable index to retrieve only relevant document pages, avoiding file duplication.
+-   **Decoupled Worker UI (Vista Officina)**: A purpose-built, secure React page () for workers, accessed via QR code and PIN, completely isolated from the main admin application to ensure simplicity and security.
+-   **Stateful Backend Enforcement**: Critical business rules (e.g., certificate expiry checks, mandatory inspection steps) are enforced in the backend APIs before actions can be completed or documents can be generated.
+-   **Composite Document Generation**: Dynamically assembling a complex, multi-chapter PDF from various data sources (database records, indexed PDF pages, user photos, checklist results) using WeasyPrint.
 
 **key DB schema**
--   **voci_lavoro**: 
+-   **non_conformita**: 
+-   **sfridi**: 
+-   **operatori**: Now contains  and .
+-   **documenti**: May contain a  field created by the .
 
 **All files of reference**
--    (The source of truth for all requirements)
--    (The new backend API)
--    (The new frontend component)
--    (The integration point for the new UI)
--    (The next file to be modified)
--    (The panel that adapts its visibility)
+-    (The source of truth for all new requirements)
+-    (The best reference for new AI Vision tasks)
+-    (An existing AI Vision service)
+-    (The PDF generator to be extended)
+-    (The worker UI to be extended with the Assembly Diary)
+-    (The backend for the worker UI)
 
 **Critical Info for New Agent**
--   **Follow the Master Plan**: Your primary guide is . All development must align with the Matrioska Structure, Adaptive Diary, and Magic Button concepts defined within.
--   **Resume at Step 2 (Frontend)**: The backend API for Voci di Lavoro is complete. Your immediate task is to finish wiring up the frontend  component and then move to Step 3: adapting the  component.
--   **UX is Key**: The user is very specific about the user experience for workshop employees: large, colored buttons, clear icons, and no unnecessary information (like costs). Adhere to this strictly.
--   **Test Thoroughly**: This is a major architectural change. After implementing the adaptive diary, you must run a full end-to-end test with the  to ensure the new mixed-job flow works and that old single-job commesse are not broken.
+-   **Start with Fase 4**: Your sole focus is the new Fase 4: Montaggio e Tracciabilità feature. All previous work is complete, tested, and approved.
+-   **Update  First**: As your first action, update  with the detailed requirements for Fase 4 before writing any code. This was explicitly requested by the user.
+-   **Leverage Existing Patterns**: The project has strong, established patterns for AI Vision (), PDF generation (), and the worker-facing UI (). Extend these patterns for the new assembly module. The Smistatore service is the perfect template for the new DDT analysis task.
+-   **Plan Your Approach**: This is a large feature. Propose a clear, step-by-step plan to the user, starting with the backend services (DDT analysis, torque data, signature capture) before moving to the new Diario di Montaggio frontend.
 
 **documents and test reports created in this job**
 -   
--    (CommessaOpsPanel refactor verification)
--    (Mobile responsiveness verification)
--    (3-category creation flow verification)
+-   
+-   
+-   
+-   
+-   
+-   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **Request**: Define the Master Plan for NormaFacile 2.0 with the Matrioska (mixed job) structure, an adaptive production diary, and a Magic Button for document generation. Mandated that this plan be added to . (DONE)
-2.  **Confirmation**: Agent confirmed the  file was updated. (ACK)
-3.  **Request**: Proceed with the 3-step surgical plan to implement the Matrioska structure. Provided specific UX feedback for the production diary: use colored buttons/icons for the 3 categories to help workers in the workshop. Requested an example of the diary UI for a mixed job. (IN PROGRESS)
+1.  **Request**: Asked for the implementation of 4 real-world workshop cases: scrap management, welder certificate blocking, mandatory visual checks, and automatic non-conformance logging. (DONE)
+2.  **Clarification**: Specified that non-conformances should trigger an immediate notification on the Admin Dashboard. (DONE)
+3.  **Approval**: Approved the plan for the 4 workshop cases. (ACK)
+4.  **Request**: Defined the full requirements for Fase 4: Montaggio e Tracciabilità (Bolt traceability, Smart Tightening, On-site assembly, and updated PDF report). This is the current task. (PENDING)
+5.  All other messages were approvals, test requests, or technical clarifications that have since been addressed and completed.
 
 **Project Health Check:**
--   **Broken**: No. The application is in a stable state but undergoing a major, planned architectural enhancement.
+-   **Broken**: No. The application is stable and all features are tested.
 -   **Mocked**: None.
 
 **3rd Party Integrations**
--   Google OAuth
--   Railway (Backend Hosting)
--   Vercel (Frontend Hosting)
+-   **Google OAuth**: For admin login.
+-   **emergentintegrations**: Used for GPT-4o Vision capabilities, powered by the Emergent LLM Key.
+-   **Railway**: Backend hosting.
+-   **Vercel**: Frontend hosting.
 
 **Testing status**
 -   **Testing agent used after significant changes**: YES
 -   **Troubleshoot agent used after agent stuck in loop**: NO
--   **Test files created**: None.
--   **Known regressions**: None.</analysis>
+-   **Test files created**: None. All testing was performed by the .
+-   **Known regressions**: None.
+
+**Credentials to test flow:**
+-   Test operators exist for the  view: **Ahmed** (PIN: ) and **Karim** (PIN: ). The next agent can reuse these for testing new  features.</analysis>

@@ -17,7 +17,7 @@ import uuid
 from datetime import datetime, date, timedelta
 
 # Use the public URL for testing
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://mixed-jobs-dev.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://assembly-tracker-11.preview.emergentagent.com').rstrip('/')
 
 
 @pytest.fixture(scope="module")
