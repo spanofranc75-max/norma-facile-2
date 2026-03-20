@@ -27,6 +27,7 @@ import EmailPreviewDialog from './EmailPreviewDialog';
 import { DisabledTooltip } from './DisabledTooltip';
 import FascicoloTecnicoSection from './FascicoloTecnicoSection';
 import GateCertificationPanel from './GateCertificationPanel';
+import DiarioProduzione from './DiarioProduzione';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
@@ -1154,6 +1155,16 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                             </div>
                             );
                         })}
+                    </div>
+                )}
+
+                {/* Diario di Produzione */}
+                {fasi.length > 0 && (
+                    <div className="mt-4 pt-4 border-t">
+                        <h4 className="text-xs font-semibold text-slate-700 mb-3 flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5 text-[#0055FF]" /> Diario di Produzione
+                        </h4>
+                        <DiarioProduzione commessaId={commessaId} fasi={fasi} />
                     </div>
                 )}
             </Section>
