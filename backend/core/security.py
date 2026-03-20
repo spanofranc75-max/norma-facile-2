@@ -9,6 +9,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
+
 
 async def exchange_session_id(session_id: str) -> dict:
     """
@@ -114,6 +117,68 @@ async def create_session(user_data: dict, response: Response) -> dict:
     # Get full user data
     user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
     return user
+
+
+async def exchange_google_code(code: str, redirect_uri: str) -> dict:
+    """
+    Exchange Google OAuth authorization code for user info.
+    """
+    if not settings.google_client_id or not settings.google_client_secret:
+        raise HTTPException(status_code=500, detail="Google OAuth non configurato")
+
+    async with httpx.AsyncClient() as client:
+        # Exchange code for tokens
+        token_response = await client.post(GOOGLE_TOKEN_URL, data={
+            "code": code,
+            "client_id": settings.google_client_id,
+            "client_secret": settings.google_client_secret,
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code",
+        })
+
+        if token_response.status_code != 200:
+            logger.error(f"Google token exchange failed: {token_response.text}")
+            raise HTTPException(status_code=401, detail="Scambio codice Google fallito")
+
+        token_data = token_response.json()
+        access_token = token_data.get("access_token")
+
+        if not access_token:
+            raise HTTPException(status_code=401, detail="Token di accesso Google mancante")
+
+        # Get user info
+        userinfo_response = await client.get(
+            GOOGLE_USERINFO_URL,
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+
+        if userinfo_response.status_code != 200:
+            logger.error(f"Google userinfo failed: {userinfo_response.text}")
+            raise HTTPException(status_code=401, detail="Impossibile ottenere dati utente Google")
+
+        return userinfo_response.json()
+
+
+async def create_session_from_google(user_data: dict, response: Response) -> dict:
+    """
+    Create or update user from Google OAuth data and create session.
+    """
+    email = user_data.get("email")
+    if not email:
+        raise HTTPException(status_code=400, detail="Email mancante dai dati Google")
+
+    # Generate a session token
+    session_token = uuid.uuid4().hex
+
+    # Reuse the same user creation/update logic
+    google_user_data = {
+        "email": email,
+        "name": user_data.get("name", ""),
+        "picture": user_data.get("picture", ""),
+        "session_token": session_token,
+    }
+
+    return await create_session(google_user_data, response)
 
 
 async def verify_session(session_token: str) -> dict:

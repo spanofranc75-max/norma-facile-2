@@ -5,7 +5,9 @@ from core.security import (
     exchange_session_id,
     create_session,
     get_current_user,
-    delete_session
+    delete_session,
+    exchange_google_code,
+    create_session_from_google
 )
 from models.user import UserResponse
 import logging
@@ -15,31 +17,50 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 class SessionExchangeRequest(BaseModel):
-    """Request body for session exchange."""
+    """Request body for session exchange (Emergent Auth)."""
     session_id: str
+
+
+class GoogleCallbackRequest(BaseModel):
+    """Request body for Google OAuth callback."""
+    code: str
+    redirect_uri: str
 
 
 @router.post("/session", response_model=UserResponse)
 async def exchange_session(request: SessionExchangeRequest, response: Response):
     """
     Exchange Emergent Auth session_id for user session.
-    Called by frontend after Google OAuth redirect.
+    Called by frontend after Google OAuth redirect via Emergent Auth.
     """
     try:
-        # Exchange session_id with Emergent Auth
         user_data = await exchange_session_id(request.session_id)
-        
-        # Create/update user and session
         user = await create_session(user_data, response)
-        
-        logger.info(f"User logged in: {user['email']}")
+        logger.info(f"User logged in via Emergent Auth: {user['email']}")
         return UserResponse(**user)
-        
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Session exchange failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Errore durante l'autenticazione")
+
+
+@router.post("/callback", response_model=UserResponse)
+async def google_oauth_callback(request: GoogleCallbackRequest, response: Response):
+    """
+    Exchange Google OAuth code for user session.
+    Called by frontend after direct Google OAuth redirect.
+    """
+    try:
+        user_data = await exchange_google_code(request.code, request.redirect_uri)
+        user = await create_session_from_google(user_data, response)
+        logger.info(f"User logged in via Google OAuth: {user['email']}")
+        return UserResponse(**user)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Google OAuth callback failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Errore durante l'autenticazione Google")
 
 
 @router.get("/me", response_model=UserResponse)

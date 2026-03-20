@@ -1,56 +1,67 @@
 /**
  * Auth Callback Page - Handles OAuth redirect
- * Processes session_id from URL fragment and exchanges it for session.
+ * Supports both:
+ *   - Google OAuth code exchange (URL query: ?code=xxx)
+ *   - Emergent Auth session exchange (URL hash: #session_id=xxx)
  */
 import { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiRequest } from '../lib/utils';
 
 export default function AuthCallback() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { setAuthUser } = useAuth();
     const hasProcessed = useRef(false);
 
     useEffect(() => {
-        // Use useRef for processed flag to prevent race conditions under StrictMode
         if (hasProcessed.current) return;
         hasProcessed.current = true;
 
         const processAuth = async () => {
             try {
-                // Extract session_id from URL fragment
                 const hash = window.location.hash;
-                const sessionIdMatch = hash.match(/session_id=([^&]+)/);
-                
-                if (!sessionIdMatch) {
-                    console.error('No session_id found in URL');
+                const searchParams = new URLSearchParams(window.location.search);
+                const code = searchParams.get('code');
+
+                let user;
+
+                if (code) {
+                    // Google OAuth: exchange code for session
+                    const redirectUri = window.location.origin + '/auth/callback';
+                    user = await apiRequest('/auth/callback', {
+                        method: 'POST',
+                        body: JSON.stringify({ code, redirect_uri: redirectUri }),
+                    });
+                } else if (hash?.includes('session_id=')) {
+                    // Emergent Auth: exchange session_id
+                    const sessionIdMatch = hash.match(/session_id=([^&]+)/);
+                    if (!sessionIdMatch) {
+                        console.error('No session_id found in URL');
+                        navigate('/');
+                        return;
+                    }
+                    user = await apiRequest('/auth/session', {
+                        method: 'POST',
+                        body: JSON.stringify({ session_id: sessionIdMatch[1] }),
+                    });
+                } else {
+                    console.error('No auth credentials found in URL');
                     navigate('/');
                     return;
                 }
 
-                const sessionId = sessionIdMatch[1];
-
-                // Exchange session_id for user session via backend
-                const user = await apiRequest('/auth/session', {
-                    method: 'POST',
-                    body: JSON.stringify({ session_id: sessionId }),
-                });
-
-                // Update auth context with user data
                 setAuthUser(user);
-
-                // Navigate to dashboard with user data
                 navigate('/dashboard', { state: { user } });
             } catch (error) {
                 console.error('Auth callback error:', error);
-                console.error('Backend URL used:', process.env.REACT_APP_BACKEND_URL);
                 navigate('/');
             }
         };
 
         processAuth();
-    }, [navigate, setAuthUser]);
+    }, [navigate, setAuthUser, location]);
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50">
