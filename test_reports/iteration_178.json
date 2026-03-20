@@ -1,0 +1,98 @@
+{
+  "summary": "Iteration 178: Comprehensive testing of Voci di Lavoro (Cantieri Misti / Matrioska) feature. Backend API tests: 19/19 passed. Frontend UI tests: All critical flows verified. The UNION logic for CommessaOpsPanel sections works correctly - when EN_13241 voce is added to an EN_1090 commessa, both Fascicolo Tecnico EN 1090 AND Certificazione Cancello EN 13241 sections appear. DiarioProduzione correctly shows voce selector with colored buttons when hasMultipleVoci is true.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration178_voci_lavoro_diario.py",
+    "/app/test_reports/pytest/iteration178_voci_lavoro_diario_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "VociLavoroSection.js: Clean implementation with 3-category buttons (EN_1090, EN_13241, GENERICA). Category-specific fields (classe_exc for EN_1090, tipologia_chiusura for EN_13241) correctly shown/hidden based on selection.",
+    "CommessaOpsPanel.js lines 55-60: allCategorie Set correctly computes UNION of parent normativa_tipo + all voci normativa_tipo. hasEN1090/hasEN13241/isOnlyGenerica flags properly control section visibility.",
+    "DiarioProduzione.js: buildSelectableVoci() function correctly builds the list of selectable voci including __principale__ for parent category. Voce selector with large colored buttons appears when hasMultipleVoci is true.",
+    "DiarioProduzione.js: Category-specific fields (numero_colata, wps_usata for EN_1090; note_collaudo for EN_13241) correctly shown based on selected voce's normativa_tipo via getSelectedVoceCategory().",
+    "Backend voci_lavoro.py: Clean CRUD implementation with proper validation of normativa_tipo enum values.",
+    "Backend diario_produzione.py: DiarioEntry model correctly includes new optional fields (voce_id, numero_colata, wps_usata, note_collaudo)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration178_voci_lavoro_diario.py"
+  ],
+  "success_rate": {
+    "backend": "100% (19/19 tests passed)",
+    "frontend": "100% (all Playwright flows verified)"
+  },
+  "test_credentials": "Session token: test_session_matrioska_1774026135169",
+  "seed_data_creation": "Created test commessa 'TEST_Cantiere_Misto_UI' with EN_1090 parent category, added EN_13241 voce 'Cancello carraio ingresso principale'",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Matrioska (Cantieri Misti) feature fully implemented and tested. Key test IDs: data-testid='voci-lavoro-section', 'btn-add-voce', 'voce-dialog', 'voce-cat-en_1090', 'voce-cat-en_13241', 'voce-cat-generica', 'voce-descrizione', 'btn-save-voce'. DiarioProduzione test IDs: 'session-dialog', 'voce-selector', 'voce-btn-__principale__', 'voce-btn-{voce_id}', 'fields-en1090', 'fields-en13241', 'field-colata', 'field-wps', 'field-collaudo'. CommessaOpsPanel correctly shows sections for UNION of all categories when multiple voci with different normative are present.",
+  "testing_summary": {
+    "backend_api_tests": {
+      "voci_crud": {
+        "list_voci_empty": "200 OK - returns empty array",
+        "create_en_1090": "200 OK - voce created with classe_exc",
+        "create_en_13241": "200 OK - voce created with tipologia_chiusura",
+        "create_generica": "200 OK - voce created without extra fields",
+        "create_invalid_normativa": "400 Bad Request - validation working",
+        "list_voci_after_creation": "200 OK - returns 3+ voci",
+        "update_voce": "200 OK - descrizione updated",
+        "delete_voce": "200 OK - voce deleted and verified"
+      },
+      "diario_produzione_new_fields": {
+        "create_basic": "200 OK - entry created",
+        "create_with_voce_id": "200 OK - voce_id persisted",
+        "create_en1090_fields": "200 OK - numero_colata and wps_usata persisted",
+        "create_en13241_fields": "200 OK - note_collaudo persisted",
+        "list_entries": "200 OK - all new fields present in response",
+        "update_entry_new_fields": "200 OK - numero_colata updated",
+        "riepilogo": "200 OK - summary stats returned"
+      },
+      "retrocompatibility": "200 OK - commesse without voci work correctly with voce_id=empty"
+    },
+    "frontend_ui_tests": {
+      "voci_lavoro_section": {
+        "visibility": "VociLavoroSection visible with data-testid='voci-lavoro-section'",
+        "add_button": "'Aggiungi Voce' button clickable with data-testid='btn-add-voce'",
+        "dialog_categories": "3 category buttons (Strutturale, Cancello, Generica) visible and selectable",
+        "conditional_fields": "Tipologia dropdown appears for EN_13241, Classe Esecuzione for EN_1090",
+        "voce_creation": "EN_13241 voce 'Cancello carraio ingresso principale' created successfully",
+        "voce_display": "Created voce appears in list with amber styling and EN 13241 badge"
+      },
+      "commessa_ops_panel_union": {
+        "en1090_sections": "Approvvigionamento, Produzione, Consegne al Cliente, Conto Lavoro, Tracciabilità Materiali, CAM, Fascicolo Tecnico EN 1090, Repository Documenti - all visible",
+        "en13241_section": "Certificazione Cancello EN 13241 section appeared AFTER adding EN_13241 voce",
+        "union_logic_verified": "Both EN 1090 AND EN 13241 sections visible simultaneously for mixed commessa"
+      },
+      "diario_produzione_voce_selector": {
+        "dialog_opens": "Session dialog opens with data-testid='session-dialog'",
+        "voce_question": "'Su quale voce stai lavorando?' question displayed",
+        "voce_buttons": "Two large colored buttons: 'Lavorazione principale (Strutturale)' and 'Cancello carraio ingresso principale'",
+        "en1090_fields": "N. Colata / Certificato 3.1 and WPS utilizzata fields visible when EN_1090 voce selected",
+        "operators_list": "Operators (Mario Rossi, Test Op) available for selection"
+      }
+    },
+    "data_testids_verified": [
+      "voci-lavoro-section",
+      "btn-add-voce",
+      "voce-dialog",
+      "voce-cat-en_1090",
+      "voce-cat-en_13241",
+      "voce-cat-generica",
+      "voce-descrizione",
+      "voce-tipologia",
+      "btn-save-voce",
+      "section-produzione",
+      "fase-card-taglio",
+      "session-dialog",
+      "voce-selector"
+    ]
+  }
+}

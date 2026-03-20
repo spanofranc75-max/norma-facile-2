@@ -33,6 +33,10 @@ class DiarioEntry(BaseModel):
     ore: float  # durata sessione
     operatori: List[Operatore]  # lista operatori coinvolti
     note: Optional[str] = ""
+    voce_id: Optional[str] = None          # Matrioska: quale voce di lavoro
+    numero_colata: Optional[str] = None    # EN 1090: numero colata / cert 3.1
+    wps_usata: Optional[str] = None        # EN 1090: WPS utilizzata
+    note_collaudo: Optional[str] = None    # EN 13241: note collaudo/sicurezza
 
 
 class DiarioEntryUpdate(BaseModel):
@@ -41,6 +45,10 @@ class DiarioEntryUpdate(BaseModel):
     ore: Optional[float] = None
     operatori: Optional[List[Operatore]] = None
     note: Optional[str] = None
+    voce_id: Optional[str] = None
+    numero_colata: Optional[str] = None
+    wps_usata: Optional[str] = None
+    note_collaudo: Optional[str] = None
 
 
 class OrePreventivateInput(BaseModel):
@@ -95,6 +103,10 @@ async def create_diario_entry(cid: str, entry: DiarioEntry, user: dict = Depends
         "operatori": [o.model_dump() for o in entry.operatori],
         "ore_totali": ore_totali,
         "note": entry.note or "",
+        "voce_id": entry.voce_id or "",
+        "numero_colata": entry.numero_colata or "",
+        "wps_usata": entry.wps_usata or "",
+        "note_collaudo": entry.note_collaudo or "",
         "created_by": user["user_id"],
         "created_at": now.isoformat(),
         "updated_at": now.isoformat(),
@@ -124,6 +136,14 @@ async def update_diario_entry(
         updates["operatori"] = [o.model_dump() for o in entry.operatori]
     if entry.note is not None:
         updates["note"] = entry.note
+    if entry.voce_id is not None:
+        updates["voce_id"] = entry.voce_id
+    if entry.numero_colata is not None:
+        updates["numero_colata"] = entry.numero_colata
+    if entry.wps_usata is not None:
+        updates["wps_usata"] = entry.wps_usata
+    if entry.note_collaudo is not None:
+        updates["note_collaudo"] = entry.note_collaudo
 
     if not updates:
         raise HTTPException(400, "Nessun dato da aggiornare")

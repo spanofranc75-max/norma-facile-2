@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { Factory, Play, CheckCircle2 } from 'lucide-react';
 import DiarioProduzione from './DiarioProduzione';
 
-export default function ProduzioneSection({ commessaId, commessaNumero, fasi, progPct, normativaTipo, onRefresh }) {
+export default function ProduzioneSection({ commessaId, commessaNumero, fasi, progPct, normativaTipo, vociLavoro = [], onRefresh }) {
     const [faseComplOpen, setFaseComplOpen] = useState(false);
     const [faseComplTarget, setFaseComplTarget] = useState(null);
     const [faseComplForm, setFaseComplForm] = useState({ started_at: '', completed_at: '', operator_name: '' });
@@ -79,6 +79,7 @@ export default function ProduzioneSection({ commessaId, commessaNumero, fasi, pr
                             commessaNumero={commessaNumero}
                             fasi={fasi}
                             normativaTipo={normativaTipo}
+                            vociLavoro={vociLavoro}
                             onFaseUpdate={(tipo, stato, extra) => handleUpdateFase(tipo, stato, extra)}
                             onFaseComplete={openFaseCompletaModal}
                             onRefresh={onRefresh}
