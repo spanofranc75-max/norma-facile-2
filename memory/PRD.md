@@ -1,94 +1,55 @@
 # NormaFacile 2.0 — PRD
 
 ## Problema Originale
-Gestionale per carpenteria metallica conforme EN 1090, EN 13241, ISO 3834. Struttura "Matrioska" per cantieri misti, con vista officina blindata per operai.
+Gestionale per carpenteria metallica conforme EN 1090, EN 13241, ISO 3834. Struttura "Matrioska" per cantieri misti, vista officina blindata per operai, generazione automatica pacco documenti.
 
 ## Utenti Target
-- **Titolare carpenteria**: Gestione completa commesse, costi, preventivi
-- **Responsabile produzione**: Diario produzione, fasi, operatori
+- **Titolare**: Gestione completa, costi, preventivi, pacco documenti
+- **Responsabile produzione**: Diario, fasi, operatori
 - **Responsabile qualità**: Fascicolo tecnico, certificati, tracciabilità
 - **Operai officina**: Vista blindata (/officina) con timer, foto, checklist
 
 ## Architettura
-- **Frontend**: React + TailwindCSS + Shadcn/UI
-- **Backend**: FastAPI + MongoDB
-- **Auth**: Google OAuth (admin) + PIN 4 cifre (operai)
-- **Hosting**: Railway (backend) + Vercel (frontend)
+- Frontend: React + TailwindCSS + Shadcn/UI
+- Backend: FastAPI + MongoDB
+- Auth: Google OAuth (admin) + PIN 4 cifre (operai)
+- PDF: WeasyPrint + pypdf
 
-## 3 Categorie di Lavoro (IMPLEMENTATO)
-### A. STRUTTURALE (EN 1090) → Tracciabilità, WPS, DoP, CE
-### B. CANCELLO (EN 13241) → Kit sicurezza, collaudo, manuale
-### C. GENERICA (No CE) → Solo ore e materiali
+## Implementato
 
-## Struttura Matrioska — Cantieri Misti (IMPLEMENTATO)
-- Commessa contiene multiple Voci di Lavoro
-- Pannello operativo mostra UNIONE di tutte le categorie
-- Diario adattivo con selettore voce colorato
-- Retrocompatibilità con commesse mono-categoria
+### Fork 1 (20/03/2026) — Cantieri Misti
+- Voci di Lavoro backend + frontend (CRUD)
+- CommessaOpsPanel: unione categorie
+- Diario Adattivo: selettore voce + campi condizionali
 
-## Vista Officina — 4 Ponti (IMPLEMENTATO 20/03/2026)
-### PONTE 1: DIARIO (Timer)
-- 3 bottoni grandi: START (verde), PAUSA (giallo), STOP (rosso)
-- Timer visivo che scorre, nessun numero di costo visibile
-- STOP → salva automaticamente minuti nel diario produzione della commessa
-- Stato timer persistito in DB (sopravvive a refresh browser)
+### Fork 2 (20/03/2026) — Vista Officina
+- 4 Ponti: Timer, Foto, Checklist, Blocco Dati
+- PIN management, QR officina per voce
+- Badge alert qualità in Dashboard
 
-### PONTE 2: FOTO (Certificati/Collaudi)
-- Singolo bottone FOTO grande circolare
-- Routing intelligente basato su voce attiva:
-  - EN 1090 → tipo "certificato_31" (Repository certificati 3.1)
-  - EN 13241 → tipo "foto" (Fascicolo tecnico)
-  - GENERICA → tipo "foto" (Repository documenti)
-- Nome file chiaro: FOTO_{normativa}_{numero_commessa}_{timestamp}.jpg
+### Fork 3 (20/03/2026) — Pulsante Magico
+- PDF unificato "Pacco Documenti Cantiere" con WeasyPrint
+- Copertina + Indice + PARTE A (1090) + PARTE B (13241) + PARTE C (Generiche)
+- Automazione verbale: checklist OK → CONFORME, NOK → NON CONFORME
+- Filtro Beltrami: documenti filtrati per voce_id
+- Firma tecnica con spazio firma manuale/digitale
+- Test: 100% backend (14/14) + 100% frontend
 
-### PONTE 3: QUALITÀ (Checklist)
-- Icone + 👍/👎 per ogni punto di controllo
-- EN 1090: Saldature Pulite, Dimensioni OK, Materiale OK
-- EN 13241: Sicurezze OK, Movimento OK
-- GENERICA: Lavoro Completato
-- 👎 → crea alert automatico per Admin (badge rosso dashboard)
-
-### PONTE 4: BLOCCO DATI
-- Operaio intrappolato in /officina — nessuna navigazione
-- Nessun menu, nessun link a fatture/clienti/fornitori
-- Accesso: QR Code + PIN 4 cifre
-- QR generabile dalla CommessaHubPage per commessa o voce specifica
-
-## Implementato — Cronologia
-
-### Pre-fork
-- Calcolo margini, deployment Railway, backend refactoring
-- Frontend refactoring CommessaOpsPanel (8 sotto-componenti)
-- Responsive 12 pagine, pulizia codice morto
-
-### Fork 1 (20/03/2026)
-- Categorie di lavoro, Voci di Lavoro (Matrioska)
-- Diario Produzione Adattivo (selettore voce, campi condizionali)
-- CommessaOpsPanel: usa UNIONE categorie
-
-### Fork 2 (20/03/2026) — Corrente
-- Vista Officina completa con 4 Ponti
-- Backend: /api/officina/* (PIN, timer, foto, checklist, alerts)
-- Frontend: OfficinaPage.js (tema dark, mobile-first)
-- PIN management inline nel DiarioProduzione
-- QR dialog aggiornato con link officina per voce
-- Badge alert qualità nella Dashboard admin
+### PROJECT_KNOWLEDGE.md aggiornato con:
+- Logiche Smistatore Intelligente (certificati cumulativi Beltrami)
+- DDT Multi-Commessa & Magazzino Scorte
+- Regola Consumabili (Filo & Gas)
+- Architettura Metadati + Indice Invertito
 
 ## Backlog Prioritizzato
 
 ### P1 — Prossimi
-- FASE 3: "Pulsante Magico" — generazione pacchetto documenti per cantiere (PDF/ZIP)
+- **Fase 4: Smistatore Intelligente** — AI per certificati cumulativi, DDT multi-commessa, consumabili auto
 - Split SettingsPage.js (>1700 righe)
 
 ### P2 — Importanti
 - Split commesse.py (>1300 righe)
-- Onboarding Wizard, Unificazione servizi PDF, Export Excel
-- RBAC granulare
+- Onboarding Wizard, Export Excel, RBAC granulare, Unificazione PDF
 
 ### P3 — Futuri
-- Firme digitali su PDF, Portale clienti read-only
-- Notifiche WhatsApp scadenze
-
-## DB Collections
-- `commesse`, `voci_lavoro`, `diario_produzione`, `operatori`
-- `commessa_documents`, `officina_timers`, `officina_checklist`, `officina_alerts`
+- Firme digitali, Portale clienti, Notifiche WhatsApp
