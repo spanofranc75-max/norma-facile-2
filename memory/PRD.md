@@ -6,7 +6,7 @@ L'app era instabile dopo migrazione a Vercel (frontend) e Railway (backend).
 
 ## Architettura
 - Frontend: React (Emergent Preview) | Backend: FastAPI + MongoDB (Emergent)
-- Preview URL: https://facile-email-fix.preview.emergentagent.com
+- Preview URL: https://pdf-refresh-1.preview.emergentagent.com
 
 ## Implementato
 
