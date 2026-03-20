@@ -2,16 +2,16 @@
  * Diario di Produzione — Registro lavoro integrato nelle fasi.
  * Ogni fase è espandibile e mostra le sessioni di lavoro.
  * Supporta: più giornate, più operatori per sessione, tracciamento ore.
+ * Operatori: anagrafica semplice (solo nome), creazione rapida dal dialog.
  */
 import { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '../lib/utils';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/select';
 import { Badge } from '../components/ui/badge';
 import { Checkbox } from '../components/ui/checkbox';
-import { Plus, Trash2, Clock, Users, BarChart3, Edit2, ChevronDown, ChevronRight, Play, CheckCircle2 } from 'lucide-react';
+import { Plus, Trash2, Clock, Users, BarChart3, Edit2, ChevronDown, ChevronRight, Play, CheckCircle2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 
 const FASE_COLORS = {
@@ -36,14 +36,16 @@ const StatoBadge = ({ stato }) => {
 export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, onRefresh }) {
     const [entries, setEntries] = useState([]);
     const [riepilogo, setRiepilogo] = useState(null);
-    const [teamMembers, setTeamMembers] = useState([]);
+    const [operatori, setOperatori] = useState([]);
     const [expandedFasi, setExpandedFasi] = useState({});
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editEntry, setEditEntry] = useState(null);
     const [targetFase, setTargetFase] = useState(null);
-    const [form, setForm] = useState({ data: '', ore: '', operatoriIds: [], note: '' });
+    const [form, setForm] = useState({ data: '', ore: '', selectedOps: [], note: '' });
     const [loading, setLoading] = useState(false);
     const [showRiepilogo, setShowRiepilogo] = useState(false);
+    const [newOpName, setNewOpName] = useState('');
+    const [addingOp, setAddingOp] = useState(false);
 
     const fetchEntries = useCallback(async () => {
         try {
@@ -59,14 +61,14 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
         } catch (e) { console.error(e); }
     }, [commessaId]);
 
-    const fetchTeam = useCallback(async () => {
+    const fetchOperatori = useCallback(async () => {
         try {
-            const res = await apiRequest('/team/members');
-            setTeamMembers((res.members || []).filter(m => m.role !== 'guest'));
+            const res = await apiRequest(`/commesse/${commessaId}/operatori`);
+            setOperatori(res.operatori || []);
         } catch (e) { console.error(e); }
-    }, []);
+    }, [commessaId]);
 
-    useEffect(() => { fetchEntries(); fetchRiepilogo(); fetchTeam(); }, [fetchEntries, fetchRiepilogo, fetchTeam]);
+    useEffect(() => { fetchEntries(); fetchRiepilogo(); fetchOperatori(); }, [fetchEntries, fetchRiepilogo, fetchOperatori]);
 
     const entriesByFase = (faseTipo) => entries.filter(e => e.fase === faseTipo).sort((a, b) => b.data.localeCompare(a.data));
 
@@ -79,7 +81,7 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
     const openNewSession = (fase) => {
         setEditEntry(null);
         setTargetFase(fase);
-        setForm({ data: new Date().toISOString().split('T')[0], ore: '', operatoriIds: [], note: '' });
+        setForm({ data: new Date().toISOString().split('T')[0], ore: '', selectedOps: [], note: '' });
         setDialogOpen(true);
     };
 
@@ -87,32 +89,60 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
         setEditEntry(entry);
         setTargetFase({ tipo: entry.fase });
         const ids = (entry.operatori || []).map(o => o.id);
-        setForm({ data: entry.data, ore: String(entry.ore), operatoriIds: ids, note: entry.note || '' });
+        setForm({ data: entry.data, ore: String(entry.ore), selectedOps: ids, note: entry.note || '' });
         setDialogOpen(true);
     };
 
-    const toggleOperatore = (userId) => {
+    const toggleOperatore = (opId) => {
         setForm(f => {
-            const ids = f.operatoriIds.includes(userId)
-                ? f.operatoriIds.filter(id => id !== userId)
-                : [...f.operatoriIds, userId];
-            return { ...f, operatoriIds: ids };
+            const ops = f.selectedOps.includes(opId)
+                ? f.selectedOps.filter(id => id !== opId)
+                : [...f.selectedOps, opId];
+            return { ...f, selectedOps: ops };
         });
     };
 
+    // Quick add operator
+    const handleAddOperatore = async () => {
+        const name = newOpName.trim();
+        if (!name) return;
+        setAddingOp(true);
+        try {
+            const res = await apiRequest(`/commesse/${commessaId}/operatori`, {
+                method: 'POST', body: JSON.stringify({ nome: name }),
+            });
+            setOperatori(prev => [...prev, res].sort((a, b) => a.nome.localeCompare(b.nome)));
+            // Auto-select the new operator
+            setForm(f => ({ ...f, selectedOps: [...f.selectedOps, res.op_id] }));
+            setNewOpName('');
+            toast.success(`${name} aggiunto`);
+        } catch (e) { toast.error(e.message); }
+        setAddingOp(false);
+    };
+
+    const handleDeleteOperatore = async (opId) => {
+        if (!window.confirm('Eliminare questo operatore?')) return;
+        try {
+            await apiRequest(`/commesse/${commessaId}/operatori/${opId}`, { method: 'DELETE' });
+            setOperatori(prev => prev.filter(o => o.op_id !== opId));
+            setForm(f => ({ ...f, selectedOps: f.selectedOps.filter(id => id !== opId) }));
+            toast.success('Operatore rimosso');
+        } catch (e) { toast.error(e.message); }
+    };
+
     const handleSave = async () => {
-        if (!form.ore || form.operatoriIds.length === 0 || !targetFase) return;
+        if (!form.ore || form.selectedOps.length === 0 || !targetFase) return;
         setLoading(true);
         try {
-            const operatori = form.operatoriIds.map(id => {
-                const m = teamMembers.find(t => t.user_id === id);
-                return { id, nome: m?.name || m?.email || '' };
+            const ops = form.selectedOps.map(id => {
+                const op = operatori.find(o => o.op_id === id);
+                return { id, nome: op?.nome || '' };
             });
             const payload = {
                 data: form.data,
                 fase: targetFase.tipo,
                 ore: parseFloat(form.ore),
-                operatori,
+                operatori: ops,
                 note: form.note,
             };
             if (editEntry) {
@@ -176,20 +206,14 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
                 return (
                     <div key={f.tipo} className={`rounded-lg border ${colors.bg} overflow-hidden`} data-testid={`fase-card-${f.tipo}`}>
                         {/* Phase header */}
-                        <div
-                            className="flex items-center gap-2 p-3 cursor-pointer select-none"
-                            onClick={() => toggleExpand(f.tipo)}
-                        >
+                        <div className="flex items-center gap-2 p-3 cursor-pointer select-none" onClick={() => toggleExpand(f.tipo)}>
                             {isExpanded ? <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" /> : <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />}
                             <span className="font-semibold text-sm flex-1">{f.label || f.tipo}</span>
 
-                            {/* Hours progress */}
                             {totOre > 0 && (
                                 <div className="flex items-center gap-1.5 mr-2">
                                     <Clock className="h-3 w-3 text-slate-400" />
-                                    <span className={`text-xs font-mono font-bold ${isOver ? 'text-red-600' : 'text-slate-700'}`}>
-                                        {totOre}h
-                                    </span>
+                                    <span className={`text-xs font-mono font-bold ${isOver ? 'text-red-600' : 'text-slate-700'}`}>{totOre}h</span>
                                     {orePrev > 0 && (
                                         <>
                                             <span className="text-[10px] text-slate-400">/ {orePrev}h</span>
@@ -201,26 +225,22 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
                                 </div>
                             )}
 
-                            {faseEntries.length > 0 && (
-                                <span className="text-[10px] text-slate-400 mr-1">{faseEntries.length} sessioni</span>
-                            )}
-
+                            {faseEntries.length > 0 && <span className="text-[10px] text-slate-400 mr-1">{faseEntries.length} sessioni</span>}
                             <StatoBadge stato={f.stato} />
 
-                            {/* Action buttons */}
                             <div className="flex gap-1 ml-1" onClick={e => e.stopPropagation()}>
                                 {f.stato === 'da_fare' && (
-                                    <Button size="sm" variant="ghost" className="h-7 text-[10px] text-blue-600 hover:bg-blue-100" onClick={() => handleStartFase(f.tipo)} data-testid={`fase-avvia-${f.tipo}`}>
+                                    <Button size="sm" variant="ghost" className="h-7 text-[10px] text-blue-600 hover:bg-blue-100" onClick={() => handleStartFase(f.tipo)}>
                                         <Play className="h-3 w-3 mr-0.5" /> Avvia
                                     </Button>
                                 )}
                                 {(f.stato === 'in_corso' || f.stato === 'da_fare') && (
-                                    <Button size="sm" variant="ghost" className="h-7 text-[10px] text-emerald-600 hover:bg-emerald-100" onClick={() => openNewSession(f)} data-testid={`fase-registra-${f.tipo}`}>
+                                    <Button size="sm" variant="ghost" className="h-7 text-[10px] text-emerald-600 hover:bg-emerald-100" onClick={() => openNewSession(f)}>
                                         <Plus className="h-3 w-3 mr-0.5" /> Registra Lavoro
                                     </Button>
                                 )}
                                 {f.stato === 'in_corso' && (
-                                    <Button size="sm" variant="ghost" className="h-7 text-[10px] text-emerald-700 hover:bg-emerald-100" onClick={() => handleCompleteFase(f.tipo)} data-testid={`fase-completa-${f.tipo}`}>
+                                    <Button size="sm" variant="ghost" className="h-7 text-[10px] text-emerald-700 hover:bg-emerald-100" onClick={() => handleCompleteFase(f.tipo)}>
                                         <CheckCircle2 className="h-3 w-3 mr-0.5" /> Completa
                                     </Button>
                                 )}
@@ -230,73 +250,49 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
                         {/* Expanded: work sessions */}
                         {isExpanded && (
                             <div className="px-3 pb-3 space-y-2">
-                                {/* Ore preventivate inline */}
                                 <div className="flex items-center gap-2 text-[10px] text-slate-500 mb-1">
                                     <span>Ore preventivate:</span>
-                                    <Input
-                                        type="number"
-                                        className="h-6 w-20 text-[11px] text-center"
-                                        value={f.ore_preventivate || ''}
-                                        placeholder="—"
-                                        onBlur={e => handleOrePreventivate(f.tipo, e.target.value)}
-                                        onChange={() => {}}
-                                        data-testid={`ore-prev-${f.tipo}`}
-                                    />
+                                    <Input type="number" className="h-6 w-20 text-[11px] text-center" value={f.ore_preventivate || ''} placeholder="—"
+                                        onBlur={e => handleOrePreventivate(f.tipo, e.target.value)} onChange={() => {}} />
                                     <span>h</span>
-                                    {f.data_prevista && (
-                                        <span className="ml-auto">Scadenza: {new Date(f.data_prevista).toLocaleDateString('it-IT')}</span>
-                                    )}
                                 </div>
 
                                 {faseEntries.length === 0 ? (
-                                    <p className="text-xs text-slate-400 italic py-3 text-center">
-                                        Nessuna sessione registrata. Clicca "Registra Lavoro" per iniziare.
-                                    </p>
+                                    <p className="text-xs text-slate-400 italic py-3 text-center">Nessuna sessione registrata. Clicca "Registra Lavoro" per iniziare.</p>
                                 ) : (
                                     <div className="space-y-1.5">
                                         {faseEntries.map(e => (
-                                            <div key={e.entry_id} className="flex items-start gap-2 p-2 bg-white/70 rounded border border-white text-xs" data-testid={`sessione-${e.entry_id}`}>
+                                            <div key={e.entry_id} className="flex items-start gap-2 p-2 bg-white/70 rounded border border-white text-xs">
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-0.5">
                                                         <span className="font-medium text-slate-700">
                                                             {new Date(e.data + 'T00:00').toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })}
                                                         </span>
-                                                        <span className="font-bold text-slate-800">
-                                                            <Clock className="h-3 w-3 inline mr-0.5" />{e.ore}h
-                                                        </span>
+                                                        <span className="font-bold text-slate-800"><Clock className="h-3 w-3 inline mr-0.5" />{e.ore}h</span>
                                                         {(e.operatori || []).length > 1 && (
-                                                            <span className="text-[10px] text-slate-400">
-                                                                ({e.ore_totali || e.ore}h persona)
-                                                            </span>
+                                                            <span className="text-[10px] text-slate-400">({e.ore_totali || e.ore}h persona)</span>
                                                         )}
                                                     </div>
                                                     <div className="flex items-center gap-1 flex-wrap">
                                                         <Users className="h-3 w-3 text-slate-400 shrink-0" />
                                                         {(e.operatori || []).map((op, i) => (
-                                                            <Badge key={i} variant="secondary" className="text-[9px] px-1 py-0 bg-slate-100">
-                                                                {op.nome}
-                                                            </Badge>
+                                                            <Badge key={i} variant="secondary" className="text-[9px] px-1 py-0 bg-slate-100">{op.nome}</Badge>
                                                         ))}
                                                     </div>
                                                     {e.note && <p className="text-[10px] text-slate-400 mt-0.5 italic">{e.note}</p>}
                                                 </div>
                                                 <div className="flex gap-0.5 shrink-0">
-                                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => openEditSession(e)}>
-                                                        <Edit2 className="h-3 w-3 text-slate-400" />
-                                                    </Button>
-                                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => handleDelete(e.entry_id)}>
-                                                        <Trash2 className="h-3 w-3 text-red-400" />
-                                                    </Button>
+                                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => openEditSession(e)}><Edit2 className="h-3 w-3 text-slate-400" /></Button>
+                                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => handleDelete(e.entry_id)}><Trash2 className="h-3 w-3 text-red-400" /></Button>
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
                                 )}
 
-                                {/* Phase total */}
                                 {faseEntries.length > 0 && (
                                     <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-200/50">
-                                        <span>{faseEntries.length} sessioni registrate</span>
+                                        <span>{faseEntries.length} sessioni</span>
                                         <span className="font-bold text-slate-700">Totale: {totOre}h persona</span>
                                     </div>
                                 )}
@@ -306,16 +302,9 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
                 );
             })}
 
-            {/* Riepilogo toggle */}
-            <Button
-                size="sm"
-                variant="outline"
-                className="w-full text-xs h-8"
-                onClick={() => setShowRiepilogo(!showRiepilogo)}
-                data-testid="diario-toggle-riepilogo"
-            >
-                <BarChart3 className="h-3 w-3 mr-1" />
-                {showRiepilogo ? 'Nascondi Riepilogo' : 'Mostra Riepilogo Costi'}
+            {/* Riepilogo */}
+            <Button size="sm" variant="outline" className="w-full text-xs h-8" onClick={() => setShowRiepilogo(!showRiepilogo)}>
+                <BarChart3 className="h-3 w-3 mr-1" /> {showRiepilogo ? 'Nascondi Riepilogo' : 'Mostra Riepilogo Costi'}
             </Button>
 
             {showRiepilogo && riepilogo && (
@@ -324,11 +313,8 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
                         <StatCard label="Ore Persona" value={`${riepilogo.totale_ore_totali}h`} color="blue" />
                         <StatCard label="Preventivate" value={riepilogo.totale_ore_preventivate > 0 ? `${riepilogo.totale_ore_preventivate}h` : '—'} color="slate" />
                         <StatCard label="Costo Effettivo" value={`€ ${riepilogo.costo_effettivo.toLocaleString('it-IT')}`} color="amber" />
-                        <StatCard
-                            label="Scostamento"
-                            value={riepilogo.scostamento !== null ? `${riepilogo.scostamento > 0 ? '+' : ''}€ ${riepilogo.scostamento.toLocaleString('it-IT')}` : '—'}
-                            color={riepilogo.scostamento > 0 ? 'red' : riepilogo.scostamento < 0 ? 'green' : 'slate'}
-                        />
+                        <StatCard label="Scostamento" value={riepilogo.scostamento !== null ? `${riepilogo.scostamento > 0 ? '+' : ''}€ ${riepilogo.scostamento.toLocaleString('it-IT')}` : '—'}
+                            color={riepilogo.scostamento > 0 ? 'red' : riepilogo.scostamento < 0 ? 'green' : 'slate'} />
                     </div>
                     {riepilogo.per_operatore.length > 0 && (
                         <div>
@@ -343,9 +329,7 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
                             </div>
                         </div>
                     )}
-                    {riepilogo.costo_orario > 0 && (
-                        <p className="text-[9px] text-slate-400">Costo orario: € {riepilogo.costo_orario.toFixed(2)}/h</p>
-                    )}
+                    {riepilogo.costo_orario > 0 && <p className="text-[9px] text-slate-400">Costo orario: € {riepilogo.costo_orario.toFixed(2)}/h</p>}
                 </div>
             )}
 
@@ -361,76 +345,71 @@ export default function DiarioProduzione({ commessaId, fasi = [], onUpdateFase, 
                     <div className="space-y-3 py-2">
                         <div>
                             <label className="text-xs font-medium text-slate-600 mb-1 block">Data</label>
-                            <Input
-                                type="date"
-                                value={form.data}
-                                onChange={e => setForm(f => ({ ...f, data: e.target.value }))}
-                                className="h-9"
-                                data-testid="diario-input-data"
-                            />
+                            <Input type="date" value={form.data} onChange={e => setForm(f => ({ ...f, data: e.target.value }))} className="h-9" />
                         </div>
                         <div>
                             <label className="text-xs font-medium text-slate-600 mb-1 block">Ore lavorate (durata sessione)</label>
-                            <Input
-                                type="number"
-                                step="0.5"
-                                min="0"
-                                max="24"
-                                value={form.ore}
-                                onChange={e => setForm(f => ({ ...f, ore: e.target.value }))}
-                                className="h-9"
-                                data-testid="diario-input-ore"
-                            />
-                            {form.ore && form.operatoriIds.length > 1 && (
+                            <Input type="number" step="0.5" min="0" max="24" value={form.ore}
+                                onChange={e => setForm(f => ({ ...f, ore: e.target.value }))} className="h-9" />
+                            {form.ore && form.selectedOps.length > 1 && (
                                 <p className="text-[10px] text-blue-600 mt-1">
-                                    {form.ore}h x {form.operatoriIds.length} operatori = {(parseFloat(form.ore) * form.operatoriIds.length).toFixed(1)}h persona totali
+                                    {form.ore}h x {form.selectedOps.length} operatori = {(parseFloat(form.ore) * form.selectedOps.length).toFixed(1)}h persona
                                 </p>
                             )}
                         </div>
                         <div>
                             <label className="text-xs font-medium text-slate-600 mb-1 block">
-                                Operatori ({form.operatoriIds.length} selezionati)
+                                Operatori ({form.selectedOps.length} selezionati)
                             </label>
-                            <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-1">
-                                {teamMembers.map(m => (
-                                    <label
-                                        key={m.user_id}
-                                        className="flex items-center gap-2 p-1.5 rounded hover:bg-slate-50 cursor-pointer"
-                                    >
-                                        <Checkbox
-                                            checked={form.operatoriIds.includes(m.user_id)}
-                                            onCheckedChange={() => toggleOperatore(m.user_id)}
-                                            data-testid={`op-check-${m.user_id}`}
-                                        />
-                                        <span className="text-sm">{m.name || m.email}</span>
-                                        {m.role && <span className="text-[9px] text-slate-400">{m.role}</span>}
-                                    </label>
-                                ))}
-                                {teamMembers.length === 0 && (
-                                    <p className="text-xs text-slate-400 italic">Nessun membro del team trovato</p>
-                                )}
+                            <div className="border rounded-md">
+                                {/* Quick add operator */}
+                                <div className="flex items-center gap-1 p-2 border-b bg-slate-50">
+                                    <UserPlus className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                                    <Input
+                                        value={newOpName}
+                                        onChange={e => setNewOpName(e.target.value)}
+                                        placeholder="Aggiungi operatore (scrivi nome)..."
+                                        className="h-7 text-xs border-0 bg-transparent shadow-none focus-visible:ring-0"
+                                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddOperatore(); } }}
+                                        data-testid="new-op-input"
+                                    />
+                                    <Button size="sm" variant="ghost" className="h-7 text-[10px] text-[#0055FF] shrink-0 px-2"
+                                        onClick={handleAddOperatore} disabled={addingOp || !newOpName.trim()}>
+                                        <Plus className="h-3 w-3" /> Aggiungi
+                                    </Button>
+                                </div>
+                                {/* Operator list */}
+                                <div className="max-h-40 overflow-y-auto p-1.5 space-y-0.5">
+                                    {operatori.length === 0 && (
+                                        <p className="text-xs text-slate-400 italic py-2 text-center">Nessun operatore. Aggiungine uno sopra.</p>
+                                    )}
+                                    {operatori.map(op => (
+                                        <label key={op.op_id} className="flex items-center gap-2 p-1.5 rounded hover:bg-slate-50 cursor-pointer group">
+                                            <Checkbox
+                                                checked={form.selectedOps.includes(op.op_id)}
+                                                onCheckedChange={() => toggleOperatore(op.op_id)}
+                                            />
+                                            <span className="text-sm flex-1">{op.nome}</span>
+                                            {op.mansione && <span className="text-[9px] text-slate-400">{op.mansione}</span>}
+                                            <Button size="sm" variant="ghost" className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100"
+                                                onClick={e => { e.preventDefault(); handleDeleteOperatore(op.op_id); }}>
+                                                <Trash2 className="h-3 w-3 text-red-300" />
+                                            </Button>
+                                        </label>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                         <div>
                             <label className="text-xs font-medium text-slate-600 mb-1 block">Note (opzionale)</label>
-                            <Input
-                                value={form.note}
-                                onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
-                                className="h-9"
-                                placeholder="Es: Taglio travi IPE 200, ritardo materiale..."
-                                data-testid="diario-input-note"
-                            />
+                            <Input value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} className="h-9"
+                                placeholder="Es: Taglio travi IPE 200..." />
                         </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" size="sm" onClick={() => setDialogOpen(false)}>Annulla</Button>
-                        <Button
-                            size="sm"
-                            className="bg-[#0055FF]"
-                            onClick={handleSave}
-                            disabled={loading || form.operatoriIds.length === 0 || !form.ore}
-                            data-testid="diario-save-btn"
-                        >
+                        <Button size="sm" className="bg-[#0055FF]" onClick={handleSave}
+                            disabled={loading || form.selectedOps.length === 0 || !form.ore}>
                             {editEntry ? 'Salva Modifiche' : 'Registra Sessione'}
                         </Button>
                     </DialogFooter>

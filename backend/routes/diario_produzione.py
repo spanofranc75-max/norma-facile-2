@@ -1,6 +1,7 @@
 """Diario di Produzione — Time tracking per commessa.
 Registra sessioni di lavoro per fase, con più operatori e più giornate.
 Calcola costi effettivi e confronto con ore preventivate.
+Include anagrafica operatori semplificata (solo nome).
 """
 import uuid
 import logging
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 COLL = "commesse_ops"
 DIARIO_COLL = "diario_produzione"
+OPERATORI_COLL = "operatori"
 
 
 class Operatore(BaseModel):
@@ -253,3 +255,49 @@ async def set_ore_preventivate(
     if result.matched_count == 0:
         raise HTTPException(404, "Fase non trovata")
     return {"message": "Ore preventivate aggiornate", "fase": fase_tipo, "ore": data.ore_preventivate}
+
+
+# ── ANAGRAFICA OPERATORI (semplice, solo nome) ──────────────────
+
+class OperatoreInput(BaseModel):
+    nome: str
+    mansione: Optional[str] = ""
+
+
+@router.get("/{cid}/operatori", tags=["operatori"])
+async def list_operatori(cid: str, user: dict = Depends(get_current_user)):
+    """List all operators for the account (shared across commesse)."""
+    admin_id = await _get_team_admin_id(user)
+    ops = await db[OPERATORI_COLL].find(
+        {"admin_id": admin_id}, {"_id": 0}
+    ).sort("nome", 1).to_list(200)
+    return {"operatori": ops}
+
+
+@router.post("/{cid}/operatori", tags=["operatori"])
+async def create_operatore(cid: str, data: OperatoreInput, user: dict = Depends(get_current_user)):
+    """Create a new operator (just name, no email/login needed)."""
+    admin_id = await _get_team_admin_id(user)
+    op_id = f"op_{uuid.uuid4().hex[:8]}"
+
+    doc = {
+        "op_id": op_id,
+        "admin_id": admin_id,
+        "nome": data.nome.strip(),
+        "mansione": data.mansione.strip() if data.mansione else "",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db[OPERATORI_COLL].insert_one(doc)
+    doc.pop("_id", None)
+    logger.info(f"Operatore created: {op_id} - {data.nome}")
+    return doc
+
+
+@router.delete("/{cid}/operatori/{op_id}", tags=["operatori"])
+async def delete_operatore(cid: str, op_id: str, user: dict = Depends(get_current_user)):
+    """Delete an operator."""
+    admin_id = await _get_team_admin_id(user)
+    result = await db[OPERATORI_COLL].delete_one({"op_id": op_id, "admin_id": admin_id})
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Operatore non trovato")
+    return {"message": "Operatore eliminato"}
