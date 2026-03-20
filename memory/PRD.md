@@ -18,29 +18,39 @@ Gestionale per carpenteria metallica conforme EN 1090, EN 13241, ISO 3834. L'ute
 
 ## Cosa è stato implementato
 
-### Sessione precedente
+### Sessioni precedenti
 - Calcolo margini corretto (include costi manodopera da diario)
 - Fix deployment Railway con nixpacks.toml
-- Dashboard, CommessaHubPage, DiarioProduzione resi responsive
+- Backend refactoring: commessa_ops.py → 6 moduli + wrapper (17/17 test)
+- Dashboard, CommessaHubPage, DiarioProduzione, DashboardLayout resi responsive
 - Indici DB ottimizzati (diario_produzione, operatori, sessions)
 
 ### Sessione corrente (20 Marzo 2026)
-- **Backend refactoring completato** (sessione precedente): commessa_ops.py → 6 moduli + wrapper
-- **Frontend refactoring COMPLETATO**: CommessaOpsPanel.js da 2.964 righe a 161 righe (orchestratore)
-  - ApprovvigionamentoSection.js (568 righe) — RdP, OdA, Arrivi, Prelievo, CertLink
-  - ProduzioneSection.js (120 righe) — Fasi produzione + Diario
-  - ConsegneSection.js (149 righe) — DDT + DoP + CE
-  - ContoLavoroSection.js (358 righe) — Verniciatura, Zincatura, Sabbiatura
-  - TracciabilitaSection.js (113 righe) — Tracciabilità EN 1090
-  - CAMSection.js (243 righe) — Criteri Ambientali Minimi DM 256/2022
-  - RepositoryDocumentiSection.js (369 righe) — Upload documenti + AI parsing
-- **Pulizia codice morto COMPLETATA**: Eliminati placeholder chat.py, documents.py, relativi models e registrazioni router
-- Test di regressione: 100% frontend + 100% backend (10/10)
+- **Frontend refactoring COMPLETATO**: CommessaOpsPanel.js da 2.964 → 161 righe
+  - ApprovvigionamentoSection.js (568 righe)
+  - ProduzioneSection.js (120 righe)
+  - ConsegneSection.js (149 righe)
+  - ContoLavoroSection.js (358 righe)
+  - TracciabilitaSection.js (113 righe)
+  - CAMSection.js (243 righe)
+  - RepositoryDocumentiSection.js (369 righe)
+  - Test: 100% (iteration_175)
+- **Pulizia codice morto**: chat.py, documents.py + model eliminati
+- **Responsive Fase 2 COMPLETATO**: 8 pagine rese mobile-friendly
+  - PreventiviPage, ClientsPage, FornitoriPage, ArticoliPage
+  - InvoicesPage, ScadenziarioPage, MarginAnalysisPage, CostControlPage
+  - Pattern: flex-col sm:flex-row, hidden md:table-cell, overflow-x-auto, w-full sm:w-auto
+  - Test: 100% desktop + mobile (iteration_176)
+
+## Pagine già responsive (totale ~12)
+Dashboard, CommessaHubPage, DiarioProduzione, DashboardLayout,
+PreventiviPage, ClientsPage, FornitoriPage, ArticoliPage,
+InvoicesPage, ScadenziarioPage, MarginAnalysisPage, CostControlPage
 
 ## Backlog Prioritizzato
 
 ### P1 — Urgenti
-- Responsive per le restanti 19 pagine dell'app
+- Responsive per le restanti pagine (DDTEditorPage, DistintaEditorPage, PlanningPage, etc.)
 - Vista "Officina" semplificata per operai
 - Split di SettingsPage.js (1.731 righe)
 
