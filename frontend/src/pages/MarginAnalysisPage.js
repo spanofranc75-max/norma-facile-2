@@ -72,7 +72,7 @@ function DetailDialog({ commessaId, open, onClose }) {
                 {data && !loading && (
                     <div className="space-y-5">
                         {/* Summary */}
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <KpiCard label="Ricavo" value={fmtEur(data.ricavo)} icon={TrendingUp} color="text-slate-800" />
                             <KpiCard label="Costi Totali" value={fmtEur(data.costo_totale)} icon={TrendingDown} color="text-red-600" />
                             <KpiCard label="Margine" value={`${fmtEur(data.margine)} (${data.margine_pct}%)`}
@@ -195,9 +195,9 @@ export default function MarginAnalysisPage() {
         <DashboardLayout>
             <div className="space-y-5" data-testid="margin-analysis-page">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <h1 className="text-lg sm:text-xl font-bold text-slate-800 flex items-center gap-2">
                             <BarChart3 className="h-5 w-5 text-indigo-600" /> Analisi Margini
                         </h1>
                         <p className="text-xs text-slate-500 mt-0.5">

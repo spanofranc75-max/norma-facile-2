@@ -333,15 +333,15 @@ export default function InvoicesPage() {
         <DashboardLayout>
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                        <h1 className="font-sans text-3xl font-bold text-slate-900">Fatturazione</h1>
+                        <h1 className="font-sans text-xl sm:text-3xl font-bold text-slate-900">Fatturazione</h1>
                         <p className="text-slate-600">{total} document{total !== 1 ? 'i' : 'o'}</p>
                     </div>
                     <Button
                         data-testid="btn-new-invoice"
                         onClick={() => navigate('/invoices/new')}
-                        className="bg-[#0055FF] text-white hover:bg-[#0044CC]"
+                        className="bg-[#0055FF] text-white hover:bg-[#0044CC] w-full sm:w-auto"
                     >
                         <Plus className="h-4 w-4 mr-2" />
                         Nuovo Documento
@@ -349,7 +349,7 @@ export default function InvoicesPage() {
                 </div>
 
                 {/* KPI Cards */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <Card className="border-gray-200">
                         <CardContent className="pt-4 pb-3">
                             <p className="text-xs text-slate-500 uppercase tracking-wide">Totale Fatturato</p>
@@ -379,7 +379,7 @@ export default function InvoicesPage() {
                 {/* Filters */}
                 <Card className="border-gray-200">
                     <CardContent className="pt-6">
-                        <div className="flex gap-4">
+                        <div className="flex flex-col sm:flex-row gap-4">
                             <Select
                                 value={filters.document_type || "all"}
                                 onValueChange={(v) => setFilters(f => ({ ...f, document_type: v === "all" ? "" : v }))}
@@ -433,17 +433,18 @@ export default function InvoicesPage() {
                 {/* Table */}
                 <Card className="border-gray-200">
                     <CardContent className="p-0">
+                        <div className="overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-[#1E293B]">
                                     <TableHead className="text-white font-semibold">Numero</TableHead>
-                                    <TableHead className="text-white font-semibold">Tipo</TableHead>
+                                    <TableHead className="text-white font-semibold hidden sm:table-cell">Tipo</TableHead>
                                     <TableHead className="text-white font-semibold">Cliente</TableHead>
-                                    <TableHead className="text-white font-semibold">Data</TableHead>
-                                    <TableHead className="text-white font-semibold">Scadenza</TableHead>
+                                    <TableHead className="text-white font-semibold hidden md:table-cell">Data</TableHead>
+                                    <TableHead className="text-white font-semibold hidden md:table-cell">Scadenza</TableHead>
                                     <TableHead className="text-white font-semibold text-right">Totale</TableHead>
-                                    <TableHead className="text-white font-semibold text-right">Pagato</TableHead>
-                                    <TableHead className="text-white font-semibold text-right">Residuo</TableHead>
+                                    <TableHead className="text-white font-semibold text-right hidden lg:table-cell">Pagato</TableHead>
+                                    <TableHead className="text-white font-semibold text-right hidden lg:table-cell">Residuo</TableHead>
                                     <TableHead className="text-white font-semibold">Stato</TableHead>
                                     <TableHead className="w-[60px]"></TableHead>
                                 </TableRow>
@@ -485,20 +486,20 @@ export default function InvoicesPage() {
                                                     {inv.document_number}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge className={DOC_TYPES[inv.document_type]?.color}>
+                                                    <Badge className={`hidden sm:inline-flex ${DOC_TYPES[inv.document_type]?.color}`}>
                                                         {DOC_TYPES[inv.document_type]?.label}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell>{inv.client_name}</TableCell>
-                                                <TableCell>{formatDateIT(inv.issue_date)}</TableCell>
-                                                <TableCell>{inv.due_date ? formatDateIT(inv.due_date) : '-'}</TableCell>
+                                                <TableCell className="hidden md:table-cell">{formatDateIT(inv.issue_date)}</TableCell>
+                                                <TableCell className="hidden md:table-cell">{inv.due_date ? formatDateIT(inv.due_date) : '-'}</TableCell>
                                                 <TableCell className="text-right font-mono font-semibold text-[#0055FF]">
                                                     {formatCurrency(totalAmount)}
                                                 </TableCell>
-                                                <TableCell className={`text-right font-mono ${isPaid ? 'font-semibold text-emerald-600' : paidAmount > 0 ? 'text-emerald-700' : 'text-slate-400'}`} data-testid={`paid-amount-${inv.invoice_id}`}>
+                                                <TableCell className={`text-right font-mono hidden lg:table-cell ${isPaid ? 'font-semibold text-emerald-600' : paidAmount > 0 ? 'text-emerald-700' : 'text-slate-400'}`} data-testid={`paid-amount-${inv.invoice_id}`}>
                                                     {isPaid ? formatCurrency(totalAmount) : paidAmount > 0 ? formatCurrency(paidAmount) : '-'}
                                                 </TableCell>
-                                                <TableCell className={`text-right font-mono ${dueAmount > 0.01 ? 'text-red-600' : 'text-slate-400'}`} data-testid={`residuo-amount-${inv.invoice_id}`}>
+                                                <TableCell className={`text-right font-mono hidden lg:table-cell ${dueAmount > 0.01 ? 'text-red-600' : 'text-slate-400'}`} data-testid={`residuo-amount-${inv.invoice_id}`}>
                                                     {dueAmount > 0.01 ? formatCurrency(dueAmount) : '-'}
                                                 </TableCell>
                                                 {/* Colonna Stato: SOLO badge, nessun bottone */}
@@ -604,14 +605,15 @@ export default function InvoicesPage() {
                                 )}
                             </TableBody>
                         </Table>
+                        </div>
 
                         {/* Footer totals */}
                         {invoices.length > 0 && (
-                            <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-t text-sm">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 bg-slate-50 border-t text-sm gap-2">
                                 <span className="text-slate-600">
                                     {invoices.length} document{invoices.length !== 1 ? 'i' : 'o'} visualizzat{invoices.length !== 1 ? 'i' : 'o'}
                                 </span>
-                                <div className="flex gap-6">
+                                <div className="flex gap-4 sm:gap-6 flex-wrap text-xs sm:text-sm">
                                     <span>Totale: <strong className="font-mono">{formatCurrency(totalDoc)}</strong></span>
                                     <span>Pagato: <strong className="font-mono text-emerald-700">{formatCurrency(totalPaid)}</strong></span>
                                     <span>Residuo: <strong className="font-mono text-red-600">{totalDue > 0.01 ? formatCurrency(totalDue) : '-'}</strong></span>

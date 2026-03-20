@@ -133,9 +133,9 @@ export default function CostControlPage() {
         <DashboardLayout>
             <div className="space-y-4" data-testid="cost-control-page">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900">Controllo Costi</h1>
+                        <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Controllo Costi</h1>
                         <p className="text-sm text-slate-500 mt-0.5">Importa righe fattura, aggiorna magazzino, analizza margini</p>
                     </div>
                     <div className="flex gap-2">

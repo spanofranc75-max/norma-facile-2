@@ -229,9 +229,9 @@ export default function ScadenziarioPage() {
         <DashboardLayout>
             <div className="space-y-4" data-testid="scadenziario-page">
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Scadenziario</h1>
-                    <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Scadenziario</h1>
+                    <div className="flex gap-2 flex-wrap">
                         <Button variant="outline" size="sm" onClick={handleExportXlsx} data-testid="export-xlsx-btn" className="border-slate-200 text-slate-600">
                             <FileSpreadsheet className="h-4 w-4 mr-1.5" />Excel
                         </Button>

@@ -195,14 +195,14 @@ export default function FornitoriPage() {
         <DashboardLayout>
             <div className="space-y-4" data-testid="fornitori-page">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                        <h1 className="font-sans text-2xl font-bold text-[#1E293B] flex items-center gap-2">
-                            <Factory className="h-6 w-6 text-[#0055FF]" /> Fornitori
+                        <h1 className="font-sans text-xl sm:text-2xl font-bold text-[#1E293B] flex items-center gap-2">
+                            <Factory className="h-5 w-5 sm:h-6 sm:w-6 text-[#0055FF]" /> Fornitori
                         </h1>
                         <p className="text-sm text-slate-500 mt-1">Anagrafica fornitori con contatti e condizioni pagamento</p>
                     </div>
-                    <Button data-testid="btn-new-supplier" onClick={() => handleOpenDialog(null)} className="h-10 bg-[#0055FF] hover:bg-[#0044CC] text-white">
+                    <Button data-testid="btn-new-supplier" onClick={() => handleOpenDialog(null)} className="h-10 bg-[#0055FF] hover:bg-[#0044CC] text-white w-full sm:w-auto">
                         <Plus className="h-4 w-4 mr-2" /> Nuovo Fornitore
                     </Button>
                 </div>
@@ -220,15 +220,16 @@ export default function FornitoriPage() {
                 {/* Table */}
                 <Card className="border-gray-200">
                     <CardContent className="p-0">
+                        <div className="overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-[#1E293B]">
                                     <TableHead className="text-white font-medium">Ragione Sociale</TableHead>
-                                    <TableHead className="text-white font-medium">Tipo</TableHead>
-                                    <TableHead className="text-white font-medium">P. IVA</TableHead>
-                                    <TableHead className="text-white font-medium">Citta</TableHead>
-                                    <TableHead className="text-white font-medium">Telefono</TableHead>
-                                    <TableHead className="text-white font-medium">Pagamento</TableHead>
+                                    <TableHead className="text-white font-medium hidden sm:table-cell">Tipo</TableHead>
+                                    <TableHead className="text-white font-medium hidden md:table-cell">P. IVA</TableHead>
+                                    <TableHead className="text-white font-medium hidden md:table-cell">Citta</TableHead>
+                                    <TableHead className="text-white font-medium hidden lg:table-cell">Telefono</TableHead>
+                                    <TableHead className="text-white font-medium hidden lg:table-cell">Pagamento</TableHead>
                                     <TableHead className="w-[100px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -245,11 +246,11 @@ export default function FornitoriPage() {
                                         return (
                                             <TableRow key={s.client_id} data-testid={`supplier-row-${s.client_id}`} className="hover:bg-slate-50 cursor-pointer" onClick={() => handleOpenDialog(s)}>
                                                 <TableCell className="font-medium">{s.business_name}</TableCell>
-                                                <TableCell><Badge className={`${tb.color} text-[10px]`}>{tb.label}</Badge></TableCell>
-                                                <TableCell className="font-mono text-sm">{s.partita_iva || '-'}</TableCell>
-                                                <TableCell className="text-sm">{s.city ? `${s.city} (${s.province})` : '-'}</TableCell>
-                                                <TableCell className="text-sm">{s.phone || s.cellulare || '-'}</TableCell>
-                                                <TableCell className="text-xs text-slate-500 max-w-[150px] truncate">{s.supplier_payment_type_label || s.payment_type_label || '-'}</TableCell>
+                                                <TableCell className="hidden sm:table-cell"><Badge className={`${tb.color} text-[10px]`}>{tb.label}</Badge></TableCell>
+                                                <TableCell className="font-mono text-sm hidden md:table-cell">{s.partita_iva || '-'}</TableCell>
+                                                <TableCell className="text-sm hidden md:table-cell">{s.city ? `${s.city} (${s.province})` : '-'}</TableCell>
+                                                <TableCell className="text-sm hidden lg:table-cell">{s.phone || s.cellulare || '-'}</TableCell>
+                                                <TableCell className="text-xs text-slate-500 max-w-[150px] truncate hidden lg:table-cell">{s.supplier_payment_type_label || s.payment_type_label || '-'}</TableCell>
                                                 <TableCell>
                                                     <div className="flex gap-1" onClick={e => e.stopPropagation()}>
                                                         <Button variant="ghost" size="sm" onClick={() => navigate(`/fascicolo/${s.client_id}`)} title="Fascicolo" className="text-[#0055FF] hover:bg-blue-50">
@@ -269,13 +270,14 @@ export default function FornitoriPage() {
                                 )}
                             </TableBody>
                         </Table>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
 
             {/* Create/Edit Dialog — Tab-based Form */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="sm:max-w-[750px] max-h-[90vh] flex flex-col" data-testid="supplier-dialog">
+                <DialogContent className="sm:max-w-[750px] max-w-[95vw] max-h-[90vh] flex flex-col" data-testid="supplier-dialog">
                     <DialogHeader>
                         <DialogTitle className="font-sans text-xl text-[#1E293B]">
                             {editingSupplier ? 'Modifica Fornitore' : 'Nuovo Fornitore'}
@@ -306,8 +308,8 @@ export default function FornitoriPage() {
                         {/* TAB: Anagrafica */}
                         {activeTab === 'anagrafica' && (
                             <div className="space-y-4">
-                                <div className="grid grid-cols-3 gap-3">
-                                    <div className="col-span-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div className="sm:col-span-2">
                                         <Label>Ragione Sociale *</Label>
                                         <Input data-testid="input-business-name" value={formData.business_name} onChange={e => updateField('business_name', e.target.value)} placeholder="Nome azienda fornitrice" />
                                     </div>
@@ -329,7 +331,7 @@ export default function FornitoriPage() {
                                 </div>
 
                                 {formData.persona_fisica && (
-                                    <div className="grid grid-cols-4 gap-3">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                         <div><Label>Titolo</Label><Input value={formData.titolo} onChange={e => updateField('titolo', e.target.value)} placeholder="Sig." /></div>
                                         <div><Label>Cognome</Label><Input value={formData.cognome} onChange={e => updateField('cognome', e.target.value)} /></div>
                                         <div className="col-span-2"><Label>Nome</Label><Input value={formData.nome} onChange={e => updateField('nome', e.target.value)} /></div>
@@ -337,7 +339,7 @@ export default function FornitoriPage() {
                                 )}
 
                                 <Separator />
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div><Label>Partita IVA</Label><Input data-testid="input-piva" value={formData.partita_iva} onChange={e => updateField('partita_iva', e.target.value)} placeholder="IT12345678901" /></div>
                                     <div><Label>Codice Fiscale</Label><Input data-testid="input-cf" value={formData.codice_fiscale} onChange={e => updateField('codice_fiscale', e.target.value.toUpperCase())} placeholder="RSSMRA80A01H501U" /></div>
                                     <div><Label>Codice SDI</Label><Input value={formData.codice_sdi} onChange={e => updateField('codice_sdi', e.target.value.toUpperCase())} placeholder="0000000" maxLength={7} /></div>
@@ -350,7 +352,7 @@ export default function FornitoriPage() {
                         {activeTab === 'indirizzo' && (
                             <div className="space-y-4">
                                 <div><Label>Via / Piazza / Localita</Label><Input data-testid="input-address" value={formData.address} onChange={e => updateField('address', e.target.value)} placeholder="Via Roma 1" /></div>
-                                <div className="grid grid-cols-4 gap-3">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                     <div><Label>CAP</Label><Input value={formData.cap} onChange={e => updateField('cap', e.target.value)} placeholder="00100" maxLength={5} /></div>
                                     <div className="col-span-2"><Label>Comune</Label><Input value={formData.city} onChange={e => updateField('city', e.target.value)} placeholder="Roma" /></div>
                                     <div><Label>Prov.</Label><Input value={formData.province} onChange={e => updateField('province', e.target.value.toUpperCase())} placeholder="RM" maxLength={2} /></div>
@@ -362,12 +364,12 @@ export default function FornitoriPage() {
                         {/* TAB: Contatti */}
                         {activeTab === 'contatti' && (
                             <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div><Label><Phone className="inline h-3.5 w-3.5 mr-1" />Telefono</Label><Input data-testid="input-phone" value={formData.phone} onChange={e => updateField('phone', e.target.value)} placeholder="+39 06 1234567" /></div>
                                     <div><Label><Phone className="inline h-3.5 w-3.5 mr-1" />Cellulare</Label><Input value={formData.cellulare} onChange={e => updateField('cellulare', e.target.value)} placeholder="+39 333 1234567" /></div>
                                     <div><Label>Fax</Label><Input value={formData.fax} onChange={e => updateField('fax', e.target.value)} /></div>
                                     <div><Label><Mail className="inline h-3.5 w-3.5 mr-1" />Email</Label><Input data-testid="input-email" type="email" value={formData.email} onChange={e => updateField('email', e.target.value)} placeholder="info@fornitore.it" /></div>
-                                    <div className="col-span-2"><Label><Globe className="inline h-3.5 w-3.5 mr-1" />Sito Web</Label><Input value={formData.sito_web} onChange={e => updateField('sito_web', e.target.value)} placeholder="https://www.fornitore.it" /></div>
+                                    <div className="col-span-1 sm:col-span-2"><Label><Globe className="inline h-3.5 w-3.5 mr-1" />Sito Web</Label><Input value={formData.sito_web} onChange={e => updateField('sito_web', e.target.value)} placeholder="https://www.fornitore.it" /></div>
                                 </div>
 
                                 <Separator />

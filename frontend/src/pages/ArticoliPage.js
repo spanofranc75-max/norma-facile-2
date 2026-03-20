@@ -192,9 +192,9 @@ export default function ArticoliPage() {
         <DashboardLayout>
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                        <h1 className="font-sans text-3xl font-bold text-slate-900">
+                        <h1 className="font-sans text-xl sm:text-3xl font-bold text-slate-900">
                             Catalogo Articoli
                         </h1>
                         <p className="text-slate-600">{total} articol{total !== 1 ? 'i' : 'o'} in archivio</p>
@@ -202,7 +202,7 @@ export default function ArticoliPage() {
                     <Button
                         data-testid="btn-new-articolo"
                         onClick={openNew}
-                        className="bg-[#0055FF] text-white hover:bg-[#0044CC]"
+                        className="bg-[#0055FF] text-white hover:bg-[#0044CC] w-full sm:w-auto"
                     >
                         <Plus className="h-4 w-4 mr-2" />
                         Nuovo Articolo
@@ -212,8 +212,8 @@ export default function ArticoliPage() {
                 {/* Filters */}
                 <Card className="border-gray-200">
                     <CardContent className="pt-6">
-                        <div className="flex gap-4">
-                            <div className="relative flex-1 max-w-sm">
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <div className="relative flex-1">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                 <Input
                                     data-testid="search-articoli"
@@ -244,17 +244,18 @@ export default function ArticoliPage() {
                 {/* Table */}
                 <Card className="border-gray-200">
                     <CardContent className="p-0">
+                        <div className="overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-[#1E293B]">
                                     <TableHead className="text-white font-semibold">Codice</TableHead>
                                     <TableHead className="text-white font-semibold">Descrizione</TableHead>
-                                    <TableHead className="text-white font-semibold">Categoria</TableHead>
-                                    <TableHead className="text-white font-semibold">U.M.</TableHead>
+                                    <TableHead className="text-white font-semibold hidden sm:table-cell">Categoria</TableHead>
+                                    <TableHead className="text-white font-semibold hidden md:table-cell">U.M.</TableHead>
                                     <TableHead className="text-white font-semibold text-right">Prezzo</TableHead>
-                                    <TableHead className="text-white font-semibold text-right">Giacenza</TableHead>
-                                    <TableHead className="text-white font-semibold">IVA</TableHead>
-                                    <TableHead className="text-white font-semibold">Fornitore</TableHead>
+                                    <TableHead className="text-white font-semibold text-right hidden md:table-cell">Giacenza</TableHead>
+                                    <TableHead className="text-white font-semibold hidden lg:table-cell">IVA</TableHead>
+                                    <TableHead className="text-white font-semibold hidden lg:table-cell">Fornitore</TableHead>
                                     <TableHead className="w-[120px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -291,23 +292,23 @@ export default function ArticoliPage() {
                                                 {art.descrizione}
                                             </TableCell>
                                             <TableCell>
-                                                <Badge className={CAT_COLORS[art.categoria] || CAT_COLORS.altro}>
+                                                <Badge className={`${CAT_COLORS[art.categoria] || CAT_COLORS.altro} hidden sm:inline-flex`}>
                                                     {CATEGORIE.find(c => c.value === art.categoria)?.label || art.categoria}
                                                 </Badge>
                                             </TableCell>
-                                            <TableCell className="text-slate-600">{art.unita_misura}</TableCell>
+                                            <TableCell className="text-slate-600 hidden md:table-cell">{art.unita_misura}</TableCell>
                                             <TableCell className="text-right font-mono font-semibold">
                                                 {formatCurrency(art.prezzo_unitario)}
                                             </TableCell>
-                                            <TableCell className="text-right font-mono">
+                                            <TableCell className="text-right font-mono hidden md:table-cell">
                                                 {(art.giacenza || 0) > 0 ? (
                                                     <span className="font-semibold text-emerald-700">{art.giacenza} {art.unita_misura}</span>
                                                 ) : (
                                                     <span className="text-slate-300">0</span>
                                                 )}
                                             </TableCell>
-                                            <TableCell>{art.aliquota_iva}%</TableCell>
-                                            <TableCell className="text-slate-600 text-sm">
+                                            <TableCell className="hidden lg:table-cell">{art.aliquota_iva}%</TableCell>
+                                            <TableCell className="text-slate-600 text-sm hidden lg:table-cell">
                                                 {art.fornitore_nome || '-'}
                                             </TableCell>
                                             <TableCell>
@@ -341,6 +342,7 @@ export default function ArticoliPage() {
                                 )}
                             </TableBody>
                         </Table>
+                        </div>
                     </CardContent>
                 </Card>
             </div>

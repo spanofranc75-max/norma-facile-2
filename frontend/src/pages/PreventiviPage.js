@@ -106,12 +106,12 @@ export default function PreventiviPage() {
     return (
         <DashboardLayout>
             <div className="space-y-6" data-testid="preventivi-page">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                        <h1 className="font-sans text-2xl font-bold text-[#1E293B]">Preventivi</h1>
+                        <h1 className="font-sans text-xl sm:text-2xl font-bold text-[#1E293B]">Preventivi</h1>
                         <p className="text-sm text-slate-500 mt-1">{totalCount} preventivi</p>
                     </div>
-                    <Button data-testid="btn-new-preventivo" onClick={() => navigate('/preventivi/new')} className="bg-[#0055FF] text-white hover:bg-[#0044CC]">
+                    <Button data-testid="btn-new-preventivo" onClick={() => navigate('/preventivi/new')} className="bg-[#0055FF] text-white hover:bg-[#0044CC] w-full sm:w-auto">
                         <Plus className="h-4 w-4 mr-2" /> Nuovo Preventivo
                     </Button>
                 </div>
@@ -134,15 +134,16 @@ export default function PreventiviPage() {
                                 onAction={() => navigate('/preventivi/new')}
                             />
                         ) : (
+                            <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader>
                                     <TableRow className="bg-slate-50">
                                         <TableHead className="font-semibold text-[#1E293B]">Numero</TableHead>
                                         <TableHead className="font-semibold text-[#1E293B]">Cliente</TableHead>
-                                        <TableHead className="font-semibold text-[#1E293B]">Oggetto</TableHead>
+                                        <TableHead className="font-semibold text-[#1E293B] hidden md:table-cell">Oggetto</TableHead>
                                         <TableHead className="text-right font-semibold text-[#1E293B]">Totale</TableHead>
-                                        <TableHead className="font-semibold text-[#1E293B]">Fatturato</TableHead>
-                                        <TableHead className="font-semibold text-[#1E293B]">Compliance</TableHead>
+                                        <TableHead className="font-semibold text-[#1E293B] hidden lg:table-cell">Fatturato</TableHead>
+                                        <TableHead className="font-semibold text-[#1E293B] hidden lg:table-cell">Compliance</TableHead>
                                         <TableHead className="font-semibold text-[#1E293B]">Stato</TableHead>
                                         <TableHead className="w-20"></TableHead>
                                     </TableRow>
@@ -163,10 +164,10 @@ export default function PreventiviPage() {
                                             <TableRow key={p.preventivo_id} data-testid={`prev-row-${p.preventivo_id}`} className={`cursor-pointer transition-colors ${st.rowBg || ''} hover:brightness-95`} onClick={() => navigate(`/preventivi/${p.preventivo_id}`)}>
                                                 <TableCell className="font-mono text-sm text-[#0055FF] font-medium">{p.number}</TableCell>
                                                 <TableCell className="text-sm">{p.client_name || '-'}</TableCell>
-                                                <TableCell className="text-sm text-slate-600 max-w-[200px] truncate">{p.subject || '-'}</TableCell>
+                                                <TableCell className="text-sm text-slate-600 max-w-[200px] truncate hidden md:table-cell">{p.subject || '-'}</TableCell>
                                                 <TableCell className="text-right font-mono font-semibold text-sm">{fmtEur(p.totals?.total)}</TableCell>
-                                                <TableCell><InvoicingProgressBar progress={p.invoicing_progress} /></TableCell>
-                                                <TableCell><ComplianceBadge status={p.compliance_status} normativa={p.normativa} /></TableCell>
+                                                <TableCell className="hidden lg:table-cell"><InvoicingProgressBar progress={p.invoicing_progress} /></TableCell>
+                                                <TableCell className="hidden lg:table-cell"><ComplianceBadge status={p.compliance_status} normativa={p.normativa} /></TableCell>
                                                 <TableCell><Badge className={st.color + ' text-xs'}>{st.label}</Badge></TableCell>
                                                 <TableCell>
                                                     <div className="flex gap-1">
@@ -188,6 +189,7 @@ export default function PreventiviPage() {
                                     })}
                                 </TableBody>
                             </Table>
+                            </div>
                         )}
                     </CardContent>
                 </Card>
