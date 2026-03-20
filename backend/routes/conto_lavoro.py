@@ -280,10 +280,11 @@ async def verifica_cl(cid: str, cl_id: str, user: dict = Depends(get_current_use
     cert_b64 = cl.get("certificato_rientro_base64")
     if cert_b64:
         doc_id = new_id("doc_")
+        tipo_cert = f"certificato_{cl.get('tipo', 'trattamento')}"
         doc_entry = {
             "doc_id": doc_id,
-            "titolo": f"Certificato {cl.get('tipo','')} — {cl.get('fornitore_nome','')}",
-            "tipo": "certificato_fornitore",
+            "titolo": f"Certificato {cl.get('tipo','').capitalize()} — {cl.get('fornitore_nome','')}",
+            "tipo": tipo_cert,
             "source": "conto_lavoro_rientro",
             "cl_id": cl_id,
             "uploaded_at": ts().isoformat(),
@@ -293,6 +294,26 @@ async def verifica_cl(cid: str, cl_id: str, user: dict = Depends(get_current_use
             {"commessa_id": cid},
             {"$push": {"documenti": doc_entry}},
         )
+
+        # Also save to commessa_documents for Pulsante Magico
+        await db.commessa_documents.insert_one({
+            "doc_id": doc_id,
+            "commessa_id": cid,
+            "nome_file": cl.get("certificato_rientro_filename", "certificato.pdf"),
+            "titolo": f"Cert. {cl.get('tipo','').capitalize()} — {cl.get('fornitore_nome','')}",
+            "tipo": tipo_cert,
+            "content_type": "application/pdf",
+            "file_base64": cert_b64,
+            "uploaded_at": ts().isoformat(),
+            "metadata_estratti": {
+                "source": "conto_lavoro_rientro",
+                "cl_id": cl_id,
+                "tipo_trattamento": cl.get("tipo", ""),
+                "fornitore": cl.get("fornitore_nome", ""),
+                "esito_qc": cl.get("esito_qc", "conforme"),
+                "ral": cl.get("ral", ""),
+            },
+        })
 
     await db[COLL].update_one(
         {"commessa_id": cid},

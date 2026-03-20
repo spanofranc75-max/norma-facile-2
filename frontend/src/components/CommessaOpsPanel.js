@@ -12,7 +12,7 @@ import { Badge } from '../components/ui/badge';
 import {
     ShoppingCart, Factory, Truck, Paintbrush, FileUp,
     ChevronDown, ChevronUp, FileText, Leaf, Shield,
-    Eye, AlertTriangle, PackageOpen, Download,
+    Eye, AlertTriangle, PackageOpen, Download, FileStack, TrendingUp,
 } from 'lucide-react';
 
 // Sub-components
@@ -29,6 +29,8 @@ import SfridiSection from './SfridiSection';
 import ControlliVisiviSection from './ControlliVisiviSection';
 import RegistroNCSection from './RegistroNCSection';
 import DNSHSection from './DNSHSection';
+import DopFrazionataSection from './DopFrazionataSection';
+import SALSection from './SALSection';
 
 // ── Collapsible Section wrapper ──
 function Section({ title, icon: Icon, count, defaultOpen, children }) {
@@ -199,6 +201,18 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
             {/* ── CSE EXPORT — Cartella Documentale Sicurezza ── */}
             <Section title="Documentazione Sicurezza CSE" icon={Shield} count={0}>
                 <CSEExportButton commessaId={commessaId} />
+            </Section>
+
+            {/* ── DOP FRAZIONATA — se almeno una voce è EN 1090 ── */}
+            {hasEN1090 && (
+                <Section title="DoP Frazionate" icon={FileStack} count={0}>
+                    <DopFrazionataSection commessaId={commessaId} onRefresh={handleRefresh} />
+                </Section>
+            )}
+
+            {/* ── SAL & ACCONTI — sempre visibile ── */}
+            <Section title="SAL & Acconti" icon={TrendingUp} count={0}>
+                <SALSection commessaId={commessaId} onRefresh={handleRefresh} />
             </Section>
 
             {/* ── REPOSITORY DOCUMENTI — sempre visibile ── */}

@@ -73,6 +73,8 @@ from routes.montaggio import router as montaggio_router
 from routes.attrezzature import router as attrezzature_router
 from routes.archivio import router as archivio_router
 from routes.sicurezza import router as sicurezza_router
+from routes.dop_frazionata import router as dop_frazionata_router
+from routes.sal_acconti import router as sal_acconti_router
 
 # Configure logging
 logging.basicConfig(
@@ -190,6 +192,8 @@ app.include_router(montaggio_router, prefix="/api")
 app.include_router(attrezzature_router, prefix="/api")
 app.include_router(archivio_router, prefix="/api")
 app.include_router(sicurezza_router, prefix="/api")
+app.include_router(dop_frazionata_router, prefix="/api")
+app.include_router(sal_acconti_router, prefix="/api")
 
 
 @app.on_event("startup")

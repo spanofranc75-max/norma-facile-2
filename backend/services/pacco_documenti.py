@@ -577,6 +577,97 @@ def _build_parte_e(commessa_id: str, data: dict) -> str:
 
 
 # ══════════════════════════════════════════════════════════════
+#  PARTE F — TRATTAMENTI SUPERFICIALI (Conto Lavoro)
+# ══════════════════════════════════════════════════════════════
+
+def _build_parte_f_trattamenti(commessa_id: str, data: dict) -> str:
+    """Build chapter: Surface treatments from Conto Lavoro entries."""
+    cl_items = data.get("conto_lavoro", [])
+    if not cl_items:
+        return ""
+
+    html = '<div class="page-break"></div>'
+    html += '<h2><span class="badge badge-1090">TRATTAMENTI</span> TRATTAMENTI SUPERFICIALI</h2>'
+
+    tipo_labels = {
+        "verniciatura": "Verniciatura",
+        "zincatura": "Zincatura a Caldo",
+        "sabbiatura": "Sabbiatura",
+        "galvanica": "Trattamento Galvanico",
+    }
+
+    for i, cl in enumerate(cl_items):
+        tipo = cl.get("tipo", "altro")
+        label = tipo_labels.get(tipo, tipo.capitalize())
+        fornitore = _s(cl.get("fornitore_nome", ""))
+        stato = cl.get("stato", "da_inviare")
+        ral = _s(cl.get("ral", ""))
+
+        stato_badges = {
+            "da_inviare": '<span class="badge badge-na">Da Inviare</span>',
+            "inviato": '<span class="badge" style="background:#fef3c7;color:#92400e;">Inviato</span>',
+            "in_lavorazione": '<span class="badge" style="background:#dbeafe;color:#1e40af;">In Lavorazione</span>',
+            "rientrato": '<span class="badge badge-ok">Rientrato</span>',
+            "verificato": '<span class="badge badge-ok">Verificato</span>',
+        }
+
+        if i > 0:
+            html += '<div style="margin-top:12px;border-top:1px solid #ddd;padding-top:8px;"></div>'
+
+        html += f'<h3>Trattamento {i + 1}: {label}</h3>'
+        html += f"""
+        <table class="info">
+            <tr><td class="lbl">Tipo Trattamento</td><td>{label}</td></tr>
+            <tr><td class="lbl">Fornitore</td><td>{fornitore}</td></tr>
+            <tr><td class="lbl">Stato</td><td>{stato_badges.get(stato, stato)}</td></tr>
+            {"<tr><td class='lbl'>Colore RAL</td><td>" + ral + "</td></tr>" if ral else ""}
+            {"<tr><td class='lbl'>Data Invio</td><td>" + _s(cl.get('data_invio', '')[:10]) + "</td></tr>" if cl.get('data_invio') else ""}
+            {"<tr><td class='lbl'>Data Rientro</td><td>" + _s(cl.get('data_rientro', '')[:10]) + "</td></tr>" if cl.get('data_rientro') else ""}
+        </table>
+        """
+
+        # Materiali inviati
+        righe = cl.get("righe", [])
+        if righe:
+            html += '<h4>Materiali Inviati</h4>'
+            html += '<table class="data"><tr><th>Descrizione</th><th>Qta</th><th>Peso (kg)</th></tr>'
+            for r in righe:
+                html += f'<tr><td>{_s(r.get("descrizione", r.get("description", "")))}</td><td>{r.get("quantita", r.get("quantity", ""))}</td><td>{r.get("peso_kg", "")}</td></tr>'
+            html += '</table>'
+
+        # Esito QC al rientro
+        if cl.get("esito_qc"):
+            esito = cl["esito_qc"]
+            esito_badge = '<span class="badge badge-ok">CONFORME</span>' if esito == "conforme" else '<span class="badge badge-nok">NON CONFORME</span>'
+            html += f"""
+            <h4>Esito Controllo Qualita al Rientro</h4>
+            <table class="info">
+                <tr><td class="lbl">Esito QC</td><td>{esito_badge}</td></tr>
+                <tr><td class="lbl">DDT Fornitore</td><td>{_s(cl.get('ddt_fornitore_numero', ''))}</td></tr>
+                <tr><td class="lbl">Peso Rientrato</td><td>{cl.get('peso_rientrato_kg', '')} kg</td></tr>
+            </table>
+            """
+            if esito == "non_conforme" and cl.get("motivo_non_conformita"):
+                html += f'<div class="note">MOTIVO NC: {_s(cl["motivo_non_conformita"])}</div>'
+
+        # Certificato di trattamento (se caricato)
+        if cl.get("certificato_rientro_filename"):
+            html += f"""
+            <h4>Certificato di Trattamento</h4>
+            <table class="info">
+                <tr><td class="lbl">File</td><td>{_s(cl.get('certificato_rientro_filename', ''))}</td></tr>
+                <tr><td class="lbl">Tipo</td><td>Certificato {label}</td></tr>
+            </table>
+            <p style="font-size:8pt;color:#666;font-style:italic;">
+                Il certificato di trattamento e' stato allegato al repository documenti della commessa
+                e sara' incluso nella documentazione finale.
+            </p>
+            """
+
+    return html
+
+
+# ══════════════════════════════════════════════════════════════
 #  MATCHING HELPERS — Filtro Beltrami
 # ══════════════════════════════════════════════════════════════
 
@@ -743,6 +834,12 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
         {"commessa_id": commessa_id}, {"_id": 0}
     ).to_list(20)
 
+    # Conto Lavoro (trattamenti superficiali)
+    comm_ops = await db.commesse_ops.find_one(
+        {"commessa_id": commessa_id}, {"_id": 0, "conto_lavoro": 1}
+    )
+    conto_lavoro = (comm_ops or {}).get("conto_lavoro", [])
+
     # Shared data context
     ctx = {
         "docs": docs,
@@ -755,6 +852,7 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
         "varianti": varianti,
         "dnsh_data": dnsh_data,
         "sicurezza_cantiere": sicurezza_cantiere,
+        "conto_lavoro": conto_lavoro,
     }
 
     # ── 2. BUILD INDEX (which parts to include) ──
@@ -790,6 +888,13 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
             "titolo": "SOSTENIBILITÀ E DNSH",
             "subtitle": "Requisiti ambientali PNRR, materiale riciclato, certificazioni",
         })
+    if conto_lavoro:
+        cl_tipi = ", ".join(set(cl.get("tipo", "").capitalize() for cl in conto_lavoro if cl.get("tipo")))
+        parti.append({
+            "lettera": f"CAP. {len(parti) + 1}",
+            "titolo": "TRATTAMENTI SUPERFICIALI",
+            "subtitle": f"Conto lavoro: {cl_tipi or 'Lavorazioni esterne'} — certificati trattamento",
+        })
 
     # ── 3. GENERATE HTML ──
 
@@ -811,6 +916,11 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
     # CAP. 5: Sostenibilità e DNSH
     if dnsh_data:
         html_body += _build_parte_e(commessa_id, ctx)
+
+    # CAP. 6 (or 5): Trattamenti Superficiali (Conto Lavoro)
+    cl_data = ctx.get("conto_lavoro", [])
+    if cl_data:
+        html_body += _build_parte_f_trattamenti(commessa_id, ctx)
 
     # ── 4. RENDER PDF ──
 
