@@ -1,77 +1,94 @@
 # NormaFacile 2.0 — PRD
 
 ## Problema Originale
-Gestionale per carpenteria metallica conforme EN 1090, EN 13241, ISO 3834. L'utente ha richiesto la gestione di 3 categorie di lavoro con workflow distinti e la struttura "Matrioska" per cantieri misti.
+Gestionale per carpenteria metallica conforme EN 1090, EN 13241, ISO 3834. Struttura "Matrioska" per cantieri misti, con vista officina blindata per operai.
 
 ## Utenti Target
 - **Titolare carpenteria**: Gestione completa commesse, costi, preventivi
 - **Responsabile produzione**: Diario produzione, fasi, operatori
-- **Responsabile qualità**: Fascicolo tecnico, certificati, tracciabilità EN 1090
-- **Operai officina**: Accesso semplificato al diario di produzione
+- **Responsabile qualità**: Fascicolo tecnico, certificati, tracciabilità
+- **Operai officina**: Vista blindata (/officina) con timer, foto, checklist
 
 ## Architettura
 - **Frontend**: React + TailwindCSS + Shadcn/UI
 - **Backend**: FastAPI + MongoDB
-- **Auth**: Google OAuth + JWT (via Emergent)
+- **Auth**: Google OAuth (admin) + PIN 4 cifre (operai)
 - **Hosting**: Railway (backend) + Vercel (frontend)
-- **AI**: Emergent LLM Key per analisi certificati
 
 ## 3 Categorie di Lavoro (IMPLEMENTATO)
-### A. STRUTTURALE (EN 1090)
-- Tracciabilità lotti ferro (3.1), patentini saldatori, WPS
-- Controllo qualità, DoP, Etichetta CE
-- Sezioni: Tutte (Approvvigionamento, Produzione, Consegne, Conto Lavoro, Tracciabilità, CAM, Fascicolo Tecnico, Repository)
-
-### B. CANCELLO (EN 13241)
-- Kit sicurezza, foto fotocellule/coste
-- Verbale collaudo forze, Manuale d'Uso
-- Sezioni: Approvvigionamento, Produzione, Consegne, Conto Lavoro, Certificazione Cancello, Repository
-
-### C. GENERICA (No Marcatura)
-- Solo gestione ore e materiali
-- Nessun obbligo burocratico
-- Sezioni: Solo Produzione, Conto Lavoro, Repository
+### A. STRUTTURALE (EN 1090) → Tracciabilità, WPS, DoP, CE
+### B. CANCELLO (EN 13241) → Kit sicurezza, collaudo, manuale
+### C. GENERICA (No CE) → Solo ore e materiali
 
 ## Struttura Matrioska — Cantieri Misti (IMPLEMENTATO)
-- Una Commessa è un "Fascicolo di Cantiere" che può contenere multiple "Voci di Lavoro"
-- Ogni Voce ha la propria categoria normativa (EN_1090, EN_13241, GENERICA)
-- Il pannello operativo mostra le sezioni dell'UNIONE di tutte le categorie presenti
-- Il Diario di Produzione chiede "Su quale voce stai lavorando?" con bottoni grandi e colorati
-- Campi adattivi: EN 1090 → N. colata + WPS | EN 13241 → Note collaudo | GENERICA → solo ore
-- Retrocompatibilità: commesse senza voci extra funzionano come prima
+- Commessa contiene multiple Voci di Lavoro
+- Pannello operativo mostra UNIONE di tutte le categorie
+- Diario adattivo con selettore voce colorato
+- Retrocompatibilità con commesse mono-categoria
 
-## Cosa è stato implementato
+## Vista Officina — 4 Ponti (IMPLEMENTATO 20/03/2026)
+### PONTE 1: DIARIO (Timer)
+- 3 bottoni grandi: START (verde), PAUSA (giallo), STOP (rosso)
+- Timer visivo che scorre, nessun numero di costo visibile
+- STOP → salva automaticamente minuti nel diario produzione della commessa
+- Stato timer persistito in DB (sopravvive a refresh browser)
 
-### Sessioni precedenti
-- Calcolo margini corretto
-- Fix deployment Railway con nixpacks.toml
-- Backend refactoring: commessa_ops.py → 6 moduli
-- Frontend refactoring: CommessaOpsPanel.js → 8 sotto-componenti
-- Responsive 12 pagine
-- Pulizia codice morto
+### PONTE 2: FOTO (Certificati/Collaudi)
+- Singolo bottone FOTO grande circolare
+- Routing intelligente basato su voce attiva:
+  - EN 1090 → tipo "certificato_31" (Repository certificati 3.1)
+  - EN 13241 → tipo "foto" (Fascicolo tecnico)
+  - GENERICA → tipo "foto" (Repository documenti)
+- Nome file chiaro: FOTO_{normativa}_{numero_commessa}_{timestamp}.jpg
 
-### Sessione 20 Marzo 2026
-- FASE 1 COMPLETATA: Categorie di Lavoro (3 bottoni, campi condizionali, banner normativa)
-- FASE 1.5 COMPLETATA: Voci di Lavoro backend (API CRUD) + frontend (VociLavoroSection)
-- FASE 2 COMPLETATA: Diario Produzione Adattivo (selettore voce, campi specifici per categoria)
-- CommessaOpsPanel fix: usa UNIONE categorie (hasEN1090, hasEN13241, isOnlyGenerica)
-- Test: 100% backend (19/19) + 100% frontend (iteration_178)
+### PONTE 3: QUALITÀ (Checklist)
+- Icone + 👍/👎 per ogni punto di controllo
+- EN 1090: Saldature Pulite, Dimensioni OK, Materiale OK
+- EN 13241: Sicurezze OK, Movimento OK
+- GENERICA: Lavoro Completato
+- 👎 → crea alert automatico per Admin (badge rosso dashboard)
+
+### PONTE 4: BLOCCO DATI
+- Operaio intrappolato in /officina — nessuna navigazione
+- Nessun menu, nessun link a fatture/clienti/fornitori
+- Accesso: QR Code + PIN 4 cifre
+- QR generabile dalla CommessaHubPage per commessa o voce specifica
+
+## Implementato — Cronologia
+
+### Pre-fork
+- Calcolo margini, deployment Railway, backend refactoring
+- Frontend refactoring CommessaOpsPanel (8 sotto-componenti)
+- Responsive 12 pagine, pulizia codice morto
+
+### Fork 1 (20/03/2026)
+- Categorie di lavoro, Voci di Lavoro (Matrioska)
+- Diario Produzione Adattivo (selettore voce, campi condizionali)
+- CommessaOpsPanel: usa UNIONE categorie
+
+### Fork 2 (20/03/2026) — Corrente
+- Vista Officina completa con 4 Ponti
+- Backend: /api/officina/* (PIN, timer, foto, checklist, alerts)
+- Frontend: OfficinaPage.js (tema dark, mobile-first)
+- PIN management inline nel DiarioProduzione
+- QR dialog aggiornato con link officina per voce
+- Badge alert qualità nella Dashboard admin
 
 ## Backlog Prioritizzato
 
-### P0 — Completato
-- ~~FASE 1: Categorie di Lavoro~~
-- ~~FASE 1.5: Voci di Lavoro (Matrioska)~~
-- ~~FASE 2: Diario Produzione Adattivo~~
-
 ### P1 — Prossimi
-- FASE 3: "Pulsante Magico" per generare pacchetto documenti specifico per categoria (PDF/ZIP)
-- Vista "Officina" semplificata per operai (mobile-first, QR + PIN)
-- Split di SettingsPage.js (1.731 righe)
+- FASE 3: "Pulsante Magico" — generazione pacchetto documenti per cantiere (PDF/ZIP)
+- Split SettingsPage.js (>1700 righe)
 
 ### P2 — Importanti
-- Split commesse.py (1.330 righe)
-- Onboarding Wizard, Unificazione servizi PDF, Export Excel, RBAC granulare
+- Split commesse.py (>1300 righe)
+- Onboarding Wizard, Unificazione servizi PDF, Export Excel
+- RBAC granulare
 
 ### P3 — Futuri
-- Firme digitali su PDF, Portale clienti read-only, Notifiche WhatsApp
+- Firme digitali su PDF, Portale clienti read-only
+- Notifiche WhatsApp scadenze
+
+## DB Collections
+- `commesse`, `voci_lavoro`, `diario_produzione`, `operatori`
+- `commessa_documents`, `officina_timers`, `officina_checklist`, `officina_alerts`
