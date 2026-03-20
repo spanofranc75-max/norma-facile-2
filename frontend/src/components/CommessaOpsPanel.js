@@ -27,6 +27,7 @@ import EmailPreviewDialog from './EmailPreviewDialog';
 import { DisabledTooltip } from './DisabledTooltip';
 import FascicoloTecnicoSection from './FascicoloTecnicoSection';
 import GateCertificationPanel from './GateCertificationPanel';
+import DiarioProduzione from './DiarioProduzione';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
@@ -1097,63 +1098,22 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                         <Play className="h-3.5 w-3.5 mr-1.5" /> Inizializza Fasi Produzione
                     </Button>
                 ) : (
-                    <div className="space-y-1.5">
+                    <div className="space-y-3">
                         {/* Progress bar */}
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2">
                             <div className="flex-1 bg-slate-200 rounded-full h-2">
                                 <div className="bg-[#0055FF] h-2 rounded-full transition-all" style={{ width: `${progPct}%` }} />
                             </div>
                             <span className="text-xs font-mono font-semibold text-[#0055FF]">{progPct}%</span>
                         </div>
-                        {fasi.map(f => {
-                            const isLate = f.data_prevista && f.stato !== 'completato' && new Date(f.data_prevista) < new Date();
-                            const daysLate = f.data_prevista && f.stato !== 'completato' ? Math.floor((new Date() - new Date(f.data_prevista)) / 86400000) : 0;
-                            return (
-                            <div key={f.tipo} className={`flex items-center gap-2 p-2 rounded text-xs ${isLate ? 'bg-red-50 border border-red-200' : 'bg-slate-50'}`} data-testid={`fase-${f.tipo}`}>
-                                <span className={`font-medium flex-1 ${isLate ? 'text-red-700' : ''}`}>{f.label || f.tipo}</span>
-                                {f.data_prevista && f.stato !== 'completato' && (
-                                    <span className={`text-[9px] ${isLate ? 'text-red-500 font-semibold' : 'text-slate-400'}`}>
-                                        {isLate ? `${daysLate}gg ritardo` : `entro ${new Date(f.data_prevista).toLocaleDateString('it-IT')}`}
-                                    </span>
-                                )}
-                                {f.data_prevista && (
-                                    <input
-                                        type="date"
-                                        className="text-[9px] border rounded px-1 py-0.5 w-24 bg-white"
-                                        value={f.data_prevista || ''}
-                                        data-testid={`fase-data-prevista-${f.tipo}`}
-                                        onChange={e => handleUpdateFase(f.tipo, f.stato, { data_prevista: e.target.value })}
-                                    />
-                                )}
-                                {!f.data_prevista && f.stato !== 'completato' && (
-                                    <input
-                                        type="date"
-                                        className="text-[9px] border rounded px-1 py-0.5 w-24 bg-white text-slate-400"
-                                        placeholder="Data prev."
-                                        data-testid={`fase-data-prevista-${f.tipo}`}
-                                        onChange={e => handleUpdateFase(f.tipo, f.stato, { data_prevista: e.target.value })}
-                                    />
-                                )}
-                                <StatoBadge stato={f.stato} />
-                                {f.stato === 'completato' && f.completed_at && (
-                                    <span className="text-[9px] text-slate-400">{new Date(f.completed_at).toLocaleDateString('it-IT')}</span>
-                                )}
-                                {f.stato === 'completato' && f.operator_name && (
-                                    <span className="text-[9px] text-slate-400 italic">{f.operator_name}</span>
-                                )}
-                                {f.stato === 'da_fare' && (
-                                    <Button size="sm" variant="ghost" className="h-6 text-[10px] text-blue-600" onClick={() => handleUpdateFase(f.tipo, 'in_corso')} data-testid={`fase-avvia-${f.tipo}`}>
-                                        <Play className="h-3 w-3 mr-0.5" /> Avvia
-                                    </Button>
-                                )}
-                                {f.stato === 'in_corso' && (
-                                    <Button size="sm" variant="ghost" className="h-6 text-[10px] text-emerald-600" onClick={() => openFaseCompletaModal(f)} data-testid={`fase-completa-${f.tipo}`}>
-                                        <CheckCircle2 className="h-3 w-3 mr-0.5" /> Completa
-                                    </Button>
-                                )}
-                            </div>
-                            );
-                        })}
+
+                        {/* Fasi con diario integrato */}
+                        <DiarioProduzione
+                            commessaId={commessaId}
+                            fasi={fasi}
+                            onUpdateFase={handleUpdateFase}
+                            onRefresh={() => { fetchData(); onRefresh?.(); }}
+                        />
                     </div>
                 )}
             </Section>
@@ -1999,7 +1959,7 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
 
             {/* Arrivo Dialog - Enhanced with material tracking */}
             <Dialog open={arrivoOpen} onOpenChange={setArrivoOpen}>
-                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+                <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Package className="h-5 w-5 text-amber-600" />
@@ -2065,38 +2025,38 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="bg-amber-50">
-                                            <TableHead className="w-[24%] text-xs">Descrizione</TableHead>
-                                            <TableHead className="w-[12%] text-xs text-center">Q.tà</TableHead>
-                                            <TableHead className="w-[9%] text-xs text-center">U.M.</TableHead>
-                                            <TableHead className="w-[14%] text-xs text-center">€/unità</TableHead>
-                                            <TableHead className="w-[14%] text-xs text-center" title="Lascia vuoto se usi tutto. Se ne usi solo una parte, indica la quantità usata per la commessa. Il resto andrà in magazzino.">Q.tà Usata</TableHead>
-                                            <TableHead className="w-[14%] text-xs">Rif. Ordine</TableHead>
+                                            <TableHead className="w-[25%] text-xs">Descrizione</TableHead>
+                                            <TableHead className="w-[8%] text-xs text-center">Q.tà</TableHead>
+                                            <TableHead className="w-[7%] text-xs text-center">U.M.</TableHead>
+                                            <TableHead className="w-[10%] text-xs text-center">€/unità</TableHead>
+                                            <TableHead className="w-[10%] text-xs text-center" title="Lascia vuoto se usi tutto. Se ne usi solo una parte, indica la quantità usata per la commessa. Il resto andrà in magazzino.">Q.tà Usata</TableHead>
+                                            <TableHead className="w-[28%] text-xs">Rif. Ordine</TableHead>
                                             <TableHead className="w-[5%] text-xs text-center">3.1</TableHead>
-                                            <TableHead className="w-[5%]"></TableHead>
+                                            <TableHead className="w-[4%]"></TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {arrivoForm.materiali.map((mat, idx) => (
                                             <TableRow key={mat.id || idx}>
-                                                <TableCell className="p-1">
+                                                <TableCell className="p-1.5">
                                                     <Input
                                                         value={mat.descrizione}
                                                         onChange={e => updateArrivoMat(idx, 'descrizione', e.target.value)}
-                                                        className="h-8 text-sm"
+                                                        className="h-9 text-sm"
                                                     />
                                                 </TableCell>
-                                                <TableCell className="p-1">
+                                                <TableCell className="p-1.5">
                                                     <Input
                                                         type="number"
                                                         value={mat.quantita}
                                                         onChange={e => updateArrivoMat(idx, 'quantita', e.target.value)}
-                                                        className="h-8 text-sm text-center"
+                                                        className="h-9 text-sm text-center"
                                                         min="0"
                                                     />
                                                 </TableCell>
-                                                <TableCell className="p-1">
+                                                <TableCell className="p-1.5">
                                                     <Select value={mat.unita_misura} onValueChange={v => updateArrivoMat(idx, 'unita_misura', v)}>
-                                                        <SelectTrigger className="h-8 text-xs">
+                                                        <SelectTrigger className="h-9 text-sm">
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -2108,32 +2068,32 @@ export default function CommessaOpsPanel({ commessaId, commessaNumero, normativa
                                                         </SelectContent>
                                                     </Select>
                                                 </TableCell>
-                                                <TableCell className="p-1">
+                                                <TableCell className="p-1.5">
                                                     <Input
                                                         type="number"
                                                         value={mat.prezzo_unitario || ''}
                                                         onChange={e => updateArrivoMat(idx, 'prezzo_unitario', e.target.value)}
-                                                        className="h-8 text-sm text-center"
+                                                        className="h-9 text-sm text-center"
                                                         min="0"
                                                         step="0.01"
                                                         data-testid={`arrivo-mat-${idx}-prezzo`}
                                                     />
                                                 </TableCell>
-                                                <TableCell className="p-1">
+                                                <TableCell className="p-1.5">
                                                     <Input
                                                         type="number"
                                                         value={mat.quantita_utilizzata}
                                                         onChange={e => updateArrivoMat(idx, 'quantita_utilizzata', e.target.value)}
-                                                        className="h-8 text-sm text-center"
+                                                        className="h-9 text-sm text-center"
                                                         min="0"
                                                         step="0.01"
                                                         title="Lascia vuoto se usi tutto. Indica qui la quantità effettivamente usata per la commessa."
                                                         data-testid={`arrivo-mat-${idx}-qty-usata`}
                                                     />
                                                 </TableCell>
-                                                <TableCell className="p-1">
+                                                <TableCell className="p-1.5">
                                                     <Select value={mat.ordine_id || '__none__'} onValueChange={v => updateArrivoMat(idx, 'ordine_id', v === '__none__' ? '' : v)}>
-                                                        <SelectTrigger className="h-8 text-xs">
+                                                        <SelectTrigger className="h-9 text-sm">
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
