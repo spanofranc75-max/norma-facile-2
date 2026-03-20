@@ -75,6 +75,7 @@ from routes.archivio import router as archivio_router
 from routes.sicurezza import router as sicurezza_router
 from routes.dop_frazionata import router as dop_frazionata_router
 from routes.sal_acconti import router as sal_acconti_router
+from routes.preventivatore import router as preventivatore_router
 
 # Configure logging
 logging.basicConfig(
@@ -194,6 +195,7 @@ app.include_router(archivio_router, prefix="/api")
 app.include_router(sicurezza_router, prefix="/api")
 app.include_router(dop_frazionata_router, prefix="/api")
 app.include_router(sal_acconti_router, prefix="/api")
+app.include_router(preventivatore_router, prefix="/api")
 
 
 @app.on_event("startup")

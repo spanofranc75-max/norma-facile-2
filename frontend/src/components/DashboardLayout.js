@@ -24,7 +24,7 @@ import {
     BarChart3, BoxIcon, FileInput, Camera, ChevronDown,
     Briefcase, Wrench, Award, ShoppingCart, FileText, LayoutGrid,
     CreditCard, TrendingUp, ClipboardCheck, Calendar, CircleDollarSign,
-    User, LogOut, Bell, Flame, Calculator, ScrollText, Menu, X, Archive,
+    User, LogOut, Bell, Flame, Calculator, ScrollText, Menu, X, Archive, Brain,
 } from 'lucide-react';
 
 // ── Navigation Structure ────────────────────────────────────────
@@ -63,6 +63,7 @@ const NAV_GROUPS = [
         children: [
             { path: '/clients', label: 'Clienti', icon: Users },
             { path: '/preventivi', label: 'Preventivi', icon: ClipboardList },
+            { path: '/preventivatore', label: 'AI Predittivo', icon: Brain },
             { path: '/invoices', label: 'Fatturazione', icon: Receipt, roles: ['admin', 'amministrazione'] },
             { path: '/ddt', label: 'DDT', icon: Truck },
         ],

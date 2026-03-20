@@ -63,6 +63,7 @@ import ActivityLogPage from './pages/ActivityLogPage';
 import OfficinaPage from './pages/OfficinaPage';
 import AttrezzaturePage from './pages/AttrezzaturePage';
 import ArchivioStoricoPage from './pages/ArchivioStoricoPage';
+import PreventivatoreWizard from './pages/PreventivatoreWizard';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './App.css';
@@ -262,6 +263,7 @@ function AppRouter() {
             <Route path="/registro-attivita" element={<ProtectedRoute><ActivityLogPage /></ProtectedRoute>} />
             <Route path="/attrezzature" element={<ProtectedRoute><AttrezzaturePage /></ProtectedRoute>} />
             <Route path="/archivio-storico" element={<ProtectedRoute><ArchivioStoricoPage /></ProtectedRoute>} />
+            <Route path="/preventivatore" element={<ProtectedRoute><PreventivatoreWizard /></ProtectedRoute>} />
         </Routes>
     );
 }

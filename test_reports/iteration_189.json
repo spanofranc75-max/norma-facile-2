@@ -1,0 +1,72 @@
+{
+  "summary": "Iteration 189: Preventivatore Predittivo Module - AI-powered quotation system. All 17 backend tests passed. Frontend verified: 4-step wizard loads correctly with upload area, margin sliders, and generate button. Sidebar shows 'AI Predittivo' link with Brain icon.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration189_preventivatore_predittivo.py",
+    "/app/test_reports/pytest/iteration189_preventivatore_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Preventivatore Predittivo service correctly implements: AI drawing analysis, historical price engine, ML hour estimation with linear regression, and quote calculation with differentiated margins",
+    "ML hour estimation falls back to parametric estimation when <3 historical samples (commesse_chiuse) - this is expected behavior",
+    "Route /api/preventivatore/accetta/{id} correctly creates commessa with pre-compiled budget, hours, and material list (RdP)",
+    "Frontend wizard has proper 4-step flow: Upload -> Materials -> Margins -> Generate with all data-testid attributes for testing"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration189_preventivatore_predittivo.py"
+  ],
+  "success_rate": {
+    "backend": "100% (17 tests passed)",
+    "frontend": "100% (all UI elements verified)"
+  },
+  "test_credentials": {
+    "note": "Test sessions cleaned up after testing"
+  },
+  "seed_data_creation": "None - test data cleaned up",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 189 tested the Preventivatore Predittivo module - AI-powered quotation system. Key findings: (1) All 6 endpoints require authentication and return 401 without auth. (2) GET /api/preventivatore/tabella-ore returns parametric hours table with 4 structure types (leggera, media, complessa, speciale). (3) GET /api/preventivatore/prezzi-storici returns historical prices with defaults if no data. (4) POST /api/preventivatore/calcola accepts material list and returns full calculation with margins. (5) POST /api/preventivatore/genera-preventivo creates official preventivo in DB. (6) POST /api/preventivatore/accetta/{id} creates commessa from accepted preventivo with pre-compiled budget and RdP. (7) Frontend wizard has 4 steps with proper data-testid attributes. (8) Sidebar shows 'AI Predittivo' link with Brain icon under Commerciale group.",
+  "testing_summary": {
+    "backend_endpoints": {
+      "GET /api/preventivatore/tabella-ore (no auth)": "✓ Returns 401",
+      "GET /api/preventivatore/tabella-ore (with auth)": "✓ Returns 200 with 4 structure types",
+      "GET /api/preventivatore/prezzi-storici (no auth)": "✓ Returns 401",
+      "GET /api/preventivatore/prezzi-storici (with auth)": "✓ Returns 200 with price categories",
+      "POST /api/preventivatore/analyze-drawing (no auth)": "✓ Returns 401",
+      "POST /api/preventivatore/analyze-drawing (no file)": "✓ Returns 422",
+      "POST /api/preventivatore/calcola (no auth)": "✓ Returns 401",
+      "POST /api/preventivatore/calcola (empty materials)": "✓ Returns 200 with valid calculation",
+      "POST /api/preventivatore/calcola (mock materials)": "✓ Returns 200 with full calculation including peso, ore, margini",
+      "POST /api/preventivatore/calcola (ore_override)": "✓ Uses custom hours",
+      "POST /api/preventivatore/genera-preventivo (no auth)": "✓ Returns 401",
+      "POST /api/preventivatore/genera-preventivo (with auth)": "✓ Creates preventivo with number and totale",
+      "POST /api/preventivatore/accetta/{id} (no auth)": "✓ Returns 401",
+      "POST /api/preventivatore/accetta/{id} (invalid id)": "✓ Returns 404",
+      "POST /api/preventivatore/accetta/{id} (valid)": "✓ Creates commessa with budget and ore_preventivate",
+      "POST /api/preventivatore/accetta/{id} (already accepted)": "✓ Returns 400"
+    },
+    "frontend_ui": {
+      "PreventivatoreWizard": {
+        "page_title": "✓ 'Preventivatore Predittivo' with Brain icon",
+        "wizard_stepper": "✓ 4 steps visible (Carica Disegno, Materiali, Margini & Calcolo, Genera Preventivo)",
+        "step_0_upload": "✓ Upload area with data-testid='upload-drawing-area'",
+        "step_0_analyze_btn": "✓ 'Analizza con AI Vision' button with data-testid='btn-analyze-drawing'",
+        "step_2_margin_sliders": "✓ Sliders for materials/labor/subcontracting (data-testid='slider-margine-*')",
+        "step_3_generate_btn": "✓ 'Genera Preventivo' button with data-testid='btn-genera-preventivo'"
+      },
+      "DashboardLayout_Sidebar": {
+        "ai_predittivo_link": "✓ Visible under Commerciale group",
+        "brain_icon": "✓ Brain icon present",
+        "navigation": "✓ Clicking navigates to /preventivatore"
+      }
+    }
+  }
+}
