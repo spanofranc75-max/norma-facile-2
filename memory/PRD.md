@@ -22,12 +22,9 @@ Gestionale per carpenterie metalliche conforme EN 1090, EN 13241, ISO 3834. Gest
 
 ### Fix Login Produzione
 - Supporto dual auth: Google OAuth diretto (produzione) + Emergent Auth (preview)
-- Backend: `POST /api/auth/callback` per Google OAuth code exchange
-- Frontend: AuthContext rileva automaticamente quale sistema usare
 
 ### Fix AI Certificati 3.1
-- Backend: corretto URL endpoint
-- Backend: aggiunto `apt-packages.txt` e dipendenze necessarie
+- Backend: corretto URL endpoint + `apt-packages.txt`
 
 ### UI Miglioramenti
 - Celle allargate nella tabella materiali
@@ -38,17 +35,15 @@ Gestionale per carpenterie metalliche conforme EN 1090, EN 13241, ISO 3834. Gest
 - Backend: `routes/diario_produzione.py` — CRUD + riepilogo
 - Frontend: `components/DiarioProduzione.js` — Calendario + registrazione ore
 - Multi-operatore, multi-sessione per fase
-- Vista Calendario mensile + Vista Riepilogo
 - Anagrafica operatori semplificata (solo nome, no email)
 
 ### Fix Calcolo Margini con Diario (20 Mar 2026)
-- `margin_service.py`: `get_all_margins()` ora pre-fetch ore dal `diario_produzione` 
-- `margin_service.py`: `get_commessa_margin_full()` gia includeva ore diario
-- Testato con 12 test backend: tutti PASSATI
+- `margin_service.py`: `get_all_margins()` ora pre-fetch ore dal `diario_produzione`
+- Testato: 12/12 test PASSATI
 
 ### Fix Deployment Railway (20 Mar 2026)
-- Rimosso `--extra-index-url` da `requirements.txt` (causava build failure)
-- Creato `nixpacks.toml` con config corretta per Railway
+- Rimosso `--extra-index-url` da `requirements.txt`
+- Creato `nixpacks.toml` con config corretta
 
 ### Indici MongoDB Ottimizzati (20 Mar 2026)
 - `diario_produzione`: idx_commessa_admin, idx_admin_data
@@ -57,32 +52,45 @@ Gestionale per carpenterie metalliche conforme EN 1090, EN 13241, ISO 3834. Gest
 - `user_sessions`: idx_expires (TTL)
 
 ### Mobile Responsive (20 Mar 2026)
-- **DashboardLayout**: hamburger menu su mobile, sidebar slide-out con backdrop, breakpoint lg (1024px)
-- **DiarioProduzione**: card fasi compatte, bottoni azione mobile dedicati, dialog registrazione touch-friendly (input h-10, 95vw), progress bar mobile
-- **CommessaHubPage**: header con bottoni icon-only su mobile, info card stackabile, KPI compatti
-- Testato su viewport 390x844 (iPhone 14) e 1920x800 (desktop): 10/10 test PASSATI
+- **DashboardLayout**: hamburger menu su mobile, sidebar slide-out con backdrop
+- **DiarioProduzione**: card fasi compatte, bottoni azione mobile dedicati, dialog touch-friendly
+- **CommessaHubPage**: header icon-only su mobile, info card stackabile, KPI compatti
+- Testato: 10/10 test PASSATI
+
+### Refactoring Backend: Split commessa_ops.py (20 Mar 2026)
+- Da 1 file 3.430 righe a 6 file modulari + 1 wrapper (29 righe)
+- `commessa_ops_common.py` (96): helpers condivisi
+- `approvvigionamento.py` (516): RdP, OdA, Arrivi, PDF, Email
+- `produzione_ops.py` (109): fasi produzione
+- `conto_lavoro.py` (477): verniciatura, zincatura, NCR, DDT
+- `documenti_ops.py` (1.387): repository documenti + AI parsing cert 3.1
+- `consegne_ops.py` (584): consegne, ops data, scheda rintracciabilita, fascicolo tecnico
+- Zero breaking changes: main.py e test invariati
+- Testato: 17/17 test PASSATI
 
 ## Endpoint API Chiave
 - `POST /api/auth/callback` — Google OAuth code exchange
 - `POST /api/auth/session` — Emergent Auth session exchange
 - `GET /api/commesse/{cid}/diario` — Lista voci diario
 - `POST /api/commesse/{cid}/diario` — Crea voce diario
-- `PUT /api/commesse/{cid}/diario/{entry_id}` — Modifica voce
-- `DELETE /api/commesse/{cid}/diario/{entry_id}` — Elimina voce
 - `GET /api/commesse/{cid}/diario/riepilogo` — Riepilogo ore/costi
-- `GET /api/costs/commessa/{cid}/margin-full` — Margine completo singola commessa
-- `GET /api/costs/margin-full` — Margine completo tutte le commesse
+- `GET /api/costs/commessa/{cid}/margin-full` — Margine singola commessa
+- `GET /api/costs/margin-full` — Margine tutte le commesse
+- `GET /api/commesse/{cid}/ops` — Dati operativi completi
+- `POST /api/commesse/{cid}/approvvigionamento/richieste` — Crea RdP
+- `POST /api/commesse/{cid}/consegne` — Crea consegna
 
 ## Backlog / Prossimi Task
-- P1: Deploy su Railway e test in produzione (nixpacks.toml pronto)
-- P1: Verifica fix errore 500 analisi AI certificati (dopo deploy Railway)
-- P2: Spezzare file monster (commessa_ops.py 3430 righe, CommessaOpsPanel.js 2959 righe)
-- P2: Unificare 13 servizi PDF in un BasePDFService condiviso
+- P1: Deploy su Railway e test in produzione
+- P1: Verifica fix errore 500 analisi AI certificati
+- P2: Spezzare CommessaOpsPanel.js frontend (2.959 righe)
+- P2: Spezzare SettingsPage.js (1.731 righe)
+- P2: Unificare 13 servizi PDF
 - P2: Rimuovere placeholder vuoti (chat.py, documents.py)
-- P2: Onboarding wizard primo accesso
-- P2: Responsive per altre pagine (33/52 gia responsive, 19 da fare)
+- P2: Responsive 19 pagine rimanenti
+- P2: Onboarding wizard
+- P2: Vista "Officina" semplificata per operai
 - P3: Sistema RBAC avanzato
 - P3: Portale cliente read-only
-- P3: Report mensile automatico costi via email
-- P3: Integrazione WhatsApp per notifiche scadenze
-- P3: Export Excel riepilogo costi per commercialista
+- P3: Export Excel per commercialista
+- P3: Notifiche WhatsApp scadenze
