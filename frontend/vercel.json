@@ -1,4 +1,4 @@
 {
   "installCommand": "yarn install",
-  "buildCommand": "yarn build"
+  "buildCommand": "CI=false yarn build"
 }
