@@ -37,7 +37,17 @@ async def get_commessa_margin_full(commessa_id: str, uid: str) -> dict:
 
     costo_orario = await get_costo_orario(uid)
     valore = float(commessa.get("value", 0) or 0)
-    ore = float(commessa.get("ore_lavorate", 0) or 0)
+
+    # Ore lavorate: from diario_produzione (ore_totali = person-hours) + legacy ore_lavorate
+    ore_diario = 0
+    async for entry in db.diario_produzione.find(
+        {"commessa_id": commessa_id, "admin_id": uid},
+        {"_id": 0, "ore_totali": 1, "ore": 1}
+    ):
+        ore_diario += float(entry.get("ore_totali", entry.get("ore", 0)) or 0)
+
+    ore_legacy = float(commessa.get("ore_lavorate", 0) or 0)
+    ore = round(ore_diario + ore_legacy, 2)
 
     # 1. Costi manuali (costi_reali)
     costi_manuali = commessa.get("costi_reali", [])
@@ -197,6 +207,18 @@ async def get_all_margins(uid: str) -> dict:
                     rtid = r["target_id"]
                     fr_by_commessa[rtid] = fr_by_commessa.get(rtid, 0) + float(fr.get("totale_documento", 0) or 0)
 
+    # Pre-fetch diary hours per commessa (person-hours from diario_produzione)
+    diario_ore_by_commessa = {}
+    commessa_ids = [c["commessa_id"] for c in commesse]
+    if commessa_ids:
+        async for entry in db.diario_produzione.find(
+            {"commessa_id": {"$in": commessa_ids}, "admin_id": uid},
+            {"_id": 0, "commessa_id": 1, "ore_totali": 1, "ore": 1}
+        ):
+            cid_entry = entry["commessa_id"]
+            diario_ore_by_commessa[cid_entry] = diario_ore_by_commessa.get(cid_entry, 0) + \
+                float(entry.get("ore_totali", entry.get("ore", 0)) or 0)
+
     results = []
     totale_ricavi = 0
     totale_costi = 0
@@ -204,7 +226,9 @@ async def get_all_margins(uid: str) -> dict:
     for c in commesse:
         cid = c["commessa_id"]
         valore = float(c.get("value", 0) or 0)
-        ore = float(c.get("ore_lavorate", 0) or 0)
+        ore_legacy = float(c.get("ore_lavorate", 0) or 0)
+        ore_diario = diario_ore_by_commessa.get(cid, 0)
+        ore = round(ore_legacy + ore_diario, 2)
         costi_manuali = sum(float(x.get("importo", 0) or 0) for x in c.get("costi_reali", []))
         costi_fr = fr_by_commessa.get(cid, 0)
         # OdA costs from approvvigionamento
