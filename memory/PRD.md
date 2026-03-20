@@ -1,58 +1,106 @@
 # NormaFacile 2.0 — PRD
 
 ## Problema Originale
-Gestionale per carpenteria metallica conforme EN 1090, EN 13241, ISO 3834.
+Gestionale completo per carpenterie metalliche conformi EN 1090, EN 13241 e ISO 3834.
+Include: commesse, preventivi, fatture, FPC, saldatori, controllo qualita, produzione, montaggio, sicurezza, PNRR e workflow automatizzati.
 
-## Implementato
+## Architettura
+- **Frontend**: React + Tailwind CSS + Shadcn UI (porta 3000)
+- **Backend**: FastAPI + MongoDB (porta 8001)
+- **AI**: GPT-4o Vision tramite emergentintegrations (Emergent LLM Key)
+- **PDF**: WeasyPrint
+- **Firma**: react-signature-canvas
 
-### Cantieri Misti (Matrioska)
-- Voci di Lavoro CRUD, CommessaOpsPanel unione categorie, Diario Adattivo
+## Utenti
+- Admin (gestione completa)
+- Ufficio Tecnico (commesse, FPC, qualita)
+- Amministrazione (fatture, costi, clienti)
+- Officina (solo produzione via PIN)
+- Guest (in attesa)
 
-### Vista Officina (4 Ponti + Montaggio)
-- Timer START/PAUSA/STOP, Foto smart routing, Checklist thumbs up/down, Blocco Dati, PIN + QR
-- Tab MONTAGGIO con 6 step: SICUREZZA → DDT → SERRAGGIO → VARIANTI → CANTIERE → FIRMA
+## Funzionalita Implementate
 
-### Pulsante Magico + Smistatore Intelligente
-- PDF con CAP. 1-5: EN 1090, EN 13241, Relazione Tecnica, Montaggio, Sostenibilita' DNSH
-- AI Vision per certificati multi-pagina + analisi DDT bulloneria + analisi DNSH
+### Core
+- CRUD Commesse, Preventivi, Fatture (vendita/acquisto), DDT, Clienti, Fornitori
+- FPC (Fascicolo Tecnico CE), DOP, Etichette CE
+- Qualifica Saldatori, WPS, Strumenti
+- Catalogo Profili e Articoli
+- Distinte materiali e rilievi
 
-### Casi Reali d'Officina
-- Sfridi (CRUD + link cert 3.1 cliccabile), Blocco Patentini, Controlli Visivi, Registro NC + alert admin
+### Produzione (Officina)
+- Diario di produzione con PIN operatore
+- Timer lavorazione con START/STOP
+- Safety Gate: blocco operatori con corsi scaduti
 
-### Admin UI (Sfridi, Controlli Visivi, NC, DNSH, CSE)
-- Sezioni integrate in CommessaOpsPanel
-- Dashboard NC Alert Banner
+### Montaggio e Tracciabilita (Fase 4)
+- Diario di Montaggio (6 step)
+- Analisi DDT bulloneria con AI Vision
+- Serraggio intelligente con calcolo coppia Nm automatico
+- Controlli fondazioni e ancoraggi con foto
+- Firma cliente digitale
+- Modulo Varianti con foto obbligatorie
+- Scadenzario Attrezzature (tarature)
 
-### Fase 4: Montaggio e Tracciabilita'
-- Tracciabilita' Bulloneria AI, Serraggio ISO 898-1, Cantiere, Firma cliente, Varianti con foto
-- CAP. 4 nel Pulsante Magico
+### Sicurezza & PNRR
+- Profilo Sicurezza Operatore (D.Lgs 81/08)
+- Archivio DNSH con analisi AI
+- Checklist sicurezza cantiere
+- Export CSE (Coordinatore Sicurezza)
 
-### Scadenzario Attrezzature + Archivio Storico
-- Pagina `/attrezzature` con tarature saldatrici/chiavi + alert scadenze
-- Pagina `/archivio-storico` con export ZIP per anno/cliente
+### Workflow Engine ("Fili Conduttori")
+- Safety Gate: blocco diary se corsi scaduti
+- Post-Sales: firma -> Targa CE + QR + Manutenzione programmata
+- Pulsante Magico: pacchetto PDF completo
 
-### Sicurezza & PNRR + Workflow Engine (20/03/2026)
-- **Profilo Sicurezza Operatore**: 6 corsi D.Lgs 81/08, CRUD, blocco diario se scaduti
-- **Archivio DNSH/PNRR**: AI Vision analizza certificati per sostenibilita', CAP. 5 nel PDF
-- **Diario Sicurezza Cantiere**: Checklist obbligatoria + foto panoramica PRIMA del montaggio
-- **Cartella CSE**: Export ZIP (DURC, POS, Attestati, Certificati macchine)
-- **WORKFLOW ENGINE (I Fili Conduttori)**:
-  - SICUREZZA → DIARIO: Timer START bloccato se corsi/patentini scaduti (403)
-  - ACQUISTI → CANTIERE: DDT → auto coppia serraggio Nm, blocco senza conferma
-  - QUALITA' → PDF: Dati DNSH → CAP. 5 Sostenibilita'
-  - FIRMA → SERVICE: Auto-genera Targa CE con QR + Manutenzioni 12/24 mesi
-- Collezioni: sicurezza_cantiere, dnsh_data, targhe_ce, scadenzario_manutenzioni
-- Test: 100% backend (17/17) + 100% frontend — iteration_186
+### Amministrazione
+- Backup & Restore (manuale + automatico)
+- Import da vecchia app (Migrazione)
+- Team management con RBAC
+- Deploy / Pulizia DB
+- Notifiche email configurabili
+- Archivio Storico con export ZIP
 
-## Backlog
+### Refactoring Completato (2026-03-20)
+- **SettingsPage.js**: Da 1732 righe a ~185 righe. Estratti 11 componenti tab in `/components/settings/`:
+  - CompanyTab, BankTab, LogoTab, CondizioniTab, IntegrazioniTab
+  - CertificazioniTab, MigrazioneTab, TeamTab, BackupTab, DeployTab, NotificheTab
 
-### P1
-- Trigger UI "Analizza con AI" per Smistatore Intelligente
-- Split SettingsPage.js (>1700 righe)
+### AI Vision per Disegni Tecnici (2026-03-20)
+- **POST /api/smistatore/analyze-drawing/{doc_id}**: Analizza disegni tecnici (PDF/immagini) con GPT-4o Vision
+  - Estrae bulloneria: diametro, classe, quantita, tipo, norma
+  - Supporta multi-pagina con deduplicazione
+- **POST /api/smistatore/drawing-to-rdp/{doc_id}**: Crea RdP automatica dalla bulloneria estratta
+- Frontend: pulsante "Analizza Disegno" nel Repository Documenti con dialog di conferma e selezione
 
-### P2
-- Smistatore Avanzato (DDT Multi-Commessa, Magazzino Scorte)
-- Split commesse.py, Export Excel, RBAC
+## Backlog Prioritizzato
 
-### P3
-- Portale clienti read-only, Notifiche WhatsApp, Unificazione 13 servizi PDF
+### P0 (Fatto)
+- [x] Refactoring SettingsPage.js
+- [x] AI Vision per disegni tecnici (DWG/PDF -> RdP)
+- [x] Workflow Engine completo
+- [x] Safety Gate operatori
+
+### P2 (Prossimi)
+- [ ] RBAC granulare (Role-Based Access Control)
+- [ ] Portale clienti read-only
+- [ ] Smistatore Avanzato per scorte e sfridi
+
+### P3 (Futuri)
+- [ ] Export Excel analisi costi
+- [ ] Unificare 13 servizi PDF legacy in "Pulsante Magico"
+- [ ] Notifiche WhatsApp
+- [ ] Client Portal con accesso diretto
+
+## Schema DB Chiave
+- commesse, preventivi, invoices, clients, fornitori
+- fpc_projects, welders, instruments, ddt
+- diario_produzione, diario_montaggio
+- bulloneria_ddt, varianti_montaggio
+- sicurezza_corsi_operatore, sicurezza_checklist_cantiere
+- attrezzature, manutenzioni_programmate, targhe_ce
+- commessa_documents, doc_page_index
+- archivio_exports
+
+## Credenziali Test
+- Operatori Officina: Ahmed (PIN 1234), Karim (PIN 5678)
+- Auth: Google OAuth tramite Emergent
