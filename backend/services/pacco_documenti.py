@@ -165,9 +165,9 @@ def _build_cover(commessa: dict, company: dict, client_name: str, parti: list) -
 # ══════════════════════════════════════════════════════════════
 
 def _build_parte_a(voci_1090: list, data: dict) -> str:
-    """Build Part A: EN 1090 structural documents."""
+    """Build CAP. 1: EN 1090 structural documents."""
     html = '<div class="page-break"></div>'
-    html += '<h2><span class="badge badge-1090">EN 1090</span> PARTE A: STRUTTURE</h2>'
+    html += '<h2><span class="badge badge-1090">EN 1090</span> CAP. 1: STRUTTURE</h2>'
 
     for i, voce in enumerate(voci_1090):
         vid = voce.get("voce_id", "__principale__")
@@ -177,7 +177,7 @@ def _build_parte_a(voci_1090: list, data: dict) -> str:
         if i > 0:
             html += '<div class="page-break"></div>'
 
-        html += f'<h3>A.{i + 1} — {desc}</h3>'
+        html += f'<h3>1.{i + 1} — {desc}</h3>'
         html += f"""
         <table class="info">
             <tr><td class="lbl">Voce di Lavoro</td><td>{desc}</td></tr>
@@ -186,11 +186,14 @@ def _build_parte_a(voci_1090: list, data: dict) -> str:
         </table>
         """
 
-        # A.x.1 — Certificati Materiali 3.1
+        # 1.x.1 — Certificati Materiali 3.1 (con Filtro Beltrami dall'indice pagine)
         cert_docs = [d for d in data.get("docs", [])
                      if _doc_matches_voce(d, vid)
                      and d.get("tipo") == "certificato_31"]
-        html += f'<h4>A.{i + 1}.1 — Certificati Materiali 3.1 ({len(cert_docs)} doc.)</h4>'
+        # Include anche pagine indicizzate dallo Smistatore Intelligente
+        indexed_pages = [p for p in data.get("page_index", [])
+                         if _page_matches_voce(p, vid, "EN_1090")]
+        html += f'<h4>1.{i + 1}.1 — Certificati Materiali 3.1 ({len(cert_docs)} doc. + {len(indexed_pages)} pag. indicizzate)</h4>'
         if cert_docs:
             html += '<table class="data"><tr><th>Nome File</th><th>N. Colata</th><th>Caricato</th></tr>'
             for d in cert_docs:
@@ -202,20 +205,27 @@ def _build_parte_a(voci_1090: list, data: dict) -> str:
         else:
             html += '<p style="font-size:9pt;color:#888;font-style:italic;">Nessun certificato 3.1 caricato per questa voce.</p>'
 
-        # A.x.2 — Foto Lavorazione
+        # Show indexed pages from Smistatore
+        if indexed_pages:
+            html += '<table class="data"><tr><th>Pag.</th><th>N. Colata</th><th>Materiale</th><th>Dimensioni</th><th>Acciaieria</th></tr>'
+            for p in indexed_pages:
+                html += f'<tr><td>{p.get("pagina", "")}</td><td>{_s(p.get("numero_colata", ""))}</td><td>{_s(p.get("tipo_materiale", ""))}</td><td>{_s(p.get("dimensioni", ""))}</td><td>{_s(p.get("acciaieria", ""))}</td></tr>'
+            html += '</table>'
+
+        # 1.x.2 — Foto Lavorazione
         foto_docs = [d for d in data.get("docs", [])
                      if _doc_matches_voce(d, vid)
                      and d.get("content_type", "").startswith("image/")]
-        html += f'<h4>A.{i + 1}.2 — Foto Lavorazione ({len(foto_docs)})</h4>'
+        html += f'<h4>1.{i + 1}.2 — Foto Lavorazione ({len(foto_docs)})</h4>'
         html += _foto_html(foto_docs)
 
-        # A.x.3 — Verbale Collaudo Qualità
-        html += f'<h4>A.{i + 1}.3 — Verbale Collaudo Qualita\'</h4>'
+        # 1.x.3 — Verbale Collaudo Qualità
+        html += f'<h4>1.{i + 1}.3 — Verbale Collaudo Qualita\'</h4>'
         html += _build_verbale(vid, data, "EN_1090")
 
-        # A.x.4 — Riepilogo Ore
+        # 1.x.4 — Riepilogo Ore
         ore_entries = [e for e in data.get("diario", []) if _diario_matches_voce(e, vid)]
-        html += f'<h4>A.{i + 1}.4 — Riepilogo Ore Lavorate</h4>'
+        html += f'<h4>1.{i + 1}.4 — Riepilogo Ore Lavorate</h4>'
         html += _build_riepilogo_ore(ore_entries)
 
     return html
@@ -226,9 +236,9 @@ def _build_parte_a(voci_1090: list, data: dict) -> str:
 # ══════════════════════════════════════════════════════════════
 
 def _build_parte_b(voci_13241: list, data: dict) -> str:
-    """Build Part B: EN 13241 gate documents."""
+    """Build CAP. 2: EN 13241 gate documents."""
     html = '<div class="page-break"></div>'
-    html += '<h2><span class="badge badge-13241">EN 13241</span> PARTE B: SICUREZZA CANCELLI</h2>'
+    html += '<h2><span class="badge badge-13241">EN 13241</span> CAP. 2: SICUREZZA CANCELLI</h2>'
 
     for i, voce in enumerate(voci_13241):
         vid = voce.get("voce_id", "__principale__")
@@ -238,7 +248,7 @@ def _build_parte_b(voci_13241: list, data: dict) -> str:
         if i > 0:
             html += '<div class="page-break"></div>'
 
-        html += f'<h3>B.{i + 1} — {desc}</h3>'
+        html += f'<h3>2.{i + 1} — {desc}</h3>'
         html += f"""
         <table class="info">
             <tr><td class="lbl">Voce di Lavoro</td><td>{desc}</td></tr>
@@ -247,20 +257,20 @@ def _build_parte_b(voci_13241: list, data: dict) -> str:
         </table>
         """
 
-        # B.x.1 — Foto Kit Sicurezza
+        # 2.x.1 — Foto Kit Sicurezza
         foto_docs = [d for d in data.get("docs", [])
                      if _doc_matches_voce(d, vid)
                      and d.get("content_type", "").startswith("image/")]
-        html += f'<h4>B.{i + 1}.1 — Foto Kit Sicurezza ({len(foto_docs)})</h4>'
+        html += f'<h4>2.{i + 1}.1 — Foto Kit Sicurezza ({len(foto_docs)})</h4>'
         html += _foto_html(foto_docs)
 
-        # B.x.2 — Verbale Collaudo
-        html += f'<h4>B.{i + 1}.2 — Verbale Collaudo</h4>'
+        # 2.x.2 — Verbale Collaudo
+        html += f'<h4>2.{i + 1}.2 — Verbale Collaudo</h4>'
         html += _build_verbale(vid, data, "EN_13241")
 
-        # B.x.3 — Riepilogo Ore
+        # 2.x.3 — Riepilogo Ore
         ore_entries = [e for e in data.get("diario", []) if _diario_matches_voce(e, vid)]
-        html += f'<h4>B.{i + 1}.3 — Riepilogo Ore Lavorate</h4>'
+        html += f'<h4>2.{i + 1}.3 — Riepilogo Ore Lavorate</h4>'
         html += _build_riepilogo_ore(ore_entries)
 
     return html
@@ -271,15 +281,15 @@ def _build_parte_b(voci_13241: list, data: dict) -> str:
 # ══════════════════════════════════════════════════════════════
 
 def _build_parte_c(voci_gen: list, data: dict) -> str:
-    """Build Part C: Generic work summary."""
+    """Build CAP. 3: Technical report — hours and materials summary."""
     html = '<div class="page-break"></div>'
-    html += '<h2><span class="badge badge-gen">GENERICA</span> PARTE C: RIEPILOGO LAVORAZIONI</h2>'
+    html += '<h2><span class="badge badge-gen">RELAZIONE</span> CAP. 3: RELAZIONE TECNICA</h2>'
 
     for i, voce in enumerate(voci_gen):
         vid = voce.get("voce_id", "__principale__")
         desc = _s(voce.get("descrizione", "Lavorazione generica"))
 
-        html += f'<h3>C.{i + 1} — {desc}</h3>'
+        html += f'<h3>3.{i + 1} — {desc}</h3>'
         html += f"""
         <table class="info">
             <tr><td class="lbl">Voce di Lavoro</td><td>{desc}</td></tr>
@@ -287,9 +297,9 @@ def _build_parte_c(voci_gen: list, data: dict) -> str:
         </table>
         """
 
-        # C.x.1 — Riepilogo Ore e Materiali
+        # 3.x.1 — Riepilogo Ore e Materiali
         ore_entries = [e for e in data.get("diario", []) if _diario_matches_voce(e, vid)]
-        html += f'<h4>C.{i + 1}.1 — Riepilogo Ore e Materiali</h4>'
+        html += f'<h4>3.{i + 1}.1 — Riepilogo Ore e Materiali</h4>'
         html += _build_riepilogo_ore(ore_entries)
 
     return html
@@ -314,7 +324,7 @@ def _build_verbale(voce_id: str, data: dict, normativa: str) -> str:
     op_nome = _s(latest.get("operatore_nome", ""))
     data_check = latest.get("submitted_at", "")[:10]
 
-    esito_badge = '<span class="badge badge-ok">CONFORME</span>' if all_ok else '<span class="badge badge-nok">NON CONFORME</span>'
+    esito_badge = '<span class="badge badge-ok">ESITO POSITIVO</span>' if all_ok else '<span class="badge badge-nok">ESITO NEGATIVO</span>'
 
     html = f"""
     <table class="info">
@@ -420,6 +430,23 @@ def _diario_matches_voce(entry: dict, voce_id: str) -> bool:
     return False
 
 
+def _page_matches_voce(page: dict, voce_id: str, normativa: str) -> bool:
+    """
+    Filtro Beltrami: check if an indexed certificate page is relevant to a voce.
+    Used by the Pulsante Magico to include only pertinent pages.
+    """
+    # Direct match to this voce
+    if page.get("matched_to_voce") == voce_id:
+        return True
+    # Consumable auto-assigned to this normativa
+    if page.get("matching_status") == "consumabile_auto":
+        return page.get("consumabile_target", "") == normativa
+    # Unmatched pages for the principal voce
+    if voce_id == "__principale__" and page.get("matching_status") == "matched" and not page.get("matched_to_voce"):
+        return True
+    return False
+
+
 # ══════════════════════════════════════════════════════════════
 #  MAIN GENERATOR
 # ══════════════════════════════════════════════════════════════
@@ -494,12 +521,19 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
         {"commessa_id": commessa_id}, {"_id": 0}
     ).to_list(100)
 
+    # Page index from Smistatore Intelligente (certificate page-level metadata)
+    page_index = await db.doc_page_index.find(
+        {"commessa_id": commessa_id},
+        {"_id": 0, "page_pdf_b64": 0}
+    ).to_list(500)
+
     # Shared data context
     ctx = {
         "docs": docs,
         "diario": diario,
         "checklists": checklists,
         "company": company,
+        "page_index": page_index,
     }
 
     # ── 2. BUILD INDEX (which parts to include) ──
@@ -507,21 +541,21 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
     parti = []
     if voci_1090:
         parti.append({
-            "lettera": "A",
+            "lettera": "CAP. 1",
             "titolo": "STRUTTURE (EN 1090)",
-            "subtitle": f"{len(voci_1090)} voce/i strutturale/i",
+            "subtitle": f"DoP, Certificati 3.1, WPS, Foto — {len(voci_1090)} voce/i",
         })
     if voci_13241:
         parti.append({
-            "lettera": "B",
-            "titolo": "SICUREZZA CANCELLI (EN 13241)",
-            "subtitle": f"{len(voci_13241)} voce/i cancello",
+            "lettera": "CAP. 2",
+            "titolo": "CANCELLI (EN 13241)",
+            "subtitle": f"Dichiarazione Conformita', Foto Sicurezze, Manuale — {len(voci_13241)} voce/i",
         })
-    if voci_gen:
+    if voci_gen or voci_1090 or voci_13241:
         parti.append({
-            "lettera": "C",
-            "titolo": "LAVORAZIONI GENERICHE",
-            "subtitle": f"{len(voci_gen)} voce/i generica/e",
+            "lettera": "CAP. 3",
+            "titolo": "RELAZIONE TECNICA",
+            "subtitle": "Riepilogo ore e materiali",
         })
 
     # ── 3. GENERATE HTML ──
@@ -532,8 +566,10 @@ async def generate_pacco_documenti(commessa_id: str, user_id: str) -> BytesIO:
         html_body += _build_parte_a(voci_1090, ctx)
     if voci_13241:
         html_body += _build_parte_b(voci_13241, ctx)
-    if voci_gen:
-        html_body += _build_parte_c(voci_gen, ctx)
+    # CAP. 3: Relazione Tecnica — includes generiche + riepilogo globale
+    all_voci_for_relazione = voci_gen if voci_gen else []
+    if all_voci_for_relazione or voci_1090 or voci_13241:
+        html_body += _build_parte_c(all_voci_for_relazione, ctx)
 
     # ── 4. RENDER PDF ──
 

@@ -66,6 +66,7 @@ from routes.activity_log import router as activity_log_router
 from routes.voci_lavoro import router as voci_lavoro_router
 from routes.officina import router as officina_router
 from routes.pacco_documenti import router as pacco_documenti_router
+from routes.smistatore import router as smistatore_router
 
 # Configure logging
 logging.basicConfig(
@@ -176,6 +177,7 @@ app.include_router(activity_log_router, prefix="/api")
 app.include_router(voci_lavoro_router, prefix="/api")
 app.include_router(officina_router, prefix="/api")
 app.include_router(pacco_documenti_router, prefix="/api")
+app.include_router(smistatore_router, prefix="/api")
 
 
 @app.on_event("startup")
