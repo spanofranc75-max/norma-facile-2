@@ -1,6 +1,7 @@
 /**
  * CommessaOpsPanel — Operational panels for a commessa.
- * Approvvigionamento, Produzione, Conto Lavoro, Repository Documenti.
+ * Sub-components: ProduzioneSection, ConsegneSection, ContoLavoroSection, RepositoryDocumentiSection
+ * Inline: Approvvigionamento, Tracciabilità, CAM, Fascicolo, Certificazione, Prelievo
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiRequest, downloadPdfBlob } from '../lib/utils';
@@ -27,7 +28,10 @@ import EmailPreviewDialog from './EmailPreviewDialog';
 import { DisabledTooltip } from './DisabledTooltip';
 import FascicoloTecnicoSection from './FascicoloTecnicoSection';
 import GateCertificationPanel from './GateCertificationPanel';
-import DiarioProduzione from './DiarioProduzione';
+import ProduzioneSection from './ProduzioneSection';
+import ConsegneSection from './ConsegneSection';
+import ContoLavoroSection from './ContoLavoroSection';
+import RepositoryDocumentiSection from './RepositoryDocumentiSection';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);

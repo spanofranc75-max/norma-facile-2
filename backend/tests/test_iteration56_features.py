@@ -16,7 +16,7 @@ import os
 import time
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://labor-margin-test.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://italiano-staging.preview.emergentagent.com').rstrip('/')
 
 # Use MongoDB to create test session
 import subprocess
