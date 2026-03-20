@@ -1,7 +1,7 @@
 # NormaFacile 2.0 — PRD
 
 ## Problema Originale
-Gestionale per carpenteria metallica conforme EN 1090, EN 13241, ISO 3834. L'utente ha richiesto la gestione di 3 categorie di lavoro con workflow distinti.
+Gestionale per carpenteria metallica conforme EN 1090, EN 13241, ISO 3834. L'utente ha richiesto la gestione di 3 categorie di lavoro con workflow distinti e la struttura "Matrioska" per cantieri misti.
 
 ## Utenti Target
 - **Titolare carpenteria**: Gestione completa commesse, costi, preventivi
@@ -32,6 +32,14 @@ Gestionale per carpenteria metallica conforme EN 1090, EN 13241, ISO 3834. L'ute
 - Nessun obbligo burocratico
 - Sezioni: Solo Produzione, Conto Lavoro, Repository
 
+## Struttura Matrioska — Cantieri Misti (IMPLEMENTATO)
+- Una Commessa è un "Fascicolo di Cantiere" che può contenere multiple "Voci di Lavoro"
+- Ogni Voce ha la propria categoria normativa (EN_1090, EN_13241, GENERICA)
+- Il pannello operativo mostra le sezioni dell'UNIONE di tutte le categorie presenti
+- Il Diario di Produzione chiede "Su quale voce stai lavorando?" con bottoni grandi e colorati
+- Campi adattivi: EN 1090 → N. colata + WPS | EN 13241 → Note collaudo | GENERICA → solo ore
+- Retrocompatibilità: commesse senza voci extra funzionano come prima
+
 ## Cosa è stato implementato
 
 ### Sessioni precedenti
@@ -42,28 +50,28 @@ Gestionale per carpenteria metallica conforme EN 1090, EN 13241, ISO 3834. L'ute
 - Responsive 12 pagine
 - Pulizia codice morto
 
-### Sessione corrente (20 Marzo 2026)
-- **FASE 1 COMPLETATA: Categorie di Lavoro**
-  - 3 bottoni grandi nel modal creazione commessa (Strutturale/Cancello/Generica)
-  - Campi condizionali: Classe EXC per EN 1090, Tipologia per EN 13241, solo info per Generica
-  - CommessaOpsPanel nasconde sezioni non pertinenti alla categoria
-  - Banner normativa nel hub commessa per tutte e 3 le categorie
-  - NORMATIVA_CONFIG aggiornato con GENERICA
-  - Test: 100% backend (13/13) + 100% frontend (iteration_177)
+### Sessione 20 Marzo 2026
+- FASE 1 COMPLETATA: Categorie di Lavoro (3 bottoni, campi condizionali, banner normativa)
+- FASE 1.5 COMPLETATA: Voci di Lavoro backend (API CRUD) + frontend (VociLavoroSection)
+- FASE 2 COMPLETATA: Diario Produzione Adattivo (selettore voce, campi specifici per categoria)
+- CommessaOpsPanel fix: usa UNIONE categorie (hasEN1090, hasEN13241, isOnlyGenerica)
+- Test: 100% backend (19/19) + 100% frontend (iteration_178)
 
 ## Backlog Prioritizzato
 
-### P0 — Prossime fasi del flusso categorie
-- FASE 2: Diario Produzione adattivo (certificati per EN 1090, foto collaudo per EN 13241, solo ore per GENERICA)
-- FASE 3: "Pulsante Magico" per generare pacchetto documenti specifico per categoria
+### P0 — Completato
+- ~~FASE 1: Categorie di Lavoro~~
+- ~~FASE 1.5: Voci di Lavoro (Matrioska)~~
+- ~~FASE 2: Diario Produzione Adattivo~~
 
-### P1 — Urgenti
-- Responsive per le restanti pagine
-- Vista "Officina" semplificata per operai
+### P1 — Prossimi
+- FASE 3: "Pulsante Magico" per generare pacchetto documenti specifico per categoria (PDF/ZIP)
+- Vista "Officina" semplificata per operai (mobile-first, QR + PIN)
 - Split di SettingsPage.js (1.731 righe)
 
 ### P2 — Importanti
+- Split commesse.py (1.330 righe)
 - Onboarding Wizard, Unificazione servizi PDF, Export Excel, RBAC granulare
 
 ### P3 — Futuri
-- Firme digitali, Portale clienti, Notifiche WhatsApp
+- Firme digitali su PDF, Portale clienti read-only, Notifiche WhatsApp
