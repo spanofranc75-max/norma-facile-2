@@ -1,0 +1,4 @@
+{
+  "installCommand": "yarn install",
+  "buildCommand": "yarn build"
+}
