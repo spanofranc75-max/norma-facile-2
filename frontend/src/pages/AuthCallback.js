@@ -44,6 +44,7 @@ export default function AuthCallback() {
                 navigate('/dashboard', { state: { user } });
             } catch (error) {
                 console.error('Auth callback error:', error);
+                console.error('Backend URL used:', process.env.REACT_APP_BACKEND_URL);
                 navigate('/');
             }
         };
