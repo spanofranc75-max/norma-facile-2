@@ -48,9 +48,19 @@ Gestionale per carpenterie metalliche conforme EN 1090, EN 13241, ISO 3834. Gest
 
 ### Fix Deployment Railway (20 Mar 2026)
 - Rimosso `--extra-index-url` da `requirements.txt` (causava build failure)
-- Creato `nixpacks.toml` con config corretta per Railway:
-  - `[phases.install]` usa `pip install -r requirements.txt --extra-index-url ...`
-  - `[phases.setup]` include apt packages per WeasyPrint e poppler-utils
+- Creato `nixpacks.toml` con config corretta per Railway
+
+### Indici MongoDB Ottimizzati (20 Mar 2026)
+- `diario_produzione`: idx_commessa_admin, idx_admin_data
+- `operatori`: idx_admin
+- `sessions`: idx_session_id (unique)
+- `user_sessions`: idx_expires (TTL)
+
+### Mobile Responsive (20 Mar 2026)
+- **DashboardLayout**: hamburger menu su mobile, sidebar slide-out con backdrop, breakpoint lg (1024px)
+- **DiarioProduzione**: card fasi compatte, bottoni azione mobile dedicati, dialog registrazione touch-friendly (input h-10, 95vw), progress bar mobile
+- **CommessaHubPage**: header con bottoni icon-only su mobile, info card stackabile, KPI compatti
+- Testato su viewport 390x844 (iPhone 14) e 1920x800 (desktop): 10/10 test PASSATI
 
 ## Endpoint API Chiave
 - `POST /api/auth/callback` — Google OAuth code exchange
@@ -64,11 +74,15 @@ Gestionale per carpenterie metalliche conforme EN 1090, EN 13241, ISO 3834. Gest
 - `GET /api/costs/margin-full` — Margine completo tutte le commesse
 
 ## Backlog / Prossimi Task
-- P1: Test completo in produzione del Diario di Produzione + margini (dopo deploy Railway)
+- P1: Deploy su Railway e test in produzione (nixpacks.toml pronto)
 - P1: Verifica fix errore 500 analisi AI certificati (dopo deploy Railway)
-- P2: Unificare servizi PDF
-- P2: Sistema RBAC
-- P2: Script migrazione dati per immagini Base64 legacy
-- P3: Firme digitali su PDF
+- P2: Spezzare file monster (commessa_ops.py 3430 righe, CommessaOpsPanel.js 2959 righe)
+- P2: Unificare 13 servizi PDF in un BasePDFService condiviso
+- P2: Rimuovere placeholder vuoti (chat.py, documents.py)
+- P2: Onboarding wizard primo accesso
+- P2: Responsive per altre pagine (33/52 gia responsive, 19 da fare)
+- P3: Sistema RBAC avanzato
 - P3: Portale cliente read-only
 - P3: Report mensile automatico costi via email
+- P3: Integrazione WhatsApp per notifiche scadenze
+- P3: Export Excel riepilogo costi per commercialista
