@@ -1,5 +1,5 @@
 /**
- * RepositoryDocumentiSection — Upload documenti, AI parsing certificati 3.1, DDT, profili
+ * RepositoryDocumentiSection — Upload documenti, AI parsing certificati 3.1, DDT, profili, disegni tecnici
  * Extracted from CommessaOpsPanel for maintainability.
  */
 import { useState, useRef } from 'react';
@@ -7,11 +7,13 @@ import { apiRequest, downloadPdfBlob } from '../lib/utils';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Checkbox } from '../components/ui/checkbox';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../components/ui/dialog';
 import { toast } from 'sonner';
 import {
     FileUp, Download, Trash2, Sparkles, Loader2, Truck,
-    Package, CheckCircle2, Leaf,
+    Package, CheckCircle2, Leaf, Wrench, Bolt,
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -35,6 +37,14 @@ export default function RepositoryDocumentiSection({ commessaId, docs, onRefresh
     const [ddtDocId, setDdtDocId] = useState(null);
     const [selectedDdtIndices, setSelectedDdtIndices] = useState([]);
     const [ddtConfirmLoading, setDdtConfirmLoading] = useState(false);
+
+    // Drawing/Bulloneria confirm states
+    const [drawingConfirmOpen, setDrawingConfirmOpen] = useState(false);
+    const [drawingResults, setDrawingResults] = useState(null);
+    const [drawingDocId, setDrawingDocId] = useState(null);
+    const [selectedBullIndices, setSelectedBullIndices] = useState([]);
+    const [drawingRdpLoading, setDrawingRdpLoading] = useState(false);
+    const [fornitoreNome, setFornitoreNome] = useState('');
 
     // ── Handlers ──
     const handleUploadDoc = async (e) => {
@@ -145,6 +155,41 @@ export default function RepositoryDocumentiSection({ commessaId, docs, onRefresh
         finally { setDdtConfirmLoading(false); }
     };
 
+    const handleParseDrawing = async (docId) => {
+        setParsing(docId);
+        try {
+            const result = await apiRequest(`/smistatore/analyze-drawing/${docId}`, { method: 'POST' });
+            if (result.bulloneria && result.bulloneria.length > 0) {
+                setDrawingResults(result);
+                setDrawingDocId(docId);
+                setSelectedBullIndices(result.bulloneria.map((_, i) => i));
+                setDrawingConfirmOpen(true);
+                toast.success(`${result.bulloneria.length} elementi di bulloneria trovati`);
+            } else {
+                toast.info(result.note_aggiuntive || 'Nessuna bulloneria trovata nel disegno');
+            }
+            onRefresh?.();
+        } catch (e2) {
+            toast.error(e2.message || 'Errore analisi disegno');
+        } finally { setParsing(null); }
+    };
+
+    const handleCreateRdpFromDrawing = async () => {
+        if (selectedBullIndices.length === 0) return;
+        setDrawingRdpLoading(true);
+        try {
+            const res = await apiRequest(`/smistatore/drawing-to-rdp/${drawingDocId}`, {
+                method: 'POST',
+                body: { selected_indices: selectedBullIndices, fornitore_nome: fornitoreNome, note: '' },
+            });
+            toast.success(res.message || 'RdP creata con successo');
+            setDrawingConfirmOpen(false);
+            setFornitoreNome('');
+            onRefresh?.();
+        } catch (e2) { toast.error(e2.message); }
+        finally { setDrawingRdpLoading(false); }
+    };
+
     return (
         <>
             <div className="space-y-2" data-testid="repository-documenti-section">
@@ -227,8 +272,43 @@ export default function RepositoryDocumentiSection({ commessaId, docs, onRefresh
                                     </div>
                                 </div>
                             )}
+                            {d.metadata_estratti?.bulloneria?.length > 0 && (
+                                <div className="mt-1 p-1.5 bg-indigo-50 rounded border border-indigo-200">
+                                    <span className="block text-[10px] text-indigo-700 font-semibold">
+                                        <Bolt className="h-3 w-3 inline mr-0.5" />
+                                        {d.metadata_estratti.bulloneria.length} elementi bulloneria estratti con AI
+                                    </span>
+                                    {d.metadata_estratti.titolo_disegno && (
+                                        <span className="block text-[10px] text-slate-500 mt-0.5">Disegno: {d.metadata_estratti.titolo_disegno}</span>
+                                    )}
+                                    <div className="mt-1 space-y-0.5">
+                                        {d.metadata_estratti.bulloneria.slice(0, 5).map((b, idx) => (
+                                            <div key={idx} className="flex items-center gap-2 text-[10px] py-0.5 border-b border-indigo-100 last:border-0">
+                                                <span className="font-mono font-semibold text-indigo-800">{b.diametro || '?'}</span>
+                                                <span className="text-slate-500">{b.tipo?.replace(/_/g, ' ')}</span>
+                                                {b.classe && <span className="text-slate-500">Cl.{b.classe}</span>}
+                                                {b.lunghezza_mm && <span className="text-slate-400">x{b.lunghezza_mm}mm</span>}
+                                                <span className="ml-auto font-semibold text-indigo-700">{b.quantita} pz</span>
+                                            </div>
+                                        ))}
+                                        {d.metadata_estratti.bulloneria.length > 5 && (
+                                            <span className="text-[9px] text-indigo-500">...e altri {d.metadata_estratti.bulloneria.length - 5}</span>
+                                        )}
+                                    </div>
+                                    {d.metadata_estratti.rdp_generata && (
+                                        <div className="mt-1 text-[10px] text-emerald-600 font-medium">RdP generata</div>
+                                    )}
+                                </div>
+                            )}
                         </div>
-                        {d.tipo !== 'ddt_fornitore' && (d.nome_file?.toLowerCase().endsWith('.pdf') || d.content_type?.includes('pdf') || d.content_type?.includes('image')) && (
+                        {d.tipo === 'disegno' && (d.nome_file?.toLowerCase().endsWith('.pdf') || d.content_type?.includes('pdf') || d.content_type?.includes('image')) && (
+                            <Button size="sm" variant="ghost" className={`h-7 text-[10px] border ${d.metadata_estratti?.bulloneria?.length > 0 ? 'text-indigo-600 border-indigo-200' : 'text-violet-600 border-violet-200'}`} disabled={parsing === d.doc_id}
+                                onClick={() => handleParseDrawing(d.doc_id)} data-testid={`btn-parse-drawing-${d.doc_id}`}>
+                                {parsing === d.doc_id ? <Loader2 className="h-3 w-3 animate-spin mr-0.5" /> : <Bolt className="h-3 w-3 mr-0.5" />}
+                                {d.metadata_estratti?.bulloneria?.length > 0 ? 'Ri-analizza Disegno' : 'Analizza Disegno'}
+                            </Button>
+                        )}
+                        {d.tipo !== 'ddt_fornitore' && d.tipo !== 'disegno' && (d.nome_file?.toLowerCase().endsWith('.pdf') || d.content_type?.includes('pdf') || d.content_type?.includes('image')) && (
                             <Button size="sm" variant="ghost" className={`h-7 text-[10px] border ${d.metadata_estratti?.numero_colata ? 'text-emerald-600 border-emerald-200' : 'text-purple-600 border-purple-200'}`} disabled={parsing === d.doc_id}
                                 onClick={() => handleParseAI(d.doc_id)} data-testid={`btn-parse-${d.doc_id}`}>
                                 {parsing === d.doc_id ? <Loader2 className="h-3 w-3 animate-spin mr-0.5" /> : <Sparkles className="h-3 w-3 mr-0.5" />}
@@ -358,6 +438,73 @@ export default function RepositoryDocumentiSection({ commessaId, docs, onRefresh
                                     className="text-xs bg-[#1a3a6b]" data-testid="btn-conferma-profili">
                                     {confirmLoading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
                                     Conferma Importazione ({selectedProfileIndices.length})
+                                </Button>
+                            </div>
+                        </div>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Drawing/Bulloneria Confirmation Dialog */}
+            <Dialog open={drawingConfirmOpen} onOpenChange={setDrawingConfirmOpen}>
+                <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="text-base flex items-center gap-2"><Bolt className="h-4 w-4 text-indigo-600" /> Bulloneria Estratta dal Disegno</DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500">
+                            {drawingResults && <>
+                                {drawingResults.titolo_disegno && <span className="font-semibold">{drawingResults.titolo_disegno}</span>}
+                                {drawingResults.numero_disegno && <span> — N. {drawingResults.numero_disegno}</span>}
+                                <br />{drawingResults.bulloneria_totale} elementi trovati. Seleziona quelli da includere nella Richiesta di Preventivo (RdP).
+                            </>}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                        {drawingResults?.bulloneria?.map((b, idx) => {
+                            const isSelected = selectedBullIndices.includes(idx);
+                            return (
+                                <label key={idx} className={`flex items-start gap-2 text-xs cursor-pointer p-2 rounded border transition-colors ${isSelected ? 'bg-indigo-50 border-indigo-300' : 'bg-slate-50 border-slate-200 opacity-60'}`} data-testid={`confirm-bull-${idx}`}>
+                                    <Checkbox checked={isSelected} onCheckedChange={(checked) => { setSelectedBullIndices(prev => checked ? [...prev, idx] : prev.filter(i => i !== idx)); }} className="mt-0.5" />
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono font-semibold text-indigo-800">{b.diametro || '?'}</span>
+                                            <span className="text-slate-600">{b.tipo?.replace(/_/g, ' ')}</span>
+                                            {b.lunghezza_mm && <span className="text-slate-400">x{b.lunghezza_mm}mm</span>}
+                                            {b.classe && b.classe !== 'da_verificare' && <span className="text-slate-500">Cl.{b.classe}</span>}
+                                            {b.classe === 'da_verificare' && <Badge variant="outline" className="text-[9px] bg-amber-50 text-amber-600 border-amber-200">classe da verificare</Badge>}
+                                        </div>
+                                        <div className="text-[10px] mt-0.5 flex items-center gap-2">
+                                            <span className="font-semibold text-indigo-700">{b.quantita} pz</span>
+                                            {b.norma && <span className="text-slate-400">{b.norma}</span>}
+                                            {b.descrizione && <span className="text-slate-400 truncate max-w-[200px]">{b.descrizione}</span>}
+                                        </div>
+                                    </div>
+                                </label>
+                            );
+                        })}
+                    </div>
+                    <div className="flex gap-2 mt-1">
+                        <button className="text-[10px] text-blue-600 hover:underline" onClick={() => setSelectedBullIndices(drawingResults?.bulloneria?.map((_, i) => i) || [])}>Seleziona tutti</button>
+                        <button className="text-[10px] text-blue-600 hover:underline" onClick={() => setSelectedBullIndices([])}>Deseleziona tutti</button>
+                    </div>
+                    <div className="mt-2">
+                        <Label className="text-xs">Fornitore (opzionale)</Label>
+                        <Input
+                            value={fornitoreNome}
+                            onChange={e => setFornitoreNome(e.target.value)}
+                            placeholder="Es: Wurth, Bossong, Hilti..."
+                            className="h-8 text-sm"
+                            data-testid="input-fornitore-rdp"
+                        />
+                    </div>
+                    <DialogFooter className="mt-3">
+                        <div className="flex items-center justify-between w-full">
+                            <span className="text-xs text-slate-500">{selectedBullIndices.length} di {drawingResults?.bulloneria?.length || 0} selezionati</span>
+                            <div className="flex gap-2">
+                                <Button variant="outline" size="sm" onClick={() => setDrawingConfirmOpen(false)} className="text-xs">Annulla</Button>
+                                <Button size="sm" onClick={handleCreateRdpFromDrawing} disabled={drawingRdpLoading || selectedBullIndices.length === 0}
+                                    className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white" data-testid="btn-crea-rdp-disegno">
+                                    {drawingRdpLoading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Wrench className="h-3 w-3 mr-1" />}
+                                    Crea RdP ({selectedBullIndices.length} righe)
                                 </Button>
                             </div>
                         </div>

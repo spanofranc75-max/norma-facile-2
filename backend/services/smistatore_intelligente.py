@@ -336,6 +336,183 @@ async def analyze_and_index_document(
     return summary
 
 
+# ── Drawing / Fastener Analysis ──
+
+DRAWING_ANALYSIS_PROMPT = """Sei un ingegnere strutturale specializzato in carpenteria metallica EN 1090.
+
+Analizza questo disegno tecnico / distinta materiali e ESTRAI TUTTI gli elementi di bulloneria/viteria presenti.
+
+Per OGNI bullone, vite, dado, rondella o tirafondi che trovi, riporta:
+1. descrizione: Descrizione completa (es. "Bullone HV M20x60", "Dado M16 Cl.10", "Rondella piana M12")
+2. diametro: Diametro metrico (es. "M12", "M16", "M20", "M24")
+3. classe: Classe di resistenza (es. "8.8", "10.9", "HV 10.9", "A4-80"). Se non leggibile, metti "da_verificare"
+4. lunghezza_mm: Lunghezza in mm (es. 60, 80, 100). null se non applicabile (dado, rondella)
+5. quantita: Numero di pezzi. Se non indicato, stima dal disegno. Se impossibile, metti 1
+6. tipo: Categoria: "bullone", "vite", "dado", "rondella", "tirafondi", "barra_filettata", "altro"
+7. norma: Norma di riferimento se leggibile (es. "EN 14399", "ISO 4014", "DIN 933"). null se non leggibile
+
+Se il disegno NON contiene bulloneria, restituisci un array vuoto.
+Se il disegno e illeggibile o non e un disegno tecnico, metti "errore": true.
+
+RISPONDI SOLO con JSON valido:
+{
+    "titolo_disegno": "...",
+    "numero_disegno": "...",
+    "bulloneria": [
+        {
+            "descrizione": "Bullone HV M20x60 Cl.10.9",
+            "diametro": "M20",
+            "classe": "10.9",
+            "lunghezza_mm": 60,
+            "quantita": 12,
+            "tipo": "bullone",
+            "norma": "EN 14399-4"
+        }
+    ],
+    "note_aggiuntive": "...",
+    "errore": false
+}"""
+
+
+async def analyze_drawing_for_fasteners(page_image_b64: str) -> dict:
+    """Analyze a technical drawing using GPT-4o Vision to extract fastener lists."""
+    if not AI_AVAILABLE:
+        return {"errore": True, "note_aggiuntive": "AI non disponibile"}
+
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not api_key:
+        return {"errore": True, "note_aggiuntive": "EMERGENT_LLM_KEY mancante"}
+
+    chat = LlmChat(
+        api_key=api_key,
+        session_id=f"draw-{uuid.uuid4().hex[:8]}",
+        system_message=DRAWING_ANALYSIS_PROMPT,
+    ).with_model("openai", "gpt-4o")
+
+    user_msg = UserMessage(
+        text="Analizza questo disegno tecnico ed estrai tutta la bulloneria presente. Restituisci il JSON.",
+        file_contents=[ImageContent(image_base64=page_image_b64)],
+    )
+
+    try:
+        response_text = await chat.send_message(user_msg)
+        cleaned = response_text.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            cleaned = cleaned.strip()
+        if cleaned.startswith("json"):
+            cleaned = cleaned[4:].strip()
+        return json.loads(cleaned)
+    except Exception as e:
+        logger.error(f"Drawing AI analysis failed: {e}")
+        return {"errore": True, "note_aggiuntive": str(e), "bulloneria": []}
+
+
+async def analyze_drawing_document(
+    doc_id: str,
+    pdf_bytes: bytes,
+    commessa_id: str,
+    user_id: str,
+    db,
+) -> dict:
+    """
+    Analyze a technical drawing (PDF) for fastener extraction.
+    Returns the fastener list and proposes an RdP.
+    """
+    now = datetime.now(timezone.utc)
+
+    # Split PDF and analyze first page (or multiple pages)
+    page_pdfs = split_pdf_to_pages(pdf_bytes)
+    total_pages = len(page_pdfs)
+    logger.info(f"[SMISTATORE-DRAWING] Analyzing {total_pages} pages from doc {doc_id}")
+
+    all_bulloneria = []
+    titolo = ""
+    numero = ""
+
+    for page_num, page_pdf in enumerate(page_pdfs, 1):
+        page_b64 = pdf_page_to_image_b64(page_pdf, dpi=200)
+        if not page_b64:
+            continue
+
+        analysis = await analyze_drawing_for_fasteners(page_b64)
+
+        if analysis.get("errore"):
+            continue
+
+        if not titolo and analysis.get("titolo_disegno"):
+            titolo = analysis["titolo_disegno"]
+        if not numero and analysis.get("numero_disegno"):
+            numero = analysis["numero_disegno"]
+
+        for b in analysis.get("bulloneria", []):
+            # Deduplicate by merging same items
+            existing = None
+            for eb in all_bulloneria:
+                if (eb.get("diametro") == b.get("diametro") and
+                    eb.get("classe") == b.get("classe") and
+                    eb.get("lunghezza_mm") == b.get("lunghezza_mm") and
+                    eb.get("tipo") == b.get("tipo")):
+                    existing = eb
+                    break
+            if existing:
+                existing["quantita"] = existing.get("quantita", 0) + b.get("quantita", 1)
+            else:
+                all_bulloneria.append(b)
+
+    # Store results on the document
+    await db.commessa_documents.update_one(
+        {"doc_id": doc_id},
+        {"$set": {
+            "metadata_estratti.drawing_analysis": True,
+            "metadata_estratti.titolo_disegno": titolo,
+            "metadata_estratti.numero_disegno": numero,
+            "metadata_estratti.bulloneria": all_bulloneria,
+            "metadata_estratti.bulloneria_count": len(all_bulloneria),
+            "metadata_estratti.drawing_analyzed_at": now.isoformat(),
+        }}
+    )
+
+    # Build RdP proposal lines
+    rdp_lines = []
+    for b in all_bulloneria:
+        desc_parts = []
+        if b.get("tipo"):
+            desc_parts.append(b["tipo"].replace("_", " ").title())
+        if b.get("diametro"):
+            desc_parts.append(b["diametro"])
+        if b.get("lunghezza_mm"):
+            desc_parts.append(f"x{b['lunghezza_mm']}mm")
+        if b.get("classe") and b["classe"] != "da_verificare":
+            desc_parts.append(f"Cl.{b['classe']}")
+        if b.get("norma"):
+            desc_parts.append(f"({b['norma']})")
+
+        rdp_lines.append({
+            "descrizione": " ".join(desc_parts) or b.get("descrizione", "Bullone"),
+            "quantita": b.get("quantita", 1),
+            "unita_misura": "pz",
+            "diametro": b.get("diametro", ""),
+            "classe": b.get("classe", ""),
+            "lunghezza_mm": b.get("lunghezza_mm"),
+            "tipo": b.get("tipo", "bullone"),
+            "norma": b.get("norma", ""),
+        })
+
+    return {
+        "doc_id": doc_id,
+        "commessa_id": commessa_id,
+        "titolo_disegno": titolo,
+        "numero_disegno": numero,
+        "pagine_analizzate": total_pages,
+        "bulloneria_totale": len(all_bulloneria),
+        "bulloneria": all_bulloneria,
+        "rdp_proposta": rdp_lines,
+    }
+
+
 def get_matched_cert_pages_for_voce(
     page_index: List[Dict], voce_id: str, normativa: str
 ) -> List[Dict]:

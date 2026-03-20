@@ -16,7 +16,7 @@ import time
 # Test endpoint from env
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
 if not BASE_URL:
-    BASE_URL = "https://assembly-tracker-11.preview.emergentagent.com"
+    BASE_URL = "https://norma-nervous-system.preview.emergentagent.com"
 
 # Test user setup
 TEST_USER_ID = f"test-user-{uuid.uuid4().hex[:8]}"
