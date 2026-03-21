@@ -15,7 +15,7 @@ import asyncio
 # Base URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://audit-ready-28.preview.emergentagent.com"
+    BASE_URL = "https://en1090-certification.preview.emergentagent.com"
 
 # Test credentials
 SESSION_TOKEN = "0urNkos478BzSaOHd49sFYF_lmqHn4n6PLLHbVjUaGE"

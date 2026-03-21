@@ -1,77 +1,62 @@
 <analysis>**original_problem_statement**:
-The user has three primary requests:
-1.  **Fix a Bug**: When setting an expiry date for a document in the Documenti Azienda checklist (e.g., DURC), the date is not saved to the database and disappears on refresh. This needs immediate fixing.
-2.  **New Feature**: Add a new tab named Allegati POS (POS Attachments) to the Settings -> Documents page. This section must allow the user to upload fixed technical attachments (e.g., documents for Noise, Vibrations, Manual Material Handling (MMC), and Video Display Terminals (VDT)).
-3.  **Integration**: Ensure that these new Allegati POS files, along with the already-uploaded DVR, are automatically included in the safety package ZIP file generated for a job order (like the Loiano project).
+The user's high-level goal is to refine their NormaFacile 2.0 application to be a comprehensive, audit-proof ERP for their metalworking business, focusing on EN 1090-1 (FPC) compliance. Throughout the session, the user's requests evolved from implementing the initial FPC Fase 2 to addressing specific audit-driven requirements.
+
+**Key requirements addressed in this session:**
+1.  **FPC Fase 2 (Initial Goal)**: Implement a Registro Saldatura (Welding Log) and automate material traceability by linking supplier Delivery Notes (DDTs) to FPC material batches.
+2.  **Audit-Ready Features (User Directive 1)**: Implement a configurable tolerance for calibration instruments (specifically  for Calibro Borletti) and create a new Checklist Fine Lavori (Final Works Checklist) as a priority.
+3.  **Fili Conduttori - Data Interconnection (User Directive 2)**: A crucial architectural requirement to eliminate data islands. This involved ensuring that data flows seamlessly between modules: material traceability from DDTs to jobs, welder qualifications from HR to the welding log, instrument calibration status to the production start gate, and job data to the final Declaration of Performance (DOP).
+4.  **P0 Tasks (User Directive 3)**: Create a Verifica Coerenza Rintracciabilità (Traceability Coherence Check) tool and a PDF template for requesting a Process 111 qualification from a lab.
+5.  **VT/Dimensional Reports (User Directive 4)**: Implement a structured report for Visual Testing (VT) based on ISO 5817 Level C and Dimensional checks based on EN 1090-2.
 
 **User's preferred language**: Italian. The next agent **MUST** respond in Italian.
 
 **what currently exists?**
-The NormaFacile 2.0 application has evolved significantly. It's a comprehensive ERP for a metalworking company featuring a predictive AI estimator, KPI dashboard, and ML calibration.
-
-Key functionalities recently added or fixed:
--   **FPC Module**: The critical bug blocking access to FPC (Factory Production Control) projects has been fixed. Users can now create and view FPC projects.
--   **Human Resources & Compliance**: The Saldatori (Welders) module has been transformed into a full Risorse Umane (Human Resources) module. It now manages all workers and their safety certifications (81/08, medicals, etc.), not just welding qualifications.
--   **Compliance Matrix (Matrice Scadenze)**: A new page  provides a company-wide dashboard showing the compliance status of each worker, with color-coded indicators for valid, expiring, or expired certifications.
--   **Installation Report (Verbale di Posa)**: A complete end-to-end feature to generate a professional Verbale di Posa in Opera PDF. This includes a dynamic form, photo uploads, client signature capture on tablets/phones, and automatic inclusion of EN 1090 material lots.
--   **Company Documents**: A dedicated section in Settings for managing global company documents (DURC, Visura, DVR, etc.) with a professional table layout and expiry alerts.
+The application is a feature-rich ERP that has been significantly enhanced to meet EN 1090 audit requirements. The agent has successfully completed a large volume of work, including:
+-   **FPC Fase 2**: A complete Registro Saldatura module with dynamic filtering of qualified welders and a Tracciabilita Materiali section.
+-   **Audit-Ready Features**: A Checklist Fine Lavori module is integrated into the job hub, and calibration instruments now have a configurable  (tolerance threshold) that is enforced by the system.
+-   **Data Unification**: A critical architectural refactor was performed, migrating data from the redundant  collection into  and updating all relevant backend endpoints to use this single source of truth.
+-   **Fili Conduttori (Data Interconnection)**: All key modules are now interconnected. The  (pre-production gate) correctly blocks production if welders are unqualified or instruments have expired calibrations. The DOP generation process now pulls data automatically from the Riesame and traceability modules.
+-   **New Tools**: A Verifica Coerenza tool has been added to the traceability section to flag discrepancies, and a Template 111 PDF generator is available for requesting lab qualifications.
+-   **Inspection Reports**: A comprehensive Report Ispezioni module for structured VT (ISO 5817) and Dimensional (EN 1090-2) checks has been implemented, including PDF generation and digital signing.
 
 **Last working item**:
--   **Last item agent was working**: The agent was investigating the user's latest request to fix the date persistence bug in the Documenti Azienda section and add the Allegati POS tab. The agent identified the root cause of the bug: the backend lacks an endpoint to update a document's expiry date without re-uploading the entire file.
+-   **Last item agent was working**: The agent was beginning the implementation of the **DOP + Etichetta CE automatica** (Automatic Declaration of Performance and CE Label) enhancement. The goal is to make the generation of these final documents fully automatic by pulling all necessary data from other modules (Riesame, Rintracciabilità, Controllo Finale) without manual input. The agent had correctly identified  as the target file and was in the process of analyzing its current structure to plan the surgical modifications.
 -   **Status**: NOT STARTED
 -   **Agent Testing Done**: N
--   **Which testing method agent to use?**: both. Backend testing (curl) for the new PATCH endpoint and frontend testing (screenshot) for the new UI elements in the settings page and POS wizard.
+-   **Which testing method agent to use?**: both. Backend testing via  will be needed to verify that the generated PDF contains the auto-populated data. Frontend testing via screenshot will be needed to confirm the UI for generating the DOP/CE label still functions correctly.
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Expiry Date Not Saving in Company Documents (P0)**
-    -   **Description**: In the  tab, when a user sets a  for a document and refreshes the page, the date disappears.
-    -   **Attempted fixes**: The agent diagnosed the root cause: no specific backend endpoint exists to update just the date. The current upload logic overwrites the document entry, and the date is only sent during file upload, not independently.
-    -   **Next debug checklist**:
-        1.  **Backend**: In , create a new  endpoint that accepts a  field and updates the corresponding document in the  collection.
-        2.  **Frontend**: In , add a Salva (Save) button next to each date input.
-        3.  **Frontend**: Wire the Salva button's  event to call the new  endpoint, sending the document type and the new date value. Provide user feedback with a toast notification.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical bug blocking a core compliance feature. Fixing it will allow the user to manage document expiries, which is essential for the alert system to function correctly.
-    -   **Status**: NOT STARTED
-    -   **Is recurring issue?**: N
-    -   **Should Test frontend/backend/both after fix?**: Both.
-    -   **Blocked on other issue**: None.
+- There are no pending bugs. All work is feature development.
 
 **In progress Task List**:
--   None.
+- There are no tasks currently in progress. The previous task was completed, and the next one is about to begin.
 
 **Upcoming and Future Tasks**
-**Upcoming Tasks:**
--   **(P0) Implement Allegati POS Tab**: Create a new tab in the  page for uploading fixed technical documents (Rumore, Vibrazioni, MMC, VDT). These files must be automatically included in every new POS safety package.
--   **(P1) Automatic ML Model Training**: Implement automatic connection of the Diario di Produzione to the ML calibration system to make the estimation model self-improving.
--   **(P1) Intelligent Alerting System**: Automatically notify managers when a project's actual costs exceed budgeted costs.
 
-**Future Tasks:**
--   **(P2) Unify PDF Services**: Migrate the 13 legacy PDF generation services into the new Pulsante Magico system.
--   **(P2) Excel Export**: Add a feature for cost analysis data export.
--   **(P2) PDF Compliance Report**: Add a button to the Matrice Scadenze to print a Stato Compliance PDF report.
--   **(P3) Client Portal**: Develop a read-only portal for clients to view job progress.
--   **(P3) Granular RBAC**: Implement a more detailed role-based access control system.
--   **(P3) Drag-and-Drop for AI Analysis**: Add drag-and-drop file upload directly to the .
--   **(P3) QR Code on Documents**: Add a QR code to generated PDFs (like the Verbale di Posa) that links to the authentic digital version in the app.
+**Upcoming Tasks (Prioritized Backlog):**
+-   **(P0) DOP + Etichetta CE automatica**: This is the immediate next task. Enhance the existing  and potentially  to make DOP and CE Label generation fully automatic, pulling data from the , , and  collections.
+-   **(P1) Scadenziario Manutenzioni Digitalizzato**: Create a digital calendar/scheduler to manage and send alerts for equipment maintenance deadlines (e.g., Sega MEP, Trapano Serrmac, Saldatrice Weco).
+-   **(P1) Verbali ITT**: Create a module to manage Initial Type Testing (ITT) reports for qualifying production processes like cutting and drilling.
+
+**Future Tasks (General Backlog):**
+-   **(P2) Training ML**: Automatically train the estimation model using data from the Diario di Produzione (Production Log).
+-   **(P2) Intelligent Alerting System**: Automatically notify managers of project cost overruns.
+-   **(P3) Unify Legacy PDFs**: Migrate the 13 old PDF generation services into a unified system.
+-   **(P3) Client Portal**: Develop a read-only portal for clients to track job progress.
+-   **(P3) Onboarding & Other**: QR Code enhancements, RBAC, and a guided setup wizard for new users.
 
 **Completed work in this session**
--   **Human Resources & Compliance Overhaul**:
-    -   Refactored the Saldatori module into a comprehensive Risorse Umane module, renaming routes to .
-    -   Created the Matrice Scadenze page, providing a company-wide compliance dashboard for all worker certifications.
-    -   Integrated worker selection and automatic certificate attachment into the POS Wizard.
--   **Verbale di Posa (Installation Report) Feature**:
-    -   Built a full-featured module for creating, saving, and generating PDF installation reports.
-    -   Implemented a mobile-first UI with photo uploads () and a signature pad ().
-    -   Ensured EN 1090 material lots are automatically pulled from the database and highlighted in the report.
-    -   Tested and finalized the feature for the Loiano project.
--   **FPC Project Creation**:
-    -   Fixed the critical FPC page crash ().
-    -   Created the Loiano commessa and linked it to the FPC project, enabling end-to-end testing.
--   **Company Documents UI/UX**:
-    -   Redesigned the Documenti Azienda page into a professional table layout with status indicators for expiry.
-    -   Added DVR as a required global document.
--   **Testing**: Consistently used  after each major feature, achieving 100% pass rates across backend and frontend tests.
+-   **Feature: Registro Saldatura (Welding Log)**: Implemented full CRUD with dynamic filtering of welders by valid qualification.
+-   **Feature: Link DDT → Lotto FPC**: Created the UI and initial logic for linking delivery notes to material batches.
+-   **Feature: Checklist Fine Lavori**: Built a new module for final pre-shipment checks based on EN 1090-2.
+-   **Feature: Soglia Calibro Configurabile**: Added a configurable tolerance field to instruments, addressing a specific audit point.
+-   **Refactor: Unificazione Dati (Fili Conduttori)**: Performed a major architectural refactor to merge  into , eliminating a critical data island.
+-   **Feature: Auto-Population DOP**: Enhanced the DOP to automatically pull the execution class (EXC) from the Riesame Tecnico.
+-   **Feature: Verifica Coerenza Rintracciabilità**: Added a tool to detect and report discrepancies between material lots and DDTs.
+-   **Feature: Template PDF Processo 111**: Created a PDF generator for requesting lab qualifications.
+-   **Feature: Report Ispezioni VT/Dimensionali**: Built a comprehensive module for ISO 5817 VT and EN 1090-2 dimensional reports, with PDF generation and signing.
+-   **Documentation**: Updated  with all architectural changes and new features.
 
 **Earlier issues found/mentioned but not fixed**
 -   None.
@@ -80,72 +65,72 @@ Key functionalities recently added or fixed:
 -   None.
 
 **Code Architecture**
-scadenza
+soglia_accettabilitamaterial_batchesmaterial_batchesfpc_batchesverifica_coerenzareport_ispezionicontrollo_finalereport_ispezionitemplate_111soglia_accettabilitaunita_soglia
 
 **Key Technical Concepts**
--   **Compliance Matrix**: Backend aggregation logic () that iterates through all workers and their qualifications to determine their real-time deployment readiness, flagging missing, expired, or expiring certifications.
--   **Dynamic PDF Generation**: Using WeasyPrint with HTML/CSS templates to create data-driven, professional PDFs on the fly, including dynamic data like material lots, project details, and a placeholder logo.
--   **Client-Side Signature Capture**: Utilizing  to capture user drawings (signatures) as a base64-encoded image for submission to the backend.
--   **Mobile-First Responsive Design**: Using TailwindCSS utility classes (, , ) to create UIs that adapt from a stacked layout on mobile to a multi-column layout on desktops, specifically for the .
+-   **Architectural Refactoring**: The most significant achievement was identifying and resolving the data island problem by unifying the  and  collections. This involved a database migration script and a codebase-wide search-and-replace to ensure all modules use a single source of truth for material data.
+-   **Inter-Module Data Flow (Fili Conduttori)**: The application logic was enhanced to create seamless data connections. For example, the  now checks data from the  collection (for calibration) and , and the  pulls data directly from the  results.
+-   **Dynamic Checklists**: New modules like  and  were built using dynamic checklists, where some items are manual inputs and others are automatic verifications that query other parts of the database in real-time.
 
 **key DB schema**
--   **company_documents**: Contains a  field (String, ). The bug is that it's not being updated independently of file uploads. New categories for allegati_pos (e.g., , ) will be needed.
--   **welders**: This collection now serves as the Operai (Workers) registry.
--   **welders.qualifications** (sub-document array): Now includes a  (e.g., ) to categorize safety certifications, in addition to welding patentini.
--   **verbali_posa** (New Collection): Stores saved installation reports, including , form data, photo filenames, and the  as a base64 data URI.
+-   **material_batches**: Now the single source of truth for all material lots, enriched with data previously held in .
+-   **instruments**: The schema was extended to include  and  to support configurable tolerance.
+-   **controllo_finale** (new): Stores the state of the 11-item final checklist for a , including manual checks, auto-check results, and a digital signature.
+-   **report_ispezioni** (new): Stores detailed inspection reports, including results for 18+ specific checks (VT and Dimensional), metadata, and a digital signature.
 
 **All files of reference**
--   **/app/backend/routes/company_docs.py**: Needs a new PATCH endpoint to fix the date bug.
--   **/app/frontend/src/components/settings/DocumentiAziendaTab.js**: Needs a Save button for dates. Will need a new Allegati POS tab.
--   **/app/frontend/src/pages/SettingsPage.js**: Needs to be modified to include the new Allegati POS tab.
--   **/app/backend/routes/sicurezza.py**: The  function will need to be updated to include the new Allegati POS documents.
--   **/app/test_reports/iteration_197.json**: Last successful test report.
--   **/app/memory/PRD.md**: Contains the full product requirements and history.
+-   **/app/backend/routes/gate_certification.py**: The primary file to modify for the next task (DOP/CE auto-generation).
+-   **/app/backend/routes/dop_frazionata.py**: May also require modification to align with the fully automatic DOP generation.
+-   **/app/backend/routes/controllo_finale.py**: A newly created module for the final checklist.
+-   **/app/backend/routes/report_ispezioni.py**: A newly created module for VT/Dimensional reports.
+-   **/app/backend/routes/fpc.py**: Contains the core traceability logic, now refactored.
+-   **/app/frontend/src/pages/CommessaHubPage.js**: The central UI where all new sections have been integrated.
+-   **/app/memory/PRD.md**: Updated with all completed tasks and the current backlog.
+-   **/app/PROJECT_KNOWLEDGE.md**: Extensively updated with the latest architectural changes, file structures, and feature descriptions.
 
 **Critical Info for New Agent**
--   **Priority 1 is the date bug**. The user cannot manage document expiries. You must implement the  endpoint in  and the corresponding save button in .
--   **Priority 2 is the Allegati POS feature**. This involves creating a new UI tab, updating the backend model/routes to accept new document types, and modifying the safety ZIP generation logic in .
--   The user wants to see these features working for the **Loiano commessa**. The ID is .
--   Authentication tokens expire. If you receive  or  errors, you may need to create a new test session token.
+-   **Operate Surgically**: The user has repeatedly emphasized the need for surgical changes that build upon the existing structure. Before creating new modules, always check if an existing one can be enhanced.
+-   **Data Unification is Key**: The merge of  into  was a critical fix. Ensure all new features respect this single source of truth.
+-   **Fili Conduttori Philosophy**: The core goal is an interconnected system. When implementing the automatic DOP/CE, ensure it pulls data programmatically from other modules (, , ) rather than requiring new manual inputs.
+-   **Testing is Comprehensive**: The previous agent made excellent use of  for backend validation and the  for full-stack regression testing. Continue this pattern.
 
 **documents and test reports created in this job**
--   /app/test_reports/iteration_194.json
--   /app/test_reports/iteration_195.json
--   /app/test_reports/iteration_196.json
--   /app/test_reports/iteration_197.json
--   /app/memory/PRD.md (updated after each major task)
+-   /app/test_reports/iteration_201.json
+-   /app/test_reports/iteration_202.json
+-   /app/test_reports/iteration_203.json
+-   /app/test_reports/iteration_204.json
+-   /app/test_reports/iteration_205.json
+-   /app/memory/PRD.md (Updated)
+-   /app/PROJECT_KNOWLEDGE.md (Extensively Updated)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User confirms Verbale plan**: Approves option B (save then send email) and using a placeholder logo. Stresses the importance of EN 1090 lots and a mobile-first design. (COMPLETE)
-2.  **Agent creates Loiano commessa**: Creates the  commessa and links it to the FPC project. (COMPLETE)
-3.  **Agent adds test data**: Adds EN 1090 material lots to the new commessa for testing. (COMPLETE)
-4.  **Agent optimizes Verbale page**: Rewrites the  to be mobile-first and to highlight the EN 1090 lots. (COMPLETE)
-5.  **Agent tests Verbale**: Successfully saves and generates a PDF for the Loiano commessa. (COMPLETE)
-6.  **Agent screenshots Verbale**: Confirms the UI shows the correct data for Loiano. (COMPLETE)
-7.  **Agent runs tests**: Runs , which passes 100%. (COMPLETE)
-8.  **Agent finishes**: Summarizes the completion of the Verbale di Posa feature. (COMPLETE)
-9.  **User reports bug and new feature**: Bug Date: When I enter deadlines in the CIMS Checklist, the system deletes them... Add a POS Attachments tab... Ensure the DVR is included in the package. (IN PROGRESS)
-10. **Agent starts debugging**: The agent correctly identifies the bug is with date persistence by testing the API and inspecting the code. (IN PROGRESS)
+1.  **User**: Asks to proceed with the VT/Dimensional report. (DONE)
+2.  **Agent**: Completes the VT/Dimensional report and summarizes the remaining work.
+3.  **User**: Asks what's left to do before discussing the RINA audit steps. (DONE)
+4.  **Agent**: Provides a full summary of completed work and the remaining backlog.
+5.  **User**: Says to continue with the next steps. (DONE)
+6.  **Agent**: Asks for confirmation to proceed with the DOP/CE automatica.
+7.  **User**: Approves and reminds the agent to operate surgically.
+8.  **Agent**: Acknowledges and begins analysis for the DOP/CE task.
+9.  **User**: (Pending from previous message) continua con i passaggi successivi - User confirmed to continue with the proposed plan.
+10. **User**: (Pending from previous message) ok procedi mi raccomando sempre di operare chirurgicamente - User approved the plan to start on the automatic DOP/CE feature.
 
 **Project Health Check:**
--   **Broken**: The functionality to save an expiry date for a company document is currently broken.
--   **Mocked**: No.
+-   **Broken**: None.
+-   **Mocked**: None. All placeholders have been implemented.
 
 **3rd Party Integrations**
--   **emergentintegrations**: Used for GPT-4o Vision, powered by the Emergent LLM Key.
--   **WeasyPrint**: For server-side PDF generation.
--   **recharts**: For data visualization on the KPI Dashboard.
--   **react-signature-canvas**: For capturing user signatures on the frontend.
--   **react-dropzone**: For drag-and-drop file uploads.
+-   **WeasyPrint**: Used for all server-side PDF generation (Riesame, Manuale, Controllo Finale, Report Ispezioni, etc.).
+-   **emergentintegrations**: Used for the AI estimator's vision analysis.
 
 **Testing status**
--   **Testing agent used after significant changes**: YES, the agent used the testing agent after every major feature implementation and achieved 100% pass rates.
+-   **Testing agent used after significant changes**: YES. The testing agent was used successfully after every major feature implementation, with reports confirming 100% pass rates.
 -   **Troubleshoot agent used after agent stuck in loop**: NO.
--   **Test files created**: None.
+-   **Test files created**: None. Testing was done via  scripts and the testing agent.
 -   **Known regressions**: None.
 
 **Credentials to test flow:**
--   The session token used previously is likely expired. The application uses a custom session mechanism managed in . If API calls fail with a 401 error, a new test session may need to be created.
+-   The agent has a working script to create a valid session token in the  collection in MongoDB. If  errors occur, this script should be used.
 
 **What agent forgot to execute**
--   The agent did not forget anything. It was in the middle of analyzing and planning the fix for the user's latest requests when the session ended. The plan to tackle the date bug and the Allegati POS feature is sound and should be the immediate next step.</analysis>
+- The agent was reminded by the user to update  and promptly did so. No other tasks were missed.</analysis>
