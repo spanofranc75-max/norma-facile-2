@@ -14,7 +14,6 @@ ERP completo per carpenteria metallica con gestione EN 1090, EN 13241, ISO 3834.
 - Core: Commesse, Clienti, Preventivi, DDT, Fatturazione, Diario Produzione, Fascicolo CE, WPS, Magazzino
 - AI Vision Disegni, Preventivatore Predittivo (+ Stima Rapida Manuale)
 - KPI Dashboard + Calibrazione ML
-- Tracciabilita FPC (creazione progetto, dettaglio, controlli, CE, DOP, Etichetta CE)
 
 ### Flusso Audit EN 1090 (21 Mar 2026)
 - **Riesame Tecnico Bloccante**: 11 check (7 auto + 4 manuali) raggruppati per sezione:
@@ -29,6 +28,20 @@ ERP completo per carpenteria metallica con gestione EN 1090, EN 13241, ISO 3834.
 - **PDF Verbale di Riesame**: Con logo, checklist, firma, prova documentale per audit
 - Backend: `/api/riesame/{id}` (GET/POST), `/approva` (POST), `/pdf` (GET)
 - DB Collection: `riesami_tecnici`
+
+### FASE 2 — Registro Saldatura + Link DDT (21 Mar 2026)
+- **Registro Saldatura per Commessa**: Log completo saldature con giunto, saldatore, WPS, data, esito VT
+  - Filtro saldatori idonei per processo/patentino valido
+  - Statistiche: conformi/non conformi/da eseguire
+  - CRUD completo con validazione
+  - Backend: `/api/registro-saldatura/{commessa_id}` (GET/POST/PUT/DELETE), `/saldatori-idonei` (GET)
+  - DB Collection: `registro_saldatura`
+  - Frontend: `RegistroSaldaturaSection` integrato in CommessaHubPage
+- **Link DDT → Lotti FPC**: Auto-associazione colata da DDT di carico a batch FPC
+  - Matching per numero colata (forte) e profilo descrizione (debole)
+  - Scheda rintracciabilita materiali con stato collegamento
+  - Backend: `/api/fpc/batches/link-ddt/{commessa_id}` (POST), `/rintracciabilita/{commessa_id}` (GET)
+  - Frontend: `TracciabilitaMaterialiSection` integrato in CommessaHubPage
 
 ### Sicurezza & Conformita
 - Documenti globali con scadenze persistenti (PATCH)
@@ -49,12 +62,10 @@ ERP completo per carpenteria metallica con gestione EN 1090, EN 13241, ISO 3834.
 
 ## Credenziali Test
 - User: user_97c773827822
-- Session: test_session_2026_active
+- Session: d36a500823254076b5c583d6c1d903fa (user_sessions collection)
 - Commessa test: com_loiano_cims_2026
 
 ## Backlog — Piano Audit EN 1090
-- (P0-FASE2) Registro Saldatura per Commessa: chi ha saldato cosa, quando, con quale WPS + filtro patentini per processo
-- (P0-FASE2) Link DDT → Lotto FPC: auto-associazione colata da DDT di carico a batch FPC
 - (P1-FASE3) Report Ispezioni VT/Dimensionali con checklist ISO 5817
 - (P1-FASE3) DOP + Etichetta CE automatica (enhancement del gate_certification esistente)
 - (P2-FASE4) Verbali ITT (qualifica taglio e foratura)
