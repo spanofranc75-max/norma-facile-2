@@ -140,6 +140,19 @@ export default function FPCProjectPage() {
           <p className="text-xs text-slate-400 text-center mt-1">DoP + CE Label + Certificati 3.1 + Qualifica Saldatore + Controlli FPC</p>
         </div>
 
+        {/* VERBALE DI POSA BUTTON */}
+        <div className="mb-6">
+          <Button
+            data-testid="verbale-posa-btn"
+            onClick={() => navigate(`/verbale-posa/${project.commessa_id || project.project_id}`)}
+            variant="outline"
+            className="w-full h-12 text-base border-[#0055FF] text-[#0055FF] hover:bg-blue-50"
+          >
+            <FileText className="h-5 w-5 mr-2" /> Genera Verbale di Posa in Opera
+          </Button>
+          <p className="text-xs text-slate-400 text-center mt-1">Dichiarazione di corretta posa + foto cantiere + firma cliente</p>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* LEFT: Welder & WPS */}
           <div className="space-y-4">

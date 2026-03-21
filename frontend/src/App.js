@@ -55,6 +55,7 @@ import QualitySystemPage from './pages/QualitySystemPage';
 import InstrumentsPage from './pages/InstrumentsPage';
 import WeldersPage from './pages/WeldersPage';
 import MatriceScadenzePage from './pages/MatriceScadenzePage';
+import VerbalePosaPage from './pages/VerbalePosaPage';
 import WPSPage from './pages/WPSPage';
 import AuditPage from './pages/AuditPage';
 import QualityHubPage from './pages/QualityHubPage';
@@ -262,6 +263,7 @@ function AppRouter() {
             <Route path="/saldatori" element={<Navigate to="/operai" replace />} />
             <Route path="/operai" element={<ProtectedRoute><WeldersPage /></ProtectedRoute>} />
             <Route path="/operai/matrice" element={<ProtectedRoute><MatriceScadenzePage /></ProtectedRoute>} />
+            <Route path="/verbale-posa/:commessaId" element={<ProtectedRoute><VerbalePosaPage /></ProtectedRoute>} />
             <Route path="/wps" element={<ProtectedRoute><WPSPage /></ProtectedRoute>} />
             <Route path="/audit" element={<ProtectedRoute><AuditPage /></ProtectedRoute>} />
             <Route path="/quality-hub" element={<ProtectedRoute><QualityHubPage /></ProtectedRoute>} />
