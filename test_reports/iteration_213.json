@@ -1,0 +1,119 @@
+{
+  "summary": "Iteration 213 — Executive Professional PDF Upgrade Testing. Backend: 8/8 tests passed (100%). Frontend: All features verified — CommessaHubPage shows red CAM alert banner with 'CAM NON CONFORME' and suggerimenti, all 6+ action buttons visible (DOP Auto, Etichetta CE, Rintracciabilita, CAM PNRR, Dossier PDF, Pacco Documenti).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "TracciabilitaMaterialiSection",
+        "issues": ["Minor hydration warning in console about <tr> inside <span> - does not affect functionality (same as iteration 212)"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration213_executive_pdf.py",
+    "/app/test_reports/pytest/iteration213_executive_pdf_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration213_executive_pdf.py"
+  ],
+  "success_rate": {
+    "backend": "100% (8/8 passed)",
+    "frontend": "100% (all features working)"
+  },
+  "seed_data_creation": "Used existing test data: commessa_id=com_2c57c1283871 (NF-2026-000036) with 4 material batches containing CAM data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Executive Professional PDF upgrade fully tested. CAM Alert endpoint returns correct compliance status (danger level for 73.6% < 75% threshold). DOP Automatica includes enriched data (riesame_checks, welding_entries, wps_docs, welders_data). All PDF endpoints generate valid PDFs: DOP (multi-page >30KB), CE Label, CAM Declaration with PNRR reference, Rintracciabilita Totale (landscape). Frontend shows red CAM alert banner with suggestions and all action buttons are visible.",
+  "features_tested": {
+    "backend_endpoints": [
+      {
+        "endpoint": "GET /api/cam/alert/{commessa_id}",
+        "status": "PASS",
+        "description": "Returns correct CAM compliance alert with level='danger', message='CAM NON CONFORME: 73.6% riciclato (soglia 75%)', suggerimenti, percentuale_riciclato=73.6"
+      },
+      {
+        "endpoint": "POST /api/fascicolo-tecnico/{cid}/dop-automatica",
+        "status": "PASS",
+        "description": "Creates DOP with enriched data: riesame_checks, welding_entries, wps_docs, welders_data, batches_rintracciabilita"
+      },
+      {
+        "endpoint": "GET /api/fascicolo-tecnico/{cid}/dop-frazionata/{dop_id}/pdf",
+        "status": "PASS",
+        "description": "Generates multi-page PDF (>30KB) with professional circular stamp, enriched ZA table, zebra striping, chapter separators"
+      },
+      {
+        "endpoint": "GET /api/fascicolo-tecnico/{cid}/etichetta-ce-1090/pdf",
+        "status": "PASS",
+        "description": "Generates CE label PDF (HTTP 200, Content-Type application/pdf)"
+      },
+      {
+        "endpoint": "GET /api/cam/dichiarazione-pdf/{cid}",
+        "status": "PASS",
+        "description": "Generates CAM declaration PDF with PNRR reference"
+      },
+      {
+        "endpoint": "GET /api/fascicolo-tecnico/{cid}/rintracciabilita-totale/pdf",
+        "status": "PASS",
+        "description": "Generates landscape traceability sheet PDF"
+      },
+      {
+        "endpoint": "GET /api/fascicolo-tecnico/{cid}/dop-frazionate",
+        "status": "PASS",
+        "description": "Lists all DOPs for commessa"
+      }
+    ],
+    "frontend_pages": [
+      {
+        "page": "CommessaHubPage",
+        "features_verified": [
+          "CAM Alert Banner visible with red background (danger level)",
+          "CAM Alert shows 'CAM NON CONFORME: 73.6% riciclato (soglia 75%)'",
+          "CAM Alert displays suggerimenti: 'Valutare fornitori alternativi con acciaio da forno elettrico (EAF)', 'Mancano solo 1.4% — un lotto aggiuntivo EAF potrebbe risolvere'",
+          "CAM Alert shows percentuale_riciclato (73.6%), soglia (75%), n_materiali (4), n_non_conformi (0)",
+          "DOP Auto button visible and functional",
+          "Etichetta CE button visible and functional",
+          "Rintracciabilita PDF button visible and functional",
+          "CAM PNRR PDF button visible and functional",
+          "Dossier PDF button visible and functional",
+          "Pacco Documenti button visible and functional"
+        ]
+      }
+    ]
+  },
+  "data_verified": {
+    "test_commessa": "com_2c57c1283871 (NF-2026-000036)",
+    "cam_alert_response": {
+      "level": "danger",
+      "conforme": false,
+      "message": "CAM NON CONFORME: 73.6% riciclato (soglia 75%)",
+      "percentuale_riciclato": 73.6,
+      "soglia_minima": 75,
+      "delta": -1.4,
+      "n_materiali": 4,
+      "n_non_conformi": 0,
+      "suggerimenti": [
+        "Valutare fornitori alternativi con acciaio da forno elettrico (EAF)",
+        "Mancano solo 1.4% — un lotto aggiuntivo EAF potrebbe risolvere"
+      ]
+    },
+    "dop_automatica_enriched_fields": {
+      "riesame_checks": "present",
+      "welding_entries": "present (up to 10 entries)",
+      "wps_docs": "present",
+      "welders_data": "present"
+    },
+    "pdf_sizes": {
+      "dop_pdf": ">30KB (multi-page)",
+      "ce_label": ">1KB",
+      "cam_declaration": ">5KB",
+      "rintracciabilita": ">5KB"
+    }
+  }
+}

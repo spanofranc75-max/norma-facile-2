@@ -767,3 +767,103 @@ async def assegna_archivio_a_commessa(
     )
 
     return {"message": f"Profilo {numero_colata} assegnato a commessa {commessa_id}", "cam_lotto_id": cam_id}
+
+
+# ══════════════════════════════════════════════════════════════════
+#  CAM ALERT — Pre-generation compliance check
+# ══════════════════════════════════════════════════════════════════
+
+@router.get("/alert/{commessa_id}")
+async def cam_alert(commessa_id: str, user: dict = Depends(get_current_user)):
+    """Check CAM compliance status for a commessa BEFORE PDF generation.
+    Returns alert level and actionable suggestions."""
+    uid = user["user_id"]
+
+    # Collect material from batches + lotti_cam
+    batches = await db.material_batches.find(
+        {"commessa_id": commessa_id, "user_id": uid},
+        {"_id": 0, "certificate_base64": 0}
+    ).to_list(200)
+
+    cam_materiali = []
+    for b in batches:
+        perc = b.get("percentuale_riciclato")
+        if perc is not None:
+            cam_materiali.append({
+                "descrizione": b.get("dimensions") or b.get("material_type", "Acciaio"),
+                "peso_kg": b.get("peso_kg", 0),
+                "percentuale_riciclato": perc,
+                "metodo_produttivo": b.get("metodo_produttivo", "forno_elettrico_non_legato"),
+                "uso_strutturale": True,
+                "certificazione": "dichiarazione_produttore",
+                "fornitore": b.get("supplier_name", ""),
+                "numero_colata": b.get("heat_number", ""),
+            })
+
+    # Also include lotti_cam
+    lotti = await db.lotti_cam.find(
+        {"commessa_id": commessa_id, "user_id": uid}, {"_id": 0}
+    ).to_list(100)
+    for lc in lotti:
+        already = any(cm.get("numero_colata") == lc.get("numero_colata") and cm.get("numero_colata") for cm in cam_materiali)
+        if not already:
+            cam_materiali.append({
+                "descrizione": lc.get("descrizione", "Materiale"),
+                "peso_kg": lc.get("peso_kg", 0),
+                "percentuale_riciclato": lc.get("percentuale_riciclato", 0),
+                "metodo_produttivo": lc.get("metodo_produttivo", "forno_elettrico_non_legato"),
+                "uso_strutturale": True,
+                "certificazione": lc.get("tipo_certificazione", "dichiarazione_produttore"),
+            })
+
+    if not cam_materiali:
+        n_batches_no_cam = len([b for b in batches if b.get("percentuale_riciclato") is None])
+        return {
+            "level": "warning" if batches else "info",
+            "conforme": None,
+            "message": f"Nessun dato CAM registrato. {n_batches_no_cam} lotti senza % riciclato." if batches else "Nessun lotto materiale registrato.",
+            "percentuale_riciclato": None,
+            "soglia_minima": None,
+            "suggerimenti": [
+                "Compilare il campo '% Riciclato' nei lotti materiale",
+                "Richiedere dichiarazione contenuto riciclato ai fornitori",
+            ],
+        }
+
+    calc = calcola_cam_commessa(cam_materiali)
+    conforme = calc.get("conforme_cam", False)
+    perc_tot = calc.get("percentuale_riciclato_totale", 0)
+    soglia = calc.get("soglia_minima_richiesta", 75)
+    delta = round(perc_tot - soglia, 2)
+
+    # Find problematic materials (below threshold)
+    non_conformi = [r for r in calc.get("righe", []) if not r.get("conforme_cam")]
+    n_no_cam = len([b for b in batches if b.get("percentuale_riciclato") is None])
+
+    suggerimenti = []
+    if not conforme:
+        if non_conformi:
+            worst = max(non_conformi, key=lambda r: r.get("peso_kg", 0))
+            suggerimenti.append(
+                f"Il lotto critico e '{worst.get('descrizione')}' ({worst.get('fornitore', '')}) "
+                f"con {worst.get('percentuale_riciclato', 0):.1f}% riciclato "
+                f"(soglia: {worst.get('soglia_minima', 75)}%)"
+            )
+        suggerimenti.append("Valutare fornitori alternativi con acciaio da forno elettrico (EAF)")
+        if delta > -5:
+            suggerimenti.append(f"Mancano solo {abs(delta):.1f}% — un lotto aggiuntivo EAF potrebbe risolvere")
+    if n_no_cam > 0:
+        suggerimenti.append(f"{n_no_cam} lotti senza dati CAM: compilare per migliorare la precisione")
+
+    return {
+        "level": "success" if conforme else "danger",
+        "conforme": conforme,
+        "message": f"CAM {'CONFORME' if conforme else 'NON CONFORME'}: {perc_tot:.1f}% riciclato (soglia {soglia:.0f}%)",
+        "percentuale_riciclato": round(perc_tot, 2),
+        "soglia_minima": soglia,
+        "delta": delta,
+        "n_materiali": len(cam_materiali),
+        "n_non_conformi": len(non_conformi),
+        "n_senza_dati_cam": n_no_cam,
+        "suggerimenti": suggerimenti,
+    }

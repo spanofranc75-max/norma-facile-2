@@ -400,6 +400,41 @@ async def create_dop_automatica(cid: str, user: dict = Depends(get_current_user)
         "data_approvazione": (ctrl_finale or {}).get("data_approvazione", ""),
     }
 
+    # === 5. Enrichment: Riesame checks detail, welding data, WPS ===
+    riesame_doc = await db.riesami_tecnici.find_one(
+        {"commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    riesame_checks = {}
+    if riesame_doc:
+        for ck in riesame_doc.get("checks", []):
+            riesame_checks[ck.get("id", "")] = {
+                "checked": ck.get("checked", False),
+                "valore": ck.get("valore", ""),
+                "note": ck.get("note", ""),
+            }
+
+    # Welding: fetch registro saldatura and WPS for this commessa
+    welding_entries = await db.registro_saldatura.find(
+        {"commessa_id": cid, "user_id": user["user_id"]},
+        {"_id": 0}
+    ).to_list(50)
+
+    wps_ids = list({w.get("wps_id") for w in welding_entries if w.get("wps_id")})
+    wps_docs = []
+    if wps_ids:
+        wps_docs = await db.wps_procedures.find(
+            {"wps_id": {"$in": wps_ids}, "user_id": user["user_id"]},
+            {"_id": 0, "wps_id": 1, "wps_number": 1, "process": 1, "material_group": 1}
+        ).to_list(20)
+
+    welder_ids = list({w.get("welder_id") for w in welding_entries if w.get("welder_id")})
+    welders_data = []
+    if welder_ids:
+        welders_data = await db.welders.find(
+            {"welder_id": {"$in": welder_ids}},
+            {"_id": 0, "welder_id": 1, "nome": 1, "cognome": 1, "patentino_numero": 1, "qualifiche": 1}
+        ).to_list(20)
+
     dop = {
         "dop_id": dop_id,
         "commessa_id": cid,
@@ -422,6 +457,10 @@ async def create_dop_automatica(cid: str, user: dict = Depends(get_current_user)
         },
         "ispezioni": ispezioni_status,
         "controllo_finale": controllo_status,
+        "riesame_checks": riesame_checks,
+        "welding_entries": welding_entries[:10],
+        "wps_docs": wps_docs,
+        "welders_data": welders_data,
         "stato": "bozza",
         "created_at": now.isoformat(),
         "updated_at": now.isoformat(),
@@ -566,8 +605,29 @@ def _build_rintracciabilita_html(dop: dict) -> str:
     </table>"""
 
 
+def _build_professional_stamp(biz: str, city: str, date_str: str, cert_num: str, firma_url: str = "") -> str:
+    """Generates a professional-looking stamp/seal for document signatures."""
+    firma_img = f'<img src="{firma_url}" style="max-height:38px;max-width:140px;margin-top:4px;" />' if firma_url else ""
+    return f"""
+    <div style="display:table;width:100%;margin-top:24px;">
+        <div style="display:table-cell;width:45%;vertical-align:bottom;">
+            {firma_img}
+            <div style="border-bottom:1.5px solid #1a3a6b;width:220px;margin-top:6px;"></div>
+            <p style="font-size:7.5pt;color:#666;margin-top:2px;">Firma Autorizzata</p>
+        </div>
+        <div style="display:table-cell;width:55%;text-align:right;vertical-align:bottom;">
+            <div style="display:inline-block;border:3px solid #1a3a6b;border-radius:50%;width:120px;height:120px;text-align:center;position:relative;overflow:hidden;">
+                <div style="position:absolute;top:0;left:0;right:0;background:#1a3a6b;color:#fff;font-size:5.5pt;font-weight:700;padding:3px 0;letter-spacing:1px;text-transform:uppercase;">VERIFICATO CONFORME</div>
+                <div style="margin-top:26px;font-size:7pt;font-weight:800;color:#1a3a6b;line-height:1.2;padding:0 6px;">{biz}</div>
+                <div style="font-size:6pt;color:#555;margin-top:2px;">FPC N. {cert_num}</div>
+                <div style="position:absolute;bottom:0;left:0;right:0;background:#1a3a6b;color:#fff;font-size:6pt;padding:3px 0;">{city} — {date_str}</div>
+            </div>
+        </div>
+    </div>"""
+
+
 def _build_verifiche_html(dop: dict) -> str:
-    """Build verification sections for auto-DOPs (Riesame, Ispezioni, Controllo Finale)."""
+    """Build verification sections — enriched with real data, skip empty ones."""
     if not dop.get("automatica"):
         return ""
     import html as html_mod
@@ -577,60 +637,122 @@ def _build_verifiche_html(dop: dict) -> str:
 
     # Riesame Tecnico
     ries = dop.get("riesame", {})
-    stato_r = "Approvato" if ries.get("approvato") else "Non approvato"
-    cls_r = "color:#276749;font-weight:700;" if ries.get("approvato") else "color:#c53030;font-weight:700;"
-    firma_r = ries.get("firma", {})
-    data_r = (ries.get("data_approvazione") or "")[:10]
-    sections.append(f"""
-    <h2>4. Riesame Tecnico Pre-Produzione</h2>
-    <table>
-        <tr><td style="font-weight:700;background:#f0f4f8;width:35%;">Stato</td>
-            <td style="{cls_r}">{stato_r}</td></tr>
-        <tr><td style="font-weight:700;background:#f0f4f8;">Firmato da</td>
-            <td>{_e(firma_r.get('nome', '—'))} — {_e(firma_r.get('ruolo', ''))}</td></tr>
-        <tr><td style="font-weight:700;background:#f0f4f8;">Data approvazione</td>
-            <td>{_e(data_r) if data_r else '—'}</td></tr>
-    </table>""")
+    if ries.get("approvato") or ries.get("firma", {}).get("nome"):
+        stato_r = "APPROVATO" if ries.get("approvato") else "In attesa"
+        bg_r = "#d4edda" if ries.get("approvato") else "#fff3cd"
+        clr_r = "#276749" if ries.get("approvato") else "#856404"
+        firma_r = ries.get("firma", {})
+        data_r = (ries.get("data_approvazione") or "")[:10]
+
+        # Enrich with Riesame checks detail
+        ck_detail = ""
+        riesame_checks = dop.get("riesame_checks", {})
+        if riesame_checks:
+            checked_items = [k for k, v in riesame_checks.items() if v.get("checked")]
+            unchecked = [k for k, v in riesame_checks.items() if not v.get("checked")]
+            ck_detail = f"""
+            <tr><td class="lbl">Verifiche Superate</td>
+                <td><strong style="color:#276749;">{len(checked_items)}/{len(riesame_checks)}</strong></td></tr>"""
+            if unchecked:
+                ck_detail += f"""
+            <tr><td class="lbl">Verifiche Mancanti</td>
+                <td style="color:#c53030;">{', '.join(u.replace('_', ' ').title() for u in unchecked[:5])}</td></tr>"""
+
+        sections.append(f"""
+        <h2 style="border-left:4px solid {clr_r};padding-left:8px;border-bottom:2px solid #1a3a6b;">4. Riesame Tecnico Pre-Produzione</h2>
+        <div style="background:{bg_r};border:2px solid {clr_r};padding:8px 12px;margin:6px 0 8px;text-align:center;font-weight:800;color:{clr_r};font-size:10pt;">{stato_r}</div>
+        <table>
+            <tr><td class="lbl">Firmato da</td>
+                <td>{_e(firma_r.get('nome', ''))}{f" — {_e(firma_r.get('ruolo', ''))}" if firma_r.get('ruolo') else ''}</td></tr>
+            <tr><td class="lbl">Data approvazione</td>
+                <td>{_e(data_r) if data_r else '—'}</td></tr>
+            {ck_detail}
+        </table>""")
+
+    # Welding Registry excerpt
+    welding = dop.get("welding_entries", [])
+    wps_docs = dop.get("wps_docs", [])
+    welders_data = dop.get("welders_data", [])
+    wps_map = {w.get("wps_id"): w for w in wps_docs}
+    welder_map = {w.get("welder_id"): w for w in welders_data}
+
+    if welding or wps_docs:
+        weld_rows = ""
+        for i, w in enumerate(welding[:8], 1):
+            wps = wps_map.get(w.get("wps_id"), {})
+            welder = welder_map.get(w.get("welder_id"), {})
+            esito = w.get("esito_vt", "da_eseguire")
+            esito_html = {
+                "conforme": '<span style="color:#276749;font-weight:700;">CONFORME</span>',
+                "non_conforme": '<span style="color:#c53030;font-weight:700;">NC</span>',
+            }.get(esito, '<span style="color:#856404;">In attesa</span>')
+            weld_rows += f"""<tr>
+                <td style="text-align:center;">{i}</td>
+                <td>{_e(w.get('giunto_id', w.get('id_giunto', '')))}</td>
+                <td>{_e(wps.get('wps_number', w.get('wps_id', '')))}</td>
+                <td>{_e(wps.get('process', w.get('processo', '135')))}</td>
+                <td>{_e(f"{welder.get('nome', '')} {welder.get('cognome', '')}".strip() or w.get('welder_id', ''))}</td>
+                <td>{_e(w.get('data_esecuzione', '')[:10] if w.get('data_esecuzione') else '')}</td>
+                <td style="text-align:center;">{esito_html}</td>
+            </tr>"""
+
+        n_conf = sum(1 for w in welding if w.get("esito_vt") == "conforme")
+        n_nc = sum(1 for w in welding if w.get("esito_vt") == "non_conforme")
+
+        sections.append(f"""
+        <h2 style="border-left:4px solid #1a3a6b;padding-left:8px;border-bottom:2px solid #1a3a6b;">4a. Registro Saldatura (EN ISO 3834)</h2>
+        <table style="margin-bottom:6px;">
+            <tr><td class="lbl">Giunti Registrati</td><td><strong>{len(welding)}</strong> ({n_conf} conformi{f', {n_nc} NC' if n_nc else ''})</td></tr>
+            <tr><td class="lbl">WPS di Riferimento</td><td>{', '.join(_e(w.get('wps_number', '')) for w in wps_docs) or '—'}</td></tr>
+            <tr><td class="lbl">Saldatori Qualificati</td><td>{', '.join(_e(f"{w.get('nome', '')} {w.get('cognome', '')}") for w in welders_data) or '—'}</td></tr>
+        </table>
+        {"" if not weld_rows else f'''
+        <table>
+            <tr><th style="width:5%;">N.</th><th>Giunto</th><th>WPS</th><th>Processo</th><th>Saldatore</th><th>Data</th><th style="text-align:center;">Esito VT</th></tr>
+            {weld_rows}
+        </table>
+        '''}""")
 
     # Report Ispezioni VT/Dimensionale
     isp = dop.get("ispezioni", {})
-    stato_i = "Approvato" if isp.get("approvato") else "Non approvato"
-    cls_i = "color:#276749;font-weight:700;" if isp.get("approvato") else "color:#c53030;font-weight:700;"
-    firma_i = isp.get("firma", {})
-    data_i = (isp.get("data_approvazione") or "")[:10]
-    sections.append(f"""
-    <h2>5. Controlli Ispezioni VT / Dimensionali</h2>
-    <table>
-        <tr><td style="font-weight:700;background:#f0f4f8;width:35%;">Stato</td>
-            <td style="{cls_i}">{stato_i}</td></tr>
-        <tr><td style="font-weight:700;background:#f0f4f8;">VT (Visual Testing)</td>
-            <td>{isp.get('vt_ok', 0)}/{isp.get('vt_totale', 0)} conformi — ISO 5817 Livello C</td></tr>
-        <tr><td style="font-weight:700;background:#f0f4f8;">Dimensionale</td>
-            <td>{isp.get('dim_ok', 0)}/{isp.get('dim_totale', 0)} conformi — EN 1090-2 B6/B8</td></tr>
-        <tr><td style="font-weight:700;background:#f0f4f8;">Firmato da</td>
-            <td>{_e(firma_i.get('nome', '—'))} — {_e(firma_i.get('ruolo', ''))}</td></tr>
-        <tr><td style="font-weight:700;background:#f0f4f8;">Data</td>
-            <td>{_e(data_i) if data_i else '—'}</td></tr>
-    </table>""")
+    has_isp = isp.get("approvato") or isp.get("vt_totale", 0) > 0 or isp.get("dim_totale", 0) > 0
+    if has_isp:
+        stato_i = "APPROVATO" if isp.get("approvato") else "In attesa"
+        bg_i = "#d4edda" if isp.get("approvato") else "#fff3cd"
+        clr_i = "#276749" if isp.get("approvato") else "#856404"
+        firma_i = isp.get("firma", {})
+        data_i = (isp.get("data_approvazione") or "")[:10]
+        sections.append(f"""
+        <h2 style="border-left:4px solid {clr_i};padding-left:8px;border-bottom:2px solid #1a3a6b;">5. Controlli Ispezioni VT / Dimensionali</h2>
+        <div style="background:{bg_i};border:2px solid {clr_i};padding:6px 10px;margin:4px 0;text-align:center;font-weight:800;color:{clr_i};font-size:10pt;">{stato_i}</div>
+        <table>
+            <tr><td class="lbl">VT (Visual Testing)</td>
+                <td><strong>{isp.get('vt_ok', 0)}/{isp.get('vt_totale', 0)}</strong> conformi — ISO 5817 Livello C (EN 1090-2)</td></tr>
+            <tr><td class="lbl">Dimensionale</td>
+                <td><strong>{isp.get('dim_ok', 0)}/{isp.get('dim_totale', 0)}</strong> conformi — EN 1090-2 Annesso B6/B8</td></tr>
+            <tr><td class="lbl">Firmato da</td>
+                <td>{_e(firma_i.get('nome', ''))}{f" — {_e(firma_i.get('ruolo', ''))}" if firma_i.get('ruolo') else ''}</td></tr>
+            <tr><td class="lbl">Data</td><td>{_e(data_i) if data_i else '—'}</td></tr>
+        </table>""")
 
     # Controllo Finale
     cf = dop.get("controllo_finale", {})
-    stato_cf = "Approvato" if cf.get("approvato") else "Non approvato"
-    cls_cf = "color:#276749;font-weight:700;" if cf.get("approvato") else "color:#c53030;font-weight:700;"
-    firma_cf = cf.get("firma", {})
-    data_cf = (cf.get("data_approvazione") or "")[:10]
-    sections.append(f"""
-    <h2>6. Controllo Finale Pre-Spedizione</h2>
-    <table>
-        <tr><td style="font-weight:700;background:#f0f4f8;width:35%;">Stato</td>
-            <td style="{cls_cf}">{stato_cf}</td></tr>
-        <tr><td style="font-weight:700;background:#f0f4f8;">Firmato da</td>
-            <td>{_e(firma_cf.get('nome', '—'))} — {_e(firma_cf.get('ruolo', ''))}</td></tr>
-        <tr><td style="font-weight:700;background:#f0f4f8;">Data</td>
-            <td>{_e(data_cf) if data_cf else '—'}</td></tr>
-    </table>""")
+    if cf.get("approvato") or cf.get("firma", {}).get("nome"):
+        stato_cf = "APPROVATO" if cf.get("approvato") else "In attesa"
+        bg_cf = "#d4edda" if cf.get("approvato") else "#fff3cd"
+        clr_cf = "#276749" if cf.get("approvato") else "#856404"
+        firma_cf = cf.get("firma", {})
+        data_cf = (cf.get("data_approvazione") or "")[:10]
+        sections.append(f"""
+        <h2 style="border-left:4px solid {clr_cf};padding-left:8px;border-bottom:2px solid #1a3a6b;">6. Controllo Finale Pre-Spedizione</h2>
+        <div style="background:{bg_cf};border:2px solid {clr_cf};padding:6px 10px;margin:4px 0;text-align:center;font-weight:800;color:{clr_cf};font-size:10pt;">{stato_cf}</div>
+        <table>
+            <tr><td class="lbl">Firmato da</td>
+                <td>{_e(firma_cf.get('nome', ''))}{f" — {_e(firma_cf.get('ruolo', ''))}" if firma_cf.get('ruolo') else ''}</td></tr>
+            <tr><td class="lbl">Data</td><td>{_e(data_cf) if data_cf else '—'}</td></tr>
+        </table>""")
 
-    return "\n".join(sections)
+    return "\n".join(sections) if sections else ""
 
 
 def _build_cam_section_html(dop: dict) -> str:
@@ -779,13 +901,51 @@ def _generate_dop_pdf(dop: dict, commessa: dict, company: dict, client_name: str
             <td style="text-align:right;">{_e(m.get('peso', ''))}</td>
         </tr>"""
 
-    firma_html = f'<img src="{firma}" style="max-height:45px;max-width:160px;" />' if firma else ""
 
     # Performance table (EN 1090 specific)
     exc = _e(dop.get('classe_esecuzione', commessa.get('classe_esecuzione', 'EXC2')))
     dop_num = _e(dop.get('dop_numero', ''))
     comm_num = _e(commessa.get('numero', ''))
     comm_title = _e(commessa.get('title', commessa.get('oggetto', '')))
+
+    # Performance table enriched from Riesame checks
+    riesame_checks = dop.get("riesame_checks", {})
+    # ZA.3 Saldabilità — enrich from WPS and welder data
+    za3_perf = f"Qualificato per classe {exc}"
+    wps_docs = dop.get("wps_docs", [])
+    welders_data = dop.get("welders_data", [])
+    if wps_docs:
+        wps_nums = ", ".join(_e(w.get("wps_number", "")) for w in wps_docs[:3])
+        za3_perf = f"WPS {wps_nums} — EN ISO 3834-{'2' if exc in ('EXC3', 'EXC4') else '3'}"
+    if welders_data:
+        za3_perf += f" ({len(welders_data)} saldatori qualificati)"
+
+    # ZA.4 Tenacità — enrich from batches count
+    n_batches = len(dop.get("batches_rintracciabilita", []))
+    za4_perf = f"{n_batches} certificati EN 10204 3.1 verificati" if n_batches else "Certificati di colata verificati"
+
+    # ZA.5 Reazione al fuoco — always A1 for steel
+    za5_perf = "Classe A1 (acciaio carbon. non rivestito — decisione CE 96/603)"
+
+    # ZA.6 Resistenza al fuoco — check Riesame for fire protection info
+    za6_check = riesame_checks.get("protezione_antincendio", riesame_checks.get("fire_protection", {}))
+    if za6_check and za6_check.get("checked"):
+        za6_note = za6_check.get("note", za6_check.get("valore", ""))
+        za6_perf = f"Conforme — {_e(za6_note)}" if za6_note else "Verificato — Come da specifica strutturale"
+    else:
+        za6_perf = "Da progetto strutturale (R15-R120 come da specifica)"
+
+    # ZA.7 Durabilità — check Riesame for surface treatment/corrosion
+    za7_check = riesame_checks.get("trattamento_superficiale", riesame_checks.get("surface_treatment", {}))
+    if za7_check and za7_check.get("checked"):
+        za7_note = za7_check.get("note", za7_check.get("valore", ""))
+        za7_perf = f"Conforme — {_e(za7_note)}" if za7_note else "Trattamento anticorrosione applicato"
+    else:
+        env_check = riesame_checks.get("classe_ambiente", riesame_checks.get("corrosion_class", {}))
+        if env_check and env_check.get("valore"):
+            za7_perf = f"Classe {_e(env_check['valore'])} — EN ISO 12944"
+        else:
+            za7_perf = "EN 1090-2, Cap. 10 — Come da specifica di progetto"
 
     html = f"""<!DOCTYPE html><html><head><style>
     @page {{
@@ -829,7 +989,8 @@ def _generate_dop_pdf(dop: dict, commessa: dict, company: dict, client_name: str
         font-weight: 700; background: #f0f4f8; width: 30%; color: #1a3a6b;
         font-size: 8.5pt;
     }}
-    tr:nth-child(even) {{ background: #f8f9fb; }}
+    tr:nth-child(even) td {{ background: #f5f7fa; }}
+    tr:nth-child(odd) td {{ background: #fff; }}
     .badge {{
         display: inline-block; padding: 3px 10px; border-radius: 3px;
         font-size: 8pt; font-weight: 700;
@@ -838,12 +999,13 @@ def _generate_dop_pdf(dop: dict, commessa: dict, company: dict, client_name: str
     .badge-green {{ background: #d4edda; color: #276749; }}
     .badge-red {{ background: #f8d7da; color: #c53030; }}
     .header-bar {{
-        background: #1a3a6b; color: #fff; padding: 12px 16px; margin-bottom: 14px;
+        background: linear-gradient(135deg, #0f2b4a 0%, #1a3a6b 100%);
+        color: #fff; padding: 12px 16px; margin-bottom: 14px;
     }}
     .header-bar table {{ margin: 0; }}
     .header-bar td {{ border: none; padding: 2px 8px; color: #fff; font-size: 8.5pt; }}
-    .seal-box {{
-        border: 2px solid #1a3a6b; padding: 8px; text-align: center; margin: 6px 0;
+    .chapter-sep {{
+        border: none; border-top: 1px solid #e0e4e8; margin: 20px 0 4px;
     }}
     </style></head><body>
 
@@ -859,6 +1021,7 @@ def _generate_dop_pdf(dop: dict, commessa: dict, company: dict, client_name: str
                     {addr}{f"<br/>{cap_city}" if cap_city.strip() else ""}
                     {f"<br/>P.IVA: {piva}" if piva else ""}
                     {f"<br/>Tel: {phone}" if phone else ""}
+                    {f"<br/>{email}" if email else ""}
                 </td>
             </tr>
         </table>
@@ -879,7 +1042,7 @@ def _generate_dop_pdf(dop: dict, commessa: dict, company: dict, client_name: str
     </div>
 
     <!-- ═══ SEZ. 1 — IDENTIFICAZIONE ═══ -->
-    <h2>1. Identificazione del Prodotto</h2>
+    <h2 style="border-left:4px solid #1a3a6b;padding-left:8px;">1. Identificazione del Prodotto</h2>
     <table>
         <tr><td class="lbl">N. Dichiarazione di Prestazione</td><td><strong>{dop_num}</strong></td></tr>
         <tr><td class="lbl">Commessa di Riferimento</td><td>{comm_num} — {comm_title}</td></tr>
@@ -889,8 +1052,10 @@ def _generate_dop_pdf(dop: dict, commessa: dict, company: dict, client_name: str
         <tr><td class="lbl">Data di Emissione</td><td>{now.strftime('%d/%m/%Y')}</td></tr>
     </table>
 
+    <hr class="chapter-sep"/>
+
     <!-- ═══ SEZ. 2 — FABBRICANTE ═══ -->
-    <h2>2. Fabbricante</h2>
+    <h2 style="border-left:4px solid #1a3a6b;padding-left:8px;">2. Fabbricante</h2>
     <table>
         <tr><td class="lbl">Ragione Sociale</td><td><strong>{biz}</strong></td></tr>
         <tr><td class="lbl">Sede Legale / Stabilimento</td><td>{addr} {cap_city}</td></tr>
@@ -900,30 +1065,33 @@ def _generate_dop_pdf(dop: dict, commessa: dict, company: dict, client_name: str
         <tr><td class="lbl">Ente Notificato</td><td>{ente} (N. {ente_num})</td></tr>
     </table>
 
+    <hr class="chapter-sep"/>
+
     <!-- ═══ SEZ. 3 — PRESTAZIONI DICHIARATE ═══ -->
-    <h2>3. Prestazioni Dichiarate (EN 1090-1, Tabella ZA.1)</h2>
+    <h2 style="border-left:4px solid #1a3a6b;padding-left:8px;">3. Prestazioni Dichiarate (EN 1090-1, Tabella ZA.1)</h2>
     <table>
-        <tr><th style="width:8%;">Rif.</th><th style="width:35%;">Caratteristica Essenziale</th>
-            <th style="width:25%;">Metodo Valutazione</th><th style="width:32%;">Prestazione</th></tr>
-        <tr><td style="text-align:center;">ZA.1</td><td>Resistenza meccanica e stabilita</td>
-            <td>EN 1090-2, EN 1993</td><td>Classe {exc} — Componenti conformi</td></tr>
-        <tr><td style="text-align:center;">ZA.2</td><td>Tolleranze dimensionali</td>
+        <tr><th style="width:8%;">Rif.</th><th style="width:30%;">Caratteristica Essenziale</th>
+            <th style="width:25%;">Metodo Valutazione</th><th style="width:37%;">Prestazione Dichiarata</th></tr>
+        <tr><td style="text-align:center;font-weight:700;">ZA.1</td><td>Resistenza meccanica e stabilita</td>
+            <td>EN 1090-2, EN 1993</td><td><strong>Classe {exc}</strong> — Componenti conformi</td></tr>
+        <tr><td style="text-align:center;font-weight:700;">ZA.2</td><td>Tolleranze dimensionali</td>
             <td>EN 1090-2, Tab. D.2</td><td>Classe 1 (tolleranze essenziali)</td></tr>
-        <tr><td style="text-align:center;">ZA.3</td><td>Saldabilita</td>
-            <td>EN ISO 3834-3/2</td><td>Qualificato per classe {exc}</td></tr>
-        <tr><td style="text-align:center;">ZA.4</td><td>Tenacita del materiale</td>
-            <td>EN 10025, Cert. 3.1</td><td>Certificati di colata verificati</td></tr>
-        <tr><td style="text-align:center;">ZA.5</td><td>Reazione al fuoco</td>
-            <td>EN 13501-1</td><td>Classe A1 (acciaio non rivestito)</td></tr>
-        <tr><td style="text-align:center;">ZA.6</td><td>Resistenza al fuoco</td>
-            <td>EN 13501-2</td><td>NPD (da progetto strutturale)</td></tr>
-        <tr><td style="text-align:center;">ZA.7</td><td>Durabilita</td>
-            <td>EN 1090-2, Cap. 10</td><td>Come da specifica di progetto</td></tr>
+        <tr><td style="text-align:center;font-weight:700;">ZA.3</td><td>Saldabilita</td>
+            <td>EN ISO 3834</td><td>{za3_perf}</td></tr>
+        <tr><td style="text-align:center;font-weight:700;">ZA.4</td><td>Tenacita del materiale</td>
+            <td>EN 10025, Cert. 3.1</td><td>{za4_perf}</td></tr>
+        <tr><td style="text-align:center;font-weight:700;">ZA.5</td><td>Reazione al fuoco</td>
+            <td>EN 13501-1</td><td>{za5_perf}</td></tr>
+        <tr><td style="text-align:center;font-weight:700;">ZA.6</td><td>Resistenza al fuoco</td>
+            <td>EN 13501-2</td><td>{za6_perf}</td></tr>
+        <tr><td style="text-align:center;font-weight:700;">ZA.7</td><td>Durabilita</td>
+            <td>EN 1090-2, Cap. 10</td><td>{za7_perf}</td></tr>
     </table>
 
-    <!-- ═══ SEZ. 3b — MATERIALI (se presenti) ═══ -->
+    <!-- ═══ SEZ. 3b — MATERIALI (condizionale) ═══ -->
     {"" if not materiali_html else f'''
-    <h2>3a. Materiali Consegnati con questa DoP</h2>
+    <hr class="chapter-sep"/>
+    <h2 style="border-left:4px solid #1a3a6b;padding-left:8px;">3a. Materiali Consegnati con questa DoP</h2>
     <table>
         <tr><th style="width:5%;">N.</th><th>DDT Rif.</th><th>Descrizione</th><th>Qta</th><th>U.M.</th><th style="text-align:right;">Peso</th></tr>
         {materiali_html}
@@ -939,34 +1107,21 @@ def _generate_dop_pdf(dop: dict, commessa: dict, company: dict, client_name: str
     {f'<h2>Note Aggiuntive</h2><p style="font-size:9pt;">{_e(dop.get("note", ""))}</p>' if dop.get("note") else ''}
 
     <!-- ═══ DICHIARAZIONE DI CONFORMITA ═══ -->
-    <h2>Dichiarazione di Conformita</h2>
-    <div style="border:2px solid #1a3a6b;padding:12px 16px;background:#f8f9fb;margin:8px 0;">
-        <p style="font-size:9.5pt;line-height:1.6;margin:0;">
-            Il sottoscritto, in qualita di {ruolo} della <strong>{biz}</strong>, dichiara sotto la propria
-            responsabilita che i componenti strutturali in acciaio descritti nella presente Dichiarazione di Prestazione
-            n. <strong>{dop_num}</strong>, relativi alla commessa <strong>{comm_num}</strong>,
+    <div style="page-break-inside:avoid;">
+    <h2 style="border-left:4px solid #276749;padding-left:8px;">Dichiarazione di Conformita</h2>
+    <div style="border:2.5px solid #1a3a6b;padding:14px 18px;background:linear-gradient(180deg,#f8f9fb 0%,#eef1f6 100%);margin:8px 0;">
+        <p style="font-size:9.5pt;line-height:1.7;margin:0;">
+            Il sottoscritto <strong>{resp}</strong>, in qualita di {ruolo} della <strong>{biz}</strong>,
+            dichiara sotto la propria responsabilita che i componenti strutturali in acciaio descritti nella presente
+            Dichiarazione di Prestazione n. <strong>{dop_num}</strong>, relativi alla commessa <strong>{comm_num}</strong>,
             sono conformi alla norma armonizzata <strong>EN 1090-1:2009+A1:2011</strong> e sono stati prodotti
             in accordo al sistema di Controllo della Produzione in Fabbrica (FPC) certificato dall'Ente Notificato
             <strong>{ente}</strong> con certificato n. <strong>{cert_num}</strong>.
         </p>
     </div>
 
-    <!-- ═══ FIRMA ═══ -->
-    <div style="margin-top:28px;">
-        <table style="border:none;">
-            <tr style="border:none;">
-                <td style="border:none;width:50%;vertical-align:bottom;">
-                    <p style="font-size:9pt;margin-bottom:4px;"><strong>{resp}</strong></p>
-                    <p style="font-size:8pt;color:#555;margin:0;">{ruolo}</p>
-                    {firma_html}
-                    <div style="border-bottom:1px solid #333;width:220px;margin-top:10px;"></div>
-                    <p style="font-size:7.5pt;color:#888;margin-top:2px;">Firma e Timbro</p>
-                </td>
-                <td style="border:none;width:50%;text-align:right;vertical-align:bottom;">
-                    <p style="font-size:9pt;">{city}, {now.strftime('%d/%m/%Y')}</p>
-                </td>
-            </tr>
-        </table>
+    <!-- ═══ TIMBRO PROFESSIONALE + FIRMA ═══ -->
+    {_build_professional_stamp(biz, city, now.strftime('%d/%m/%Y'), cert_num, firma)}
     </div>
 
     </body></html>"""

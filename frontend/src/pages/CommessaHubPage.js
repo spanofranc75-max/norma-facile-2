@@ -134,6 +134,7 @@ export default function CommessaHubPage() {
     const [closingSimple, setClosingSimple] = useState(false);
     const [checklistStato, setChecklistStato] = useState({});
     const [vociLavoro, setVociLavoro] = useState([]);
+    const [camAlert, setCamAlert] = useState(null);
 
     const fetchHub = useCallback(async () => {
         try {
@@ -148,6 +149,12 @@ export default function CommessaHubPage() {
     }, [commessaId]);
 
     useEffect(() => { fetchHub(); }, [fetchHub]);
+
+    // Fetch CAM alert status
+    useEffect(() => {
+        if (!commessaId) return;
+        apiRequest(`/cam/alert/${commessaId}`).then(setCamAlert).catch(() => {});
+    }, [commessaId]);
 
     const handleChecklistToggle = async (itemKey, currentChecked) => {
         const newVal = !currentChecked;
@@ -400,6 +407,46 @@ export default function CommessaHubPage() {
                         )}
                     </div>
                 </div>
+
+                {/* ══ CAM Alert Banner — Pre-generation compliance check ══ */}
+                {camAlert && camAlert.level !== 'info' && (
+                    <div data-testid="cam-alert-banner" className={`rounded-lg border-2 p-3 flex items-start gap-3 ${
+                        camAlert.level === 'success' ? 'bg-emerald-50 border-emerald-400' :
+                        camAlert.level === 'danger' ? 'bg-red-50 border-red-400' :
+                        'bg-amber-50 border-amber-400'
+                    }`}>
+                        <div className={`mt-0.5 ${
+                            camAlert.level === 'success' ? 'text-emerald-600' :
+                            camAlert.level === 'danger' ? 'text-red-600' : 'text-amber-600'
+                        }`}>
+                            {camAlert.level === 'success' ? <CheckCircle2 className="h-5 w-5" /> :
+                             camAlert.level === 'danger' ? <XCircle className="h-5 w-5" /> :
+                             <AlertTriangle className="h-5 w-5" />}
+                        </div>
+                        <div className="flex-1">
+                            <p className={`text-sm font-bold ${
+                                camAlert.level === 'success' ? 'text-emerald-800' :
+                                camAlert.level === 'danger' ? 'text-red-800' : 'text-amber-800'
+                            }`}>
+                                CAM DM 256/2022 — {camAlert.message}
+                            </p>
+                            {camAlert.suggerimenti?.length > 0 && (
+                                <ul className="mt-1 text-xs text-slate-600 list-disc list-inside space-y-0.5">
+                                    {camAlert.suggerimenti.map((s, i) => <li key={i}>{s}</li>)}
+                                </ul>
+                            )}
+                            {camAlert.percentuale_riciclato != null && (
+                                <div className="mt-2 flex gap-3 text-xs">
+                                    <span className="font-mono font-bold">{camAlert.percentuale_riciclato?.toFixed(1)}% riciclato</span>
+                                    <span className="text-slate-400">|</span>
+                                    <span>Soglia: {camAlert.soglia_minima}%</span>
+                                    <span className="text-slate-400">|</span>
+                                    <span>{camAlert.n_materiali} materiali, {camAlert.n_non_conformi} NC</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 {/* Validazione Preventiva Documenti */}
                 <CommessaComplianceBanner commessaId={commessaId} />
