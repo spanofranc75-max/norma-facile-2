@@ -31,6 +31,7 @@ import RiesameTecnicoSection from '../components/RiesameTecnicoSection';
 import RegistroSaldaturaSection from '../components/RegistroSaldaturaSection';
 import TracciabilitaMaterialiSection from '../components/TracciabilitaMaterialiSection';
 import ControlloFinaleSection from '../components/ControlloFinaleSection';
+import ReportIspezioniSection from '../components/ReportIspezioniSection';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
@@ -331,6 +332,9 @@ export default function CommessaHubPage() {
 
                 {/* Tracciabilita Materiali — Link DDT → Lotti FPC */}
                 <TracciabilitaMaterialiSection commessaId={commessaId} />
+
+                {/* Report Ispezioni VT/Dimensionali — EN 1090-2 */}
+                <ReportIspezioniSection commessaId={commessaId} />
 
                 {/* Controllo Finale — Checklist pre-spedizione EN 1090-2:2024 */}
                 <ControlloFinaleSection commessaId={commessaId} />

@@ -84,6 +84,7 @@ from routes.riesame_tecnico import router as riesame_router
 from routes.registro_saldatura import router as registro_saldatura_router
 from routes.controllo_finale import router as controllo_finale_router
 from routes.template_111 import router as template_111_router
+from routes.report_ispezioni import router as report_ispezioni_router
 
 # Configure logging
 logging.basicConfig(
@@ -212,6 +213,7 @@ app.include_router(riesame_router, prefix="/api")
 app.include_router(registro_saldatura_router, prefix="/api")
 app.include_router(controllo_finale_router, prefix="/api")
 app.include_router(template_111_router, prefix="/api")
+app.include_router(report_ispezioni_router, prefix="/api")
 
 
 @app.on_event("startup")

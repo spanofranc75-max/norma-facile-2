@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 
 from core.database import db
 from core.security import get_current_user
+from routes.report_ispezioni import VT_CHECKS
 
 router = APIRouter(prefix="/controllo-finale", tags=["controllo-finale"])
 logger = logging.getLogger(__name__)
@@ -45,8 +46,8 @@ CHECKLIST_DEFINITION = [
     {
         "id": "vt_nc_chiuse",
         "area": "Visual Testing",
-        "label": "Non conformita chiuse o riparate",
-        "desc": "Nessuna NC aperta relativa a difetti visivi",
+        "label": "Report Ispezioni VT approvato",
+        "desc": "Rapporto VT con checklist ISO 5817-C firmato e chiuso",
         "auto": True,
     },
     # === DIMENSIONALE ===
@@ -123,15 +124,19 @@ async def _run_auto_checks(commessa_id: str, user_id: str) -> dict:
                 else "Nessun giunto registrato nel Registro Saldatura",
     }
 
-    # VT: NC chiuse
-    nc_aperte = await db.non_conformita.count_documents({
-        "commessa_id": commessa_id, "user_id": user_id,
-        "stato": {"$nin": ["chiusa", "riparata", "accettata"]}
-    })
+    # VT: Report Ispezioni VT approvato
+    report_isp = await db.report_ispezioni.find_one(
+        {"commessa_id": commessa_id, "user_id": user_id}, {"_id": 0}
+    )
+    vt_results = {r["check_id"]: r for r in (report_isp or {}).get("ispezioni_vt", [])}
+    n_vt_compiled = sum(1 for r in vt_results.values() if r.get("esito") is not None)
+    n_vt_ok = sum(1 for r in vt_results.values() if r.get("esito") is True)
     results["vt_nc_chiuse"] = {
-        "ok": nc_aperte == 0,
-        "valore": f"{nc_aperte} NC aperte" if nc_aperte else "Nessuna NC aperta",
-        "nota": f"Chiudere {nc_aperte} non conformita prima della spedizione" if nc_aperte else "Tutte le NC risolte",
+        "ok": bool(report_isp) and report_isp.get("approvato", False),
+        "valore": f"Report {'approvato' if report_isp and report_isp.get('approvato') else f'{n_vt_compiled}/{len(VT_CHECKS)} compilati' if report_isp else 'non creato'}",
+        "nota": "Report Ispezioni VT firmato e approvato" if report_isp and report_isp.get("approvato")
+                else f"{n_vt_ok} VT conformi su {n_vt_compiled} compilati" if report_isp
+                else "Compilare il Report Ispezioni VT dalla sezione dedicata",
     }
 
     # DIM: Strumenti tarati
