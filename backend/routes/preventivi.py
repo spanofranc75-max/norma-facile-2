@@ -375,6 +375,9 @@ async def list_preventivi(
         query["client_id"] = client_id
     if status:
         query["status"] = status
+    else:
+        # Di default escludi i preventivi eliminati
+        query["status"] = {"$ne": "eliminato"}
     total = await db.preventivi.count_documents(query)
     skip = (page - 1) * per_page
     cursor = db.preventivi.find(query, {"_id": 0}).skip(skip).limit(per_page).sort("number", -1)
