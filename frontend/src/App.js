@@ -64,6 +64,7 @@ import OfficinaPage from './pages/OfficinaPage';
 import AttrezzaturePage from './pages/AttrezzaturePage';
 import ArchivioStoricoPage from './pages/ArchivioStoricoPage';
 import PreventivatoreWizard from './pages/PreventivatoreWizard';
+import KPIDashboard from './pages/KPIDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './App.css';
@@ -264,6 +265,7 @@ function AppRouter() {
             <Route path="/attrezzature" element={<ProtectedRoute><AttrezzaturePage /></ProtectedRoute>} />
             <Route path="/archivio-storico" element={<ProtectedRoute><ArchivioStoricoPage /></ProtectedRoute>} />
             <Route path="/preventivatore" element={<ProtectedRoute><PreventivatoreWizard /></ProtectedRoute>} />
+            <Route path="/kpi" element={<ProtectedRoute><KPIDashboard /></ProtectedRoute>} />
         </Routes>
     );
 }
