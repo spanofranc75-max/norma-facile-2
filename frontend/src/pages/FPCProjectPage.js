@@ -31,8 +31,14 @@ export default function FPCProjectPage() {
       fetch(`${API}/api/fpc/batches`, fetchOpts()),
     ]);
     if (pRes.ok) setProject(await pRes.json());
-    if (wRes.ok) setWelders(await wRes.json());
-    if (bRes.ok) setBatches(await bRes.json());
+    if (wRes.ok) {
+      const wData = await wRes.json();
+      setWelders(Array.isArray(wData) ? wData : wData.welders || []);
+    }
+    if (bRes.ok) {
+      const bData = await bRes.json();
+      setBatches(Array.isArray(bData) ? bData : bData.batches || []);
+    }
   }, [projectId]);
 
   useEffect(() => { load(); }, [load]);

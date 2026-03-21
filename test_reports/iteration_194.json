@@ -1,0 +1,91 @@
+{
+  "summary": "Iteration 194: FPC Bug Fix & Company Documents - All features verified. Backend: 16/16 tests passed. Frontend: All UI elements working correctly. FPC project detail page renders without crash (batches.map bug fixed). Settings Documenti tab shows all 4 document cards with light theme.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "TracciabilitaPage",
+        "issues": ["Minor React hydration warnings in console (span inside tbody/select) - cosmetic only, doesn't affect functionality"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration194_fpc_company_docs.py",
+    "/app/test_reports/pytest/iteration194_fpc_company_docs_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "FPCProjectPage.js line 35-40: Correctly handles batches response format - destructures {batches: [...]} from API response",
+    "TracciabilitaPage.js line 39-40: Also correctly handles batches format with fallback: Array.isArray(data) ? data : data.batches || []",
+    "DocumentiAziendaTab.js: Light theme implementation with 4 document cards (DURC, Visura, White List, Patente a Crediti)",
+    "SettingsPage.js line 197-200: Has 'documenti' tab with data-testid='tab-documenti'",
+    "company_docs.py: Global security documents CRUD at /sicurezza-globali/{doc_type} working correctly",
+    "fpc.py: FPC projects API returns 409 for duplicate project creation as expected"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration194_fpc_company_docs.py"
+  ],
+  "success_rate": {
+    "backend": "100% (16 tests passed)",
+    "frontend": "100% (all UI elements verified)"
+  },
+  "test_credentials": {
+    "session_token": "sXLRQVAMtJAFhjM60UrZAjE_8wtJUdJ4sQQpbS5SFsY",
+    "user_id": "user_97c773827822",
+    "fpc_project_id": "prj_ee66232bbe9d",
+    "preventivo_id": "prev_d006776485",
+    "cookie_name": "session_token"
+  },
+  "seed_data_creation": "Used existing FPC project prj_ee66232bbe9d (PRV-2026-0042, Loiano) for testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 194 verified FPC bug fix and Company Documents feature. Key findings: (1) FPC project detail page at /tracciabilita/progetto/prj_ee66232bbe9d renders without crash - the batches.map bug was fixed by handling {batches:[]} response format. (2) Settings page at /settings has 'Documenti' tab (data-testid='tab-documenti') showing 4 document cards: DURC, Visura Camerale, White List, Patente a Crediti. (3) Global docs API at /api/company/documents/sicurezza-globali supports GET/POST/DELETE for each doc type. (4) FPC project creation returns 409 for duplicates. (5) All FPC controls, welder select, WPS input, material assignment, CE generation buttons visible on project detail page.",
+  "testing_summary": {
+    "backend_endpoints": {
+      "GET /api/fpc/projects": "✓ Returns list with Loiano project",
+      "GET /api/fpc/projects/prj_ee66232bbe9d": "✓ Returns project detail without error",
+      "POST /api/fpc/projects (duplicate)": "✓ Returns 409 Conflict",
+      "GET /api/fpc/batches": "✓ Returns {batches: [...]} format",
+      "GET /api/fpc/welders": "✓ Returns welders list",
+      "GET /api/company/documents/sicurezza-globali": "✓ Returns 4 doc types structure",
+      "POST /api/company/documents/sicurezza-globali/durc": "✓ Upload works",
+      "DELETE /api/company/documents/sicurezza-globali/durc": "✓ Delete works",
+      "GET /api/fpc/projects/{id}/ce-check": "✓ Returns blockers list",
+      "PUT /api/fpc/projects/{id}/fpc": "✓ Updates WPS/welder data",
+      "Auth required tests": "✓ All return 401 without auth"
+    },
+    "frontend_ui": {
+      "TracciabilitaPage": {
+        "projects_tab": "✓ Shows Loiano project PRV-2026-0042",
+        "create_project_btn": "✓ data-testid='new-project-btn' visible",
+        "create_dialog": "✓ Opens with preventivo selector and execution class selector"
+      },
+      "FPCProjectPage": {
+        "page_loads": "✓ No crash - batches.map bug fixed",
+        "project_title": "✓ Shows 'Progetto PRV-2026-0042'",
+        "welder_select": "✓ data-testid='welder-select' visible",
+        "wps_input": "✓ data-testid='wps-input' visible",
+        "fpc_controls": "✓ data-testid='fpc-controls' with 7 checkboxes",
+        "material_assignment": "✓ data-testid='material-assignment' visible",
+        "ce_check_btn": "✓ data-testid='ce-check-btn' visible",
+        "generate_ce_btn": "✓ data-testid='generate-ce-btn' visible",
+        "dossier_btn": "✓ data-testid='download-dossier-btn' visible"
+      },
+      "SettingsPage_Documenti": {
+        "documenti_tab": "✓ data-testid='tab-documenti' visible",
+        "documenti_content": "✓ data-testid='documenti-azienda-tab' visible",
+        "durc_card": "✓ data-testid='doc-card-durc' visible",
+        "visura_card": "✓ data-testid='doc-card-visura' visible",
+        "white_list_card": "✓ data-testid='doc-card-white_list' visible",
+        "patente_card": "✓ data-testid='doc-card-patente_crediti' visible",
+        "upload_buttons": "✓ All 4 cards have upload functionality",
+        "scadenza_inputs": "✓ All 4 cards have date inputs"
+      }
+    }
+  }
+}

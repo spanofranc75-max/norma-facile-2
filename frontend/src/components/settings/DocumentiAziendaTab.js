@@ -3,73 +3,88 @@
  * Questi documenti sono automaticamente disponibili per ogni pacchetto sicurezza/POS.
  */
 import { useState, useEffect } from 'react';
-import { apiRequest } from '../../lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { toast } from 'sonner';
-import { Upload, FileCheck, FileX, Trash2, Calendar, Shield, Loader2 } from 'lucide-react';
+import { Upload, FileCheck, FileX, Trash2, Calendar, Shield, Loader2, Download } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
-const DOC_ICONS = {
-    durc: '1',
-    visura: '2',
-    white_list: '3',
-    patente_crediti: '4',
+const DOC_LABELS = {
+    durc: { icon: 'D', color: 'bg-blue-600' },
+    visura: { icon: 'V', color: 'bg-indigo-600' },
+    white_list: { icon: 'W', color: 'bg-teal-600' },
+    patente_crediti: { icon: 'P', color: 'bg-amber-600' },
 };
 
 function DocCard({ docType, data, onUpload, onDelete, uploading }) {
     const [scadenza, setScadenza] = useState(data?.scadenza || '');
+    const meta = DOC_LABELS[docType] || { icon: '?', color: 'bg-slate-500' };
 
     const handleFileChange = (e) => {
         const file = e.target.files?.[0];
         if (file) onUpload(docType, file, scadenza);
     };
 
+    const handleDownload = async () => {
+        if (!data?.doc_id) return;
+        try {
+            const r = await fetch(`${API}/api/company/documents/${data.doc_id}/download`, { credentials: 'include' });
+            if (!r.ok) { toast.error('Download non disponibile'); return; }
+            const blob = await r.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = data.filename || 'documento.pdf';
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (e) { toast.error(e.message); }
+    };
+
     return (
-        <Card className={`border ${data?.presente ? 'border-emerald-700 bg-emerald-950/20' : 'border-zinc-700 bg-zinc-900'}`} data-testid={`doc-card-${docType}`}>
+        <Card className={`border-2 transition-all ${data?.presente ? 'border-emerald-300 bg-emerald-50/30' : 'border-slate-200 bg-white'}`} data-testid={`doc-card-${docType}`}>
             <CardContent className="pt-4 space-y-3">
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold ${data?.presente ? 'bg-emerald-900/50 text-emerald-400' : 'bg-zinc-800 text-zinc-500'}`}>
-                            {DOC_ICONS[docType]}
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold text-white ${meta.color}`}>
+                            {meta.icon}
                         </div>
                         <div>
-                            <h3 className="text-sm font-semibold text-zinc-200">{data?.label || docType}</h3>
-                            <p className="text-xs text-zinc-500">{data?.desc || ''}</p>
+                            <h3 className="text-sm font-semibold text-slate-800">{data?.label || docType}</h3>
+                            <p className="text-xs text-slate-500">{data?.desc || ''}</p>
                         </div>
                     </div>
                     {data?.presente ? (
-                        <Badge className="bg-emerald-900/50 text-emerald-300 text-[10px]">
+                        <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px]">
                             <FileCheck className="w-3 h-3 mr-1" /> Caricato
                         </Badge>
                     ) : (
-                        <Badge variant="outline" className="border-amber-600 text-amber-400 text-[10px]">
+                        <Badge variant="outline" className="border-amber-300 text-amber-600 bg-amber-50 text-[10px]">
                             <FileX className="w-3 h-3 mr-1" /> Mancante
                         </Badge>
                     )}
                 </div>
 
                 {data?.presente && (
-                    <div className="text-xs text-zinc-400 space-y-0.5 bg-zinc-800/50 p-2 rounded">
-                        <div>File: <span className="text-zinc-300">{data.filename}</span></div>
-                        <div>Caricato: <span className="text-zinc-300">{data.upload_date ? new Date(data.upload_date).toLocaleDateString('it-IT') : '-'}</span></div>
-                        {data.scadenza && <div>Scadenza: <span className="text-amber-300">{data.scadenza}</span></div>}
-                        <div>Dimensione: <span className="text-zinc-300">{data.size_kb} KB</span></div>
+                    <div className="text-xs text-slate-600 space-y-0.5 bg-slate-50 p-2 rounded border border-slate-100">
+                        <div>File: <span className="font-medium text-slate-800">{data.filename}</span></div>
+                        <div>Caricato: <span className="text-slate-700">{data.upload_date ? new Date(data.upload_date).toLocaleDateString('it-IT') : '-'}</span></div>
+                        {data.scadenza && <div>Scadenza: <span className="font-medium text-amber-600">{data.scadenza}</span></div>}
+                        <div>Dimensione: <span className="text-slate-700">{data.size_kb} KB</span></div>
                     </div>
                 )}
 
                 <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1 flex-1">
-                        <Calendar className="w-3.5 h-3.5 text-zinc-500" />
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
                         <Input
                             type="date"
                             value={scadenza}
                             onChange={e => setScadenza(e.target.value)}
                             placeholder="Scadenza"
-                            className="h-8 text-xs bg-zinc-800 border-zinc-700 flex-1"
+                            className="h-8 text-xs flex-1"
                             data-testid={`scadenza-${docType}`}
                         />
                     </div>
@@ -79,7 +94,7 @@ function DocCard({ docType, data, onUpload, onDelete, uploading }) {
                     <label className="flex-1">
                         <input type="file" accept=".pdf,.doc,.docx,.png,.jpg" className="hidden"
                             onChange={handleFileChange} data-testid={`file-input-${docType}`} />
-                        <Button variant="outline" size="sm" className="w-full text-xs border-zinc-600 hover:bg-zinc-800"
+                        <Button variant="outline" size="sm" className="w-full text-xs"
                             disabled={uploading === docType} asChild>
                             <span>
                                 {uploading === docType ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Upload className="w-3 h-3 mr-1" />}
@@ -88,10 +103,16 @@ function DocCard({ docType, data, onUpload, onDelete, uploading }) {
                         </Button>
                     </label>
                     {data?.presente && (
-                        <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-300 hover:bg-red-950/30"
-                            onClick={() => onDelete(docType)} data-testid={`delete-${docType}`}>
-                            <Trash2 className="w-3 h-3" />
-                        </Button>
+                        <>
+                            <Button variant="outline" size="sm" className="text-blue-600 hover:text-blue-700"
+                                onClick={handleDownload} data-testid={`download-${docType}`}>
+                                <Download className="w-3 h-3" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                onClick={() => onDelete(docType)} data-testid={`delete-${docType}`}>
+                                <Trash2 className="w-3 h-3" />
+                            </Button>
+                        </>
                     )}
                 </div>
             </CardContent>
@@ -129,7 +150,7 @@ export default function DocumentiAziendaTab() {
                 method: 'POST', credentials: 'include', body: fd,
             });
             if (res.ok) {
-                toast.success(`${docs[docType]?.label || docType} caricato`);
+                toast.success(`${docs[docType]?.label || docType} caricato con successo`);
                 load();
             } else {
                 const d = await res.json().catch(() => ({}));
@@ -140,17 +161,17 @@ export default function DocumentiAziendaTab() {
     };
 
     const handleDelete = async (docType) => {
-        if (!confirm(`Eliminare ${docs[docType]?.label}?`)) return;
+        if (!window.confirm(`Eliminare ${docs[docType]?.label}?`)) return;
         try {
             const res = await fetch(`${API}/api/company/documents/sicurezza-globali/${docType}`, {
                 method: 'DELETE', credentials: 'include',
             });
-            if (res.ok) { toast.success('Eliminato'); load(); }
+            if (res.ok) { toast.success('Documento eliminato'); load(); }
             else toast.error('Errore eliminazione');
         } catch (e) { toast.error(e.message); }
     };
 
-    if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-zinc-500" /></div>;
+    if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>;
 
     const docTypes = ['durc', 'visura', 'white_list', 'patente_crediti'];
 
@@ -158,15 +179,15 @@ export default function DocumentiAziendaTab() {
         <div className="space-y-4" data-testid="documenti-azienda-tab">
             <div className="flex items-center justify-between">
                 <div>
-                    <h3 className="text-base font-semibold text-zinc-200 flex items-center gap-2">
-                        <Shield className="w-4 h-4 text-indigo-400" />
+                    <h3 className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-[#0055FF]" />
                         Documenti Azienda — Sicurezza Globale
                     </h3>
-                    <p className="text-xs text-zinc-500 mt-0.5">
+                    <p className="text-xs text-slate-500 mt-0.5">
                         Questi documenti sono automaticamente inclusi in ogni pacchetto sicurezza/POS e richiesta CIMS.
                     </p>
                 </div>
-                <Badge className={completo ? 'bg-emerald-900/50 text-emerald-300' : 'bg-amber-900/50 text-amber-300'}>
+                <Badge className={completo ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-amber-100 text-amber-700 border border-amber-200'}>
                     {completo ? 'Completo' : `${Object.values(docs).filter(d => d.presente).length}/4 caricati`}
                 </Badge>
             </div>
@@ -185,7 +206,7 @@ export default function DocumentiAziendaTab() {
             </div>
 
             {!completo && (
-                <div className="text-xs text-amber-400 bg-amber-950/30 border border-amber-800 rounded p-3">
+                <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">
                     Attenzione: alcuni documenti sono mancanti. I pacchetti sicurezza/POS generati saranno incompleti.
                 </div>
             )}

@@ -326,7 +326,7 @@ async def export_cse(commessa_id: str, user: dict = Depends(get_current_user)):
     zip_buffer = io.BytesIO()
 
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-        # DURC/POS
+        # DURC/POS from commessa-specific docs
         safety_docs = await db.commessa_documents.find(
             {"commessa_id": commessa_id, "tipo": {"$in": ["durc", "pos", "dvr", "pimus", "sicurezza"]}},
             {"_id": 0}
@@ -336,6 +336,22 @@ async def export_cse(commessa_id: str, user: dict = Depends(get_current_user)):
             if b64:
                 nome = doc.get("nome_file", doc.get("doc_id", "doc"))
                 zf.writestr(f"01_DURC_POS/{nome}", base64.b64decode(b64))
+
+        # Global safety documents (DURC, Visura, White List, Patente a Crediti)
+        upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "company_docs")
+        global_docs = await db.company_documents.find(
+            {"category": "sicurezza_globale"},
+            {"_id": 0}
+        ).to_list(20)
+        for gdoc in global_docs:
+            safe_fn = gdoc.get("safe_filename", "")
+            filepath = os.path.join(upload_dir, safe_fn)
+            if safe_fn and os.path.exists(filepath):
+                tag = (gdoc.get("tags", [None]) or [None])[0] or "doc"
+                label = gdoc.get("title", tag).upper().replace(" ", "_")
+                filename = gdoc.get("filename", safe_fn)
+                with open(filepath, "rb") as f:
+                    zf.writestr(f"00_DOCUMENTI_AZIENDA/{label}_{filename}", f.read())
 
         # Attestati operatori
         operators = await db.operatori.find(

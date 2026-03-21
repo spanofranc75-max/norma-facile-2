@@ -239,6 +239,11 @@ function WeldersTab() {
 // ═══════════════════════════════════════════════════════
 function ProjectsTab() {
   const [projects, setProjects] = useState([]);
+  const [preventivi, setPreventivi] = useState([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [selectedPrev, setSelectedPrev] = useState('');
+  const [execClass, setExecClass] = useState('EXC2');
+  const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
 
   const load = useCallback(async () => {
@@ -246,24 +251,66 @@ function ProjectsTab() {
     if (r.ok) { const d = await r.json(); setProjects(Array.isArray(d) ? d : d.projects || []); }
   }, []);
 
+  const loadPreventivi = useCallback(async () => {
+    const r = await fetch(`${API}/api/preventivi/`, fetchOpts());
+    if (r.ok) {
+      const d = await r.json();
+      const items = d.preventivi || d.items || (Array.isArray(d) ? d : []);
+      const valid = items.filter(p => p.status !== 'eliminato');
+      setPreventivi(valid);
+    }
+  }, []);
+
   useEffect(() => { load(); }, [load]);
+
+  const openCreate = () => {
+    loadPreventivi();
+    setSelectedPrev('');
+    setExecClass('EXC2');
+    setShowCreate(true);
+  };
+
+  const createProject = async () => {
+    if (!selectedPrev) { toast.error('Seleziona un preventivo'); return; }
+    setCreating(true);
+    try {
+      const r = await fetch(`${API}/api/fpc/projects`, fetchOpts('POST', {
+        preventivo_id: selectedPrev,
+        execution_class: execClass,
+      }));
+      if (r.ok) {
+        const data = await r.json();
+        toast.success('Progetto FPC creato!');
+        setShowCreate(false);
+        load();
+        navigate(`/tracciabilita/progetto/${data.project_id}`);
+      } else {
+        const d = await r.json().catch(() => ({}));
+        toast.error(d.detail || 'Errore nella creazione');
+      }
+    } catch (e) { toast.error('Errore: ' + e.message); }
+    finally { setCreating(false); }
+  };
 
   const getStatusBadge = (p) => {
     const fpc = p.fpc_data || {};
-    if (fpc.ce_label_generated) return <span className="px-2 py-0.5 rounded text-xs bg-green-600/20 text-green-400">CE Generato</span>;
-    if (p.status === 'completed') return <span className="px-2 py-0.5 rounded text-xs bg-blue-600/20 text-blue-400">Completato</span>;
-    return <span className="px-2 py-0.5 rounded text-xs bg-amber-600/20 text-amber-400">In Corso</span>;
+    if (fpc.ce_label_generated) return <span className="px-2 py-0.5 rounded text-xs bg-green-100 text-green-700 border border-green-200">CE Generato</span>;
+    if (p.status === 'completed') return <span className="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700 border border-blue-200">Completato</span>;
+    return <span className="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-700 border border-amber-200">In Corso</span>;
   };
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-slate-500">Progetti creati da preventivi con tracciabilità FPC</p>
+        <p className="text-sm text-slate-500">Progetti creati da preventivi con tracciabilita FPC</p>
+        <Button data-testid="new-project-btn" onClick={openCreate} className="bg-[#0055FF] hover:bg-[#0044CC]">
+          <Plus className="h-4 w-4 mr-1" /> Crea Progetto FPC
+        </Button>
       </div>
 
       <div className="space-y-2" data-testid="projects-list">
         {projects.map(p => (
-          <div key={p.project_id} className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-white cursor-pointer hover:border-[#0055FF]/50 hover:shadow-sm transition-all" onClick={() => navigate(`/tracciabilita/progetto/${p.project_id}`)}>
+          <div key={p.project_id} data-testid={`project-row-${p.project_id}`} className="flex items-center justify-between p-3 rounded-lg border border-slate-200 bg-white cursor-pointer hover:border-[#0055FF]/50 hover:shadow-sm transition-all" onClick={() => navigate(`/tracciabilita/progetto/${p.project_id}`)}>
             <div>
               <div className="font-medium flex items-center gap-2">
                 {p.preventivo_number || p.project_id}
@@ -275,8 +322,50 @@ function ProjectsTab() {
             <Shield className="h-5 w-5 text-slate-300" />
           </div>
         ))}
-        {projects.length === 0 && <p className="text-center py-8 text-slate-400">Nessun progetto FPC. Converti un preventivo per iniziare.</p>}
+        {projects.length === 0 && <p className="text-center py-8 text-slate-400">Nessun progetto FPC. Clicca "Crea Progetto FPC" per iniziare.</p>}
       </div>
+
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Crea Progetto FPC da Preventivo</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs text-slate-500 font-medium">Preventivo *</label>
+              <select data-testid="select-preventivo" value={selectedPrev} onChange={e => setSelectedPrev(e.target.value)}
+                className="w-full border rounded px-3 py-2 text-sm mt-1 bg-white">
+                <option value="">-- Seleziona preventivo --</option>
+                {preventivi.map(p => (
+                  <option key={p.preventivo_id} value={p.preventivo_id}>
+                    {p.number} — {p.client_name || 'N/A'} — {p.subject || 'Senza oggetto'}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 font-medium">Classe di Esecuzione (EN 1090) *</label>
+              <select data-testid="select-exec-class" value={execClass} onChange={e => setExecClass(e.target.value)}
+                className="w-full border rounded px-3 py-2 text-sm mt-1 bg-white">
+                <option value="EXC1">EXC1 — Base</option>
+                <option value="EXC2">EXC2 — Standard (piu comune)</option>
+                <option value="EXC3">EXC3 — Alta</option>
+                <option value="EXC4">EXC4 — Massima</option>
+              </select>
+            </div>
+            {selectedPrev && (
+              <div className="bg-blue-50 border border-blue-200 rounded p-3 text-xs text-blue-700">
+                Il preventivo selezionato verra convertito in un progetto FPC con tracciabilita materiali, controlli qualita e generazione etichetta CE.
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreate(false)}>Annulla</Button>
+            <Button data-testid="confirm-create-project" onClick={createProject} className="bg-[#0055FF] hover:bg-[#0044CC]"
+              disabled={!selectedPrev || creating}>
+              {creating ? 'Creazione...' : 'Crea Progetto'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
