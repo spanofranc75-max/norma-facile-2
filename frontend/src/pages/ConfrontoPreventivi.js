@@ -89,7 +89,7 @@ export default function ConfrontoPreventivi() {
     const [manId, setManId] = useState(searchParams.get('man') || '');
 
     useEffect(() => {
-        apiRequest('/preventivi').then(r => {
+        apiRequest('/preventivi/').then(r => {
             if (r && Array.isArray(r.preventivi)) setPrevList(r.preventivi);
             else if (r && Array.isArray(r)) setPrevList(r);
         }).catch(() => {});

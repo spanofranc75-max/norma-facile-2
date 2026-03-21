@@ -2,7 +2,7 @@
  * Norma Facile 2.0 - Main App Component
  * Handles routing and auth context.
  */
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from './components/ui/sonner';
 import LandingPage from './pages/LandingPage';
@@ -66,6 +66,7 @@ import ArchivioStoricoPage from './pages/ArchivioStoricoPage';
 import PreventivatoreWizard from './pages/PreventivatoreWizard';
 import KPIDashboard from './pages/KPIDashboard';
 import ConfrontoPreventivi from './pages/ConfrontoPreventivi';
+import AnalisiAIPage from './pages/AnalisiAIPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './App.css';
@@ -268,6 +269,8 @@ function AppRouter() {
             <Route path="/preventivatore" element={<ProtectedRoute><PreventivatoreWizard /></ProtectedRoute>} />
             <Route path="/kpi" element={<ProtectedRoute><KPIDashboard /></ProtectedRoute>} />
             <Route path="/confronto" element={<ProtectedRoute><ConfrontoPreventivi /></ProtectedRoute>} />
+            <Route path="/analisi-ai/:prevId" element={<ProtectedRoute><AnalisiAIPage /></ProtectedRoute>} />
+            <Route path="/fpc" element={<Navigate to="/tracciabilita" replace />} />
         </Routes>
     );
 }

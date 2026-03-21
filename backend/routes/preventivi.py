@@ -113,6 +113,10 @@ class PreventivoUpdate(BaseModel):
     ingegnere_disegno: Optional[str] = None
     classe_esecuzione: Optional[str] = None
     giorni_consegna: Optional[int] = None
+    totals: Optional[dict] = None
+    peso_totale_kg: Optional[float] = None
+    ore_stimate: Optional[float] = None
+    predittivo_data: Optional[dict] = None
 
     @validator("giorni_consegna", pre=True)
     def parse_giorni(cls, v):
@@ -562,6 +566,14 @@ async def update_preventivo(prev_id: str, data: PreventivoUpdate, user: dict = D
         upd["acconto"] = data.acconto
     if data.sconto_globale is not None:
         upd["sconto_globale"] = data.sconto_globale
+    if data.peso_totale_kg is not None:
+        upd["peso_totale_kg"] = data.peso_totale_kg
+    if data.ore_stimate is not None:
+        upd["ore_stimate"] = data.ore_stimate
+    if data.predittivo_data is not None:
+        upd["predittivo_data"] = data.predittivo_data
+    if data.totals is not None:
+        upd["totals"] = data.totals
 
     # Determine lines to use for totals calculation
     lines_for_calc = None

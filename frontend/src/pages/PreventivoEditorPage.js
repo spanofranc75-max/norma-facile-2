@@ -29,6 +29,7 @@ import { AutoExpandTextarea } from '../components/AutoExpandTextarea';
 import InvoiceGenerationModal from '../components/InvoiceGenerationModal';
 import EmailPreviewDialog from '../components/EmailPreviewDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
+import { Brain } from 'lucide-react';
 
 const ZONES = ['A', 'B', 'C', 'D', 'E', 'F'];
 import { DisabledTooltip } from '../components/DisabledTooltip';
@@ -631,6 +632,18 @@ export default function PreventivoEditorPage() {
 
                         {/* FPC Project */}
                         {!isNew && <Button data-testid="btn-convert-project" variant="outline" onClick={() => setShowFpcDialog(true)} disabled={converting} className="border-emerald-500 text-emerald-600 hover:bg-emerald-50 h-9 text-xs"><Shield className="h-3.5 w-3.5 mr-1.5" /> FPC</Button>}
+
+                        {/* Analisi AI */}
+                        {!isNew && (
+                            <Button
+                                data-testid="btn-analisi-ai"
+                                variant="outline"
+                                onClick={() => navigate(`/analisi-ai/${prevId}`)}
+                                className="border-indigo-500 text-indigo-600 hover:bg-indigo-50 h-9 text-xs"
+                            >
+                                <Brain className="h-3.5 w-3.5 mr-1.5" /> Analisi AI
+                            </Button>
+                        )}
 
                         {/* Compliance */}
                         <DisabledTooltip show={isNew} reason="Salva il preventivo prima di verificare la compliance">
