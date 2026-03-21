@@ -13,11 +13,12 @@ ERP completo per carpenteria metallica con gestione EN 1090, EN 13241, ISO 3834.
 ## Moduli Implementati — Flusso Audit EN 1090
 
 ### FASE 1 — Riesame Tecnico (completata)
-- 11 check (7 auto + 4 manuali), Gate AVVIO_PRODUZIONE bloccante, Firma digitale + PDF
+- 12 check (8 auto + 4 manuali), Gate AVVIO_PRODUZIONE bloccante, Firma digitale + PDF
+- Nuovo check: `itt_processi_qualificati` (auto) verifica ITT validi per taglio/foratura
 
 ### FASE 2 — Registro Saldatura + Link DDT (completata)
 - Registro Saldatura CRUD con filtro saldatori per processo/patentino
-- Tracciabilita Materiali con auto-link DDT → batch
+- Tracciabilita Materiali con auto-link DDT -> batch
 
 ### Checklist Fine Lavori + Soglia Calibro (completata)
 - 11 check in 3 aree (VT, Dimensionale, Compliance), firma
@@ -32,19 +33,33 @@ ERP completo per carpenteria metallica con gestione EN 1090, EN 13241, ISO 3834.
 - Confronto automatico lotti vs DDT con discrepanze
 - PDF richiesta preventivo laboratorio per processo 111
 
-### Report Ispezioni VT/Dimensionali (21 Mar 2026)
+### Report Ispezioni VT/Dimensionali (completata)
 - 10 check VT (ISO 5817-C) + 8 check DIM (EN 1090-2 B6/B8)
 - PDF rapporto con tabelle VT+DIM + firma
-- Integrazione con Controllo Finale (auto-check)
 
 ### DOP + Etichetta CE automatica EN 1090 (21 Mar 2026)
-- **POST /api/fascicolo-tecnico/{cid}/dop-automatica** — Crea DOP con zero input manuale
-  - Auto-raccoglie: EXC da Riesame, lotti da material_batches, stato Riesame/Ispezioni/Controllo Finale
-  - Flag `automatica: true` abilita sezioni extra nel PDF (Riesame, Ispezioni VT/DIM, Controllo Finale)
-- **GET /api/fascicolo-tecnico/{cid}/etichetta-ce-1090/pdf** — Genera Etichetta CE 148x105mm
-  - Auto-popola: norma, certificato FPC, ente notificato, classe EXC, DoP riferimento
-- **Frontend:** Bottoni "DOP Auto" (indigo) e "Etichetta CE" (slate) visibili solo per EN_1090
-- Test: 100% (12/12 backend + frontend — iteration 206)
+- `POST /api/fascicolo-tecnico/{cid}/dop-automatica` — DOP senza input manuale
+- `GET /api/fascicolo-tecnico/{cid}/etichetta-ce-1090/pdf` — Etichetta CE 148x105mm
+- Frontend: bottoni "DOP Auto" + "Etichetta CE" solo per EN_1090
+- Test: 100% (iteration 206)
+
+### Scadenziario Manutenzioni Unificato (21 Mar 2026)
+- `GET /api/scadenziario-manutenzioni` — Aggrega instruments + attrezzature + ITT
+- KPI: totale/scaduti/in_scadenza/prossimi/conformi
+- Badge impatto: mostra quali moduli sono bloccati (Riesame, Controllo Finale)
+- Frontend: `/manutenzioni` con KPI cliccabili come filtro + tabella urgenza
+- Fili: instruments -> Riesame + Controllo Finale, attrezzature -> Riesame, ITT -> Riesame
+- Test: 100% (iteration 207)
+
+### Verbali ITT — Initial Type Testing (21 Mar 2026)
+- `POST/GET/DELETE /api/verbali-itt` — CRUD con prove, esito, processo
+- `POST /api/verbali-itt/{id}/firma` — Firma digitale
+- `GET /api/verbali-itt/{id}/pdf` — PDF WeasyPrint
+- `GET /api/verbali-itt/check-validita` — Report processi qualificati/scaduti
+- Processi: taglio_termico, taglio_meccanico, foratura, piegatura, punzonatura, raddrizzatura
+- **Filo conduttore**: Riesame Tecnico (check `itt_processi_qualificati`) verifica che taglio e foratura siano qualificati
+- Frontend: `/verbali-itt` con form, tabella, PDF, banner filo conduttore
+- Test: 100% (iteration 207)
 
 ## Credenziali Test
 - User: user_e4012a8f48
@@ -52,10 +67,6 @@ ERP completo per carpenteria metallica con gestione EN 1090, EN 13241, ISO 3834.
 - Commessa EN 1090: comm_sasso_marconi (C-2026-0012)
 
 ## Backlog
-
-### P1 — Prossimi
-- Scadenziario Manutenzioni Digitalizzato (calendario trimestrali/annuali + alert)
-- Verbali ITT (qualifica taglio e foratura)
 
 ### P2 — Miglioramenti
 - Training automatico ML dal Diario Produzione
