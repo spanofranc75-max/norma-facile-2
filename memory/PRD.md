@@ -18,10 +18,11 @@ ERP completo per carpenteria metallica con gestione EN 1090, EN 13241, ISO 3834.
 - Tracciabilita FPC completa (creazione progetto, dettaglio, controlli, CE)
 
 ### Sicurezza Operativa
-- **Canale AZIENDA**: Documenti globali (DURC, Visura, White List, Patente a Crediti, DVR) con scadenze
+- **Canale AZIENDA**: Documenti globali (DURC, Visura, White List, Patente a Crediti, DVR) con scadenze persistenti
 - **Canale PERSONALE**: Risorse Umane (/operai) — anagrafica operai + 8 tipi attestato sicurezza
 - **Matrice Scadenze** (/operai/matrice) — tabella pallini colorati (verde/giallo/rosso/grigio)
 - **POS Wizard Step 4**: Selezione operai + warning attestati + documenti globali
+- **Allegati Tecnici POS**: Rumore, Vibrazioni, MMC con toggle "Includi nel POS" — auto-inclusi nello ZIP
 
 ### Verbale di Posa in Opera (21 Mar 2026)
 - **Pagina mobile-first** `/verbale-posa/:commessaId` — uso diretto in cantiere
@@ -32,7 +33,13 @@ ERP completo per carpenteria metallica con gestione EN 1090, EN 13241, ISO 3834.
 - **PDF professionale**: Header Steel Project Design, appendice lotti + DDT
 - **Bottone "Invia a CIMS"**: Preparato (disabilitato), pronto per email integration
 - **Accessibile da FPC Project** page tramite bottone dedicato
-- Testing: Backend 14/14 (100%), Frontend 100% (iteration_197)
+
+### Fix Persistenza Date + Allegati POS (21 Mar 2026)
+- **Bug Fix**: Endpoint PATCH per aggiornare scadenza senza re-upload file
+- **Allegati POS**: Nuova sezione con upload Rumore/Vibrazioni/MMC + toggle "Includi nel POS"
+- **Alert Scadenze**: Badge colorati (verde valido, giallo <30gg, rosso scaduto, pulse <15gg)
+- **Integrazione ZIP**: Cartella 05_ALLEGATI_POS nel pacchetto CSE con solo documenti inclusi
+- Testing: Backend 21/21 (100%), Frontend 100% (iteration_198)
 
 ### Test Data - Commessa Loiano
 - Commessa: com_loiano_cims_2026 (NF-2026-LOIANO) — C.I.M.S SCRL
@@ -42,7 +49,7 @@ ERP completo per carpenteria metallica con gestione EN 1090, EN 13241, ISO 3834.
 
 ## Credenziali Test
 - User: user_97c773827822
-- Session: active_test_session_2026
+- Session: test_session_2026_active
 
 ## Backlog
 - (P1) Integrazione email "Invia a CIMS" (SendGrid/Resend)
@@ -50,4 +57,5 @@ ERP completo per carpenteria metallica con gestione EN 1090, EN 13241, ISO 3834.
 - (P1) Alerting costi reali > budget
 - (P2) Upload logo aziendale (per Verbale/POS/Preventivi)
 - (P2) Unificazione PDF legacy, Export Excel
-- (P3) Portale clienti, RBAC granulare, Drag-and-Drop AI
+- (P2) PDF Compliance dalla Matrice Scadenze
+- (P3) Portale clienti, RBAC granulare, Drag-and-Drop AI, QR Code su documenti
