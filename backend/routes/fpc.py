@@ -512,3 +512,139 @@ async def download_dossier(project_id: str, user: dict = Depends(get_current_use
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+
+# ═══════════════════════════════════════════════════════════════
+# LINK DDT → LOTTI FPC (Auto-associazione colata)
+# ═══════════════════════════════════════════════════════════════
+
+@router.post("/batches/link-ddt/{commessa_id}")
+async def link_ddt_to_batches(commessa_id: str, user: dict = Depends(get_current_user)):
+    """
+    Cerca DDT di carico e associa automaticamente le righe ai lotti FPC
+    basandosi sulla corrispondenza tra descrizione/colata del DDT e i batch.
+    Aggiorna i batch con il riferimento DDT di origine.
+    """
+    uid = user["user_id"]
+
+    # Load commessa
+    commessa = await db.commesse.find_one(
+        {"commessa_id": commessa_id, "user_id": uid}, {"_id": 0, "commessa_id": 1}
+    )
+    if not commessa:
+        raise HTTPException(404, "Commessa non trovata")
+
+    # Load FPC batches for this commessa
+    batches = await db.fpc_batches.find(
+        {"commessa_id": commessa_id, "user_id": uid}, {"_id": 0}
+    ).to_list(200)
+    if not batches:
+        return {"message": "Nessun lotto FPC per questa commessa", "links": [], "totale": 0}
+
+    # Load all DDT (carico = with lines that could be incoming materials)
+    ddt_docs = await db.ddt_documents.find(
+        {"user_id": uid}, {"_id": 0, "ddt_id": 1, "number": 1, "client_name": 1, "lines": 1, "subject": 1}
+    ).to_list(500)
+
+    links = []
+    for batch in batches:
+        heat = (batch.get("heat_number") or "").strip().upper()
+        desc = (batch.get("description") or "").strip().upper()
+        profile = desc.split(" ")[0] if desc else ""  # e.g. "HEB" from "HEB 120..."
+
+        if not heat and not profile:
+            continue
+
+        for ddt in ddt_docs:
+            for line in (ddt.get("lines") or []):
+                line_desc = (line.get("description") or "").upper()
+                line_colata = (line.get("colata") or line.get("heat_number") or "").upper()
+
+                match = False
+                match_type = ""
+
+                # Match by heat number (strongest match)
+                if heat and line_colata and heat in line_colata:
+                    match = True
+                    match_type = "colata"
+                # Match by profile description
+                elif profile and profile in line_desc:
+                    match = True
+                    match_type = "profilo"
+
+                if match:
+                    # Update batch with DDT reference
+                    await db.fpc_batches.update_one(
+                        {"batch_id": batch["batch_id"]},
+                        {"$set": {
+                            "ddt_origin": ddt["ddt_id"],
+                            "ddt_number": ddt.get("number", ""),
+                            "ddt_fornitore": ddt.get("client_name", ""),
+                            "linked_at": datetime.now(timezone.utc).isoformat(),
+                        }}
+                    )
+                    links.append({
+                        "batch_id": batch["batch_id"],
+                        "batch_desc": batch.get("description", ""),
+                        "heat_number": heat,
+                        "ddt_id": ddt["ddt_id"],
+                        "ddt_number": ddt.get("number", ""),
+                        "fornitore": ddt.get("client_name", ""),
+                        "match_type": match_type,
+                    })
+                    break  # One DDT match per batch is enough
+            if links and links[-1]["batch_id"] == batch["batch_id"]:
+                break  # Already matched this batch
+
+    return {
+        "message": f"{len(links)} lotti collegati a DDT",
+        "links": links,
+        "totale": len(links),
+        "batches_totali": len(batches),
+    }
+
+
+@router.get("/batches/rintracciabilita/{commessa_id}")
+async def scheda_rintracciabilita(commessa_id: str, user: dict = Depends(get_current_user)):
+    """
+    Scheda Rintracciabilita Materiali auto-compilata.
+    Per ogni lotto FPC mostra: materiale, colata, cert 3.1, DDT di origine, posizione disegno.
+    """
+    uid = user["user_id"]
+
+    commessa = await db.commesse.find_one(
+        {"commessa_id": commessa_id, "user_id": uid},
+        {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1}
+    )
+    if not commessa:
+        raise HTTPException(404, "Commessa non trovata")
+
+    batches = await db.fpc_batches.find(
+        {"commessa_id": commessa_id, "user_id": uid}, {"_id": 0}
+    ).sort("created_at", 1).to_list(200)
+
+    righe = []
+    for b in batches:
+        righe.append({
+            "batch_id": b["batch_id"],
+            "descrizione": b.get("description", ""),
+            "materiale": b.get("material_type", ""),
+            "colata": b.get("heat_number", ""),
+            "certificato_31": b.get("certificate_31", b.get("certificate_number", "")),
+            "fornitore": b.get("supplier", b.get("ddt_fornitore", "")),
+            "ddt_numero": b.get("ddt_number", ""),
+            "ddt_id": b.get("ddt_origin", ""),
+            "quantita": b.get("quantity", ""),
+            "posizione_dwg": b.get("posizione_dwg", ""),
+            "linked": bool(b.get("ddt_origin")),
+        })
+
+    return {
+        "commessa_id": commessa_id,
+        "numero": commessa.get("numero", ""),
+        "title": commessa.get("title", ""),
+        "righe": righe,
+        "totale": len(righe),
+        "collegati": sum(1 for r in righe if r["linked"]),
+    }
