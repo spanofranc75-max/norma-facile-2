@@ -102,6 +102,13 @@ CHECKS_DEFINITION = [
         "desc": "Filo/elettrodi con lotto e certificato assegnati alla commessa",
         "auto": True,
     },
+    {
+        "id": "itt_processi_qualificati",
+        "sezione": "Produzione",
+        "label": "Processi produttivi qualificati (ITT)",
+        "desc": "Verbali ITT validi per taglio, foratura e altri processi usati nella commessa",
+        "auto": True,
+    },
 ]
 
 
@@ -265,6 +272,36 @@ async def _run_auto_checks(commessa_id: str, user_id: str) -> dict:
         "ok": len(cons) > 0,
         "valore": f"{len(cons)} lotti consumabili",
         "nota": "Fili/elettrodi con certificati assegnati" if cons else "Caricare consumabili di saldatura",
+    }
+
+    # 8. ITT — verifica processi qualificati
+    itt_docs = await db.verbali_itt.find(
+        {"user_id": user_id, "esito_globale": True},
+        {"_id": 0, "processo": 1, "data_scadenza": 1}
+    ).to_list(200)
+    processi_validi = set()
+    processi_scaduti = set()
+    for itt in itt_docs:
+        proc = itt.get("processo", "")
+        try:
+            scad = date.fromisoformat(itt["data_scadenza"][:10])
+            if scad >= today:
+                processi_validi.add(proc)
+            else:
+                processi_scaduti.add(proc)
+        except (ValueError, KeyError):
+            pass
+    # At minimum we need taglio and foratura qualified
+    processi_minimi = {"taglio_termico", "taglio_meccanico", "foratura"}
+    mancanti = processi_minimi - processi_validi
+    results["itt_processi_qualificati"] = {
+        "ok": len(mancanti) == 0,
+        "valore": f"{len(processi_validi)} processi qualificati" if processi_validi else "Nessun ITT",
+        "nota": (
+            f"Processi mancanti: {', '.join(p.replace('_', ' ') for p in sorted(mancanti))}"
+            if mancanti else
+            f"ITT validi: {', '.join(p.replace('_', ' ') for p in sorted(processi_validi))}"
+        ),
     }
 
     return results

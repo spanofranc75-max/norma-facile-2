@@ -100,6 +100,8 @@ const NAV_GROUPS = [
             { path: '/wps', label: 'WPS (Procedure)', icon: Flame },
             { path: '/audit', label: 'Audit & NC', icon: ClipboardCheck },
             { path: '/attrezzature', label: 'Scadenzario Attrezzature', icon: Wrench },
+            { path: '/manutenzioni', label: 'Scadenziario Manutenzioni', icon: Calendar },
+            { path: '/verbali-itt', label: 'Verbali ITT', icon: Award },
         ],
     },
     {

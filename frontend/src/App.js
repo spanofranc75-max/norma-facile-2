@@ -64,6 +64,8 @@ import SettingsPage from './pages/SettingsPage';
 import ActivityLogPage from './pages/ActivityLogPage';
 import OfficinaPage from './pages/OfficinaPage';
 import AttrezzaturePage from './pages/AttrezzaturePage';
+import ScadenziarioManutenzioniPage from './pages/ScadenziarioManutenzioniPage';
+import VerbaliITTPage from './pages/VerbaliITTPage';
 import ArchivioStoricoPage from './pages/ArchivioStoricoPage';
 import PreventivatoreWizard from './pages/PreventivatoreWizard';
 import ManualePage from './pages/ManualePage';
@@ -271,6 +273,8 @@ function AppRouter() {
             <Route path="/notifiche" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
             <Route path="/registro-attivita" element={<ProtectedRoute><ActivityLogPage /></ProtectedRoute>} />
             <Route path="/attrezzature" element={<ProtectedRoute><AttrezzaturePage /></ProtectedRoute>} />
+            <Route path="/manutenzioni" element={<ProtectedRoute><ScadenziarioManutenzioniPage /></ProtectedRoute>} />
+            <Route path="/verbali-itt" element={<ProtectedRoute><VerbaliITTPage /></ProtectedRoute>} />
             <Route path="/archivio-storico" element={<ProtectedRoute><ArchivioStoricoPage /></ProtectedRoute>} />
             <Route path="/preventivatore" element={<ProtectedRoute><PreventivatoreWizard /></ProtectedRoute>} />
             <Route path="/manuale" element={<ProtectedRoute><ManualePage /></ProtectedRoute>} />

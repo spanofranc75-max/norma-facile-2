@@ -1,0 +1,83 @@
+{
+  "summary": "Iteration 207: Scadenziario Manutenzioni Unificato + Verbali ITT - All 19 backend tests passed. Frontend UI verified: both new pages load correctly with KPI cards, tables, forms, and sidebar navigation working.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration207_scadenziario_itt.py",
+    "/app/test_reports/pytest/iteration207_scadenziario_itt_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "GET /api/scadenziario-manutenzioni correctly aggregates instruments (no user_id filter) + attrezzature + verbali_itt with KPI and urgenza calculation",
+    "Scadenziario shows 4 items: 2 instruments (Cesoia Idraulica, Calibro Digitale) + 2 ITTs (taglio_termico, foratura), 0 attrezzature",
+    "POST /api/verbali-itt validates processo against PROCESSI_ITT list, creates with prove array and esito_globale",
+    "GET /api/verbali-itt returns verbali with calculated scaduto/in_scadenza/giorni_rimasti status fields",
+    "GET /api/verbali-itt/check-validita returns processi_qualificati/scaduti for Riesame Tecnico integration",
+    "POST /api/verbali-itt/{itt_id}/firma adds digital signature with nome/ruolo/data",
+    "GET /api/verbali-itt/{itt_id}/pdf generates WeasyPrint PDF with company logo, prove table, esito, firma",
+    "GET /api/riesame/{commessa_id} now has 12 checks (was 11), new check 'itt_processi_qualificati' in Produzione section",
+    "ITT check verifies taglio_termico, taglio_meccanico, foratura are qualified - shows 'Processi mancanti: taglio meccanico' since only 2/3 are qualified",
+    "Frontend ScadenziarioManutenzioniPage shows unified table with fonte icons (strumento/attrezzatura/itt), urgenza badges, impatto badges",
+    "Frontend VerbaliITTPage shows CRUD form with processo select, prove management, esito checkbox, PDF download, delete buttons",
+    "Sidebar DashboardLayout has 'Scadenziario Manutenzioni' and 'Verbali ITT' under Certificazioni group"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration207_scadenziario_itt.py"
+  ],
+  "success_rate": {
+    "backend": "100% (19/19 tests passed)",
+    "frontend": "100% (all UI elements working, navigation, forms, tables, KPI cards)"
+  },
+  "test_credentials": {
+    "session_token": "d36a500823254076b5c583d6c1d903fa",
+    "user_id": "user_e4012a8f48",
+    "test_commessa": "comm_sasso_marconi (C-2026-0012)",
+    "existing_itts": ["itt_1de1f91f53 (taglio_termico)", "itt_fa852ec36b (foratura)"]
+  },
+  "seed_data_creation": "No new seed data created. Used existing test ITTs and instruments.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 207 verified the new Scadenziario Manutenzioni Unificato and Verbali ITT features. Key endpoints: GET /api/scadenziario-manutenzioni (aggregates instruments + attrezzature + ITT with KPI), POST/GET/DELETE /api/verbali-itt (CRUD), POST /api/verbali-itt/{id}/firma (signature), GET /api/verbali-itt/{id}/pdf (WeasyPrint PDF), GET /api/verbali-itt/check-validita (process status), GET /api/riesame/{commessa_id} (now 12 checks with itt_processi_qualificati). Frontend pages: /manutenzioni (ScadenziarioManutenzioniPage.js), /verbali-itt (VerbaliITTPage.js). Sidebar links under Certificazioni group. The 'filo conduttore' philosophy is implemented - ITT data appears in both Scadenziario and Riesame Tecnico.",
+  "testing_summary": {
+    "backend_endpoints": {
+      "GET /api/scadenziario-manutenzioni": "PASS - Returns 4 items (2 instruments + 2 ITTs), KPI with totale/scaduti/in_scadenza/prossimi_90gg/conformi",
+      "POST /api/verbali-itt": "PASS - Creates verbale with processo validation, prove array, esito_globale",
+      "GET /api/verbali-itt": "PASS - Lists verbali with scaduto/in_scadenza/giorni_rimasti calculated",
+      "GET /api/verbali-itt?processo=taglio_termico": "PASS - Filters by processo",
+      "DELETE /api/verbali-itt/{itt_id}": "PASS - Deletes verbale, returns 404 for nonexistent",
+      "POST /api/verbali-itt/{itt_id}/firma": "PASS - Adds signature, validates nome required",
+      "GET /api/verbali-itt/{itt_id}/pdf": "PASS - Returns valid PDF (>5KB), 404 for nonexistent",
+      "GET /api/verbali-itt/check-validita": "PASS - Returns processi_qualificati/scaduti/tutti_i_processi",
+      "GET /api/riesame/{commessa_id}": "PASS - Has 12 checks including itt_processi_qualificati"
+    },
+    "frontend_ui": {
+      "sidebar_navigation": {
+        "scadenziario_manutenzioni_link": "VISIBLE - Under Certificazioni group",
+        "verbali_itt_link": "VISIBLE - Under Certificazioni group"
+      },
+      "scadenziario_manutenzioni_page": {
+        "page_loads": "YES - data-testid='scadenziario-manutenzioni-page'",
+        "kpi_cards": "4 cards: Totale(4), Scaduti(0), In Scadenza(0), Conformi(4)",
+        "table_rows": "4 items with fonte icons, urgenza badges, impatto badges",
+        "refresh_button": "VISIBLE"
+      },
+      "verbali_itt_page": {
+        "page_loads": "YES - data-testid='verbali-itt-page'",
+        "kpi_cards": "4 cards: Totale(2), Validi(2), Scaduti(0), Processi Coperti(2/6)",
+        "filo_conduttore_alert": "VISIBLE - 'Filo Conduttore: Riesame Tecnico' info card",
+        "nuovo_itt_button": "VISIBLE - Opens form",
+        "form_fields": "processo select, macchina, materiale, spessore, data_prova, data_scadenza, prove, esito, note",
+        "table_rows": "2 ITTs with PDF/delete buttons",
+        "pdf_buttons": "2 buttons for downloading PDFs",
+        "delete_buttons": "2 buttons for deleting verbali"
+      }
+    }
+  }
+}
