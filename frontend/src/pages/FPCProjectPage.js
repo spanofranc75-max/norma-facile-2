@@ -141,10 +141,11 @@ export default function FPCProjectPage() {
         </div>
 
         {/* VERBALE DI POSA BUTTON */}
+        {project.commessa_id && (
         <div className="mb-6">
           <Button
             data-testid="verbale-posa-btn"
-            onClick={() => navigate(`/verbale-posa/${project.commessa_id || project.project_id}`)}
+            onClick={() => navigate(`/verbale-posa/${project.commessa_id}`)}
             variant="outline"
             className="w-full h-12 text-base border-[#0055FF] text-[#0055FF] hover:bg-blue-50"
           >
@@ -152,6 +153,7 @@ export default function FPCProjectPage() {
           </Button>
           <p className="text-xs text-slate-400 text-center mt-1">Dichiarazione di corretta posa + foto cantiere + firma cliente</p>
         </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* LEFT: Welder & WPS */}

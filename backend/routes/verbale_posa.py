@@ -24,6 +24,15 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 async def _load_commessa_context(commessa_id: str) -> dict:
     """Load commessa with related FPC batches, DDT, and company info."""
     commessa = await db.commesse.find_one({"commessa_id": commessa_id}, {"_id": 0})
+
+    # Fallback: if commessa_id is actually a project_id, find commessa via FPC project
+    if not commessa:
+        fpc_p = await db.fpc_projects.find_one({"project_id": commessa_id}, {"_id": 0})
+        if fpc_p and fpc_p.get("commessa_id"):
+            commessa = await db.commesse.find_one({"commessa_id": fpc_p["commessa_id"]}, {"_id": 0})
+            if commessa:
+                commessa_id = commessa["commessa_id"]
+
     if not commessa:
         raise HTTPException(404, "Commessa non trovata")
 
