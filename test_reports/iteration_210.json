@@ -1,0 +1,115 @@
+{
+  "summary": "Full audit of SOPRALLUOGHI, PERIZIE, PREVENTIVATORE, RILIEVI modules completed. Backend: 36/36 tests passed (100%). Frontend: All 4 pages working correctly with proper data display.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "SopralluogoWizardPage",
+        "issues": ["Minor HTML hydration warning: <tr> cannot be child of <span> and <span> cannot be child of <tbody>. This is a React rendering issue but doesn't affect functionality."]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration210_sopralluoghi_perizie_preventivatore.py",
+    "/app/test_reports/pytest/iteration210_sopralluoghi_perizie_preventivatore_results.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: Fix HTML structure in SopralluogoWizardPage.js around line 891-893 to avoid hydration warnings (span wrapping tr elements in tbody)"
+  ],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration210_sopralluoghi_perizie_preventivatore.py"
+  ],
+  "success_rate": {
+    "backend": "100% (36/36 passed)",
+    "frontend": "100% (4/4 pages working)"
+  },
+  "seed_data_creation": "Test data created and cleaned up: sopralluogo, perizia, preventivo, commessa, rilievo (all prefixed with TEST_)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "SOPRALLUOGHI, PERIZIE, PREVENTIVATORE, RILIEVI modules fully tested. All CRUD operations working. AI endpoints (analizza, analyze-photos, analyze-drawing) were SKIPPED as they require real images and GPT-4o API credits. The existing sopralluogo sop_546b0934db54 has AI analysis data that was verified. Preventivatore /calcola endpoint (pure math) tested fully. The accetta flow creates commessa with normativa_tipo=EN_1090 and classe_exc=EXC2 correctly.",
+  "modules_tested": {
+    "sopralluoghi": {
+      "endpoints_tested": [
+        "GET /api/sopralluoghi/ - list with status and conformita %",
+        "POST /api/sopralluoghi/ - create new",
+        "GET /api/sopralluoghi/{id} - detail with AI analysis",
+        "PUT /api/sopralluoghi/{id} - update",
+        "DELETE /api/sopralluoghi/{id} - delete",
+        "GET /api/sopralluoghi/articoli-catalogo - catalog items with prices",
+        "POST /api/sopralluoghi/{id}/genera-preventivo - requires AI analysis first",
+        "GET /api/sopralluoghi/{id}/pdf - generates PDF"
+      ],
+      "ai_endpoints_skipped": ["POST /api/sopralluoghi/{id}/analizza - requires real photos + GPT-4o"],
+      "status": "PASSED"
+    },
+    "perizie": {
+      "endpoints_tested": [
+        "GET /api/perizie/ - list",
+        "POST /api/perizie/ - create with tipo_danno, auto-generates voci_costo",
+        "GET /api/perizie/{id} - detail",
+        "PUT /api/perizie/{id} - update",
+        "DELETE /api/perizie/{id} - delete",
+        "GET /api/perizie/codici-danno - damage codes reference",
+        "PATCH /api/perizie/{id}/collega-commessa - link to commessa",
+        "POST /api/perizie/{id}/recalc - recalculate costs",
+        "GET /api/perizie/{id}/pdf - generates PDF"
+      ],
+      "ai_endpoints_skipped": ["POST /api/perizie/{id}/analyze-photos - requires real photos + GPT-4o"],
+      "status": "PASSED"
+    },
+    "preventivatore": {
+      "endpoints_tested": [
+        "GET /api/preventivatore/tabella-ore - reference hours table",
+        "GET /api/preventivatore/prezzi-storici - historical prices",
+        "POST /api/preventivatore/calcola - calculate weight/hours/cost (pure math)",
+        "POST /api/preventivatore/genera-preventivo - generate preventivo from calcolo",
+        "POST /api/preventivatore/accetta/{id} - accept and create commessa EN_1090",
+        "POST /api/preventivatore/confronta - compare AI vs manual preventivi"
+      ],
+      "ai_endpoints_skipped": ["POST /api/preventivatore/analyze-drawing - requires real image + GPT-4o"],
+      "status": "PASSED"
+    },
+    "rilievi": {
+      "endpoints_tested": [
+        "GET /api/rilievi/ - list",
+        "POST /api/rilievi/ - create (note: survey_date must be date only, not datetime)",
+        "GET /api/rilievi/{id} - detail",
+        "PUT /api/rilievi/{id} - update",
+        "DELETE /api/rilievi/{id} - delete",
+        "POST /api/rilievi/{id}/calcola-materiali - calculate materials from measurements"
+      ],
+      "status": "PASSED"
+    }
+  },
+  "frontend_pages_tested": {
+    "/sopralluoghi": {
+      "status": "WORKING",
+      "features_verified": ["Page title", "Search input", "Nuovo Sopralluogo button", "Sopralluogo cards with status badges (Analizzato/Completato)", "Conformita percentage display"]
+    },
+    "/sopralluoghi/{id}": {
+      "status": "WORKING",
+      "features_verified": ["Document number", "Status badge", "Wizard tabs (Cliente & Luogo, Foto, Analisi AI, Risultati)", "Tipo Chiusura", "Conformita %", "Criticità Riscontrate with severity badges (ALTA/MEDIA)", "Problem description", "Solution suggestions", "Norma references (EN 12453, EN 13241)"]
+    },
+    "/perizie": {
+      "status": "WORKING",
+      "features_verified": ["Page title", "Search input", "Nuova Perizia button", "Table with columns (Numero, Data, Cliente, Tipo Danno, Totale, Stato)", "Action buttons (view, PDF, delete)"]
+    },
+    "/preventivatore": {
+      "status": "WORKING",
+      "features_verified": ["Page title", "Wizard steps (Carica Disegno, Materiali, Margini & Calcolo, Genera Preventivo)", "Upload area for technical drawing", "Analizza con AI Vision button", "Manual estimation section (Peso stimato, Tipologia struttura)", "Calcola con peso manuale button"]
+    }
+  },
+  "regression_tests": {
+    "sopralluogo_ai_analysis_structure": "PASSED - AI analysis has correct structure with tipo_chiusura, descrizione_generale, rischi (zona, gravita, problema, norma_riferimento, soluzione), dispositivi_presenti, dispositivi_mancanti, conformita_percentuale",
+    "preventivo_from_sopralluogo": "PASSED - Preventivo linked to sopralluogo has correct structure with lines, totals, sopralluogo_id"
+  },
+  "integration_test": {
+    "preventivo_to_commessa_flow": "PASSED - Created preventivo via /calcola + /genera-preventivo, then /accetta created commessa with normativa_tipo=EN_1090 and classe_exc=EXC2"
+  }
+}
