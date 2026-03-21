@@ -17,6 +17,18 @@ router = APIRouter(prefix="/welders", tags=["welders"])
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "welder_certs")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+# Safety certification types for the expiry matrix
+SAFETY_CERT_TYPES = [
+    {"code": "patentino_saldatura", "label": "Patentino Saldatura", "category": "tecnico"},
+    {"code": "formazione_base_8108", "label": "Formazione Base 81/08", "category": "sicurezza"},
+    {"code": "formazione_specifica", "label": "Form. Specifica Rischio Alto", "category": "sicurezza"},
+    {"code": "primo_soccorso", "label": "Primo Soccorso", "category": "sicurezza"},
+    {"code": "antincendio", "label": "Antincendio", "category": "sicurezza"},
+    {"code": "lavori_quota", "label": "Lavori in Quota", "category": "sicurezza"},
+    {"code": "ple", "label": "PLE (Piattaforme)", "category": "sicurezza"},
+    {"code": "idoneita_sanitaria", "label": "Idoneita Sanitaria", "category": "medico"},
+]
+
 
 def _qual_status(expiry_str: str) -> tuple[str, int | None]:
     """Compute qualification status from expiry date."""
@@ -43,10 +55,12 @@ def _qual_to_response(q: dict) -> dict:
         "position": q.get("position"),
         "issue_date": q.get("issue_date"),
         "expiry_date": q.get("expiry_date", ""),
+        "cert_code": q.get("cert_code") or _guess_cert_code(q.get("standard", "")),
         "status": status,
         "days_until_expiry": days,
         "has_file": bool(q.get("safe_filename")),
         "filename": q.get("filename"),
+        "notes": q.get("notes"),
     }
 
 
@@ -130,6 +144,173 @@ async def list_welders(
         items = [i for i in items if i["overall_status"] == status]
 
     return WelderList(items=items, total=len(items), stats=stats)
+
+
+def _guess_cert_code(standard: str) -> str:
+    """Map existing qualification standard names to safety cert codes."""
+    s = standard.lower()
+    if "9606" in s or "287" in s or "14732" in s or "saldatura" in s:
+        return "patentino_saldatura"
+    if "81/08" in s or "81-08" in s:
+        if "specif" in s or "rischio" in s:
+            return "formazione_specifica"
+        return "formazione_base_8108"
+    if "soccorso" in s:
+        return "primo_soccorso"
+    if "antincendio" in s or "incendio" in s:
+        return "antincendio"
+    if "quota" in s:
+        return "lavori_quota"
+    if "ple" in s or "piattaform" in s:
+        return "ple"
+    if "sanitaria" in s or "medic" in s or "idone" in s:
+        return "idoneita_sanitaria"
+    return ""
+
+
+# ── Safety Certification Types ──
+
+@router.get("/safety-cert-types")
+async def get_safety_cert_types(user: dict = Depends(get_current_user)):
+    return {"cert_types": SAFETY_CERT_TYPES}
+
+
+# ── Matrice Scadenze ──
+
+@router.get("/matrice-scadenze")
+async def matrice_scadenze(user: dict = Depends(get_current_user)):
+    """
+    Returns a matrix: rows = workers, columns = cert types.
+    Each cell has status: 'valido', 'in_scadenza', 'scaduto', 'mancante'.
+    """
+    all_docs = await db.welders.find({}, {"_id": 0}).sort("name", 1).to_list(200)
+    today = date.today()
+
+    cert_codes = [c["code"] for c in SAFETY_CERT_TYPES]
+    rows = []
+
+    for doc in all_docs:
+        quals = doc.get("qualifications", [])
+        cert_map = {}
+        for q in quals:
+            code = q.get("cert_code") or _guess_cert_code(q.get("standard", ""))
+            if code and code in cert_codes:
+                existing = cert_map.get(code)
+                if existing:
+                    if (q.get("expiry_date", "") or "") > (existing.get("expiry_date", "") or ""):
+                        cert_map[code] = q
+                else:
+                    cert_map[code] = q
+
+        cells = {}
+        has_any_expired = False
+        for code in cert_codes:
+            q = cert_map.get(code)
+            if not q:
+                cells[code] = {"status": "mancante", "days": None, "expiry": None}
+            else:
+                exp_str = q.get("expiry_date", "")
+                try:
+                    exp = date.fromisoformat(exp_str) if exp_str else None
+                except (ValueError, TypeError):
+                    exp = None
+
+                if exp:
+                    days = (exp - today).days
+                    if days < 0:
+                        cells[code] = {"status": "scaduto", "days": days, "expiry": exp_str}
+                        has_any_expired = True
+                    elif days <= 15:
+                        cells[code] = {"status": "in_scadenza", "days": days, "expiry": exp_str}
+                    else:
+                        cells[code] = {"status": "valido", "days": days, "expiry": exp_str}
+                else:
+                    cells[code] = {"status": "valido", "days": None, "expiry": None}
+
+        can_go = not has_any_expired and all(
+            cells[c]["status"] != "mancante" for c in cert_codes
+        )
+
+        rows.append({
+            "welder_id": doc["welder_id"],
+            "name": doc["name"],
+            "stamp_id": doc.get("stamp_id", ""),
+            "role": doc.get("role", ""),
+            "cells": cells,
+            "can_go_to_cantiere": can_go,
+        })
+
+    return {
+        "cert_types": SAFETY_CERT_TYPES,
+        "workers": rows,
+        "total": len(rows),
+    }
+
+
+# ── POS Worker Selection ──
+
+@router.get("/per-pos")
+async def workers_for_pos(user: dict = Depends(get_current_user)):
+    """
+    Return worker list enriched with safety compliance status for POS selection.
+    """
+    all_docs = await db.welders.find({}, {"_id": 0}).sort("name", 1).to_list(200)
+    today = date.today()
+    cert_codes = [c["code"] for c in SAFETY_CERT_TYPES]
+
+    results = []
+    for doc in all_docs:
+        quals = doc.get("qualifications", [])
+        cert_map = {}
+        for q in quals:
+            code = q.get("cert_code") or _guess_cert_code(q.get("standard", ""))
+            if code and code in cert_codes:
+                existing = cert_map.get(code)
+                if not existing or (q.get("expiry_date", "") or "") > (existing.get("expiry_date", "") or ""):
+                    cert_map[code] = q
+
+        warnings = []
+        blockers = []
+        for c in SAFETY_CERT_TYPES:
+            code = c["code"]
+            q = cert_map.get(code)
+            if not q:
+                blockers.append(f"{c['label']}: mancante")
+            else:
+                exp_str = q.get("expiry_date", "")
+                try:
+                    exp = date.fromisoformat(exp_str) if exp_str else None
+                except (ValueError, TypeError):
+                    exp = None
+                if exp:
+                    days = (exp - today).days
+                    if days < 0:
+                        blockers.append(f"{c['label']}: scaduto ({exp_str})")
+                    elif days <= 15:
+                        warnings.append(f"{c['label']}: scade tra {days}gg")
+
+        cert_files = []
+        for q in quals:
+            if q.get("safe_filename"):
+                cert_files.append({
+                    "qual_id": q["qual_id"],
+                    "standard": q.get("standard", ""),
+                    "filename": q.get("filename", ""),
+                    "safe_filename": q["safe_filename"],
+                })
+
+        results.append({
+            "welder_id": doc["welder_id"],
+            "name": doc["name"],
+            "stamp_id": doc.get("stamp_id", ""),
+            "role": doc.get("role", ""),
+            "can_deploy": len(blockers) == 0,
+            "warnings": warnings,
+            "blockers": blockers,
+            "cert_files_count": len(cert_files),
+        })
+
+    return {"workers": results}
 
 
 @router.get("/{welder_id}", response_model=WelderResponse)
@@ -218,6 +399,7 @@ async def add_qualification(
     issue_date: str = Form(""),
     expiry_date: str = Form(...),
     notes: str = Form(""),
+    cert_code: str = Form(""),
     file: Optional[UploadFile] = File(None),
     user: dict = Depends(get_current_user),
 ):
@@ -251,6 +433,7 @@ async def add_qualification(
         "issue_date": issue_date.strip() or None,
         "expiry_date": expiry_date.strip(),
         "notes": notes.strip() or None,
+        "cert_code": cert_code.strip() or _guess_cert_code(standard.strip()),
         "safe_filename": safe_filename,
         "filename": filename,
     }

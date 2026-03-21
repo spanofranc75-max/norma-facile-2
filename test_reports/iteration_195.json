@@ -1,0 +1,97 @@
+{
+  "summary": "Iteration 195: Matrice Scadenze & Risorse Umane - All features verified. Backend: 14/14 tests passed. Frontend: All UI elements working correctly. New endpoints matrice-scadenze, per-pos, safety-cert-types working. Settings Documenti tab shows 5 documents including DVR. POS Wizard has 4 steps with worker selection in step 4.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "MatriceScadenzePage",
+        "issues": ["React hydration warnings in console (span inside tbody/tr/th/td) - cosmetic only, doesn't affect functionality"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration195_matrice_scadenze.py",
+    "/app/test_reports/pytest/iteration195_matrice_scadenze_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "welders.py: Route ordering is correct - matrice-scadenze, per-pos, safety-cert-types come BEFORE /{welder_id} dynamic route",
+    "welders.py: SAFETY_CERT_TYPES has 8 types as expected (patentino_saldatura, formazione_base_8108, formazione_specifica, primo_soccorso, antincendio, lavori_quota, ple, idoneita_sanitaria)",
+    "welder.py model: QualificationResponse includes cert_code and notes fields",
+    "MatriceScadenzePage.js: Matrix table renders correctly with colored dots (green=valido, yellow=in_scadenza, red=scaduto, gray=mancante)",
+    "WeldersPage.js: Page title is 'Risorse Umane' with CERT_PRESETS for 8 safety cert types",
+    "DashboardLayout.js: Sidebar has 'Risorse Umane' group with 'Anagrafica Operai' and 'Matrice Scadenze' links",
+    "App.js: /saldatori redirects to /operai, /operai/matrice route exists",
+    "DocumentiAziendaTab.js: Shows 5 document types (DURC, Visura, White List, Patente a Crediti, DVR) in table format",
+    "PosWizardPage.js: Has 4 steps (Cantiere, Lavorazioni, Macchine & DPI, Documenti) with worker selection in step 4"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration195_matrice_scadenze.py"
+  ],
+  "success_rate": {
+    "backend": "100% (14 tests passed)",
+    "frontend": "100% (all UI elements verified)"
+  },
+  "test_credentials": {
+    "session_token": "active_test_session_2026",
+    "cookie_name": "session_token",
+    "test_workers": {
+      "marco_bianchi": "wld_022030bdcf (all valid - Idoneo)",
+      "luca_rossi": "wld_811fabf3a1 (some expired - 6 problemi)",
+      "andrea_verdi": "wld_1282360dd4 (expiring - 5 problemi)"
+    }
+  },
+  "seed_data_creation": "Test workers were pre-created with varied qualification statuses",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 195 verified Matrice Scadenze & Risorse Umane features. Key findings: (1) /operai page renders as 'Risorse Umane' with Matrice Scadenze button. (2) /operai/matrice shows matrix table with 3 test workers and 8 cert type columns with colored dots. (3) Sidebar has 'Risorse Umane' group with 'Anagrafica Operai' and 'Matrice Scadenze' links. (4) /saldatori redirects to /operai. (5) Settings Documenti tab shows 5 documents (DURC, Visura, White List, Patente a Crediti, DVR) in table format. (6) POS Wizard has 4 steps with worker selection and global docs summary in step 4. (7) Backend endpoints matrice-scadenze, per-pos, safety-cert-types all working correctly with proper auth.",
+  "testing_summary": {
+    "backend_endpoints": {
+      "GET /api/welders/safety-cert-types": "✓ Returns 8 safety certification types",
+      "GET /api/welders/matrice-scadenze": "✓ Returns matrix with cert_types, workers array with cells per cert type",
+      "GET /api/welders/per-pos": "✓ Returns workers with can_deploy, blockers, warnings",
+      "POST /api/welders/{id}/qualifications": "✓ Accepts cert_code field",
+      "GET /api/company/documents/sicurezza-globali": "✓ Returns 5 document types including DVR",
+      "Auth required tests": "✓ All return 401 without auth"
+    },
+    "frontend_ui": {
+      "WeldersPage (/operai)": {
+        "page_title": "✓ Shows 'Risorse Umane'",
+        "matrice_btn": "✓ data-testid='btn-matrice' visible",
+        "welders_page": "✓ data-testid='welders-page' visible",
+        "worker_list": "✓ Shows 3 test workers (Andrea Verdi, Luca Rossi, Marco Bianchi)"
+      },
+      "MatriceScadenzePage (/operai/matrice)": {
+        "page_loads": "✓ data-testid='matrice-scadenze-page' visible",
+        "matrice_table": "✓ data-testid='matrice-table' with 8 cert columns",
+        "matrice_stats": "✓ Shows 3 Operai, 1 Idonei Cantiere, 1 Scaduti, 10 Mancanti",
+        "colored_dots": "✓ Green (valido), Yellow (in_scadenza), Red (scaduto), Gray (mancante)",
+        "worker_status": "✓ Marco Bianchi=OK, Luca Rossi=NO, Andrea Verdi=NO"
+      },
+      "Sidebar": {
+        "risorse_umane_group": "✓ data-testid='nav-group-risorse_umane' visible",
+        "operai_link": "✓ data-testid='nav-operai' visible",
+        "matrice_link": "✓ data-testid='nav-operai-matrice' visible"
+      },
+      "Redirect": {
+        "saldatori_to_operai": "✓ /saldatori redirects to /operai"
+      },
+      "SettingsPage_Documenti": {
+        "documenti_tab": "✓ data-testid='tab-documenti' visible",
+        "docs_table": "✓ data-testid='docs-table' visible",
+        "doc_rows": "✓ All 5 doc rows visible (durc, visura, white_list, patente_crediti, dvr)"
+      },
+      "PosWizardPage": {
+        "wizard_steps": "✓ 4 steps (Cantiere, Lavorazioni, Macchine & DPI, Documenti)",
+        "step4_worker_list": "✓ data-testid='pos-worker-list' visible",
+        "step4_global_docs": "✓ data-testid='pos-global-docs' shows 5 docs",
+        "worker_badges": "✓ Shows Idoneo/problemi badges for each worker"
+      }
+    }
+  }
+}

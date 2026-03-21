@@ -17,7 +17,7 @@ import { Separator } from '../components/ui/separator';
 import { Badge } from '../components/ui/badge';
 import { toast } from 'sonner';
 import {
-    Save, ArrowLeft, ArrowRight, HardHat, FileDown, Sparkles, Loader2, CheckCircle2,
+    Save, ArrowLeft, ArrowRight, HardHat, FileDown, Sparkles, Loader2, CheckCircle2, Shield, FileCheck, FileX, AlertTriangle, Download,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
@@ -25,6 +25,7 @@ const STEPS = [
     { num: 1, label: 'Cantiere' },
     { num: 2, label: 'Lavorazioni' },
     { num: 3, label: 'Macchine & DPI' },
+    { num: 4, label: 'Documenti' },
 ];
 
 export default function PosWizardPage() {
@@ -40,6 +41,9 @@ export default function PosWizardPage() {
     const [savedId, setSavedId] = useState(posId || null);
     const [clients, setClients] = useState([]);
     const [refData, setRefData] = useState({ rischi: [], macchine: [], dpi: [] });
+    const [globalDocs, setGlobalDocs] = useState(null);
+    const [posWorkers, setPosWorkers] = useState([]);
+    const [selectedWorkers, setSelectedWorkers] = useState([]);
 
     const [formData, setFormData] = useState({
         project_name: '',
@@ -69,6 +73,21 @@ export default function PosWizardPage() {
             } catch { /* ignore */ }
         };
         fetch();
+    }, []);
+
+    // Fetch global docs + workers for POS
+    useEffect(() => {
+        const fetchGlobal = async () => {
+            try {
+                const [docData, wData] = await Promise.all([
+                    apiRequest('/company/documents/sicurezza-globali'),
+                    apiRequest('/welders/per-pos'),
+                ]);
+                setGlobalDocs(docData);
+                setPosWorkers(wData.workers || []);
+            } catch { /* ignore */ }
+        };
+        fetchGlobal();
     }, []);
 
     // Auto-fill committente from client
@@ -448,6 +467,136 @@ export default function PosWizardPage() {
 
                             <div className="flex justify-between">
                                 <Button variant="outline" onClick={() => setStep(2)}>
+                                    <ArrowLeft className="h-4 w-4 mr-2" /> Indietro
+                                </Button>
+                                <Button data-testid="btn-next-3" onClick={() => setStep(4)} className="bg-[#0055FF] text-white hover:bg-[#0044CC]">
+                                    Avanti <ArrowRight className="h-4 w-4 ml-2" />
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+                {/* Step 4: Operai & Documenti */}
+                {step === 4 && (
+                    <Card className="border-gray-200">
+                        <CardHeader className="bg-blue-50 border-b border-gray-200">
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <Shield className="w-5 h-5 text-[#0055FF]" />
+                                4. Operai in Cantiere & Documenti
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-6 space-y-6">
+                            {/* Worker selection */}
+                            <div>
+                                <h3 className="font-semibold text-[#1E293B] mb-2">Quali operai mandi in cantiere?</h3>
+                                <p className="text-sm text-slate-500 mb-3">Seleziona gli operai. I loro attestati verranno inclusi automaticamente nel pacchetto ZIP.</p>
+                                <div className="space-y-2" data-testid="pos-worker-list">
+                                    {posWorkers.length === 0 ? (
+                                        <p className="text-sm text-slate-400 text-center py-4">Nessun operaio in anagrafica. <a href="/operai" className="text-[#0055FF] underline">Aggiungi operai</a></p>
+                                    ) : posWorkers.map(w => {
+                                        const isSelected = selectedWorkers.includes(w.welder_id);
+                                        const hasBlockers = w.blockers.length > 0;
+                                        return (
+                                            <label key={w.welder_id}
+                                                data-testid={`pos-worker-${w.welder_id}`}
+                                                className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${
+                                                    isSelected
+                                                        ? hasBlockers ? 'border-red-300 bg-red-50/50' : 'border-[#0055FF] bg-blue-50'
+                                                        : 'border-gray-200 hover:bg-slate-50'
+                                                }`}>
+                                                <div className="flex items-center gap-3">
+                                                    <Checkbox
+                                                        checked={isSelected}
+                                                        onCheckedChange={() => {
+                                                            setSelectedWorkers(prev =>
+                                                                prev.includes(w.welder_id)
+                                                                    ? prev.filter(id => id !== w.welder_id)
+                                                                    : [...prev, w.welder_id]
+                                                            );
+                                                        }}
+                                                    />
+                                                    <div>
+                                                        <div className="font-medium text-sm text-slate-800">{w.name}</div>
+                                                        <div className="text-xs text-slate-500 capitalize">{w.role || 'operaio'} — {w.stamp_id} — {w.cert_files_count} attestati</div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    {hasBlockers ? (
+                                                        <Badge className="bg-red-100 text-red-700 border border-red-200 text-[10px] gap-1">
+                                                            <AlertTriangle className="w-3 h-3" /> {w.blockers.length} problemi
+                                                        </Badge>
+                                                    ) : w.warnings.length > 0 ? (
+                                                        <Badge className="bg-amber-100 text-amber-700 border border-amber-200 text-[10px] gap-1">
+                                                            {w.warnings.length} attenzione
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge className="bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px]">
+                                                            <CheckCircle2 className="w-3 h-3 mr-1" /> Idoneo
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                                {/* Show warnings for selected workers */}
+                                {selectedWorkers.length > 0 && (() => {
+                                    const issues = posWorkers
+                                        .filter(w => selectedWorkers.includes(w.welder_id))
+                                        .flatMap(w => [
+                                            ...w.blockers.map(b => ({ name: w.name, msg: b, level: 'error' })),
+                                            ...w.warnings.map(b => ({ name: w.name, msg: b, level: 'warn' })),
+                                        ]);
+                                    if (issues.length === 0) return null;
+                                    return (
+                                        <div className="mt-3 bg-red-50 border border-red-200 rounded-lg p-3 text-sm space-y-1" data-testid="pos-worker-issues">
+                                            <div className="font-medium text-red-700 flex items-center gap-1">
+                                                <AlertTriangle className="w-4 h-4" /> Problemi rilevati:
+                                            </div>
+                                            {issues.map((iss, i) => (
+                                                <div key={i} className={`text-xs ${iss.level === 'error' ? 'text-red-600' : 'text-amber-600'}`}>
+                                                    <strong>{iss.name}</strong>: {iss.msg}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
+                            <Separator />
+
+                            {/* Global docs summary */}
+                            <div>
+                                <h3 className="font-semibold text-[#1E293B] mb-2">Documenti Azienda</h3>
+                                {globalDocs ? (() => {
+                                    const documenti = globalDocs.documenti || {};
+                                    const docTypes = ['durc', 'visura', 'white_list', 'patente_crediti', 'dvr'];
+                                    return (
+                                        <div className="grid grid-cols-5 gap-2" data-testid="pos-global-docs">
+                                            {docTypes.map(dt => {
+                                                const d = documenti[dt] || {};
+                                                return (
+                                                    <div key={dt} className={`p-2 rounded-lg border text-center text-xs ${
+                                                        d.presente
+                                                            ? d.is_expired ? 'bg-red-50 border-red-200 text-red-700'
+                                                            : d.is_expiring ? 'bg-amber-50 border-amber-200 text-amber-700'
+                                                            : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                                                            : 'bg-slate-50 border-slate-200 text-slate-500'
+                                                    }`}>
+                                                        {d.presente ? <FileCheck className="w-4 h-4 mx-auto mb-1" /> : <FileX className="w-4 h-4 mx-auto mb-1" />}
+                                                        <div className="font-medium">{d.label || dt}</div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                })() : <Loader2 className="w-5 h-5 animate-spin text-slate-400" />}
+                            </div>
+
+                            <Separator />
+
+                            <div className="flex justify-between">
+                                <Button variant="outline" onClick={() => setStep(3)}>
                                     <ArrowLeft className="h-4 w-4 mr-2" /> Indietro
                                 </Button>
                                 <div className="flex gap-3">

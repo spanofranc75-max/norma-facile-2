@@ -4,6 +4,7 @@
  * Layout master-detail: lista saldatori (sidebar) + scheda dettaglio con qualifiche.
  */
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiRequest, API_BASE } from '../lib/utils';
 import DashboardLayout from '../components/DashboardLayout';
 import { Button } from '../components/ui/button';
@@ -41,8 +42,19 @@ const QUAL_STATUS = {
     scaduto: { label: 'Scaduto', color: 'bg-red-100 text-red-800 border-red-200' },
 };
 
-const EMPTY_WELDER = { name: '', stamp_id: '', role: 'saldatore', phone: '', email: '', hire_date: '', notes: '' };
-const EMPTY_QUAL = { standard: 'ISO 9606-1', process: '', material_group: '', thickness_range: '', position: '', issue_date: '', expiry_date: '', notes: '' };
+const EMPTY_WELDER = { name: '', stamp_id: '', role: 'operaio', phone: '', email: '', hire_date: '', notes: '' };
+const EMPTY_QUAL = { standard: '', process: '', material_group: '', thickness_range: '', position: '', issue_date: '', expiry_date: '', notes: '', cert_code: '' };
+
+const CERT_PRESETS = [
+    { code: 'patentino_saldatura', standard: 'ISO 9606-1', label: 'Patentino Saldatura', showProcess: true },
+    { code: 'formazione_base_8108', standard: 'Formazione Base 81/08', label: 'Formazione Base 81/08' },
+    { code: 'formazione_specifica', standard: 'Form. Specifica Rischio Alto', label: 'Formazione Specifica Rischio Alto' },
+    { code: 'primo_soccorso', standard: 'Primo Soccorso', label: 'Primo Soccorso' },
+    { code: 'antincendio', standard: 'Antincendio', label: 'Antincendio' },
+    { code: 'lavori_quota', standard: 'Lavori in Quota', label: 'Lavori in Quota' },
+    { code: 'ple', standard: 'PLE (Piattaforme)', label: 'PLE (Piattaforme Elevabili)' },
+    { code: 'idoneita_sanitaria', standard: 'Idoneita Sanitaria', label: 'Idoneita Sanitaria (Visita Medica)' },
+];
 
 function fmtDate(iso) {
     if (!iso) return '--';
@@ -52,6 +64,7 @@ function fmtDate(iso) {
 /* ═══════════════════════════════════════════════════════ */
 
 export default function WeldersPage() {
+    const navigate = useNavigate();
     const [welders, setWelders] = useState([]);
     const [stats, setStats] = useState({});
     const [loading, setLoading] = useState(true);
@@ -151,11 +164,12 @@ export default function WeldersPage() {
     /* ── Qualification CRUD ── */
     const handleSaveQual = async () => {
         if (!qualForm.expiry_date) { toast.error('Inserisci la data di scadenza'); return; }
+        if (!qualForm.cert_code && !qualForm.standard) { toast.error('Seleziona il tipo di attestato'); return; }
         if (!selected) return;
         setSavingQual(true);
         try {
             const fd = new FormData();
-            fd.append('standard', qualForm.standard);
+            fd.append('standard', qualForm.standard || qualForm.cert_code);
             fd.append('process', qualForm.process);
             fd.append('material_group', qualForm.material_group);
             fd.append('thickness_range', qualForm.thickness_range);
@@ -163,6 +177,7 @@ export default function WeldersPage() {
             fd.append('issue_date', qualForm.issue_date);
             fd.append('expiry_date', qualForm.expiry_date);
             fd.append('notes', qualForm.notes);
+            fd.append('cert_code', qualForm.cert_code);
             if (qualFile) fd.append('file', qualFile);
 
             const res = await fetch(`${API_BASE}/welders/${selected.welder_id}/qualifications`, {
@@ -216,17 +231,22 @@ export default function WeldersPage() {
                 {/* ── Header ── */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="font-sans text-3xl font-bold text-slate-900">Registro Saldatori</h1>
-                        <p className="text-slate-600">Patentini e qualifiche del personale (ISO 9606)</p>
+                        <h1 className="font-sans text-3xl font-bold text-slate-900">Risorse Umane</h1>
+                        <p className="text-slate-600">Anagrafica operai, patentini, attestati sicurezza 81/08</p>
                     </div>
-                    <Button data-testid="btn-add-welder" onClick={() => setShowWelderForm(true)} className="bg-[#0055FF] text-white hover:bg-[#0044CC]">
-                        <Plus className="h-4 w-4 mr-2" /> Nuovo Saldatore
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => navigate('/operai/matrice')} className="border-[#0055FF] text-[#0055FF] hover:bg-blue-50" data-testid="btn-matrice">
+                            <Shield className="h-4 w-4 mr-2" /> Matrice Scadenze
+                        </Button>
+                        <Button data-testid="btn-add-welder" onClick={() => setShowWelderForm(true)} className="bg-[#0055FF] text-white hover:bg-[#0044CC]">
+                            <Plus className="h-4 w-4 mr-2" /> Nuovo Operaio
+                        </Button>
+                    </div>
                 </div>
 
                 {/* ── Stats ── */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="stats-bar">
-                    <StatCard label="Saldatori" value={stats.total || 0} icon={Users} color="text-slate-700" bg="bg-slate-50" />
+                    <StatCard label="Operai" value={stats.total || 0} icon={Users} color="text-slate-700" bg="bg-slate-50" />
                     <StatCard label="Qualificati" value={stats.ok || 0} icon={CheckCircle2} color="text-emerald-700" bg="bg-emerald-50" />
                     <StatCard label="Attenzione" value={(stats.warning || 0) + (stats.expired || 0)} icon={AlertTriangle} color="text-amber-700" bg="bg-amber-50" />
                     <StatCard label="Patentini Tot." value={stats.total_qualifications || 0} icon={Shield} color="text-blue-700" bg="bg-blue-50" />
@@ -303,8 +323,8 @@ export default function WeldersPage() {
             <Dialog open={showWelderForm} onOpenChange={v => { if (!v) closeWelderForm(); else setShowWelderForm(true); }}>
                 <DialogContent className="max-w-md" data-testid="welder-form-dialog">
                     <DialogHeader>
-                        <DialogTitle>{editWelder ? 'Modifica Saldatore' : 'Nuovo Saldatore'}</DialogTitle>
-                        <DialogDescription>Inserisci i dati anagrafici del saldatore.</DialogDescription>
+                        <DialogTitle>{editWelder ? 'Modifica Operaio' : 'Nuovo Operaio'}</DialogTitle>
+                        <DialogDescription>Inserisci i dati anagrafici.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-3 mt-2">
                         <div className="grid grid-cols-2 gap-3">
@@ -323,9 +343,13 @@ export default function WeldersPage() {
                                 <Select value={welderForm.role} onValueChange={v => setWelderForm(f => ({ ...f, role: v }))}>
                                     <SelectTrigger data-testid="select-welder-role" className="mt-1"><SelectValue /></SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="operaio">Operaio</SelectItem>
                                         <SelectItem value="saldatore">Saldatore</SelectItem>
                                         <SelectItem value="capo_saldatore">Capo Saldatore</SelectItem>
-                                        <SelectItem value="operatore">Operatore</SelectItem>
+                                        <SelectItem value="montatore">Montatore</SelectItem>
+                                        <SelectItem value="carpentiere">Carpentiere</SelectItem>
+                                        <SelectItem value="verniciatore">Verniciatore</SelectItem>
+                                        <SelectItem value="capo_squadra">Capo Squadra</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -363,66 +387,112 @@ export default function WeldersPage() {
             <Dialog open={showQualForm} onOpenChange={v => { if (!v) { setShowQualForm(false); setQualFile(null); } }}>
                 <DialogContent className="max-w-lg" data-testid="qual-form-dialog">
                     <DialogHeader>
-                        <DialogTitle>Nuovo Patentino</DialogTitle>
-                        <DialogDescription>Aggiungi una qualifica per {selected?.name}.</DialogDescription>
+                        <DialogTitle>Nuovo Attestato / Patentino</DialogTitle>
+                        <DialogDescription>Aggiungi certificazione per {selected?.name}.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-3 mt-2">
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <Label className="text-xs font-medium">Norma di Riferimento</Label>
-                                <Select value={qualForm.standard} onValueChange={v => setQualForm(f => ({ ...f, standard: v }))}>
-                                    <SelectTrigger data-testid="select-qual-standard" className="mt-1"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="ISO 9606-1">ISO 9606-1 (Acciaio)</SelectItem>
-                                        <SelectItem value="ISO 9606-2">ISO 9606-2 (Alluminio)</SelectItem>
-                                        <SelectItem value="ISO 14732">ISO 14732 (Operatore)</SelectItem>
-                                        <SelectItem value="EN 287-1">EN 287-1 (Legacy)</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div>
-                                <Label className="text-xs font-medium">Processo</Label>
-                                <Select value={qualForm.process || '__none__'} onValueChange={v => setQualForm(f => ({ ...f, process: v === '__none__' ? '' : v }))}>
-                                    <SelectTrigger data-testid="select-qual-process" className="mt-1"><SelectValue placeholder="Seleziona" /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="__none__">--</SelectItem>
-                                        <SelectItem value="111 (SMAW)">111 - SMAW (Elettrodo)</SelectItem>
-                                        <SelectItem value="135 (MAG)">135 - MAG</SelectItem>
-                                        <SelectItem value="136 (FCAW)">136 - FCAW (Filo animato)</SelectItem>
-                                        <SelectItem value="138 (MAG-MC)">138 - MAG Metal Core</SelectItem>
-                                        <SelectItem value="141 (TIG)">141 - TIG</SelectItem>
-                                        <SelectItem value="121 (SAW)">121 - SAW (Arco sommerso)</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                        {/* Quick select cert type */}
+                        <div>
+                            <Label className="text-xs font-medium">Tipo Attestato</Label>
+                            <select
+                                data-testid="select-cert-type"
+                                value={qualForm.cert_code}
+                                onChange={e => {
+                                    const preset = CERT_PRESETS.find(p => p.code === e.target.value);
+                                    if (preset) {
+                                        setQualForm(f => ({
+                                            ...f,
+                                            cert_code: preset.code,
+                                            standard: preset.standard,
+                                        }));
+                                    } else {
+                                        setQualForm(f => ({ ...f, cert_code: e.target.value }));
+                                    }
+                                }}
+                                className="w-full border rounded px-3 py-2 text-sm mt-1 bg-white"
+                            >
+                                <option value="">-- Seleziona tipo --</option>
+                                {CERT_PRESETS.map(p => (
+                                    <option key={p.code} value={p.code}>{p.label}</option>
+                                ))}
+                                <option value="altro">Altro (personalizzato)</option>
+                            </select>
                         </div>
-                        <div className="grid grid-cols-3 gap-3">
-                            <div>
-                                <Label className="text-xs font-medium">Gruppo Materiale</Label>
-                                <Input data-testid="input-qual-material" value={qualForm.material_group} onChange={e => setQualForm(f => ({ ...f, material_group: e.target.value }))} placeholder="es. FM1" className="mt-1" />
+
+                        {/* Standard & Process — show when patentino_saldatura or custom */}
+                        {(qualForm.cert_code === 'patentino_saldatura' || qualForm.cert_code === 'altro' || !qualForm.cert_code) && (
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <Label className="text-xs font-medium">Norma di Riferimento</Label>
+                                    <Select value={qualForm.standard || '__custom__'} onValueChange={v => setQualForm(f => ({ ...f, standard: v === '__custom__' ? '' : v }))}>
+                                        <SelectTrigger data-testid="select-qual-standard" className="mt-1"><SelectValue placeholder="Seleziona" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="ISO 9606-1">ISO 9606-1 (Acciaio)</SelectItem>
+                                            <SelectItem value="ISO 9606-2">ISO 9606-2 (Alluminio)</SelectItem>
+                                            <SelectItem value="ISO 14732">ISO 14732 (Operatore)</SelectItem>
+                                            <SelectItem value="EN 287-1">EN 287-1 (Legacy)</SelectItem>
+                                            <SelectItem value="__custom__">Altro</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label className="text-xs font-medium">Processo</Label>
+                                    <Select value={qualForm.process || '__none__'} onValueChange={v => setQualForm(f => ({ ...f, process: v === '__none__' ? '' : v }))}>
+                                        <SelectTrigger data-testid="select-qual-process" className="mt-1"><SelectValue placeholder="Seleziona" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="__none__">--</SelectItem>
+                                            <SelectItem value="111 (SMAW)">111 - SMAW (Elettrodo)</SelectItem>
+                                            <SelectItem value="135 (MAG)">135 - MAG</SelectItem>
+                                            <SelectItem value="136 (FCAW)">136 - FCAW (Filo animato)</SelectItem>
+                                            <SelectItem value="138 (MAG-MC)">138 - MAG Metal Core</SelectItem>
+                                            <SelectItem value="141 (TIG)">141 - TIG</SelectItem>
+                                            <SelectItem value="121 (SAW)">121 - SAW (Arco sommerso)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
-                            <div>
-                                <Label className="text-xs font-medium">Spessori</Label>
-                                <Input data-testid="input-qual-thickness" value={qualForm.thickness_range} onChange={e => setQualForm(f => ({ ...f, thickness_range: e.target.value }))} placeholder="es. 3-30mm" className="mt-1" />
+                        )}
+
+                        {/* Welding specific fields */}
+                        {qualForm.cert_code === 'patentino_saldatura' && (
+                            <div className="grid grid-cols-3 gap-3">
+                                <div>
+                                    <Label className="text-xs font-medium">Gruppo Materiale</Label>
+                                    <Input data-testid="input-qual-material" value={qualForm.material_group} onChange={e => setQualForm(f => ({ ...f, material_group: e.target.value }))} placeholder="es. FM1" className="mt-1" />
+                                </div>
+                                <div>
+                                    <Label className="text-xs font-medium">Spessori</Label>
+                                    <Input data-testid="input-qual-thickness" value={qualForm.thickness_range} onChange={e => setQualForm(f => ({ ...f, thickness_range: e.target.value }))} placeholder="es. 3-30mm" className="mt-1" />
+                                </div>
+                                <div>
+                                    <Label className="text-xs font-medium">Posizione</Label>
+                                    <Input data-testid="input-qual-position" value={qualForm.position} onChange={e => setQualForm(f => ({ ...f, position: e.target.value }))} placeholder="es. PA, PB" className="mt-1" />
+                                </div>
                             </div>
+                        )}
+
+                        {/* Custom standard name */}
+                        {qualForm.cert_code === 'altro' && (
                             <div>
-                                <Label className="text-xs font-medium">Posizione</Label>
-                                <Input data-testid="input-qual-position" value={qualForm.position} onChange={e => setQualForm(f => ({ ...f, position: e.target.value }))} placeholder="es. PA, PB, PC" className="mt-1" />
+                                <Label className="text-xs font-medium">Nome Attestato</Label>
+                                <Input value={qualForm.standard} onChange={e => setQualForm(f => ({ ...f, standard: e.target.value }))} placeholder="es. Corso carrellisti, BLSD..." className="mt-1" />
                             </div>
-                        </div>
+                        )}
+
                         <div className="grid grid-cols-2 gap-3">
                             <div>
                                 <Label className="text-xs font-medium">Data Rilascio</Label>
                                 <Input data-testid="input-qual-issue" type="date" value={qualForm.issue_date} onChange={e => setQualForm(f => ({ ...f, issue_date: e.target.value }))} className="mt-1" />
                             </div>
                             <div>
-                                <Label className="text-xs font-medium">Data Scadenza *</Label>
+                                <Label className="text-xs font-medium">Data di Scadenza *</Label>
                                 <Input data-testid="input-qual-expiry" type="date" value={qualForm.expiry_date} onChange={e => setQualForm(f => ({ ...f, expiry_date: e.target.value }))} className="mt-1" />
                             </div>
                         </div>
+
                         {/* File upload */}
                         <div>
-                            <Label className="text-xs font-medium">PDF Patentino</Label>
+                            <Label className="text-xs font-medium">PDF Attestato</Label>
                             <div
                                 className={`mt-1 border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${qualFile ? 'border-[#0055FF] bg-blue-50/40' : 'border-slate-200 hover:border-slate-300'}`}
                                 onClick={() => document.getElementById('qual-file-input')?.click()}
@@ -436,16 +506,21 @@ export default function WeldersPage() {
                                         <button onClick={e => { e.stopPropagation(); setQualFile(null); }}><X className="h-4 w-4 text-slate-400 hover:text-red-500" /></button>
                                     </div>
                                 ) : (
-                                    <p className="text-sm text-slate-500"><Upload className="h-4 w-4 inline mr-1" />Carica PDF patentino</p>
+                                    <p className="text-sm text-slate-500"><Upload className="h-4 w-4 inline mr-1" />Carica PDF attestato</p>
                                 )}
                             </div>
+                        </div>
+
+                        <div>
+                            <Label className="text-xs font-medium">Note</Label>
+                            <Input value={qualForm.notes} onChange={e => setQualForm(f => ({ ...f, notes: e.target.value }))} placeholder="Note aggiuntive" className="mt-1" />
                         </div>
                     </div>
                     <DialogFooter className="mt-4">
                         <Button variant="outline" onClick={() => { setShowQualForm(false); setQualFile(null); }}>Annulla</Button>
                         <Button data-testid="btn-save-qual" onClick={handleSaveQual} disabled={savingQual} className="bg-[#0055FF] text-white hover:bg-[#0044CC]">
                             {savingQual && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                            Aggiungi Patentino
+                            Aggiungi Attestato
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -455,8 +530,8 @@ export default function WeldersPage() {
             <Dialog open={!!deleteTarget} onOpenChange={v => { if (!v) setDeleteTarget(null); }}>
                 <DialogContent className="max-w-sm" data-testid="delete-welder-dialog">
                     <DialogHeader>
-                        <DialogTitle className="text-red-600">Elimina Saldatore</DialogTitle>
-                        <DialogDescription>Questa azione elimina anche tutti i patentini associati.</DialogDescription>
+                        <DialogTitle className="text-red-600">Elimina Operaio</DialogTitle>
+                        <DialogDescription>Questa azione elimina anche tutti gli attestati associati.</DialogDescription>
                     </DialogHeader>
                     <p className="text-sm text-slate-600 mt-2">Eliminare <strong>{deleteTarget?.name}</strong> ({deleteTarget?.stamp_id})?</p>
                     <DialogFooter className="mt-4">

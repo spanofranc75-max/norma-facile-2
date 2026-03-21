@@ -7,10 +7,11 @@ CategoryType = Literal["manuali", "procedure", "certificazioni", "template", "no
 
 # Document types that are "global" - auto-attached to security packages
 GLOBAL_DOC_TYPES = {
-    "durc": {"label": "DURC", "desc": "Documento Unico di Regolarità Contributiva"},
+    "durc": {"label": "DURC", "desc": "Documento Unico di Regolarita Contributiva"},
     "visura": {"label": "Visura Camerale", "desc": "Visura CCIAA aggiornata"},
     "white_list": {"label": "White List", "desc": "Iscrizione White List Prefettura"},
     "patente_crediti": {"label": "Patente a Crediti", "desc": "Patente a Crediti INAIL"},
+    "dvr": {"label": "DVR", "desc": "Documento di Valutazione dei Rischi (D.Lgs 81/08)"},
 }
 
 

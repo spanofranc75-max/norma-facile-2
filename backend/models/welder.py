@@ -25,10 +25,12 @@ class QualificationResponse(BaseModel):
     position: Optional[str] = None
     issue_date: Optional[str] = None
     expiry_date: str
+    cert_code: Optional[str] = None
     status: QualificationStatus
     days_until_expiry: Optional[int] = None
     has_file: bool = False
     filename: Optional[str] = None
+    notes: Optional[str] = None
 
 
 class WelderCreate(BaseModel):

@@ -96,10 +96,20 @@ const NAV_GROUPS = [
             { path: '/report-cam', label: 'Sostenibilita & CO2', icon: Award },
             { path: '/sistema-qualita', label: 'Sistema Qualita', icon: FileText },
             { path: '/strumenti', label: 'Apparecchiature', icon: Wrench },
-            { path: '/saldatori', label: 'Saldatori', icon: Users },
             { path: '/wps', label: 'WPS (Procedure)', icon: Flame },
             { path: '/audit', label: 'Audit & NC', icon: ClipboardCheck },
             { path: '/attrezzature', label: 'Scadenzario Attrezzature', icon: Wrench },
+        ],
+    },
+    {
+        id: 'risorse_umane',
+        label: 'Risorse Umane',
+        icon: Users,
+        type: 'group',
+        roles: ['admin', 'ufficio_tecnico'],
+        children: [
+            { path: '/operai', label: 'Anagrafica Operai', icon: Users },
+            { path: '/operai/matrice', label: 'Matrice Scadenze', icon: Shield },
         ],
     },
     {

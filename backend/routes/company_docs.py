@@ -284,25 +284,53 @@ async def delete_document(doc_id: str, user: dict = Depends(get_current_user)):
 
 @router.get("/sicurezza-globali")
 async def list_global_docs(user: dict = Depends(get_current_user)):
-    """Lista documenti aziendali globali per sicurezza/POS."""
+    """Lista documenti aziendali globali per sicurezza/POS con info scadenze."""
     from models.company_doc import GLOBAL_DOC_TYPES
     docs = await db.company_documents.find(
         {"category": "sicurezza_globale"},
         {"_id": 0}
     ).to_list(50)
 
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     result = {}
+    scadenze_alert = []
+
     for doc_type, meta in GLOBAL_DOC_TYPES.items():
         matching = [d for d in docs if d.get("tags") and doc_type in d.get("tags", [])]
         if matching:
             d = matching[0]
+            scadenza = d.get("scadenza", "")
+            days_to_expiry = None
+            is_expiring = False
+            is_expired = False
+            if scadenza:
+                try:
+                    from datetime import date
+                    exp_date = date.fromisoformat(scadenza)
+                    today_date = date.fromisoformat(today)
+                    days_to_expiry = (exp_date - today_date).days
+                    is_expiring = 0 < days_to_expiry <= 15
+                    is_expired = days_to_expiry <= 0
+                except (ValueError, TypeError):
+                    pass
+            if is_expiring or is_expired:
+                scadenze_alert.append({
+                    "doc_type": doc_type,
+                    "label": meta["label"],
+                    "scadenza": scadenza,
+                    "days_to_expiry": days_to_expiry,
+                    "is_expired": is_expired,
+                })
             result[doc_type] = {
                 "doc_id": d["doc_id"],
                 "title": d["title"],
                 "filename": d["filename"],
                 "upload_date": str(d.get("upload_date", "")),
-                "scadenza": d.get("scadenza", ""),
+                "scadenza": scadenza,
                 "size_kb": d.get("size_kb", 0),
+                "days_to_expiry": days_to_expiry,
+                "is_expiring": is_expiring,
+                "is_expired": is_expired,
                 "presente": True,
                 **meta,
             }
@@ -310,10 +338,21 @@ async def list_global_docs(user: dict = Depends(get_current_user)):
             result[doc_type] = {
                 "doc_id": None,
                 "presente": False,
+                "days_to_expiry": None,
+                "is_expiring": False,
+                "is_expired": False,
                 **meta,
             }
 
-    return {"documenti": result, "completo": all(v["presente"] for v in result.values())}
+    total = len(GLOBAL_DOC_TYPES)
+    caricati = sum(1 for v in result.values() if v["presente"])
+    return {
+        "documenti": result,
+        "completo": caricati == total,
+        "caricati": caricati,
+        "totale": total,
+        "scadenze_alert": scadenze_alert,
+    }
 
 
 @router.post("/sicurezza-globali/{doc_type}")
