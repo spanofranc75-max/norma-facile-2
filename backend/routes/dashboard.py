@@ -1,6 +1,10 @@
 """Dashboard stats routes for the Workshop Dashboard (Cruscotto Officina)."""
+import io
+import os
+import zipfile
 from fastapi import APIRouter, Depends, HTTPException
-from datetime import datetime, timezone, timedelta
+from fastapi.responses import StreamingResponse
+from datetime import datetime, timezone, timedelta, date
 from core.security import get_current_user
 from core.database import db
 from services.profiles_data import calculate_bars_needed
@@ -137,7 +141,265 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
     }
 
 
-@router.get("/compliance-en1090")
+@router.get("/compliance-docs")
+async def get_compliance_docs_status(user: dict = Depends(get_current_user)):
+    """Stato conformita documenti aziendali + allegati POS con previsione 30 giorni."""
+    from models.company_doc import GLOBAL_DOC_TYPES, ALLEGATI_POS_TYPES
+    today = date.today()
+
+    # Global docs
+    global_docs = await db.company_documents.find(
+        {"category": "sicurezza_globale"}, {"_id": 0}
+    ).to_list(50)
+    global_map = {}
+    for d in global_docs:
+        tag = (d.get("tags", []) or [None])[0]
+        if tag:
+            global_map[tag] = d
+
+    docs_status = []
+    for dtype, meta in GLOBAL_DOC_TYPES.items():
+        d = global_map.get(dtype)
+        if d:
+            scadenza = d.get("scadenza", "")
+            days_left = None
+            status = "valido"
+            if scadenza:
+                try:
+                    exp = date.fromisoformat(scadenza)
+                    days_left = (exp - today).days
+                    if days_left <= 0:
+                        status = "scaduto"
+                    elif days_left <= 15:
+                        status = "critico"
+                    elif days_left <= 30:
+                        status = "in_scadenza"
+                except (ValueError, TypeError):
+                    pass
+            else:
+                status = "no_scadenza"
+            docs_status.append({
+                "tipo": dtype, "label": meta["label"],
+                "presente": True, "scadenza": scadenza,
+                "days_left": days_left, "status": status,
+            })
+        else:
+            docs_status.append({
+                "tipo": dtype, "label": meta["label"],
+                "presente": False, "scadenza": None,
+                "days_left": None, "status": "mancante",
+            })
+
+    # Allegati POS
+    pos_docs = await db.company_documents.find(
+        {"category": "allegati_pos"}, {"_id": 0}
+    ).to_list(50)
+    pos_map = {}
+    for d in pos_docs:
+        tag = (d.get("tags", []) or [None])[0]
+        if tag:
+            pos_map[tag] = d
+
+    allegati_status = []
+    for dtype, meta in ALLEGATI_POS_TYPES.items():
+        d = pos_map.get(dtype)
+        allegati_status.append({
+            "tipo": dtype, "label": meta["label"],
+            "presente": d is not None,
+            "includi_pos": d.get("includi_pos", True) if d else True,
+        })
+
+    # Aggregate
+    total_global = len(GLOBAL_DOC_TYPES)
+    caricati_global = sum(1 for s in docs_status if s["presente"])
+    scaduti = [s for s in docs_status if s["status"] == "scaduto"]
+    critici = [s for s in docs_status if s["status"] == "critico"]
+    in_scadenza = [s for s in docs_status if s["status"] == "in_scadenza"]
+    mancanti = [s for s in docs_status if s["status"] == "mancante"]
+
+    total_pos = len(ALLEGATI_POS_TYPES)
+    caricati_pos = sum(1 for s in allegati_status if s["presente"])
+
+    # Conformita % for commesse
+    commesse_attive = await db.commesse.find(
+        {"user_id": user["user_id"], "stato": {"$nin": ["chiuso", "sospesa"]}},
+        {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "client_name": 1,
+         "deadline": 1, "cantiere": 1}
+    ).sort("created_at", -1).to_list(50)
+
+    commesse_compliance = []
+    for c in commesse_attive:
+        # Stima durata dalla deadline o dal cantiere
+        deadline_str = c.get("deadline") or ""
+        cantiere_data = c.get("cantiere", {})
+        if isinstance(cantiere_data, dict):
+            deadline_str = deadline_str or cantiere_data.get("end_date", "")
+        end_date = None
+        if deadline_str:
+            try:
+                end_date = date.fromisoformat(str(deadline_str)[:10])
+            except (ValueError, TypeError):
+                pass
+
+        # Calcola quanti documenti saranno validi per la durata della commessa
+        validi_per_commessa = 0
+        problemi = []
+        for s in docs_status:
+            if not s["presente"]:
+                problemi.append(f"{s['label']}: mancante")
+                continue
+            if s["status"] == "scaduto":
+                problemi.append(f"{s['label']}: scaduto")
+                continue
+            if end_date and s["days_left"] is not None:
+                remaining_at_end = s["days_left"] - (end_date - today).days
+                if remaining_at_end < 0:
+                    problemi.append(f"{s['label']}: scade prima della fine lavori")
+                    continue
+            validi_per_commessa += 1
+
+        pct = round(validi_per_commessa / total_global * 100) if total_global > 0 else 0
+        commesse_compliance.append({
+            "commessa_id": c["commessa_id"],
+            "numero": c.get("numero", ""),
+            "title": c.get("title", ""),
+            "client_name": c.get("client_name", ""),
+            "deadline": str(deadline_str) if deadline_str else None,
+            "pct_conforme": pct,
+            "problemi": problemi,
+        })
+
+    return {
+        "documenti": docs_status,
+        "allegati_pos": allegati_status,
+        "riepilogo": {
+            "totale_globali": total_global,
+            "caricati_globali": caricati_global,
+            "totale_pos": total_pos,
+            "caricati_pos": caricati_pos,
+            "scaduti": len(scaduti),
+            "critici": len(critici),
+            "in_scadenza_30gg": len(in_scadenza),
+            "mancanti": len(mancanti),
+        },
+        "alert_30gg": [s for s in docs_status if s["status"] in ("in_scadenza", "critico", "scaduto")],
+        "commesse_compliance": commesse_compliance,
+    }
+
+
+@router.get("/fascicolo-aziendale")
+async def download_fascicolo_aziendale(user: dict = Depends(get_current_user)):
+    """Scarica ZIP con tutti i documenti aziendali globali (DURC, Visura, DVR, etc.)."""
+    upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "company_docs")
+    global_docs = await db.company_documents.find(
+        {"category": {"$in": ["sicurezza_globale", "allegati_pos"]}},
+        {"_id": 0}
+    ).to_list(50)
+
+    if not global_docs:
+        raise HTTPException(404, "Nessun documento aziendale caricato")
+
+    zip_buffer = io.BytesIO()
+    files_added = 0
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for doc in global_docs:
+            safe_fn = doc.get("safe_filename", "")
+            fpath = os.path.join(upload_dir, safe_fn)
+            if safe_fn and os.path.exists(fpath):
+                cat = doc.get("category", "")
+                folder = "01_DOCUMENTI_AZIENDA" if cat == "sicurezza_globale" else "02_ALLEGATI_POS"
+                label = doc.get("title", "").upper().replace(" ", "_")
+                filename = doc.get("filename", safe_fn)
+                with open(fpath, "rb") as f:
+                    zf.writestr(f"{folder}/{label}_{filename}", f.read())
+                files_added += 1
+
+        now_str = datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M")
+        zf.writestr("INFO.txt", f"Fascicolo Aziendale — Steel Project Design\nGenerato: {now_str}\nDocumenti inclusi: {files_added}\n")
+
+    if files_added == 0:
+        raise HTTPException(404, "Nessun file trovato su disco")
+
+    zip_buffer.seek(0)
+    fname = f"Fascicolo_Aziendale_{datetime.now(timezone.utc).strftime('%Y%m%d')}.zip"
+    return StreamingResponse(
+        zip_buffer, media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
+
+
+@router.get("/commessa-compliance/{commessa_id}")
+async def check_commessa_compliance(commessa_id: str, user: dict = Depends(get_current_user)):
+    """Validazione preventiva: i documenti aziendali coprono la durata della commessa?"""
+    from models.company_doc import GLOBAL_DOC_TYPES
+
+    commessa = await db.commesse.find_one(
+        {"commessa_id": commessa_id, "user_id": user["user_id"]},
+        {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "deadline": 1, "cantiere": 1}
+    )
+    if not commessa:
+        raise HTTPException(404, "Commessa non trovata")
+
+    today = date.today()
+    deadline_str = commessa.get("deadline") or ""
+    cantiere_data = commessa.get("cantiere", {})
+    if isinstance(cantiere_data, dict):
+        deadline_str = deadline_str or cantiere_data.get("end_date", "")
+    end_date = None
+    if deadline_str:
+        try:
+            end_date = date.fromisoformat(str(deadline_str)[:10])
+        except (ValueError, TypeError):
+            pass
+
+    global_docs = await db.company_documents.find(
+        {"category": "sicurezza_globale"}, {"_id": 0}
+    ).to_list(50)
+    gmap = {}
+    for d in global_docs:
+        tag = (d.get("tags", []) or [None])[0]
+        if tag:
+            gmap[tag] = d
+
+    checks = []
+    bloccanti = []
+    for dtype, meta in GLOBAL_DOC_TYPES.items():
+        d = gmap.get(dtype)
+        if not d:
+            checks.append({"tipo": dtype, "label": meta["label"], "esito": "mancante", "messaggio": f"{meta['label']} non caricato"})
+            bloccanti.append(f"{meta['label']}: mancante")
+            continue
+
+        scadenza = d.get("scadenza", "")
+        if not scadenza:
+            checks.append({"tipo": dtype, "label": meta["label"], "esito": "no_scadenza", "messaggio": f"{meta['label']} caricato, scadenza non impostata"})
+            continue
+
+        try:
+            exp = date.fromisoformat(scadenza)
+            days_left = (exp - today).days
+        except (ValueError, TypeError):
+            checks.append({"tipo": dtype, "label": meta["label"], "esito": "errore", "messaggio": "Data scadenza non valida"})
+            continue
+
+        if days_left <= 0:
+            checks.append({"tipo": dtype, "label": meta["label"], "esito": "scaduto", "messaggio": f"{meta['label']} scaduto il {scadenza}"})
+            bloccanti.append(f"{meta['label']}: scaduto il {scadenza}")
+        elif end_date and (exp < end_date):
+            checks.append({"tipo": dtype, "label": meta["label"], "esito": "insufficiente",
+                           "messaggio": f"{meta['label']} scade il {scadenza}, prima della fine lavori ({end_date.isoformat()})"})
+            bloccanti.append(f"{meta['label']}: scade prima della fine lavori")
+        else:
+            checks.append({"tipo": dtype, "label": meta["label"], "esito": "ok", "messaggio": f"Valido (scade {scadenza}, {days_left}gg)"})
+
+    conforme = len(bloccanti) == 0
+    return {
+        "commessa_id": commessa_id,
+        "numero": commessa.get("numero", ""),
+        "conforme": conforme,
+        "bloccanti": bloccanti,
+        "checks": checks,
+    }
 async def get_compliance_overview(user: dict = Depends(get_current_user)):
     """Dashboard widget: EN 1090 compliance status for all commesse with fascicolo tecnico data."""
     uid = user["user_id"]

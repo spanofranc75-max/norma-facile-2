@@ -21,6 +21,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import QuickActionFAB from '../components/QuickActionFAB';
 import QualityScoreWidget from '../components/QualityScoreWidget';
 import ComplianceWidget from '../components/ComplianceWidget';
+import ComplianceDocsWidget from '../components/ComplianceDocsWidget';
 
 const formatCurrency = (v) =>
     new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
@@ -320,6 +321,9 @@ export default function Dashboard() {
                         <ComplianceWidget />
                     </div>
                 </div>
+
+                {/* Conformita Documentale — Pre-qualifica */}
+                <ComplianceDocsWidget />
 
                 {/* Widgets Row — 3 columns */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

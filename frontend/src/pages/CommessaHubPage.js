@@ -26,6 +26,7 @@ import {
 import CommessaOpsPanel from '../components/CommessaOpsPanel';
 import VociLavoroSection from '../components/VociLavoroSection';
 import { DisabledTooltip } from '../components/DisabledTooltip';
+import CommessaComplianceBanner from '../components/CommessaComplianceBanner';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
@@ -303,6 +304,9 @@ export default function CommessaHubPage() {
                         </Button>
                     </div>
                 </div>
+
+                {/* Validazione Preventiva Documenti */}
+                <CommessaComplianceBanner commessaId={commessaId} />
 
                 {/* Commessa Info Card */}
                 <Card className="border-gray-200" data-testid="commessa-info">

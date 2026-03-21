@@ -1,0 +1,72 @@
+{
+  "summary": "Iteration 199: Compliance Docs Widget & Fascicolo Aziendale - All features working correctly. Backend 21/21 tests passed. Frontend UI fully functional with dashboard widget, commessa compliance banner, and download buttons.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration199_compliance_docs_widget.py",
+    "/app/test_reports/pytest/iteration199_compliance_docs_widget_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "GET /api/dashboard/compliance-docs returns correct structure: documenti, allegati_pos, riepilogo, alert_30gg, commesse_compliance",
+    "Riepilogo shows totale_globali=5, caricati_globali=3, mancanti=2 (White List, Patente a Crediti)",
+    "Commesse compliance shows pct_conforme (60% for Loiano) with problemi list",
+    "GET /api/dashboard/fascicolo-aziendale returns valid ZIP with INFO.txt and organized folders",
+    "GET /api/dashboard/commessa-compliance/{commessa_id} returns conforme=false, bloccanti=['White List: mancante', 'Patente a Crediti: mancante']",
+    "Each check has tipo, label, esito (ok/mancante/scaduto/insufficiente/no_scadenza), messaggio",
+    "Frontend ComplianceDocsWidget shows document pills with status colors, alert badge '2 problemi', commesse progress bars",
+    "Frontend CommessaComplianceBanner shows red warning with all 5 checks and 'Correggi documenti' button",
+    "Pacco Documenti button works - returns valid PDF",
+    "Fascicolo download button works - returns valid ZIP",
+    "Verbale Posa PDF logo integration implemented at lines 332-340 in verbale_posa.py - checks both settings and company_settings collections"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration199_compliance_docs_widget.py"
+  ],
+  "success_rate": {
+    "backend": "100% (21 tests passed)",
+    "frontend": "100% (all UI elements working)"
+  },
+  "test_credentials": {
+    "session_token": "test_session_2026_active",
+    "cookie_name": "session_token",
+    "test_commessa": "com_loiano_cims_2026"
+  },
+  "seed_data_creation": "Test data already exists: DURC with scadenza 2026-08-15, Visura Camerale, DVR uploaded. White List and Patente a Crediti missing (as expected for compliance testing).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 199 verified Compliance Docs Widget & Fascicolo Aziendale features. Key findings: (1) Dashboard widget 'Conformita Documentale' shows 5 document pills with status colors, '2 problemi' alert badge, and 6 commesse with progress bars (60% for Loiano). (2) Fascicolo download button returns valid ZIP with INFO.txt and organized folders. (3) CommessaHub page shows red compliance warning banner with 5 checks (DURC ok, Visura no_scadenza, White List mancante, Patente mancante, DVR no_scadenza). (4) 'Correggi documenti' button navigates to settings. (5) Pacco Documenti button returns valid PDF. (6) Verbale Posa PDF logo integration checks both settings and company_settings collections for logo_url.",
+  "testing_summary": {
+    "backend_endpoints": {
+      "GET /api/dashboard/compliance-docs": "PASS - Returns documenti, allegati_pos, riepilogo, alert_30gg, commesse_compliance",
+      "GET /api/dashboard/fascicolo-aziendale": "PASS - Returns valid ZIP with Content-Disposition header",
+      "GET /api/dashboard/commessa-compliance/{commessa_id}": "PASS - Returns conforme, bloccanti, checks for Loiano",
+      "GET /api/commesse/{commessa_id}/pacco-documenti": "PASS - Returns valid PDF",
+      "Auth required tests": "PASS - All return 401 without auth",
+      "404 for invalid commessa": "PASS - Returns 404 for non-existent commessa"
+    },
+    "frontend_ui": {
+      "Dashboard (/dashboard)": {
+        "compliance_widget": "PASS - data-testid='widget-compliance-docs' visible",
+        "doc_pills": "PASS - 5 document status pills (DURC, Visura, White List, Patente, DVR)",
+        "alert_badge": "PASS - Shows '2 problemi' in red badge",
+        "commesse_rows": "PASS - 6 commesse with progress bars and percentages",
+        "fascicolo_btn": "PASS - data-testid='btn-fascicolo' clickable",
+        "gestisci_link": "PASS - data-testid='link-gestisci-docs' visible"
+      },
+      "CommessaHub (/commesse/com_loiano_cims_2026)": {
+        "compliance_banner": "PASS - data-testid='compliance-banner-warning' visible",
+        "checks_list": "PASS - 5 checks with icons and messages",
+        "fix_button": "PASS - data-testid='btn-fix-compliance' with '2 problemi' badge",
+        "pacco_btn": "PASS - data-testid='btn-pacco-magico' visible"
+      }
+    }
+  }
+}

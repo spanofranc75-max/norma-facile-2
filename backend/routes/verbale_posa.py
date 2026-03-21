@@ -329,6 +329,16 @@ async def generate_pdf(commessa_id: str, user: dict = Depends(get_current_user))
     company_addr = company.get("indirizzo", "Via dell'Industria - Bologna") if company else ""
     company_piva = company.get("partita_iva", "") if company else ""
 
+    # Logo aziendale — check both settings collections
+    logo_url = company.get("logo_url", "") if company else ""
+    if not logo_url:
+        cs = await db.company_settings.find_one({}, {"_id": 0, "logo_url": 1})
+        logo_url = cs.get("logo_url", "") if cs else ""
+    if logo_url and logo_url.startswith("data:image"):
+        logo_html = f'<img src="{logo_url}" style="max-height:50px;max-width:180px;object-fit:contain;" />'
+    else:
+        logo_html = f'<h1 style="font-size:18pt;color:#0055FF;margin:0;letter-spacing:1px;">{company_name.upper()}</h1>'
+
     html = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8">
 <style>
@@ -371,7 +381,7 @@ async def generate_pdf(commessa_id: str, user: dict = Depends(get_current_user))
 <!-- HEADER -->
 <div class="header">
     <div class="logo-area">
-        <h1>STEEL PROJECT DESIGN</h1>
+        {logo_html}
         <p>{company_addr} | P.IVA {company_piva}</p>
     </div>
     <div class="doc-info">
