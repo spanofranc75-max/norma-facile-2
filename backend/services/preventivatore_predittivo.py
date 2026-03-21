@@ -52,8 +52,8 @@ TABELLA_ORE_KG = {
     "speciale": {
         "label": "Struttura Speciale",
         "desc": "EXC3/EXC4, strutture antisismiche, offshore, ad alta precisione",
-        "ore_per_ton": 55,
-        "range": (45, 70),
+        "ore_per_ton": 30,
+        "range": (25, 40),
     },
 }
 
@@ -97,16 +97,22 @@ DRAWING_MATERIALS_PROMPT = """Sei un ingegnere strutturale esperto in carpenteri
 
 Analizza questo disegno tecnico e ESTRAI TUTTI i materiali strutturali presenti.
 
+REGOLE IMPORTANTI:
+- LEGGI LE QUOTE REALI dal disegno (scala indicata nel cartiglio). NON assumere lunghezze fisse.
+- Distingui tra TRAVI (orizzontali, luci campata) e PILASTRI (verticali, altezza interpiano ~3-4m).
+- Per i BULLONI, stima sempre il peso: M16 cl.8.8 ~0.5 kg/cad, M20 cl.8.8 ~0.8 kg/cad, M24 cl.8.8 ~1.3 kg/cad.
+- Per le PIASTRE, calcola il peso dal volume: peso = lung_m * larg_m * spessore_m * 7850 kg/m3.
+
 Per OGNI elemento trovato, riporta:
 1. tipo: "profilo", "piastra", "lamiera", "tubo", "angolare", "bullone", "tirafondi", "altro"
 2. profilo: Nome profilo esatto se applicabile (es. "IPE 200", "HEA 160", "UPN 120", "TUBO 100x100x4")
 3. materiale: Tipo acciaio (es. "S275JR", "S355JR"). Se non leggibile: "S275JR"
-4. lunghezza_mm: Lunghezza in mm (stimata se necessario)
+4. lunghezza_mm: Lunghezza REALE dal disegno in mm (NON assumere 12000mm per tutti)
 5. quantita: Numero pezzi
 6. spessore_mm: Per piastre/lamiere, spessore in mm
 7. larghezza_mm: Per piastre/lamiere, larghezza in mm
-8. descrizione: Descrizione testuale
-9. peso_stimato_kg: Peso stimato in kg (calcolato se possibile)
+8. descrizione: Descrizione testuale (specificare se trave o pilastro)
+9. peso_stimato_kg: Peso calcolato in kg (per bulloni: peso totale = peso_unitario * quantita)
 10. diametro: Per bulloneria, diametro (es. "M16", "M20")
 11. classe: Per bulloneria, classe resistenza (es. "8.8", "10.9")
 
@@ -302,12 +308,30 @@ async def ml_stima_ore(user_id: str, peso_totale_kg: float, tipologia: str, db_i
     """
     Machine Learning semplice: confronta con commesse chiuse per affinare la stima.
     Usa regressione lineare su peso → ore effettive.
+    Include anche stima EUR/kg come metodo alternativo (es. 1.05 EUR/kg montaggio).
     Returns: { "ore_parametriche": X, "ore_ml": Y, "ore_suggerite": Z, "confidence": "alta|media|bassa", "campioni": N }
     """
-    # 1. Stima parametrica
+    # 1. Stima parametrica (ore/tonnellata)
     params = TABELLA_ORE_KG.get(tipologia, TABELLA_ORE_KG["media"])
     peso_ton = peso_totale_kg / 1000
     ore_parametriche = round(peso_ton * params["ore_per_ton"], 1)
+
+    # 1b. Stima alternativa EUR/kg (metodo diffuso in carpenteria)
+    # Costo montaggio ~1.05 EUR/kg include officina+montaggio
+    COSTO_MONTAGGIO_EUR_KG = {
+        "semplice": 0.85,
+        "media": 1.00,
+        "complessa": 1.20,
+        "speciale": 1.05,  # Antisismico: piu saldature ma pesi standardizzati
+    }
+    eur_kg = COSTO_MONTAGGIO_EUR_KG.get(tipologia, 1.05)
+    costo_totale_montaggio = peso_totale_kg * eur_kg
+    # Recupera costo orario company
+    company = await db_instance.company_costs.find_one(
+        {"user_id": user_id}, {"_id": 0, "costo_orario_pieno": 1}
+    )
+    costo_orario = (company or {}).get("costo_orario_pieno", 35.0)
+    ore_eur_kg = round(costo_totale_montaggio / costo_orario, 1) if costo_orario else ore_parametriche
 
     # 2. Recupera dati storici dalle commesse chiuse
     commesse_chiuse = await db_instance.commesse.find(
@@ -346,15 +370,18 @@ async def ml_stima_ore(user_id: str, peso_totale_kg: float, tipologia: str, db_i
     n_campioni = len(campioni)
 
     if n_campioni < 3:
-        # Not enough data for ML, use parametric
+        # Not enough data for ML, use EUR/kg as primary, parametric as fallback
+        ore_suggerite = ore_eur_kg  # Metodo EUR/kg piu affidabile del parametrico puro
         return {
             "ore_parametriche": ore_parametriche,
+            "ore_eur_kg": ore_eur_kg,
+            "eur_kg_montaggio": eur_kg,
             "ore_ml": None,
-            "ore_suggerite": ore_parametriche,
+            "ore_suggerite": ore_suggerite,
             "confidence": "bassa",
             "campioni": n_campioni,
-            "metodo": "parametrico",
-            "nota": f"Solo {n_campioni} commesse chiuse con dati. Servono almeno 3 per ML.",
+            "metodo": "eur_kg",
+            "nota": f"Solo {n_campioni} commesse chiuse con dati. Usato metodo EUR/kg ({eur_kg} EUR/kg).",
         }
 
     # 3. Regressione lineare semplice: peso_kg → ore
@@ -404,6 +431,8 @@ async def ml_stima_ore(user_id: str, peso_totale_kg: float, tipologia: str, db_i
 
     return {
         "ore_parametriche": ore_parametriche,
+        "ore_eur_kg": ore_eur_kg,
+        "eur_kg_montaggio": eur_kg,
         "ore_ml": ore_ml,
         "ore_suggerite": ore_suggerite,
         "confidence": confidence,
