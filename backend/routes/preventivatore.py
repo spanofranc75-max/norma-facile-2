@@ -42,6 +42,10 @@ class CalcolaRequest(BaseModel):
     margine_conto_lavoro: float = 20
     ore_override: Optional[float] = None
     costo_cl_override: Optional[float] = None
+    applica_calibrazione: bool = False
+    peso_kg_target: Optional[float] = None
+    classe_antisismica_target: Optional[int] = None
+    nodi_target: Optional[int] = None
 
 
 class GeneraPreventivoRequest(BaseModel):
@@ -185,6 +189,25 @@ async def calcola(data: CalcolaRequest, user: dict = Depends(get_current_user)):
         costo_cl_stimato=data.costo_cl_override or 0,
     )
 
+    # Apply ML calibration if requested
+    calibrazione = None
+    if data.applica_calibrazione:
+        from services.ml_calibrazione import applica_calibrazione as ml_calibra
+        target_params = {
+            "peso_kg": data.peso_kg_target or peso_totale,
+            "classe_antisismica": data.classe_antisismica_target or 0,
+            "nodi_strutturali": data.nodi_target or 0,
+            "tipologia": data.tipologia_struttura,
+        }
+        riepilogo = calcolo.get("riepilogo", {})
+        stima_raw = {
+            "ore_totali": ore_da_usare,
+            "costo_materiali": riepilogo.get("costo_materiali", 0),
+            "costo_manodopera": riepilogo.get("costo_manodopera", 0),
+            "costo_cl": riepilogo.get("costo_cl", 0),
+        }
+        calibrazione = await ml_calibra(db, user["user_id"], stima_raw, target_params)
+
     return {
         "peso_totale_kg": round(peso_totale, 1),
         "tipologia": data.tipologia_struttura,
@@ -193,6 +216,7 @@ async def calcola(data: CalcolaRequest, user: dict = Depends(get_current_user)):
         "ore_utilizzate": ore_da_usare,
         "costo_orario": costo_orario,
         "calcolo": calcolo,
+        "calibrazione": calibrazione,
     }
 
 

@@ -62,15 +62,18 @@ export default function KPIDashboard() {
     const [tempi, setTempi] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    const [calibrazione, setCalibrazione] = useState(null);
+
     const fetchAll = useCallback(async () => {
         try {
-            const [ov, acc, tr, mar, forn, tmp] = await Promise.all([
+            const [ov, acc, tr, mar, forn, tmp, cal] = await Promise.all([
                 apiRequest('/kpi/overview'),
                 apiRequest('/kpi/accuracy-score'),
                 apiRequest('/kpi/trend-accuracy'),
                 apiRequest('/kpi/marginalita'),
                 apiRequest('/kpi/ritardi-fornitori'),
                 apiRequest('/kpi/tempi-medi'),
+                apiRequest('/calibrazione/status').catch(() => null),
             ]);
             setOverview(ov);
             setAccuracy(acc);
@@ -78,6 +81,7 @@ export default function KPIDashboard() {
             setMarginalita(mar);
             setFornitori(forn);
             setTempi(tmp);
+            setCalibrazione(cal);
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
     }, []);
@@ -307,6 +311,90 @@ export default function KPIDashboard() {
                                     <Bar dataKey="ore_per_ton" fill="#6366f1" name="Ore/Ton" radius={[4, 4, 0, 0]} />
                                 </BarChart>
                             </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* ML Calibration Panel */}
+                {calibrazione && calibrazione.n_progetti > 0 && (
+                    <Card className="border-indigo-200" data-testid="calibrazione-card">
+                        <CardHeader className="bg-indigo-50 border-b border-indigo-200 py-3">
+                            <CardTitle className="text-sm flex items-center gap-2 text-indigo-800">
+                                <Brain className="h-4 w-4" /> Calibrazione ML Predittiva
+                                {calibrazione.calibrato && (
+                                    <Badge variant="outline" className="border-emerald-500 text-emerald-700 text-[10px] ml-auto">Attiva</Badge>
+                                )}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4 space-y-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div className="text-center p-2 bg-white rounded border">
+                                    <p className="text-[10px] text-slate-500">Progetti Training</p>
+                                    <p className="text-xl font-bold text-indigo-700">{calibrazione.n_progetti}</p>
+                                </div>
+                                <div className="text-center p-2 bg-white rounded border">
+                                    <p className="text-[10px] text-slate-500">Accuracy Pre-ML</p>
+                                    <p className="text-xl font-bold text-amber-600">{calibrazione.accuracy_pre_calibrazione}%</p>
+                                </div>
+                                <div className="text-center p-2 bg-white rounded border">
+                                    <p className="text-[10px] text-slate-500">Accuracy Post-ML</p>
+                                    <p className="text-xl font-bold text-emerald-600">{calibrazione.accuracy_post_calibrazione}%</p>
+                                </div>
+                                <div className="text-center p-2 bg-white rounded border">
+                                    <p className="text-[10px] text-slate-500">Miglioramento</p>
+                                    <p className={`text-xl font-bold ${calibrazione.miglioramento_pct > 0 ? 'text-emerald-600' : 'text-slate-600'}`}>
+                                        {calibrazione.miglioramento_pct > 0 ? '+' : ''}{calibrazione.miglioramento_pct}%
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Correction factors */}
+                            {calibrazione.fattori && (
+                                <div>
+                                    <p className="text-xs font-medium text-slate-600 mb-2">Fattori Correttivi Appresi</p>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {Object.entries(calibrazione.fattori).map(([k, v]) => (
+                                            <div key={k} className="text-center p-1.5 bg-slate-50 rounded text-xs">
+                                                <span className="text-slate-500 capitalize">{k.replace('_', ' ')}</span>
+                                                <p className={`font-mono font-bold ${v > 1.05 ? 'text-red-600' : v < 0.95 ? 'text-emerald-600' : 'text-slate-700'}`}>
+                                                    x{v.toFixed(3)}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Evolution chart */}
+                            {calibrazione.evoluzione?.length > 2 && (
+                                <div>
+                                    <p className="text-xs font-medium text-slate-600 mb-2">Evoluzione Accuratezza</p>
+                                    <ResponsiveContainer width="100%" height={160}>
+                                        <LineChart data={calibrazione.evoluzione}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                            <XAxis dataKey="n" tick={{ fontSize: 10 }} label={{ value: 'Progetti', position: 'bottom', fontSize: 10 }} />
+                                            <YAxis domain={[50, 100]} tick={{ fontSize: 10 }} />
+                                            <Tooltip formatter={(v, name) => [`${v}%`, name === 'accuracy_pre' ? 'Senza ML' : 'Con ML']} />
+                                            <Line type="monotone" dataKey="accuracy_pre" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="5 5" name="Senza ML" dot={false} />
+                                            <Line type="monotone" dataKey="accuracy_post" stroke="#10b981" strokeWidth={2} name="Con ML" dot={{ r: 3 }} />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            )}
+
+                            {/* Distribution by type */}
+                            {calibrazione.distribuzione_tipologia && (
+                                <div>
+                                    <p className="text-xs font-medium text-slate-600 mb-2">Distribuzione per Tipologia</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {Object.entries(calibrazione.distribuzione_tipologia).map(([tipo, data]) => (
+                                            <Badge key={tipo} variant="outline" className="text-xs">
+                                                {tipo}: {data.count} progetti (err. {data.errore_medio_ore}%)
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 )}

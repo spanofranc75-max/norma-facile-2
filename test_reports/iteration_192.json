@@ -1,0 +1,97 @@
+{
+  "summary": "Iteration 192: ML Calibrazione for Preventivatore Predittivo. All 17 backend tests passed. Frontend KPI Dashboard verified with Calibrazione ML Predittiva panel showing training stats, accuracy metrics, correction factors, evolution chart, and distribution by type.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration192_ml_calibrazione.py",
+    "/app/test_reports/pytest/iteration192_ml_calibrazione_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "GET /api/calibrazione/status correctly returns training stats with n_progetti, calibrato, fattori, accuracy_pre/post_calibrazione, miglioramento_pct, distribuzione_tipologia, evoluzione",
+    "POST /api/calibrazione/calcola-fattori calculates correction factors using weighted similarity scoring (peso 50%, classe_antisismica 25%, nodi 15%, tipologia 10%)",
+    "POST /api/calibrazione/applica applies calibration factors to raw estimates and returns stima_originale, stima_calibrata, delta, fattori",
+    "POST /api/calibrazione/feedback registers completed projects and recalculates calibration",
+    "POST /api/preventivatore/calcola with applica_calibrazione=true integrates ML calibration into quote calculation",
+    "Correction factors are clamped to [0.5, 2.0] range for safety",
+    "Frontend KPI Dashboard shows Calibrazione ML Predittiva panel with all required elements: Progetti Training, Accuracy Pre/Post-ML, Miglioramento, Fattori Correttivi, Evoluzione chart, Distribuzione per Tipologia"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration192_ml_calibrazione.py"
+  ],
+  "success_rate": {
+    "backend": "100% (17 tests passed)",
+    "frontend": "100% (all UI elements verified)"
+  },
+  "test_credentials": {
+    "session_token": "test_cal_session_192",
+    "user_id": "test_cal_user_192",
+    "cookie_name": "session_token"
+  },
+  "seed_data_creation": "Created test user test_cal_user_192 with 10 historical completed projects in progetti_completati collection for ML calibration training",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 192 tested the ML Calibrazione system for Preventivatore Predittivo. Key findings: (1) GET /api/calibrazione/status returns training stats with n_progetti, calibrato, fattori (ore/materiali/manodopera/conto_lavoro), accuracy_pre_calibrazione, accuracy_post_calibrazione, miglioramento_pct, distribuzione_tipologia (by type with count and errore_medio_ore), evoluzione (array with progetto, accuracy_pre, accuracy_post, n). (2) POST /api/calibrazione/calcola-fattori calculates correction factors for target project using weighted similarity scoring. (3) POST /api/calibrazione/applica applies calibration to raw estimate and returns stima_originale, stima_calibrata, delta, fattori. (4) POST /api/calibrazione/feedback registers completed project and recalculates calibration. (5) POST /api/preventivatore/calcola with applica_calibrazione=true integrates ML calibration. (6) Frontend KPI Dashboard /kpi shows Calibrazione ML Predittiva panel at bottom with all stats, factors, evolution chart, and distribution badges. (7) Test user: test_cal_user_192 with session test_cal_session_192 has 10 seeded historical projects. (8) Cookie name is 'session_token' not 'session'.",
+  "testing_summary": {
+    "backend_endpoints": {
+      "GET /api/calibrazione/status (no auth)": "✓ Returns 401",
+      "GET /api/calibrazione/status (with auth)": "✓ Returns 200 with training stats",
+      "GET /api/calibrazione/status (test session)": "✓ Returns 200 with 10 projects, calibrato=true",
+      "POST /api/calibrazione/calcola-fattori (no auth)": "✓ Returns 401",
+      "POST /api/calibrazione/calcola-fattori (with auth)": "✓ Returns 200 with correction factors",
+      "POST /api/calibrazione/calcola-fattori (different tipologie)": "✓ Returns 200 for leggera/media/pesante/complessa",
+      "POST /api/calibrazione/applica (no auth)": "✓ Returns 401",
+      "POST /api/calibrazione/applica (with auth)": "✓ Returns 200 with calibrated estimate",
+      "POST /api/calibrazione/applica (delta verification)": "✓ Delta calculations correct",
+      "POST /api/calibrazione/feedback (no auth)": "✓ Returns 401",
+      "POST /api/calibrazione/feedback (with auth)": "✓ Returns 200, registers project",
+      "POST /api/preventivatore/calcola (without calibrazione)": "✓ Returns 200, calibrazione=null",
+      "POST /api/preventivatore/calcola (with calibrazione)": "✓ Returns 200 with calibrazione data",
+      "POST /api/calibrazione/calcola-fattori (empty target)": "✓ Returns 200 with defaults",
+      "POST /api/calibrazione/applica (zero values)": "✓ Returns 200",
+      "GET /api/calibrazione/status (evoluzione structure)": "✓ Verified array structure",
+      "GET /api/calibrazione/status (distribuzione structure)": "✓ Verified dict structure"
+    },
+    "frontend_ui": {
+      "KPIDashboard": {
+        "page_header": "✓ 'Dashboard KPI' with subtitle",
+        "kpi_overview": "✓ data-testid='kpi-overview' with 7 stat cards",
+        "accuracy_card": "✓ data-testid='accuracy-card' with gauge",
+        "trend_card": "✓ data-testid='trend-card' with line chart",
+        "marginalita_card": "✓ data-testid='marginalita-card' with bar chart",
+        "fornitori_card": "✓ data-testid='fornitori-card' with supplier list",
+        "calibrazione_card": "✓ data-testid='calibrazione-card' with ML panel"
+      },
+      "CalibrazioneMLPanel": {
+        "title": "✓ 'Calibrazione ML Predittiva' with 'Attiva' badge",
+        "progetti_training": "✓ Shows '10' projects",
+        "accuracy_pre_ml": "✓ Shows '91.8%'",
+        "accuracy_post_ml": "✓ Shows '97.6%'",
+        "miglioramento": "✓ Shows '+5.8%'",
+        "fattori_correttivi": "✓ Shows Ore x1.090, Materiali x1.071, Manodopera x1.090, Conto Lavoro x1.000",
+        "evoluzione_chart": "✓ Line chart with accuracy_pre (dashed) and accuracy_post (solid)",
+        "distribuzione_tipologia": "✓ Badges: pesante 2 (8.4%), leggera 2 (6%), media 3 (6.1%), complessa 3 (11.6%)"
+      }
+    },
+    "calibration_results": {
+      "n_progetti": 10,
+      "calibrato": true,
+      "accuracy_pre_calibrazione": "91.8%",
+      "accuracy_post_calibrazione": "97.6%",
+      "miglioramento_pct": "+5.8%",
+      "fattori": {
+        "ore": 1.09,
+        "materiali": 1.0708,
+        "manodopera": 1.09,
+        "conto_lavoro": 1.0
+      }
+    }
+  }
+}
