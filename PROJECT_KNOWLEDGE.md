@@ -259,6 +259,11 @@ INDICE
 │   │   ├── commesse.py             # CRUD commesse (~1330 righe)
 │   │   ├── voci_lavoro.py          # CRUD voci di lavoro (Matrioska)
 │   │   ├── officina.py             # Vista Officina: PIN, Timer, Foto, Checklist, Alerts
+│   │   ├── company_docs.py         # Documenti aziendali + Allegati POS (PATCH scadenza, CRUD allegati)
+│   │   ├── sicurezza.py            # Export CSE ZIP (include 05_ALLEGATI_POS/)
+│   │   ├── verbale_posa.py         # CRUD + PDF Verbale di Posa (con logo dinamico)
+│   │   ├── dashboard.py            # Stats + compliance-docs + fascicolo-aziendale + commessa-compliance
+│   │   ├── welders.py              # Risorse Umane + Matrice Scadenze
 │   │   ├── commessa_ops.py
 │   │   ├── approvvigionamento.py
 │   │   ├── produzione_ops.py
@@ -277,12 +282,19 @@ INDICE
         │   ├── CommessaOpsPanel.js   # Orchestratore (usa UNIONE categorie)
         │   ├── VociLavoroSection.js  # UI Voci di Lavoro
         │   ├── DiarioProduzione.js   # Diario adattivo + gestione PIN
-        │   └── ...
+        │   ├── ComplianceDocsWidget.js    # Widget dashboard conformita documentale
+        │   ├── CommessaComplianceBanner.js # Banner validazione preventiva commessa
+        │   └── settings/
+        │       ├── DocumentiAziendaTab.js  # Tabella documenti CIMS + salvataggio scadenze
+        │       ├── AllegatiPosTab.js       # Upload Rumore/Vibrazioni/MMC + toggle Includi POS
+        │       └── LogoTab.js              # Upload logo aziendale
         └── pages/
-            ├── CommessaHubPage.js    # Hub commessa + QR Officina
+            ├── CommessaHubPage.js    # Hub commessa + QR Officina + Compliance Banner
             ├── OfficinaPage.js       # Vista operai blindata (4 Ponti)
-            ├── Dashboard.js          # + Badge alert qualità
-            └── SettingsPage.js       # ⚠️ 1.731 righe — DA SPEZZARE
+            ├── Dashboard.js          # + Badge alert qualità + Widget Conformita
+            ├── VerbalePosaPage.js    # Mobile-first + firma + foto + lotti EN 1090
+            ├── MatriceScadenzePage.js # Matrice scadenze compliance operai
+            └── SettingsPage.js       # Documenti + Allegati POS + Logo + Azienda
 ```
 
 ### Regole di Manutenzione Codice
@@ -325,6 +337,10 @@ si DEVE proporre di spezzarlo.
 | `fatture` | Fatture emesse |
 | `fatture_ricevute` | Fatture fornitori |
 | `clients` | Clienti + fornitori |
+| `company_documents` | Documenti aziendali (sicurezza_globale + allegati_pos) |
+| `company_settings` | Impostazioni aziendali (logo_url, ragione_sociale, etc.) |
+| `verbali_posa` | Verbali di posa in opera (firma, foto, checklist) |
+| `welders` | Operai (Risorse Umane) con qualifiche e attestati sicurezza |
 
 ---
 
@@ -344,6 +360,52 @@ si DEVE proporre di spezzarlo.
 - **`DiarioProduzione.js`:** Gestione PIN inline per operatori
 - **`Dashboard.js`:** Badge rosso alert qualità
 - Test: 100% backend (16/16) + 100% frontend (iteration_179)
+
+### 21 Marzo 2026 — Fork 3: Sicurezza Documentale & Conformita Pre-Qualifica
+
+#### Fix Persistenza Date Scadenza (Bug P0)
+- **Backend `company_docs.py`:** Nuovo endpoint `PATCH /api/company/documents/sicurezza-globali/{doc_type}` per aggiornare la scadenza senza re-upload file
+- **Frontend `DocumentiAziendaTab.js`:** Aggiunto pulsante "Salva" (icona floppy) accanto ad ogni campo data, con funzione `handleSaveDate` che chiama il PATCH
+- Test: 100% backend + frontend (iteration_198)
+
+#### Allegati Tecnici POS (Rumore, Vibrazioni, MMC)
+- **Backend `company_doc.py` (model):** Aggiunto dizionario `ALLEGATI_POS_TYPES` con 3 tipi: rumore, vibrazioni, mmc
+- **Backend `company_docs.py`:** 4 nuovi endpoint per allegati POS:
+  - `GET /allegati-pos` — lista allegati con stato e flag includi_pos
+  - `POST /allegati-pos/{doc_type}` — upload allegato
+  - `PATCH /allegati-pos/{doc_type}` — toggle flag includi_pos
+  - `DELETE /allegati-pos/{doc_type}` — elimina allegato
+- **Frontend `AllegatiPosTab.js`:** Nuovo componente con tabella, upload, Switch "Includi nel POS", download, delete
+- **Frontend `SettingsPage.js`:** Tab Documenti ora mostra sia "Checklist Documenti CIMS" che "Allegati Tecnici POS"
+- **Backend `sicurezza.py`:** ZIP export (`export_cse`) include cartella `05_ALLEGATI_POS/` con solo documenti dove `includi_pos=true`
+- Collezione DB: `company_documents` con `category: "allegati_pos"` e campo `includi_pos: bool`
+- Test: 100% backend (21/21) + frontend (iteration_198)
+
+#### Dashboard Conformita Documentale (Widget Pre-Qualifica)
+- **Backend `dashboard.py`:** 3 nuovi endpoint:
+  - `GET /compliance-docs` — stato completo documenti + allegati + previsione 30gg + % conformita per commessa
+  - `GET /fascicolo-aziendale` — download ZIP istantaneo con tutti i documenti aziendali organizzati (01_DOCUMENTI_AZIENDA/ + 02_ALLEGATI_POS/ + INFO.txt)
+  - `GET /commessa-compliance/{commessa_id}` — validazione preventiva: verifica se documenti coprono la deadline della commessa
+- **Frontend `ComplianceDocsWidget.js`:** Widget full-width nella Dashboard con:
+  - Pillole colorate per stato di ogni documento (verde/giallo/rosso/grigio)
+  - Sezione "Previsione 30 giorni" con alert documenti in scadenza
+  - Barre di avanzamento per ogni commessa attiva (es. "Loiano: 60%")
+  - Pulsante "Fascicolo" per download ZIP istantaneo
+  - Link "Gestisci documenti" verso Impostazioni
+- **Frontend `CommessaComplianceBanner.js`:** Banner validazione preventiva nella pagina commessa:
+  - Banner verde se tutti i documenti sono conformi
+  - Banner rosso bloccante se documenti mancanti/scaduti/insufficienti
+  - Dettaglio check per ogni documento con esito (ok/mancante/scaduto/insufficiente/no_scadenza)
+  - Pulsante "Correggi documenti" che porta a Impostazioni
+- **Frontend `Dashboard.js`:** Importa e renderizza `ComplianceDocsWidget` sopra la riga widget
+- **Frontend `CommessaHubPage.js`:** Importa e renderizza `CommessaComplianceBanner` dopo l'header, prima della card info commessa
+- Test: 100% backend (21/21) + frontend (iteration_199)
+
+#### Logo Aziendale nel Verbale di Posa
+- **Backend `verbale_posa.py`:** PDF generation ora legge `logo_url` da `company_settings` collection
+  - Se logo base64 presente → mostra `<img>` nell'header PDF
+  - Se assente → fallback a testo "STEEL PROJECT DESIGN" in blu
+  - Cerca in entrambe le collection: `settings` e `company_settings`
 
 ### Sessioni Precedenti
 - Refactoring Backend: commessa_ops.py → 6 moduli (17/17 test)
@@ -519,6 +581,11 @@ Pacco Documenti: CAP. 1-5 (EN 1090, EN 13241, Relazione Tecnica, Montaggio, Sost
 ### Backlog Funzionale
 - UI Admin per Sfridi, Controlli Visivi, Registro NC
 - RBAC, Export Excel, Unificazione PDF, Portale clienti, WhatsApp
+- (P1) Integrazione email "Invia a CIMS" (SendGrid/Resend)
+- (P1) Training automatico ML dal Diario di Produzione
+- (P1) Alerting costi reali > budget
+- (P2) PDF Compliance dalla Matrice Scadenze
+- (P3) QR Code su documenti generati
 
 ---
 
