@@ -14,7 +14,7 @@ import uuid
 from datetime import datetime
 
 # Use the public URL for testing
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://norma-nervous-system.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://analisi-carpenteria.preview.emergentagent.com').rstrip('/')
 
 
 @pytest.fixture(scope="module")

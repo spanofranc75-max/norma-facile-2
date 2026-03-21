@@ -17,7 +17,7 @@ from datetime import datetime
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://norma-nervous-system.preview.emergentagent.com"
+    BASE_URL = "https://analisi-carpenteria.preview.emergentagent.com"
 
 
 class TestClonePreventivo:

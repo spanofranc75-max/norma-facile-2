@@ -13,7 +13,7 @@ import os
 from datetime import datetime, timedelta
 
 # Use PUBLIC URL for testing
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://norma-nervous-system.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://analisi-carpenteria.preview.emergentagent.com').rstrip('/')
 AUTH_TOKEN = "yDZ9JAQM_3ct2TZ0UE3BFkZDQcc6YRSFWMlv888wRhQ"
 
 # Test user data
