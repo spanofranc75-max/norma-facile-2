@@ -18,42 +18,24 @@ ERP completo per carpenteria metallica con gestione EN 1090, EN 13241, ISO 3834.
 ### Flusso Audit EN 1090
 
 #### FASE 1 — Riesame Tecnico (completata)
-- 11 check (7 auto + 4 manuali) raggruppati per sezione
-- Gate AVVIO_PRODUZIONE bloccante
-- Firma digitale + PDF Verbale
+- 11 check (7 auto + 4 manuali), Gate AVVIO_PRODUZIONE bloccante, Firma digitale + PDF
 
-#### FASE 2 — Registro Saldatura + Link DDT (21 Mar 2026)
-- **Registro Saldatura**: CRUD completo con filtro saldatori per processo/patentino
-  - Backend: `/api/registro-saldatura/{commessa_id}` (GET/POST/PUT/DELETE) + `/saldatori-idonei`
-  - Frontend: `RegistroSaldaturaSection` in CommessaHubPage
-- **Tracciabilita Materiali**: Auto-collegamento DDT → batch FPC
-  - Backend: `/api/fpc/batches/link-ddt/{commessa_id}` + `/rintracciabilita/{commessa_id}`
-  - Frontend: `TracciabilitaMaterialiSection` in CommessaHubPage
+#### FASE 2 — Registro Saldatura + Link DDT (completata)
+- Registro Saldatura CRUD con filtro saldatori per processo/patentino
+- Tracciabilita Materiali con auto-link DDT → batch
 
-#### Blocco Audit — Checklist + Soglia Calibro (21 Mar 2026)
-- **Controllo Finale Pre-Spedizione EN 1090-2:2024**: 11 check in 3 macro-aree:
-  - Visual Testing (4): VT 100% ISO 5817-C, difetti accettabili, saldature registrate, NC chiuse
-  - Dimensionale (3): Quote critiche B6/B8, tolleranze montaggio, strumenti tarati
-  - Compliance (4): Etichetta CE, DOP, colate coerenti, fascicolo completo
-  - 5 check manuali (checkbox) + 6 auto (verifiche real-time su DB)
-  - Firma digitale + approvazione bloccante
-  - Backend: `/api/controllo-finale/{commessa_id}` (GET/POST/POST approva)
-  - Frontend: `ControlloFinaleSection` in CommessaHubPage
-  - DB Collection: `controlli_finali`
-- **Soglia Accettabilita Configurabile per Strumento** (Racc. RINA n.2):
-  - Campo `soglia_accettabilita` + `unita_soglia` (mm/% /N/bar) nel modello Instrument
-  - Default Calibro Borletti: ±0.1 mm
-  - Alert "Fuori Tolleranza" nel Riesame Tecnico (check dinamico per strumento)
-  - Badge viola sulle card strumenti nella InstrumentsPage
-  - Sezione form soglia visibile solo per type=misura
+#### Checklist Fine Lavori + Soglia Calibro (completata)
+- 11 check in 3 aree (VT ISO 5817-C, Dimensionale B6/B8, Compliance CE/DOP)
+- Soglia accettabilita configurabile per strumento (default Calibro ±0.1mm)
 
-### Sicurezza & Conformita
-- Documenti globali con scadenze persistenti (PATCH)
-- Allegati Tecnici POS (Rumore, Vibrazioni, MMC) con toggle
-- Dashboard Conformita + Fascicolo Aziendale ZIP + Validazione Preventiva Commessa
-
-### Manuale Utente PDF
-- 7 capitoli navigabili + 8 FAQ + PDF white-label con QR Code
+#### Fili Conduttori — Unificazione Dati (21 Mar 2026)
+- **Filo Rintracciabilita**: `material_batches` = unica fonte di verita (non piu `fpc_batches` separato)
+  - Rintracciabilita, Riesame, Controllo Finale tutti leggono da `material_batches`
+- **Filo Qualifica**: Saldatori filtrati per patentino valido nel Registro Saldatura
+- **Filo Manutenzione**: Riesame Tecnico blocca se strumenti/attrezzature scaduti
+  - Soglia tolleranza configurabile per strumento
+- **Filo Documentale**: DOP auto-popola classe_esecuzione dal Riesame + rintracciabilita da `material_batches`
+  - Sezione "3b. Rintracciabilita Materiali" aggiunta automaticamente nel PDF DOP
 
 ## Credenziali Test
 - User: user_97c773827822
@@ -63,8 +45,8 @@ ERP completo per carpenteria metallica con gestione EN 1090, EN 13241, ISO 3834.
 ## Backlog Prioritario
 
 ### P0 — Richiesti dall'utente (prossimi)
-- (P0) Verifica Coerenza Rintracciabilita — Pulsante che confronta lotti FPC vs DDT e segnala discrepanze
-- (P0) Template Processo 111 — PDF richiesta preventivo laboratorio (UNI EN ISO 15614-1, EXC2, S275/S355)
+- Verifica Coerenza Rintracciabilita — Pulsante confronto lotti vs DDT con segnalazione discrepanze
+- Template Processo 111 — PDF richiesta preventivo laboratorio prove (UNI EN ISO 15614-1, EXC2, S275/S355)
 
 ### P1 — Fase 3 Audit
 - Report Ispezioni VT/Dimensionali con checklist ISO 5817
