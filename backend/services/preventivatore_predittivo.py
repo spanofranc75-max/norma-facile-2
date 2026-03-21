@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # ── AI imports (safe) ──
 AI_AVAILABLE = False
 try:
-    from emergentintegrations.llm import LlmChat, UserMessage, ImageContent
+    from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
     AI_AVAILABLE = True
 except ImportError:
     logger.warning("emergentintegrations not available — AI features disabled")
