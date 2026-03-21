@@ -25,6 +25,7 @@ import {
     Briefcase, Wrench, Award, ShoppingCart, FileText, LayoutGrid,
     CreditCard, TrendingUp, ClipboardCheck, Calendar, CircleDollarSign,
     User, LogOut, Bell, Flame, Calculator, ScrollText, Menu, X, Archive, Brain, Target,
+    BookOpen,
 } from 'lucide-react';
 
 // ── Navigation Structure ────────────────────────────────────────
@@ -153,6 +154,7 @@ const NAV_GROUPS = [
         children: [
             { path: '/settings', label: 'Dati Azienda', icon: Settings },
             { path: '/impostazioni/pagamenti', label: 'Tipi Pagamento', icon: CreditCard },
+            { path: '/manuale', label: 'Guida all\'Uso', icon: BookOpen },
             { path: '/registro-attivita', label: 'Registro Attivita', icon: ScrollText },
             { path: '/archivio-storico', label: 'Archivio Storico', icon: Archive },
         ],

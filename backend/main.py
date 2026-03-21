@@ -79,6 +79,7 @@ from routes.sal_acconti import router as sal_acconti_router
 from routes.preventivatore import router as preventivatore_router
 from routes.kpi_dashboard import router as kpi_dashboard_router
 from routes.calibrazione import router as calibrazione_router
+from routes.manuale import router as manuale_router
 
 # Configure logging
 logging.basicConfig(
@@ -202,6 +203,7 @@ app.include_router(sal_acconti_router, prefix="/api")
 app.include_router(preventivatore_router, prefix="/api")
 app.include_router(kpi_dashboard_router, prefix="/api")
 app.include_router(calibrazione_router, prefix="/api")
+app.include_router(manuale_router, prefix="/api")
 
 
 @app.on_event("startup")

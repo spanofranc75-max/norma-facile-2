@@ -66,6 +66,7 @@ import OfficinaPage from './pages/OfficinaPage';
 import AttrezzaturePage from './pages/AttrezzaturePage';
 import ArchivioStoricoPage from './pages/ArchivioStoricoPage';
 import PreventivatoreWizard from './pages/PreventivatoreWizard';
+import ManualePage from './pages/ManualePage';
 import KPIDashboard from './pages/KPIDashboard';
 import ConfrontoPreventivi from './pages/ConfrontoPreventivi';
 import AnalisiAIPage from './pages/AnalisiAIPage';
@@ -272,6 +273,7 @@ function AppRouter() {
             <Route path="/attrezzature" element={<ProtectedRoute><AttrezzaturePage /></ProtectedRoute>} />
             <Route path="/archivio-storico" element={<ProtectedRoute><ArchivioStoricoPage /></ProtectedRoute>} />
             <Route path="/preventivatore" element={<ProtectedRoute><PreventivatoreWizard /></ProtectedRoute>} />
+            <Route path="/manuale" element={<ProtectedRoute><ManualePage /></ProtectedRoute>} />
             <Route path="/kpi" element={<ProtectedRoute><KPIDashboard /></ProtectedRoute>} />
             <Route path="/confronto" element={<ProtectedRoute><ConfrontoPreventivi /></ProtectedRoute>} />
             <Route path="/analisi-ai/:prevId" element={<ProtectedRoute><AnalisiAIPage /></ProtectedRoute>} />
