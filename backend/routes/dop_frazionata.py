@@ -257,6 +257,201 @@ async def generate_dop_frazionata_pdf(cid: str, dop_id: str, user: dict = Depend
     )
 
 
+@router.post("/{cid}/dop-automatica")
+async def create_dop_automatica(cid: str, user: dict = Depends(get_current_user)):
+    """Crea una DOP EN 1090 completamente automatica — zero input manuale.
+    Raccoglie dati da: Riesame Tecnico, Material Batches, Controllo Finale, Report Ispezioni."""
+    commessa = await _get_commessa(cid, user["user_id"])
+    numero_commessa = commessa.get("numero", cid)
+
+    # Count existing DoP to determine suffix
+    count = await db.dop_frazionate.count_documents(
+        {"commessa_id": cid, "user_id": user["user_id"]}
+    )
+    if count >= len(SUFFISSI):
+        raise HTTPException(400, f"Numero massimo DoP raggiunto ({len(SUFFISSI)})")
+
+    suffisso = SUFFISSI[count]
+    dop_numero = f"{numero_commessa}{suffisso}"
+    dop_id = f"dop_{uuid.uuid4().hex[:10]}"
+    now = datetime.now(timezone.utc)
+
+    # === 1. EXC class from Riesame Tecnico ===
+    exc_class = commessa.get("exc_class") or commessa.get("classe_esecuzione", "")
+    riesame = await db.riesami_tecnici.find_one(
+        {"commessa_id": cid}, {"_id": 0, "checks": 1, "approvato": 1,
+         "firma": 1, "data_approvazione": 1}
+    )
+    riesame_approvato = bool(riesame and riesame.get("approvato"))
+    riesame_firma = (riesame or {}).get("firma", {})
+    riesame_data = (riesame or {}).get("data_approvazione", "")
+    if not exc_class and riesame:
+        for ck in (riesame.get("checks") or []):
+            if ck.get("id") == "exc_class" and ck.get("valore"):
+                exc_class = ck["valore"]
+                break
+    if not exc_class:
+        fpc_prj = await db.fpc_projects.find_one(
+            {"commessa_id": cid}, {"_id": 0, "fpc_data": 1}
+        )
+        if fpc_prj:
+            exc_class = fpc_prj.get("fpc_data", {}).get("execution_class", "")
+    exc_class = exc_class or "EXC2"
+
+    # === 2. Material Batches (rintracciabilita) ===
+    batches_rintracciabilita = []
+    batch_docs = await db.material_batches.find(
+        {"commessa_id": cid, "user_id": user["user_id"]},
+        {"_id": 0, "certificate_base64": 0, "certificato_31_base64": 0}
+    ).to_list(200)
+    for b in batch_docs:
+        batches_rintracciabilita.append({
+            "batch_id": b.get("batch_id", ""),
+            "descrizione": b.get("dimensions", b.get("material_type", "")),
+            "numero_colata": b.get("heat_number", b.get("numero_colata", "")),
+            "certificato_31": b.get("numero_certificato", b.get("certificate_31", "")),
+            "fornitore": b.get("supplier_name", b.get("fornitore", "")),
+            "ddt_numero": b.get("ddt_numero", ""),
+        })
+
+    # === 3. Report Ispezioni status ===
+    report_isp = await db.report_ispezioni.find_one(
+        {"commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    ispezioni_status = {
+        "approvato": bool(report_isp and report_isp.get("approvato")),
+        "firma": (report_isp or {}).get("firma", {}),
+        "data_approvazione": (report_isp or {}).get("data_approvazione", ""),
+        "vt_ok": sum(1 for r in (report_isp or {}).get("ispezioni_vt", []) if r.get("esito") is True),
+        "vt_totale": len((report_isp or {}).get("ispezioni_vt", [])),
+        "dim_ok": sum(1 for r in (report_isp or {}).get("ispezioni_dim", []) if r.get("esito") is True),
+        "dim_totale": len((report_isp or {}).get("ispezioni_dim", [])),
+    }
+
+    # === 4. Controllo Finale status ===
+    ctrl_finale = await db.controlli_finali.find_one(
+        {"commessa_id": cid}, {"_id": 0}
+    )
+    controllo_status = {
+        "approvato": bool(ctrl_finale and ctrl_finale.get("approvato")),
+        "firma": (ctrl_finale or {}).get("firma", {}),
+        "data_approvazione": (ctrl_finale or {}).get("data_approvazione", ""),
+    }
+
+    dop = {
+        "dop_id": dop_id,
+        "commessa_id": cid,
+        "user_id": user["user_id"],
+        "dop_numero": dop_numero,
+        "suffisso": suffisso,
+        "ddt_ids": [],
+        "descrizione": f"DoP Automatica — Commessa {numero_commessa}",
+        "note": "",
+        "materiali_tracciati": [],
+        "cert_pages": [],
+        "classe_esecuzione": exc_class,
+        "batches_rintracciabilita": batches_rintracciabilita,
+        "automatica": True,
+        "riesame": {
+            "approvato": riesame_approvato,
+            "firma": riesame_firma,
+            "data_approvazione": riesame_data,
+        },
+        "ispezioni": ispezioni_status,
+        "controllo_finale": controllo_status,
+        "stato": "bozza",
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat(),
+    }
+
+    await db.dop_frazionate.insert_one(dop)
+    del dop["_id"]
+
+    return {
+        "message": f"DoP automatica {dop_numero} creata — {len(batches_rintracciabilita)} lotti tracciati",
+        "dop": dop,
+    }
+
+
+@router.get("/{cid}/etichetta-ce-1090/pdf")
+async def generate_ce_label_1090(cid: str, user: dict = Depends(get_current_user)):
+    """Genera Etichetta CE per EN 1090 — auto-compilata da Riesame e dati commessa."""
+    from fastapi.responses import StreamingResponse
+    import html as html_mod
+    _e = html_mod.escape
+
+    commessa = await _get_commessa(cid, user["user_id"])
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+
+    # EXC class
+    exc_class = commessa.get("exc_class") or commessa.get("classe_esecuzione", "")
+    if not exc_class:
+        riesame = await db.riesami_tecnici.find_one(
+            {"commessa_id": cid}, {"_id": 0, "checks": 1}
+        )
+        if riesame:
+            for ck in (riesame.get("checks") or []):
+                if ck.get("id") == "exc_class" and ck.get("valore"):
+                    exc_class = ck["valore"]
+                    break
+    exc_class = exc_class or "EXC2"
+
+    num = commessa.get("numero", "")
+    biz = _e(company.get("business_name", ""))
+    addr = _e(f"{company.get('address', '')} {company.get('cap', '')} {company.get('city', '')}")
+    cert_num = _e(company.get("certificato_en1090_numero", ""))
+    ente = _e(company.get("ente_certificatore", ""))
+    ente_num = _e(company.get("ente_certificatore_numero", ""))
+    logo = company.get("logo_url", "")
+    logo_html = f'<img src="{logo}" style="max-height:30px;max-width:120px;margin-bottom:4px;" />' if logo else ""
+    anno = datetime.now().year
+
+    # DOP numero (use the latest if exists)
+    latest_dop = await db.dop_frazionate.find(
+        {"commessa_id": cid, "user_id": user["user_id"]},
+        {"_id": 0, "dop_numero": 1}
+    ).sort("created_at", -1).to_list(1)
+    dop_ref = latest_dop[0]["dop_numero"] if latest_dop else f"{num}/A"
+
+    html = f"""<!DOCTYPE html><html><head><style>
+    @page {{ size: 148mm 105mm; margin: 5mm; }}
+    body {{ font-family: Helvetica, Arial, sans-serif; font-size: 9pt; color: #1E293B; margin: 0; padding: 0; }}
+    .ce-box {{ border: 3px solid #1E293B; padding: 6mm; text-align: center; height: 90mm; }}
+    .ce {{ font-size: 36pt; font-weight: 900; letter-spacing: 3mm; margin: 0; }}
+    .info-table {{ width: 92%; margin: 3mm auto 0; font-size: 8pt; border: none; }}
+    .info-table td {{ border: none; padding: 1.2mm 3mm; }}
+    .info-table .lbl {{ text-align: right; width: 45%; font-weight: 700; color: #475569; }}
+    .info-table .val {{ text-align: left; color: #1E293B; }}
+    </style></head><body>
+    <div class="ce-box">
+        {logo_html}
+        <div class="ce">CE</div>
+        <p style="font-size:10pt;font-weight:700;margin:2mm 0 0;">{biz}</p>
+        <p style="font-size:7pt;color:#64748b;margin:1mm 0 0;">{addr}</p>
+        <hr style="margin:3mm auto;border:none;border-top:1px solid #ccc;width:80%;"/>
+        <table class="info-table">
+            <tr><td class="lbl">Norma:</td><td class="val">EN 1090-1:2009+A1:2011</td></tr>
+            <tr><td class="lbl">Certificato FPC:</td><td class="val">{cert_num}</td></tr>
+            <tr><td class="lbl">Ente Notificato:</td><td class="val">{ente} (N. {ente_num})</td></tr>
+            <tr><td class="lbl">Classe Esecuzione:</td><td class="val"><strong>{_e(exc_class)}</strong></td></tr>
+            <tr><td class="lbl">Commessa:</td><td class="val">{_e(num)}</td></tr>
+            <tr><td class="lbl">DoP Rif.:</td><td class="val">{_e(dop_ref)}</td></tr>
+            <tr><td class="lbl">Anno:</td><td class="val">{anno}</td></tr>
+        </table>
+    </div>
+    </body></html>"""
+
+    from weasyprint import HTML as WP_HTML
+    buf = BytesIO()
+    WP_HTML(string=html).write_pdf(buf)
+    fname = f"Etichetta_CE_1090_{num.replace('/', '-')}.pdf"
+    return StreamingResponse(
+        BytesIO(buf.getvalue()),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'}
+    )
+
+
 def _build_rintracciabilita_html(dop: dict) -> str:
     """Build traceability table from auto-populated material batches."""
     import html as html_mod
@@ -279,6 +474,73 @@ def _build_rintracciabilita_html(dop: dict) -> str:
         <tr><th>Materiale</th><th>N. Colata</th><th>Cert. 3.1</th><th>Fornitore</th><th>DDT</th></tr>
         {rows}
     </table>"""
+
+
+def _build_verifiche_html(dop: dict) -> str:
+    """Build verification sections for auto-DOPs (Riesame, Ispezioni, Controllo Finale)."""
+    if not dop.get("automatica"):
+        return ""
+    import html as html_mod
+    _e = html_mod.escape
+
+    sections = []
+
+    # Riesame Tecnico
+    ries = dop.get("riesame", {})
+    stato_r = "Approvato" if ries.get("approvato") else "Non approvato"
+    cls_r = "color:#276749;font-weight:700;" if ries.get("approvato") else "color:#c53030;font-weight:700;"
+    firma_r = ries.get("firma", {})
+    data_r = (ries.get("data_approvazione") or "")[:10]
+    sections.append(f"""
+    <h2>4. Riesame Tecnico Pre-Produzione</h2>
+    <table>
+        <tr><td style="font-weight:700;background:#f0f4f8;width:35%;">Stato</td>
+            <td style="{cls_r}">{stato_r}</td></tr>
+        <tr><td style="font-weight:700;background:#f0f4f8;">Firmato da</td>
+            <td>{_e(firma_r.get('nome', '—'))} — {_e(firma_r.get('ruolo', ''))}</td></tr>
+        <tr><td style="font-weight:700;background:#f0f4f8;">Data approvazione</td>
+            <td>{_e(data_r) if data_r else '—'}</td></tr>
+    </table>""")
+
+    # Report Ispezioni VT/Dimensionale
+    isp = dop.get("ispezioni", {})
+    stato_i = "Approvato" if isp.get("approvato") else "Non approvato"
+    cls_i = "color:#276749;font-weight:700;" if isp.get("approvato") else "color:#c53030;font-weight:700;"
+    firma_i = isp.get("firma", {})
+    data_i = (isp.get("data_approvazione") or "")[:10]
+    sections.append(f"""
+    <h2>5. Controlli Ispezioni VT / Dimensionali</h2>
+    <table>
+        <tr><td style="font-weight:700;background:#f0f4f8;width:35%;">Stato</td>
+            <td style="{cls_i}">{stato_i}</td></tr>
+        <tr><td style="font-weight:700;background:#f0f4f8;">VT (Visual Testing)</td>
+            <td>{isp.get('vt_ok', 0)}/{isp.get('vt_totale', 0)} conformi — ISO 5817 Livello C</td></tr>
+        <tr><td style="font-weight:700;background:#f0f4f8;">Dimensionale</td>
+            <td>{isp.get('dim_ok', 0)}/{isp.get('dim_totale', 0)} conformi — EN 1090-2 B6/B8</td></tr>
+        <tr><td style="font-weight:700;background:#f0f4f8;">Firmato da</td>
+            <td>{_e(firma_i.get('nome', '—'))} — {_e(firma_i.get('ruolo', ''))}</td></tr>
+        <tr><td style="font-weight:700;background:#f0f4f8;">Data</td>
+            <td>{_e(data_i) if data_i else '—'}</td></tr>
+    </table>""")
+
+    # Controllo Finale
+    cf = dop.get("controllo_finale", {})
+    stato_cf = "Approvato" if cf.get("approvato") else "Non approvato"
+    cls_cf = "color:#276749;font-weight:700;" if cf.get("approvato") else "color:#c53030;font-weight:700;"
+    firma_cf = cf.get("firma", {})
+    data_cf = (cf.get("data_approvazione") or "")[:10]
+    sections.append(f"""
+    <h2>6. Controllo Finale Pre-Spedizione</h2>
+    <table>
+        <tr><td style="font-weight:700;background:#f0f4f8;width:35%;">Stato</td>
+            <td style="{cls_cf}">{stato_cf}</td></tr>
+        <tr><td style="font-weight:700;background:#f0f4f8;">Firmato da</td>
+            <td>{_e(firma_cf.get('nome', '—'))} — {_e(firma_cf.get('ruolo', ''))}</td></tr>
+        <tr><td style="font-weight:700;background:#f0f4f8;">Data</td>
+            <td>{_e(data_cf) if data_cf else '—'}</td></tr>
+    </table>""")
+
+    return "\n".join(sections)
 
 
 def _generate_dop_pdf(dop: dict, commessa: dict, company: dict, client_name: str) -> bytes:
@@ -335,7 +597,7 @@ def _generate_dop_pdf(dop: dict, commessa: dict, company: dict, client_name: str
         {logo_html}
         <h1>DICHIARAZIONE DI PRESTAZIONE (DoP)</h1>
         <div style="font-size:14pt;font-weight:800;color:#1a3a6b;margin:8px 0;">N. {_e(dop.get('dop_numero', ''))}</div>
-        <div class="badge">EN 1090-1 — CONSEGNA FRAZIONATA {_e(dop.get('suffisso', ''))}</div>
+        <div class="badge">EN 1090-1 — {_e('DoP AUTOMATICA' if dop.get('automatica') else f"CONSEGNA FRAZIONATA {dop.get('suffisso', '')}")}</div>
     </div>
 
     <h2>1. Identificazione</h2>
@@ -363,9 +625,11 @@ def _generate_dop_pdf(dop: dict, commessa: dict, company: dict, client_name: str
 
     {_build_rintracciabilita_html(dop)}
 
-    {f'<h2>4. Note</h2><p>{_e(dop.get("note", ""))}</p>' if dop.get("note") else ''}
+    {_build_verifiche_html(dop)}
 
-    <h2>{'5' if dop.get('note') else '4'}. Dichiarazione</h2>
+    {f'<h2>Note</h2><p>{_e(dop.get("note", ""))}</p>' if dop.get("note") else ''}
+
+    <h2>Dichiarazione di Conformita</h2>
     <p style="font-size:10pt;">
         Il fabbricante <strong>{biz}</strong> dichiara che i componenti strutturali sopra descritti,
         consegnati con questa DoP frazionata <strong>{_e(dop.get('dop_numero', ''))}</strong>,

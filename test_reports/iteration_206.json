@@ -1,0 +1,71 @@
+{
+  "summary": "Iteration 206: DOP Automatica + Etichetta CE EN 1090 - All backend tests passed (12/12). Frontend UI verified: 'DOP Auto' and 'Etichetta CE' buttons visible ONLY for EN_1090 commesse, hidden for GENERICA. Button clicks trigger DOP creation and PDF downloads correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration206_dop_etichetta_ce.py",
+    "/app/test_reports/pytest/iteration206_dop_etichetta_ce_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "POST /api/fascicolo-tecnico/{cid}/dop-automatica creates DOP with auto-populated fields from riesame, material_batches, report_ispezioni, controllo_finale",
+    "DOP automatica has 'automatica: true' flag and includes riesame, ispezioni, controllo_finale sections",
+    "GET /api/fascicolo-tecnico/{cid}/dop-frazionata/{dop_id}/pdf generates PDF with _build_verifiche_html() for automatic DOPs (sections 4-6)",
+    "GET /api/fascicolo-tecnico/{cid}/etichetta-ce-1090/pdf generates compact 148x105mm CE label PDF",
+    "Frontend CommessaHubPage correctly shows DOP Auto and Etichetta CE buttons ONLY when c?.normativa_tipo === 'EN_1090'",
+    "handleDopAutomatica() creates DOP via POST then downloads PDF via downloadPdfBlob()",
+    "handleEtichettaCE1090() directly downloads CE label PDF"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration206_dop_etichetta_ce.py"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 tests passed)",
+    "frontend": "100% (all UI elements working, button visibility conditional, downloads working)"
+  },
+  "test_credentials": {
+    "session_token": "d36a500823254076b5c583d6c1d903fa",
+    "test_commessa_en1090": "comm_sasso_marconi (C-2026-0012)",
+    "test_commessa_generica": "com_e416683e1890 (GEN-PRV-2026-0036)"
+  },
+  "seed_data_creation": "No new seed data created. Used existing test commesse.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 206 verified the new DOP Automatica and Etichetta CE EN 1090 features. Key endpoints: POST /api/fascicolo-tecnico/{cid}/dop-automatica (creates auto-populated DOP), GET /api/fascicolo-tecnico/{cid}/dop-frazionata/{dop_id}/pdf (PDF with verification sections for auto DOPs), GET /api/fascicolo-tecnico/{cid}/etichetta-ce-1090/pdf (compact CE label). Frontend buttons 'DOP Auto' and 'Etichetta CE' are conditionally rendered only for EN_1090 commesse (line ~350-366 in CommessaHubPage.js). Test DOPs were cleaned up after testing.",
+  "testing_summary": {
+    "backend_endpoints": {
+      "POST /api/fascicolo-tecnico/{cid}/dop-automatica": "PASS - Creates DOP with automatica=true, riesame, ispezioni, controllo_finale sections",
+      "GET /api/fascicolo-tecnico/{cid}/dop-frazionata/{dop_id}/pdf": "PASS - Returns valid PDF (30KB+) with verification sections",
+      "GET /api/fascicolo-tecnico/{cid}/etichetta-ce-1090/pdf": "PASS - Returns valid CE label PDF (18KB+) with 148x105mm format",
+      "GET /api/fascicolo-tecnico/{cid}/dop-frazionate": "PASS - Lists all DOPs for commessa",
+      "GET /api/commesse/{cid}/hub": "PASS - Returns normativa_tipo field for button visibility"
+    },
+    "frontend_ui": {
+      "EN_1090_commessa": {
+        "btn-dop-automatica": "VISIBLE - Indigo button with FileText icon",
+        "btn-etichetta-ce-1090": "VISIBLE - Slate button with Award icon"
+      },
+      "GENERICA_commessa": {
+        "btn-dop-automatica": "HIDDEN - Correctly not rendered",
+        "btn-etichetta-ce-1090": "HIDDEN - Correctly not rendered"
+      },
+      "DOP_Auto_click": {
+        "action": "Creates DOP via POST, then downloads PDF",
+        "toast": "DoP automatica C-2026-0012/A creata — 0 lotti tracciati",
+        "download": "DoP_C-2026-0012_A.pdf"
+      },
+      "Etichetta_CE_click": {
+        "action": "Downloads CE label PDF directly",
+        "toast": "Etichetta CE generata",
+        "download": "Etichetta_CE_1090_C-2026-0012.pdf"
+      }
+    }
+  }
+}

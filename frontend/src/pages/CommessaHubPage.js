@@ -252,6 +252,35 @@ export default function CommessaHubPage() {
         } catch (e) { toast.error(e.message); }
     };
 
+    const [generatingDopAuto, setGeneratingDopAuto] = useState(false);
+    const handleDopAutomatica = async () => {
+        setGeneratingDopAuto(true);
+        try {
+            const res = await apiRequest(`/fascicolo-tecnico/${commessaId}/dop-automatica`, { method: 'POST' });
+            toast.success(res.message);
+            // Now download the PDF
+            const dopId = res.dop?.dop_id;
+            if (dopId) {
+                await downloadPdfBlob(
+                    `/fascicolo-tecnico/${commessaId}/dop-frazionata/${dopId}/pdf`,
+                    `DoP_Auto_${hub?.commessa?.numero || commessaId}.pdf`
+                );
+            }
+        } catch (e) { toast.error(e.message); }
+        finally { setGeneratingDopAuto(false); }
+    };
+
+    const handleEtichettaCE1090 = async () => {
+        try {
+            toast.info('Generazione Etichetta CE EN 1090...');
+            await downloadPdfBlob(
+                `/fascicolo-tecnico/${commessaId}/etichetta-ce-1090/pdf`,
+                `Etichetta_CE_1090_${hub?.commessa?.numero || commessaId}.pdf`
+            );
+            toast.success('Etichetta CE generata');
+        } catch (e) { toast.error(e.message); }
+    };
+
     const handleCloseSimple = async () => {
         setClosingSimple(true);
         try {
@@ -318,6 +347,23 @@ export default function CommessaHubPage() {
                         <Button size="sm" onClick={handleDownloadTemplate111} className="bg-amber-600 text-white hover:bg-amber-700 text-xs px-2 sm:px-3" data-testid="btn-template-111">
                             <Award className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Template 111</span>
                         </Button>
+                        {c?.normativa_tipo === 'EN_1090' && (
+                            <>
+                                <Button size="sm" onClick={handleDopAutomatica} disabled={generatingDopAuto}
+                                    className="bg-indigo-600 text-white hover:bg-indigo-700 text-xs px-2 sm:px-3 shadow-lg shadow-indigo-600/20"
+                                    data-testid="btn-dop-automatica"
+                                >
+                                    {generatingDopAuto ? <Loader2 className="h-3.5 w-3.5 animate-spin sm:mr-1.5" /> : <FileText className="h-3.5 w-3.5 sm:mr-1.5" />}
+                                    <span className="hidden sm:inline">DOP Auto</span>
+                                </Button>
+                                <Button size="sm" onClick={handleEtichettaCE1090}
+                                    className="bg-slate-800 text-white hover:bg-slate-900 text-xs px-2 sm:px-3"
+                                    data-testid="btn-etichetta-ce-1090"
+                                >
+                                    <Award className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Etichetta CE</span>
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </div>
 
