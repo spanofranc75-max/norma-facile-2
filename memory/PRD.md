@@ -21,7 +21,7 @@ ERP completo per carpenteria metallica con gestione EN 1090, EN 13241, ISO 3834.
 
 ### Checklist Fine Lavori + Soglia Calibro (completata)
 - 11 check in 3 aree (VT, Dimensionale, Compliance), firma
-- Soglia accettabilita configurabile (Calibro ±0.1mm)
+- Soglia accettabilita configurabile (Calibro +/-0.1mm)
 
 ### Fili Conduttori — Unificazione Dati (completata)
 - `material_batches` = unica fonte di verita
@@ -33,32 +33,35 @@ ERP completo per carpenteria metallica con gestione EN 1090, EN 13241, ISO 3834.
 - PDF richiesta preventivo laboratorio per processo 111
 
 ### Report Ispezioni VT/Dimensionali (21 Mar 2026)
-- **Backend `report_ispezioni.py`:** 4 endpoint:
-  - `GET /api/report-ispezioni/{commessa_id}` — 10 check VT (ISO 5817-C) + 8 check DIM (EN 1090-2 B6/B8)
-  - `POST /api/report-ispezioni/{commessa_id}` — Salva risultati ispezioni
-  - `POST /api/report-ispezioni/{commessa_id}/approva` — Firma (validazione: tutti i 18 check compilati)
-  - `GET /api/report-ispezioni/{commessa_id}/pdf` — PDF rapporto con tabelle VT+DIM + firma
-- **VT Checks (10):** Cricche, Porosita, Inclusioni, Fusione, Penetrazione, Sottosquadro, Sovrametallo, Slivellamento, Spruzzi, Aspetto generale
-- **DIM Checks (8):** Lunghezze B6, Rettilineita B6, Squadratura B6, Interassi fori B8, Diametro fori, Posizione piastre, Altezza sezione, Gola saldatura
-- **Frontend `ReportIspezioniSection.js`:** Aree tab VT/DIM, bottoni OK/NOK, campi Misura+Note, Save/Approve/PDF
-- **Integrazione Controllo Finale:** Il check `vt_nc_chiuse` ora legge da `report_ispezioni` (auto-check "Report VT approvato")
-- DB Collection: `report_ispezioni`
-- Test: 100% (22/22 — iteration 205)
+- 10 check VT (ISO 5817-C) + 8 check DIM (EN 1090-2 B6/B8)
+- PDF rapporto con tabelle VT+DIM + firma
+- Integrazione con Controllo Finale (auto-check)
+
+### DOP + Etichetta CE automatica EN 1090 (21 Mar 2026)
+- **POST /api/fascicolo-tecnico/{cid}/dop-automatica** — Crea DOP con zero input manuale
+  - Auto-raccoglie: EXC da Riesame, lotti da material_batches, stato Riesame/Ispezioni/Controllo Finale
+  - Flag `automatica: true` abilita sezioni extra nel PDF (Riesame, Ispezioni VT/DIM, Controllo Finale)
+- **GET /api/fascicolo-tecnico/{cid}/etichetta-ce-1090/pdf** — Genera Etichetta CE 148x105mm
+  - Auto-popola: norma, certificato FPC, ente notificato, classe EXC, DoP riferimento
+- **Frontend:** Bottoni "DOP Auto" (indigo) e "Etichetta CE" (slate) visibili solo per EN_1090
+- Test: 100% (12/12 backend + frontend — iteration 206)
 
 ## Credenziali Test
-- User: user_97c773827822
+- User: user_e4012a8f48
 - Session: d36a500823254076b5c583d6c1d903fa
-- Commessa test: com_loiano_cims_2026
+- Commessa EN 1090: comm_sasso_marconi (C-2026-0012)
 
 ## Backlog
 
-### P1 — Fase 3 (prossimo)
-- DOP + Etichetta CE automatica (enhancement gate_certification)
+### P1 — Prossimi
+- Scadenziario Manutenzioni Digitalizzato (calendario trimestrali/annuali + alert)
+- Verbali ITT (qualifica taglio e foratura)
 
 ### P2 — Miglioramenti
-- Scadenziario Manutenzioni Digitalizzato
-- Verbali ITT (qualifica taglio e foratura)
-- Training automatico ML, Alerting costi > budget
+- Training automatico ML dal Diario Produzione
+- Alerting costi reali > budget
 
 ### P3 — Backlog Generale
-- Unificazione PDF, Export Excel, Portale clienti, RBAC, QR Code
+- Unificazione PDF legacy, Export Excel, Portale clienti, RBAC, QR Code
+- Split SettingsPage.js (1.731 righe)
+- Split commesse.py (1.330 righe)
