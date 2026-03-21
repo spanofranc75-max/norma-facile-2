@@ -28,6 +28,8 @@ import VociLavoroSection from '../components/VociLavoroSection';
 import { DisabledTooltip } from '../components/DisabledTooltip';
 import CommessaComplianceBanner from '../components/CommessaComplianceBanner';
 import RiesameTecnicoSection from '../components/RiesameTecnicoSection';
+import RegistroSaldaturaSection from '../components/RegistroSaldaturaSection';
+import TracciabilitaMaterialiSection from '../components/TracciabilitaMaterialiSection';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
@@ -311,6 +313,12 @@ export default function CommessaHubPage() {
 
                 {/* Riesame Tecnico — Gate pre-produzione */}
                 <RiesameTecnicoSection commessaId={commessaId} />
+
+                {/* Registro Saldatura — EN 1090 FPC Fase 2 */}
+                <RegistroSaldaturaSection commessaId={commessaId} />
+
+                {/* Tracciabilita Materiali — Link DDT → Lotti FPC */}
+                <TracciabilitaMaterialiSection commessaId={commessaId} />
 
                 {/* Commessa Info Card */}
                 <Card className="border-gray-200" data-testid="commessa-info">
