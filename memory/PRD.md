@@ -5,16 +5,7 @@ ERP completo per carpenteria metallica con gestione EN 1090, EN 13241, ISO 3834.
 
 ## Utenti Target
 - Titolari/responsabili carpenteria metallica
-- Responsabili qualità e produzione
-
-## Requisiti Core
-- Gestione commesse con fascicolo tecnico CE
-- Tracciabilità materiali EN 10204
-- Qualifica saldatori e WPS
-- Preventivazione automatica e manuale
-- DDT e fatturazione elettronica
-- Diario di produzione
-- Certificazioni e DoP
+- Responsabili qualita e produzione
 
 ## Architettura
 - **Frontend**: React 18 + TailwindCSS + Shadcn/UI + Recharts
@@ -25,40 +16,51 @@ ERP completo per carpenteria metallica con gestione EN 1090, EN 13241, ISO 3834.
 
 ## Moduli Implementati
 
-### Core (Completati)
-- Gestione Commesse, Clienti, Preventivi
-- DDT (vendita/acquisto/conto lavoro)
-- Fatturazione attiva/passiva
-- Diario di Produzione con timer
-- Fascicolo Tecnico CE
-- Qualifica Saldatori + WPS/WPQR
-- Magazzino con tracciabilità lotti
+### Core
+- Commesse, Clienti, Preventivi, DDT, Fatturazione
+- Diario di Produzione, Fascicolo Tecnico CE
+- Qualifica Saldatori + WPS/WPQR, Magazzino
 
-### Moduli Avanzati (Completati)
-- **AI Vision Disegni**: Analisi automatica disegni tecnici con GPT-4o
-- **Preventivatore Predittivo**: Wizard AI che analizza disegni → estrae materiali → calcola costi → genera preventivo
-- **DoP Frazionata**: Generazione dichiarazioni di prestazione per lotti parziali
-- **SAL e Acconti**: Gestione stati avanzamento lavori
-- **Conto Lavoro Avanzato**: Certificati trattamento automatici
-- **KPI Dashboard**: Metriche e Confidence Score (Recharts)
-- **Confronto AI vs Manuale**: Report dettagliato con delta riga per riga, confidence score, insights AI
+### Moduli Avanzati
+- **AI Vision Disegni**: Analisi automatica disegni con GPT-4o
+- **Preventivatore Predittivo**: Wizard AI per stime automatiche
+- **DoP Frazionata**, **SAL e Acconti**, **Conto Lavoro Avanzato**
+- **KPI Dashboard**: Metriche + Confidence Score
+- **Confronto AI vs Manuale**: Report delta riga per riga + insights
+- **Calibrazione ML Predittiva**: Apprendimento automatico da progetti completati
 
 ### Ultimo Completamento (21 Mar 2026)
-- **Blind Test Preventivatore Predittivo**:
-  - Analisi autonoma disegno "Solaio Carpenteria A2" (Sasso Marconi)
-  - Estrazione materiali: IPE 270, HEA 200, Piastre 15/20mm, Bulloneria M16/M20
-  - Calcolo costi con prezzi storici DDT (S275: 1.15€/kg, Piastre: 1.30€/kg, Zinc: 0.45€/kg, Bulloni: 4.50€/kg)
-  - Margini applicati: Materiali 15%, Manodopera 40%, C/L 10%
-  - Preventivo AI PV-2026-0045-AI generato (€32.038,38 vs Manuale €14.535,64)
-  - Endpoint POST /api/preventivatore/confronta creato e testato
-  - Frontend /confronto con gauge, KPI cards, tabella categorie, tabella righe, osservazioni AI
-  - Testing: 15/15 backend + 100% frontend (iteration_191)
+
+**Blind Test Preventivatore Predittivo:**
+- Analisi autonoma disegno "Solaio Carpenteria A2" (Sasso Marconi)
+- Materiali estratti: IPE 270, HEA 200, Piastre 15/20mm, Bulloneria M16/M20
+- Prezzi storici DDT: S275 1.15/kg, Piastre 1.30/kg, Zinc 0.45/kg, Bulloni 4.50/kg
+- Margini: Materiali 15%, Manodopera 40%, C/L 10%
+- PV-2026-0045-AI generato (32.038 vs 14.536 manuale)
+- Endpoint POST /api/preventivatore/confronta + pagina /confronto
+- Testing: 15/15 backend + 100% frontend (iteration_191)
+
+**Sistema ML Calibrazione Predittiva:**
+- 10 progetti storici completati usati per training
+- Fattori correttivi pesati per similarita (peso 50%, classe 25%, nodi 15%, tipo 10%)
+- Accuracy Pre-ML: 89% -> Post-ML: 90.7% (+1.7%)
+- API: /api/calibrazione/status, calcola-fattori, applica, feedback
+- Integrato nel preventivatore: applica_calibrazione=true
+- Pannello ML nella KPI Dashboard con grafico evoluzione
+- Testing: 17/17 backend + 100% frontend (iteration_192)
 
 ## Credenziali Test
 - User: spano.franc75@gmail.com (user_97c773827822)
-- Session: ryz-fOEx6ZwaCAXAV6zySsdMQjiayNpQgmkGzvO2wHI
-- Test session: test_blind_2026
+- Session: sXLRQVAMtJAFhjM60UrZAjE_8wtJUdJ4sQQpbS5SFsY
+- Test session: test_cal_2026
 - Operatori: Ahmed (PIN 1234), Karim (PIN 5678)
+
+## API Key Endpoints
+- /api/preventivatore/confronta (POST) - Confronto AI vs Manuale
+- /api/calibrazione/status (GET) - Stato calibrazione ML
+- /api/calibrazione/calcola-fattori (POST) - Fattori per target
+- /api/calibrazione/applica (POST) - Applica calibrazione a stima
+- /api/calibrazione/feedback (POST) - Registra progetto completato
 
 ## Task Futuri (Backlog)
 - (P1) Sistema alerting intelligente (costi reali > budget 10%)
