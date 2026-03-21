@@ -535,9 +535,9 @@ async def link_ddt_to_batches(commessa_id: str, user: dict = Depends(get_current
     if not commessa:
         raise HTTPException(404, "Commessa non trovata")
 
-    # Load FPC batches for this commessa
-    batches = await db.fpc_batches.find(
-        {"commessa_id": commessa_id, "user_id": uid}, {"_id": 0}
+    # Load material batches for this commessa (unified collection)
+    batches = await db.material_batches.find(
+        {"commessa_id": commessa_id, "user_id": uid}, {"_id": 0, "certificate_base64": 0}
     ).to_list(200)
     if not batches:
         return {"message": "Nessun lotto FPC per questa commessa", "links": [], "totale": 0}
@@ -574,8 +574,8 @@ async def link_ddt_to_batches(commessa_id: str, user: dict = Depends(get_current
                     match_type = "profilo"
 
                 if match:
-                    # Update batch with DDT reference
-                    await db.fpc_batches.update_one(
+                    # Update batch with DDT reference (unified material_batches)
+                    await db.material_batches.update_one(
                         {"batch_id": batch["batch_id"]},
                         {"$set": {
                             "ddt_origin": ddt["ddt_id"],
@@ -620,24 +620,25 @@ async def scheda_rintracciabilita(commessa_id: str, user: dict = Depends(get_cur
     if not commessa:
         raise HTTPException(404, "Commessa non trovata")
 
-    batches = await db.fpc_batches.find(
-        {"commessa_id": commessa_id, "user_id": uid}, {"_id": 0}
+    batches = await db.material_batches.find(
+        {"commessa_id": commessa_id, "user_id": uid},
+        {"_id": 0, "certificate_base64": 0, "certificato_31_base64": 0}
     ).sort("created_at", 1).to_list(200)
 
     righe = []
     for b in batches:
         righe.append({
             "batch_id": b["batch_id"],
-            "descrizione": b.get("description", ""),
-            "materiale": b.get("material_type", ""),
-            "colata": b.get("heat_number", ""),
-            "certificato_31": b.get("certificate_31", b.get("certificate_number", "")),
-            "fornitore": b.get("supplier", b.get("ddt_fornitore", "")),
-            "ddt_numero": b.get("ddt_number", ""),
+            "descrizione": b.get("dimensions", b.get("description", b.get("material_type", ""))),
+            "materiale": b.get("material_type", b.get("tipo_materiale", "")),
+            "colata": b.get("heat_number", b.get("numero_colata", "")),
+            "certificato_31": b.get("numero_certificato", b.get("certificate_31", "")),
+            "fornitore": b.get("supplier_name", b.get("fornitore", "")),
+            "ddt_numero": b.get("ddt_numero", ""),
             "ddt_id": b.get("ddt_origin", ""),
-            "quantita": b.get("quantity", ""),
-            "posizione_dwg": b.get("posizione_dwg", ""),
-            "linked": bool(b.get("ddt_origin")),
+            "quantita": b.get("quantity", b.get("n_pezzi", "")),
+            "posizione_dwg": b.get("posizione", b.get("posizione_dwg", "")),
+            "linked": bool(b.get("ddt_origin") or b.get("ddt_numero")),
         })
 
     return {

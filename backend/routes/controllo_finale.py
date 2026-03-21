@@ -171,11 +171,12 @@ async def _run_auto_checks(commessa_id: str, user_id: str) -> dict:
         "nota": "Dichiarazione di Prestazione compilata" if has_dop else "Generare la DOP dalla sezione Certificazioni",
     }
 
-    # COMP: Colate coerenti (check FPC batches have heat numbers)
-    batches = await db.fpc_batches.find(
-        {"commessa_id": commessa_id, "user_id": user_id}, {"_id": 0}
+    # COMP: Colate coerenti (check material_batches have heat numbers)
+    batches = await db.material_batches.find(
+        {"commessa_id": commessa_id, "user_id": user_id},
+        {"_id": 0, "heat_number": 1, "numero_colata": 1, "batch_id": 1}
     ).to_list(200)
-    senza_colata = [b for b in batches if not b.get("heat_number")]
+    senza_colata = [b for b in batches if not (b.get("heat_number") or b.get("numero_colata"))]
     results["comp_colate_coerenti"] = {
         "ok": len(batches) > 0 and len(senza_colata) == 0,
         "valore": f"{len(batches)} lotti, {len(senza_colata)} senza colata",

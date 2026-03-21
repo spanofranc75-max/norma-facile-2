@@ -130,13 +130,14 @@ async def _run_auto_checks(commessa_id: str, user_id: str) -> dict:
         "nota": f"Classe {exc}" if exc else "Definire la classe di esecuzione nel progetto FPC",
     }
 
-    # 2. Materials confirmed (check FPC batches)
-    batches = await db.fpc_batches.find(
-        {"commessa_id": commessa_id, "user_id": user_id}, {"_id": 0}
+    # 2. Materials confirmed (check unified material_batches)
+    batches = await db.material_batches.find(
+        {"commessa_id": commessa_id, "user_id": user_id},
+        {"_id": 0, "material_type": 1, "tipo_materiale": 1, "dimensions": 1, "heat_number": 1, "numero_colata": 1}
     ).to_list(100)
     mat_types = set()
     for b in batches:
-        mt = (b.get("material_type") or b.get("material", "")).upper()
+        mt = (b.get("material_type") or b.get("tipo_materiale") or b.get("dimensions") or "").upper()
         if mt:
             mat_types.add(mt)
     results["materiali_confermati"] = {

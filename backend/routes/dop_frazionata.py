@@ -112,6 +112,40 @@ async def create_dop_frazionata(cid: str, data: DopFrazionataCreate, user: dict 
                 "dimensioni": p.get("dimensioni", ""),
             })
 
+    # === AUTO-POPULATION: EXC class from Riesame Tecnico ===
+    exc_class = commessa.get("exc_class") or commessa.get("execution_class") or commessa.get("classe_esecuzione", "")
+    if not exc_class:
+        riesame = await db.riesami_tecnici.find_one(
+            {"commessa_id": cid}, {"_id": 0, "checks": 1}
+        )
+        if riesame:
+            for ck in (riesame.get("checks") or []):
+                if ck.get("id") == "exc_class" and ck.get("valore"):
+                    exc_class = ck["valore"]
+                    break
+        fpc_prj = await db.fpc_projects.find_one(
+            {"commessa_id": cid}, {"_id": 0, "fpc_data": 1}
+        )
+        if not exc_class and fpc_prj:
+            exc_class = fpc_prj.get("fpc_data", {}).get("execution_class", "")
+    exc_class = exc_class or "EXC2"
+
+    # === AUTO-POPULATION: Material batches for traceability ===
+    batches_rintracciabilita = []
+    batch_docs = await db.material_batches.find(
+        {"commessa_id": cid, "user_id": user["user_id"]},
+        {"_id": 0, "certificate_base64": 0, "certificato_31_base64": 0}
+    ).to_list(200)
+    for b in batch_docs:
+        batches_rintracciabilita.append({
+            "batch_id": b.get("batch_id", ""),
+            "descrizione": b.get("dimensions", b.get("material_type", "")),
+            "numero_colata": b.get("heat_number", b.get("numero_colata", "")),
+            "certificato_31": b.get("numero_certificato", b.get("certificate_31", "")),
+            "fornitore": b.get("supplier_name", b.get("fornitore", "")),
+            "ddt_numero": b.get("ddt_numero", ""),
+        })
+
     dop = {
         "dop_id": dop_id,
         "commessa_id": cid,
@@ -123,6 +157,8 @@ async def create_dop_frazionata(cid: str, data: DopFrazionataCreate, user: dict 
         "note": data.note or "",
         "materiali_tracciati": materiali_tracciati,
         "cert_pages": cert_pages,
+        "classe_esecuzione": exc_class,
+        "batches_rintracciabilita": batches_rintracciabilita,
         "stato": "bozza",
         "created_at": now.isoformat(),
         "updated_at": now.isoformat(),
@@ -221,6 +257,30 @@ async def generate_dop_frazionata_pdf(cid: str, dop_id: str, user: dict = Depend
     )
 
 
+def _build_rintracciabilita_html(dop: dict) -> str:
+    """Build traceability table from auto-populated material batches."""
+    import html as html_mod
+    _e = html_mod.escape
+    batches = dop.get("batches_rintracciabilita", [])
+    if not batches:
+        return ""
+    rows = ""
+    for b in batches:
+        rows += f"""<tr>
+            <td>{_e(b.get('descrizione', ''))}</td>
+            <td style="font-family:monospace;font-weight:700;">{_e(b.get('numero_colata', ''))}</td>
+            <td>{_e(b.get('certificato_31', ''))}</td>
+            <td>{_e(b.get('fornitore', ''))}</td>
+            <td>{_e(b.get('ddt_numero', ''))}</td>
+        </tr>"""
+    return f"""
+    <h2>3b. Rintracciabilita Materiali</h2>
+    <table>
+        <tr><th>Materiale</th><th>N. Colata</th><th>Cert. 3.1</th><th>Fornitore</th><th>DDT</th></tr>
+        {rows}
+    </table>"""
+
+
 def _generate_dop_pdf(dop: dict, commessa: dict, company: dict, client_name: str) -> bytes:
     """Generate a DoP PDF for a fractioned delivery."""
     try:
@@ -285,7 +345,7 @@ def _generate_dop_pdf(dop: dict, commessa: dict, company: dict, client_name: str
         <tr><td class="lbl">Oggetto</td><td>{_e(commessa.get('title', commessa.get('oggetto', '')))}</td></tr>
         <tr><td class="lbl">Committente</td><td>{_e(client_name)}</td></tr>
         <tr><td class="lbl">Descrizione Consegna</td><td>{_e(dop.get('descrizione', ''))}</td></tr>
-        <tr><td class="lbl">Classe di Esecuzione</td><td>{_e(commessa.get('classe_esecuzione', 'EXC2'))}</td></tr>
+        <tr><td class="lbl">Classe di Esecuzione</td><td><strong>{_e(dop.get('classe_esecuzione', commessa.get('classe_esecuzione', 'EXC2')))}</strong></td></tr>
     </table>
 
     <h2>2. Fabbricante</h2>
@@ -300,6 +360,8 @@ def _generate_dop_pdf(dop: dict, commessa: dict, company: dict, client_name: str
         <tr><th>DDT Rif.</th><th>Descrizione Materiale</th><th>Qta</th><th>U.M.</th><th>Peso</th></tr>
         {materiali_html if materiali_html else '<tr><td colspan="5" style="text-align:center;color:#888;">Nessun materiale associato</td></tr>'}
     </table>
+
+    {_build_rintracciabilita_html(dop)}
 
     {f'<h2>4. Note</h2><p>{_e(dop.get("note", ""))}</p>' if dop.get("note") else ''}
 
