@@ -162,8 +162,22 @@ async def analyze_drawing(
 @router.post("/calcola")
 async def calcola(data: CalcolaRequest, user: dict = Depends(get_current_user)):
     """Calcola il preventivo predittivo con margini differenziati."""
-    # Calculate total weight
+    # Calculate total weight — from materials or from manual peso_kg_target
     peso_totale = sum(calcola_peso_materiale(m) for m in data.materiali)
+
+    # Se nessun materiale ma peso target fornito, crea materiale sintetico
+    materiali_calc = list(data.materiali)
+    if peso_totale <= 0 and data.peso_kg_target and data.peso_kg_target > 0:
+        peso_totale = data.peso_kg_target
+        materiali_calc = [{
+            "tipo": "profilo",
+            "profilo": f"Carpenteria {data.tipologia_struttura}",
+            "descrizione": f"Stima manuale — {data.peso_kg_target} kg",
+            "materiale": "S275JR",
+            "quantita": 1,
+            "peso_stimato_kg": data.peso_kg_target,
+            "peso_calcolato_kg": data.peso_kg_target,
+        }]
 
     # Get historical prices
     prezzi = await calcola_prezzi_storici(user["user_id"], db)
@@ -179,7 +193,7 @@ async def calcola(data: CalcolaRequest, user: dict = Depends(get_current_user)):
 
     # Calculate full quote
     calcolo = calcola_preventivo_predittivo(
-        materiali=data.materiali,
+        materiali=materiali_calc,
         prezzi_storici=prezzi,
         ore_stimate=ore_da_usare,
         costo_orario=costo_orario,

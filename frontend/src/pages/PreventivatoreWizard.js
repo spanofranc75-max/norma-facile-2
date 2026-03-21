@@ -63,6 +63,32 @@ export default function PreventivatoreWizard() {
     const [note, setNote] = useState('');
     const [generatedPrev, setGeneratedPrev] = useState(null);
     const [commessaCreated, setCommessaCreated] = useState(null);
+    const [pesoManuale, setPesoManuale] = useState('');
+
+    // Quick estimate (manual weight)
+    const handleStimaRapida = useCallback(async () => {
+        const peso = parseFloat(pesoManuale);
+        if (!peso || peso <= 0) { toast.error('Inserisci un peso valido (kg)'); return; }
+        setLoading(true);
+        try {
+            const body = {
+                materiali: [],
+                tipologia_struttura: tipologia,
+                margine_materiali: margineMat,
+                margine_manodopera: margineMano,
+                margine_conto_lavoro: margineCL,
+                peso_kg_target: peso,
+            };
+            if (oreOverride) body.ore_override = parseFloat(oreOverride);
+            const data = await apiRequest('/preventivatore/calcola', { method: 'POST', body });
+            setCalcolo(data.calcolo);
+            setStimaOre(data.stima_ore);
+            setMateriali(data.calcolo?.righe_materiali || []);
+            toast.success(`Stima completata per ${peso} kg`);
+            setStep(3);
+        } catch (e) { toast.error(e.message); }
+        finally { setLoading(false); }
+    }, [pesoManuale, tipologia, margineMat, margineMano, margineCL, oreOverride]);
 
     // Step 1: Upload and analyze
     const handleAnalyze = useCallback(async () => {
@@ -201,6 +227,45 @@ export default function PreventivatoreWizard() {
                                 {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
                                 {loading ? 'Analisi AI in corso...' : 'Analizza con AI Vision'}
                             </Button>
+
+                            {/* Divider */}
+                            <div className="relative py-2">
+                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200"></div></div>
+                                <div className="relative flex justify-center"><span className="bg-white px-3 text-xs text-slate-400 font-medium">oppure</span></div>
+                            </div>
+
+                            {/* Quick manual estimate */}
+                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3" data-testid="stima-rapida-section">
+                                <div className="flex items-center gap-2">
+                                    <Scale className="h-4 w-4 text-slate-600" />
+                                    <span className="text-sm font-semibold text-slate-700">Stima Rapida Manuale</span>
+                                </div>
+                                <p className="text-xs text-slate-500">Inserisci peso e tipologia per un calcolo istantaneo senza disegno</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <Label className="text-xs text-slate-600">Peso stimato (kg)</Label>
+                                        <Input type="number" value={pesoManuale} onChange={e => setPesoManuale(e.target.value)}
+                                            placeholder="es. 2500" className="h-9 text-sm" data-testid="input-peso-manuale" />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs text-slate-600">Tipologia struttura</Label>
+                                        <Select value={tipologia} onValueChange={setTipologia}>
+                                            <SelectTrigger className="h-9 text-xs" data-testid="select-tipologia-rapida"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="leggera">Leggera</SelectItem>
+                                                <SelectItem value="media">Media</SelectItem>
+                                                <SelectItem value="complessa">Complessa</SelectItem>
+                                                <SelectItem value="speciale">Speciale</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                <Button onClick={handleStimaRapida} disabled={!pesoManuale || loading}
+                                    variant="outline" className="w-full h-10 text-sm border-slate-300 hover:bg-slate-100" data-testid="btn-stima-rapida">
+                                    {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Calculator className="h-4 w-4 mr-2" />}
+                                    Calcola con peso manuale
+                                </Button>
+                            </div>
                         </CardContent>
                     </Card>
                 )}
