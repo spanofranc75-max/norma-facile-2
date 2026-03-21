@@ -10,61 +10,55 @@ ERP completo per carpenteria metallica con gestione EN 1090, EN 13241, ISO 3834.
 - **Auth**: Google OAuth (Emergent-managed)
 - **PDF**: WeasyPrint + qrcode
 
-## Moduli Implementati
+## Moduli Implementati — Flusso Audit EN 1090
 
-### Flusso Audit EN 1090 (Completo Fase 1-2 + Operativo)
-
-#### FASE 1 — Riesame Tecnico
+### FASE 1 — Riesame Tecnico (completata)
 - 11 check (7 auto + 4 manuali), Gate AVVIO_PRODUZIONE bloccante, Firma digitale + PDF
 
-#### FASE 2 — Registro Saldatura + Link DDT
+### FASE 2 — Registro Saldatura + Link DDT (completata)
 - Registro Saldatura CRUD con filtro saldatori per processo/patentino
 - Tracciabilita Materiali con auto-link DDT → batch
 
-#### Checklist Fine Lavori + Soglia Calibro
-- 11 check in 3 aree (VT ISO 5817-C, Dimensionale B6/B8, Compliance CE/DOP)
-- Soglia accettabilita configurabile per strumento (default Calibro ±0.1mm)
+### Checklist Fine Lavori + Soglia Calibro (completata)
+- 11 check in 3 aree (VT, Dimensionale, Compliance), firma
+- Soglia accettabilita configurabile (Calibro ±0.1mm)
 
-#### Fili Conduttori — Unificazione Dati
+### Fili Conduttori — Unificazione Dati (completata)
 - `material_batches` = unica fonte di verita
-- DOP auto-popola classe EXC dal Riesame + rintracciabilita da material_batches
+- DOP auto-popola EXC + rintracciabilita
 - Tutti i fili (Rintracciabilita, Qualifica, Manutenzione, Documentale) connessi
 
-#### Verifica Coerenza Rintracciabilita (21 Mar 2026)
-- **Backend `fpc.py`:** `GET /api/fpc/batches/verifica-coerenza/{commessa_id}`
-  - Confronto automatico lotti vs DDT
-  - Rileva: colata mancante, certificato 3.1 mancante, DDT non collegato, descrizione mismatch, quantita mismatch, colata mismatch
-  - Riepilogo con totale/conformi/critici/attenzione/pct_conforme
-- **Frontend `TracciabilitaMaterialiSection.js`:** Pulsante "Verifica Coerenza" + pannello risultati con stats e dettaglio per lotto
+### Verifica Coerenza + Template 111 (completata)
+- Confronto automatico lotti vs DDT con discrepanze
+- PDF richiesta preventivo laboratorio per processo 111
 
-#### Template PDF Processo 111 (21 Mar 2026)
-- **Backend `template_111.py`:** 2 endpoint:
-  - `GET /api/template-111/preview/{commessa_id}` — Preview dati
-  - `GET /api/template-111/pdf/{commessa_id}` — Download PDF professionale
-- Contenuto: richiesta preventivo laboratorio prove per qualifica processo 111 (SMAW)
-  - UNI EN ISO 15614-1, EXC2, acciai S275/S355
-  - Tabella prove richieste (VT, RT/UT, piega, trazione, resilienza, macro, durezza)
-  - Auto-population dati aziendali da company_settings e classe EXC da Riesame
-- **Frontend:** Pulsante "Template 111" nella barra azioni CommessaHubPage
+### Report Ispezioni VT/Dimensionali (21 Mar 2026)
+- **Backend `report_ispezioni.py`:** 4 endpoint:
+  - `GET /api/report-ispezioni/{commessa_id}` — 10 check VT (ISO 5817-C) + 8 check DIM (EN 1090-2 B6/B8)
+  - `POST /api/report-ispezioni/{commessa_id}` — Salva risultati ispezioni
+  - `POST /api/report-ispezioni/{commessa_id}/approva` — Firma (validazione: tutti i 18 check compilati)
+  - `GET /api/report-ispezioni/{commessa_id}/pdf` — PDF rapporto con tabelle VT+DIM + firma
+- **VT Checks (10):** Cricche, Porosita, Inclusioni, Fusione, Penetrazione, Sottosquadro, Sovrametallo, Slivellamento, Spruzzi, Aspetto generale
+- **DIM Checks (8):** Lunghezze B6, Rettilineita B6, Squadratura B6, Interassi fori B8, Diametro fori, Posizione piastre, Altezza sezione, Gola saldatura
+- **Frontend `ReportIspezioniSection.js`:** Aree tab VT/DIM, bottoni OK/NOK, campi Misura+Note, Save/Approve/PDF
+- **Integrazione Controllo Finale:** Il check `vt_nc_chiuse` ora legge da `report_ispezioni` (auto-check "Report VT approvato")
+- DB Collection: `report_ispezioni`
+- Test: 100% (22/22 — iteration 205)
 
 ## Credenziali Test
 - User: user_97c773827822
-- Session: d36a500823254076b5c583d6c1d903fa (user_sessions collection)
+- Session: d36a500823254076b5c583d6c1d903fa
 - Commessa test: com_loiano_cims_2026
 
 ## Backlog
 
-### P1 — Fase 3 Audit
-- Report Ispezioni VT/Dimensionali con checklist ISO 5817
+### P1 — Fase 3 (prossimo)
 - DOP + Etichetta CE automatica (enhancement gate_certification)
 
 ### P2 — Miglioramenti
-- Scadenziario Manutenzioni Digitalizzato (calendari trimestrali/annuali + alert)
+- Scadenziario Manutenzioni Digitalizzato
 - Verbali ITT (qualifica taglio e foratura)
-- Training automatico ML
-- Alerting costi > budget
+- Training automatico ML, Alerting costi > budget
 
 ### P3 — Backlog Generale
-- Unificazione PDF, Export Excel
-- Portale clienti, RBAC, QR Code
-- Onboarding Wizard
+- Unificazione PDF, Export Excel, Portale clienti, RBAC, QR Code
