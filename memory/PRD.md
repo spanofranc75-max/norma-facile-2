@@ -1,61 +1,70 @@
 # NormaFacile 2.0 — PRD
 
 ## Problema Originale
-ERP completo per carpenteria metallica con gestione EN 1090, EN 13241, ISO 3834. Francesco vuole vendere l'app in abbonamento SaaS.
+ERP per carpenteria metallica con focus su conformità EN 1090-1 e viabilità commerciale come prodotto startup. Multi-normativa (EN 1090, EN 13241, Generica) con gestione commesse, tracciabilità materiali, saldatura, ispezioni, e generazione documentazione (DOP, CE Label).
+
+## Utente Target
+Carpenterie metalliche italiane, certificazione EN 1090, contratti PNRR.
+
+## Funzionalità Implementate
+
+### Core EN 1090 (Completo)
+- Commesse CRUD con voci lavoro multi-normativa
+- FPC: lotti materiale con tracciabilità colata → cert 3.1 → DDT
+- Registro saldatura con WPS e qualifiche saldatori
+- Riesame Tecnico (gate pre-produzione) con 12 check automatici
+- Ispezioni, Controllo Finale, Fascicolo Tecnico
+- DOP frazionata e automatica con PDF professionale
+
+### CAM — Criteri Ambientali Minimi (Completato 21/03/2026)
+- Campi CAM su `material_batches`: `peso_kg`, `percentuale_riciclato`, `metodo_produttivo`, `distanza_trasporto_km`, `certificazione_epd`, `ente_certificatore_epd`
+- Calcolo conformità CAM da material_batches (bridge FPC ↔ CAM senza duplicazione)
+- Sezione CAM integrata nella DOP EN 1090 con badge PNRR DM 256/2022
+- Dichiarazione CAM dedicata con riferimenti normativi e firma
+- Form frontend batch con sezione CAM (Peso, % Riciclato, Metodo Produttivo, Distanza)
+- Colonne Peso e % Riciclato nella tabella rintracciabilità
+
+### PDF Professionali (Completato 21/03/2026)
+- DOP EN 1090: 4 pagine, intestazione aziendale, tabella prestazioni ZA.1-ZA.7, tracciabilità, allegato CAM PNRR, dichiarazione conformità con firma
+- Etichetta CE: formato compatto 148x105mm, stampa adesivo, badge EN 1090-1
+- Dichiarazione CAM PNRR: summary boxes, dettaglio materiali con fornitore/colata/distanza, riferimento DM 256/2022
+- Scheda Rintracciabilità Totale: A4 landscape, catena Disegno → DDT → Colata → Cert 3.1 con 12 colonne
+
+### Multi-Normativa (Parziale)
+- Executive Dashboard con vista EN 1090 / EN 13241 / Generica
+- `normativa_tipo` su voci_lavoro
+- Riesame Selettivo: DA IMPLEMENTARE
+
+### Moduli Aggiuntivi (Completato)
+- Scadenziario Manutenzioni Digitalizzato
+- Verbali ITT (Initial Type Testing)
+- Sopralluoghi, Perizie, Preventivatore con AI
+- DDT, Fatturazione attiva/passiva, Analisi finanziaria
+- Notifiche (base), QR Code, Team management
+
+## Backlog Prioritizzato
+
+### P0 (Nessuno — task corrente completato)
+
+### P1
+1. **Riesame Tecnico Selettivo**: Check condizionali per normativa nelle commesse miste
+2. **Ponte Perizie → Preventivatore**: Trasferimento auto dati AI perizia → preventivo
+3. **Sistema Notifiche Proattive**: Email 30/7/1gg prima di scadenze
+
+### P2
+4. **Architettura Multi-Tenant**: `tenant_id` su tutte le collection
+5. **Training ML**: Modello di stima dal Diario Produzione
+6. **Alerting Intelligente**: Notifica sforamento costi
+
+### P3
+7. Unificazione PDF legacy (13 servizi)
+8. Portale Clienti (read-only)
+9. RBAC avanzato, QR Code migliorati
+10. Split file grandi (SettingsPage.js, commesse.py)
 
 ## Architettura
-- **Frontend**: React 18 + TailwindCSS + Shadcn/UI + Recharts
-- **Backend**: FastAPI + Motor (MongoDB async)
-- **AI**: emergentintegrations (GPT-4o Vision)
-- **Auth**: Google OAuth (Emergent-managed)
-- **PDF**: WeasyPrint + qrcode
-- **Multi-normativa**: voci_lavoro con normativa_tipo per riga (EN_1090, EN_13241, GENERICA)
-
-## Moduli Implementati
-
-### Flusso EN 1090 completo (testato con stress test RINA)
-1. Perizia AI → Preventivo → Commessa EN_1090 EXC2
-2. Riesame Tecnico (12 checks auto, safety gate bloccante)
-3. Registro Saldatura + Tracciabilita Materiali
-4. Controllo Finale + Report Ispezioni VT/DIM
-5. DOP + Etichetta CE automatica
-6. Scadenziario Manutenzioni + Verbali ITT
-
-### Dashboard Executive Multi-Normativa (21 Mar 2026)
-- `GET /api/dashboard/executive` — vista aggregata 3 settori
-- **EN 1090**: indice rischio normativo, audit-ready count, riesame/ispezioni/controllo/DOP status
-- **EN 13241**: stesse metriche per chiusure
-- **GENERICA**: efficienza produttiva dalle fasi_produzione
-- **Commesse miste**: voci_lavoro con normative diverse → commessa appare in piu settori con badge MISTA
-- **Scadenze imminenti**: patentini + tarature + ITT aggregati con urgenza colorata
-- **Frontend**: `/executive` — 3 sezioni settore, KPI cards, alert scadenze, click→CommessaHub
-- Test: iteration 211 — 20/20 backend + 100% frontend
-
-### Sopralluoghi + Perizie + Preventivatore (testati iteration 210)
-- 36/36 endpoint testati — CRUD, PDF, genera-preventivo, accetta→commessa
-- AI endpoints (GPT-4o Vision) verificati con dati esistenti
-
-## Test Eseguiti
-- Iteration 206: DOP/CE — 12/12
-- Iteration 207: Scadenziario/ITT — 19/19
-- Iteration 208: E2E integration (10 flussi) — 34/34
-- Iteration 209: STRESS TEST RINA (4 scenari) — 28/28
-- Iteration 210: Sopralluoghi/Perizie/Preventivatore — 36/36
-- Iteration 211: Executive Dashboard Multi-Normativa — 20/20
-
-## Backlog
-
-### P1 — Prossimi (dalla richiesta utente)
-- Riesame Tecnico Selettivo: attivare check solo per righe normate (EN 1090/13241), bypassare per generiche
-- Verbali Prova EN 13241: forze cancello, fotocellule, bordi sensibili
-- Sistema Notifiche Proattive: email 30gg/7gg/scadenza per patentini/tarature
-- Ponte Perizie → Preventivatore: flusso automatico dati AI perizia → righe preventivo
-
-### P2 — Miglioramenti
-- Multi-Tenant: tenant_id su ogni collection + middleware isolamento
-- Training ML dal Diario Produzione
-- Alerting costi > budget
-
-### P3 — Backlog Generale
-- Unificazione PDF legacy, Portale clienti, RBAC, QR Code, Export Excel
-- Split file grandi (SettingsPage.js, commesse.py)
+- Frontend: React + ShadCN/UI, porta 3000
+- Backend: FastAPI + MongoDB, porta 8001
+- PDF: WeasyPrint
+- AI: emergentintegrations + GPT-4o Vision
+- Auth: Google OAuth con sessioni cookie

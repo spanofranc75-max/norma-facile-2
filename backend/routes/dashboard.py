@@ -1377,12 +1377,6 @@ async def morning_briefing(user: dict = Depends(get_current_user)):
 
     # ── Card 4: Da fare oggi ──
     # Preventivi accettati senza commessa
-    preventivi_da_convertire = await db.preventivi.count_documents({
-        "user_id": uid,
-        "status": "accettato",
-        "hidden_from_planning": {"$ne": True},
-    })
-    # Check if they already have a linked commessa
     prev_accettati = await db.preventivi.find(
         {"user_id": uid, "status": "accettato", "hidden_from_planning": {"$ne": True}},
         {"_id": 0, "preventivo_id": 1}
