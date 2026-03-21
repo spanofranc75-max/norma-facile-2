@@ -129,6 +129,7 @@ async def create_batch(body: MaterialBatchCreate, user: dict = Depends(get_curre
     doc = {
         "batch_id": f"bat_{uuid.uuid4().hex[:12]}",
         "user_id": user["user_id"],
+        "commessa_id": body.commessa_id or "",  # Link to commessa for traceability
         "supplier_name": body.supplier_name,
         "material_type": body.material_type,
         "heat_number": body.heat_number,
@@ -166,6 +167,8 @@ async def update_batch(batch_id: str, body: MaterialBatchCreate, user: dict = De
         "ddt_numero": body.ddt_numero,
         "disegno_numero": body.disegno_numero,
     }
+    if body.commessa_id is not None:
+        update["commessa_id"] = body.commessa_id
     if body.certificate_base64 is not None:
         update["certificate_base64"] = body.certificate_base64
         update["certificate_filename"] = body.certificate_filename

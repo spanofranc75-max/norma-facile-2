@@ -42,6 +42,7 @@ class MaterialBatchCreate(BaseModel):
     numero_certificato: Optional[str] = None  # Certificate number
     ddt_numero: Optional[str] = None       # DDT number
     disegno_numero: Optional[str] = None   # Drawing number
+    commessa_id: Optional[str] = None      # Link to commessa for traceability
 
 
 class MaterialBatchOut(BaseModel):

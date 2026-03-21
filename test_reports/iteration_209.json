@@ -1,0 +1,88 @@
+{
+  "summary": "RINA STRESS TEST AUDIT Complete - All 4 scenarios passed (28/28 tests). Fixed bug: POST /api/fpc/batches was not saving commessa_id field.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration209_rina_stress_audit.py",
+    "/app/test_reports/pytest/iteration209_rina_stress_audit_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/models/fpc.py",
+    "/app/backend/routes/fpc.py"
+  ],
+  "success_rate": {
+    "backend": "100% (28/28 passed)"
+  },
+  "seed_data_creation": "Test data created and cleaned up: preventivo, commessa, material batch (colata X12345), registro saldatura entry, DOP automatica",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "RINA stress test audit completed successfully. All 4 scenarios verified: (1) Preventivo→Commessa flow with EN_1090/EXC2, (2) Safety gate blocks approval when checks fail, (3) Material traceability with colata X12345 flows to Riesame and DOP, (4) DOP automatica collects all data correctly. Bug fixed: POST /api/fpc/batches was missing commessa_id field - now properly saves and links batches to commesse for traceability.",
+  "scenarios_tested": {
+    "scenario_1_preventivo_to_commessa": {
+      "status": "PASSED",
+      "tests": [
+        "POST /api/preventivatore/calcola with HEB 200 S355J2 - OK",
+        "POST /api/preventivatore/genera-preventivo - OK",
+        "POST /api/preventivatore/accetta/{id} generates commessa - OK",
+        "Commessa has normativa_tipo=EN_1090, classe_exc=EXC2 - OK",
+        "Riesame exists with 12 checks - OK"
+      ]
+    },
+    "scenario_2_safety_gate_blocco": {
+      "status": "PASSED",
+      "tests": [
+        "POST /api/riesame/{cid}/approva without checks returns 400 - OK",
+        "strumenti_tarati reads real instrument expiry dates - OK",
+        "saldatori_qualificati reads real welder qualifications - OK",
+        "itt_processi_qualificati detects missing taglio_meccanico - OK"
+      ]
+    },
+    "scenario_3_rintracciabilita_coerenza": {
+      "status": "PASSED",
+      "tests": [
+        "POST /api/fpc/batches with colata X12345 - OK",
+        "Colata X12345 appears in Riesame materiali_confermati - OK",
+        "POST /api/registro-saldatura/{cid} with different colata - OK",
+        "GET /api/fpc/batches/verifica-coerenza/{cid} - OK",
+        "GET /api/registro-saldatura/{cid}/saldatori-idonei filters by process - OK"
+      ]
+    },
+    "scenario_4_output_finale_dop": {
+      "status": "PASSED",
+      "tests": [
+        "POST /api/controllo-finale/{cid} saves notes - OK",
+        "POST /api/report-ispezioni/{cid} with VT checks - OK",
+        "POST /api/fascicolo-tecnico/{cid}/dop-automatica - OK",
+        "DOP contains colata X12345 in batches_rintracciabilita - OK",
+        "GET /api/fascicolo-tecnico/{cid}/etichetta-ce-1090/pdf returns valid PDF - OK",
+        "GET /api/fascicolo-tecnico/{cid}/dop-frazionata/{dop_id}/pdf returns valid PDF - OK"
+      ]
+    },
+    "scenario_5_cleanup": {
+      "status": "PASSED",
+      "tests": [
+        "All test data cleaned up successfully"
+      ]
+    }
+  },
+  "bug_fixed": {
+    "description": "POST /api/fpc/batches was not saving commessa_id field",
+    "root_cause": "MaterialBatchCreate model in models/fpc.py was missing commessa_id field, and create_batch endpoint in routes/fpc.py was not including it in the document",
+    "fix_applied": [
+      "Added commessa_id: Optional[str] = None to MaterialBatchCreate model",
+      "Added commessa_id to create_batch endpoint document",
+      "Added commessa_id handling to update_batch endpoint"
+    ],
+    "impact": "Material batches can now be properly linked to commesse for EN 1090 traceability requirements"
+  },
+  "rca_of_the_issue": "The POST /api/fpc/batches endpoint was accepting commessa_id in the request body but not saving it to the database. This broke the traceability chain required by EN 1090 - material batches need to be linked to specific commesse so that Riesame Tecnico can verify materials and DOP can include batch traceability data."
+}
