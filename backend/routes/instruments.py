@@ -57,6 +57,8 @@ def _doc_to_response(doc: dict) -> dict:
         "computed_status": computed,
         "days_until_expiry": days,
         "notes": doc.get("notes"),
+        "soglia_accettabilita": doc.get("soglia_accettabilita"),
+        "unita_soglia": doc.get("unita_soglia", "mm"),
         "created_at": doc.get("created_at", ""),
         "updated_at": doc.get("updated_at", ""),
     }
@@ -145,6 +147,8 @@ async def create_instrument(
         "calibration_interval_months": payload.calibration_interval_months or 12,
         "status": payload.status,
         "notes": payload.notes or "",
+        "soglia_accettabilita": payload.soglia_accettabilita,
+        "unita_soglia": payload.unita_soglia or "mm",
         "created_at": now_iso,
         "updated_at": now_iso,
     }
@@ -176,6 +180,8 @@ async def update_instrument(
         "calibration_interval_months": payload.calibration_interval_months or 12,
         "status": payload.status,
         "notes": payload.notes or "",
+        "soglia_accettabilita": payload.soglia_accettabilita,
+        "unita_soglia": payload.unita_soglia or "mm",
         "updated_at": now_iso,
     }
 

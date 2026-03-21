@@ -17,6 +17,8 @@ class InstrumentCreate(BaseModel):
     calibration_interval_months: Optional[int] = 12
     status: InstrumentStatus = "attivo"
     notes: Optional[str] = None
+    soglia_accettabilita: Optional[float] = None
+    unita_soglia: Optional[str] = "mm"
 
 
 class InstrumentResponse(BaseModel):
@@ -33,6 +35,8 @@ class InstrumentResponse(BaseModel):
     computed_status: str  # real-time status considering expiry
     days_until_expiry: Optional[int] = None
     notes: Optional[str] = None
+    soglia_accettabilita: Optional[float] = None
+    unita_soglia: Optional[str] = "mm"
     created_at: str
     updated_at: str
 

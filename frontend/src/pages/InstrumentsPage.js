@@ -52,6 +52,7 @@ const EMPTY_FORM = {
     name: '', serial_number: '', type: 'misura', manufacturer: '',
     purchase_date: '', last_calibration_date: '', next_calibration_date: '',
     calibration_interval_months: 12, status: 'attivo', notes: '',
+    soglia_accettabilita: '', unita_soglia: 'mm',
 };
 
 function formatDate(iso) {
@@ -106,12 +107,16 @@ export default function InstrumentsPage() {
         if (!form.name.trim()) { toast.error('Inserisci il nome'); return; }
         if (!form.serial_number.trim()) { toast.error('Inserisci la matricola'); return; }
         setSaving(true);
+        const payload = {
+            ...form,
+            soglia_accettabilita: form.soglia_accettabilita === '' ? null : form.soglia_accettabilita,
+        };
         try {
             if (editTarget) {
-                await apiRequest(`/instruments/${editTarget.instrument_id}`, { method: 'PUT', body: form });
+                await apiRequest(`/instruments/${editTarget.instrument_id}`, { method: 'PUT', body: payload });
                 toast.success('Strumento aggiornato');
             } else {
-                await apiRequest('/instruments/', { method: 'POST', body: form });
+                await apiRequest('/instruments/', { method: 'POST', body: payload });
                 toast.success('Strumento creato');
             }
             closeForm();
@@ -147,6 +152,8 @@ export default function InstrumentsPage() {
             next_calibration_date: inst.next_calibration_date || '',
             calibration_interval_months: inst.calibration_interval_months || 12,
             status: inst.status, notes: inst.notes || '',
+            soglia_accettabilita: inst.soglia_accettabilita ?? '',
+            unita_soglia: inst.unita_soglia || 'mm',
         });
         setShowForm(true);
     };
@@ -336,6 +343,45 @@ export default function InstrumentsPage() {
                             </div>
                         </div>
 
+                        {/* Soglia Accettabilita — Racc. RINA Audit 2025 */}
+                        {form.type === 'misura' && (
+                            <div className="border-t pt-3">
+                                <p className="text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                                    <AlertTriangle className="h-3.5 w-3.5 text-amber-500" /> Soglia di Accettabilita (Racc. RINA n.2)
+                                </p>
+                                <p className="text-[10px] text-slate-400 mb-2">
+                                    Se lo scostamento misurato supera questa soglia, il sistema genera un alert "Fuori Tolleranza"
+                                </p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <Label className="text-xs font-medium">Soglia</Label>
+                                        <Input
+                                            data-testid="input-soglia"
+                                            type="number"
+                                            step="0.01"
+                                            min={0}
+                                            value={form.soglia_accettabilita}
+                                            onChange={e => setForm(f => ({ ...f, soglia_accettabilita: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                                            placeholder="es. 0.1"
+                                            className="mt-1"
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs font-medium">Unita</Label>
+                                        <Select value={form.unita_soglia} onValueChange={v => setForm(f => ({ ...f, unita_soglia: v }))}>
+                                            <SelectTrigger data-testid="select-unita-soglia" className="mt-1"><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="mm">mm</SelectItem>
+                                                <SelectItem value="%">%</SelectItem>
+                                                <SelectItem value="N">N (Newton)</SelectItem>
+                                                <SelectItem value="bar">bar</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <div>
                             <Label className="text-xs font-medium">Note</Label>
                             <Textarea data-testid="input-notes" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Note aggiuntive..." rows={2} className="mt-1" />
@@ -474,6 +520,16 @@ function InstrumentCard({ inst, onEdit, onDelete }) {
                                         : `${inst.days_until_expiry} giorni rimanenti`}
                             </p>
                         )}
+                    </div>
+                )}
+
+                {/* Soglia Accettabilita badge */}
+                {inst.soglia_accettabilita != null && (
+                    <div className="flex items-center gap-1.5 mb-3 px-3 py-1.5 bg-violet-50 border border-violet-200 rounded-lg">
+                        <AlertTriangle className="h-3 w-3 text-violet-500" />
+                        <span className="text-[10px] text-violet-700 font-medium">
+                            Soglia: ±{inst.soglia_accettabilita} {inst.unita_soglia || 'mm'}
+                        </span>
                     </div>
                 )}
 

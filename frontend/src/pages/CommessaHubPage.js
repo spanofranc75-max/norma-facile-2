@@ -30,6 +30,7 @@ import CommessaComplianceBanner from '../components/CommessaComplianceBanner';
 import RiesameTecnicoSection from '../components/RiesameTecnicoSection';
 import RegistroSaldaturaSection from '../components/RegistroSaldaturaSection';
 import TracciabilitaMaterialiSection from '../components/TracciabilitaMaterialiSection';
+import ControlloFinaleSection from '../components/ControlloFinaleSection';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
@@ -319,6 +320,9 @@ export default function CommessaHubPage() {
 
                 {/* Tracciabilita Materiali — Link DDT → Lotti FPC */}
                 <TracciabilitaMaterialiSection commessaId={commessaId} />
+
+                {/* Controllo Finale — Checklist pre-spedizione EN 1090-2:2024 */}
+                <ControlloFinaleSection commessaId={commessaId} />
 
                 {/* Commessa Info Card */}
                 <Card className="border-gray-200" data-testid="commessa-info">

@@ -1,0 +1,78 @@
+{
+  "summary": "Iteration 202: Controllo Finale Checklist + Soglia Accettabilita Calibro - All backend tests passed (21/21). Frontend UI verified: ControlloFinaleSection renders with 3 area progress bars, manual check toggles work, save draft works. InstrumentsPage shows Soglia badge on Calibro cards, form shows Soglia section only for type=misura.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "InstrumentsPage",
+        "issues": ["Console warning: Encountered two children with the same key (inst_c5ea355990, inst_85dfa1a092) - duplicate instrument IDs in database"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration202_controllo_finale_soglia.py",
+    "/app/test_reports/pytest/iteration202_controllo_finale_soglia_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "All 3 Controllo Finale endpoints working correctly with proper authentication and error handling",
+    "GET /api/controllo-finale/{commessa_id} returns 11 checks grouped by 3 areas (Visual Testing, Dimensionale, Compliance) with auto-checks running against real DB data",
+    "POST /api/controllo-finale/{commessa_id} saves manual check results and 3 note fields (note_vt, note_dim, note_generali)",
+    "POST /api/controllo-finale/{commessa_id}/approva correctly fails with 400 if not all checks pass",
+    "GET /api/instruments/ returns soglia_accettabilita and unita_soglia fields for all instruments",
+    "PUT /api/instruments/{id} can update soglia_accettabilita with different units (mm, %, N, bar)",
+    "GET /api/riesame/{commessa_id} includes tolleranza_calibro check that uses per-instrument configurable threshold",
+    "Frontend ControlloFinaleSection renders with 3 area progress bars showing ok/totale counts",
+    "Frontend manual checks can be toggled via checkbox, auto-checks show real-time data with valore and nota",
+    "Frontend Save draft button persists manual checks and notes (toast: 'Controllo finale salvato')",
+    "Frontend InstrumentsPage shows 'Soglia: ±0.1 mm' badge on Calibro cards (violet background)",
+    "Frontend InstrumentsPage form shows 'Soglia di Accettabilita (Racc. RINA n.2)' section only for type=misura"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration202_controllo_finale_soglia.py"
+  ],
+  "success_rate": {
+    "backend": "100% (21/21 tests passed)",
+    "frontend": "100% (all UI elements working, CRUD verified)"
+  },
+  "test_credentials": {
+    "session_token": "d36a500823254076b5c583d6c1d903fa",
+    "test_commessa_id": "com_loiano_cims_2026",
+    "test_user": "user_97c773827822"
+  },
+  "seed_data_creation": "No new seed data created. Used existing test commessa and instruments.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 202 verified Controllo Finale Checklist and Soglia Accettabilita features. Key findings: (1) All 3 Controllo Finale endpoints working correctly. (2) ControlloFinaleSection at data-testid='controllo-finale-section' with 3 area progress bars at data-testid='cf-areas-stats'. (3) Manual check toggles at data-testid='cf-toggle-{check_id}' (e.g., cf-toggle-vt_100_eseguito). (4) Save button at data-testid='cf-save-btn', Approve button at data-testid='cf-approve-start-btn'. (5) Note fields at data-testid='cf-note-vt', 'cf-note-dim', 'cf-note-gen'. (6) InstrumentsPage at /strumenti route with data-testid='instruments-page'. (7) Soglia badge visible on Calibro cards with text 'Soglia: ±0.1 mm'. (8) Form Soglia section only visible when type=misura, hidden for other types. (9) Riesame Tecnico tolleranza_calibro check uses per-instrument configurable threshold. (10) IMPORTANT: API calls must NOT use trailing slash to avoid 307 redirect issues.",
+  "testing_summary": {
+    "backend_endpoints": {
+      "GET /api/controllo-finale/{commessa_id}": "PASS - Returns 11 checks grouped by 3 areas with auto-checks",
+      "POST /api/controllo-finale/{commessa_id}": "PASS - Saves manual checks and notes",
+      "POST /api/controllo-finale/{commessa_id}/approva": "PASS - Fails with 400 if not all checks pass",
+      "GET /api/instruments/": "PASS - Returns soglia_accettabilita and unita_soglia fields",
+      "PUT /api/instruments/{id}": "PASS - Can update soglia_accettabilita",
+      "GET /api/riesame/{commessa_id}": "PASS - tolleranza_calibro check uses per-instrument threshold"
+    },
+    "frontend_ui": {
+      "ControlloFinaleSection": {
+        "component_visible": "PASS - data-testid='controllo-finale-section'",
+        "areas_progress_bars": "PASS - 3 areas (Visual Testing, Dimensionale, Compliance) with progress bars",
+        "manual_check_toggles": "PASS - Checkboxes for manual checks work",
+        "auto_checks_display": "PASS - Shows valore and nota for auto-checks",
+        "save_draft_button": "PASS - Saves and shows toast notification",
+        "note_fields": "PASS - 3 note fields (VT, Dim, Gen) present"
+      },
+      "InstrumentsPage": {
+        "soglia_badge_on_cards": "PASS - Shows 'Soglia: ±0.1 mm' on Calibro cards",
+        "form_soglia_section_misura": "PASS - Visible for type=misura",
+        "form_soglia_section_hidden": "PASS - Hidden for type=saldatura/macchinario/altro",
+        "rina_recommendation_text": "PASS - Shows 'Racc. RINA n.2' text"
+      }
+    }
+  }
+}

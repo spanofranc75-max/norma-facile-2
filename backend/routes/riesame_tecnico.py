@@ -84,8 +84,8 @@ CHECKS_DEFINITION = [
     {
         "id": "tolleranza_calibro",
         "sezione": "Attrezzature",
-        "label": "Tolleranza calibro conforme (racc. RINA: < 5%)",
-        "desc": "Verifica che la tolleranza del calibro sia sotto il 5% (raccomandazione audit 2025)",
+        "label": "Tolleranza calibro conforme (configurabile per strumento)",
+        "desc": "Verifica che la tolleranza di ogni strumento di misura rispetti la soglia impostata (racc. RINA audit 2025)",
         "auto": True,
     },
     {
@@ -184,20 +184,25 @@ async def _run_auto_checks(commessa_id: str, user_id: str) -> dict:
     ).to_list(100)
 
     expired_instr = []
-    calibro_tolleranza_ok = True
+    calibro_fuori_tolleranza = []
     for inst in instruments:
-        nc = inst.get("next_calibration", "")
+        nc = inst.get("next_calibration", "") or inst.get("next_calibration_date", "")
         if nc:
             try:
                 if date.fromisoformat(str(nc)[:10]) < today:
                     expired_instr.append(inst.get("name", "?"))
             except (ValueError, TypeError):
                 pass
-        # Check calibro tolerance (RINA recommendation: < 5%)
-        if "calibro" in (inst.get("name") or "").lower():
-            tol = inst.get("tolerance_pct") or inst.get("tolerance", 0)
-            if isinstance(tol, (int, float)) and tol >= 5:
-                calibro_tolleranza_ok = False
+        # Check per-instrument configurable tolerance threshold
+        soglia = inst.get("soglia_accettabilita")
+        if soglia is not None and isinstance(soglia, (int, float)):
+            scostamento = inst.get("ultimo_scostamento")
+            if scostamento is not None and isinstance(scostamento, (int, float)):
+                unita = inst.get("unita_soglia", "mm")
+                if abs(scostamento) > soglia:
+                    calibro_fuori_tolleranza.append(
+                        f"{inst.get('name','?')}: scostamento {scostamento}{unita} > soglia {soglia}{unita}"
+                    )
 
     results["strumenti_tarati"] = {
         "ok": len(expired_instr) == 0,
@@ -212,9 +217,9 @@ async def _run_auto_checks(commessa_id: str, user_id: str) -> dict:
     }
 
     results["tolleranza_calibro"] = {
-        "ok": calibro_tolleranza_ok,
-        "valore": "Conforme" if calibro_tolleranza_ok else "Tolleranza >= 5%",
-        "nota": "Raccomandazione RINA 2025: tolleranza calibro < 5%" if not calibro_tolleranza_ok else "Conforme alla raccomandazione audit",
+        "ok": len(calibro_fuori_tolleranza) == 0,
+        "valore": "Conforme" if not calibro_fuori_tolleranza else f"{len(calibro_fuori_tolleranza)} fuori tolleranza",
+        "nota": "; ".join(calibro_fuori_tolleranza[:3]) if calibro_fuori_tolleranza else "Tutti gli strumenti entro la soglia configurata",
     }
 
     # 6. Company docs
