@@ -1,137 +1,151 @@
 <analysis>**original_problem_statement**:
-The user has two primary requests:
-1.  **Create a 'Documenti Azienda' section in the Settings page.** This section should allow the user to upload and manage global company documents like DURC, Visura Camerale, White List, and Patente a Crediti. These documents must be automatically available for inclusion in safety packages (e.g., POS for a construction site).
-2.  **Fix a critical bug in the FPC (Factory Production Control) module.** The user is unable to open an FPC project, specifically for a project in Loiano, which prevents them from linking documents and proceeding with their work. The user also reported that navigating to  results in a crash or a blank page.
+The user has three primary requests:
+1.  **Fix a Bug**: When setting an expiry date for a document in the Documenti Azienda checklist (e.g., DURC), the date is not saved to the database and disappears on refresh. This needs immediate fixing.
+2.  **New Feature**: Add a new tab named Allegati POS (POS Attachments) to the Settings -> Documents page. This section must allow the user to upload fixed technical attachments (e.g., documents for Noise, Vibrations, Manual Material Handling (MMC), and Video Display Terminals (VDT)).
+3.  **Integration**: Ensure that these new Allegati POS files, along with the already-uploaded DVR, are automatically included in the safety package ZIP file generated for a job order (like the Loiano project).
 
 **User's preferred language**: Italian. The next agent **MUST** respond in Italian.
 
 **what currently exists?**
-The NormaFacile 2.0 application is a comprehensive ERP for a metalworking company. Key features include a predictive quoting system powered by AI vision (Preventivatore Predittivo), a KPI dashboard, and a machine learning module to calibrate and improve the accuracy of future estimates. The agent has successfully completed a blind test of the estimator, refined its logic based on user feedback, and added a new Analisi AI page that allows for live editing of AI-extracted data with real-time price recalculation. The agent has just started implementing the user's latest requests to add a company documents section and fix the FPC module bug.
+The NormaFacile 2.0 application has evolved significantly. It's a comprehensive ERP for a metalworking company featuring a predictive AI estimator, KPI dashboard, and ML calibration.
+
+Key functionalities recently added or fixed:
+-   **FPC Module**: The critical bug blocking access to FPC (Factory Production Control) projects has been fixed. Users can now create and view FPC projects.
+-   **Human Resources & Compliance**: The Saldatori (Welders) module has been transformed into a full Risorse Umane (Human Resources) module. It now manages all workers and their safety certifications (81/08, medicals, etc.), not just welding qualifications.
+-   **Compliance Matrix (Matrice Scadenze)**: A new page  provides a company-wide dashboard showing the compliance status of each worker, with color-coded indicators for valid, expiring, or expired certifications.
+-   **Installation Report (Verbale di Posa)**: A complete end-to-end feature to generate a professional Verbale di Posa in Opera PDF. This includes a dynamic form, photo uploads, client signature capture on tablets/phones, and automatic inclusion of EN 1090 material lots.
+-   **Company Documents**: A dedicated section in Settings for managing global company documents (DURC, Visura, DVR, etc.) with a professional table layout and expiry alerts.
 
 **Last working item**:
--   **Last item agent was working**: The agent was simultaneously addressing two user requests:
-    1.  **Feature**: Creating the 'Documenti Azienda' tab within the Settings page, including backend routes and frontend components.
-    2.  **Bugfix**: Investigating and fixing a crash/inaccessibility issue with the FPC (Factory Production Control) module, which the user needs for a Loiano project.
--   **Status**: IN PROGRESS
+-   **Last item agent was working**: The agent was investigating the user's latest request to fix the date persistence bug in the Documenti Azienda section and add the Allegati POS tab. The agent identified the root cause of the bug: the backend lacks an endpoint to update a document's expiry date without re-uploading the entire file.
+-   **Status**: NOT STARTED
 -   **Agent Testing Done**: N
--   **Which testing method agent to use?**: both. The feature requires backend API testing (upload/download/list global docs) and frontend UI testing (new settings tab). The bug fix requires both backend (verifying project creation logic) and frontend (verifying page navigation and rendering) testing.
+-   **Which testing method agent to use?**: both. Backend testing (curl) for the new PATCH endpoint and frontend testing (screenshot) for the new UI elements in the settings page and POS wizard.
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: FPC Project Page Inaccessible/Crash (P0)**
-    -   **Description**: The user cannot open FPC projects, specifically mentioning a Loiano project. Navigating directly to  also failed. This blocks the user from managing EN 1090 traceability and linking required documents.
-    -   **Attempted fixes**: The agent identified that the frontend route  did not exist and added a redirect to the correct main traceability page (). The agent also discovered that no FPC projects existed in the database, likely because the Loiano  (job order) itself hadn't been created. The agent created a mock Loiano commessa to proceed with debugging.
+-   **Issue 1: Expiry Date Not Saving in Company Documents (P0)**
+    -   **Description**: In the  tab, when a user sets a  for a document and refreshes the page, the date disappears.
+    -   **Attempted fixes**: The agent diagnosed the root cause: no specific backend endpoint exists to update just the date. The current upload logic overwrites the document entry, and the date is only sent during file upload, not independently.
     -   **Next debug checklist**:
-        1.  Verify the flow for creating an FPC project from a  works correctly. This happens in the  inside .
-        2.  Test the navigation from the list of FPC projects to a single project's detail page ().
-        3.  Ensure the  component correctly fetches and displays project data for an existing project.
-    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical blocker for the user, preventing them from performing essential EN 1090 compliance tasks. Fixing it will restore a core module of the application.
-    -   **Status**: IN PROGRESS
+        1.  **Backend**: In , create a new  endpoint that accepts a  field and updates the corresponding document in the  collection.
+        2.  **Frontend**: In , add a Salva (Save) button next to each date input.
+        3.  **Frontend**: Wire the Salva button's  event to call the new  endpoint, sending the document type and the new date value. Provide user feedback with a toast notification.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical bug blocking a core compliance feature. Fixing it will allow the user to manage document expiries, which is essential for the alert system to function correctly.
+    -   **Status**: NOT STARTED
     -   **Is recurring issue?**: N
     -   **Should Test frontend/backend/both after fix?**: Both.
     -   **Blocked on other issue**: None.
 
 **In progress Task List**:
--   **Task 1: Implement Documenti Azienda (Company Documents) Feature (P0)**
-    -   **Description**: Create a new tab in the Settings page to manage global documents (DURC, Visura, etc.) that can be attached to any safety package.
-    -   **Where to resume**:
-        *   **Backend**: The agent added new categories to the  model and created new endpoints () to handle upload and listing of these specific document types.
-        *   **Frontend**: The agent created the  component and added it to the  router.
-        *   **Next Steps**: The UI and backend are scaffolded but require end-to-end testing for file upload, listing, viewing, and deleting. The logic to make these documents available in safety packages also needs to be implemented.
-    -   **What will be achieved with this?**: A centralized, single source of truth for critical company documents, streamlining the creation of compliance-related document packages.
-    -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: Both.
-    -   **Blocked on something**: The FPC bug needs to be fixed so the user can test the full workflow of attaching these new global docs to the Loiano project's safety plan.
+-   None.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **(P1) Automatic ML Model Training**: Implement the agent's suggestion to automatically connect the Diario di Produzione (Production Log) to the ML calibration system. When a job order is closed, its actual hours should be used to retrain and improve the estimation model, making it self-improving over time.
+-   **(P0) Implement Allegati POS Tab**: Create a new tab in the  page for uploading fixed technical documents (Rumore, Vibrazioni, MMC, VDT). These files must be automatically included in every new POS safety package.
+-   **(P1) Automatic ML Model Training**: Implement automatic connection of the Diario di Produzione to the ML calibration system to make the estimation model self-improving.
+-   **(P1) Intelligent Alerting System**: Automatically notify managers when a project's actual costs exceed budgeted costs.
 
 **Future Tasks:**
--   **(P1) Intelligent Alerting System**: Automatically notify managers when a project's actual costs exceed budgeted costs.
 -   **(P2) Unify PDF Services**: Migrate the 13 legacy PDF generation services into the new Pulsante Magico system.
 -   **(P2) Excel Export**: Add a feature for cost analysis data export.
+-   **(P2) PDF Compliance Report**: Add a button to the Matrice Scadenze to print a Stato Compliance PDF report.
 -   **(P3) Client Portal**: Develop a read-only portal for clients to view job progress.
 -   **(P3) Granular RBAC**: Implement a more detailed role-based access control system.
 -   **(P3) Drag-and-Drop for AI Analysis**: Add drag-and-drop file upload directly to the .
+-   **(P3) QR Code on Documents**: Add a QR code to generated PDFs (like the Verbale di Posa) that links to the authentic digital version in the app.
 
 **Completed work in this session**
--   **Predictive Estimator Blind Test**: Successfully executed a full, autonomous quote generation from a technical drawing, created a comparison endpoint (), and built a frontend page () to display the AI vs. Manual results.
--   **Predictive Estimator Refinement**: Corrected the AI's estimation logic based on user feedback (e.g., using €/kg for labor, reading drawing dimensions, weighting bolts).
--   **Machine Learning Calibration**: Implemented an ML system to refine estimation accuracy over time using historical data. This included a new backend service (), new API endpoints (), and a new Calibrazione ML panel in the KPI Dashboard.
--   **Frontend Enhancements & Fixes**:
-    -   Created the  page to display and edit AI analysis results.
-    -   Implemented **live editing of material weights with real-time recalculation** of all costs and totals.
-    -   Added a button in the  to navigate directly to the .
-    -   Fixed numerous frontend bugs related to API calls (mixed content, incorrect URL paths) and component state.
-    -   Partially addressed the FPC bug by adding a redirect for the invalid  route.
+-   **Human Resources & Compliance Overhaul**:
+    -   Refactored the Saldatori module into a comprehensive Risorse Umane module, renaming routes to .
+    -   Created the Matrice Scadenze page, providing a company-wide compliance dashboard for all worker certifications.
+    -   Integrated worker selection and automatic certificate attachment into the POS Wizard.
+-   **Verbale di Posa (Installation Report) Feature**:
+    -   Built a full-featured module for creating, saving, and generating PDF installation reports.
+    -   Implemented a mobile-first UI with photo uploads () and a signature pad ().
+    -   Ensured EN 1090 material lots are automatically pulled from the database and highlighted in the report.
+    -   Tested and finalized the feature for the Loiano project.
+-   **FPC Project Creation**:
+    -   Fixed the critical FPC page crash ().
+    -   Created the Loiano commessa and linked it to the FPC project, enabling end-to-end testing.
+-   **Company Documents UI/UX**:
+    -   Redesigned the Documenti Azienda page into a professional table layout with status indicators for expiry.
+    -   Added DVR as a required global document.
+-   **Testing**: Consistently used  after each major feature, achieving 100% pass rates across backend and frontend tests.
 
 **Earlier issues found/mentioned but not fixed**
--   None. The only outstanding issue is the FPC bug, which is currently in progress.
+-   None.
 
 **Known issue recurrence from previous fork**
 -   None.
 
 **Code Architecture**
-
+scadenza
 
 **Key Technical Concepts**
--   **Machine Learning Calibration**: A system that uses completed projects (estimated vs. actual hours) to calculate correction factors (for hours, materials, etc.), which are then applied to new estimates to improve their accuracy.
--   **Live Recalculation (Frontend)**: Using React state () and effects () to create a highly interactive UI where changing an input (e.g., a material's weight) instantly triggers a recalculation of all dependent values (costs, margins, totals) on the client side.
--   **Global Document Management**: A new category of company-wide documents, stored and tagged separately, intended for reuse across multiple compliance packages.
+-   **Compliance Matrix**: Backend aggregation logic () that iterates through all workers and their qualifications to determine their real-time deployment readiness, flagging missing, expired, or expiring certifications.
+-   **Dynamic PDF Generation**: Using WeasyPrint with HTML/CSS templates to create data-driven, professional PDFs on the fly, including dynamic data like material lots, project details, and a placeholder logo.
+-   **Client-Side Signature Capture**: Utilizing  to capture user drawings (signatures) as a base64-encoded image for submission to the backend.
+-   **Mobile-First Responsive Design**: Using TailwindCSS utility classes (, , ) to create UIs that adapt from a stacked layout on mobile to a multi-column layout on desktops, specifically for the .
 
 **key DB schema**
--   **preventivi**: Now includes optional fields  (dict),  (float),  (float) to persist the results and manual corrections from the AI analysis.
--   **company_documents**: The  field now includes , , , and .
+-   **company_documents**: Contains a  field (String, ). The bug is that it's not being updated independently of file uploads. New categories for allegati_pos (e.g., , ) will be needed.
+-   **welders**: This collection now serves as the Operai (Workers) registry.
+-   **welders.qualifications** (sub-document array): Now includes a  (e.g., ) to categorize safety certifications, in addition to welding patentini.
+-   **verbali_posa** (New Collection): Stores saved installation reports, including , form data, photo filenames, and the  as a base64 data URI.
 
 **All files of reference**
--   **/app/frontend/src/pages/SettingsPage.js**: The main settings page, where the new tab was added.
--   **/app/frontend/src/components/settings/DocumentiAziendaTab.js**: The new component for managing company documents.
--   **/app/backend/routes/company_docs.py**: The backend API for managing company documents.
--   **/app/frontend/src/pages/TracciabilitaPage.js**: The page containing the FPC project creation flow, which needs to be debugged.
--   **/app/frontend/src/pages/FPCProjectPage.js**: The detail page for a single FPC project, which was crashing or inaccessible.
--   **/app/backend/routes/fpc.py**: The backend API for the FPC module.
+-   **/app/backend/routes/company_docs.py**: Needs a new PATCH endpoint to fix the date bug.
+-   **/app/frontend/src/components/settings/DocumentiAziendaTab.js**: Needs a Save button for dates. Will need a new Allegati POS tab.
+-   **/app/frontend/src/pages/SettingsPage.js**: Needs to be modified to include the new Allegati POS tab.
+-   **/app/backend/routes/sicurezza.py**: The  function will need to be updated to include the new Allegati POS documents.
+-   **/app/test_reports/iteration_197.json**: Last successful test report.
+-   **/app/memory/PRD.md**: Contains the full product requirements and history.
 
 **Critical Info for New Agent**
--   You have two high-priority tasks from the user: fix the FPC bug and finish the Company Documents feature.
--   The **FPC bug is a blocker**. The user cannot proceed with their compliance workflow for the Loiano project until it's fixed. The root cause is likely in the project creation flow within  or data loading in . No FPC projects currently exist in the database.
--   The Documenti Azienda feature is well underway. The frontend tab and backend endpoints are created. You need to test the file operations and then implement the logic to make these documents accessible when generating safety packages (likely in  or a related service).
+-   **Priority 1 is the date bug**. The user cannot manage document expiries. You must implement the  endpoint in  and the corresponding save button in .
+-   **Priority 2 is the Allegati POS feature**. This involves creating a new UI tab, updating the backend model/routes to accept new document types, and modifying the safety ZIP generation logic in .
+-   The user wants to see these features working for the **Loiano commessa**. The ID is .
+-   Authentication tokens expire. If you receive  or  errors, you may need to create a new test session token.
 
 **documents and test reports created in this job**
--   /app/test_reports/iteration_191.json
--   /app/test_reports/iteration_192.json
--   /app/test_reports/iteration_193.json
--   /app/memory/PRD.md (updated multiple times)
+-   /app/test_reports/iteration_194.json
+-   /app/test_reports/iteration_195.json
+-   /app/test_reports/iteration_196.json
+-   /app/test_reports/iteration_197.json
+-   /app/memory/PRD.md (updated after each major task)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User stops agent**: Emergent, stop. (COMPLETE)
-2.  **User reports missing pages**: Dashboard Analisi and Lista Materiali AI are not accessible from the menu. (COMPLETE - Agent created  and linked it).
-3.  **User requests UI link**: Connect the analysis screen to a button inside each quote. (COMPLETE - Agent added the button).
-4.  **User requests live editing**: Wants to correct AI-extracted weights (e.g., 7000kg -> 2200kg) and see the price update in real-time. (COMPLETE - Agent implemented this feature).
-5.  **User reports FPC bug**: la pagina FPC mi dà ancora errore... Ripara il database. (IN PROGRESS - Agent identified route issue and lack of data).
-6.  **User requests same view**: Voglio vedere esattamente quello che vedi tu, ora. (ACK - Agent proceeded to implement fixes).
-7.  **User reports missing feature**: The settings page is missing a module for uploading fixed company documents. (IN PROGRESS - Agent started implementation).
-8.  **User specifies feature requirements**: Crea subito la sezione Documenti Azienda nelle Impostazioni. for DURC, Visura, etc. (IN PROGRESS).
-9.  **User specifies document scope**: Rendi questi documenti Globali. (IN PROGRESS - Agent is creating dedicated endpoints).
-10. **User re-iterates blocker**: Reminds the agent that the FPC bug fix is necessary to link these new documents to the Loiano project. (IN PROGRESS).
+1.  **User confirms Verbale plan**: Approves option B (save then send email) and using a placeholder logo. Stresses the importance of EN 1090 lots and a mobile-first design. (COMPLETE)
+2.  **Agent creates Loiano commessa**: Creates the  commessa and links it to the FPC project. (COMPLETE)
+3.  **Agent adds test data**: Adds EN 1090 material lots to the new commessa for testing. (COMPLETE)
+4.  **Agent optimizes Verbale page**: Rewrites the  to be mobile-first and to highlight the EN 1090 lots. (COMPLETE)
+5.  **Agent tests Verbale**: Successfully saves and generates a PDF for the Loiano commessa. (COMPLETE)
+6.  **Agent screenshots Verbale**: Confirms the UI shows the correct data for Loiano. (COMPLETE)
+7.  **Agent runs tests**: Runs , which passes 100%. (COMPLETE)
+8.  **Agent finishes**: Summarizes the completion of the Verbale di Posa feature. (COMPLETE)
+9.  **User reports bug and new feature**: Bug Date: When I enter deadlines in the CIMS Checklist, the system deletes them... Add a POS Attachments tab... Ensure the DVR is included in the package. (IN PROGRESS)
+10. **Agent starts debugging**: The agent correctly identifies the bug is with date persistence by testing the API and inspecting the code. (IN PROGRESS)
 
 **Project Health Check:**
--   **Broken**: The FPC module is currently broken for the user due to the project access/creation bug.
+-   **Broken**: The functionality to save an expiry date for a company document is currently broken.
 -   **Mocked**: No.
 
 **3rd Party Integrations**
 -   **emergentintegrations**: Used for GPT-4o Vision, powered by the Emergent LLM Key.
 -   **WeasyPrint**: For server-side PDF generation.
 -   **recharts**: For data visualization on the KPI Dashboard.
+-   **react-signature-canvas**: For capturing user signatures on the frontend.
+-   **react-dropzone**: For drag-and-drop file uploads.
 
 **Testing status**
--   **Testing agent used after significant changes**: YES. Agent has consistently used  after each major feature completion, including the most recent Analisi AI page.
+-   **Testing agent used after significant changes**: YES, the agent used the testing agent after every major feature implementation and achieved 100% pass rates.
 -   **Troubleshoot agent used after agent stuck in loop**: NO.
 -   **Test files created**: None.
--   **Known regressions**: The FPC module functionality appears to have regressed or was never fully tested, as the user cannot access projects.
+-   **Known regressions**: None.
 
 **Credentials to test flow:**
--   Admin credentials are required to access Settings and all compliance modules. The session token is .
+-   The session token used previously is likely expired. The application uses a custom session mechanism managed in . If API calls fail with a 401 error, a new test session may need to be created.
 
 **What agent forgot to execute**
--   The agent correctly captured all user requests and was actively working on them. It did not forget anything, but the resolution for the FPC bug and the implementation of the Company Documents feature are both incomplete and are the highest priority for the next session.</analysis>
+-   The agent did not forget anything. It was in the middle of analyzing and planning the fix for the user's latest requests when the session ended. The plan to tackle the date bug and the Allegati POS feature is sound and should be the immediate next step.</analysis>

@@ -17,7 +17,7 @@ import uuid
 from datetime import datetime, date, timedelta
 
 # Use the public URL for testing
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://normafacile-fpc-fix.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://pos-attachments-hub.preview.emergentagent.com').rstrip('/')
 
 
 @pytest.fixture(scope="module")
