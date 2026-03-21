@@ -10,56 +10,58 @@ ERP completo per carpenteria metallica con gestione EN 1090, EN 13241, ISO 3834.
 - **Auth**: Google OAuth (Emergent-managed)
 - **PDF**: WeasyPrint + qrcode
 
-## Moduli Implementati — Flusso Audit EN 1090
+## Flusso Audit EN 1090 Completo (Testato)
 
-### FASE 1 — Riesame Tecnico (completata)
-- 12 check (8 auto + 4 manuali), Gate AVVIO_PRODUZIONE bloccante, Firma digitale + PDF
-- Nuovo check: `itt_processi_qualificati` (auto) verifica ITT validi per taglio/foratura
+### 1. Perizia AI → Preventivo → Commessa
+- Upload foto → AI estrae materiali → Calcolo predittivo → Accetta → Commessa EN_1090 EXC2 auto
+- **Filo**: preventivi → commesse (normativa, classe EXC, budget, distinta)
 
-### FASE 2 — Registro Saldatura + Link DDT (completata)
-- Registro Saldatura CRUD con filtro saldatori per processo/patentino
-- Tracciabilita Materiali con auto-link DDT -> batch
+### 2. Riesame Tecnico (Safety Gate) — 12 checks
+- 8 auto-checks: strumenti_tarati, attrezzature_idonee, saldatori_qualificati, wps_assegnate, materiali_confermati, consumabili_disponibili, documenti_aziendali, **itt_processi_qualificati**
+- 4 manuali: disegni_approvati, normativa_verificata, tolleranza_calibro, exc_class
+- **BLOCCA** approvazione se qualsiasi check fallisce
+- **Fili**: instruments, attrezzature, welders, wps, material_batches, consumable_batches, company_documents, verbali_itt
 
-### Checklist Fine Lavori + Soglia Calibro (completata)
-- 11 check in 3 aree (VT, Dimensionale, Compliance), firma
-- Soglia accettabilita configurabile (Calibro +/-0.1mm)
+### 3. Registro Saldatura
+- CRUD con filtro saldatori per qualifica/processo valido
+- **Filo**: welders → registro (solo saldatori idonei)
 
-### Fili Conduttori — Unificazione Dati (completata)
-- `material_batches` = unica fonte di verita
-- DOP auto-popola EXC + rintracciabilita
-- Tutti i fili (Rintracciabilita, Qualifica, Manutenzione, Documentale) connessi
+### 4. Tracciabilita Materiali
+- Lotti con colata, certificato 3.1, DDT, fornitore
+- Link DDT → batch automatico
+- Verifica Coerenza (discrepanze colata/DDT)
+- **Filo**: material_batches → riesame, DOP, verifica coerenza
+- **BUG CORRETTO**: commessa_id non veniva salvato nel lotto (iteration 209)
 
-### Verifica Coerenza + Template 111 (completata)
-- Confronto automatico lotti vs DDT con discrepanze
-- PDF richiesta preventivo laboratorio per processo 111
+### 5. Controllo Finale Pre-Spedizione
+- 11 checks in 3 aree (VT, Dimensionale, Compliance)
+- Auto-checks: vt_saldature_registro, vt_nc_chiuse, dim_strumenti_tarati
+- **Filo**: registro_saldatura, report_ispezioni, instruments
 
-### Report Ispezioni VT/Dimensionali (completata)
-- 10 check VT (ISO 5817-C) + 8 check DIM (EN 1090-2 B6/B8)
-- PDF rapporto con tabelle VT+DIM + firma
+### 6. Report Ispezioni VT/Dimensionali
+- 10 checks VT (ISO 5817-C) + 8 checks DIM (EN 1090-2 B6/B8)
+- PDF + firma digitale
 
-### DOP + Etichetta CE automatica EN 1090 (21 Mar 2026)
-- `POST /api/fascicolo-tecnico/{cid}/dop-automatica` — DOP senza input manuale
-- `GET /api/fascicolo-tecnico/{cid}/etichetta-ce-1090/pdf` — Etichetta CE 148x105mm
-- Frontend: bottoni "DOP Auto" + "Etichetta CE" solo per EN_1090
-- Test: 100% (iteration 206)
+### 7. DOP + Etichetta CE automatica
+- DOP Auto: zero input manuale, raccoglie da riesame + batches + ispezioni + controllo_finale
+- Etichetta CE 148x105mm: norma, certificato FPC, ente, EXC, DoP rif.
+- **Fili**: riesame → DOP (EXC), material_batches → DOP (colate), ispezioni → DOP, controllo → DOP
 
-### Scadenziario Manutenzioni Unificato (21 Mar 2026)
-- `GET /api/scadenziario-manutenzioni` — Aggrega instruments + attrezzature + ITT
-- KPI: totale/scaduti/in_scadenza/prossimi/conformi
-- Badge impatto: mostra quali moduli sono bloccati (Riesame, Controllo Finale)
-- Frontend: `/manutenzioni` con KPI cliccabili come filtro + tabella urgenza
-- Fili: instruments -> Riesame + Controllo Finale, attrezzature -> Riesame, ITT -> Riesame
-- Test: 100% (iteration 207)
+### 8. Scadenziario Manutenzioni Unificato
+- Aggrega instruments + attrezzature + ITT
+- Badge impatto: Riesame, Controllo Finale
+- **Filo**: instruments/attrezzature/ITT → scadenziario → visibilita proattiva
 
-### Verbali ITT — Initial Type Testing (21 Mar 2026)
-- `POST/GET/DELETE /api/verbali-itt` — CRUD con prove, esito, processo
-- `POST /api/verbali-itt/{id}/firma` — Firma digitale
-- `GET /api/verbali-itt/{id}/pdf` — PDF WeasyPrint
-- `GET /api/verbali-itt/check-validita` — Report processi qualificati/scaduti
-- Processi: taglio_termico, taglio_meccanico, foratura, piegatura, punzonatura, raddrizzatura
-- **Filo conduttore**: Riesame Tecnico (check `itt_processi_qualificati`) verifica che taglio e foratura siano qualificati
-- Frontend: `/verbali-itt` con form, tabella, PDF, banner filo conduttore
-- Test: 100% (iteration 207)
+### 9. Verbali ITT
+- CRUD per taglio_termico, taglio_meccanico, foratura, piegatura, punzonatura, raddrizzatura
+- **Filo**: verbali_itt → Riesame (check itt_processi_qualificati)
+
+## Test Eseguiti
+- Iteration 206: DOP/CE unit tests — 12/12 pass
+- Iteration 207: Scadenziario/ITT unit tests — 19/19 pass
+- Iteration 208: E2E integration (10 flussi cross-module) — 34/34 pass
+- Iteration 209: STRESS TEST RINA (4 scenari audit) — 28/28 pass
+- **Bug corretto**: POST /api/fpc/batches non salvava commessa_id (catena rintracciabilita rotta)
 
 ## Credenziali Test
 - User: user_e4012a8f48
