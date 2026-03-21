@@ -174,6 +174,10 @@ def calcola_cam_commessa(materiali: List[dict]) -> dict:
             "certificazione": mat.get("certificazione", "nessuna"),
             "conforme_cam": calc["conforme"],
             "soglia_minima": calc["soglia_minima"],
+            "distanza_trasporto_km": mat.get("distanza_trasporto_km"),
+            "fornitore": mat.get("fornitore", ""),
+            "numero_colata": mat.get("numero_colata", ""),
+            "ddt_numero": mat.get("ddt_numero", ""),
         })
     
     perc_totale = (peso_riciclato_totale / peso_totale * 100) if peso_totale > 0 else 0

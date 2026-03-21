@@ -281,6 +281,28 @@ export default function CommessaHubPage() {
         } catch (e) { toast.error(e.message); }
     };
 
+    const handleRintracciabilitaPdf = async () => {
+        try {
+            toast.info('Generazione Scheda Rintracciabilita...');
+            await downloadPdfBlob(
+                `/fascicolo-tecnico/${commessaId}/rintracciabilita-totale/pdf`,
+                `Rintracciabilita_${hub?.commessa?.numero || commessaId}.pdf`
+            );
+            toast.success('Scheda Rintracciabilita generata');
+        } catch (e) { toast.error(e.message); }
+    };
+
+    const handleCamDichiarazionePdf = async () => {
+        try {
+            toast.info('Generazione Dichiarazione CAM PNRR...');
+            await downloadPdfBlob(
+                `/cam/dichiarazione-pdf/${commessaId}`,
+                `Dichiarazione_CAM_${hub?.commessa?.numero || commessaId}.pdf`
+            );
+            toast.success('Dichiarazione CAM generata');
+        } catch (e) { toast.error(e.message); }
+    };
+
     const handleCloseSimple = async () => {
         setClosingSimple(true);
         try {
@@ -361,6 +383,18 @@ export default function CommessaHubPage() {
                                     data-testid="btn-etichetta-ce-1090"
                                 >
                                     <Award className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Etichetta CE</span>
+                                </Button>
+                                <Button size="sm" onClick={handleRintracciabilitaPdf}
+                                    className="bg-teal-600 text-white hover:bg-teal-700 text-xs px-2 sm:px-3"
+                                    data-testid="btn-rintracciabilita-pdf"
+                                >
+                                    <FileText className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Rintracciabilita</span>
+                                </Button>
+                                <Button size="sm" onClick={handleCamDichiarazionePdf}
+                                    className="bg-amber-700 text-white hover:bg-amber-800 text-xs px-2 sm:px-3"
+                                    data-testid="btn-cam-dichiarazione-pdf"
+                                >
+                                    <FileText className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">CAM PNRR</span>
                                 </Button>
                             </>
                         )}

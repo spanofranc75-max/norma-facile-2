@@ -101,7 +101,7 @@ def generate_cam_declaration_pdf(
     company: Dict,
     cliente: Dict = None,
 ) -> bytes:
-    """Generate CAM compliance declaration PDF."""
+    """Generate professional CAM compliance declaration PDF — DM 23/06/2022 for PNRR."""
     if not WEASYPRINT_AVAILABLE:
         raise RuntimeError("WeasyPrint not available")
 
@@ -112,33 +112,60 @@ def generate_cam_declaration_pdf(
     if cliente:
         cliente_address = f"{safe(cliente.get('address', ''))}<br/>{safe(cliente.get('cap', ''))} {safe(cliente.get('city', ''))}"
 
+    # Company info
+    biz = safe(company.get("business_name", ""))
+    addr = safe(company.get("address", ""))
+    cap_city = safe(f"{company.get('cap', '')} {company.get('city', '')}".strip())
+    piva = safe(company.get("partita_iva", company.get("vat_number", "")))
+    phone = safe(company.get("phone", company.get("telefono", "")))
+    resp = safe(company.get("responsabile_nome", ""))
+    ruolo = safe(company.get("ruolo_firmatario", "Legale Rappresentante"))
+    logo = company.get("logo_url", "")
+    firma = company.get("firma_digitale", "")
+    city = safe(company.get("city", ""))
+
     # Header
-    header_html = build_header(company, cliente_nome, cliente_address)
+    logo_html = f'<img src="{logo}" style="max-height:45px;max-width:180px;margin-right:12px;vertical-align:middle;" />' if logo else ""
+    firma_html = f'<img src="{firma}" style="max-height:40px;max-width:150px;" />' if firma else ""
 
     # Title
     title_html = f"""
-    <h1 class="doc-title">DICHIARAZIONE DI CONFORMITÀ CAM</h1>
-    <p style="text-align: center; font-size: 9pt; color: #555; margin-top: -15px; margin-bottom: 15px;">
+    <div class="header-bar">
+        <table><tr>
+            <td style="width:60%;vertical-align:middle;">
+                {logo_html}
+                <span style="font-size:13pt;font-weight:800;vertical-align:middle;">{biz}</span>
+            </td>
+            <td style="width:40%;text-align:right;font-size:8pt;line-height:1.6;">
+                {addr}{f"<br/>{cap_city}" if cap_city else ""}
+                {f"<br/>P.IVA: {piva}" if piva else ""}
+                {f"<br/>Tel: {phone}" if phone else ""}
+            </td>
+        </tr></table>
+    </div>
+
+    <h1 class="doc-title" style="font-size:15pt;margin-top:14px;">
+        DICHIARAZIONE DI CONFORMITA CAM
+    </h1>
+    <p style="text-align:center;font-size:9pt;color:#555;margin-top:-10px;margin-bottom:8px;">
         ai sensi del DM 23 giugno 2022 n. 256 — Criteri Ambientali Minimi per l'Edilizia
     </p>
-    """
-
-    # Commessa info
-    info_html = f"""
-    <div class="info-boxes">
-        <div class="info-box">
-            <div class="info-label">COMMESSA</div>
-            <div class="info-value">{commessa_numero}</div>
-        </div>
-        <div class="info-box">
-            <div class="info-label">DATA DICHIARAZIONE</div>
-            <div class="info-value">{datetime.now(timezone.utc).strftime('%d/%m/%Y')}</div>
-        </div>
+    <div style="text-align:center;margin-bottom:14px;">
+        <span style="display:inline-block;background:#f8f4e8;border:2px solid #d4a017;padding:4px 14px;font-size:8.5pt;font-weight:700;color:#8B6914;">
+            DOCUMENTAZIONE PNRR — Art. 57, D.Lgs. 36/2023
+        </span>
     </div>
     """
 
-    if commessa_title:
-        info_html += f'<p class="oggetto-line"><span class="oggetto-label">Oggetto:</span> {commessa_title}</p>'
+    # Commessa/Client info
+    info_html = f"""
+    <table>
+        <tr><td class="lbl" style="width:30%;">Commessa</td><td><strong>{commessa_numero}</strong> — {commessa_title}</td></tr>
+        <tr><td class="lbl">Committente</td><td>{cliente_nome}</td></tr>
+        {f'<tr><td class="lbl">Indirizzo Committente</td><td>{cliente_address}</td></tr>' if cliente_address else ''}
+        <tr><td class="lbl">Data Dichiarazione</td><td>{datetime.now(timezone.utc).strftime('%d/%m/%Y')}</td></tr>
+    </table>
+    """
 
     # Summary boxes
     peso_totale = calcolo.get("peso_totale_kg", 0)
@@ -147,12 +174,14 @@ def generate_cam_declaration_pdf(
     soglia = calcolo.get("soglia_minima_richiesta", 0)
     conforme = calcolo.get("conforme_cam", False)
 
-    conf_class = "cam-conforme" if conforme else "cam-non-conforme"
+    conf_color = "#276749" if conforme else "#c53030"
+    conf_bg = "#d4edda" if conforme else "#f8d7da"
+    conf_text = "CONFORME AI CRITERI AMBIENTALI MINIMI" if conforme else "NON CONFORME AI CRITERI AMBIENTALI MINIMI"
 
     summary_html = f"""
     <div class="cam-summary">
         <div class="cam-summary-cell">
-            <div class="cam-summary-label">Peso Totale</div>
+            <div class="cam-summary-label">Peso Totale Acciaio</div>
             <div class="cam-summary-value" style="color: #1e3a5f;">{fmt_it(peso_totale)} kg</div>
         </div>
         <div class="cam-summary-cell">
@@ -160,78 +189,77 @@ def generate_cam_declaration_pdf(
             <div class="cam-summary-value" style="color: #1e3a5f;">{fmt_it(peso_riciclato)} kg</div>
         </div>
         <div class="cam-summary-cell">
-            <div class="cam-summary-label">% Riciclato</div>
-            <div class="cam-summary-value {conf_class}">{fmt_it(perc_totale)}%</div>
+            <div class="cam-summary-label">% Riciclato Ponderata</div>
+            <div class="cam-summary-value" style="color:{conf_color};">{fmt_it(perc_totale)}%</div>
         </div>
         <div class="cam-summary-cell">
-            <div class="cam-summary-label">Soglia Minima</div>
+            <div class="cam-summary-label">Soglia Minima (DM 256)</div>
             <div class="cam-summary-value" style="color: #555;">{fmt_it(soglia)}%</div>
         </div>
     </div>
+
+    <div style="text-align:center;padding:12px;margin:10px 0;background:{conf_bg};border:3px solid {conf_color};font-size:13pt;font-weight:800;color:{conf_color};">
+        {conf_text}
+    </div>
     """
 
-    # Result box
-    if conforme:
-        result_html = """
-        <div class="result-box conforme">
-            CONFORME AI CRITERI AMBIENTALI MINIMI
-        </div>
-        """
-    else:
-        result_html = """
-        <div class="result-box non-conforme">
-            NON CONFORME AI CRITERI AMBIENTALI MINIMI
-        </div>
-        """
-
-    # Materials table
+    # Materials table — enriched
     righe = calcolo.get("righe", [])
     rows_html = ""
     for i, r in enumerate(righe, 1):
-        conf_badge = '<span style="color:#28a745;font-weight:600;">SI</span>' if r.get("conforme_cam") else '<span style="color:#dc3545;font-weight:600;">NO</span>'
+        conf_badge = '<span style="color:#276749;font-weight:700;">SI</span>' if r.get("conforme_cam") else '<span style="color:#c53030;font-weight:700;">NO</span>'
         metodo_label = {
-            "forno_elettrico_non_legato": "Forno El. (non legato)",
-            "forno_elettrico_legato": "Forno El. (legato)",
-            "ciclo_integrale": "Ciclo Integrale",
-            "sconosciuto": "Sconosciuto",
+            "forno_elettrico_non_legato": "EAF (non legato)",
+            "forno_elettrico_legato": "EAF (legato)",
+            "ciclo_integrale": "BOF/BF (integrale)",
+            "sconosciuto": "N/D",
         }.get(r.get("metodo_produttivo", ""), r.get("metodo_produttivo", ""))
 
         cert_label = {
-            "epd": "EPD",
+            "epd": "EPD (ISO 14025)",
             "remade_in_italy": "ReMade in Italy",
             "dichiarazione_produttore": "Dich. Produttore",
-            "altra_accreditata": "Altra",
+            "altra_accreditata": "Altra Accreditata",
             "nessuna": "-",
         }.get(r.get("certificazione", ""), r.get("certificazione", ""))
+
+        dist_val = r.get("distanza_trasporto_km")
+        dist_str = f"{dist_val:.0f} km" if dist_val else "—"
 
         rows_html += f"""
         <tr>
             <td class="tc">{i}</td>
             <td>{safe(r.get('descrizione', ''))}</td>
+            <td>{safe(r.get('fornitore', ''))}</td>
+            <td style="font-family:monospace;font-weight:700;">{safe(r.get('numero_colata', ''))}</td>
             <td class="tr">{fmt_it(r.get('peso_kg', 0))}</td>
-            <td class="tc">{fmt_it(r.get('percentuale_riciclato', 0))}%</td>
+            <td class="tc" style="font-weight:700;color:{conf_color};">{fmt_it(r.get('percentuale_riciclato', 0))}%</td>
             <td class="tr">{fmt_it(r.get('peso_riciclato_kg', 0))}</td>
             <td>{metodo_label}</td>
             <td>{cert_label}</td>
+            <td class="tc">{dist_str}</td>
             <td class="tc">{fmt_it(r.get('soglia_minima', 0))}%</td>
             <td class="tc">{conf_badge}</td>
         </tr>
         """
 
     table_html = f"""
-    <h3 style="color: #1e3a5f; font-size: 11pt; margin: 20px 0 10px 0;">DETTAGLIO MATERIALI</h3>
+    <h3 style="color: #1e3a5f; font-size: 11pt; margin: 20px 0 8px 0;">DETTAGLIO MATERIALI — Dati Estratti da Certificati 3.1 (EN 10204)</h3>
     <table class="items-table">
         <thead>
             <tr>
-                <th class="tc" style="width:5%;">N.</th>
-                <th style="width:20%;">Descrizione</th>
-                <th class="tr" style="width:10%;">Peso (kg)</th>
-                <th class="tc" style="width:10%;">% Ric.</th>
-                <th class="tr" style="width:10%;">Peso Ric.</th>
-                <th style="width:15%;">Metodo</th>
-                <th style="width:12%;">Cert.</th>
-                <th class="tc" style="width:8%;">Soglia</th>
-                <th class="tc" style="width:10%;">Conf.</th>
+                <th class="tc" style="width:4%;">N.</th>
+                <th style="width:12%;">Materiale</th>
+                <th style="width:10%;">Fornitore</th>
+                <th style="width:9%;">N. Colata</th>
+                <th class="tr" style="width:8%;">Peso</th>
+                <th class="tc" style="width:7%;">% Ric.</th>
+                <th class="tr" style="width:8%;">Peso Ric.</th>
+                <th style="width:11%;">Metodo</th>
+                <th style="width:10%;">Certificaz.</th>
+                <th class="tc" style="width:7%;">Distanza</th>
+                <th class="tc" style="width:6%;">Soglia</th>
+                <th class="tc" style="width:6%;">Conf.</th>
             </tr>
         </thead>
         <tbody>
@@ -240,31 +268,44 @@ def generate_cam_declaration_pdf(
     </table>
     """
 
-    # Normativa reference
+    # Normativa reference (enriched for PNRR)
     normativa_html = """
-    <div class="normativa-ref">
-        <strong>Riferimento normativo:</strong> DM 23 giugno 2022 n. 256 — Criteri Ambientali Minimi per l'affidamento 
-        del servizio di progettazione di interventi edilizi, per l'affidamento dei lavori per interventi edilizi e per 
-        l'affidamento congiunto di progettazione e lavori per interventi edilizi.<br/><br/>
-        <strong>Requisiti acciaio strutturale:</strong> Il contenuto di materia recuperata o riciclata deve essere 
-        almeno pari al 75% per acciaio non legato da forno elettrico, 60% per acciaio legato da forno elettrico,
-        12% per acciaio da ciclo integrale (altoforno).
+    <div class="normativa-ref" style="margin-top:16px;">
+        <strong>Riferimento normativo:</strong><br/>
+        DM 23 giugno 2022 n. 256 — Criteri Ambientali Minimi per l'affidamento del servizio di progettazione
+        di interventi edilizi, per l'affidamento dei lavori per interventi edilizi e per l'affidamento congiunto
+        di progettazione e lavori per interventi edilizi.<br/><br/>
+        <strong>Requisiti acciaio strutturale (Allegato, par. 2.5.4):</strong><br/>
+        Il contenuto di materia recuperata o riciclata deve essere almeno pari a:
+        <ul style="margin:4px 0 4px 16px;padding:0;">
+            <li><strong>75%</strong> — Acciaio non legato da forno elettrico (EAF)</li>
+            <li><strong>60%</strong> — Acciaio legato da forno elettrico (EAF)</li>
+            <li><strong>12%</strong> — Acciaio da ciclo integrale (BOF/BF)</li>
+        </ul>
+        <strong>Verifica:</strong> Mediante certificati di colata EN 10204 3.1, EPD (ISO 14025, EN 15804),
+        certificazione ReMade in Italy, o dichiarazione del produttore sotto propria responsabilita.<br/><br/>
+        <strong>Obbligo PNRR:</strong> Applicazione obbligatoria al 100% per appalti pubblici
+        finanziati con fondi PNRR (Art. 57, D.Lgs. 36/2023).
     </div>
     """
 
     # Signature section
-    firma_html = f"""
-    <div class="firma-section">
-        <div class="firma-cell">
-            <div class="firma-label">Luogo e Data</div>
-            <div class="firma-line"></div>
-            <div class="firma-label" style="margin-top: 5px;">_________________, {datetime.now(timezone.utc).strftime('%d/%m/%Y')}</div>
-        </div>
-        <div class="firma-cell">
-            <div class="firma-label">Timbro e Firma</div>
-            <div class="firma-line"></div>
-            <div class="firma-label" style="margin-top: 5px;">{safe(company.get('business_name', ''))}</div>
-        </div>
+    firma_section = f"""
+    <div class="firma-section" style="margin-top:30px;">
+        <table style="border:none;width:100%;">
+            <tr style="border:none;">
+                <td style="border:none;width:50%;vertical-align:bottom;">
+                    <p style="font-size:9pt;margin-bottom:4px;"><strong>{resp}</strong></p>
+                    <p style="font-size:8pt;color:#555;margin:0;">{ruolo}</p>
+                    {firma_html}
+                    <div style="border-bottom:1px solid #333;width:220px;margin-top:10px;"></div>
+                    <p style="font-size:7.5pt;color:#888;margin-top:2px;">Firma e Timbro</p>
+                </td>
+                <td style="border:none;width:50%;text-align:right;vertical-align:bottom;">
+                    <p style="font-size:9pt;">{city}, {datetime.now(timezone.utc).strftime('%d/%m/%Y')}</p>
+                </td>
+            </tr>
+        </table>
     </div>
     """
 
@@ -274,17 +315,28 @@ def generate_cam_declaration_pdf(
     <html>
     <head>
         <meta charset="utf-8">
-        <style>{UNIFIED_CSS}{CAM_EXTRA_CSS}</style>
+        <style>
+        {UNIFIED_CSS}
+        {CAM_EXTRA_CSS}
+        .header-bar {{
+            background: #1a3a6b; color: #fff; padding: 10px 14px; margin-bottom: 12px;
+        }}
+        .header-bar table {{ margin: 0; width: 100%; border-collapse: collapse; }}
+        .header-bar td {{ border: none; padding: 2px 6px; color: #fff; }}
+        .lbl {{
+            font-weight: 700; background: #f0f4f8; width: 30%; color: #1a3a6b; font-size: 8.5pt;
+        }}
+        table {{ border-collapse: collapse; }}
+        td, th {{ border: 1px solid #bbb; }}
+        </style>
     </head>
     <body>
-        {header_html}
         {title_html}
         {info_html}
         {summary_html}
-        {result_html}
         {table_html}
         {normativa_html}
-        {firma_html}
+        {firma_section}
     </body>
     </html>
     """

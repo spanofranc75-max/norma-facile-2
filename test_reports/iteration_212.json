@@ -1,0 +1,116 @@
+{
+  "summary": "Iteration 212 — CAM (Criteri Ambientali Minimi) Compliance Testing. Backend: 12/12 tests passed (100%). Frontend: All features verified — CommessaHubPage shows Rintracciabilita and CAM PNRR buttons, TracciabilitaPage batch form has CAM fields section, TracciabilitaMaterialiSection shows peso_kg and percentuale_riciclato columns.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "TracciabilitaMaterialiSection",
+        "issues": ["Minor hydration warning in console about <tr> inside <span> - does not affect functionality"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration212_cam_compliance.py",
+    "/app/test_reports/pytest/iteration212_cam_compliance_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration212_cam_compliance.py"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 passed)",
+    "frontend": "100% (all features working)"
+  },
+  "seed_data_creation": "Used existing test data: commessa_id=com_2c57c1283871 (NF-2026-000036) with 4 material batches containing CAM data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "CAM compliance features fully tested. The material_batches collection now includes CAM fields (peso_kg, percentuale_riciclato, metodo_produttivo, distanza_trasporto_km, certificazione_epd). DOP automatica creates cam_summary with materiali list, co2_risparmiata_kg, and distanza_media_km. PDF endpoints (DOP, CE Label, CAM Declaration, Rintracciabilita Totale) all return valid PDFs. Frontend shows CAM fields in batch form and displays peso/% riciclato columns in tables.",
+  "features_tested": {
+    "backend_endpoints": [
+      {
+        "endpoint": "POST /api/fpc/batches",
+        "status": "PASS",
+        "description": "Creates batch with CAM fields (peso_kg, percentuale_riciclato, metodo_produttivo, distanza_trasporto_km)"
+      },
+      {
+        "endpoint": "PUT /api/fpc/batches/{id}",
+        "status": "PASS",
+        "description": "Updates CAM fields correctly"
+      },
+      {
+        "endpoint": "GET /api/fpc/batches/rintracciabilita/{commessa_id}",
+        "status": "PASS",
+        "description": "Returns peso_kg and percentuale_riciclato in righe"
+      },
+      {
+        "endpoint": "POST /api/cam/calcola/{commessa_id}",
+        "status": "PASS",
+        "description": "Pulls CAM data from material_batches and calculates correctly"
+      },
+      {
+        "endpoint": "POST /api/fascicolo-tecnico/{cid}/dop-automatica",
+        "status": "PASS",
+        "description": "Creates DOP with cam_summary including materiali, co2, distanza_media"
+      },
+      {
+        "endpoint": "GET /api/fascicolo-tecnico/{cid}/dop-frazionata/{dop_id}/pdf",
+        "status": "PASS",
+        "description": "Generates multi-page professional PDF with CAM section"
+      },
+      {
+        "endpoint": "GET /api/fascicolo-tecnico/{cid}/etichetta-ce-1090/pdf",
+        "status": "PASS",
+        "description": "Generates CE label PDF"
+      },
+      {
+        "endpoint": "GET /api/cam/dichiarazione-pdf/{cid}",
+        "status": "PASS",
+        "description": "Generates enhanced CAM declaration with PNRR reference"
+      },
+      {
+        "endpoint": "GET /api/fascicolo-tecnico/{cid}/rintracciabilita-totale/pdf",
+        "status": "PASS",
+        "description": "Generates landscape A4 PDF with all traceability data"
+      }
+    ],
+    "frontend_pages": [
+      {
+        "page": "CommessaHubPage",
+        "features_verified": [
+          "Rintracciabilita PDF button visible and functional",
+          "CAM PNRR PDF button visible and functional",
+          "DOP Auto button visible",
+          "Etichetta CE button visible",
+          "TracciabilitaMaterialiSection displays peso_kg and percentuale_riciclato columns"
+        ]
+      },
+      {
+        "page": "TracciabilitaPage",
+        "features_verified": [
+          "Batch form has CAM fields section with header 'Dati CAM (Criteri Ambientali Minimi — DM 256/2022)'",
+          "Peso (kg) input field present",
+          "% Riciclato input field present",
+          "Metodo Produttivo dropdown present",
+          "Distanza Trasporto (km) input field present",
+          "Batches table shows Peso and % Ric. columns with actual data"
+        ]
+      }
+    ]
+  },
+  "data_verified": {
+    "test_commessa": "com_2c57c1283871 (NF-2026-000036)",
+    "material_batches_with_cam_data": 4,
+    "sample_batch_data": {
+      "AV-2026-8734": {"peso_kg": 2540, "percentuale_riciclato": 82.5},
+      "ARV-2026-1192": {"peso_kg": 1876, "percentuale_riciclato": 78.3},
+      "DTP-2026-5567": {"peso_kg": 3420, "percentuale_riciclato": 76.1},
+      "AM-2026-3301": {"peso_kg": 680, "percentuale_riciclato": 15.2}
+    }
+  }
+}

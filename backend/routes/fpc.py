@@ -144,6 +144,13 @@ async def create_batch(body: MaterialBatchCreate, user: dict = Depends(get_curre
         "numero_certificato": body.numero_certificato,
         "ddt_numero": body.ddt_numero,
         "disegno_numero": body.disegno_numero,
+        # CAM fields
+        "peso_kg": body.peso_kg or 0,
+        "percentuale_riciclato": body.percentuale_riciclato,
+        "metodo_produttivo": body.metodo_produttivo,
+        "distanza_trasporto_km": body.distanza_trasporto_km,
+        "certificazione_epd": body.certificazione_epd,
+        "ente_certificatore_epd": body.ente_certificatore_epd,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db.material_batches.insert_one(doc)
@@ -166,6 +173,13 @@ async def update_batch(batch_id: str, body: MaterialBatchCreate, user: dict = De
         "numero_certificato": body.numero_certificato,
         "ddt_numero": body.ddt_numero,
         "disegno_numero": body.disegno_numero,
+        # CAM fields
+        "peso_kg": body.peso_kg or 0,
+        "percentuale_riciclato": body.percentuale_riciclato,
+        "metodo_produttivo": body.metodo_produttivo,
+        "distanza_trasporto_km": body.distanza_trasporto_km,
+        "certificazione_epd": body.certificazione_epd,
+        "ente_certificatore_epd": body.ente_certificatore_epd,
     }
     if body.commessa_id is not None:
         update["commessa_id"] = body.commessa_id
@@ -642,6 +656,10 @@ async def scheda_rintracciabilita(commessa_id: str, user: dict = Depends(get_cur
             "quantita": b.get("quantity", b.get("n_pezzi", "")),
             "posizione_dwg": b.get("posizione", b.get("posizione_dwg", "")),
             "linked": bool(b.get("ddt_origin") or b.get("ddt_numero")),
+            "peso_kg": b.get("peso_kg"),
+            "percentuale_riciclato": b.get("percentuale_riciclato"),
+            "metodo_produttivo": b.get("metodo_produttivo"),
+            "distanza_trasporto_km": b.get("distanza_trasporto_km"),
         })
 
     return {

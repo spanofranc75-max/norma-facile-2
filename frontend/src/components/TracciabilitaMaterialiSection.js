@@ -242,6 +242,8 @@ export default function TracciabilitaMaterialiSection({ commessaId }) {
                                     <th className="pb-2 pr-2 font-medium">Cert. 3.1</th>
                                     <th className="pb-2 pr-2 font-medium">Fornitore</th>
                                     <th className="pb-2 pr-2 font-medium">DDT</th>
+                                    <th className="pb-2 pr-2 font-medium">Peso</th>
+                                    <th className="pb-2 pr-2 font-medium">% Ric.</th>
                                     <th className="pb-2 pr-2 font-medium">Pos. Dwg</th>
                                     <th className="pb-2 font-medium">Stato</th>
                                 </tr>
@@ -273,6 +275,14 @@ export default function TracciabilitaMaterialiSection({ commessaId }) {
                                             ) : (
                                                 <span className="text-slate-400">—</span>
                                             )}
+                                        </td>
+                                        <td className="py-2 pr-2 text-right text-slate-600 font-mono">{r.peso_kg ? `${r.peso_kg.toLocaleString('it-IT')} kg` : '—'}</td>
+                                        <td className="py-2 pr-2 text-center">
+                                            {r.percentuale_riciclato != null ? (
+                                                <Badge className={`text-[10px] ${r.percentuale_riciclato >= 75 ? 'bg-emerald-100 text-emerald-700' : r.percentuale_riciclato >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                                                    {r.percentuale_riciclato.toFixed(1)}%
+                                                </Badge>
+                                            ) : <span className="text-slate-400">—</span>}
                                         </td>
                                         <td className="py-2 pr-2 text-slate-500">{r.posizione_dwg || '—'}</td>
                                         <td className="py-2">

@@ -43,6 +43,13 @@ class MaterialBatchCreate(BaseModel):
     ddt_numero: Optional[str] = None       # DDT number
     disegno_numero: Optional[str] = None   # Drawing number
     commessa_id: Optional[str] = None      # Link to commessa for traceability
+    # CAM (Criteri Ambientali Minimi) fields — DM 23/06/2022
+    peso_kg: Optional[float] = None        # Weight in kg
+    percentuale_riciclato: Optional[float] = None  # % recycled content (from cert 3.1 / AI)
+    metodo_produttivo: Optional[str] = None  # forno_elettrico_non_legato | forno_elettrico_legato | ciclo_integrale
+    distanza_trasporto_km: Optional[float] = None  # Transport distance from supplier
+    certificazione_epd: Optional[str] = None  # EPD certificate number
+    ente_certificatore_epd: Optional[str] = None  # EPD certifying body
 
 
 class MaterialBatchOut(BaseModel):

@@ -30,7 +30,7 @@ function BatchesTab() {
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ supplier_name: '', material_type: '', heat_number: '', notes: '', received_date: '' });
+  const [form, setForm] = useState({ supplier_name: '', material_type: '', heat_number: '', notes: '', received_date: '', dimensions: '', ddt_numero: '', numero_certificato: '', peso_kg: '', percentuale_riciclato: '', metodo_produttivo: '', distanza_trasporto_km: '', commessa_id: '' });
   const [certFile, setCertFile] = useState(null);
 
   const load = useCallback(async () => {
@@ -43,8 +43,8 @@ function BatchesTab() {
 
   useEffect(() => { load(); }, [load]);
 
-  const openNew = () => { setEditing(null); setForm({ supplier_name: '', material_type: '', heat_number: '', notes: '', received_date: '' }); setCertFile(null); setShowForm(true); };
-  const openEdit = (b) => { setEditing(b.batch_id); setForm({ supplier_name: b.supplier_name, material_type: b.material_type, heat_number: b.heat_number, notes: b.notes || '', received_date: b.received_date || '' }); setCertFile(null); setShowForm(true); };
+  const openNew = () => { setEditing(null); setForm({ supplier_name: '', material_type: '', heat_number: '', notes: '', received_date: '', dimensions: '', ddt_numero: '', numero_certificato: '', peso_kg: '', percentuale_riciclato: '', metodo_produttivo: '', distanza_trasporto_km: '', commessa_id: '' }); setCertFile(null); setShowForm(true); };
+  const openEdit = (b) => { setEditing(b.batch_id); setForm({ supplier_name: b.supplier_name, material_type: b.material_type, heat_number: b.heat_number, notes: b.notes || '', received_date: b.received_date || '', dimensions: b.dimensions || '', ddt_numero: b.ddt_numero || '', numero_certificato: b.numero_certificato || '', peso_kg: b.peso_kg || '', percentuale_riciclato: b.percentuale_riciclato ?? '', metodo_produttivo: b.metodo_produttivo || '', distanza_trasporto_km: b.distanza_trasporto_km ?? '', commessa_id: b.commessa_id || '' }); setCertFile(null); setShowForm(true); };
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -58,6 +58,9 @@ function BatchesTab() {
 
   const save = async () => {
     const payload = { ...form };
+    if (payload.peso_kg) payload.peso_kg = parseFloat(payload.peso_kg) || 0;
+    if (payload.percentuale_riciclato !== '') payload.percentuale_riciclato = parseFloat(payload.percentuale_riciclato); else payload.percentuale_riciclato = null;
+    if (payload.distanza_trasporto_km !== '') payload.distanza_trasporto_km = parseFloat(payload.distanza_trasporto_km); else payload.distanza_trasporto_km = null;
     if (certFile) {
       payload.certificate_base64 = certFile.base64;
       payload.certificate_filename = certFile.filename;
@@ -107,7 +110,8 @@ function BatchesTab() {
             <th className="text-left py-2 px-3">N. Colata</th>
             <th className="text-left py-2 px-3">Materiale</th>
             <th className="text-left py-2 px-3">Fornitore</th>
-            <th className="text-left py-2 px-3">Data Ric.</th>
+            <th className="text-right py-2 px-3">Peso</th>
+            <th className="text-center py-2 px-3">% Ric.</th>
             <th className="text-center py-2 px-3">Cert. 3.1</th>
             <th className="text-right py-2 px-3">Azioni</th>
           </tr></thead>
@@ -115,9 +119,14 @@ function BatchesTab() {
             {filtered.map(b => (
               <tr key={b.batch_id} className="border-b hover:bg-slate-50">
                 <td className="py-2 px-3 font-mono font-bold text-[#0055FF]">{b.heat_number}</td>
-                <td className="py-2 px-3">{b.material_type}</td>
+                <td className="py-2 px-3">{b.dimensions || b.material_type}</td>
                 <td className="py-2 px-3">{b.supplier_name}</td>
-                <td className="py-2 px-3 text-slate-400">{b.received_date || '-'}</td>
+                <td className="py-2 px-3 text-right text-slate-600 font-mono">{b.peso_kg ? `${Number(b.peso_kg).toLocaleString('it-IT')} kg` : '-'}</td>
+                <td className="py-2 px-3 text-center">
+                  {b.percentuale_riciclato != null ? (
+                    <span className={`font-bold ${b.percentuale_riciclato >= 75 ? 'text-emerald-600' : b.percentuale_riciclato >= 60 ? 'text-amber-600' : 'text-red-600'}`}>{Number(b.percentuale_riciclato).toFixed(1)}%</span>
+                  ) : <span className="text-slate-300">-</span>}
+                </td>
                 <td className="py-2 px-3 text-center">
                   {b.has_certificate ? (
                     <button data-testid={`download-cert-${b.batch_id}`} onClick={() => downloadCert(b.batch_id, b.certificate_filename)} className="text-emerald-500 hover:text-emerald-600"><Download className="h-4 w-4 inline" /></button>
@@ -129,7 +138,7 @@ function BatchesTab() {
                 </td>
               </tr>
             ))}
-            {filtered.length === 0 && <tr><td colSpan={6} className="text-center py-8 text-slate-400">Nessun lotto registrato</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan={7} className="text-center py-8 text-slate-400">Nessun lotto registrato</td></tr>}
           </tbody>
         </table>
       </div>
@@ -137,13 +146,39 @@ function BatchesTab() {
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{editing ? 'Modifica Lotto' : 'Nuovo Lotto Materiale'}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-3 max-h-[70vh] overflow-y-auto">
             <div><label className="text-xs text-slate-500">Fornitore *</label><Input data-testid="batch-supplier" value={form.supplier_name} onChange={e => setForm({ ...form, supplier_name: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><label className="text-xs text-slate-500">Tipo Materiale *</label><Input data-testid="batch-material" placeholder="es. S275JR" value={form.material_type} onChange={e => setForm({ ...form, material_type: e.target.value })} /></div>
               <div><label className="text-xs text-slate-500">N. Colata (Heat Number) *</label><Input data-testid="batch-heat" value={form.heat_number} onChange={e => setForm({ ...form, heat_number: e.target.value })} /></div>
             </div>
-            <div><label className="text-xs text-slate-500">Data Ricevimento</label><Input data-testid="batch-date" type="date" value={form.received_date} onChange={e => setForm({ ...form, received_date: e.target.value })} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="text-xs text-slate-500">Profilo / Dimensioni</label><Input data-testid="batch-dimensions" placeholder="es. IPE 300 x 6000" value={form.dimensions} onChange={e => setForm({ ...form, dimensions: e.target.value })} /></div>
+              <div><label className="text-xs text-slate-500">Data Ricevimento</label><Input data-testid="batch-date" type="date" value={form.received_date} onChange={e => setForm({ ...form, received_date: e.target.value })} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="text-xs text-slate-500">DDT Numero</label><Input data-testid="batch-ddt" placeholder="es. DDT 456/2026" value={form.ddt_numero} onChange={e => setForm({ ...form, ddt_numero: e.target.value })} /></div>
+              <div><label className="text-xs text-slate-500">N. Certificato 3.1</label><Input data-testid="batch-cert-num" value={form.numero_certificato} onChange={e => setForm({ ...form, numero_certificato: e.target.value })} /></div>
+            </div>
+            <div className="border-t pt-3 mt-2">
+              <p className="text-xs font-semibold text-amber-700 mb-2 flex items-center gap-1"><Shield className="h-3.5 w-3.5" /> Dati CAM (Criteri Ambientali Minimi — DM 256/2022)</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-xs text-slate-500">Peso (kg)</label><Input data-testid="batch-peso" type="number" step="0.1" placeholder="es. 2540" value={form.peso_kg} onChange={e => setForm({ ...form, peso_kg: e.target.value })} /></div>
+                <div><label className="text-xs text-slate-500">% Riciclato</label><Input data-testid="batch-perc-riciclato" type="number" step="0.1" min="0" max="100" placeholder="es. 82.5" value={form.percentuale_riciclato} onChange={e => setForm({ ...form, percentuale_riciclato: e.target.value })} /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                <div>
+                  <label className="text-xs text-slate-500">Metodo Produttivo</label>
+                  <select data-testid="batch-metodo" className="w-full h-9 border rounded-md px-3 text-sm" value={form.metodo_produttivo} onChange={e => setForm({ ...form, metodo_produttivo: e.target.value })}>
+                    <option value="">— Seleziona —</option>
+                    <option value="forno_elettrico_non_legato">Forno Elettrico (non legato) — soglia 75%</option>
+                    <option value="forno_elettrico_legato">Forno Elettrico (legato) — soglia 60%</option>
+                    <option value="ciclo_integrale">Ciclo Integrale (BOF/BF) — soglia 12%</option>
+                  </select>
+                </div>
+                <div><label className="text-xs text-slate-500">Distanza Trasporto (km)</label><Input data-testid="batch-distanza" type="number" step="1" placeholder="es. 185" value={form.distanza_trasporto_km} onChange={e => setForm({ ...form, distanza_trasporto_km: e.target.value })} /></div>
+              </div>
+            </div>
             <div><label className="text-xs text-slate-500">Certificato 3.1 (PDF)</label><input data-testid="batch-cert-upload" type="file" accept=".pdf" onChange={handleFileChange} className="w-full text-sm file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:bg-slate-100 file:text-slate-700" /></div>
             <div><label className="text-xs text-slate-500">Note</label><Input data-testid="batch-notes" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
           </div>

@@ -229,8 +229,6 @@ async def delete_lotto_cam(lotto_id: str, user: dict = Depends(get_current_user)
     result = await db.lotti_cam.delete_one({"lotto_id": lotto_id, "user_id": user["user_id"]})
     if result.deleted_count == 0:
         raise HTTPException(404, "Lotto non trovato")
-    # Also delete the linked material_batch if exists (same colata + commessa)
-    lotto = await db.lotti_cam.find_one({"lotto_id": lotto_id})
     logger.info(f"CAM lotto {lotto_id} deleted")
     return {"message": "Lotto CAM eliminato"}
 
@@ -276,15 +274,23 @@ async def calcola_cam_per_commessa(commessa_id: str, user: dict = Depends(get_cu
         )
         batches = await cursor_batches.to_list(100)
         
-        # Converti batches in formato lotti
+        # Converti batches in formato lotti, using new CAM fields if present
         for b in batches:
+            perc_ric = b.get("percentuale_riciclato")
+            if perc_ric is None:
+                perc_ric = 75  # Default forno elettrico
+            metodo = b.get("metodo_produttivo") or "forno_elettrico_non_legato"
             lotti.append({
-                "descrizione": b.get("tipo_materiale") or b.get("material_type", "Acciaio"),
+                "descrizione": b.get("dimensions") or b.get("material_type", "Acciaio"),
                 "peso_kg": b.get("peso_kg", 0),
-                "percentuale_riciclato": b.get("percentuale_riciclato", 75),  # Default forno elettrico
-                "metodo_produttivo": b.get("metodo_produttivo", "forno_elettrico_non_legato"),
+                "percentuale_riciclato": perc_ric,
+                "metodo_produttivo": metodo,
                 "uso_strutturale": True,
-                "certificazione": b.get("tipo_certificazione", "dichiarazione_produttore"),
+                "certificazione": b.get("certificazione_epd", "dichiarazione_produttore") if b.get("certificazione_epd") else "dichiarazione_produttore",
+                "distanza_trasporto_km": b.get("distanza_trasporto_km"),
+                "fornitore": b.get("supplier_name", ""),
+                "numero_colata": b.get("heat_number", ""),
+                "ddt_numero": b.get("ddt_numero", ""),
             })
     
     # Calcola
@@ -296,6 +302,10 @@ async def calcola_cam_per_commessa(commessa_id: str, user: dict = Depends(get_cu
             "metodo_produttivo": mat.get("metodo_produttivo", "forno_elettrico_non_legato"),
             "uso_strutturale": mat.get("uso_strutturale", True),
             "certificazione": mat.get("tipo_certificazione") or mat.get("certificazione", "nessuna"),
+            "distanza_trasporto_km": mat.get("distanza_trasporto_km") or mat.get("km_approvvigionamento"),
+            "fornitore": mat.get("fornitore", ""),
+            "numero_colata": mat.get("numero_colata", ""),
+            "ddt_numero": mat.get("ddt_numero", ""),
         }
         for mat in lotti
     ])
