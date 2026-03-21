@@ -1,0 +1,76 @@
+{
+  "summary": "Iteration 198: POS Attachments & Scadenza Bug Fix - All features working correctly. Backend 21/21 tests passed. Frontend UI fully functional with date save, toggle switches, and expiry badges.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "SettingsPage - Documenti tab",
+        "issues": ["Console warning: `value` prop on input should not be null - cosmetic only, doesn't affect functionality"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration198_pos_attachments.py",
+    "/app/test_reports/pytest/iteration198_pos_attachments_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "PATCH /api/company/documents/sicurezza-globali/{doc_type} correctly updates scadenza without requiring file re-upload",
+    "GET /api/company/documents/sicurezza-globali returns correct expiry flags (days_to_expiry, is_expiring, is_expired)",
+    "Expiry alert logic working: is_expiring=true when 0 < days_to_expiry <= 15, is_expired=true when days_to_expiry <= 0",
+    "GET /api/company/documents/allegati-pos returns all 3 POS attachment types with includi_pos status",
+    "PATCH /api/company/documents/allegati-pos/{doc_type} correctly toggles includi_pos flag",
+    "POST /api/sicurezza/export-cse/{commessa_id} ZIP correctly includes only allegati with includi_pos=true in 05_ALLEGATI_POS folder",
+    "Frontend DocumentiAziendaTab shows date input with save button (floppy icon) that persists scadenza",
+    "Frontend AllegatiPosTab shows toggle switches for 'Includi nel POS' that work correctly",
+    "ExpiryBadge component shows 'Valido' (green), days countdown (yellow/amber), 'Scaduto' (red) based on scadenza date",
+    "DVR is correctly included in 00_DOCUMENTI_AZIENDA folder of CSE export ZIP"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration198_pos_attachments.py"
+  ],
+  "success_rate": {
+    "backend": "100% (21 tests passed)",
+    "frontend": "100% (all UI elements working)"
+  },
+  "test_credentials": {
+    "session_token": "test_session_2026_active",
+    "cookie_name": "session_token",
+    "test_commessa": "com_loiano_cims_2026"
+  },
+  "seed_data_creation": "Test data already exists: DURC with scadenza, Visura, DVR uploaded. All 3 allegati POS (rumore, vibrazioni, mmc) uploaded.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 198 verified POS Attachments & Scadenza Bug Fix. Key findings: (1) PATCH endpoint for scadenza works without file re-upload - date persists correctly. (2) Expiry alert logic: is_expiring=true for 0-15 days, is_expired=true for <=0 days. (3) Allegati POS (rumore, vibrazioni, mmc) all uploaded with toggle switches working. (4) CSE export ZIP includes 05_ALLEGATI_POS folder with only docs where includi_pos=true. (5) Frontend shows both 'Checklist Documenti CIMS' and 'Allegati Tecnici POS' sections in Settings > Documenti tab. (6) ExpiryBadge shows correct colors: green=Valido, yellow/amber=expiring, red=Scaduto.",
+  "testing_summary": {
+    "backend_endpoints": {
+      "GET /api/company/documents/sicurezza-globali": "PASS - Returns all 5 doc types with expiry flags",
+      "PATCH /api/company/documents/sicurezza-globali/{doc_type}": "PASS - Updates scadenza without file upload",
+      "GET /api/company/documents/allegati-pos": "PASS - Returns all 3 POS attachment types",
+      "PATCH /api/company/documents/allegati-pos/{doc_type}": "PASS - Toggles includi_pos flag",
+      "POST /api/sicurezza/export-cse/{commessa_id}": "PASS - ZIP includes 05_ALLEGATI_POS with correct files",
+      "Auth required tests": "PASS - All return 401 without auth",
+      "Expiry alert logic tests": "PASS - is_expiring/is_expired flags calculated correctly"
+    },
+    "frontend_ui": {
+      "SettingsPage (/settings)": {
+        "documenti_tab": "PASS - data-testid='tab-documenti' clickable",
+        "documenti_azienda_tab": "PASS - data-testid='documenti-azienda-tab' visible",
+        "allegati_pos_tab": "PASS - data-testid='allegati-pos-tab' visible",
+        "docs_table": "PASS - data-testid='docs-table' with all 5 doc rows",
+        "allegati_table": "PASS - data-testid='allegati-table' with all 3 allegato rows",
+        "save_date_button": "PASS - data-testid='save-date-{dt}' clickable, saves date",
+        "scadenza_input": "PASS - data-testid='scadenza-{dt}' editable",
+        "toggle_switches": "PASS - data-testid='toggle-pos-{dt}' toggles includi_pos",
+        "expiry_badge": "PASS - Shows Valido/days/Scaduto based on date",
+        "docs_counter": "PASS - Shows '3/5 caricati'",
+        "allegati_counter": "PASS - Shows '3/3 caricati'"
+      }
+    }
+  }
+}

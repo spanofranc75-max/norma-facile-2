@@ -14,6 +14,13 @@ GLOBAL_DOC_TYPES = {
     "dvr": {"label": "DVR", "desc": "Documento di Valutazione dei Rischi (D.Lgs 81/08)"},
 }
 
+# Allegati Tecnici POS — valutazioni specifiche rischio
+ALLEGATI_POS_TYPES = {
+    "rumore": {"label": "Valutazione Rumore", "desc": "Valutazione esposizione al rumore (D.Lgs 81/08 Titolo VIII)"},
+    "vibrazioni": {"label": "Valutazione Vibrazioni", "desc": "Valutazione esposizione a vibrazioni meccaniche (D.Lgs 81/08)"},
+    "mmc": {"label": "Valutazione MMC", "desc": "Movimentazione Manuale dei Carichi (D.Lgs 81/08 Titolo VI)"},
+}
+
 
 class CompanyDocumentCreate(BaseModel):
     title: str

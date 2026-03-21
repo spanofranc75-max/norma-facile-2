@@ -353,6 +353,21 @@ async def export_cse(commessa_id: str, user: dict = Depends(get_current_user)):
                 with open(filepath, "rb") as f:
                     zf.writestr(f"00_DOCUMENTI_AZIENDA/{label}_{filename}", f.read())
 
+        # Allegati Tecnici POS (Rumore, Vibrazioni, MMC) — solo quelli con includi_pos=True
+        allegati_pos = await db.company_documents.find(
+            {"category": "allegati_pos", "includi_pos": True},
+            {"_id": 0}
+        ).to_list(20)
+        for adoc in allegati_pos:
+            safe_fn = adoc.get("safe_filename", "")
+            apath = os.path.join(upload_dir, safe_fn)
+            if safe_fn and os.path.exists(apath):
+                tag = (adoc.get("tags", [None]) or [None])[0] or "doc"
+                label = adoc.get("title", tag).upper().replace(" ", "_")
+                filename = adoc.get("filename", safe_fn)
+                with open(apath, "rb") as f:
+                    zf.writestr(f"05_ALLEGATI_POS/{label}_{filename}", f.read())
+
         # Attestati operatori
         operators = await db.operatori.find(
             {"admin_id": user["user_id"]}, {"_id": 0, "nome": 1, "corsi_sicurezza": 1}

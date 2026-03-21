@@ -10,7 +10,7 @@ import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../ui/table';
 import { toast } from 'sonner';
-import { Upload, FileCheck, FileX, Trash2, Download, Shield, Loader2, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
+import { Upload, FileCheck, FileX, Trash2, Download, Shield, Loader2, AlertTriangle, Clock, CheckCircle, Save } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -77,6 +77,7 @@ export default function DocumentiAziendaTab() {
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(null);
     const [scadenze, setScadenze] = useState({});
+    const [savingDate, setSavingDate] = useState(null);
 
     const load = async () => {
         try {
@@ -146,6 +147,31 @@ export default function DocumentiAziendaTab() {
             a.click();
             URL.revokeObjectURL(url);
         } catch (e) { toast.error(e.message); }
+    };
+
+    const handleSaveDate = async (docType) => {
+        const val = scadenze[docType];
+        if (!docs[docType]?.presente) {
+            toast.error('Caricare prima il file');
+            return;
+        }
+        setSavingDate(docType);
+        try {
+            const res = await fetch(`${API}/api/company/documents/sicurezza-globali/${docType}`, {
+                method: 'PATCH',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ scadenza: val || '' }),
+            });
+            if (res.ok) {
+                toast.success('Scadenza salvata');
+                load();
+            } else {
+                const d = await res.json().catch(() => ({}));
+                toast.error(d.detail || 'Errore salvataggio scadenza');
+            }
+        } catch (e) { toast.error(e.message); }
+        finally { setSavingDate(null); }
     };
 
     if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>;
@@ -252,13 +278,28 @@ export default function DocumentiAziendaTab() {
                                         )}
                                     </TableCell>
                                     <TableCell>
-                                        <Input
-                                            type="date"
-                                            value={scadenze[dt] || ''}
-                                            onChange={e => setScadenze(prev => ({ ...prev, [dt]: e.target.value }))}
-                                            className="h-8 text-xs w-[150px]"
-                                            data-testid={`scadenza-${dt}`}
-                                        />
+                                        <div className="flex items-center gap-1">
+                                            <Input
+                                                type="date"
+                                                value={scadenze[dt] || ''}
+                                                onChange={e => setScadenze(prev => ({ ...prev, [dt]: e.target.value }))}
+                                                className="h-8 text-xs w-[140px]"
+                                                disabled={!d.presente}
+                                                data-testid={`scadenza-${dt}`}
+                                            />
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 w-8 p-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                                onClick={() => handleSaveDate(dt)}
+                                                disabled={!d.presente || savingDate === dt}
+                                                data-testid={`save-date-${dt}`}
+                                            >
+                                                {savingDate === dt
+                                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    : <Save className="w-3.5 h-3.5" />}
+                                            </Button>
+                                        </div>
                                         {d.scadenza && <div className="text-[10px] text-slate-400 mt-0.5">Attuale: {d.scadenza}</div>}
                                     </TableCell>
                                     <TableCell className="text-center">

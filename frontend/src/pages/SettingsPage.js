@@ -23,6 +23,7 @@ import BackupTab from '../components/settings/BackupTab';
 import DeployTab from '../components/settings/DeployTab';
 import NotificheTab from '../components/settings/NotificheTab';
 import DocumentiAziendaTab from '../components/settings/DocumentiAziendaTab';
+import AllegatiPosTab from '../components/settings/AllegatiPosTab';
 
 export default function SettingsPage() {
     const { user } = useAuth();
@@ -240,7 +241,12 @@ export default function SettingsPage() {
                         <NotificheTab />
                     </TabsContent>
                     <TabsContent value="documenti">
-                        <DocumentiAziendaTab />
+                        <div className="space-y-6">
+                            <DocumentiAziendaTab />
+                            <div className="border-t border-slate-200 pt-6">
+                                <AllegatiPosTab />
+                            </div>
+                        </div>
                     </TabsContent>
                     {user?.role === 'admin' && (
                         <TabsContent value="team">
