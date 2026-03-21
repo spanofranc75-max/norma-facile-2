@@ -537,6 +537,18 @@ async def emit_event(commessa_id: str, req: EventoRequest, user: dict = Depends(
         if new_stato == "__previous__":
             new_stato = doc.get("stato_precedente", "bozza")
 
+        # ── GATE: Riesame Tecnico obbligatorio prima della produzione ──
+        if tipo == "AVVIO_PRODUZIONE":
+            riesame = await db.riesami_tecnici.find_one(
+                {"commessa_id": commessa_id}, {"_id": 0, "approvato": 1}
+            )
+            if not riesame or not riesame.get("approvato"):
+                raise HTTPException(
+                    400,
+                    "Impossibile avviare la produzione: il Riesame Tecnico non e stato approvato. "
+                    "Completare e firmare il riesame dall'Hub Commessa."
+                )
+
         # Build updates
         now = datetime.now(timezone.utc)
         updates = {
