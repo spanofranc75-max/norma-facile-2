@@ -1433,3 +1433,215 @@ async def morning_briefing(user: dict = Depends(get_current_user)):
             "fatture_scadute": fatture_scadute_count,
         },
     }
+
+
+# ── Executive Dashboard Multi-Normativa ─────────────────────────
+@router.get("/executive")
+async def get_executive_dashboard(user: dict = Depends(get_current_user)):
+    """Dashboard Executive: vista aggregata multi-normativa (1090 / 13241 / Generico).
+    Ogni commessa viene classificata per le normative presenti nelle sue voci_lavoro.
+    Una commessa mista appare in piu settori."""
+    uid = user["user_id"]
+    today = date.today()
+
+    # ── 1. Fetch all active commesse ──
+    commesse = await db.commesse.find(
+        {"user_id": uid, "stato": {"$nin": ["chiuso"]}},
+        {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "stato": 1,
+         "normativa_tipo": 1, "client_name": 1, "value": 1, "deadline": 1,
+         "classe_esecuzione": 1, "fasi_produzione": 1}
+    ).sort("created_at", -1).to_list(200)
+
+    cid_list = [c["commessa_id"] for c in commesse]
+
+    # ── 2. Fetch voci_lavoro to detect per-line normativa ──
+    voci = await db.voci_lavoro.find(
+        {"user_id": uid, "commessa_id": {"$in": cid_list}},
+        {"_id": 0, "commessa_id": 1, "normativa_tipo": 1}
+    ).to_list(2000)
+
+    # Build map: commessa_id -> set of normative
+    norm_map: dict[str, set] = {}
+    for v in voci:
+        cid = v.get("commessa_id", "")
+        nt = v.get("normativa_tipo", "")
+        norm_map.setdefault(cid, set())
+        if nt:
+            norm_map[cid].add(nt)
+
+    # Fallback: use commessa-level normativa_tipo if no voci
+    for c in commesse:
+        cid = c["commessa_id"]
+        if cid not in norm_map or not norm_map[cid]:
+            nt = c.get("normativa_tipo", "") or ""
+            norm_map[cid] = {nt} if nt else {"GENERICA"}
+
+    # ── 3. Fetch audit data in bulk ──
+    riesami = {r["commessa_id"]: r async for r in db.riesami_tecnici.find(
+        {"commessa_id": {"$in": cid_list}},
+        {"_id": 0, "commessa_id": 1, "approvato": 1, "n_ok": 1, "n_totale": 1}
+    )}
+    ctrl_finali = {r["commessa_id"]: r async for r in db.controlli_finali.find(
+        {"commessa_id": {"$in": cid_list}},
+        {"_id": 0, "commessa_id": 1, "approvato": 1}
+    )}
+    report_isp = {r["commessa_id"]: r async for r in db.report_ispezioni.find(
+        {"user_id": uid, "commessa_id": {"$in": cid_list}},
+        {"_id": 0, "commessa_id": 1, "approvato": 1}
+    )}
+    dop_counts: dict[str, int] = {}
+    async for d in db.dop_frazionate.find(
+        {"commessa_id": {"$in": cid_list}, "user_id": uid},
+        {"_id": 0, "commessa_id": 1}
+    ):
+        dop_counts[d["commessa_id"]] = dop_counts.get(d["commessa_id"], 0) + 1
+
+    # ── 4. Build per-commessa cards ──
+    def build_card(c):
+        cid = c["commessa_id"]
+        normative = sorted(norm_map.get(cid, set()))
+        is_mista = len(normative) > 1
+
+        # Production progress
+        fasi = c.get("fasi_produzione", [])
+        prod_done = sum(1 for f in fasi if f.get("stato") == "completato")
+        prod_total = len(fasi) if fasi else 0
+
+        # Deadline
+        deadline = c.get("deadline")
+        days_left = None
+        if deadline:
+            try:
+                dl = datetime.strptime(deadline, "%Y-%m-%d").date()
+                days_left = (dl - today).days
+            except (ValueError, TypeError):
+                pass
+
+        # Audit status (only for normed commesse)
+        has_norma = any(n in normative for n in ["EN_1090", "EN_13241"])
+        ries = riesami.get(cid, {})
+        ctrl = ctrl_finali.get(cid, {})
+        risp = report_isp.get(cid, {})
+
+        audit = None
+        if has_norma:
+            audit = {
+                "riesame_ok": bool(ries.get("approvato")),
+                "riesame_pct": round(ries["n_ok"] / ries["n_totale"] * 100) if ries.get("n_totale") else 0,
+                "ispezioni_ok": bool(risp.get("approvato")),
+                "controllo_ok": bool(ctrl.get("approvato")),
+                "dop_count": dop_counts.get(cid, 0),
+            }
+
+        return {
+            "commessa_id": cid,
+            "numero": c.get("numero", ""),
+            "title": c.get("title", ""),
+            "stato": c.get("stato", ""),
+            "client_name": c.get("client_name", ""),
+            "value": c.get("value", 0),
+            "deadline": deadline,
+            "days_left": days_left,
+            "normative_presenti": normative,
+            "mista": is_mista,
+            "classe_esecuzione": c.get("classe_esecuzione", ""),
+            "prod_done": prod_done,
+            "prod_total": prod_total,
+            "audit": audit,
+        }
+
+    cards = [build_card(c) for c in commesse]
+
+    # ── 5. Classify into sectors ──
+    settori = {
+        "EN_1090": {"label": "EN 1090 — Strutture", "commesse": [], "stats": {}},
+        "EN_13241": {"label": "EN 13241 — Chiusure", "commesse": [], "stats": {}},
+        "GENERICA": {"label": "Generica — Senza Marcatura", "commesse": [], "stats": {}},
+    }
+
+    for card in cards:
+        placed = False
+        for nt in card["normative_presenti"]:
+            key = nt if nt in settori else "GENERICA"
+            settori[key]["commesse"].append(card)
+            placed = True
+        if not placed:
+            settori["GENERICA"]["commesse"].append(card)
+
+    # ── 6. Per-sector stats ──
+    for key, s in settori.items():
+        cc = s["commesse"]
+        s["stats"] = {
+            "totale_commesse": len(cc),
+            "valore_totale": sum(c.get("value", 0) or 0 for c in cc),
+            "in_ritardo": sum(1 for c in cc if c.get("days_left") is not None and c["days_left"] < 0),
+            "in_produzione": sum(1 for c in cc if c["stato"] in ("produzione", "in_corso")),
+        }
+        if key != "GENERICA":
+            audited = [c for c in cc if c.get("audit")]
+            s["stats"]["audit_ready"] = sum(1 for c in audited
+                                            if c["audit"]["riesame_ok"] and c["audit"]["ispezioni_ok"]
+                                            and c["audit"]["controllo_ok"])
+            s["stats"]["riesame_approvati"] = sum(1 for c in audited if c["audit"]["riesame_ok"])
+            s["stats"]["dop_generate"] = sum(1 for c in audited if c["audit"]["dop_count"] > 0)
+            total_pct = sum(c["audit"]["riesame_pct"] for c in audited)
+            s["stats"]["indice_rischio"] = round(100 - (total_pct / len(audited))) if audited else 0
+        else:
+            # Efficienza produttiva per generiche
+            prod_cc = [c for c in cc if c["prod_total"] > 0]
+            total_done = sum(c["prod_done"] for c in prod_cc)
+            total_phases = sum(c["prod_total"] for c in prod_cc)
+            s["stats"]["efficienza_produttiva"] = round(total_done / total_phases * 100) if total_phases else 0
+
+    # ── 7. Scadenze aggregate ──
+    scadenze = []
+
+    # Instruments
+    async for inst in db.instruments.find({}, {"_id": 0, "name": 1, "next_calibration_date": 1}):
+        nc = inst.get("next_calibration_date", "")
+        if nc:
+            try:
+                delta = (date.fromisoformat(nc[:10]) - today).days
+                if delta <= 30:
+                    scadenze.append({"tipo": "taratura", "nome": inst["name"],
+                                     "scadenza": nc, "giorni": delta,
+                                     "settore": "EN_1090"})
+            except (ValueError, TypeError):
+                pass
+
+    # Welders
+    async for w in db.welders.find({"user_id": uid}, {"_id": 0, "name": 1, "qualifications": 1}):
+        for q in w.get("qualifications", []):
+            exp = q.get("expiry_date", "")
+            if exp:
+                try:
+                    delta = (date.fromisoformat(exp[:10]) - today).days
+                    if delta <= 30:
+                        scadenze.append({"tipo": "patentino", "nome": f"{w['name']} — {q.get('process', '')}",
+                                         "scadenza": exp, "giorni": delta,
+                                         "settore": "EN_1090"})
+                except (ValueError, TypeError):
+                    pass
+
+    # ITT
+    async for itt in db.verbali_itt.find({"user_id": uid}, {"_id": 0, "processo": 1, "data_scadenza": 1}):
+        ds = itt.get("data_scadenza", "")
+        if ds:
+            try:
+                delta = (date.fromisoformat(ds[:10]) - today).days
+                if delta <= 30:
+                    proc = itt.get("processo", "").replace("_", " ").title()
+                    scadenze.append({"tipo": "itt", "nome": f"ITT {proc}",
+                                     "scadenza": ds, "giorni": delta,
+                                     "settore": "EN_1090"})
+            except (ValueError, TypeError):
+                pass
+
+    scadenze.sort(key=lambda x: x.get("giorni", 999))
+
+    return {
+        "settori": settori,
+        "scadenze_imminenti": scadenze,
+        "totale_commesse": len(commesse),
+        "totale_valore": sum((c.get("value") or 0) for c in commesse),
+    }

@@ -40,6 +40,14 @@ const NAV_GROUPS = [
         roles: [],
     },
     {
+        id: 'executive',
+        label: 'Cruscotto Executive',
+        icon: TrendingUp,
+        type: 'link',
+        path: '/executive',
+        roles: ['admin'],
+    },
+    {
         id: 'ebitda',
         label: 'Analisi Finanziaria',
         icon: TrendingUp,

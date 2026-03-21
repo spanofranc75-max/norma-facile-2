@@ -1,0 +1,80 @@
+{
+  "summary": "Executive Dashboard Multi-Normativa testing completed. Backend: 20/20 tests passed (100%). Frontend: All features working correctly - page loads, KPI cards visible, 3 sector sections (EN_1090, EN_13241, GENERICA), scadenze alert with red/amber colors, MISTA badge on multi-normativa commesse, click navigation to CommessaHub, sidebar navigation working.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration211_executive_dashboard.py",
+    "/app/test_reports/pytest/iteration211_executive_dashboard_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration211_executive_dashboard.py"
+  ],
+  "success_rate": {
+    "backend": "100% (20/20 passed)",
+    "frontend": "100% (all features working)"
+  },
+  "seed_data_creation": "Used existing test data: NF-2026-000036 (mista commessa with EN_1090, EN_13241, GENERICA voci_lavoro)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Executive Dashboard fully tested. The endpoint GET /api/dashboard/executive aggregates commesse by normativa_tipo from voci_lavoro. Mista commesse appear in multiple sectors. Scadenze include patentini, tarature, and ITT within 30 days. Frontend shows KPI cards, 3 sector sections with tables, MISTA badges, and scadenze alert with color-coded urgency.",
+  "features_tested": {
+    "backend_endpoint": {
+      "endpoint": "GET /api/dashboard/executive",
+      "tests_passed": 20,
+      "tests_failed": 0,
+      "coverage": [
+        "Response structure validation (settori, scadenze_imminenti, totale_commesse, totale_valore)",
+        "Three sectors present (EN_1090, EN_13241, GENERICA)",
+        "EN_1090 sector: label, commesse list, stats (totale_commesse, valore_totale, indice_rischio, audit_ready, riesame_approvati, dop_generate)",
+        "EN_13241 sector: same structure as EN_1090",
+        "GENERICA sector: efficienza_produttiva instead of audit fields",
+        "Commessa mista NF-2026-000036 appears in all 3 sectors",
+        "Mista flag and normative_presenti array correct",
+        "Scadenze structure (tipo, nome, scadenza, giorni, settore)",
+        "Scadenze sorted by urgency (giorni ascending)",
+        "Patentini included in scadenze",
+        "Commessa card fields (commessa_id, numero, title, stato, value, deadline, days_left, prod_done, prod_total, audit)",
+        "Audit data structure (riesame_ok, riesame_pct, ispezioni_ok, controllo_ok, dop_count)",
+        "totale_commesse matches unique commesse count",
+        "totale_valore matches sum of unique commesse values",
+        "Authentication required (401 without cookie)"
+      ]
+    },
+    "frontend_page": {
+      "url": "/executive",
+      "features_verified": [
+        "Page title 'Cruscotto Executive' visible",
+        "Subtitle shows total commesse and portfolio value",
+        "4 KPI cards (Commesse Attive, EN 1090, EN 13241, Generiche)",
+        "Scadenze alert with red/amber color-coded badges",
+        "EN_1090 sector section with table and audit badges",
+        "EN_13241 sector section with table and audit badges",
+        "GENERICA sector section with efficienza percentage",
+        "MISTA badge visible on multi-normativa commesse",
+        "Click on commessa row navigates to CommessaHub",
+        "Refresh button functional",
+        "Sidebar 'Cruscotto Executive' entry navigable"
+      ]
+    }
+  },
+  "data_verified": {
+    "totale_commesse": 9,
+    "totale_valore": 86857.9,
+    "en_1090_commesse": 4,
+    "en_13241_commesse": 3,
+    "generica_commesse": 4,
+    "mista_commessa": "NF-2026-000036 (appears in all 3 sectors)",
+    "scadenze_imminenti": 4,
+    "expired_patentini": 1,
+    "upcoming_patentini": 3
+  }
+}
