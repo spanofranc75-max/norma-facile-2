@@ -1,0 +1,82 @@
+{
+  "summary": "Iteration 204: Verifica Coerenza Rintracciabilita + Template PDF Processo 111 - All backend tests passed (24/24). Frontend UI verified: Template 111 button in action bar, Verifica Coerenza button triggers analysis showing 3 critical issues (missing cert 3.1) + 3 attention issues (DDT not linked).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "TracciabilitaMaterialiSection",
+        "issues": ["Console warning: In HTML, <tr> cannot be a child of <span> - hydration warning from React dev tools (cosmetic, not functional)"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration204_verifica_coerenza_template111.py",
+    "/app/test_reports/pytest/iteration204_verifica_coerenza_template111_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "GET /api/fpc/batches/verifica-coerenza/{commessa_id} returns discrepancy analysis with riepilogo (totale=3, conformi=0, critici=3, attenzione=0, senza_colata=0, senza_certificato=3, pct_conforme=0)",
+    "Verifica Coerenza correctly detects certificato_mancante (critica) and ddt_non_collegato (attenzione) issues for all 3 batches",
+    "GET /api/template-111/preview/{commessa_id} returns azienda data (Steel Project Design Srls, P.IVA 02042850897) and specifiche_tecniche (UNI EN ISO 15614-1, processo 111)",
+    "Template 111 auto-populates classe_esecuzione=EXC2 from Riesame Tecnico",
+    "GET /api/template-111/pdf/{commessa_id} generates valid PDF (29KB+) with Content-Disposition attachment header",
+    "Frontend TracciabilitaMaterialiSection shows 'Verifica Coerenza' button (data-testid='tracciabilita-verifica-btn') that triggers analysis",
+    "Frontend shows verify result panel (data-testid='tracciabilita-verify-result') with stats grid (Conformi, Critici, Senza colata, Senza cert.) and per-lotto issue details",
+    "Frontend CommessaHubPage has 'Template 111' button (data-testid='btn-template-111') in top action bar (amber/orange color)",
+    "Regression: /api/fpc/batches/rintracciabilita/{commessa_id} still returns 3 batches with colata values",
+    "Regression: /api/riesame/{commessa_id} auto-checks (strumenti_tarati, materiali_confermati, tolleranza_calibro) still work correctly"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration204_verifica_coerenza_template111.py"
+  ],
+  "success_rate": {
+    "backend": "100% (24/24 tests passed)",
+    "frontend": "100% (all UI elements working, data correctly displayed)"
+  },
+  "test_credentials": {
+    "session_token": "d36a500823254076b5c583d6c1d903fa",
+    "test_commessa_id": "com_loiano_cims_2026",
+    "test_user": "user_97c773827822"
+  },
+  "seed_data_creation": "No new seed data created. Used existing test commessa with 3 material_batches (bat_loiano_0/1/2) that have colata but no certificates or DDT links.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 204 verified two new P0 features: (1) Verifica Coerenza Rintracciabilita at /api/fpc/batches/verifica-coerenza/{commessa_id} - compares material_batches with DDT to detect discrepancies (certificato_mancante, ddt_non_collegato, colata_mancante, descrizione_mismatch, quantita_mismatch, colata_mismatch). Returns riepilogo with totale/conformi/critici/attenzione/senza_colata/senza_certificato/pct_conforme. (2) Template PDF Processo 111 at /api/template-111/preview/{commessa_id} and /api/template-111/pdf/{commessa_id} - generates professional PDF for welding qualification request per UNI EN ISO 15614-1, EXC2, S275/S355. Auto-populates company data from company_settings and classe_esecuzione from Riesame Tecnico. Frontend: TracciabilitaMaterialiSection has 'Verifica Coerenza' button that shows results panel with stats and issue details. CommessaHubPage has 'Template 111' button in top action bar.",
+  "testing_summary": {
+    "backend_endpoints": {
+      "GET /api/fpc/batches/verifica-coerenza/{commessa_id}": "PASS - Returns discrepancy analysis with 3 critici (certificato_mancante) + 3 attenzione (ddt_non_collegato)",
+      "GET /api/template-111/preview/{commessa_id}": "PASS - Returns azienda (Steel Project Design Srls, P.IVA 02042850897), specifiche_tecniche (UNI EN ISO 15614-1), classe_esecuzione=EXC2",
+      "GET /api/template-111/pdf/{commessa_id}": "PASS - Returns valid PDF (29KB+) with correct Content-Type and Content-Disposition",
+      "GET /api/fpc/batches/rintracciabilita/{commessa_id}": "PASS (regression) - Returns 3 batches with colata values",
+      "GET /api/riesame/{commessa_id}": "PASS (regression) - Auto-checks (strumenti_tarati, materiali_confermati, tolleranza_calibro) work correctly"
+    },
+    "frontend_ui": {
+      "Template111Button": {
+        "location": "CommessaHubPage top action bar",
+        "data_testid": "btn-template-111",
+        "visible": "PASS",
+        "clickable": "PASS"
+      },
+      "VerificaCoerenzaButton": {
+        "location": "TracciabilitaMaterialiSection header",
+        "data_testid": "tracciabilita-verifica-btn",
+        "visible": "PASS",
+        "clickable": "PASS"
+      },
+      "VerifyResultPanel": {
+        "data_testid": "tracciabilita-verify-result",
+        "stats_grid": "PASS - Shows Conformi=0, Critici=3, Senza colata=0, Senza cert.=3",
+        "issue_details": "PASS - Shows per-lotto issues with gravita (critica/attenzione) and messaggio"
+      },
+      "TracciabilitaTable": {
+        "data_testid": "tracciabilita-table",
+        "rows": "PASS - 3 material batch rows with colata column"
+      }
+    }
+  }
+}

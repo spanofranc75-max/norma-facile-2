@@ -11,7 +11,7 @@ import { Badge } from './ui/badge';
 import { toast } from 'sonner';
 import {
     Link2, Package, Loader2, RefreshCw, CheckCircle, XCircle,
-    FileText, Truck, ArrowRight, Zap, AlertTriangle,
+    FileText, Truck, ArrowRight, Zap, AlertTriangle, Search,
 } from 'lucide-react';
 
 export default function TracciabilitaMaterialiSection({ commessaId }) {
@@ -19,6 +19,8 @@ export default function TracciabilitaMaterialiSection({ commessaId }) {
     const [loading, setLoading] = useState(true);
     const [linking, setLinking] = useState(false);
     const [linkResult, setLinkResult] = useState(null);
+    const [verifying, setVerifying] = useState(false);
+    const [verifyResult, setVerifyResult] = useState(null);
 
     const load = useCallback(async () => {
         try {
@@ -52,6 +54,27 @@ export default function TracciabilitaMaterialiSection({ commessaId }) {
         }
     };
 
+    const handleVerificaCoerenza = async () => {
+        setVerifying(true);
+        setVerifyResult(null);
+        try {
+            const res = await apiRequest(`/fpc/batches/verifica-coerenza/${commessaId}`);
+            setVerifyResult(res);
+            const r = res.riepilogo;
+            if (r.critici > 0) {
+                toast.error(`${r.critici} discrepanze critiche trovate`);
+            } else if (r.attenzione > 0) {
+                toast.warning(`${r.attenzione} avvisi trovati — nessuna criticita`);
+            } else {
+                toast.success('Verifica superata — tutti i lotti conformi');
+            }
+        } catch (e) {
+            toast.error(e.message || 'Errore durante la verifica');
+        } finally {
+            setVerifying(false);
+        }
+    };
+
     if (loading) {
         return (
             <Card className="border-gray-200">
@@ -81,6 +104,16 @@ export default function TracciabilitaMaterialiSection({ commessaId }) {
                     <div className="flex items-center gap-2">
                         <Button size="sm" variant="ghost" onClick={load} className="text-white hover:bg-white/10 h-7 w-7 p-0" data-testid="tracciabilita-refresh">
                             <RefreshCw className="h-3 w-3" />
+                        </Button>
+                        <Button
+                            size="sm"
+                            onClick={handleVerificaCoerenza}
+                            disabled={verifying || totale === 0}
+                            className="bg-white/20 text-white hover:bg-white/30 text-[11px] h-7 px-2.5 border border-white/30"
+                            data-testid="tracciabilita-verifica-btn"
+                        >
+                            {verifying ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Search className="h-3 w-3 mr-1" />}
+                            Verifica Coerenza
                         </Button>
                         <Button
                             size="sm"
@@ -117,6 +150,62 @@ export default function TracciabilitaMaterialiSection({ commessaId }) {
                                 ))}
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* Verify Result Panel */}
+                {verifyResult && (
+                    <div className="space-y-2" data-testid="tracciabilita-verify-result">
+                        <div className={`p-2.5 rounded-lg text-xs border ${
+                            verifyResult.riepilogo.critici > 0
+                                ? 'bg-red-50 border-red-200 text-red-700'
+                                : verifyResult.riepilogo.attenzione > 0
+                                    ? 'bg-amber-50 border-amber-200 text-amber-700'
+                                    : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                        }`}>
+                            <div className="flex items-center justify-between mb-1.5">
+                                <span className="font-semibold flex items-center gap-1.5">
+                                    {verifyResult.riepilogo.critici > 0 ? <XCircle className="h-3.5 w-3.5" /> :
+                                     verifyResult.riepilogo.attenzione > 0 ? <AlertTriangle className="h-3.5 w-3.5" /> :
+                                     <CheckCircle className="h-3.5 w-3.5" />}
+                                    Verifica Coerenza — {verifyResult.riepilogo.pct_conforme}% conforme
+                                </span>
+                                <span className="text-[10px]">{verifyResult.riepilogo.conformi}/{verifyResult.riepilogo.totale} lotti OK</span>
+                            </div>
+                            <div className="grid grid-cols-4 gap-2 mt-2">
+                                <div className="text-center p-1 bg-white/60 rounded">
+                                    <p className="text-[9px]">Conformi</p>
+                                    <p className="font-bold text-emerald-700">{verifyResult.riepilogo.conformi}</p>
+                                </div>
+                                <div className="text-center p-1 bg-white/60 rounded">
+                                    <p className="text-[9px]">Critici</p>
+                                    <p className="font-bold text-red-700">{verifyResult.riepilogo.critici}</p>
+                                </div>
+                                <div className="text-center p-1 bg-white/60 rounded">
+                                    <p className="text-[9px]">Senza colata</p>
+                                    <p className="font-bold text-red-700">{verifyResult.riepilogo.senza_colata}</p>
+                                </div>
+                                <div className="text-center p-1 bg-white/60 rounded">
+                                    <p className="text-[9px]">Senza cert.</p>
+                                    <p className="font-bold text-amber-700">{verifyResult.riepilogo.senza_certificato}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {/* Issue details */}
+                        {verifyResult.lotti.filter(l => !l.conforme).map(l => (
+                            <div key={l.batch_id} className="p-2 bg-white border border-slate-200 rounded-lg text-xs">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-mono font-semibold text-slate-800">{l.descrizione || l.batch_id}</span>
+                                    <span className="text-slate-400">Colata: {l.colata || '—'}</span>
+                                </div>
+                                {l.issues.map((issue, i) => (
+                                    <div key={i} className={`flex items-start gap-1.5 mt-1 ${issue.gravita === 'critica' ? 'text-red-600' : 'text-amber-600'}`}>
+                                        {issue.gravita === 'critica' ? <XCircle className="h-3 w-3 mt-0.5 shrink-0" /> : <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />}
+                                        <span className="text-[10px]">{issue.messaggio}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        ))}
                     </div>
                 )}
 

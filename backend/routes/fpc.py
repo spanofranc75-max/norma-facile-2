@@ -649,3 +649,172 @@ async def scheda_rintracciabilita(commessa_id: str, user: dict = Depends(get_cur
         "totale": len(righe),
         "collegati": sum(1 for r in righe if r["linked"]),
     }
+
+
+
+@router.get("/batches/verifica-coerenza/{commessa_id}")
+async def verifica_coerenza_rintracciabilita(commessa_id: str, user: dict = Depends(get_current_user)):
+    """
+    Confronta material_batches con DDT per segnalare discrepanze:
+    - Colate non corrispondenti
+    - Pesi/quantita mismatch
+    - Descrizioni diverse (es. HEB 120 vs Piatto 100x10)
+    - Certificati 3.1 mancanti
+    """
+    uid = user["user_id"]
+    commessa = await db.commesse.find_one(
+        {"commessa_id": commessa_id, "user_id": uid},
+        {"_id": 0, "commessa_id": 1, "numero": 1}
+    )
+    if not commessa:
+        raise HTTPException(404, "Commessa non trovata")
+
+    # Load material batches
+    batches = await db.material_batches.find(
+        {"commessa_id": commessa_id, "user_id": uid},
+        {"_id": 0, "certificate_base64": 0, "certificato_31_base64": 0}
+    ).to_list(200)
+
+    # Load DDTs related to this commessa
+    ddts = await db.ddt_documents.find(
+        {"user_id": uid, "commessa_id": commessa_id},
+        {"_id": 0}
+    ).to_list(100)
+    # Also check DDTs not explicitly linked but referenced in batches
+    ddt_ids_from_batches = set()
+    for b in batches:
+        did = b.get("ddt_origin", "")
+        if did:
+            ddt_ids_from_batches.add(did)
+    if ddt_ids_from_batches:
+        extra_ddts = await db.ddt_documents.find(
+            {"ddt_id": {"$in": list(ddt_ids_from_batches)}, "user_id": uid},
+            {"_id": 0}
+        ).to_list(100)
+        existing_ids = {d.get("ddt_id") for d in ddts}
+        for ed in extra_ddts:
+            if ed.get("ddt_id") not in existing_ids:
+                ddts.append(ed)
+
+    # Build DDT lookup by ddt_id
+    ddt_map = {d.get("ddt_id", ""): d for d in ddts}
+
+    discrepanze = []
+    conformi = 0
+    senza_cert = 0
+    senza_colata = 0
+
+    for b in batches:
+        batch_id = b.get("batch_id", "")
+        desc_batch = (b.get("dimensions") or b.get("description") or b.get("material_type") or "").strip()
+        colata_batch = (b.get("heat_number") or b.get("numero_colata") or "").strip()
+        cert = (b.get("numero_certificato") or b.get("certificate_31") or "").strip()
+        ddt_origin = b.get("ddt_origin", "")
+        ddt_numero = b.get("ddt_numero", "")
+
+        issues = []
+
+        # Check 1: Colata presente
+        if not colata_batch:
+            issues.append({
+                "tipo": "colata_mancante",
+                "gravita": "critica",
+                "messaggio": "Numero di colata mancante — rintracciabilita non garantita",
+            })
+            senza_colata += 1
+
+        # Check 2: Certificato 3.1 presente
+        if not cert and not b.get("has_certificate"):
+            issues.append({
+                "tipo": "certificato_mancante",
+                "gravita": "critica",
+                "messaggio": "Certificato 3.1 mancante — richiesto da EN 10204",
+            })
+            senza_cert += 1
+
+        # Check 3: Cross-reference con DDT
+        if ddt_origin and ddt_origin in ddt_map:
+            ddt_doc = ddt_map[ddt_origin]
+            ddt_lines = ddt_doc.get("lines", ddt_doc.get("righe", []))
+
+            # Check descrizione match
+            for line in ddt_lines:
+                line_desc = (line.get("description") or line.get("descrizione") or "").strip()
+                if line_desc and desc_batch:
+                    # Fuzzy match: check if main keyword is present
+                    batch_words = set(desc_batch.upper().split())
+                    line_words = set(line_desc.upper().split())
+                    common = batch_words & line_words
+                    if len(common) == 0 and len(batch_words) > 1:
+                        issues.append({
+                            "tipo": "descrizione_mismatch",
+                            "gravita": "attenzione",
+                            "messaggio": f"Descrizione lotto \"{desc_batch}\" diversa da DDT \"{line_desc}\"",
+                        })
+                        break
+
+                # Check peso/quantita
+                line_qty = line.get("quantity") or line.get("quantita") or ""
+                batch_qty = b.get("quantity") or b.get("n_pezzi") or ""
+                if line_qty and batch_qty:
+                    try:
+                        lq = float(str(line_qty).replace(",", ".").split()[0])
+                        bq = float(str(batch_qty).replace(",", ".").split()[0])
+                        if abs(lq - bq) > 0.01 * max(lq, bq):  # >1% difference
+                            issues.append({
+                                "tipo": "quantita_mismatch",
+                                "gravita": "attenzione",
+                                "messaggio": f"Quantita lotto ({batch_qty}) diversa da DDT ({line_qty})",
+                            })
+                    except (ValueError, IndexError):
+                        pass
+
+                # Check colata nel DDT
+                line_colata = (line.get("heat_number") or line.get("colata") or "").strip()
+                if colata_batch and line_colata and colata_batch.upper() != line_colata.upper():
+                    issues.append({
+                        "tipo": "colata_mismatch",
+                        "gravita": "critica",
+                        "messaggio": f"Colata lotto ({colata_batch}) non corrisponde a DDT ({line_colata})",
+                    })
+                    break
+        elif not ddt_origin and not ddt_numero:
+            issues.append({
+                "tipo": "ddt_non_collegato",
+                "gravita": "attenzione",
+                "messaggio": "Lotto non collegato a nessun DDT — origine materiale non tracciata",
+            })
+
+        if not issues:
+            conformi += 1
+
+        discrepanze.append({
+            "batch_id": batch_id,
+            "descrizione": desc_batch,
+            "colata": colata_batch,
+            "certificato_31": cert,
+            "fornitore": b.get("supplier_name", b.get("fornitore", "")),
+            "ddt_numero": ddt_numero,
+            "conforme": len(issues) == 0,
+            "issues": issues,
+        })
+
+    n_totale = len(batches)
+    n_critici = sum(1 for d in discrepanze if any(i["gravita"] == "critica" for i in d["issues"]))
+    n_attenzione = sum(1 for d in discrepanze if any(i["gravita"] == "attenzione" for i in d["issues"]) and not any(i["gravita"] == "critica" for i in d["issues"]))
+
+    return {
+        "commessa_id": commessa_id,
+        "numero": commessa.get("numero", ""),
+        "eseguito_il": datetime.now(timezone.utc).isoformat(),
+        "lotti": discrepanze,
+        "riepilogo": {
+            "totale": n_totale,
+            "conformi": conformi,
+            "critici": n_critici,
+            "attenzione": n_attenzione,
+            "senza_colata": senza_colata,
+            "senza_certificato": senza_cert,
+            "pct_conforme": round(conformi / n_totale * 100) if n_totale else 0,
+        },
+    }

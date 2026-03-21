@@ -328,7 +328,7 @@ si DEVE proporre di spezzarlo.
 | `articoli` | Catalogo articoli/materiali |
 | `diario_produzione` | Registrazioni ore operai |
 | `operatori` | Anagrafica operai + PIN |
-| `material_batches` | Lotti materiale tracciati (EN 1090) |
+| `material_batches` | **UNICA fonte verita** lotti materiale (EN 1090) — ex fpc_batches unificato |
 | `cam_lotti` | Lotti CAM (EN 1090) |
 | `commessa_documents` | Repository documenti + foto officina |
 | `officina_timers` | Timer START/PAUSA/STOP |
@@ -341,6 +341,10 @@ si DEVE proporre di spezzarlo.
 | `company_settings` | Impostazioni aziendali (logo_url, ragione_sociale, etc.) |
 | `verbali_posa` | Verbali di posa in opera (firma, foto, checklist) |
 | `welders` | Operai (Risorse Umane) con qualifiche e attestati sicurezza |
+| `riesami_tecnici` | Riesame Tecnico pre-produzione (11 check + firma) |
+| `registro_saldatura` | Log saldature per commessa (giunto, saldatore, WPS, esito VT) |
+| `controlli_finali` | Checklist pre-spedizione EN 1090-2 (11 check, 3 aree + firma) |
+| `instruments` | Strumenti di misura con soglia accettabilita configurabile |
 
 ---
 
@@ -407,12 +411,58 @@ si DEVE proporre di spezzarlo.
   - Se assente → fallback a testo "STEEL PROJECT DESIGN" in blu
   - Cerca in entrambe le collection: `settings` e `company_settings`
 
-### Sessioni Precedenti
-- Refactoring Backend: commessa_ops.py → 6 moduli (17/17 test)
-- Refactoring Frontend: CommessaOpsPanel → 8 sotto-componenti (iteration_175)
-- Pulizia codice morto: chat.py, documents.py eliminati
-- Responsive 8 pagine (iteration_176)
-- Categorie di Lavoro — 3 bottoni nel CreateCommessaModal (iteration_177)
+### 21 Marzo 2026 — Fork 4: Audit EN 1090 — Fase 2 + Fili Conduttori
+
+#### Registro Saldatura per Commessa (COMPLETATO)
+- **Backend `registro_saldatura.py`:** 5 endpoint CRUD:
+  - `GET /api/registro-saldatura/{commessa_id}` — Lista righe con stats (conformi/non conformi/da eseguire)
+  - `POST /api/registro-saldatura/{commessa_id}` — Nuova riga con validazione processo
+  - `PUT /api/registro-saldatura/{commessa_id}/{riga_id}` — Modifica riga
+  - `DELETE /api/registro-saldatura/{commessa_id}/{riga_id}` — Elimina riga
+  - `GET /api/registro-saldatura/{commessa_id}/saldatori-idonei?processo=X` — Filtra saldatori per patentino valido
+- **Frontend `RegistroSaldaturaSection.js`:** Componente con tabella, dialog form, dropdown saldatori filtrato per processo, stats
+- **Filo Qualifica (HR ↔ Saldatura):** Il dropdown mostra SOLO saldatori con patentino in corso di validità per il processo specifico (es. 135 MIG/MAG)
+- Collezione DB: `registro_saldatura`
+- Test: 100% (22/22 backend + frontend — iteration 201)
+
+#### Tracciabilita Materiali — Link DDT → Lotti FPC (COMPLETATO)
+- **Backend `fpc.py` (aggiornato):**
+  - `POST /api/fpc/batches/link-ddt/{commessa_id}` — Auto-collegamento DDT a batch per match colata/profilo
+  - `GET /api/fpc/batches/rintracciabilita/{commessa_id}` — Scheda rintracciabilita con stato collegamento
+- **Frontend `TracciabilitaMaterialiSection.js`:** Tabella materiali con colata, cert 3.1, DDT, pulsante "Auto-Collega DDT"
+- Test: 100% (22/22 — iteration 201)
+
+#### Checklist Fine Lavori EN 1090-2:2024 (COMPLETATO)
+- **Backend `controllo_finale.py`:** 3 endpoint:
+  - `GET /api/controllo-finale/{commessa_id}` — 11 check in 3 macro-aree con auto-check real-time
+  - `POST /api/controllo-finale/{commessa_id}` — Salva check manuali e note
+  - `POST /api/controllo-finale/{commessa_id}/approva` — Firma e chiudi (bloccante se check non superati)
+- **3 Macro-aree:**
+  - **Visual Testing (4 check):** VT 100% ISO 5817-C, difetti accettabili, saldature registrate (auto), NC chiuse (auto)
+  - **Dimensionale (3 check):** Quote critiche B6/B8, tolleranze montaggio, strumenti tarati (auto)
+  - **Compliance (4 check):** Etichetta CE, DOP presente (auto), colate coerenti (auto), fascicolo completo (auto)
+- **Frontend `ControlloFinaleSection.js`:** Barre progresso per area, checkbox manuali, auto-check con feedback, firma + approvazione
+- Collezione DB: `controlli_finali`
+- Test: 100% (21/21 — iteration 202)
+
+#### Soglia Accettabilita Configurabile per Strumento — Racc. RINA n.2 (COMPLETATO)
+- **Backend `instruments.py` + `instrument.py`:** Nuovi campi `soglia_accettabilita` (float) e `unita_soglia` (mm/%/N/bar)
+- **Default Calibro Borletti:** ±0.1 mm (risposta diretta a raccomandazione RINA audit 2025)
+- **Backend `riesame_tecnico.py`:** Check `tolleranza_calibro` ora usa soglia configurabile per strumento (non piu 5% hardcoded)
+- **Frontend `InstrumentsPage.js`:** Badge viola "Soglia: ±0.1 mm" su card, sezione form condizionale per type=misura
+- Test: 100% (21/21 — iteration 202)
+
+#### Unificazione "Fili Conduttori" — Eliminazione Isole Dati (COMPLETATO)
+- **Filo Rintracciabilita:** `material_batches` = UNICA fonte di verita
+  - Rintracciabilita (`fpc.py`), Riesame (`riesame_tecnico.py`), Controllo Finale (`controllo_finale.py`) tutti leggono da `material_batches`
+  - Eliminata dipendenza da `fpc_batches` (dati migrati a `material_batches`)
+- **Filo Documentale (DOP/CE):**
+  - `dop_frazionata.py` ora auto-popola `classe_esecuzione` dal Riesame Tecnico
+  - Aggiunta sezione "3b. Rintracciabilita Materiali" nel PDF DOP con colate e certificati 3.1
+  - Helper `_build_rintracciabilita_html()` genera la tabella rintracciabilita
+- **Filo Qualifica:** Saldatori filtrati per patentino valido in tempo reale (gia funzionante)
+- **Filo Manutenzione:** Riesame blocca se strumenti/attrezzature scaduti (gia funzionante)
+- Test: 100% (17/17 — iteration 203)
 
 ---
 
@@ -581,9 +631,15 @@ Pacco Documenti: CAP. 1-5 (EN 1090, EN 13241, Relazione Tecnica, Montaggio, Sost
 ### Backlog Funzionale
 - UI Admin per Sfridi, Controlli Visivi, Registro NC
 - RBAC, Export Excel, Unificazione PDF, Portale clienti, WhatsApp
+- (P0) Verifica Coerenza Rintracciabilita — Confronto lotti vs DDT con segnalazione discrepanze
+- (P0) Template Processo 111 — PDF richiesta preventivo laboratorio (UNI EN ISO 15614-1, EXC2, S275/S355)
+- (P1) Report Ispezioni VT/Dimensionali con checklist ISO 5817
+- (P1) DOP + Etichetta CE automatica (enhancement gate_certification)
 - (P1) Integrazione email "Invia a CIMS" (SendGrid/Resend)
 - (P1) Training automatico ML dal Diario di Produzione
 - (P1) Alerting costi reali > budget
+- (P2) Scadenziario Manutenzioni Digitalizzato (calendari trimestrali/annuali + alert)
+- (P2) Verbali ITT (qualifica taglio e foratura)
 - (P2) PDF Compliance dalla Matrice Scadenze
 - (P3) QR Code su documenti generati
 
