@@ -277,3 +277,128 @@ async def delete_document(doc_id: str, user: dict = Depends(get_current_user)):
 
     await db.company_documents.delete_one({"doc_id": doc_id})
     return {"message": "Documento eliminato", "doc_id": doc_id}
+
+
+
+# ── Global Security Documents (DURC, Visura, White List, Patente a Crediti) ──
+
+@router.get("/sicurezza-globali")
+async def list_global_docs(user: dict = Depends(get_current_user)):
+    """Lista documenti aziendali globali per sicurezza/POS."""
+    from models.company_doc import GLOBAL_DOC_TYPES
+    docs = await db.company_documents.find(
+        {"category": "sicurezza_globale"},
+        {"_id": 0}
+    ).to_list(50)
+
+    result = {}
+    for doc_type, meta in GLOBAL_DOC_TYPES.items():
+        matching = [d for d in docs if d.get("tags") and doc_type in d.get("tags", [])]
+        if matching:
+            d = matching[0]
+            result[doc_type] = {
+                "doc_id": d["doc_id"],
+                "title": d["title"],
+                "filename": d["filename"],
+                "upload_date": str(d.get("upload_date", "")),
+                "scadenza": d.get("scadenza", ""),
+                "size_kb": d.get("size_kb", 0),
+                "presente": True,
+                **meta,
+            }
+        else:
+            result[doc_type] = {
+                "doc_id": None,
+                "presente": False,
+                **meta,
+            }
+
+    return {"documenti": result, "completo": all(v["presente"] for v in result.values())}
+
+
+@router.post("/sicurezza-globali/{doc_type}")
+async def upload_global_doc(
+    doc_type: str,
+    file: UploadFile = File(...),
+    scadenza: Optional[str] = Form(None),
+    user: dict = Depends(get_current_user),
+):
+    """Carica/aggiorna un documento globale di sicurezza."""
+    from models.company_doc import GLOBAL_DOC_TYPES
+    if doc_type not in GLOBAL_DOC_TYPES:
+        raise HTTPException(400, f"Tipo non valido. Ammessi: {list(GLOBAL_DOC_TYPES.keys())}")
+
+    meta = GLOBAL_DOC_TYPES[doc_type]
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(400, f"Estensione {ext} non ammessa")
+
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(400, "File troppo grande (max 50MB)")
+
+    # Check if exists
+    existing = await db.company_documents.find_one(
+        {"category": "sicurezza_globale", "tags": doc_type},
+        {"_id": 0}
+    )
+
+    doc_id = existing["doc_id"] if existing else f"gdoc_{uuid.uuid4().hex[:12]}"
+    safe_name = f"{doc_type}_{doc_id}{ext}"
+    filepath = os.path.join(UPLOAD_DIR, safe_name)
+    with open(filepath, "wb") as f:
+        f.write(content)
+
+    now = datetime.now(timezone.utc).isoformat()
+    doc_data = {
+        "doc_id": doc_id,
+        "user_id": user["user_id"],
+        "title": meta["label"],
+        "category": "sicurezza_globale",
+        "filename": file.filename,
+        "safe_filename": safe_name,
+        "content_type": file.content_type or "application/octet-stream",
+        "size_kb": round(len(content) / 1024, 1),
+        "tags": [doc_type],
+        "uploaded_by": user.get("name", user["user_id"]),
+        "upload_date": now,
+        "scadenza": scadenza or "",
+        "version": 1,
+    }
+
+    if existing:
+        # Delete old file
+        old_path = os.path.join(UPLOAD_DIR, existing.get("safe_filename", ""))
+        if os.path.exists(old_path):
+            os.remove(old_path)
+        await db.company_documents.update_one({"doc_id": doc_id}, {"$set": doc_data})
+    else:
+        await db.company_documents.insert_one(doc_data)
+
+    return {
+        "message": f"{meta['label']} caricato",
+        "doc_id": doc_id,
+        "filename": file.filename,
+    }
+
+
+@router.delete("/sicurezza-globali/{doc_type}")
+async def delete_global_doc(doc_type: str, user: dict = Depends(get_current_user)):
+    """Elimina un documento globale di sicurezza."""
+    from models.company_doc import GLOBAL_DOC_TYPES
+    if doc_type not in GLOBAL_DOC_TYPES:
+        raise HTTPException(400, "Tipo non valido")
+
+    doc = await db.company_documents.find_one(
+        {"category": "sicurezza_globale", "tags": doc_type},
+        {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "Documento non trovato")
+
+    filepath = os.path.join(UPLOAD_DIR, doc.get("safe_filename", ""))
+    if os.path.exists(filepath):
+        os.remove(filepath)
+
+    await db.company_documents.delete_one({"doc_id": doc["doc_id"]})
+    return {"message": "Documento eliminato"}

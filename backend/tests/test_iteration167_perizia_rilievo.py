@@ -16,7 +16,7 @@ import requests
 import os
 import io
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://analisi-carpenteria.preview.emergentagent.com")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://normafacile-fpc-fix.preview.emergentagent.com")
 SESSION_TOKEN = os.environ.get("TEST_SESSION_TOKEN", "session_iter167_1772998028952")
 
 

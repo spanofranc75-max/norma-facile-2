@@ -2,8 +2,16 @@
 from pydantic import BaseModel
 from typing import Optional, List, Literal
 
-CATEGORIES = ["manuali", "procedure", "certificazioni", "template", "normative", "organigramma", "altro"]
-CategoryType = Literal["manuali", "procedure", "certificazioni", "template", "normative", "organigramma", "altro"]
+CATEGORIES = ["manuali", "procedure", "certificazioni", "template", "normative", "organigramma", "sicurezza_globale", "altro"]
+CategoryType = Literal["manuali", "procedure", "certificazioni", "template", "normative", "organigramma", "sicurezza_globale", "altro"]
+
+# Document types that are "global" - auto-attached to security packages
+GLOBAL_DOC_TYPES = {
+    "durc": {"label": "DURC", "desc": "Documento Unico di Regolarità Contributiva"},
+    "visura": {"label": "Visura Camerale", "desc": "Visura CCIAA aggiornata"},
+    "white_list": {"label": "White List", "desc": "Iscrizione White List Prefettura"},
+    "patente_crediti": {"label": "Patente a Crediti", "desc": "Patente a Crediti INAIL"},
+}
 
 
 class CompanyDocumentCreate(BaseModel):

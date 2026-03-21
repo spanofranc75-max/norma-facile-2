@@ -8,7 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { toast } from 'sonner';
-import { Save, Building2, CreditCard, FileText, ImageIcon, Upload, Plug, ShieldCheck, HardDrive, Users, Trash2, Bell } from 'lucide-react';
+import { Save, Building2, CreditCard, FileText, ImageIcon, Upload, Plug, ShieldCheck, HardDrive, Users, Trash2, Bell, Shield } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
 import CompanyTab from '../components/settings/CompanyTab';
@@ -22,6 +22,7 @@ import TeamTab from '../components/settings/TeamTab';
 import BackupTab from '../components/settings/BackupTab';
 import DeployTab from '../components/settings/DeployTab';
 import NotificheTab from '../components/settings/NotificheTab';
+import DocumentiAziendaTab from '../components/settings/DocumentiAziendaTab';
 
 export default function SettingsPage() {
     const { user } = useAuth();
@@ -193,6 +194,10 @@ export default function SettingsPage() {
                             <Bell className="h-4 w-4" />
                             Notifiche
                         </TabsTrigger>
+                        <TabsTrigger value="documenti" className="gap-2" data-testid="tab-documenti">
+                            <Shield className="h-4 w-4" />
+                            Documenti
+                        </TabsTrigger>
                         {user?.role === 'admin' && (
                             <TabsTrigger value="team" className="gap-2" data-testid="tab-team">
                                 <Users className="h-4 w-4" />
@@ -233,6 +238,9 @@ export default function SettingsPage() {
                     </TabsContent>
                     <TabsContent value="notifiche">
                         <NotificheTab />
+                    </TabsContent>
+                    <TabsContent value="documenti">
+                        <DocumentiAziendaTab />
                     </TabsContent>
                     {user?.role === 'admin' && (
                         <TabsContent value="team">

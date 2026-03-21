@@ -1,74 +1,73 @@
 <analysis>**original_problem_statement**:
-The user wants to finalize the NormaFacile 2.0 application by adding a final set of advanced features and ensuring the nervous system of automated workflows is complete. The latest user requests focus on creating a Preventivatore Predittivo (Predictive Estimator) and a corresponding KPI Dashboard.
-
-The user's final instruction is a specific test case:
-1.  **Autonomous Analysis**: Analyze the technical drawing  for the Sasso Marconi project using AI Vision.
-2.  **Extract & Calculate**: Extract the complete bill of materials (profiles, plates, bolts) and calculate their theoretical weights.
-3.  **Costing**: Apply average prices for steel and galvanizing from the purchase database (DDTs).
-4.  **Labor Estimation**: Estimate workshop and assembly hours, considering the project's complexity (5 structural nodes, 'Antisismic Class 3').
-5.  **Apply Margins**: Use specific margins: Materials 15%, Labor 40%, Subcontracting 10%.
-6.  **Generate Quote**: Create a new quote named  based on the analysis.
-7.  **Blind Test**: The AI must NOT consult the existing manually created quote for this project.
-8.  **Comparison**: After generation, activate a new  endpoint to show the delta between the AI-generated quote and the manual one.
+The user has two primary requests:
+1.  **Create a 'Documenti Azienda' section in the Settings page.** This section should allow the user to upload and manage global company documents like DURC, Visura Camerale, White List, and Patente a Crediti. These documents must be automatically available for inclusion in safety packages (e.g., POS for a construction site).
+2.  **Fix a critical bug in the FPC (Factory Production Control) module.** The user is unable to open an FPC project, specifically for a project in Loiano, which prevents them from linking documents and proceeding with their work. The user also reported that navigating to  results in a crash or a blank page.
 
 **User's preferred language**: Italian. The next agent **MUST** respond in Italian.
 
 **what currently exists?**
-The application is a feature-rich ERP for a metalworking company. In this session, the agent completed several major modules:
--   **Refactoring**: The monolithic  was successfully broken down into 11 smaller components.
--   **AI Vision for Drawings**: An AI service was implemented to analyze technical drawings and automatically propose a procurement request (RdP).
--   **Administrative Modules**: New modules for DoP Frazionata (Fractional Declaration of Performance) and SAL e Acconti (Work Progress Statements and Down Payments) were created and integrated.
--   **Conto Lavoro (Subcontracting)**: The workflow was enhanced to automatically handle the upload and association of treatment certificates upon material return.
--   **Preventivatore Predittivo**: A multi-step wizard was created that uses AI to analyze a drawing, estimate material and labor costs from historical data, apply custom margins, and generate a complete quote.
--   **KPI Dashboard**: A dashboard was built to display key performance indicators, including a Confidence Score that measures the accuracy of the AI estimator against actual project costs.
+The NormaFacile 2.0 application is a comprehensive ERP for a metalworking company. Key features include a predictive quoting system powered by AI vision (Preventivatore Predittivo), a KPI dashboard, and a machine learning module to calibrate and improve the accuracy of future estimates. The agent has successfully completed a blind test of the estimator, refined its logic based on user feedback, and added a new Analisi AI page that allows for live editing of AI-extracted data with real-time price recalculation. The agent has just started implementing the user's latest requests to add a company documents section and fix the FPC module bug.
 
 **Last working item**:
--   **Last item agent was working**: The agent just received a detailed request to perform a blind test of the new Preventivatore Predittivo module. The goal is to generate a quote from a technical drawing completely autonomously and then compare it to a manually created quote. The agent's first action was to search for the relevant project files.
--   **Status**: NOT STARTED
+-   **Last item agent was working**: The agent was simultaneously addressing two user requests:
+    1.  **Feature**: Creating the 'Documenti Azienda' tab within the Settings page, including backend routes and frontend components.
+    2.  **Bugfix**: Investigating and fixing a crash/inaccessibility issue with the FPC (Factory Production Control) module, which the user needs for a Loiano project.
+-   **Status**: IN PROGRESS
 -   **Agent Testing Done**: N
--   **Which testing method agent to use?**: both. The task requires complex backend processing (AI analysis, DB queries, calculations) and a new frontend view/endpoint for the comparison.
+-   **Which testing method agent to use?**: both. The feature requires backend API testing (upload/download/list global docs) and frontend UI testing (new settings tab). The bug fix requires both backend (verifying project creation logic) and frontend (verifying page navigation and rendering) testing.
 -   **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-There are no known bugs or technical issues. The sole focus is on the user's latest request.
+-   **Issue 1: FPC Project Page Inaccessible/Crash (P0)**
+    -   **Description**: The user cannot open FPC projects, specifically mentioning a Loiano project. Navigating directly to  also failed. This blocks the user from managing EN 1090 traceability and linking required documents.
+    -   **Attempted fixes**: The agent identified that the frontend route  did not exist and added a redirect to the correct main traceability page (). The agent also discovered that no FPC projects existed in the database, likely because the Loiano  (job order) itself hadn't been created. The agent created a mock Loiano commessa to proceed with debugging.
+    -   **Next debug checklist**:
+        1.  Verify the flow for creating an FPC project from a  works correctly. This happens in the  inside .
+        2.  Test the navigation from the list of FPC projects to a single project's detail page ().
+        3.  Ensure the  component correctly fetches and displays project data for an existing project.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a critical blocker for the user, preventing them from performing essential EN 1090 compliance tasks. Fixing it will restore a core module of the application.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: N
+    -   **Should Test frontend/backend/both after fix?**: Both.
+    -   **Blocked on other issue**: None.
 
 **In progress Task List**:
--   **Task 1: Execute Predictive Estimator Blind Test (P0)**
-    -   **Where to resume**: The previous agent's attempt to find the drawing  with a simple file listing command failed. The next step is to query the  collection in the database to locate the document associated with the Sasso Marconi project.
-    -   **What will be achieved with this?**: This will be the final validation of the entire Predictive Estimator workflow, proving its ability to generate an accurate, real-world quote from scratch and comparing it against human work.
-    -   **Status**: NOT STARTED
-    -   **Should Test frontend/backend/both after fix?**: Both
-    -   **Blocked on something**: Locating the specific drawing file ().
+-   **Task 1: Implement Documenti Azienda (Company Documents) Feature (P0)**
+    -   **Description**: Create a new tab in the Settings page to manage global documents (DURC, Visura, etc.) that can be attached to any safety package.
+    -   **Where to resume**:
+        *   **Backend**: The agent added new categories to the  model and created new endpoints () to handle upload and listing of these specific document types.
+        *   **Frontend**: The agent created the  component and added it to the  router.
+        *   **Next Steps**: The UI and backend are scaffolded but require end-to-end testing for file upload, listing, viewing, and deleting. The logic to make these documents available in safety packages also needs to be implemented.
+    -   **What will be achieved with this?**: A centralized, single source of truth for critical company documents, streamlining the creation of compliance-related document packages.
+    -   **Status**: IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?**: Both.
+    -   **Blocked on something**: The FPC bug needs to be fixed so the user can test the full workflow of attaching these new global docs to the Loiano project's safety plan.
 
 **Upcoming and Future Tasks**
 **Upcoming Tasks:**
--   **(P0) Create Comparison Endpoint**: As part of the current task, create the new backend endpoint  and a corresponding UI view to display the differences between the AI-generated quote and the manual one.
+-   **(P1) Automatic ML Model Training**: Implement the agent's suggestion to automatically connect the Diario di Produzione (Production Log) to the ML calibration system. When a job order is closed, its actual hours should be used to retrain and improve the estimation model, making it self-improving over time.
 
-**Future Tasks (from PRD & Agent Suggestions):**
--   **(P1) Intelligent Alerting System**: Automatically notify a manager when a project's real costs (from SAL) exceed the budgeted costs by a certain threshold (e.g., 10%).
+**Future Tasks:**
+-   **(P1) Intelligent Alerting System**: Automatically notify managers when a project's actual costs exceed budgeted costs.
 -   **(P2) Unify PDF Services**: Migrate the 13 legacy PDF generation services into the new Pulsante Magico system.
 -   **(P2) Excel Export**: Add a feature for cost analysis data export.
--   **(P3) Read-only Client Portal**: Develop a portal for clients to view job progress and download documents.
+-   **(P3) Client Portal**: Develop a read-only portal for clients to view job progress.
 -   **(P3) Granular RBAC**: Implement a more detailed role-based access control system.
+-   **(P3) Drag-and-Drop for AI Analysis**: Add drag-and-drop file upload directly to the .
 
 **Completed work in this session**
--   ** Refactoring**: The 1700+ line file was split into 11 independent components located in .
--   **AI Vision for Drawings**: The  service was extended to analyze drawings, extract materials, and propose procurement requests. Implemented in .
--   **Administrative Modules**:
-    -   **DoP Frazionata**: Implemented via  and .
-    -   **SAL e Acconti**: Implemented via  and .
--   **Conto Lavoro Enhancement**: The  route was updated to automatically prompt for and save treatment certificates to the document repository on material return.
--   **Preventivatore Predittivo**: A full-featured AI quote generator.
-    -   Backend:  (route) and  (service).
-    -   Frontend:  page.
--   **KPI Dashboard**: A new analytics page to track estimator accuracy and other metrics.
-    -   Backend:  route.
-    -   Frontend:  page using Recharts.
--   **Comparative Report**: A markdown file  was generated, detailing the system's evolution.
--   **Testing**: All implemented features were successfully tested with the , passing all backend and frontend checks.
+-   **Predictive Estimator Blind Test**: Successfully executed a full, autonomous quote generation from a technical drawing, created a comparison endpoint (), and built a frontend page () to display the AI vs. Manual results.
+-   **Predictive Estimator Refinement**: Corrected the AI's estimation logic based on user feedback (e.g., using €/kg for labor, reading drawing dimensions, weighting bolts).
+-   **Machine Learning Calibration**: Implemented an ML system to refine estimation accuracy over time using historical data. This included a new backend service (), new API endpoints (), and a new Calibrazione ML panel in the KPI Dashboard.
+-   **Frontend Enhancements & Fixes**:
+    -   Created the  page to display and edit AI analysis results.
+    -   Implemented **live editing of material weights with real-time recalculation** of all costs and totals.
+    -   Added a button in the  to navigate directly to the .
+    -   Fixed numerous frontend bugs related to API calls (mixed content, incorrect URL paths) and component state.
+    -   Partially addressed the FPC bug by adding a redirect for the invalid  route.
 
 **Earlier issues found/mentioned but not fixed**
--   None. All identified linting errors and minor bugs were fixed during the session.
+-   None. The only outstanding issue is the FPC bug, which is currently in progress.
 
 **Known issue recurrence from previous fork**
 -   None.
@@ -77,80 +76,62 @@ There are no known bugs or technical issues. The sole focus is on the user's lat
 
 
 **Key Technical Concepts**
--   **AI-Powered Estimation**: Combining AI Vision (GPT-4o) for material extraction from drawings with a custom service that queries historical data (DDTs, invoices) for cost pricing and uses project metadata to estimate labor.
--   **ML-based Labor Estimation**: The system is designed to use historical data from  to refine labor hour estimates for future projects.
--   **Data-Driven Dashboards**: Using Recharts to create dynamic, data-rich KPI dashboards for business intelligence.
--   **End-to-End Workflow Automation**: The new estimator module automates the entire process from drawing analysis to quote generation and, upon acceptance, automatically creates the  (Job Order).
+-   **Machine Learning Calibration**: A system that uses completed projects (estimated vs. actual hours) to calculate correction factors (for hours, materials, etc.), which are then applied to new estimates to improve their accuracy.
+-   **Live Recalculation (Frontend)**: Using React state () and effects () to create a highly interactive UI where changing an input (e.g., a material's weight) instantly triggers a recalculation of all dependent values (costs, margins, totals) on the client side.
+-   **Global Document Management**: A new category of company-wide documents, stored and tagged separately, intended for reuse across multiple compliance packages.
 
 **key DB schema**
--   **preventivi_predittivi**: 
--   **dop_frazionate**: 
--   **sal_avanzamento**: 
+-   **preventivi**: Now includes optional fields  (dict),  (float),  (float) to persist the results and manual corrections from the AI analysis.
+-   **company_documents**: The  field now includes , , , and .
 
 **All files of reference**
--   **/app/backend/routes/preventivatore.py**: The main API for the new estimator.
--   **/app/backend/services/preventivatore_predittivo.py**: The core service containing the AI analysis and calculation logic.
--   **/app/frontend/pages/PreventivatoreWizard.js**: The frontend UI for the estimator.
--   **/app/backend/routes/commesse.py**: Will be used to create the new Job Order after the quote is accepted.
--   **/app/backend/routes/ddt.py** & **/app/backend/routes/invoices.py**: Sources for historical material pricing.
--   **/app/backend/routes/diario_produzione.py**: Source for historical labor data for the ML model.
-
-**Areas that need refactoring**:
--   None. A major refactoring of  was just completed.
-
-**key api endpoints**
--   : Starts the AI analysis of a technical drawing.
--   : Takes analysis results and margins to calculate final prices.
--   : Generates the final quote document and saves it.
--   : Retrieves main KPI data for the dashboard.
--   : Lists fractional DoPs for a job.
--   : Lists SAL reports for a job.
--   : **(NEEDS TO BE CREATED)** Compares an AI quote with a manual one.
+-   **/app/frontend/src/pages/SettingsPage.js**: The main settings page, where the new tab was added.
+-   **/app/frontend/src/components/settings/DocumentiAziendaTab.js**: The new component for managing company documents.
+-   **/app/backend/routes/company_docs.py**: The backend API for managing company documents.
+-   **/app/frontend/src/pages/TracciabilitaPage.js**: The page containing the FPC project creation flow, which needs to be debugged.
+-   **/app/frontend/src/pages/FPCProjectPage.js**: The detail page for a single FPC project, which was crashing or inaccessible.
+-   **/app/backend/routes/fpc.py**: The backend API for the FPC module.
 
 **Critical Info for New Agent**
--   Your immediate task is to execute the user's specific blind test for the Predictive Estimator. Do not deviate from the instructions.
--   You must first successfully locate the document  by querying the database, as the simple file search failed.
--   You must create the new  endpoint as requested by the user to complete the task.
--   The entire system has been extensively tested after each feature addition. You can trust the existing components to work as expected.
+-   You have two high-priority tasks from the user: fix the FPC bug and finish the Company Documents feature.
+-   The **FPC bug is a blocker**. The user cannot proceed with their compliance workflow for the Loiano project until it's fixed. The root cause is likely in the project creation flow within  or data loading in . No FPC projects currently exist in the database.
+-   The Documenti Azienda feature is well underway. The frontend tab and backend endpoints are created. You need to test the file operations and then implement the logic to make these documents accessible when generating safety packages (likely in  or a related service).
 
 **documents and test reports created in this job**
--   /app/REPORT_EVOLUZIONE.md
--   /app/memory/PRD.md
--   /app/test_reports/iteration_187.json
--   /app/test_reports/iteration_188.json
--   /app/test_reports/iteration_189.json
--   /app/test_reports/iteration_190.json
+-   /app/test_reports/iteration_191.json
+-   /app/test_reports/iteration_192.json
+-   /app/test_reports/iteration_193.json
+-   /app/memory/PRD.md (updated multiple times)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **Request (KPI Dashboard)**: User accepts the suggestion to build a KPI dashboard with a Confidence Score. (DONE)
-2.  **Approval**: procedi. (ACK)
-3.  **Completion**: Agent finishes the KPI Dashboard and suggests an intelligent alerting system. (DONE)
-4.  **Question**: User asks if the changes are in production and how to save. (PENDING)
-5.  **Action**: Agent calls  to explain the preview/production/save workflow. (DONE)
-6.  **Response**: Agent relays the support agent's explanation on how to use Save to GitHub and Deploy. (DONE)
-7.  **Request (Manual Match)**: User initially asks to match an AI analysis with a pre-existing manual quote. (SUPERSEDED)
-8.  **Action**: Agent asks for clarification on whether to use the existing quote data or do a full AI analysis. (DONE)
-9.  **Request (Blind Test)**: User provides new, detailed instructions for a blind test: analyze a specific drawing from scratch, apply costs/margins, and generate a new quote without looking at the manual one. This supersedes the previous request. **This is the current task.** (PENDING)
-10. **Action**: Agent begins work by searching for the specified project files, but the initial search is unsuccessful. (IN PROGRESS)
+1.  **User stops agent**: Emergent, stop. (COMPLETE)
+2.  **User reports missing pages**: Dashboard Analisi and Lista Materiali AI are not accessible from the menu. (COMPLETE - Agent created  and linked it).
+3.  **User requests UI link**: Connect the analysis screen to a button inside each quote. (COMPLETE - Agent added the button).
+4.  **User requests live editing**: Wants to correct AI-extracted weights (e.g., 7000kg -> 2200kg) and see the price update in real-time. (COMPLETE - Agent implemented this feature).
+5.  **User reports FPC bug**: la pagina FPC mi dà ancora errore... Ripara il database. (IN PROGRESS - Agent identified route issue and lack of data).
+6.  **User requests same view**: Voglio vedere esattamente quello che vedi tu, ora. (ACK - Agent proceeded to implement fixes).
+7.  **User reports missing feature**: The settings page is missing a module for uploading fixed company documents. (IN PROGRESS - Agent started implementation).
+8.  **User specifies feature requirements**: Crea subito la sezione Documenti Azienda nelle Impostazioni. for DURC, Visura, etc. (IN PROGRESS).
+9.  **User specifies document scope**: Rendi questi documenti Globali. (IN PROGRESS - Agent is creating dedicated endpoints).
+10. **User re-iterates blocker**: Reminds the agent that the FPC bug fix is necessary to link these new documents to the Loiano project. (IN PROGRESS).
 
 **Project Health Check:**
--   **Broken**: No. The application is stable and has passed all recent tests.
--   **Mocked**: No. All features are implemented with real logic and database integration.
+-   **Broken**: The FPC module is currently broken for the user due to the project access/creation bug.
+-   **Mocked**: No.
 
 **3rd Party Integrations**
--   **emergentintegrations**: Used for GPT-4o Vision capabilities, powered by the Emergent LLM Key.
+-   **emergentintegrations**: Used for GPT-4o Vision, powered by the Emergent LLM Key.
 -   **WeasyPrint**: For server-side PDF generation.
--   **react-signature-canvas**: For capturing client signatures on the frontend.
 -   **recharts**: For data visualization on the KPI Dashboard.
 
 **Testing status**
--   **Testing agent used after significant changes**: YES. The agent ran the testing agent after every major feature implementation in this session, resulting in stable and verified code.
+-   **Testing agent used after significant changes**: YES. Agent has consistently used  after each major feature completion, including the most recent Analisi AI page.
 -   **Troubleshoot agent used after agent stuck in loop**: NO.
--   **Test files created**: None. All testing was E2E via the testing agent.
--   **Known regressions**: None.
+-   **Test files created**: None.
+-   **Known regressions**: The FPC module functionality appears to have regressed or was never fully tested, as the user cannot access projects.
 
 **Credentials to test flow:**
--   **Ahmed** (PIN: ) and **Karim** (PIN: ) can be used for operator-level testing. Admin credentials should be used for accessing new features like the KPI dashboard and Predictive Estimator.
+-   Admin credentials are required to access Settings and all compliance modules. The session token is .
 
 **What agent forgot to execute**
--   The agent did not forget anything but was at the very beginning of the last task. The key pending action is to **create the  endpoint** as specified in the user's final request. The immediate next step is to find the required document to start the analysis.</analysis>
+-   The agent correctly captured all user requests and was actively working on them. It did not forget anything, but the resolution for the FPC bug and the implementation of the Company Documents feature are both incomplete and are the highest priority for the next session.</analysis>
