@@ -1,0 +1,119 @@
+{
+  "summary": "Iteration 223 — P0.2: Spiegabilità + Punti incerti + Linguaggio officina. Backend: 11/11 tests passed (100%). Frontend: All P0.2 features verified. New 'Perché propone EN 1090' card with evidences (forti/da confermare). New 'Punti da chiarire' card consolidating ambiguities. All section titles renamed to workshop language. Visual order correct: Esito → Perché → Punti → Conferme → Tech Details → CTA.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "IstruttoriaPage",
+        "issues": ["Minor: HTML nesting warning in console (<div> inside <p>) - cosmetic only, doesn't affect functionality (pre-existing from P0.25)"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration223_p02_spiegabilita.py",
+    "/app/test_reports/pytest/iteration223_p02_spiegabilita_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration223_p02_spiegabilita.py"
+  ],
+  "success_rate": {
+    "backend": "100% (11/11 tests passed)",
+    "frontend": "100% (all P0.2 features verified)"
+  },
+  "seed_data_creation": "Used existing test data: istr_701cc0cc1ddc (confermata state)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "P0.2 spiegabilità features fully working. New data-testids: card-perche-proposta, card-punti-incerti. buildEvidenze() derives from estrazione_tecnica (elementi_strutturali, lavorazioni_rilevate, saldature, trattamenti_superficiali). buildPuntiIncerti() consolidates from ambiguita_rilevate + unanswered questions. Test credentials: session_token=99659c11314245d4ae753a9ae27aef5a, istruttoria_id=istr_701cc0cc1ddc",
+  "features_tested": {
+    "card_perche_proposta_visible": {
+      "status": "PASSED",
+      "details": "'Perché propone EN 1090' card (data-testid=card-perche-proposta) is visible"
+    },
+    "evidenze_rilevate_section": {
+      "status": "PASSED",
+      "details": "'Evidenze rilevate' section found with confermato/dedotto badges"
+    },
+    "da_confermare_section": {
+      "status": "PASSED",
+      "details": "'Da confermare' section available (shows when uncertain items exist)"
+    },
+    "evidence_badges_correct": {
+      "status": "PASSED",
+      "details": "Evidence badges show 'confermato' and 'dedotto' correctly"
+    },
+    "card_punti_incerti_visible": {
+      "status": "PASSED",
+      "details": "'Punti da chiarire' card (data-testid=card-punti-incerti) is visible"
+    },
+    "punti_show_impatto": {
+      "status": "PASSED",
+      "details": "Each punto shows impatto text (e.g., 'Potrebbe riferirsi solo all'assemblaggio...')"
+    },
+    "section_renamed_conferme_che_mancano": {
+      "status": "PASSED",
+      "details": "Section renamed from 'Conferme richieste' to 'Conferme che mancano'"
+    },
+    "section_renamed_cosa_ha_rilevato": {
+      "status": "PASSED",
+      "details": "Section renamed from 'Dettaglio tecnico estratto' to 'Cosa ha rilevato dal preventivo'"
+    },
+    "section_renamed_documenti_da_raccogliere": {
+      "status": "PASSED",
+      "details": "Section renamed from 'Documenti da produrre' to 'Documenti da raccogliere'"
+    },
+    "section_renamed_nota_tecnica": {
+      "status": "PASSED",
+      "details": "Section renamed from 'Nota del Tecnico AI' to 'Nota tecnica'"
+    },
+    "ambiguita_card_removed": {
+      "status": "PASSED",
+      "details": "Old 'Ambiguità' card removed, content moved to 'Punti da chiarire'"
+    },
+    "visual_order_correct": {
+      "status": "PASSED",
+      "details": "Cards order: Esito → Perché → Punti → Conferme → Applicabilità → Tech Details"
+    },
+    "backend_endpoints_working": {
+      "status": "PASSED",
+      "details": "All existing endpoints still work (no backend changes in P0.2)"
+    }
+  },
+  "test_credentials": {
+    "session_token": "99659c11314245d4ae753a9ae27aef5a",
+    "test_istruttoria_id": "istr_701cc0cc1ddc",
+    "test_preventivo_id": "prev_625826c752ac",
+    "istruttoria_page_url": "https://istruttoria-hub.preview.emergentagent.com/istruttoria/prev_625826c752ac"
+  },
+  "data_testid_elements_verified": [
+    "istruttoria-page",
+    "card-esito-istruttoria",
+    "card-perche-proposta",
+    "card-punti-incerti",
+    "card-domande-residue",
+    "card-applicabilita",
+    "toggle-tech-details"
+  ],
+  "p02_feature_mapping": {
+    "buildEvidenze_function": {
+      "location": "IstruttoriaPage.js lines 206-260",
+      "data_sources": ["estrazione_tecnica.elementi_strutturali", "estrazione_tecnica.lavorazioni_rilevate", "estrazione_tecnica.saldature", "estrazione_tecnica.trattamenti_superficiali", "profilo_tecnico.motivazione"]
+    },
+    "buildPuntiIncerti_function": {
+      "location": "IstruttoriaPage.js lines 263-297",
+      "data_sources": ["estrazione_tecnica.ambiguita_rilevate", "unanswered questions count", "elementi_strutturali with stato=incerto"]
+    },
+    "renamed_sections": {
+      "Conferme che mancano": "was 'Conferme richieste'",
+      "Cosa ha rilevato dal preventivo": "was 'Dettaglio tecnico estratto'",
+      "Documenti da raccogliere": "was 'Documenti da produrre'",
+      "Nota tecnica": "was 'Nota del Tecnico AI'"
+    }
+  }
+}

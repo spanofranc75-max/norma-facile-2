@@ -202,6 +202,100 @@ const RIEPILOGO_ICONS = {
     saldatura: Flame, zincatura: Truck, montaggio: Hammer, commessa_mista: AlertTriangle,
 };
 
+/* ───────── EVIDENZE (Perché questa proposta) ───────── */
+function buildEvidenze(data) {
+    const forti = [];
+    const daConfermare = [];
+    const est = data?.estrazione_tecnica;
+
+    // Structural elements
+    const elemConf = (est?.elementi_strutturali || []).filter(e => e.stato === 'confermato' || e.stato === 'dedotto');
+    if (elemConf.length > 0) {
+        forti.push({ testo: `Rilevati ${elemConf.length} elementi/profili in acciaio`, tipo: elemConf.some(e => e.stato === 'confermato') ? 'confermato' : 'dedotto' });
+    }
+
+    // Lavorazioni
+    const lavs = est?.lavorazioni_rilevate || [];
+    if (lavs.length > 0) {
+        forti.push({ testo: `${lavs.length} lavorazion${lavs.length > 1 ? 'i' : 'e'} compatibili con carpenteria strutturale`, tipo: 'dedotto' });
+    }
+
+    // Welding
+    if (est?.saldature?.presenti) {
+        const s = est.saldature.stato;
+        if (s === 'confermato' || s === 'dedotto') {
+            forti.push({ testo: 'Saldatura prevista o menzionata nel preventivo', tipo: s });
+        } else {
+            daConfermare.push({ testo: 'Saldatura ipotizzata ma non confermata', impatto: 'Determina WPS, WPQR e qualifiche necessarie' });
+        }
+    }
+
+    // Surface treatment
+    const tratt = est?.trattamenti_superficiali;
+    if (tratt?.tipo && tratt.tipo !== 'nessuno') {
+        const s = tratt.stato;
+        if (s === 'confermato' || s === 'dedotto') {
+            forti.push({ testo: `Trattamento superficiale: ${tratt.tipo}`, tipo: s });
+        } else {
+            daConfermare.push({ testo: `Trattamento superficiale (${tratt.tipo}) da confermare`, impatto: 'Impatta documentazione e subforniture' });
+        }
+    }
+
+    // Profile motivation — if deduced by analogy
+    const prof = data?.profilo_tecnico;
+    if (prof?.motivazione) {
+        const m = prof.motivazione.toLowerCase();
+        if (m.includes('dedott') || m.includes('analog') || m.includes('ipotizz')) {
+            daConfermare.push({ testo: 'Classe/profilo proposto per analogia', impatto: prof.motivazione });
+        }
+    }
+
+    // Uncertain elements
+    const incerti = (est?.elementi_strutturali || []).filter(e => e.stato === 'incerto' || e.stato === 'mancante');
+    if (incerti.length > 0) {
+        daConfermare.push({ testo: `${incerti.length} element${incerti.length > 1 ? 'i' : 'o'} con dati incompleti`, impatto: 'Potrebbe influenzare la classe di esecuzione' });
+    }
+
+    return { forti: forti.slice(0, 5), daConfermare: daConfermare.slice(0, 4) };
+}
+
+/* ───────── PUNTI INCERTI ───────── */
+function buildPuntiIncerti(data, nRisposte, nDomande) {
+    const punti = [];
+
+    // From ambiguities
+    (data?.estrazione_tecnica?.ambiguita_rilevate || []).forEach(a => {
+        punti.push({
+            testo: a.punto,
+            impatto: a.possibili_interpretazioni?.join(' / '),
+            livello: a.impatto === 'alto' ? 'alto' : 'medio',
+        });
+    });
+
+    // Unanswered questions
+    if (nDomande > 0 && nRisposte < nDomande) {
+        punti.push({
+            testo: `${nDomande - nRisposte} conferme ancora da dare`,
+            impatto: 'Le risposte possono cambiare documenti e controlli richiesti',
+            livello: 'medio',
+        });
+    }
+
+    // Uncertain/missing elements
+    (data?.estrazione_tecnica?.elementi_strutturali || [])
+        .filter(e => e.stato === 'incerto')
+        .slice(0, 2)
+        .forEach(e => {
+            punti.push({
+                testo: `${e.descrizione}: dati incompleti`,
+                impatto: 'Potrebbe richiedere integrazione dal disegno',
+                livello: 'basso',
+            });
+        });
+
+    return punti.slice(0, 6);
+}
+
 /* ───────────── PAGE ───────────── */
 
 export default function IstruttoriaPage() {
@@ -480,12 +574,6 @@ export default function IstruttoriaPage() {
                                     </div>
                                 </div>
 
-                                {classificazione?.motivazione && (
-                                    <p className="text-[11px] text-slate-600 leading-relaxed border-l-2 border-blue-300 pl-3 italic" data-testid="motivazione-ai">
-                                        {classificazione.motivazione}
-                                    </p>
-                                )}
-
                                 {/* ── Riepilogo decisioni ── */}
                                 {hasRiepilogo && (
                                     <div className="flex flex-wrap gap-2 pt-1" data-testid="riepilogo-decisioni">
@@ -560,7 +648,80 @@ export default function IstruttoriaPage() {
                     </Card>
                 )}
 
-                {/* ════════════════ WARNINGS (compact) ════════════════ */}
+                {/* ════════════════ PERCHÉ QUESTA PROPOSTA ════════════════ */}
+                {(() => {
+                    const ev = buildEvidenze(data);
+                    const hasEvidenze = ev.forti.length > 0 || ev.daConfermare.length > 0;
+                    if (!hasEvidenze) return null;
+                    return (
+                        <Card className="border-slate-200" data-testid="card-perche-proposta">
+                            <CardContent className="p-4 space-y-3">
+                                <p className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                    <Lightbulb className="h-3.5 w-3.5 text-blue-600" />
+                                    Perché propone {normativa.replace('_', ' ')}
+                                </p>
+                                {ev.forti.length > 0 && (
+                                    <div className="space-y-1">
+                                        <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider">Evidenze rilevate</p>
+                                        {ev.forti.map((e, i) => (
+                                            <div key={i} className="flex items-center gap-2 text-[11px] text-slate-700">
+                                                <CheckCircle2 className={`h-3 w-3 shrink-0 ${e.tipo === 'confermato' ? 'text-emerald-500' : 'text-blue-500'}`} />
+                                                <span>{e.testo}</span>
+                                                <StatoBadge stato={e.tipo} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                {ev.daConfermare.length > 0 && (
+                                    <div className="space-y-1">
+                                        <p className="text-[9px] font-bold text-amber-600 uppercase tracking-wider">Da confermare</p>
+                                        {ev.daConfermare.map((e, i) => (
+                                            <div key={i} className="text-[11px]">
+                                                <div className="flex items-center gap-2 text-slate-600">
+                                                    <HelpCircle className="h-3 w-3 shrink-0 text-amber-500" />
+                                                    <span>{e.testo}</span>
+                                                </div>
+                                                {e.impatto && (
+                                                    <p className="text-[9px] text-slate-400 ml-5">{e.impatto}</p>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    );
+                })()}
+
+                {/* ════════════════ PUNTI INCERTI ════════════════ */}
+                {(() => {
+                    const punti = buildPuntiIncerti(data, nRisposte, nDomande);
+                    if (punti.length === 0) return null;
+                    return (
+                        <Card className="border-amber-200 bg-amber-50/20" data-testid="card-punti-incerti">
+                            <CardContent className="p-4 space-y-2">
+                                <p className="text-xs font-bold text-amber-800 flex items-center gap-1.5">
+                                    <CircleAlert className="h-3.5 w-3.5" />
+                                    Punti da chiarire
+                                </p>
+                                {punti.map((p, i) => (
+                                    <div key={i} className="flex items-start gap-2">
+                                        <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
+                                            p.livello === 'alto' ? 'bg-red-500' : p.livello === 'medio' ? 'bg-amber-500' : 'bg-slate-400'}`} />
+                                        <div>
+                                            <p className="text-[11px] text-slate-700">{p.testo}</p>
+                                            {p.impatto && (
+                                                <p className="text-[9px] text-slate-400">{p.impatto}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </CardContent>
+                        </Card>
+                    );
+                })()}
+
+                {/* ════════════════ CORREZIONI MOTORE REGOLE ════════════════ */}
                 {warnings_regole?.length > 0 && (
                     <Card className="border-amber-300 bg-amber-50/50">
                         <CardContent className="p-3 space-y-1">
@@ -580,7 +741,7 @@ export default function IstruttoriaPage() {
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-2">
                                 <Zap className="h-4 w-4 text-blue-600" />
-                                Conferme richieste
+                                Conferme che mancano
                                 <Badge className="bg-blue-100 text-blue-700 text-[10px] ml-1">{nRisposte}/{nDomande}</Badge>
                                 {tutteRisposte && (
                                     <Badge className="bg-emerald-100 text-emerald-700 text-[9px] gap-0.5">
@@ -755,7 +916,7 @@ export default function IstruttoriaPage() {
                             {appData.items_non_applicabili?.length > 0 && (
                                 <div>
                                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                                        <Ban className="h-3 w-3" /> Requisiti non applicabili ({appData.items_non_applicabili.length})
+                                        <Ban className="h-3 w-3" /> Non necessari per questa commessa ({appData.items_non_applicabili.length})
                                     </p>
                                     <div className="flex flex-wrap gap-1.5">
                                         {appData.items_non_applicabili.map((item, i) => (
@@ -772,7 +933,7 @@ export default function IstruttoriaPage() {
                             {appData.items_condizionali?.length > 0 && (
                                 <div>
                                     <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1 flex items-center gap-1">
-                                        <AlertTriangle className="h-3 w-3" /> Requisiti aggiuntivi ({appData.items_condizionali.length})
+                                        <AlertTriangle className="h-3 w-3" /> Documenti aggiuntivi richiesti ({appData.items_condizionali.length})
                                     </p>
                                     <div className="flex flex-wrap gap-1.5">
                                         {appData.items_condizionali.map((item, i) => (
@@ -789,26 +950,6 @@ export default function IstruttoriaPage() {
                     </Card>
                 )}
 
-                {/* ════════════════ AMBIGUITIES ════════════════ */}
-                {estrazione_tecnica?.ambiguita_rilevate?.length > 0 && (
-                    <Card className="border-amber-200 bg-amber-50/30">
-                        <CardContent className="p-3">
-                            <p className="text-xs font-bold text-amber-800 flex items-center gap-1.5 mb-1">
-                                <AlertTriangle className="h-3.5 w-3.5" /> Punti incerti da verificare
-                            </p>
-                            <div className="space-y-0.5">
-                                {estrazione_tecnica.ambiguita_rilevate.map((a, i) => (
-                                    <div key={i} className="text-[10px] text-amber-800 py-0.5">
-                                        <strong>{a.punto}</strong>
-                                        <Badge className={`text-[8px] px-1 py-0 ml-1 ${a.impatto === 'alto' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>{a.impatto}</Badge>
-                                        <span className="text-amber-600 ml-1">Possibili: {a.possibili_interpretazioni?.join(' / ')}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
-
                 {/* ════════════════ TECHNICAL DETAILS (collapsible) ════════════════ */}
                 <Card className="border-slate-200">
                     <button onClick={() => setShowTechDetails(!showTechDetails)}
@@ -816,7 +957,7 @@ export default function IstruttoriaPage() {
                         data-testid="toggle-tech-details">
                         <span className="text-xs font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
                             <FileText className="h-3.5 w-3.5" />
-                            Dettaglio tecnico estratto
+                            Cosa ha rilevato dal preventivo
                             <Badge className="bg-slate-100 text-slate-500 text-[8px]">
                                 {(estrazione_tecnica?.elementi_strutturali?.length || 0)} elementi ·
                                 {(estrazione_tecnica?.lavorazioni_rilevate?.length || 0)} lavorazioni ·
@@ -918,7 +1059,7 @@ export default function IstruttoriaPage() {
                             {/* Documents + Controls + Prerequisites */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Documenti da produrre ({documenti_richiesti?.length || 0})</p>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Documenti da raccogliere ({documenti_richiesti?.length || 0})</p>
                                     {(documenti_richiesti || []).map((d, i) => {
                                         const na = isNonApplicabile(d.documento);
                                         return (
@@ -988,7 +1129,7 @@ export default function IstruttoriaPage() {
                             {/* Production phases */}
                             {fasi_produttive_attese?.length > 0 && (
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Fasi produttive attese</p>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Fasi di lavorazione previste</p>
                                     <div className="flex flex-wrap gap-1.5">
                                         {fasi_produttive_attese.sort((a, b) => a.ordine - b.ordine).map((f, i) => (
                                             <Badge key={i} variant="outline"
@@ -1008,7 +1149,7 @@ export default function IstruttoriaPage() {
                 {enrichments_regole?.length > 0 && (
                     <Card className="border-indigo-200 bg-indigo-50/30">
                         <CardContent className="p-3">
-                            <p className="text-xs font-bold text-indigo-800 mb-1">Note Arricchimento Regole</p>
+                            <p className="text-xs font-bold text-indigo-800 mb-1">Note dal motore regole</p>
                             {enrichments_regole.map((e, i) => (
                                 <p key={i} className="text-[10px] text-indigo-700">{e.messaggio}</p>
                             ))}
@@ -1021,7 +1162,7 @@ export default function IstruttoriaPage() {
                     <Card className="border-slate-200">
                         <CardContent className="p-3">
                             <p className="text-xs font-bold text-slate-600 mb-1 flex items-center gap-1">
-                                <Brain className="h-3.5 w-3.5 text-blue-500" /> Nota del Tecnico AI
+                                <Brain className="h-3.5 w-3.5 text-blue-500" /> Nota tecnica
                             </p>
                             <p className="text-[10px] text-slate-600 leading-relaxed italic">"{estrazione_tecnica.note_tecnico}"</p>
                         </CardContent>
