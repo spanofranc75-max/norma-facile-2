@@ -1196,6 +1196,60 @@ export default function IstruttoriaPage() {
                     </Card>
                 )}
 
+                {/* ════════════════ SE CONFERMI LA COMMESSA ════════════════ */}
+                {!confermata && !hasBloccoBloccante && (
+                    <Card className="border-slate-200 bg-slate-50/30" data-testid="card-se-confermi">
+                        <CardContent className="p-4 space-y-3">
+                            <p className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                <FileText className="h-3.5 w-3.5 text-slate-500" />
+                                Se confermi la commessa
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                                        <CheckCircle2 className="h-3 w-3" /> Verra preparato
+                                    </p>
+                                    <ul className="space-y-1 text-[11px] text-slate-600">
+                                        <li className="flex items-start gap-1.5"><span className="text-emerald-500 mt-0.5">-</span> Riesame tecnico precompilato</li>
+                                        <li className="flex items-start gap-1.5"><span className="text-emerald-500 mt-0.5">-</span> Lavorazioni e controlli pertinenti</li>
+                                        <li className="flex items-start gap-1.5"><span className="text-emerald-500 mt-0.5">-</span> Documenti da raccogliere</li>
+                                        <li className="flex items-start gap-1.5"><span className="text-emerald-500 mt-0.5">-</span> Requisiti materiali e tracciabilita</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                                        <HelpCircle className="h-3 w-3" /> Restera da completare
+                                    </p>
+                                    <ul className="space-y-1 text-[11px] text-slate-600">
+                                        {!tutteRisposte && nDomande > 0 && (
+                                            <li className="flex items-start gap-1.5"><span className="text-amber-500 mt-0.5">-</span> {nDomande - nRisposte} conferme ancora mancanti</li>
+                                        )}
+                                        <li className="flex items-start gap-1.5"><span className="text-amber-500 mt-0.5">-</span> Evidenze documentali</li>
+                                        {(riepilogo.saldatura && !riepilogo.saldatura.includes('Non previst')) && (
+                                            <li className="flex items-start gap-1.5"><span className="text-amber-500 mt-0.5">-</span> Dati saldatura, se prevista</li>
+                                        )}
+                                        {(riepilogo.zincatura && riepilogo.zincatura.includes('terzista')) && (
+                                            <li className="flex items-start gap-1.5"><span className="text-amber-500 mt-0.5">-</span> Documentazione terzista zincatura</li>
+                                        )}
+                                        {(riepilogo.montaggio && !riepilogo.montaggio.includes('Non previst')) && (
+                                            <li className="flex items-start gap-1.5"><span className="text-amber-500 mt-0.5">-</span> Dati posa in opera, se prevista</li>
+                                        )}
+                                    </ul>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-red-700 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                                        <ShieldAlert className="h-3 w-3" /> Non ancora emettibile
+                                    </p>
+                                    <ul className="space-y-1 text-[11px] text-slate-600">
+                                        <li className="flex items-start gap-1.5"><span className="text-red-400 mt-0.5">-</span> DoP e documenti finali restano bloccati</li>
+                                        <li className="flex items-start gap-1.5"><span className="text-red-400 mt-0.5">-</span> finche non ci sono le prove richieste</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
                 {/* ════════════════ CTA — CONFIRMATION BAR ════════════════ */}
                 <Card className={`border-2 ${
                     confermata ? 'border-emerald-400 bg-emerald-50/40' :

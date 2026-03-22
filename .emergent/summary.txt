@@ -1,136 +1,159 @@
 <analysis>**original_problem_statement**:
-The user's high-level goal is to refine their NormaFacile 2.0 application to be a comprehensive, audit-proof ERP for their metalworking business, focusing on EN 1090-1 (FPC) compliance. Throughout the session, the user's requests evolved from implementing the initial FPC Fase 2 to addressing specific audit-driven requirements.
+The user's core mission is to transform their NormaFacile 2.0 ERP from a simple document generator into an operational techno-normative co-pilot.
 
-**Key requirements addressed in this session:**
-1.  **FPC Fase 2 (Initial Goal)**: Implement a Registro Saldatura (Welding Log) and automate material traceability by linking supplier Delivery Notes (DDTs) to FPC material batches.
-2.  **Audit-Ready Features (User Directive 1)**: Implement a configurable tolerance for calibration instruments (specifically  for Calibro Borletti) and create a new Checklist Fine Lavori (Final Works Checklist) as a priority.
-3.  **Fili Conduttori - Data Interconnection (User Directive 2)**: A crucial architectural requirement to eliminate data islands. This involved ensuring that data flows seamlessly between modules: material traceability from DDTs to jobs, welder qualifications from HR to the welding log, instrument calibration status to the production start gate, and job data to the final Declaration of Performance (DOP).
-4.  **P0 Tasks (User Directive 3)**: Create a Verifica Coerenza Rintracciabilità (Traceability Coherence Check) tool and a PDF template for requesting a Process 111 qualification from a lab.
-5.  **VT/Dimensional Reports (User Directive 4)**: Implement a structured report for Visual Testing (VT) based on ISO 5817 Level C and Dimensional checks based on EN 1090-2.
+This AI-driven engine must:
+1.  **Read and Understand a Quote**: Analyze text and data to extract technical specifications.
+2.  **Translate Commercial to Technical Language**: Convert sales terms into concrete workshop tasks.
+3.  **Apply Normative Logic**: Use a rule engine to determine applicable regulations (EN 1090, EN 13241, etc.).
+4.  **Produce a Candidate Dossier**: Create a pre-filled, proposed technical job file, highlighting knowns, unknowns, and risks.
+5.  **Ask Only Critical Questions**: Radically simplify the user's workload by asking only high-impact questions needed to complete the technical assessment.
+
+The overarching goal, reinforced through recent user feedback, is to create a UI that **makes the user do work** (i.e., complete the technical analysis) rather than just **showing an analysis**. The system must feel like it's actively guiding the user to a final, validated job order.
 
 **User's preferred language**: Italian. The next agent **MUST** respond in Italian.
 
 **what currently exists?**
-The application is a feature-rich ERP that has been significantly enhanced to meet EN 1090 audit requirements. The agent has successfully completed a large volume of work, including:
--   **FPC Fase 2**: A complete Registro Saldatura module with dynamic filtering of qualified welders and a Tracciabilita Materiali section.
--   **Audit-Ready Features**: A Checklist Fine Lavori module is integrated into the job hub, and calibration instruments now have a configurable  (tolerance threshold) that is enforced by the system.
--   **Data Unification**: A critical architectural refactor was performed, migrating data from the redundant  collection into  and updating all relevant backend endpoints to use this single source of truth.
--   **Fili Conduttori (Data Interconnection)**: All key modules are now interconnected. The  (pre-production gate) correctly blocks production if welders are unqualified or instruments have expired calibrations. The DOP generation process now pulls data automatically from the Riesame and traceability modules.
--   **New Tools**: A Verifica Coerenza tool has been added to the traceability section to flag discrepancies, and a Template 111 PDF generator is available for requesting lab qualifications.
--   **Inspection Reports**: A comprehensive Report Ispezioni module for structured VT (ISO 5817) and Dimensional (EN 1090-2) checks has been implemented, including PDF generation and digital signing.
+The application is a mature metalworking ERP. The core AI Compliance Engine has been built and significantly enhanced through several iterative steps:
+- A backend service () and API endpoint () use GPT-4o to analyze quotes.
+- A frontend page () serves as the cockpit for this analysis.
+- **Interactive Loop**: Users can now answer AI-generated questions.
+- **P0.1 Action Cockpit Redesign**: The UI was overhauled to be action-oriented, with a dominant Esito Istruttoria (Outcome) card and progress bars.
+- **P0.15 Dynamic Dependencies**: A new backend service () drives real-time UI changes. Answering a question (e.g., no welding) correctly hides irrelevant downstream requirements (e.g., WPS/WPQR).
+- **P0.25 Contextual Questions**: The system now generates *new* rule-based follow-up questions based on user answers, guiding the user through the analysis (e.g., answering External galvanizing creates new questions about the third-party supplier).
+- **P0.2 Explainability & UX Polish**: The UI has been further refined with a Perché questa proposta (Why this proposal?) box, a Punti da chiarire (Points to clarify) box, and all component titles have been rewritten in user-friendly workshop language.
 
 **Last working item**:
--   **Last item agent was working**: The agent was beginning the implementation of the **DOP + Etichetta CE automatica** (Automatic Declaration of Performance and CE Label) enhancement. The goal is to make the generation of these final documents fully automatic by pulling all necessary data from other modules (Riesame, Rintracciabilità, Controllo Finale) without manual input. The agent had correctly identified  as the target file and was in the process of analyzing its current structure to plan the surgical modifications.
--   **Status**: NOT STARTED
--   **Agent Testing Done**: N
--   **Which testing method agent to use?**: both. Backend testing via  will be needed to verify that the generated PDF contains the auto-populated data. Frontend testing via screenshot will be needed to confirm the UI for generating the DOP/CE label still functions correctly.
--   **User Testing Done**: N
+-   **Last item agent was working**: The agent completed P0.2, a frontend-only task to enhance the explainability and user-friendliness of the . This involved adding new informational boxes (Why this proposal, Points to clarify) and renaming all section titles to align with workshop language.
+-   **Status**: USER VERIFICATION PENDING
+-   **Agent Testing Done**: Y
+-   **Which testing method agent to use?**: NA
+-   **User Testing Done**: Y
 
 **All Pending/In progress Issue list**:
-- There are no pending bugs. All work is feature development.
+-   **Issue 1**: (P3) Minor frontend  warning in .
+-   **Issue 2**: (P3) Minor frontend hydration warning reported in  and .
+
+**Issues Detail**:
+-   **Issue 1:  warning**
+    -   **Attempted fixes**: None.
+    -   **Next debug checklist**: In , locate the  on line 109 and add the missing  dependency to its dependency array.
+    -   **Why fix this issue and what will be achieved with the fix?**: Fixes a React linting warning and ensures the hook has the correct dependencies, preventing potential stale state issues. Low priority code quality improvement.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: frontend
+    -   **Blocked on other issue**: None
+-   **Issue 2: Hydration warning**
+    -   **Attempted fixes**: None.
+    -   **Next debug checklist**: Review  and  for invalid HTML nesting that could cause a mismatch between server-rendered and client-rendered markup.
+    -   **Why fix this issue and what will be achieved with the fix?**: Fixes a minor React warning and improves code quality.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: frontend
+    -   **Blocked on other issue**: None
 
 **In progress Task List**:
-- There are no tasks currently in progress. The previous task was completed, and the next one is about to begin.
+-   None.
 
 **Upcoming and Future Tasks**
 
-**Upcoming Tasks (Prioritized Backlog):**
--   **(P0) DOP + Etichetta CE automatica**: This is the immediate next task. Enhance the existing  and potentially  to make DOP and CE Label generation fully automatic, pulling data from the , , and  collections.
--   **(P1) Scadenziario Manutenzioni Digitalizzato**: Create a digital calendar/scheduler to manage and send alerts for equipment maintenance deadlines (e.g., Sega MEP, Trapano Serrmac, Saldatrice Weco).
--   **(P1) Verbali ITT**: Create a module to manage Initial Type Testing (ITT) reports for qualifying production processes like cutting and drilling.
+**Upcoming Tasks (The User-Approved Strategic Roadmap):**
+-   **(P0) P0.3 - What Happens Next Box**: Quickly add a minimal box to  explaining the consequences of confirming the analysis (what gets pre-filled, what remains to be done, what blocks final document issuance).
+-   **(P0) P1 - Real-World Validation**: This is the most critical next step. Validate the entire AI engine against 5-10 real-world quotes using the detailed, measurable scorecard provided by the user. The goal is to measure accuracy and prove real-world value before further development.
+-   **(P1) Phase 2 - Generate Revised Job Order**: After successful validation in P1, create the workflow to generate a Commessa Pre-Istruita Revisionata (pre-analyzed job order) from the confirmed AI analysis.
+-   **(P2) Phase 3 - Implement Evidence Gate**: Build the crucial gate that prevents the final issuance of compliance documents (DOP, CE Label) if mandatory evidence has not been logged.
 
-**Future Tasks (General Backlog):**
--   **(P2) Training ML**: Automatically train the estimation model using data from the Diario di Produzione (Production Log).
--   **(P2) Intelligent Alerting System**: Automatically notify managers of project cost overruns.
--   **(P3) Unify Legacy PDFs**: Migrate the 13 old PDF generation services into a unified system.
--   **(P3) Client Portal**: Develop a read-only portal for clients to track job progress.
--   **(P3) Onboarding & Other**: QR Code enhancements, RBAC, and a guided setup wizard for new users.
+**Future Tasks (Deprioritized Backlog):**
+-   (P2) Architettura Multi-Tenant for SaaS.
+-   (P2) Automatic ML model training from production diary data.
+-   (P2) Intelligent cost overrun alerts.
+-   (P3) Unify legacy PDF generation services.
+-   (P3) Develop a read-only client portal.
 
 **Completed work in this session**
--   **Feature: Registro Saldatura (Welding Log)**: Implemented full CRUD with dynamic filtering of welders by valid qualification.
--   **Feature: Link DDT → Lotto FPC**: Created the UI and initial logic for linking delivery notes to material batches.
--   **Feature: Checklist Fine Lavori**: Built a new module for final pre-shipment checks based on EN 1090-2.
--   **Feature: Soglia Calibro Configurabile**: Added a configurable tolerance field to instruments, addressing a specific audit point.
--   **Refactor: Unificazione Dati (Fili Conduttori)**: Performed a major architectural refactor to merge  into , eliminating a critical data island.
--   **Feature: Auto-Population DOP**: Enhanced the DOP to automatically pull the execution class (EXC) from the Riesame Tecnico.
--   **Feature: Verifica Coerenza Rintracciabilità**: Added a tool to detect and report discrepancies between material lots and DDTs.
--   **Feature: Template PDF Processo 111**: Created a PDF generator for requesting lab qualifications.
--   **Feature: Report Ispezioni VT/Dimensionali**: Built a comprehensive module for ISO 5817 VT and EN 1090-2 dimensional reports, with PDF generation and signing.
--   **Documentation**: Updated  with all architectural changes and new features.
+-   **Feature: P0.2 - Explainability & UX Polish**: Enhanced  with Why this proposal? and Points to clarify sections, and rewrote all titles in workshop language. (DONE)
+-   **Feature: P0.25 - Contextual Questions**: Implemented a rule-based engine to generate new, contextual follow-up questions based on user answers. (DONE)
+-   **Feature: P0.15 - Dynamic Dependencies**: Created  to dynamically show/hide requirements on the frontend based on user answers. (DONE)
+-   **Feature: P0.1 - Action Cockpit Redesign**: Overhauled  to be action-oriented with a dominant Esito Istruttoria card and interactive UI. (DONE)
+-   **Feature: Answer AI Questions**: Implemented the initial backend endpoints and frontend UI for users to answer AI-generated questions. (DONE)
 
 **Earlier issues found/mentioned but not fixed**
--   None.
+-   See All Pending/In progress Issue list. The minor frontend warnings have been present throughout the session but have been deprioritized in favor of core feature development.
 
 **Known issue recurrence from previous fork**
 -   None.
 
 **Code Architecture**
-soglia_accettabilitamaterial_batchesmaterial_batchesfpc_batchesverifica_coerenzareport_ispezionicontrollo_finalereport_ispezionitemplate_111soglia_accettabilitaunita_soglia
+
 
 **Key Technical Concepts**
--   **Architectural Refactoring**: The most significant achievement was identifying and resolving the data island problem by unifying the  and  collections. This involved a database migration script and a codebase-wide search-and-replace to ensure all modules use a single source of truth for material data.
--   **Inter-Module Data Flow (Fili Conduttori)**: The application logic was enhanced to create seamless data connections. For example, the  now checks data from the  collection (for calibration) and , and the  pulls data directly from the  results.
--   **Dynamic Checklists**: New modules like  and  were built using dynamic checklists, where some items are manual inputs and others are automatic verifications that query other parts of the database in real-time.
+-   **Strategic Pivot**: The project's focus has shifted from a document generator to a techno-normative co-pilot.
+-   **AI Compliance Engine**: A hybrid system combining a Large Language Model (GPT-4o) for semantic understanding with deterministic rule engines () for applying compliance logic.
+-   **Human-in-the-Loop (HITL)**: A mandatory human review step is at the core of the architecture. The system tracks AI suggestions, user answers, and corrections.
+-   **Progressive Disclosure UX**: The UI now dynamically shows/hides requirements and generates new questions in context, reducing cognitive load and guiding the user through the analysis. This is a key pattern implemented in P0.15 and P0.25.
+-   **Backend-Driven UI State**: The logic for applicability and question generation resides on the backend (), ensuring a single source of truth, while the frontend provides real-time reactivity.
 
 **key DB schema**
--   **material_batches**: Now the single source of truth for all material lots, enriched with data previously held in .
--   **instruments**: The schema was extended to include  and  to support configurable tolerance.
--   **controllo_finale** (new): Stores the state of the 11-item final checklist for a , including manual checks, auto-check results, and a digital signature.
--   **report_ispezioni** (new): Stores detailed inspection reports, including results for 18+ specific checks (VT and Dimensional), metadata, and a digital signature.
+-   **istruttorie** (collection):
+    -   : Unique identifier.
+    -   : Link to the source quote.
+    -   : The current stage (, , ).
+    -   : The full, structured JSON output from the initial AI engine.
+    -   : Array tracking human overrides.
+    -   : (Edited) Stores answers to the *initial* AI questions.
+    -   : (New) Persisted JSON object from  detailing what is/isn't applicable, with reason codes.
+    -   : (New) Array of dynamically generated contextual questions, with state (, , ).
+    -   : (New) Stores user answers to the contextual questions.
 
 **All files of reference**
--   **/app/backend/routes/gate_certification.py**: The primary file to modify for the next task (DOP/CE auto-generation).
--   **/app/backend/routes/dop_frazionata.py**: May also require modification to align with the fully automatic DOP generation.
--   **/app/backend/routes/controllo_finale.py**: A newly created module for the final checklist.
--   **/app/backend/routes/report_ispezioni.py**: A newly created module for VT/Dimensional reports.
--   **/app/backend/routes/fpc.py**: Contains the core traceability logic, now refactored.
--   **/app/frontend/src/pages/CommessaHubPage.js**: The central UI where all new sections have been integrated.
--   **/app/memory/PRD.md**: Updated with all completed tasks and the current backlog.
--   **/app/PROJECT_KNOWLEDGE.md**: Extensively updated with the latest architectural changes, file structures, and feature descriptions.
+-   **/app/frontend/src/pages/IstruttoriaPage.js**: The central UI for the co-pilot. Has been heavily modified.
+-   **/app/backend/routes/istruttoria.py**: The API file for all co-pilot actions. Has been heavily modified.
+-   **/app/backend/services/applicabilita_engine.py**: The new rule engine for dynamic dependencies and contextual questions.
+-   **/app/backend/services/ai_compliance_engine.py**: The initial AI analysis service.
 
 **Critical Info for New Agent**
--   **Operate Surgically**: The user has repeatedly emphasized the need for surgical changes that build upon the existing structure. Before creating new modules, always check if an existing one can be enhanced.
--   **Data Unification is Key**: The merge of  into  was a critical fix. Ensure all new features respect this single source of truth.
--   **Fili Conduttori Philosophy**: The core goal is an interconnected system. When implementing the automatic DOP/CE, ensure it pulls data programmatically from other modules (, , ) rather than requiring new manual inputs.
--   **Testing is Comprehensive**: The previous agent made excellent use of  for backend validation and the  for full-stack regression testing. Continue this pattern.
+-   **Your Immediate Priority is P0.3, then P1**: The user has clearly defined the next steps.
+    1.  **Quickly implement P0.3**: Add the minimal what happens next box to . This should be a small, frontend-only change.
+    2.  **Immediately start P1**: This is the most critical task. Prepare the validation scorecard based on the user's detailed instructions and begin testing the engine's accuracy on real-world quotes. The system contains 109 , but they appear to be test data. Clarify with the user or select the most suitable ones to start the validation.
+-   **No More UX Polish Until P1 is Done**: Do not add new features or make further UX improvements until the real-world validation (P1) is complete. The goal is now to measure the engine's effectiveness.
 
 **documents and test reports created in this job**
--   /app/test_reports/iteration_201.json
--   /app/test_reports/iteration_202.json
--   /app/test_reports/iteration_203.json
--   /app/test_reports/iteration_204.json
--   /app/test_reports/iteration_205.json
--   /app/memory/PRD.md (Updated)
--   /app/PROJECT_KNOWLEDGE.md (Extensively Updated)
+-   /app/test_reports/iteration_219.json
+-   /app/test_reports/iteration_220.json
+-   /app/test_reports/iteration_221.json
+-   /app/test_reports/iteration_222.json
+-   /app/test_reports/iteration_223.json
+-   /app/memory/PRD.md (updated after each major step)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: Asks to proceed with the VT/Dimensional report. (DONE)
-2.  **Agent**: Completes the VT/Dimensional report and summarizes the remaining work.
-3.  **User**: Asks what's left to do before discussing the RINA audit steps. (DONE)
-4.  **Agent**: Provides a full summary of completed work and the remaining backlog.
-5.  **User**: Says to continue with the next steps. (DONE)
-6.  **Agent**: Asks for confirmation to proceed with the DOP/CE automatica.
-7.  **User**: Approves and reminds the agent to operate surgically.
-8.  **Agent**: Acknowledges and begins analysis for the DOP/CE task.
-9.  **User**: (Pending from previous message) continua con i passaggi successivi - User confirmed to continue with the proposed plan.
-10. **User**: (Pending from previous message) ok procedi mi raccomando sempre di operare chirurgicamente - User approved the plan to start on the automatic DOP/CE feature.
+1.  **User**: Approves P0.25 (Contextual Questions) and gives detailed corrections (make child questions  not deleted, refine wording, limit branching depth). **(COMPLETED)**
+2.  **Agent**: Confirms understanding and plans to implement P0.25. **(COMPLETED)**
+3.  **User**: Confirms the plan for P0.25 is correct and gives the go-ahead. **(COMPLETED)**
+4.  **Agent**: Implements and tests P0.25, finds and fixes a bug in the answer-parsing logic. **(COMPLETED)**
+5.  **Agent**: Finishes P0.25, proposing the next step is P0.2 (Explainability). **(COMPLETED)**
+6.  **User**: Approves the completion of P0.25 and strongly agrees that P0.2 is the correct next step. Provides detailed instructions on how to implement the Why this proposal and Points to clarify boxes and what workshop language to use. **(COMPLETED)**
+7.  **Agent**: Confirms understanding and plans to implement the frontend-only P0.2. **(COMPLETED)**
+8.  **User**: Approves the plan for P0.2, providing minor refinements (limit number of why evidences, show impact of uncertainties). **(COMPLETED)**
+9.  **Agent**: Implements and tests P0.2. Finishes the task and proposes the next step: quickly finish P0.3 (what happens next box) and then immediately start P1 (real-world validation). **(COMPLETED)**
+10. **User**: **(PENDING)** Agrees completely. P0.3 should be minimal. P1 is the top priority. Provides a comprehensive, detailed scorecard for validating the engine on 5-10 real quotes, including metrics for classification accuracy, data extraction, question utility, and user trust. Confirms the agent should use existing quotes if available or load a small, representative sample.
 
 **Project Health Check:**
 -   **Broken**: None.
--   **Mocked**: None. All placeholders have been implemented.
+-   **Mocked**: N/A.
 
 **3rd Party Integrations**
--   **WeasyPrint**: Used for all server-side PDF generation (Riesame, Manuale, Controllo Finale, Report Ispezioni, etc.).
--   **emergentintegrations**: Used for the AI estimator's vision analysis.
+-   **WeasyPrint**: Used for server-side PDF generation.
+-   **OpenAI GPT-4o**: Used via  for the core AI analysis. Uses Emergent LLM Key.
+-   **Resend**: Used for sending email notifications. Requires a user-provided API key.
 
 **Testing status**
--   **Testing agent used after significant changes**: YES. The testing agent was used successfully after every major feature implementation, with reports confirming 100% pass rates.
+-   **Testing agent used after significant changes**: YES. It was used after every single incremental feature (P0.1, P0.15, P0.25, P0.2).
 -   **Troubleshoot agent used after agent stuck in loop**: NO.
--   **Test files created**: None. Testing was done via  scripts and the testing agent.
+-   **Test files created**: None. All testing done via , screenshots, and the testing agent.
 -   **Known regressions**: None.
 
 **Credentials to test flow:**
--   The agent has a working script to create a valid session token in the  collection in MongoDB. If  errors occur, this script should be used.
+-   The backend connects to the database named  as defined in .
+-   A new session token may be needed for API testing if the previous one has expired.
 
 **What agent forgot to execute**
-- The agent was reminded by the user to update  and promptly did so. No other tasks were missed.</analysis>
+-   The agent has consistently ignored and not fixed the minor, low-priority frontend warnings related to  and hydration. These remain in the issue list.</analysis>

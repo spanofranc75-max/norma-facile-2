@@ -1,0 +1,122 @@
+{
+  "summary": "Iteration 224 — P0.3 'Se confermi la commessa' box + P1 Validation Page. Backend: 9/9 tests passed (100%). Frontend: All features verified. P0.3 box shows 3 sections (Verrà preparato, Resterà da completare, Non ancora emettibile) with dynamic pending questions count. P1 Validation page shows 8 preventivi with aggregate scorecard (75% global), individual results with OK/MISTA badges, and run buttons.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "IstruttoriaPage",
+        "issues": ["Minor: HTML nesting warning in console (<div> inside <p>) - cosmetic only, pre-existing from P0.25"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration224_p03_validation.py",
+    "/app/test_reports/pytest/iteration224_p03_validation_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration224_p03_validation.py"
+  ],
+  "success_rate": {
+    "backend": "100% (9/9 tests passed)",
+    "frontend": "100% (all P0.3 and P1 features verified)"
+  },
+  "seed_data_creation": "Used existing test data: prev_4db2a68b44 (main user), validation set with 8 preventivi",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "P0.3 and P1 features fully working. P0.3 box visible at bottom of IstruttoriaPage when analysis exists and not confirmed. P1 Validation page at /validazione-p1 shows 8 preventivi with aggregate scorecard (75% global, 6/8 classifications correct). Sidebar link 'Validazione AI (P1)' under Certificazioni with FlaskConical icon. Test credentials: main_user_session=fEQQyik5bSdSU_dnWx_8QR1am6kyw543-sOFR12E7sk, test_user_session=test_perizia_205a45704b22",
+  "features_tested": {
+    "p03_se_confermi_box_visible": {
+      "status": "PASSED",
+      "details": "'Se confermi la commessa' card (data-testid=card-se-confermi) visible on IstruttoriaPage when analysis exists and not confirmed"
+    },
+    "p03_section_verra_preparato": {
+      "status": "PASSED",
+      "details": "Section 'Verrà preparato' shows: Riesame tecnico precompilato, Lavorazioni e controlli pertinenti, Documenti da raccogliere, Requisiti materiali e tracciabilità"
+    },
+    "p03_section_restera_da_completare": {
+      "status": "PASSED",
+      "details": "Section 'Resterà da completare' shows dynamic pending questions count (e.g., '4 conferme ancora mancanti')"
+    },
+    "p03_section_non_ancora_emettibile": {
+      "status": "PASSED",
+      "details": "Section 'Non ancora emettibile' shows: DoP e documenti finali restano bloccati, finché non ci sono le prove richieste"
+    },
+    "p1_validation_page_loads": {
+      "status": "PASSED",
+      "details": "ValidationPage at /validazione-p1 loads correctly with data-testid=validation-page"
+    },
+    "p1_validation_set_8_preventivi": {
+      "status": "PASSED",
+      "details": "Validation set contains exactly 8 preventivi with expected normative (EN_1090, EN_13241, GENERICA)"
+    },
+    "p1_aggregate_scorecard": {
+      "status": "PASSED",
+      "details": "Aggregate scorecard shows 75% global score, 8 preventivi, with breakdown (Classificazione 75%, Profilo 81%, Estrazione 59%, Domande 100%)"
+    },
+    "p1_individual_results_badges": {
+      "status": "PASSED",
+      "details": "Individual results show OK/MISTA badges for classification correctness"
+    },
+    "p1_run_buttons": {
+      "status": "PASSED",
+      "details": "'Pilota 3 casi' and 'Valida tutti (8)' buttons present and functional"
+    },
+    "sidebar_validazione_ai_link": {
+      "status": "PASSED",
+      "details": "Sidebar navigation includes 'Validazione AI (P1)' link under Certificazioni with FlaskConical icon"
+    },
+    "api_validation_set": {
+      "status": "PASSED",
+      "details": "GET /api/validation/set returns 8 preventivi with expected normativa"
+    },
+    "api_validation_results": {
+      "status": "PASSED",
+      "details": "GET /api/validation/results returns existing validation results with scorecards and aggregate"
+    }
+  },
+  "test_credentials": {
+    "main_user_session_token": "fEQQyik5bSdSU_dnWx_8QR1am6kyw543-sOFR12E7sk",
+    "test_user_session_token": "test_perizia_205a45704b22",
+    "istruttoria_page_url": "https://istruttoria-hub-1.preview.emergentagent.com/istruttoria/prev_4db2a68b44",
+    "validation_page_url": "https://istruttoria-hub-1.preview.emergentagent.com/validazione-p1"
+  },
+  "data_testid_elements_verified": [
+    "istruttoria-page",
+    "card-esito-istruttoria",
+    "card-se-confermi",
+    "card-conferma",
+    "validation-page",
+    "card-aggregato",
+    "card-validation-set",
+    "val-row-{preventivo_id}",
+    "btn-run-pilot",
+    "btn-run-all",
+    "nav-validazione-p1"
+  ],
+  "validation_set_preventivi": [
+    {"id": "prev_04a9a9d21bfa", "number": "PRV-2026-0028", "normativa": "EN_1090"},
+    {"id": "prev_35c6b96a9e75", "number": "PRV-2026-0033", "normativa": "EN_1090"},
+    {"id": "prev_62e2e4b9c088", "number": "PRV-2026-0030", "normativa": "EN_13241"},
+    {"id": "prev_7c71048368", "number": "PRV-2026-0037", "normativa": "EN_13241"},
+    {"id": "prev_1d4a5ec4c687", "number": "PRV-2026-0008", "normativa": "GENERICA"},
+    {"id": "prev_eb87b5c85253", "number": "PRV-2026-0002", "normativa": "EN_13241"},
+    {"id": "prev_73cdb12e4ef7", "number": "PRV-2026-0035", "normativa": "EN_13241"},
+    {"id": "prev_8e8311d22a3c", "number": "PRV-2026-0021", "normativa": "EN_1090"}
+  ],
+  "aggregate_scorecard_observed": {
+    "global_score": "75%",
+    "n_preventivi": 8,
+    "classificazione_corretta": "6/8",
+    "media_classificazione": "75%",
+    "media_profilo": "81%",
+    "media_estrazione": "59%",
+    "media_domande": "100%"
+  }
+}

@@ -25,7 +25,7 @@ import {
     Briefcase, Wrench, Award, ShoppingCart, FileText, LayoutGrid,
     CreditCard, TrendingUp, ClipboardCheck, Calendar, CircleDollarSign,
     User, LogOut, Bell, Flame, Calculator, ScrollText, Menu, X, Archive, Brain, Target,
-    BookOpen,
+    BookOpen, FlaskConical,
 } from 'lucide-react';
 
 // ── Navigation Structure ────────────────────────────────────────
@@ -110,6 +110,7 @@ const NAV_GROUPS = [
             { path: '/attrezzature', label: 'Scadenzario Attrezzature', icon: Wrench },
             { path: '/manutenzioni', label: 'Scadenziario Manutenzioni', icon: Calendar },
             { path: '/verbali-itt', label: 'Verbali ITT', icon: Award },
+            { path: '/validazione-p1', label: 'Validazione AI (P1)', icon: FlaskConical },
         ],
     },
     {
