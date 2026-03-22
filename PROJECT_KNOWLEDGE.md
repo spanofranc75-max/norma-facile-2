@@ -752,6 +752,14 @@ Pacco Documenti: CAP. 1-5 (EN 1090, EN 13241, Relazione Tecnica, Montaggio, Sost
 - **Snapshot cache**: last_gate_status, last_completion_percent, last_blockers_count
 - Test: 100% backend (24/24) + 100% frontend (iteration_228)
 
+#### S0 — Collegamento Segmentazione → Rami Normativi (COMPLETATO)
+- Phase 2 auto-genera rami normativi dopo creazione commessa preistruita (idempotente)
+- `genera-da-istruttoria` cerca commessa in `commesse` + `commesse_preistruite`
+- `crea_ramo` e legacy adapter supportano entrambe le collezioni
+- `normative_presenti` aggiornato sulla collezione corretta
+- Frontend: toast rami generati + badge nella card Phase 2
+- Test: 100% backend (12/12) (iteration_229)
+
 ### FASE 6 — Smistatore Intelligente Avanzato (PROSSIMO)
 - Certificati cumulativi: AI analizza ogni pagina, matching per numero colata
 - DDT Multi-Commessa: spacchettamento automatico per commessa/voce

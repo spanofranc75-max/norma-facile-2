@@ -1,99 +1,56 @@
 # NormaFacile 2.0 — PRD
 
 ## Problema Originale
-ERP per carpenteria metallica con focus su conformita EN 1090-1. Multi-normativa (EN 1090, EN 13241, Generica) con gestione commesse, tracciabilita materiali, saldatura, ispezioni, e generazione documentazione (DOP, CE Label).
-
-**Pivot strategico**: da generatore documentale a copilota tecnico-normativo AI-driven.
-
-## Utente Target
-Carpenterie metalliche italiane, certificazione EN 1090, contratti PNRR.
+ERP per carpenteria metallica. Copilota tecnico-normativo AI-driven per EN 1090, EN 13241, Generica.
 
 ## Funzionalita Implementate
 
-### Core EN 1090 + Multi-Normativa (Completo)
-- Commesse CRUD, FPC, Saldatura, Riesame Tecnico, Ispezioni, DOP, CE Label
-- CAM, PDF Executive, Scadenziario, DDT, Fatturazione, Notifiche, QR Code
+### Core ERP (Completo)
+Commesse, FPC, Saldatura, Riesame, Ispezioni, DOP, CE Label, CAM, PDF, DDT, Fatturazione, Notifiche, QR Code
 
-### Motore di Istruttoria Automatica (Completo)
-- P0.1-P0.3 Cockpit, dipendenze, domande, spiegabilita, box "Se confermi"
+### Motore Istruttoria AI (Completo)
+Cockpit, dipendenze, domande, spiegabilita, box "Se confermi". Validazione: 91% globale, 100% classificazione.
 
-### P1 — Validazione Real-World (Completato)
-- Score: 91% globale, 100% classificazione, 79% estrazione
+### Segmentazione + Phase 2 (Completo)
+Segmentazione per riga, commessa pre-istruita con 7 criteri eleggibilita.
 
-### P1.1 — Segmentazione Normativa per Riga (Completato)
-- Keyword + GPT-4o, review utente, conferma
-
-### Phase 2 — Commessa Pre-Istruita Revisionata (Completato)
-- 7 criteri eleggibilita, output con voci/controlli/documenti
-
-### Fase A — Modello Gerarchico Commessa (Completato 22/03/2026)
-- 4 livelli: Commessa Madre -> Ramo Normativo -> Emissione Documentale -> Evidence Gate
-- Collezioni: `commesse_normative`, `emissioni_documentali`
-- Numerazione: `NF-2026-000125-1090-D01`
-- Legacy adapter centralizzato, creazione idempotente
-- Test: 100% backend (21/21) + 100% frontend (iteration_227)
+### Fase A — Modello Gerarchico (Completato 22/03/2026)
+4 livelli: Madre → Ramo → Emissione → Gate. Indici univoci, numerazione strutturata, legacy adapter.
 
 ### Fase B — Evidence Gate Avanzato (Completato 22/03/2026)
-- **B1: Motore gate completo** (`evidence_gate_engine.py`):
-  - 3 check comuni (scope, ramo, gia emessa)
-  - 10+ regole EN 1090 (materiali, cert 3.1, WPS/WPQR, saldatori, registro, VT, controllo finale, riesame tecnico, terzista/zincatura, strumenti/ITT)
-  - 6 regole EN 13241 (identificazione, manuale uso, collaudo, dispositivi, posa)
-  - Gate minimo GENERICA (scope + warning no DoP/CE)
-  - Matrice condizionale: saldatura_attiva, zincatura_esterna, montaggio_attivo, has_automation, requires_force_test, has_safety_devices
-  - Output standardizzato: checks[], blockers[], warnings[], completion_percent
-  - completion_percent esclude not_applicable dal denominatore
-  - Codici blocker/warning standardizzati (MATERIAL_CERT_MISSING, WPS_MISSING, etc.)
-- **B2: UI EmissioneDetailPanel** (`EmissioneDetailPanel.js`):
-  - 3 colonne: Cosa serve | Cosa c'e | Cosa manca
-  - Barra progresso con colore (rosso<50, arancione<80, verde>=80)
-  - Blockers e warnings con codici e messaggi
-  - Pulsante "collega" per check mancanti linkabili
-  - Pulsante "Emetti" solo se emittable=true
-  - Click su emissione apre pannello dettaglio
-- **B3: Blocco reale emissione**:
-  - POST /emetti ricalcola SEMPRE il gate
-  - 409 con dettaglio blockers se non emettibile
-  - Emissione gia emessa = 409 EMISSION_ALREADY_ISSUED
-  - Nessun bypass UI-only
-- **Snapshot cache**: last_gate_status, last_gate_check_at, last_completion_percent, last_blockers_count
-- Test: 100% backend (24/24) + 100% frontend (iteration_228)
+Motore gate con 13+ check EN 1090, 6 EN 13241. Matrice condizionale. UI 3 colonne. Blocco reale 409.
 
-## Backlog Prioritizzato
+### S0 — Collegamento Segmentazione → Rami (Completato 22/03/2026)
+Phase 2 auto-genera rami. genera-da-istruttoria cerca in commesse + commesse_preistruite. Idempotente.
 
-### P0 — Immediato
-- **Auto-generazione rami da segmentazione confermata** — Collegare genera-da-istruttoria al flusso Phase 2 frontend
-- **Fase C: Dashboard Cantiere Multilivello** — Vista commessa madre -> rami -> emissioni con progress tracker
+## Backlog
+
+### P0 — Prossimo: Ramo Sicurezza MVP
+1. Design dati: scheda cantiere + libreria rischi iniziale
+2. Parser template POS.docx
+3. Motore AI Sicurezza
+4. Generazione DOCX bozza
 
 ### P1
-- Progress Tracker per Commessa Pre-Istruita
-- Stability guard deterministico per classificazione borderline
+- Dashboard Cantiere Multilivello
+- Progress Tracker Commessa Pre-Istruita
+- Stability guard deterministico
 
 ### P2
-- Multi-Tenant SaaS
-- ML Training automatico
-- Alert costi reali > budget
+- Multi-Tenant, ML Training, Alert costi
 
 ### P3
-- Unificazione PDF legacy
-- Portale clienti read-only
-- Fix warning minori (exhaustive-deps, hydration)
-- Refactoring: split SettingsPage.js, commesse.py
+- Unificazione PDF, Portale Clienti, Fix warning minori, Refactoring
 
 ## Architettura
-- Frontend: React + ShadCN/UI, porta 3000
-- Backend: FastAPI + MongoDB (test_database), porta 8001
-- PDF: WeasyPrint
-- AI: emergentintegrations + GPT-4o Vision
-- Auth: Google OAuth con sessioni cookie
+- Frontend: React + ShadCN/UI (3000) | Backend: FastAPI + MongoDB (8001) | PDF: WeasyPrint | AI: emergentintegrations + GPT-4o
 
-## Collezioni DB
-- `commesse_normative`: rami normativi per commessa madre
-- `emissioni_documentali`: emissioni progressive per ramo + snapshot cache gate
-- `counters`: contatori atomici (emission_{ramo_id}_{type})
+## Collezioni DB Nuove
+- `commesse_normative`, `emissioni_documentali`, `counters`
 
-## File Chiave Fase B
-- `/app/backend/services/evidence_gate_engine.py` — Motore gate completo
-- `/app/backend/services/commesse_normative_service.py` — Service layer + snapshot
-- `/app/backend/routes/commesse_normative.py` — API endpoints
-- `/app/frontend/src/components/EmissioneDetailPanel.js` — UI 3 colonne
-- `/app/frontend/src/components/RamiNormativiSection.js` — Lista rami + emissioni
+## File Chiave
+- `/app/backend/services/evidence_gate_engine.py`
+- `/app/backend/services/commesse_normative_service.py`
+- `/app/backend/routes/commesse_normative.py`
+- `/app/frontend/src/components/EmissioneDetailPanel.js`
+- `/app/frontend/src/components/RamiNormativiSection.js`
