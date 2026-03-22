@@ -1,0 +1,129 @@
+{
+  "summary": "Iteration 225 — P1.1 Segmentation Feature Testing Complete. Backend: 11/11 tests passed (100%). Frontend: All segmentation UI features verified. Segmentation card shows when normativa is MISTA, displays summary badges (EN 1090, EN 13241, Generiche, Incerte), per-line table with dropdown selects, save draft and confirm buttons. Blocking works correctly when INCERTA lines present. Validation page shows updated aggregate (81% global, 7/8 correct).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "IstruttoriaPage",
+        "issues": ["Minor: HTML nesting warning in console (<span> inside <select>) from React dev tools overlay - cosmetic only, does not affect functionality"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration225_p11_segmentation.py",
+    "/app/test_reports/pytest/iteration225_p11_segmentation_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration225_p11_segmentation.py"
+  ],
+  "success_rate": {
+    "backend": "100% (11/11 tests passed)",
+    "frontend": "100% (all P1.1 segmentation features verified)"
+  },
+  "seed_data_creation": "Used existing test data: prev_8e8311d22a3c (main user, PRV-2026-0021), prev_eb87b5c85253 (test user, PRV-2026-0002)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "P1.1 Segmentation feature fully working. Segmentation card (data-testid=card-segmentazione) shows when normativa is MISTA or hasBloccoBloccante. Key data-testids: btn-avvia-segmentazione (before segmentation runs), seg-line-{line_id}, seg-select-{line_id}, btn-seg-bozza, btn-seg-conferma. Validation aggregate now 81% (was 75%), 7/8 correct (was 6/8). Test credentials: main_user_session=fEQQyik5bSdSU_dnWx_8QR1am6kyw543-sOFR12E7sk, test_user_session=test_perizia_205a45704b22",
+  "features_tested": {
+    "segmenta_endpoint_returns_line_classification": {
+      "status": "PASSED",
+      "details": "POST /api/istruttoria/segmenta/{preventivo_id} returns line_classification, segments, summary with correct structure"
+    },
+    "segmenta_review_save_draft": {
+      "status": "PASSED",
+      "details": "POST /api/istruttoria/segmenta/{preventivo_id}/review with action=save_draft saves user corrections"
+    },
+    "segmenta_confirm_blocked_with_incerta": {
+      "status": "PASSED",
+      "details": "Confirm action returns 400 error when INCERTA lines present: 'Non puoi confermare con righe ancora INCERTE'"
+    },
+    "segmenta_confirm_success_after_classifying_all": {
+      "status": "PASSED",
+      "details": "Confirm action succeeds when all lines classified, creates official_segmentation snapshot"
+    },
+    "istruttoria_has_segmentazione_proposta": {
+      "status": "PASSED",
+      "details": "GET /api/istruttoria/preventivo/{preventivo_id} returns segmentazione_proposta for MISTA preventivi"
+    },
+    "validation_aggregate_81_percent": {
+      "status": "PASSED",
+      "details": "Validation aggregate shows 81% global score (updated from 75%), 7/8 correct (updated from 6/8)"
+    },
+    "validation_set_includes_mista_preventivi": {
+      "status": "PASSED",
+      "details": "Validation set includes 2 MISTA preventivi (prev_eb87b5c85253, prev_8e8311d22a3c) with correct ground truth"
+    },
+    "frontend_segmentation_card_visible": {
+      "status": "PASSED",
+      "details": "Segmentation card (card-segmentazione) visible when normativa is MISTA"
+    },
+    "frontend_summary_badges": {
+      "status": "PASSED",
+      "details": "Summary badges show EN 1090, EN 13241, Generiche, Incerte counts"
+    },
+    "frontend_per_line_table": {
+      "status": "PASSED",
+      "details": "Per-line table shows descriptions with dropdown selects for normativa"
+    },
+    "frontend_dropdown_interaction": {
+      "status": "PASSED",
+      "details": "Dropdown selects work correctly, changing INCERTA to other normativa"
+    },
+    "frontend_save_draft_button": {
+      "status": "PASSED",
+      "details": "'Salva bozza' button saves draft and shows success toast"
+    },
+    "frontend_confirm_button_disabled": {
+      "status": "PASSED",
+      "details": "'Conferma segmentazione' button disabled when INCERTA lines present"
+    },
+    "frontend_p03_se_confermi_box": {
+      "status": "PASSED",
+      "details": "P0.3 'Se confermi la commessa' box visible with all 3 sections"
+    },
+    "frontend_validation_page_aggregate": {
+      "status": "PASSED",
+      "details": "Validation page shows 81% global, 8 preventivi, 7/8 correct"
+    }
+  },
+  "test_credentials": {
+    "main_user_session_token": "fEQQyik5bSdSU_dnWx_8QR1am6kyw543-sOFR12E7sk",
+    "test_user_session_token": "test_perizia_205a45704b22",
+    "test_preventivo_mista": "prev_8e8311d22a3c (PRV-2026-0021)",
+    "test_preventivo_mista2": "prev_eb87b5c85253 (PRV-2026-0002)"
+  },
+  "data_testid_elements_verified": [
+    "istruttoria-page",
+    "card-segmentazione",
+    "btn-avvia-segmentazione",
+    "seg-line-{line_id}",
+    "seg-select-{line_id}",
+    "btn-seg-bozza",
+    "btn-seg-conferma",
+    "card-se-confermi",
+    "validation-page",
+    "card-aggregato",
+    "card-validation-set"
+  ],
+  "segmentation_api_responses": {
+    "segmenta_endpoint": {
+      "returns": "segmentazione object with enabled, trigger_reason, summary, segments, line_classification"
+    },
+    "review_save_draft": {
+      "returns": "status: in_review, segmentazione object with updated reviews"
+    },
+    "review_confirm_blocked": {
+      "returns": "400 error: Non puoi confermare con righe ancora INCERTE"
+    },
+    "review_confirm_success": {
+      "returns": "status: confirmed, official_segmentation with line_assignments"
+    }
+  }
+}

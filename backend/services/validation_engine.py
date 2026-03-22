@@ -69,12 +69,12 @@ VALIDATION_SET = {
     "prev_eb87b5c85253": {
         "number": "PRV-2026-0002",
         "subject": "Recinzione + cancelli",
-        "normativa_attesa": "EN_13241",
-        "profilo_atteso": {"tipo": "categorie_prestazione"},
-        "elementi_attesi": ["recinzione", "cancello", "tubolari"],
+        "normativa_attesa": "MISTA",
+        "profilo_atteso": {"tipo": "exc,categorie_prestazione"},
+        "elementi_attesi": ["recinzione", "cancello", "tubolari", "porta"],
         "saldatura_attesa": True,
         "montaggio_atteso": True,
-        "note": "Recinzione perimetrale con cancelli — EN 13241 per i cancelli"
+        "note": "Recinzione + porta + cancellino pedonale — effettivamente MISTA (EN 13241 per cancelli, GENERICA per recinzione)"
     },
     "prev_73cdb12e4ef7": {
         "number": "PRV-2026-0035",
@@ -89,12 +89,12 @@ VALIDATION_SET = {
     "prev_8e8311d22a3c": {
         "number": "PRV-2026-0021",
         "subject": "Parapetti — Roma Srl",
-        "normativa_attesa": "EN_1090",
-        "profilo_atteso": {"tipo": "exc", "valore_range": ["EXC1", "EXC2"]},
-        "elementi_attesi": ["parapetto", "ringhiera", "tubolare"],
+        "normativa_attesa": "MISTA",
+        "profilo_atteso": {"tipo": "exc,categorie_prestazione"},
+        "elementi_attesi": ["parapetto", "ringhiera", "cancello", "motorizzazione", "recinzione"],
         "saldatura_attesa": True,
         "montaggio_atteso": True,
-        "note": "Parapetti strutturali multipli con posa in opera"
+        "note": "Parapetti (EN 1090) + cancello carraio + motorizzazione (EN 13241) + recinzione — effettivamente MISTA"
     },
 }
 

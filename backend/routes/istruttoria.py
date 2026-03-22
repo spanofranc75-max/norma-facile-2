@@ -13,6 +13,7 @@ from core.security import get_current_user
 from core.database import db
 from services.ai_compliance_engine import analizza_preventivo_completo
 from services.applicabilita_engine import calcola_applicabilita, genera_domande_contestuali
+from services.segmentation_engine import segmenta_preventivo
 
 router = APIRouter(prefix="/istruttoria", tags=["istruttoria"])
 logger = logging.getLogger(__name__)
@@ -363,3 +364,146 @@ async def list_istruttorie(user: dict = Depends(get_current_user)):
          "stato": 1, "created_at": 1, "updated_at": 1, "versione": 1}
     ).sort("updated_at", -1).to_list(100)
     return {"istruttorie": docs, "total": len(docs)}
+
+
+# ═══════════════════════════════════════════════════════════════
+#  SEGMENTAZIONE — P1.1
+# ═══════════════════════════════════════════════════════════════
+
+@router.post("/segmenta/{preventivo_id}")
+async def run_segmentazione(preventivo_id: str, user: dict = Depends(get_current_user)):
+    """Esegue la segmentazione per riga del preventivo.
+    Analizza ogni riga e propone la normativa applicabile."""
+    uid = user["user_id"]
+
+    preventivo = await db.preventivi.find_one(
+        {"preventivo_id": preventivo_id},
+        {"_id": 0}
+    )
+    if not preventivo:
+        raise HTTPException(404, "Preventivo non trovato")
+
+    logger.info(f"[SEGM] Avvio segmentazione per {preventivo_id}")
+
+    segmentazione = await segmenta_preventivo(preventivo)
+
+    if not segmentazione.get("enabled"):
+        return {"segmentazione": segmentazione}
+
+    # Save to istruttoria if exists, otherwise create a minimal record
+    istr = await db.istruttorie.find_one(
+        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"_id": 0, "istruttoria_id": 1}
+    )
+
+    if istr:
+        await db.istruttorie.update_one(
+            {"istruttoria_id": istr["istruttoria_id"]},
+            {"$set": {
+                "segmentazione_proposta": segmentazione,
+                "updated_at": datetime.now(timezone.utc),
+            }}
+        )
+    else:
+        istr_id = f"istr_{uuid.uuid4().hex[:12]}"
+        await db.istruttorie.insert_one({
+            "istruttoria_id": istr_id,
+            "preventivo_id": preventivo_id,
+            "preventivo_number": preventivo.get("number", ""),
+            "user_id": uid,
+            "stato": "segmentazione",
+            "segmentazione_proposta": segmentazione,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        })
+
+    return {"segmentazione": segmentazione}
+
+
+@router.post("/segmenta/{preventivo_id}/review")
+async def review_segmentazione(preventivo_id: str, body: dict, user: dict = Depends(get_current_user)):
+    """Utente conferma/corregge la segmentazione.
+    Body: {
+        "line_reviews": [
+            {"line_id": "ln_xxx", "final_normativa": "EN_1090", "decision": "accepted|corrected"},
+            ...
+        ],
+        "action": "confirm" | "save_draft"
+    }
+    """
+    uid = user["user_id"]
+
+    istr = await db.istruttorie.find_one(
+        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"_id": 0, "istruttoria_id": 1, "segmentazione_proposta": 1}
+    )
+    if not istr:
+        raise HTTPException(404, "Istruttoria non trovata")
+
+    seg = istr.get("segmentazione_proposta")
+    if not seg:
+        raise HTTPException(400, "Nessuna segmentazione proposta presente")
+
+    line_reviews = body.get("line_reviews", [])
+    action = body.get("action", "save_draft")
+
+    # Apply reviews to line_classification
+    review_map = {r["line_id"]: r for r in line_reviews}
+    for lc in seg.get("line_classification", []):
+        lid = lc.get("line_id")
+        if lid in review_map:
+            rev = review_map[lid]
+            lc["review"] = {
+                "final_normativa": rev.get("final_normativa"),
+                "decision": rev.get("decision", "accepted"),
+                "reviewed_by": uid,
+                "reviewed_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+    if action == "confirm":
+        # Build official segmentation
+        line_assignments = []
+        has_uncertain = False
+        for lc in seg.get("line_classification", []):
+            rev = lc.get("review", {})
+            final = rev.get("final_normativa") or lc.get("proposed_normativa")
+            if final == "INCERTA":
+                has_uncertain = True
+            line_assignments.append({
+                "line_id": lc["line_id"],
+                "normativa": final,
+            })
+
+        if has_uncertain:
+            raise HTTPException(400, "Non puoi confermare con righe ancora INCERTE. Classifica tutte le righe prima.")
+
+        official = {
+            "confirmed": True,
+            "confirmed_by": uid,
+            "confirmed_at": datetime.now(timezone.utc).isoformat(),
+            "line_assignments": line_assignments,
+        }
+
+        seg["status"] = "confirmed"
+        await db.istruttorie.update_one(
+            {"istruttoria_id": istr["istruttoria_id"]},
+            {"$set": {
+                "segmentazione_proposta": seg,
+                "official_segmentation": official,
+                "updated_at": datetime.now(timezone.utc),
+            }}
+        )
+
+        return {"status": "confirmed", "official_segmentation": official}
+    else:
+        seg["status"] = "in_review"
+        await db.istruttorie.update_one(
+            {"istruttoria_id": istr["istruttoria_id"]},
+            {"$set": {
+                "segmentazione_proposta": seg,
+                "updated_at": datetime.now(timezone.utc),
+            }}
+        )
+
+        return {"status": "in_review", "segmentazione": seg}
+

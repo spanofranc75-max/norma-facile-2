@@ -14,6 +14,7 @@ import {
     Hammer, Flame, Ruler, Package, Truck, Eye, Wrench,
     ArrowLeft, RefreshCw, CircleAlert, Lightbulb, Save,
     Target, ChevronDown, ChevronUp, Zap, Ban, ShieldAlert,
+    Layers, ArrowRightLeft,
 } from 'lucide-react';
 
 /* ───────────── CONSTANTS ───────────── */
@@ -309,6 +310,10 @@ export default function IstruttoriaPage() {
     const [showTechDetails, setShowTechDetails] = useState(false);
     const [risposteCtx, setRisposteCtx] = useState({});
     const [savingCtx, setSavingCtx] = useState(false);
+    const [segmentazione, setSegmentazione] = useState(null);
+    const [segRunning, setSegRunning] = useState(false);
+    const [segReviews, setSegReviews] = useState({});
+    const [segSaving, setSegSaving] = useState(false);
 
     const fetchIstruttoria = useCallback(async () => {
         setLoading(true);
@@ -338,7 +343,18 @@ export default function IstruttoriaPage() {
             });
             setRisposteCtx(ctxSaved);
         }
-    }, [data?.risposte_utente, data?.domande_contestuali]);
+        // Init segmentation
+        if (data?.segmentazione_proposta) {
+            setSegmentazione(data.segmentazione_proposta);
+            const reviews = {};
+            (data.segmentazione_proposta.line_classification || []).forEach(lc => {
+                if (lc.review?.decision) {
+                    reviews[lc.line_id] = lc.review.final_normativa || lc.proposed_normativa;
+                }
+            });
+            setSegReviews(reviews);
+        }
+    }, [data?.risposte_utente, data?.domande_contestuali, data?.segmentazione_proposta]);
 
     const handleRispostaChange = (idx, value) => {
         setRisposte(prev => ({ ...prev, [String(idx)]: value }));
@@ -419,6 +435,58 @@ export default function IstruttoriaPage() {
             toast.success('Istruttoria confermata — pronta per Fase 2');
             fetchIstruttoria();
         } catch (e) { toast.error(e.message); }
+    };
+
+    const handleSegmenta = async () => {
+        setSegRunning(true);
+        try {
+            toast.info('Segmentazione in corso...');
+            const res = await apiRequest(`/istruttoria/segmenta/${preventivoId}`, { method: 'POST' });
+            setSegmentazione(res.segmentazione);
+            toast.success('Segmentazione completata');
+            fetchIstruttoria();
+        } catch (e) { toast.error(e.message); }
+        finally { setSegRunning(false); }
+    };
+
+    const handleSegReview = (lineId, normativa) => {
+        setSegReviews(prev => ({ ...prev, [lineId]: normativa }));
+    };
+
+    const handleSegSave = async (action) => {
+        if (!data?.istruttoria_id) return;
+        setSegSaving(true);
+        try {
+            const lineReviews = Object.entries(segReviews).map(([lineId, norm]) => ({
+                line_id: lineId,
+                final_normativa: norm,
+                decision: 'corrected',
+            }));
+            // Also add accepted lines (not explicitly reviewed = accept AI proposal)
+            const seg = segmentazione || data?.segmentazione_proposta;
+            if (seg?.line_classification) {
+                for (const lc of seg.line_classification) {
+                    if (!segReviews[lc.line_id]) {
+                        lineReviews.push({
+                            line_id: lc.line_id,
+                            final_normativa: lc.proposed_normativa,
+                            decision: 'accepted',
+                        });
+                    }
+                }
+            }
+            const res = await apiRequest(`/istruttoria/segmenta/${preventivoId}/review`, {
+                method: 'POST',
+                body: { line_reviews: lineReviews, action },
+            });
+            if (action === 'confirm') {
+                toast.success('Segmentazione confermata');
+            } else {
+                toast.success('Bozza segmentazione salvata');
+            }
+            fetchIstruttoria();
+        } catch (e) { toast.error(e.message); }
+        finally { setSegSaving(false); }
     };
 
     // ── Real-time applicability (local, mirrors backend) ──
@@ -1249,6 +1317,134 @@ export default function IstruttoriaPage() {
                         </CardContent>
                     </Card>
                 )}
+
+                {/* ════════════════ SEGMENTAZIONE NORMATIVA ════════════════ */}
+                {!confermata && (normativa === 'MISTA' || hasBloccoBloccante || segmentazione?.enabled) && (() => {
+                    const seg = segmentazione || data?.segmentazione_proposta;
+                    const segConfirmed = data?.official_segmentation?.confirmed;
+                    const lines = seg?.line_classification || [];
+                    const summary = seg?.summary || {};
+                    const NORM_OPTIONS = ['EN_1090', 'EN_13241', 'GENERICA', 'INCERTA'];
+                    const NORM_COLORS = { EN_1090: 'bg-blue-100 text-blue-700', EN_13241: 'bg-violet-100 text-violet-700', GENERICA: 'bg-slate-100 text-slate-600', INCERTA: 'bg-amber-100 text-amber-700' };
+                    const hasIncerte = lines.some(lc => (segReviews[lc.line_id] || lc.proposed_normativa) === 'INCERTA');
+
+                    return (
+                        <Card className={`border-2 ${segConfirmed ? 'border-emerald-300 bg-emerald-50/20' : 'border-purple-200 bg-purple-50/20'}`} data-testid="card-segmentazione">
+                            <CardContent className="p-4 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Layers className="h-4 w-4 text-purple-600" />
+                                        <span className="text-xs font-bold text-slate-700">Suggerimento di segmentazione</span>
+                                        {segConfirmed && <Badge className="bg-emerald-100 text-emerald-700 text-[9px]">Confermata</Badge>}
+                                        {seg?.status === 'in_review' && <Badge className="bg-amber-100 text-amber-700 text-[9px]">In revisione</Badge>}
+                                    </div>
+                                    {!seg && (
+                                        <Button size="sm" onClick={handleSegmenta} disabled={segRunning}
+                                            className="bg-purple-600 hover:bg-purple-700 text-white text-xs"
+                                            data-testid="btn-avvia-segmentazione">
+                                            {segRunning ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <ArrowRightLeft className="h-3 w-3 mr-1" />}
+                                            Analizza per riga
+                                        </Button>
+                                    )}
+                                </div>
+
+                                {!seg && (
+                                    <p className="text-[11px] text-slate-500">
+                                        Il preventivo contiene righe che sembrano appartenere a percorsi normativi diversi.
+                                        Avvia l'analisi per proporre una divisione riga per riga.
+                                    </p>
+                                )}
+
+                                {seg && (
+                                    <>
+                                        {/* Summary badges */}
+                                        <div className="flex flex-wrap gap-2">
+                                            {summary.en_1090 > 0 && <Badge className="bg-blue-100 text-blue-700 text-[10px]">EN 1090: {summary.en_1090} righe</Badge>}
+                                            {summary.en_13241 > 0 && <Badge className="bg-violet-100 text-violet-700 text-[10px]">EN 13241: {summary.en_13241} righe</Badge>}
+                                            {summary.generiche > 0 && <Badge className="bg-slate-100 text-slate-600 text-[10px]">Generiche: {summary.generiche} righe</Badge>}
+                                            {summary.incerte > 0 && <Badge className="bg-amber-100 text-amber-700 text-[10px]">Incerte: {summary.incerte} righe</Badge>}
+                                        </div>
+
+                                        {/* Per-line classification table */}
+                                        <div className="space-y-1.5">
+                                            {lines.map((lc) => {
+                                                const reviewed = segReviews[lc.line_id];
+                                                const displayNorm = reviewed || lc.proposed_normativa;
+                                                const isChanged = reviewed && reviewed !== lc.proposed_normativa;
+
+                                                return (
+                                                    <div key={lc.line_id}
+                                                        className={`rounded border p-2 transition-all ${
+                                                            isChanged ? 'border-indigo-200 bg-indigo-50/30' :
+                                                            displayNorm === 'INCERTA' ? 'border-amber-200 bg-amber-50/20' :
+                                                            'border-slate-100 bg-white'
+                                                        }`}
+                                                        data-testid={`seg-line-${lc.line_id}`}>
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-[11px] text-slate-700 leading-snug truncate" title={lc.descrizione}>
+                                                                    {lc.descrizione}
+                                                                </p>
+                                                                <p className="text-[9px] text-slate-400 mt-0.5">
+                                                                    {lc.reasoning}
+                                                                    {isChanged && <span className="text-indigo-500 ml-1">(corretto manualmente)</span>}
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex items-center gap-1 shrink-0">
+                                                                {!segConfirmed ? (
+                                                                    <select
+                                                                        value={displayNorm}
+                                                                        onChange={(e) => handleSegReview(lc.line_id, e.target.value)}
+                                                                        className={`text-[10px] font-medium rounded px-1.5 py-0.5 border-0 ${NORM_COLORS[displayNorm] || 'bg-slate-100'}`}
+                                                                        data-testid={`seg-select-${lc.line_id}`}>
+                                                                        {NORM_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+                                                                    </select>
+                                                                ) : (
+                                                                    <Badge className={`text-[9px] ${NORM_COLORS[displayNorm] || 'bg-slate-100'}`}>
+                                                                        {displayNorm}
+                                                                    </Badge>
+                                                                )}
+                                                                <span className="text-[9px] text-slate-300">{Math.round(lc.confidence * 100)}%</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* CTA */}
+                                        {!segConfirmed && (
+                                            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                                                {hasIncerte && (
+                                                    <p className="text-[10px] text-amber-600 flex items-center gap-1">
+                                                        <AlertTriangle className="h-3 w-3" />
+                                                        Classifica le righe incerte prima di confermare
+                                                    </p>
+                                                )}
+                                                <div className="flex gap-2 ml-auto">
+                                                    <Button size="sm" variant="outline"
+                                                        onClick={() => handleSegSave('save_draft')}
+                                                        disabled={segSaving}
+                                                        data-testid="btn-seg-bozza">
+                                                        <Save className="h-3 w-3 mr-1" /> Salva bozza
+                                                    </Button>
+                                                    <Button size="sm"
+                                                        onClick={() => handleSegSave('confirm')}
+                                                        disabled={segSaving || hasIncerte}
+                                                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                                                        data-testid="btn-seg-conferma">
+                                                        {segSaving ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <ShieldCheck className="h-3 w-3 mr-1" />}
+                                                        Conferma segmentazione
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </CardContent>
+                        </Card>
+                    );
+                })()}
 
                 {/* ════════════════ CTA — CONFIRMATION BAR ════════════════ */}
                 <Card className={`border-2 ${
