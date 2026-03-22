@@ -1,0 +1,128 @@
+{
+  "summary": "Iteration 216 — 3 P1 Features Testing. Backend: 13/13 tests passed (100%). Frontend: All 3 features verified — Ponte Perizia→Preventivatore button visible and working, Sistema Notifiche Proattive returns ITT alerts with urgency levels, Report CAM Mensile PDF generates valid PDF.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration216_p1_features.py",
+    "/app/test_reports/pytest/iteration216_p1_features_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration216_p1_features.py"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 passed)",
+    "frontend": "100% (all 3 features working)"
+  },
+  "seed_data_creation": "Used existing test data: per_test_ponte_8baac379 (perizia with voci_costo), welders with expiring qualifications, instrument with calibration due tomorrow, ITT verbale due in 25 days",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 216 P1 features fully tested. 1) Ponte Perizia→Preventivatore: POST /api/perizie/{perizia_id}/genera-preventivo creates new preventivo with perizia_source metadata, updates perizia with preventivo_id/preventivo_number linking. Frontend button 'Genera Preventivo da Perizia' (data-testid='btn-ponte-preventivo') visible in PeriziaEditorPage Riepilogo step. 2) Sistema Notifiche Proattive: POST /api/notifications/check-now returns welder_alerts, instrument_alerts, itt_alerts with urgency field (scaduto/critico/urgente/alert). Email sent via Resend when alerts exist. 3) Report CAM Mensile: GET /api/cam/report-mensile/pdf generates valid PDF with KPIs, per-commessa table, trend bars, quarterly projection. Frontend button 'Report CAM Mensile (PDF)' (data-testid='btn-report-cam-mensile') visible in ExecutiveDashboardPage CAM Safety Gate section.",
+  "features_tested": {
+    "feature_1_ponte_perizia_preventivatore": {
+      "description": "Ponte Perizie→Preventivatore: automatic workflow transferring perizia data into a new draft preventivo",
+      "backend_endpoints": [
+        {
+          "endpoint": "POST /api/perizie/{perizia_id}/genera-preventivo",
+          "status": "PASS",
+          "response_fields": ["preventivo_id", "preventivo_number", "totale", "righe", "message"]
+        },
+        {
+          "endpoint": "GET /api/preventivi/{preventivo_id}",
+          "status": "PASS",
+          "verified": "perizia_source metadata contains perizia_id, perizia_number, tipo_danno, total_perizia"
+        },
+        {
+          "endpoint": "GET /api/perizie/{perizia_id}",
+          "status": "PASS",
+          "verified": "After ponte, perizia has preventivo_id and preventivo_number fields"
+        }
+      ],
+      "frontend_verification": [
+        "PeriziaEditorPage shows 'Genera Preventivo da Perizia' button (data-testid='btn-ponte-preventivo')",
+        "Button visible in Riepilogo step (step 5) for saved perizie (!isNew)",
+        "Button has emerald-600 background color",
+        "Button navigates to /preventivi/{preventivo_id} after success"
+      ]
+    },
+    "feature_2_sistema_notifiche_proattive": {
+      "description": "Sistema Notifiche Proattive: enhanced scheduler with ITT checks + 3 urgency levels + email via Resend",
+      "backend_endpoints": [
+        {
+          "endpoint": "POST /api/notifications/check-now",
+          "status": "PASS",
+          "response_fields": ["welder_alerts", "instrument_alerts", "itt_alerts", "payment_alerts", "total_alerts", "email_sent", "checked_at", "source"]
+        }
+      ],
+      "urgency_levels_verified": {
+        "scaduto": "days_remaining < 0",
+        "critico": "days_remaining <= 1",
+        "urgente": "days_remaining <= 7",
+        "alert": "days_remaining <= 30"
+      },
+      "test_data_alerts": {
+        "welder_alerts": 6,
+        "instrument_alerts": 1,
+        "itt_alerts": 1,
+        "email_sent": true
+      }
+    },
+    "feature_3_report_cam_mensile": {
+      "description": "Report CAM Mensile: PDF endpoint with monthly recycled content trend, per-commessa breakdown, and quarterly projection",
+      "backend_endpoints": [
+        {
+          "endpoint": "GET /api/cam/report-mensile/pdf",
+          "status": "PASS",
+          "content_type": "application/pdf",
+          "pdf_size": "24802 bytes",
+          "pdf_valid": "Starts with %PDF-1.7"
+        }
+      ],
+      "frontend_verification": [
+        "ExecutiveDashboardPage shows 'Report CAM Mensile (PDF)' button (data-testid='btn-report-cam-mensile')",
+        "Button visible in CAM Safety Gate section",
+        "Button opens PDF in new tab via window.open"
+      ]
+    }
+  },
+  "data_verified": {
+    "test_perizia": {
+      "perizia_id": "per_test_ponte_8baac379",
+      "number": "PER-2026/TEST",
+      "voci_costo_count": 4,
+      "total_perizia": 762.50
+    },
+    "notification_alerts": {
+      "welder_alerts_sample": [
+        {"name": "Luca Rossi", "urgency": "scaduto", "days": -111},
+        {"name": "Mario Rossi", "urgency": "urgente", "days": 5}
+      ],
+      "instrument_alerts_sample": [
+        {"name": "Calibro EN 1090", "urgency": "critico", "days": 1}
+      ],
+      "itt_alerts_sample": [
+        {"numero": "ITT-2026/001", "urgency": "alert", "days": 25}
+      ]
+    },
+    "cam_safety_gate": {
+      "percentuale_globale": 73.6,
+      "soglia": 75,
+      "peso_totale_kg": 8516,
+      "level": "danger",
+      "n_non_conformi": 1
+    }
+  },
+  "test_credentials": {
+    "session_token": "fresh_4f69b847846148459e91",
+    "user_id": "user_97c773827822",
+    "test_perizia_id": "per_test_ponte_8baac379"
+  }
+}

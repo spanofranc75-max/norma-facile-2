@@ -23,7 +23,7 @@ import {
     Save, ArrowLeft, ArrowRight, Camera, Brain, MapPin, ShieldAlert,
     Wrench, Zap, PaintBucket, X, FileText, FileDown, Send, Ruler,
     Plus, Trash2, RefreshCw, Check, Locate, ImagePlus, Focus, Info, Percent,
-    Link, Building2,
+    Link, Building2, TrendingUp,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
@@ -377,6 +377,16 @@ export default function PeriziaEditorPage() {
             toast.success('Lettera generata');
         } catch (e) { toast.error(e.message); }
         finally { setGeneratingLetter(false); }
+    };
+
+    const handleGeneraPreventivoDaPerizia = async () => {
+        if (isNew) { toast.error('Salva prima la perizia'); return; }
+        try {
+            toast.info('Ponte Perizia → Preventivatore in corso...');
+            const res = await apiRequest(`/perizie/${periziaId}/genera-preventivo`, { method: 'POST' });
+            toast.success(`Preventivo ${res.preventivo_number} generato!`);
+            navigate(`/preventivi/${res.preventivo_id}`);
+        } catch (e) { toast.error(e.message || 'Errore generazione preventivo'); }
     };
 
     // Accept AI suggestion
@@ -888,6 +898,17 @@ export default function PeriziaEditorPage() {
                                 <FileText className="h-5 w-5 mr-2" />
                                 {recalcing ? 'Generazione...' : 'Genera Preventivo Normato'}
                             </Button>
+
+                            {!isNew && (
+                                <Button
+                                    data-testid="btn-ponte-preventivo"
+                                    onClick={handleGeneraPreventivoDaPerizia}
+                                    className="w-full h-14 text-base bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl"
+                                >
+                                    <TrendingUp className="h-5 w-5 mr-2" />
+                                    Genera Preventivo da Perizia
+                                </Button>
+                            )}
 
                             <Button
                                 data-testid="btn-genera-lettera"

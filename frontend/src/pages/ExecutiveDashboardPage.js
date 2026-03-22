@@ -314,6 +314,14 @@ export default function ExecutiveDashboardPage() {
                                     </div>
                                 </div>
                             )}
+                            <div className="flex justify-end mt-2">
+                                <Button size="sm" variant="outline"
+                                    className="text-[10px] h-7 border-slate-300"
+                                    data-testid="btn-report-cam-mensile"
+                                    onClick={() => window.open(`${process.env.REACT_APP_BACKEND_URL}/api/cam/report-mensile/pdf`, '_blank')}>
+                                    <FileText className="h-3 w-3 mr-1" /> Report CAM Mensile (PDF)
+                                </Button>
+                            </div>
                         </CardContent>
                     </Card>
                 )}

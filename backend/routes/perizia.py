@@ -992,3 +992,111 @@ async def get_perizia_pdf(perizia_id: str, user: dict = Depends(get_current_user
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+
+# ── Ponte Perizia → Preventivatore ──
+
+@router.post("/{perizia_id}/genera-preventivo")
+async def genera_preventivo_da_perizia(perizia_id: str, user: dict = Depends(get_current_user)):
+    """Ponte Perizia → Preventivatore: trasferisce i dati della perizia in un nuovo preventivo."""
+    perizia = await db[COLLECTION].find_one(
+        {"perizia_id": perizia_id, "user_id": user["user_id"]}, {"_id": 0}
+    )
+    if not perizia:
+        raise HTTPException(404, "Perizia non trovata")
+
+    now = datetime.now(timezone.utc)
+    year = now.strftime("%Y")
+    count = await db.preventivi.count_documents({"user_id": user["user_id"]})
+    prev_id = f"prev_{uuid.uuid4().hex[:12]}"
+    prev_number = f"PV-{year}-{count + 1:04d}"
+
+    # Build preventivo lines from perizia voci_costo
+    voci = perizia.get("voci_costo", [])
+    lines = []
+    for v in voci:
+        totale = v.get("totale", 0)
+        qty = v.get("quantita", 1)
+        lines.append({
+            "line_id": f"l_{uuid.uuid4().hex[:8]}",
+            "description": f"[{v.get('codice', '')}] {v.get('descrizione', '')}",
+            "quantity": qty,
+            "unit": v.get("unita", "corpo"),
+            "unit_price": round(v.get("prezzo_unitario", 0), 2),
+            "sconto_1": 0,
+            "sconto_2": 0,
+            "vat_rate": "22",
+            "line_total": round(totale, 2),
+            "prezzo_netto": round(v.get("prezzo_unitario", 0), 2),
+        })
+
+    subtotal = sum(ln.get("line_total", 0) for ln in lines)
+    vat = round(subtotal * 0.22, 2)
+
+    # Determine normativa from perizia tipo_danno
+    tipo = perizia.get("tipo_danno", "strutturale")
+    normativa = "EN_1090" if tipo == "strutturale" else "EN_13241" if tipo == "automatismi" else "NESSUNA"
+
+    # Build subject from perizia info
+    moduli = perizia.get("moduli", [])
+    total_ml = sum(float(m.get("lunghezza_ml", 0)) for m in moduli)
+    subject = f"Ripristino da Perizia {perizia.get('number', '')} — {total_ml:.1f} ml"
+
+    client_name = perizia.get("client_name", "")
+    client_id = perizia.get("client_id", "")
+
+    preventivo = {
+        "preventivo_id": prev_id,
+        "user_id": user["user_id"],
+        "number": prev_number,
+        "client_id": client_id,
+        "client_name": client_name,
+        "subject": subject,
+        "status": "bozza",
+        "lines": lines,
+        "totals": {
+            "subtotal": round(subtotal, 2),
+            "sconto_globale_pct": 0,
+            "sconto_val": 0,
+            "imponibile": round(subtotal, 2),
+            "total_vat": vat,
+            "total": round(subtotal + vat, 2),
+            "total_document": round(subtotal + vat, 2),
+            "acconto": 0,
+            "da_pagare": round(subtotal + vat, 2),
+            "line_count": len(lines),
+        },
+        "notes": f"Generato automaticamente da Perizia {perizia.get('number', '')}",
+        "normativa": normativa,
+        "classe_esecuzione": "EXC2",
+        "giorni_consegna": 30,
+        "validity_days": 30,
+        "perizia_source": {
+            "perizia_id": perizia_id,
+            "perizia_number": perizia.get("number", ""),
+            "tipo_danno": tipo,
+            "total_perizia": perizia.get("total_perizia", 0),
+        },
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    await db.preventivi.insert_one(preventivo)
+
+    # Link perizia to preventivo
+    await db[COLLECTION].update_one(
+        {"perizia_id": perizia_id},
+        {"$set": {"preventivo_id": prev_id, "preventivo_number": prev_number, "updated_at": now}}
+    )
+
+    logger.info(f"Ponte Perizia→Preventivo: {perizia_id} -> {prev_id} ({prev_number})")
+    await log_activity(user, "ponte_perizia", "preventivo", prev_id, label=f"Da perizia {perizia.get('number', '')}")
+
+    return {
+        "message": f"Preventivo {prev_number} generato da Perizia {perizia.get('number', '')}",
+        "preventivo_id": prev_id,
+        "preventivo_number": prev_number,
+        "totale": round(subtotal + vat, 2),
+        "righe": len(lines),
+    }

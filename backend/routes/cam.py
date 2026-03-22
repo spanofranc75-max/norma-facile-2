@@ -4,7 +4,7 @@ Gestione conformità ambientale per carpenteria metallica.
 DM 23 giugno 2022 n. 256
 """
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from typing import Optional, List
 from datetime import datetime, timezone
 from pydantic import BaseModel
@@ -867,3 +867,218 @@ async def cam_alert(commessa_id: str, user: dict = Depends(get_current_user)):
         "n_senza_dati_cam": n_no_cam,
         "suggerimenti": suggerimenti,
     }
+
+
+
+@router.get("/report-mensile/pdf")
+async def report_cam_mensile_pdf(user: dict = Depends(get_current_user)):
+    """Report CAM Mensile — PDF con trend % riciclato, breakdown commesse, proiezione trimestrale."""
+    import html as html_mod
+    from io import BytesIO
+    from weasyprint import HTML as WP_HTML
+    from datetime import datetime, timezone, timedelta
+
+    _e = html_mod.escape
+    uid = user["user_id"]
+    now = datetime.now(timezone.utc)
+
+    # Get company info
+    company = await db.company_settings.find_one({"user_id": uid}, {"_id": 0}) or {}
+    biz = _e(company.get("business_name", "Steel Project Design"))
+    logo = company.get("logo_url", "")
+
+    # Get all commesse with material batches
+    commesse = await db.commesse.find(
+        {"user_id": uid},
+        {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "stato": 1, "created_at": 1}
+    ).to_list(500)
+
+    batches = await db.material_batches.find(
+        {"user_id": uid, "percentuale_riciclato": {"$ne": None}},
+        {"_id": 0, "commessa_id": 1, "peso_kg": 1, "percentuale_riciclato": 1,
+         "metodo_produttivo": 1, "created_at": 1}
+    ).to_list(2000)
+
+    # Per-commessa breakdown
+    cam_data = {}
+    for b in batches:
+        cid = b["commessa_id"]
+        if cid not in cam_data:
+            cam_data[cid] = {"peso": 0, "peso_ric": 0, "batches": 0}
+        peso = b.get("peso_kg", 0) or 0
+        perc = b.get("percentuale_riciclato", 0) or 0
+        cam_data[cid]["peso"] += peso
+        cam_data[cid]["peso_ric"] += peso * perc / 100
+        cam_data[cid]["batches"] += 1
+
+    # Build per-commessa table
+    rows_html = ""
+    total_peso = 0
+    total_peso_ric = 0
+    soglia = 75
+    n_conformi = 0
+    n_non_conformi = 0
+
+    for c in commesse:
+        cid = c["commessa_id"]
+        if cid not in cam_data:
+            continue
+        d = cam_data[cid]
+        perc = round(d["peso_ric"] / d["peso"] * 100, 1) if d["peso"] > 0 else 0
+        conf = perc >= soglia
+        total_peso += d["peso"]
+        total_peso_ric += d["peso_ric"]
+        if conf:
+            n_conformi += 1
+        else:
+            n_non_conformi += 1
+
+        color = "#16A34A" if conf else "#DC2626"
+        badge = "CONFORME" if conf else "NON CONFORME"
+        rows_html += f"""<tr>
+            <td>{_e(c.get('numero', cid))}</td>
+            <td>{_e(c.get('title', '')[:40])}</td>
+            <td style="text-align:right;">{d['peso']:,.1f}</td>
+            <td style="text-align:right;">{d['peso_ric']:,.1f}</td>
+            <td style="text-align:center;font-weight:700;color:{color};">{perc:.1f}%</td>
+            <td style="text-align:center;"><span style="background:{'#dcfce7' if conf else '#fee2e2'};color:{color};padding:2px 8px;border-radius:4px;font-size:7pt;font-weight:700;">{badge}</span></td>
+        </tr>"""
+
+    perc_globale = round(total_peso_ric / total_peso * 100, 1) if total_peso > 0 else 0
+
+    # Monthly trend (last 6 months)
+    trend_data = {}
+    for b in batches:
+        ca = b.get("created_at")
+        if ca and hasattr(ca, "strftime"):
+            key = ca.strftime("%Y-%m")
+        elif ca and isinstance(ca, str):
+            key = ca[:7]
+        else:
+            continue
+        if key not in trend_data:
+            trend_data[key] = {"peso": 0, "peso_ric": 0}
+        peso = b.get("peso_kg", 0) or 0
+        perc = b.get("percentuale_riciclato", 0) or 0
+        trend_data[key]["peso"] += peso
+        trend_data[key]["peso_ric"] += peso * perc / 100
+
+    sorted_months = sorted(trend_data.keys())[-6:]
+    trend_rows = ""
+    trend_percs = []
+    for m in sorted_months:
+        d = trend_data[m]
+        p = round(d["peso_ric"] / d["peso"] * 100, 1) if d["peso"] > 0 else 0
+        trend_percs.append(p)
+        bar_w = min(max(p, 5), 100)
+        bar_color = "#16A34A" if p >= soglia else "#DC2626"
+        trend_rows += f"""<tr>
+            <td style="width:80px;">{m}</td>
+            <td style="width:60px;text-align:right;font-weight:700;color:{'#16A34A' if p >= soglia else '#DC2626'};">{p:.1f}%</td>
+            <td><div style="background:#f1f5f9;border-radius:4px;height:16px;position:relative;">
+                <div style="background:{bar_color};border-radius:4px;height:16px;width:{bar_w}%;"></div>
+                <div style="position:absolute;left:{soglia}%;top:0;bottom:0;border-left:2px dashed #94A3B8;"></div>
+            </div></td>
+        </tr>"""
+
+    # Quarterly projection
+    if len(trend_percs) >= 2:
+        avg_delta = sum(trend_percs[i] - trend_percs[i - 1] for i in range(1, len(trend_percs))) / (len(trend_percs) - 1)
+        proj_3m = round(perc_globale + avg_delta * 3, 1)
+        proj_text = f"Proiezione trimestrale: <strong>{proj_3m:.1f}%</strong> (trend {'positivo' if avg_delta > 0 else 'negativo'}: {'+' if avg_delta > 0 else ''}{avg_delta:.1f}%/mese)"
+    else:
+        proj_text = "Dati insufficienti per la proiezione trimestrale (servono almeno 2 mesi)"
+
+    # Build PDF
+    pdf_html = f"""<!DOCTYPE html><html><head><style>
+    @page {{
+        size: A4; margin: 18mm 14mm 22mm 14mm;
+        @bottom-left {{ content: "Report CAM Mensile — DM 23/06/2022"; font-size: 7pt; color: #999; font-family: Helvetica; }}
+        @bottom-right {{ content: "Pag. " counter(page) " di " counter(pages); font-size: 7pt; color: #777; font-family: Helvetica; }}
+    }}
+    body {{ font-family: Helvetica, Arial, sans-serif; font-size: 9pt; color: #1E293B; }}
+    h1 {{ font-size: 16pt; color: #1E293B; margin: 0 0 2mm; }}
+    h2 {{ font-size: 11pt; color: #1a3a6b; margin: 8mm 0 3mm; border-bottom: 2px solid #1a3a6b; padding-bottom: 2mm; }}
+    table {{ width: 100%; border-collapse: collapse; margin: 3mm 0; }}
+    th {{ background: #1a3a6b; color: white; padding: 2.5mm 3mm; font-size: 7.5pt; text-align: left; font-weight: 600; text-transform: uppercase; }}
+    td {{ padding: 2mm 3mm; border-bottom: 0.5px solid #E2E8F0; font-size: 8.5pt; }}
+    tr:nth-child(even) {{ background: #FAFBFC; }}
+    .kpi-row {{ display: table; width: 100%; margin: 4mm 0; }}
+    .kpi-cell {{ display: table-cell; width: 25%; text-align: center; padding: 3mm; border: 1px solid #e2e8f0; }}
+    .kpi-val {{ font-size: 18pt; font-weight: 800; }}
+    .kpi-lbl {{ font-size: 7pt; color: #64748B; text-transform: uppercase; margin-top: 1mm; }}
+    </style></head><body>
+
+    <div style="background:#1a3a6b;color:white;padding:5mm 6mm;margin-bottom:6mm;">
+        <table style="margin:0;"><tr>
+            <td style="border:none;color:white;vertical-align:middle;width:60%;">
+                {f'<img src="{logo}" style="max-height:28px;max-width:120px;margin-right:8px;vertical-align:middle;" />' if logo else ''}
+                <span style="font-size:13pt;font-weight:800;">{biz}</span>
+            </td>
+            <td style="border:none;color:white;text-align:right;font-size:8pt;vertical-align:middle;">
+                Report generato il {now.strftime('%d/%m/%Y %H:%M')}
+            </td>
+        </tr></table>
+    </div>
+
+    <h1>Report CAM Mensile</h1>
+    <p style="font-size:9pt;color:#64748B;margin-bottom:5mm;">Criteri Ambientali Minimi — DM 23/06/2022 n. 256 — Art. 57 D.Lgs. 36/2023</p>
+
+    <div class="kpi-row">
+        <div class="kpi-cell">
+            <div class="kpi-val" style="color:{'#16A34A' if perc_globale >= soglia else '#DC2626'};">{perc_globale:.1f}%</div>
+            <div class="kpi-lbl">% Riciclato Globale</div>
+        </div>
+        <div class="kpi-cell">
+            <div class="kpi-val" style="color:#1a3a6b;">{total_peso:,.0f} kg</div>
+            <div class="kpi-lbl">Peso Totale Acciaio</div>
+        </div>
+        <div class="kpi-cell">
+            <div class="kpi-val" style="color:#16A34A;">{n_conformi}</div>
+            <div class="kpi-lbl">Commesse Conformi</div>
+        </div>
+        <div class="kpi-cell">
+            <div class="kpi-val" style="color:{'#DC2626' if n_non_conformi > 0 else '#16A34A'};">{n_non_conformi}</div>
+            <div class="kpi-lbl">Non Conformi</div>
+        </div>
+    </div>
+
+    <h2>Dettaglio per Commessa</h2>
+    <table>
+        <thead><tr><th>Commessa</th><th>Oggetto</th><th>Peso (kg)</th><th>Riciclato (kg)</th><th>%</th><th>Esito</th></tr></thead>
+        <tbody>{rows_html}</tbody>
+        <tr style="font-weight:700;background:#e8f0f7;">
+            <td colspan="2" style="text-align:right;">TOTALE</td>
+            <td style="text-align:right;">{total_peso:,.1f}</td>
+            <td style="text-align:right;">{total_peso_ric:,.1f}</td>
+            <td style="text-align:center;font-weight:800;color:{'#16A34A' if perc_globale >= soglia else '#DC2626'};">{perc_globale:.1f}%</td>
+            <td></td>
+        </tr>
+    </table>
+
+    <h2>Trend Mensile (ultimi 6 mesi)</h2>
+    <table>
+        <thead><tr><th style="width:80px;">Mese</th><th style="width:60px;">%</th><th>Barra (linea tratteggiata = soglia {soglia}%)</th></tr></thead>
+        <tbody>{trend_rows}</tbody>
+    </table>
+
+    <h2>Proiezione Trimestrale</h2>
+    <div style="background:#f8f9fa;padding:4mm 5mm;border-left:4px solid #1a3a6b;margin:3mm 0;">
+        <p style="margin:0;font-size:10pt;">{proj_text}</p>
+    </div>
+
+    <div style="margin-top:10mm;padding:4mm;border:1px solid #e2e8f0;border-radius:4px;font-size:8pt;color:#64748B;">
+        <strong>Nota:</strong> Il presente report e generato automaticamente dal sistema NormaFacile 2.0.
+        I dati sono basati sui certificati di colata (EN 10204 3.1) e le dichiarazioni dei produttori registrate nel sistema.
+        Soglia di riferimento: {soglia}% per acciaio non legato da forno elettrico (DM 23/06/2022, Allegato par. 2.5.4).
+    </div>
+    </body></html>"""
+
+    pdf_bytes = WP_HTML(string=pdf_html).write_pdf()
+    fname = f"Report_CAM_{now.strftime('%Y_%m')}.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{fname}"'}
+    )

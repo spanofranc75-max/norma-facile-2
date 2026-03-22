@@ -57,6 +57,14 @@ async def check_welder_expirations() -> list[dict]:
                 exp = date.fromisoformat(exp_str) if isinstance(exp_str, str) else exp_str
                 delta = (exp - today).days
                 if delta <= ALERT_THRESHOLD_DAYS:
+                    if delta < 0:
+                        urgency = "scaduto"
+                    elif delta <= 1:
+                        urgency = "critico"
+                    elif delta <= 7:
+                        urgency = "urgente"
+                    else:
+                        urgency = "alert"
                     status = "SCADUTA" if delta < 0 else f"scade tra {delta} giorni"
                     alerts.append({
                         "type": "welder_qualification",
@@ -66,6 +74,7 @@ async def check_welder_expirations() -> list[dict]:
                         "expiry_date": exp_str,
                         "days_remaining": delta,
                         "status_label": status,
+                        "urgency": urgency,
                     })
             except (ValueError, TypeError):
                 continue
@@ -89,6 +98,14 @@ async def check_instrument_expirations() -> list[dict]:
             exp = date.fromisoformat(next_cal) if isinstance(next_cal, str) else next_cal
             delta = (exp - today).days
             if delta <= ALERT_THRESHOLD_DAYS:
+                if delta < 0:
+                    urgency = "scaduto"
+                elif delta <= 1:
+                    urgency = "critico"
+                elif delta <= 7:
+                    urgency = "urgente"
+                else:
+                    urgency = "alert"
                 status = "SCADUTA" if delta < 0 else f"scade tra {delta} giorni"
                 alerts.append({
                     "type": "instrument_calibration",
@@ -97,6 +114,53 @@ async def check_instrument_expirations() -> list[dict]:
                     "next_calibration_date": next_cal,
                     "days_remaining": delta,
                     "status_label": status,
+                    "urgency": urgency,
+                })
+        except (ValueError, TypeError):
+            continue
+    return alerts
+
+
+async def check_itt_expirations() -> list[dict]:
+    """Find ITT verbali expiring within threshold."""
+    alerts = []
+    today = date.today()
+    verbali = await db.verbali_itt.find(
+        {"stato": {"$nin": ["annullato", "chiuso"]}},
+        {"_id": 0},
+    ).to_list(500)
+
+    for v in verbali:
+        exp_str = v.get("data_scadenza") or v.get("scadenza") or v.get("data_prossima_verifica", "")
+        if not exp_str:
+            continue
+        try:
+            if isinstance(exp_str, str):
+                exp = date.fromisoformat(exp_str)
+            elif hasattr(exp_str, 'date'):
+                exp = exp_str.date() if hasattr(exp_str, 'date') else exp_str
+            else:
+                exp = exp_str
+            delta = (exp - today).days
+            if delta <= ALERT_THRESHOLD_DAYS:
+                if delta < 0:
+                    urgency = "scaduto"
+                elif delta <= 1:
+                    urgency = "critico"
+                elif delta <= 7:
+                    urgency = "urgente"
+                else:
+                    urgency = "alert"
+                status = "SCADUTO" if delta < 0 else f"scade tra {delta} giorni"
+                alerts.append({
+                    "type": "itt_verbale",
+                    "verbale_numero": v.get("numero", v.get("verbale_id", "N/A")),
+                    "descrizione": v.get("descrizione", v.get("tipo", "Verbale ITT")),
+                    "commessa": v.get("commessa_id", ""),
+                    "data_scadenza": str(exp),
+                    "days_remaining": delta,
+                    "status_label": status,
+                    "urgency": urgency,
                 })
         except (ValueError, TypeError):
             continue
@@ -391,38 +455,66 @@ async def send_payment_alert(manual: bool = False) -> dict:
 
 
 
-def _build_alert_email_html(welder_alerts: list, instrument_alerts: list) -> str:
-    """Build a professional HTML email for expiration alerts."""
+def _build_alert_email_html(welder_alerts: list, instrument_alerts: list, itt_alerts: list = None) -> str:
+    """Build a professional HTML email for expiration alerts with urgency levels."""
     now_str = datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M")
-    total = len(welder_alerts) + len(instrument_alerts)
+    itt_alerts = itt_alerts or []
+    total = len(welder_alerts) + len(instrument_alerts) + len(itt_alerts)
+
+    def urgency_color(a):
+        u = a.get("urgency", "alert")
+        if u == "scaduto":
+            return "#dc2626"
+        if u == "critico":
+            return "#ea580c"
+        if u == "urgente":
+            return "#d97706"
+        return "#eab308"
+
+    def urgency_badge(a):
+        u = a.get("urgency", "alert")
+        colors = {"scaduto": ("#dc2626", "#fef2f2"), "critico": ("#ea580c", "#fff7ed"),
+                  "urgente": ("#d97706", "#fffbeb"), "alert": ("#eab308", "#fefce8")}
+        fg, bg = colors.get(u, ("#eab308", "#fefce8"))
+        labels = {"scaduto": "SCADUTO", "critico": "1 GIORNO", "urgente": "7 GIORNI", "alert": "30 GIORNI"}
+        return f'<span style="background:{bg};color:{fg};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;">{labels.get(u, "ALERT")}</span>'
 
     rows_welders = ""
     for a in sorted(welder_alerts, key=lambda x: x["days_remaining"]):
-        color = "#ef4444" if a["days_remaining"] < 0 else "#f59e0b" if a["days_remaining"] <= 7 else "#eab308"
         rows_welders += f"""
         <tr>
             <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{a['welder_name']}</td>
             <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{a['stamp_id']}</td>
             <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{a['qualification']}</td>
             <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{a['expiry_date']}</td>
-            <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:{color};font-weight:600;">{a['status_label']}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{urgency_badge(a)}</td>
         </tr>"""
 
     rows_instruments = ""
     for a in sorted(instrument_alerts, key=lambda x: x["days_remaining"]):
-        color = "#ef4444" if a["days_remaining"] < 0 else "#f59e0b" if a["days_remaining"] <= 7 else "#eab308"
         rows_instruments += f"""
         <tr>
             <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{a['instrument_name']}</td>
             <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{a['serial_number']}</td>
             <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{a['next_calibration_date']}</td>
-            <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;color:{color};font-weight:600;">{a['status_label']}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{urgency_badge(a)}</td>
+        </tr>"""
+
+    rows_itt = ""
+    for a in sorted(itt_alerts, key=lambda x: x["days_remaining"]):
+        rows_itt += f"""
+        <tr>
+            <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{a['verbale_numero']}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{a['descrizione']}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{a['data_scadenza']}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;">{urgency_badge(a)}</td>
         </tr>"""
 
     welder_section = ""
     if welder_alerts:
+        n_crit = sum(1 for a in welder_alerts if a.get("urgency") in ("scaduto", "critico"))
         welder_section = f"""
-        <h3 style="color:#1e293b;margin:24px 0 12px;">Qualifiche Saldatori ({len(welder_alerts)})</h3>
+        <h3 style="color:#1e293b;margin:24px 0 12px;">Qualifiche Saldatori ({len(welder_alerts)}{f' — {n_crit} critiche' if n_crit else ''})</h3>
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
             <thead>
                 <tr style="background:#f1f5f9;">
@@ -438,8 +530,9 @@ def _build_alert_email_html(welder_alerts: list, instrument_alerts: list) -> str
 
     instrument_section = ""
     if instrument_alerts:
+        n_crit = sum(1 for a in instrument_alerts if a.get("urgency") in ("scaduto", "critico"))
         instrument_section = f"""
-        <h3 style="color:#1e293b;margin:24px 0 12px;">Calibrazioni Strumenti ({len(instrument_alerts)})</h3>
+        <h3 style="color:#1e293b;margin:24px 0 12px;">Calibrazioni Strumenti ({len(instrument_alerts)}{f' — {n_crit} critiche' if n_crit else ''})</h3>
         <table style="width:100%;border-collapse:collapse;font-size:14px;">
             <thead>
                 <tr style="background:#f1f5f9;">
@@ -452,35 +545,68 @@ def _build_alert_email_html(welder_alerts: list, instrument_alerts: list) -> str
             <tbody>{rows_instruments}</tbody>
         </table>"""
 
+    itt_section = ""
+    if itt_alerts:
+        n_crit = sum(1 for a in itt_alerts if a.get("urgency") in ("scaduto", "critico"))
+        itt_section = f"""
+        <h3 style="color:#1e293b;margin:24px 0 12px;">Verbali ITT ({len(itt_alerts)}{f' — {n_crit} critici' if n_crit else ''})</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+            <thead>
+                <tr style="background:#f1f5f9;">
+                    <th style="padding:8px 12px;text-align:left;">N. Verbale</th>
+                    <th style="padding:8px 12px;text-align:left;">Descrizione</th>
+                    <th style="padding:8px 12px;text-align:left;">Scadenza</th>
+                    <th style="padding:8px 12px;text-align:left;">Stato</th>
+                </tr>
+            </thead>
+            <tbody>{rows_itt}</tbody>
+        </table>"""
+
+    # Count by urgency
+    all_alerts = welder_alerts + instrument_alerts + itt_alerts
+    n_scaduti = sum(1 for a in all_alerts if a.get("urgency") == "scaduto")
+    n_critici = sum(1 for a in all_alerts if a.get("urgency") == "critico")
+    n_urgenti = sum(1 for a in all_alerts if a.get("urgency") == "urgente")
+
+    urgency_summary = ""
+    if n_scaduti > 0:
+        urgency_summary += f'<span style="background:#fef2f2;color:#dc2626;padding:4px 12px;border-radius:6px;font-weight:700;font-size:13px;margin:0 4px;">{n_scaduti} SCADUT{"O" if n_scaduti == 1 else "I"}</span>'
+    if n_critici > 0:
+        urgency_summary += f'<span style="background:#fff7ed;color:#ea580c;padding:4px 12px;border-radius:6px;font-weight:700;font-size:13px;margin:0 4px;">{n_critici} CRITIC{"O" if n_critici == 1 else "I"}</span>'
+    if n_urgenti > 0:
+        urgency_summary += f'<span style="background:#fffbeb;color:#d97706;padding:4px 12px;border-radius:6px;font-weight:700;font-size:13px;margin:0 4px;">{n_urgenti} URGENT{"E" if n_urgenti == 1 else "I"}</span>'
+
     html = f"""
     <div style="font-family:'Segoe UI',sans-serif;max-width:700px;margin:0 auto;background:#f8fafc;padding:40px 20px;">
         <div style="background:white;border-radius:12px;padding:32px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
             <div style="text-align:center;margin-bottom:24px;">
-                <h1 style="color:#f59e0b;font-size:24px;margin:0;">Allarme Scadenze - NormaFacile</h1>
+                <h1 style="color:#1e293b;font-size:22px;margin:0;">Allarme Scadenze — NormaFacile 2.0</h1>
                 <p style="color:#64748b;font-size:13px;margin-top:4px;">Controllo automatico del {now_str}</p>
             </div>
             <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:16px;margin-bottom:20px;text-align:center;">
-                <p style="color:#92400e;font-weight:700;font-size:18px;margin:0;">
+                <p style="color:#92400e;font-weight:700;font-size:18px;margin:0 0 8px;">
                     {total} scadenz{'a' if total == 1 else 'e'} rilevat{'a' if total == 1 else 'e'}
                 </p>
+                <div>{urgency_summary}</div>
             </div>
             {welder_section}
             {instrument_section}
+            {itt_section}
             <div style="margin-top:24px;text-align:center;">
-                <a href="{settings.domain_url}/dashboard" 
+                <a href="{settings.domain_url}/dashboard"
                    style="display:inline-block;background:#0055FF;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">
                     Vai a NormaFacile
                 </a>
             </div>
         </div>
         <p style="text-align:center;color:#94a3b8;font-size:12px;margin-top:20px;">
-            {settings.sender_name} - Notifica automatica (Il Cane da Guardia)
+            {settings.sender_name} — Il Cane da Guardia (Notifica automatica)
         </p>
     </div>"""
     return html
 
 
-async def _send_alert_email(recipients: list[str], welder_alerts: list, instrument_alerts: list) -> bool:
+async def _send_alert_email(recipients: list[str], welder_alerts: list, instrument_alerts: list, itt_alerts: list = None) -> bool:
     """Send the notification email via Resend."""
     try:
         import resend
@@ -489,13 +615,19 @@ async def _send_alert_email(recipients: list[str], welder_alerts: list, instrume
             return False
         resend.api_key = settings.resend_api_key
 
-        html = _build_alert_email_html(welder_alerts, instrument_alerts)
-        total = len(welder_alerts) + len(instrument_alerts)
+        itt_alerts = itt_alerts or []
+        html = _build_alert_email_html(welder_alerts, instrument_alerts, itt_alerts)
+        total = len(welder_alerts) + len(instrument_alerts) + len(itt_alerts)
+
+        # Count critical items for subject line
+        all_a = welder_alerts + instrument_alerts + itt_alerts
+        n_crit = sum(1 for a in all_a if a.get("urgency") in ("scaduto", "critico"))
+        urgency_tag = f" [{n_crit} CRITICHE]" if n_crit else ""
 
         params = {
             "from": f"{settings.sender_name} <{settings.sender_email}>",
             "to": recipients,
-            "subject": f"[NormaFacile] {total} scadenz{'a' if total == 1 else 'e'} in arrivo",
+            "subject": f"[NormaFacile] {total} scadenz{'a' if total == 1 else 'e'} in arrivo{urgency_tag}",
             "html": html,
         }
         resend.Emails.send(params)
@@ -529,14 +661,16 @@ async def run_expiration_check(manual: bool = False) -> dict:
 
     welder_alerts = await check_welder_expirations()
     instrument_alerts = await check_instrument_expirations()
+    itt_alerts = await check_itt_expirations()
     payment_result = await send_payment_alert(manual=manual)
-    total = len(welder_alerts) + len(instrument_alerts)
+    total = len(welder_alerts) + len(instrument_alerts) + len(itt_alerts)
 
     result = {
         "checked_at": datetime.now(timezone.utc).isoformat(),
         "source": source,
         "welder_alerts": welder_alerts,
         "instrument_alerts": instrument_alerts,
+        "itt_alerts": itt_alerts,
         "payment_alerts": payment_result,
         "total_alerts": total + payment_result.get("total", 0),
         "email_sent": False,
@@ -545,7 +679,7 @@ async def run_expiration_check(manual: bool = False) -> dict:
     if total > 0:
         recipients = await _get_notification_recipients()
         if recipients:
-            result["email_sent"] = await _send_alert_email(recipients, welder_alerts, instrument_alerts)
+            result["email_sent"] = await _send_alert_email(recipients, welder_alerts, instrument_alerts, itt_alerts)
             result["recipients"] = recipients
         else:
             logger.warning("[WATCHDOG] No recipients found (no admin/ufficio_tecnico users with email)")
@@ -557,6 +691,7 @@ async def run_expiration_check(manual: bool = False) -> dict:
         "total_alerts": result["total_alerts"],
         "welder_count": len(welder_alerts),
         "instrument_count": len(instrument_alerts),
+        "itt_count": len(itt_alerts),
         "payment_count": payment_result.get("total", 0),
         "email_sent": result["email_sent"] or payment_result.get("email_sent", False),
         "payment_email_sent": payment_result.get("email_sent", False),
