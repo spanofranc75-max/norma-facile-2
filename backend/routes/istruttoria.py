@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from core.security import get_current_user
 from core.database import db
 from services.ai_compliance_engine import analizza_preventivo_completo
-from services.applicabilita_engine import calcola_applicabilita
+from services.applicabilita_engine import calcola_applicabilita, genera_domande_contestuali
 
 router = APIRouter(prefix="/istruttoria", tags=["istruttoria"])
 logger = logging.getLogger(__name__)
@@ -266,6 +266,10 @@ async def rispondi_domande(istruttoria_id: str, body: dict, user: dict = Depends
     # Calcola applicabilita condizionale
     applicabilita = calcola_applicabilita(domande, risposte_esistenti)
 
+    # Genera domande contestuali (preserva risposte esistenti, marca stale)
+    ctx_esistenti = doc.get("domande_contestuali", [])
+    domande_ctx = genera_domande_contestuali(domande, risposte_esistenti, ctx_esistenti)
+
     await db.istruttorie.update_one(
         {"istruttoria_id": istruttoria_id},
         {"$set": {
@@ -273,6 +277,7 @@ async def rispondi_domande(istruttoria_id: str, body: dict, user: dict = Depends
             "n_risposte": n_risposte,
             "n_domande_totali": n_domande,
             "applicabilita": applicabilita,
+            "domande_contestuali": domande_ctx,
             "updated_at": now,
         }}
     )
@@ -285,6 +290,66 @@ async def rispondi_domande(istruttoria_id: str, body: dict, user: dict = Depends
         "n_risposte": n_risposte,
         "n_domande_totali": n_domande,
         "applicabilita": applicabilita,
+        "domande_contestuali": domande_ctx,
+    }
+
+
+@router.post("/{istruttoria_id}/rispondi-contestuale")
+async def rispondi_domande_contestuali(
+    istruttoria_id: str, body: dict, user: dict = Depends(get_current_user)
+):
+    """Salva risposte alle domande contestuali (figlie delle domande base).
+
+    Body: { "risposte": [{"id": "ctx_zinc_01", "risposta": "Testo"}, ...] }
+    """
+    uid = user["user_id"]
+    doc = await db.istruttorie.find_one(
+        {"istruttoria_id": istruttoria_id, "user_id": uid},
+        {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "Istruttoria non trovata")
+
+    risposte_input = body.get("risposte", [])
+    if not risposte_input:
+        raise HTTPException(400, "Nessuna risposta fornita")
+
+    now = datetime.now(timezone.utc)
+    domande_ctx = doc.get("domande_contestuali", [])
+    ctx_map = {q["id"]: i for i, q in enumerate(domande_ctx)}
+
+    updated_count = 0
+    for r in risposte_input:
+        qid = r.get("id")
+        risposta_text = r.get("risposta", "").strip()
+        if not qid or qid not in ctx_map:
+            continue
+        if not risposta_text:
+            continue
+
+        idx = ctx_map[qid]
+        domande_ctx[idx]["risposta"] = risposta_text
+        domande_ctx[idx]["risposto_da"] = uid
+        domande_ctx[idx]["risposto_da_nome"] = user.get("name", user.get("email", uid))
+        domande_ctx[idx]["risposto_il"] = now.isoformat()
+        domande_ctx[idx]["stale"] = False
+        updated_count += 1
+
+    await db.istruttorie.update_one(
+        {"istruttoria_id": istruttoria_id},
+        {"$set": {
+            "domande_contestuali": domande_ctx,
+            "updated_at": now,
+        }}
+    )
+
+    logger.info(
+        f"[ISTRUTTORIA] Risposte contestuali salvate: {updated_count} per {istruttoria_id}"
+    )
+
+    return {
+        "message": f"Risposte contestuali salvate: {updated_count}",
+        "domande_contestuali": domande_ctx,
     }
 
 

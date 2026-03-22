@@ -87,22 +87,27 @@ function parseAnswer(answerText, category) {
     if (!t) return 'pending';
 
     if (category === 'saldatura') {
-        if (['no', 'non previst', 'bullonatura', 'bullonata', 'nessuna saldatura'].some(kw => t.includes(kw))) return 'negative';
+        if (['non previst', 'bullonatura', 'bullonata', 'nessuna saldatura'].some(kw => t.includes(kw))) return 'negative';
+        if (t === 'no' || t === 'no.') return 'negative';
         if (['sì', 'si', 'officina', 'terzi', 'previst'].some(kw => t.includes(kw))) return 'positive';
         if (t.includes('verificare') || t.includes('definire')) return 'pending';
         return 'positive';
     }
     if (category === 'zincatura') {
-        if (['nessun trattamento', 'non previst', 'no'].some(kw => t.includes(kw))) return 'negative';
+        // Check external FIRST (priority over negative — "esterno" contains "no")
         if (['esterna', 'terzi', 'subfornitore', 'terzista'].some(kw => t.includes(kw))) return 'external';
+        if (['nessun trattamento', 'non previst'].some(kw => t.includes(kw))) return 'negative';
+        if (t === 'no' || t === 'no.') return 'negative';
         if (['a caldo', 'a freddo', 'verniciatura', 'industriale'].some(kw => t.includes(kw))) return 'positive';
         if (t.includes('definire') || t.includes('verificare')) return 'pending';
         return 'positive';
     }
     if (category === 'montaggio') {
-        if (['no', 'non previsto', 'non prevista', 'solo officina', 'solo assemblaggio'].some(kw => t.includes(kw))) return 'negative';
+        // Check positive/external FIRST to avoid "no" in "interno"/"esterno"
         if (['sì', 'si', 'inclusa', 'cantiere', 'installazione'].some(kw => t.includes(kw))) return 'positive';
         if (['terzi', 'affidato'].some(kw => t.includes(kw))) return 'external';
+        if (['non previsto', 'non prevista', 'solo officina', 'solo assemblaggio'].some(kw => t.includes(kw))) return 'negative';
+        if (t === 'no' || t === 'no.') return 'negative';
         if (t.includes('verificare') || t.includes('definire')) return 'pending';
         return 'positive';
     }
@@ -208,6 +213,8 @@ export default function IstruttoriaPage() {
     const [risposte, setRisposte] = useState({});
     const [savingRisposte, setSavingRisposte] = useState(false);
     const [showTechDetails, setShowTechDetails] = useState(false);
+    const [risposteCtx, setRisposteCtx] = useState({});
+    const [savingCtx, setSavingCtx] = useState(false);
 
     const fetchIstruttoria = useCallback(async () => {
         setLoading(true);
@@ -229,7 +236,15 @@ export default function IstruttoriaPage() {
             });
             setRisposte(saved);
         }
-    }, [data?.risposte_utente]);
+        // Init contextual answers
+        if (data?.domande_contestuali) {
+            const ctxSaved = {};
+            data.domande_contestuali.forEach(q => {
+                if (q.risposta) ctxSaved[q.id] = q.risposta;
+            });
+            setRisposteCtx(ctxSaved);
+        }
+    }, [data?.risposte_utente, data?.domande_contestuali]);
 
     const handleRispostaChange = (idx, value) => {
         setRisposte(prev => ({ ...prev, [String(idx)]: value }));
@@ -255,6 +270,32 @@ export default function IstruttoriaPage() {
             fetchIstruttoria();
         } catch (e) { toast.error(e.message); }
         finally { setSavingRisposte(false); }
+    };
+
+    const handleCtxRispostaChange = (id, value) => {
+        setRisposteCtx(prev => ({ ...prev, [id]: value }));
+    };
+
+    const handleCtxQuickAnswer = (id, option) => {
+        const current = risposteCtx[id] || '';
+        handleCtxRispostaChange(id, current === option ? '' : option);
+    };
+
+    const handleSalvaCtx = async () => {
+        if (!data?.istruttoria_id) return;
+        const payload = Object.entries(risposteCtx)
+            .filter(([, v]) => v.trim())
+            .map(([id, risposta]) => ({ id, risposta }));
+        if (!payload.length) { toast.warning('Inserisci almeno una risposta'); return; }
+        setSavingCtx(true);
+        try {
+            await apiRequest(`/istruttoria/${data.istruttoria_id}/rispondi-contestuale`, {
+                method: 'POST', body: { risposte: payload },
+            });
+            toast.success(`Risposte contestuali salvate (${payload.length})`);
+            fetchIstruttoria();
+        } catch (e) { toast.error(e.message); }
+        finally { setSavingCtx(false); }
     };
 
     const handleAnalizza = async () => {
@@ -556,7 +597,8 @@ export default function IstruttoriaPage() {
                                 const isAnswered = !!savedAnswer;
 
                                 return (
-                                    <div key={i}
+                                    <div key={i} className="space-y-2">
+                                    <div
                                         className={`rounded-lg border transition-all ${isAnswered ? 'border-emerald-200 bg-emerald-50/30' : 'border-slate-200 bg-slate-50/30'}`}
                                         data-testid={`domanda-${i}`}>
                                         <div className="p-3 space-y-2">
@@ -613,6 +655,69 @@ export default function IstruttoriaPage() {
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* ── Contextual child questions for this parent ── */}
+                                    {(data?.domande_contestuali || [])
+                                        .filter(cq => cq.active && cq.parent_domanda_idx === i)
+                                        .map(cq => {
+                                            const ctxValue = risposteCtx[cq.id] || '';
+                                            const ctxSaved = !!cq.risposta;
+                                            return (
+                                                <div key={cq.id}
+                                                    className={`ml-8 rounded-lg border-l-4 border-l-blue-400 border border-blue-200 bg-blue-50/20 transition-all ${ctxSaved ? 'border-l-emerald-400' : ''}`}
+                                                    data-testid={`ctx-domanda-${cq.id}`}>
+                                                    <div className="p-3 space-y-2">
+                                                        <p className="text-[9px] text-blue-500 font-medium flex items-center gap-1">
+                                                            <Zap className="h-2.5 w-2.5" />
+                                                            {cq.trigger_reason}
+                                                        </p>
+                                                        <div className="flex items-start gap-2">
+                                                            <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 text-[9px] font-bold text-white ${ctxSaved ? 'bg-emerald-500' : 'bg-blue-400'}`}>
+                                                                {ctxSaved ? <CheckCircle2 className="h-2.5 w-2.5" /> : '?'}
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <p className="text-xs font-medium text-slate-700">{cq.domanda}</p>
+                                                                <Badge className="text-[8px] px-1 py-0 bg-blue-100 text-blue-600 mt-0.5">impatto {cq.impatto}</Badge>
+                                                            </div>
+                                                        </div>
+
+                                                        {cq.opzioni?.length > 0 && (
+                                                            <div className="flex flex-wrap gap-1.5 ml-7">
+                                                                {cq.opzioni.map(opt => (
+                                                                    <button key={opt} type="button"
+                                                                        onClick={() => handleCtxQuickAnswer(cq.id, opt)}
+                                                                        className={`text-[10px] px-2.5 py-0.5 rounded-full border transition-all ${
+                                                                            ctxValue === opt
+                                                                                ? 'bg-blue-600 text-white border-blue-600'
+                                                                                : 'bg-white text-slate-500 border-slate-300 hover:border-blue-400'}`}
+                                                                        data-testid={`ctx-btn-${cq.id}-${opt.substring(0, 8).replace(/\s/g, '_')}`}>
+                                                                        {opt}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        )}
+
+                                                        <div className="ml-7">
+                                                            <Textarea
+                                                                placeholder={cq.opzioni?.length > 0 ? 'Oppure scrivi...' : 'Scrivi la tua risposta...'}
+                                                                value={ctxValue}
+                                                                onChange={(e) => handleCtxRispostaChange(cq.id, e.target.value)}
+                                                                className="text-xs min-h-[36px] border-blue-200 focus:border-blue-400 bg-white"
+                                                                rows={1}
+                                                                data-testid={`ctx-input-${cq.id}`} />
+                                                            {ctxSaved && (
+                                                                <p className="text-[8px] text-emerald-600 mt-0.5 flex items-center gap-1">
+                                                                    <CheckCircle2 className="h-2 w-2" />
+                                                                    Risposto da {cq.risposto_da_nome}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    }
+                                    </div>
                                 );
                             })}
 
@@ -622,12 +727,22 @@ export default function IstruttoriaPage() {
                                         ? 'Tutte le conferme sono state date. Puoi salvare e procedere alla conferma.'
                                         : 'Puoi salvare anche risposte parziali e completare dopo.'}
                                 </p>
-                                <Button onClick={handleSalvaRisposte}
-                                    disabled={savingRisposte || !Object.values(risposte).some(v => v.trim())}
-                                    className="bg-blue-700 hover:bg-blue-800 text-white" data-testid="btn-salva-risposte">
-                                    {savingRisposte ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Save className="h-4 w-4 mr-1.5" />}
-                                    {savingRisposte ? 'Salvataggio...' : 'Salva Risposte'}
-                                </Button>
+                                <div className="flex gap-2">
+                                    {(data?.domande_contestuali || []).some(cq => cq.active) && (
+                                        <Button onClick={handleSalvaCtx} variant="outline" size="sm"
+                                            disabled={savingCtx || !Object.values(risposteCtx).some(v => v.trim())}
+                                            className="border-blue-300 text-blue-700 hover:bg-blue-50" data-testid="btn-salva-ctx">
+                                            {savingCtx ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+                                            Salva Contestuali
+                                        </Button>
+                                    )}
+                                    <Button onClick={handleSalvaRisposte}
+                                        disabled={savingRisposte || !Object.values(risposte).some(v => v.trim())}
+                                        className="bg-blue-700 hover:bg-blue-800 text-white" data-testid="btn-salva-risposte">
+                                        {savingRisposte ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Save className="h-4 w-4 mr-1.5" />}
+                                        {savingRisposte ? 'Salvataggio...' : 'Salva Risposte'}
+                                    </Button>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>

@@ -47,7 +47,9 @@ def _parse_answer(answer_text: str, category: str) -> str:
         return 'pending'
 
     if category == 'saldatura':
-        if any(kw in t for kw in ['no', 'non previst', 'bullonatura', 'bullonata', 'nessuna saldatura']):
+        if any(kw in t for kw in ['non previst', 'bullonatura', 'bullonata', 'nessuna saldatura']):
+            return 'negative'
+        if t in ('no', 'no.'):
             return 'negative'
         if any(kw in t for kw in ['sì', 'si', 'officina', 'terzi', 'previst']):
             return 'positive'
@@ -56,10 +58,13 @@ def _parse_answer(answer_text: str, category: str) -> str:
         return 'positive'
 
     if category == 'zincatura':
-        if any(kw in t for kw in ['nessun trattamento', 'non previst', 'no']):
-            return 'negative'
+        # Check external FIRST (has priority over negative because "esterno" contains "no")
         if any(kw in t for kw in ['esterna', 'terzi', 'subfornitore', 'terzista', 'affidato a terzi']):
             return 'external'
+        if any(kw in t for kw in ['nessun trattamento', 'non previst']):
+            return 'negative'
+        if t in ('no', 'no.'):
+            return 'negative'
         if any(kw in t for kw in ['a caldo', 'a freddo', 'verniciatura', 'industriale']):
             return 'positive'
         if 'definire' in t or 'verificare' in t:
@@ -67,13 +72,15 @@ def _parse_answer(answer_text: str, category: str) -> str:
         return 'positive'
 
     if category == 'montaggio':
-        if any(kw in t for kw in ['no', 'non previsto', 'non prevista',
-                                   'solo officina', 'solo assemblaggio']):
-            return 'negative'
+        # Check positive/external FIRST to avoid "no" matching in "esterno"/"interno"
         if any(kw in t for kw in ['sì', 'si', 'inclusa', 'cantiere', 'installazione']):
             return 'positive'
         if any(kw in t for kw in ['terzi', 'affidato']):
             return 'external'
+        if any(kw in t for kw in ['non previsto', 'non prevista', 'solo officina', 'solo assemblaggio']):
+            return 'negative'
+        if t in ('no', 'no.'):
+            return 'negative'
         if 'verificare' in t or 'definire' in t:
             return 'pending'
         return 'positive'
@@ -215,3 +222,145 @@ def calcola_applicabilita(domande_residue: list, risposte_utente: dict) -> dict:
         'blocchi_conferma': blocchi_conferma,
         'riepilogo': riepilogo,
     }
+
+
+# ──────────────────────────────────────────────────────
+# P0.25 — Domande Contestuali Dinamiche
+# ──────────────────────────────────────────────────────
+
+REGOLE_DOMANDE_CONTESTUALI = [
+    # ── Zincatura esterna ──
+    {
+        'id': 'ctx_zinc_01',
+        'parent_category': 'zincatura',
+        'triggered_by_stato': 'external',
+        'domanda': 'Nome del terzista per la zincatura?',
+        'trigger_reason': 'Comparsa perché hai indicato zincatura esterna',
+        'opzioni': [],
+        'impatto': 'medio',
+    },
+    {
+        'id': 'ctx_zinc_02',
+        'parent_category': 'zincatura',
+        'triggered_by_stato': 'external',
+        'domanda': 'Per la zincatura esterna, quale evidenza/documentazione va richiesta?',
+        'trigger_reason': 'Comparsa perché hai indicato zincatura esterna',
+        'opzioni': [
+            'Conformita trattamento secondo EN ISO 1461',
+            'Documentazione generica del terzista',
+            'Da definire',
+        ],
+        'impatto': 'alto',
+    },
+    # ── Saldatura presente ──
+    {
+        'id': 'ctx_sald_01',
+        'parent_category': 'saldatura',
+        'triggered_by_stato': 'positive',
+        'domanda': 'Saldatura interna o affidata a terzi?',
+        'trigger_reason': 'Comparsa perché hai confermato la presenza di saldatura',
+        'opzioni': ['Interna', 'Affidata a terzi', 'Mista (interna + terzi)'],
+        'impatto': 'alto',
+    },
+    {
+        'id': 'ctx_sald_02',
+        'parent_category': 'saldatura',
+        'triggered_by_stato': 'positive',
+        'domanda': 'Processo di saldatura prevalente?',
+        'trigger_reason': 'Comparsa perché hai confermato la presenza di saldatura',
+        'opzioni': ['135 (MIG/MAG)', '141 (TIG)', '111 (Elettrodo)', 'Da confermare'],
+        'impatto': 'medio',
+    },
+    # ── Montaggio confermato ──
+    {
+        'id': 'ctx_mont_01',
+        'parent_category': 'montaggio',
+        'triggered_by_stato': 'positive',
+        'domanda': 'Montaggio gestito internamente o affidato?',
+        'trigger_reason': 'Comparsa perché hai confermato il montaggio in cantiere',
+        'opzioni': ['Interno', 'Affidato a terzi'],
+        'impatto': 'medio',
+    },
+    {
+        'id': 'ctx_mont_02',
+        'parent_category': 'montaggio',
+        'triggered_by_stato': 'positive',
+        'domanda': 'Sono richiesti documenti/controlli di posa in opera?',
+        'trigger_reason': 'Comparsa perché hai confermato il montaggio in cantiere',
+        'opzioni': ['Si', 'No', 'Da verificare'],
+        'impatto': 'medio',
+    },
+]
+
+
+def genera_domande_contestuali(
+    domande_residue: list,
+    risposte_utente: dict,
+    domande_contestuali_esistenti: list | None = None,
+) -> list:
+    """
+    Genera domande contestuali basate sulle risposte alle domande base.
+
+    - Se il trigger e attivo → domanda active + visible
+    - Se il trigger non vale piu ma c'era una risposta → stale (non cancellata)
+    - Se il trigger non vale e non c'era risposta → inactive + hidden
+    - Risposte esistenti preservate sempre
+    """
+    # Compute decisions from base answers
+    decisioni = {}
+    for idx, domanda in enumerate(domande_residue or []):
+        categoria = _detect_category(domanda.get('domanda', ''))
+        if not categoria:
+            continue
+        risposta_obj = risposte_utente.get(str(idx), {})
+        risposta_text = (
+            risposta_obj.get('risposta', '')
+            if isinstance(risposta_obj, dict)
+            else str(risposta_obj)
+        )
+        stato = _parse_answer(risposta_text, categoria)
+        decisioni[categoria] = {'stato': stato, 'domanda_idx': idx}
+
+    # Index existing contextual questions by ID
+    existing_map = {}
+    for q in (domande_contestuali_esistenti or []):
+        existing_map[q['id']] = q
+
+    result = []
+    for rule in REGOLE_DOMANDE_CONTESTUALI:
+        cat = rule['parent_category']
+        triggered_by = rule['triggered_by_stato']
+        decisione = decisioni.get(cat, {})
+
+        should_be_active = decisione.get('stato') == triggered_by
+        prev = existing_map.get(rule['id'])
+        had_answer = bool(prev and prev.get('risposta'))
+
+        q = {
+            'id': rule['id'],
+            'parent_category': rule['parent_category'],
+            'parent_domanda_idx': decisione.get('domanda_idx'),
+            'triggered_by_stato': triggered_by,
+            'triggered_by_answer': decisione.get('stato'),
+            'trigger_reason': rule['trigger_reason'],
+            'domanda': rule['domanda'],
+            'opzioni': rule['opzioni'],
+            'impatto': rule['impatto'],
+            'active': should_be_active,
+            'stale': had_answer and not should_be_active,
+            'visible': should_be_active,
+            # Preserve existing answer data
+            'risposta': prev.get('risposta') if prev else None,
+            'risposto_da': prev.get('risposto_da') if prev else None,
+            'risposto_da_nome': prev.get('risposto_da_nome') if prev else None,
+            'risposto_il': prev.get('risposto_il') if prev else None,
+        }
+        result.append(q)
+
+    n_active = sum(1 for q in result if q['active'])
+    n_stale = sum(1 for q in result if q['stale'])
+    logger.info(
+        f"[DOMANDE_CTX] Generato {len(result)} domande contestuali: "
+        f"{n_active} attive, {n_stale} stale"
+    )
+    return result
