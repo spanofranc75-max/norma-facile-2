@@ -16,6 +16,7 @@ from services.cantieri_sicurezza_service import (
     get_fasi_lavoro, get_rischi_sicurezza, get_dpi_misure,
     get_rischi_per_codici, get_dpi_per_codici,
     seed_libreria_v2, calcola_gate_pos,
+    ALL_RUOLI,
 )
 
 router = APIRouter(tags=["cantieri_sicurezza"])
@@ -30,7 +31,7 @@ class CreaCantiereSicurezzaRequest(BaseModel):
 
 class AggiornaCantiereSicurezzaRequest(BaseModel):
     dati_cantiere: Optional[dict] = None
-    soggetti_riferimento: Optional[dict] = None
+    soggetti: Optional[List[dict]] = None
     lavoratori_coinvolti: Optional[List[dict]] = None
     turni_lavoro: Optional[dict] = None
     subappalti: Optional[List[dict]] = None
@@ -104,6 +105,12 @@ async def api_gate_pos(cantiere_id: str, user: dict = Depends(get_current_user))
         raise HTTPException(status_code=404, detail="Cantiere sicurezza non trovato")
     return calcola_gate_pos(doc)
 
+
+
+@router.get("/ruoli-disponibili")
+async def api_ruoli_disponibili(user: dict = Depends(get_current_user)):
+    """Lista ruoli disponibili per soggetti commessa/cantiere."""
+    return ALL_RUOLI
 
 # ═══════════════════════════════════════════════════════════════════
 #  LIBRERIA 3 LIVELLI — Read APIs

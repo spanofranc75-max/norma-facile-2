@@ -403,6 +403,49 @@ FASI_SEED = [
     },
 ]
 
+# ── Ruoli seed per figure aziendali ──
+RUOLI_AZIENDALI_SEED = [
+    {"ruolo": "DATORE_LAVORO", "label": "Datore di Lavoro", "categoria": "azienda", "obbligatorio": True},
+    {"ruolo": "RSPP", "label": "RSPP", "categoria": "azienda", "obbligatorio": True},
+    {"ruolo": "MEDICO_COMPETENTE", "label": "Medico Competente", "categoria": "azienda", "obbligatorio": True},
+    {"ruolo": "PREPOSTO_CANTIERE", "label": "Preposto di Cantiere", "categoria": "azienda", "obbligatorio": False},
+    {"ruolo": "DIRETTORE_TECNICO", "label": "Direttore Tecnico", "categoria": "azienda", "obbligatorio": False},
+]
+
+RUOLI_COMMITTENTE_SEED = [
+    {"ruolo": "COMMITTENTE", "label": "Committente", "categoria": "committente", "obbligatorio": True},
+    {"ruolo": "REFERENTE_COMMITTENTE", "label": "Referente Committente", "categoria": "committente", "obbligatorio": False},
+    {"ruolo": "RESPONSABILE_LAVORI", "label": "Responsabile dei Lavori", "categoria": "committente", "obbligatorio": False},
+    {"ruolo": "DIRETTORE_LAVORI", "label": "Direttore dei Lavori", "categoria": "committente", "obbligatorio": False},
+    {"ruolo": "CSP", "label": "Coordinatore Sicurezza Progettazione", "categoria": "committente", "obbligatorio": False},
+    {"ruolo": "CSE", "label": "Coordinatore Sicurezza Esecuzione", "categoria": "committente", "obbligatorio": False},
+]
+
+RUOLI_TECNICI_SEED = [
+    {"ruolo": "PROGETTISTA", "label": "Progettista", "categoria": "tecnico", "obbligatorio": False},
+    {"ruolo": "STRUTTURISTA", "label": "Ingegnere Strutturista", "categoria": "tecnico", "obbligatorio": False},
+    {"ruolo": "COLLAUDATORE", "label": "Collaudatore", "categoria": "tecnico", "obbligatorio": False},
+]
+
+ALL_RUOLI = RUOLI_AZIENDALI_SEED + RUOLI_COMMITTENTE_SEED + RUOLI_TECNICI_SEED
+
+
+def _empty_soggetto(ruolo_def: dict) -> dict:
+    return {
+        "ruolo": ruolo_def["ruolo"],
+        "label": ruolo_def["label"],
+        "categoria": ruolo_def["categoria"],
+        "obbligatorio": ruolo_def["obbligatorio"],
+        "status": "mancante",
+        "nome": "",
+        "azienda": "",
+        "telefono": "",
+        "email": "",
+        "titolo": "",
+        "note": "",
+    }
+
+
 # ── Defaults per cantiere ──
 MACCHINE_DEFAULT = [
     {"nome": "Avvitatore elettrico", "marcata_ce": True, "verifiche_periodiche": True},
@@ -527,6 +570,7 @@ async def get_dpi_per_codici(user_id: str, codici: list) -> list:
 
 def _new_cantiere_template(cantiere_id: str, user_id: str, commessa_id: Optional[str] = None) -> dict:
     now = datetime.now(timezone.utc).isoformat()
+    soggetti = [_empty_soggetto(r) for r in ALL_RUOLI]
     return {
         "cantiere_id": cantiere_id,
         "user_id": user_id,
@@ -537,10 +581,7 @@ def _new_cantiere_template(cantiere_id: str, user_id: str, commessa_id: Optional
             "attivita_cantiere": "", "data_inizio_lavori": "", "data_fine_prevista": "",
             "indirizzo_cantiere": "", "citta_cantiere": "", "provincia_cantiere": "",
         },
-        "soggetti_riferimento": {
-            "committente": "", "responsabile_lavori": "", "direttore_lavori": "",
-            "progettista": "", "csp": "", "cse": "",
-        },
+        "soggetti": soggetti,
         "lavoratori_coinvolti": [],
         "turni_lavoro": {"mattina": "08:00-13:00", "pomeriggio": "14:00-17:00", "note": ""},
         "subappalti": [],
@@ -571,17 +612,34 @@ async def crea_cantiere(user_id: str, commessa_id: Optional[str] = None, pre_fil
     cantiere_id = f"cant_{uuid.uuid4().hex[:12]}"
     doc = _new_cantiere_template(cantiere_id, user_id, commessa_id)
 
+    # Pre-fill from commessa
     if commessa_id:
         commessa = await db.commesse.find_one({"commessa_id": commessa_id, "user_id": user_id}, {"_id": 0})
         if commessa:
             doc["dati_cantiere"]["attivita_cantiere"] = commessa.get("description", "")
-            doc["soggetti_riferimento"]["committente"] = commessa.get("client_name", "")
+            _set_soggetto(doc["soggetti"], "COMMITTENTE", nome=commessa.get("client_name", ""))
 
+    # Pre-fill from company_settings (figure aziendali)
+    company = await db.company_settings.find_one({"user_id": user_id}, {"_id": 0})
+    if company:
+        # Map responsabile_nome → DATORE_LAVORO
+        if company.get("responsabile_nome"):
+            _set_soggetto(doc["soggetti"], "DATORE_LAVORO", nome=company["responsabile_nome"])
+        # Map figure_aziendali array
+        for fig in company.get("figure_aziendali", []):
+            if fig.get("ruolo") and fig.get("nome"):
+                _set_soggetto(doc["soggetti"], fig["ruolo"],
+                              nome=fig.get("nome", ""),
+                              telefono=fig.get("telefono", ""),
+                              email=fig.get("email", ""),
+                              azienda=fig.get("azienda", ""))
+
+    # Apply explicit pre-fill overrides
     if pre_fill:
-        for key in ["dati_cantiere", "soggetti_riferimento", "turni_lavoro"]:
+        for key in ["dati_cantiere", "turni_lavoro"]:
             if key in pre_fill and isinstance(pre_fill[key], dict):
                 doc[key].update(pre_fill[key])
-        for key in ["lavoratori_coinvolti", "subappalti", "sostanze_chimiche", "fasi_lavoro_selezionate"]:
+        for key in ["lavoratori_coinvolti", "subappalti", "sostanze_chimiche", "fasi_lavoro_selezionate", "soggetti"]:
             if key in pre_fill and isinstance(pre_fill[key], list):
                 doc[key] = pre_fill[key]
 
@@ -589,6 +647,28 @@ async def crea_cantiere(user_id: str, commessa_id: Optional[str] = None, pre_fil
     doc.pop("_id", None)
     await seed_libreria_v2(user_id)
     return doc
+
+
+def _set_soggetto(soggetti: list, ruolo: str, nome: str = "", telefono: str = "", email: str = "", azienda: str = ""):
+    """Set data for a soggetto by ruolo code."""
+    for s in soggetti:
+        if s["ruolo"] == ruolo:
+            if nome:
+                s["nome"] = nome
+                s["status"] = "precompilato"
+            if telefono:
+                s["telefono"] = telefono
+            if email:
+                s["email"] = email
+            if azienda:
+                s["azienda"] = azienda
+            return
+    # If ruolo not in template, add it
+    soggetti.append({
+        "ruolo": ruolo, "label": ruolo.replace("_", " ").title(), "categoria": "altro",
+        "obbligatorio": False, "status": "precompilato" if nome else "mancante",
+        "nome": nome, "azienda": azienda, "telefono": telefono, "email": email, "titolo": "", "note": "",
+    })
 
 
 async def get_cantiere(cantiere_id: str, user_id: str) -> Optional[dict]:
@@ -635,17 +715,17 @@ CAMPI_OBBLIGATORI = [
     ("dati_cantiere.indirizzo_cantiere", "Indirizzo cantiere"),
     ("dati_cantiere.citta_cantiere", "Citta cantiere"),
     ("dati_cantiere.data_inizio_lavori", "Data inizio lavori"),
-    ("soggetti_riferimento.committente", "Committente"),
     ("lavoratori_coinvolti", "Almeno un lavoratore"),
     ("fasi_lavoro_selezionate", "Almeno una fase di lavoro"),
 ]
 CAMPI_OPZIONALI = [
     ("dati_cantiere.data_fine_prevista", "Data fine prevista"),
     ("dati_cantiere.attivita_cantiere", "Attivita cantiere"),
-    ("soggetti_riferimento.direttore_lavori", "Direttore lavori"),
-    ("soggetti_riferimento.cse", "Coordinatore sicurezza esecuzione"),
     ("data_dichiarazione", "Data dichiarazione"),
 ]
+
+# Soggetti obbligatori nel POS
+SOGGETTI_OBBLIGATORI = ["DATORE_LAVORO", "RSPP", "COMMITTENTE"]
 
 
 def _get_nested(doc: dict, path: str):
@@ -662,7 +742,7 @@ def _get_nested(doc: dict, path: str):
 def calcola_gate_pos(cantiere: dict) -> dict:
     campi_mancanti = []
     blockers = []
-    total_checks = len(CAMPI_OBBLIGATORI) + len(CAMPI_OPZIONALI)
+    total_checks = len(CAMPI_OBBLIGATORI) + len(CAMPI_OPZIONALI) + len(SOGGETTI_OBBLIGATORI)
     passed = 0
 
     for path, label in CAMPI_OBBLIGATORI:
@@ -678,6 +758,20 @@ def calcola_gate_pos(cantiere: dict) -> dict:
         val = _get_nested(cantiere, path)
         if (isinstance(val, list) and len(val) > 0) or val:
             passed += 1
+
+    # Check soggetti obbligatori
+    soggetti = cantiere.get("soggetti", [])
+    for ruolo_code in SOGGETTI_OBBLIGATORI:
+        found = False
+        for s in soggetti:
+            if s.get("ruolo") == ruolo_code and s.get("nome"):
+                found = True
+                break
+        if found:
+            passed += 1
+        else:
+            label = ruolo_code.replace("_", " ").title()
+            campi_mancanti.append(f"Soggetto: {label}")
 
     # Check gate_critical domande_residue
     for domanda in cantiere.get("domande_residue", []):

@@ -65,6 +65,10 @@ class CompanySettings(BaseModel):
     # Firma digitale (base64 data URI - immagine PNG/JPG)
     firma_digitale: Optional[str] = None
     
+    # Figure aziendali sicurezza (defaults per POS)
+    figure_aziendali: list = Field(default_factory=list)
+    # Struttura: [{"ruolo": "DATORE_LAVORO", "nome": "...", "telefono": "", "email": ""}, ...]
+
     # EN 1090 — Dati certificazione aziendali
     responsabile_nome: Optional[str] = None  # Nome e cognome responsabile/amministratore
     ruolo_firmatario: Optional[str] = None  # es. "Legale Rappresentante"
@@ -76,7 +80,10 @@ class CompanySettings(BaseModel):
     
     # Condizioni di vendita
     condizioni_vendita: Optional[str] = None
-    
+
+    # Figure aziendali (update)
+    figure_aziendali: Optional[list] = None
+
     # Aruba SDI Integration (legacy)
     aruba_username: Optional[str] = None
     aruba_password: Optional[str] = None

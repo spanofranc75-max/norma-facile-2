@@ -112,7 +112,7 @@ export default function SicurezzaPage() {
                                     const gateReady = c.gate_pos_status?.pronto_per_generazione;
                                     const addr = c.dati_cantiere?.indirizzo_cantiere || '';
                                     const city = c.dati_cantiere?.citta_cantiere || '';
-                                    const committente = c.soggetti_riferimento?.committente || '-';
+                                    const committente = (c.soggetti || []).find(s => s.ruolo === 'COMMITTENTE')?.nome || '-';
                                     return (
                                         <TableRow key={c.cantiere_id} className="hover:bg-slate-50 cursor-pointer" onClick={() => navigate(`/scheda-cantiere/${c.cantiere_id}`)} data-testid={`cantiere-row-${c.cantiere_id}`}>
                                             <TableCell>

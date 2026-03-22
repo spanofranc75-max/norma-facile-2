@@ -58,10 +58,7 @@ export default function SchedaCantierePage() {
             attivita_cantiere: '', data_inizio_lavori: '', data_fine_prevista: '',
             indirizzo_cantiere: '', citta_cantiere: '', provincia_cantiere: '',
         },
-        soggetti_riferimento: {
-            committente: '', responsabile_lavori: '', direttore_lavori: '',
-            progettista: '', csp: '', cse: '',
-        },
+        soggetti: [],
         lavoratori_coinvolti: [],
         turni_lavoro: { mattina: '08:00-13:00', pomeriggio: '14:00-17:00', note: '' },
         subappalti: [],
@@ -129,7 +126,14 @@ export default function SchedaCantierePage() {
     }, [isEditing, cantiereId, navigate]);
 
     const updateDatiCantiere = (f, v) => setFormData(p => ({ ...p, dati_cantiere: { ...p.dati_cantiere, [f]: v } }));
-    const updateSoggetti = (f, v) => setFormData(p => ({ ...p, soggetti_riferimento: { ...p.soggetti_riferimento, [f]: v } }));
+    const updateSoggetto = (ruolo, field, value) => {
+        setFormData(p => ({
+            ...p,
+            soggetti: p.soggetti.map(s =>
+                s.ruolo === ruolo ? { ...s, [field]: value, status: value ? 'confermato' : 'mancante' } : s
+            ),
+        }));
+    };
 
     const handleSave = useCallback(async () => {
         setSaving(true);
@@ -294,14 +298,38 @@ export default function SchedaCantierePage() {
                             </CardContent>
                         </Card>
                         <Card>
-                            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Building2 className="h-5 w-5 text-[#0055FF]" /> Soggetti di Riferimento</CardTitle></CardHeader>
-                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div><Label>Committente *</Label><Input data-testid="input-committente" value={formData.soggetti_riferimento.committente} onChange={e => updateSoggetti('committente', e.target.value)} /></div>
-                                <div><Label>Responsabile Lavori</Label><Input value={formData.soggetti_riferimento.responsabile_lavori} onChange={e => updateSoggetti('responsabile_lavori', e.target.value)} /></div>
-                                <div><Label>Direttore Lavori</Label><Input value={formData.soggetti_riferimento.direttore_lavori} onChange={e => updateSoggetti('direttore_lavori', e.target.value)} /></div>
-                                <div><Label>Progettista</Label><Input value={formData.soggetti_riferimento.progettista} onChange={e => updateSoggetti('progettista', e.target.value)} /></div>
-                                <div><Label>CSP</Label><Input value={formData.soggetti_riferimento.csp} onChange={e => updateSoggetti('csp', e.target.value)} /></div>
-                                <div><Label>CSE</Label><Input value={formData.soggetti_riferimento.cse} onChange={e => updateSoggetti('cse', e.target.value)} /></div>
+                            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Building2 className="h-5 w-5 text-[#0055FF]" /> Soggetti & Referenti</CardTitle></CardHeader>
+                            <CardContent className="space-y-6">
+                                {[
+                                    { cat: 'azienda', label: 'Figure Aziendali', color: 'border-blue-200 bg-blue-50/30' },
+                                    { cat: 'committente', label: 'Figure Committente / Cantiere', color: 'border-amber-200 bg-amber-50/30' },
+                                    { cat: 'tecnico', label: 'Figure Tecniche', color: 'border-slate-200 bg-slate-50/30' },
+                                ].map(({ cat, label, color }) => {
+                                    const group = formData.soggetti.filter(s => s.categoria === cat);
+                                    if (group.length === 0) return null;
+                                    return (
+                                        <div key={cat} className={`rounded-lg border p-4 ${color}`}>
+                                            <h4 className="text-sm font-semibold text-slate-700 mb-3">{label}</h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                {group.map(s => (
+                                                    <div key={s.ruolo} className="bg-white rounded-md p-3 border border-gray-100" data-testid={`soggetto-${s.ruolo}`}>
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <Label className="text-xs font-semibold">{s.label} {s.obbligatorio && <span className="text-red-500">*</span>}</Label>
+                                                            {s.status === 'precompilato' && <Badge className="text-[10px] bg-blue-100 text-blue-700">precompilato</Badge>}
+                                                            {s.status === 'confermato' && <Badge className="text-[10px] bg-emerald-100 text-emerald-700">confermato</Badge>}
+                                                            {s.status === 'mancante' && s.obbligatorio && <Badge className="text-[10px] bg-red-100 text-red-700">mancante</Badge>}
+                                                        </div>
+                                                        <Input placeholder="Nome / Ragione Sociale" value={s.nome || ''} onChange={e => updateSoggetto(s.ruolo, 'nome', e.target.value)} className="mb-1.5 text-sm" />
+                                                        <div className="grid grid-cols-2 gap-1.5">
+                                                            <Input placeholder="Telefono" value={s.telefono || ''} onChange={e => updateSoggetto(s.ruolo, 'telefono', e.target.value)} className="text-xs" />
+                                                            <Input placeholder="Email" value={s.email || ''} onChange={e => updateSoggetto(s.ruolo, 'email', e.target.value)} className="text-xs" />
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </CardContent>
                         </Card>
                         <Card>
@@ -581,7 +609,7 @@ export default function SchedaCantierePage() {
                                 <CardContent className="text-sm space-y-1">
                                     <p><span className="text-slate-500">Indirizzo:</span> {formData.dati_cantiere.indirizzo_cantiere || '-'}</p>
                                     <p><span className="text-slate-500">Citta:</span> {formData.dati_cantiere.citta_cantiere || '-'}</p>
-                                    <p><span className="text-slate-500">Committente:</span> {formData.soggetti_riferimento.committente || '-'}</p>
+                                    <p><span className="text-slate-500">Committente:</span> {(formData.soggetti.find(s => s.ruolo === 'COMMITTENTE') || {}).nome || '-'}</p>
                                     <p><span className="text-slate-500">Inizio:</span> {formData.dati_cantiere.data_inizio_lavori || '-'}</p>
                                 </CardContent>
                             </Card>
