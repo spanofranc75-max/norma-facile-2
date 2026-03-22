@@ -202,6 +202,75 @@ async def conferma_istruttoria(istruttoria_id: str, user: dict = Depends(get_cur
 
 
 
+@router.post("/{istruttoria_id}/rispondi")
+async def rispondi_domande(istruttoria_id: str, body: dict, user: dict = Depends(get_current_user)):
+    """Salva le risposte dell'utente alle domande residue generate dall'AI.
+
+    Body: {
+        "risposte": [
+            {"domanda_idx": 0, "risposta": "Testo risposta utente"},
+            {"domanda_idx": 1, "risposta": "Altra risposta"},
+            ...
+        ]
+    }
+    """
+    uid = user["user_id"]
+    doc = await db.istruttorie.find_one(
+        {"istruttoria_id": istruttoria_id, "user_id": uid},
+        {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "Istruttoria non trovata")
+
+    risposte_input = body.get("risposte", [])
+    if not risposte_input:
+        raise HTTPException(400, "Nessuna risposta fornita")
+
+    now = datetime.now(timezone.utc)
+    domande = doc.get("domande_residue", [])
+
+    # Build the risposte map: merge with any existing answers
+    risposte_esistenti = doc.get("risposte_utente", {})
+
+    for r in risposte_input:
+        idx = r.get("domanda_idx")
+        risposta_text = r.get("risposta", "").strip()
+        if idx is None or idx < 0 or idx >= len(domande):
+            continue
+        if not risposta_text:
+            continue
+
+        risposte_esistenti[str(idx)] = {
+            "risposta": risposta_text,
+            "domanda": domande[idx].get("domanda", ""),
+            "risposto_da": uid,
+            "risposto_da_nome": user.get("name", user.get("email", uid)),
+            "risposto_il": now.isoformat(),
+        }
+
+    n_risposte = len(risposte_esistenti)
+    n_domande = len(domande)
+
+    await db.istruttorie.update_one(
+        {"istruttoria_id": istruttoria_id},
+        {"$set": {
+            "risposte_utente": risposte_esistenti,
+            "n_risposte": n_risposte,
+            "n_domande_totali": n_domande,
+            "updated_at": now,
+        }}
+    )
+
+    logger.info(f"[ISTRUTTORIA] Risposte salvate: {n_risposte}/{n_domande} per {istruttoria_id}")
+
+    return {
+        "message": f"Risposte salvate: {n_risposte}/{n_domande}",
+        "risposte_utente": risposte_esistenti,
+        "n_risposte": n_risposte,
+        "n_domande_totali": n_domande,
+    }
+
+
 @router.get("")
 async def list_istruttorie(user: dict = Depends(get_current_user)):
     """Lista tutte le istruttorie dell'utente."""

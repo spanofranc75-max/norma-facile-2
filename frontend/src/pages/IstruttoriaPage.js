@@ -6,11 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { apiRequest } from '../lib/utils';
+import { Textarea } from '../components/ui/textarea';
 import {
     Brain, Loader2, ShieldCheck, ShieldAlert, FileText,
     AlertTriangle, CheckCircle2, HelpCircle, Minus,
     Hammer, Flame, Ruler, Package, Truck, Eye, Wrench,
-    ArrowLeft, RefreshCw, CircleAlert, Lightbulb,
+    ArrowLeft, RefreshCw, CircleAlert, Lightbulb, Save, MessageSquare,
 } from 'lucide-react';
 
 const STATO_COLORS = {
@@ -52,6 +53,8 @@ export default function IstruttoriaPage() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [analyzing, setAnalyzing] = useState(false);
+    const [risposte, setRisposte] = useState({});
+    const [savingRisposte, setSavingRisposte] = useState(false);
 
     const fetchIstruttoria = useCallback(async () => {
         setLoading(true);
@@ -64,6 +67,42 @@ export default function IstruttoriaPage() {
     }, [preventivoId]);
 
     useEffect(() => { fetchIstruttoria(); }, [fetchIstruttoria]);
+
+    // Initialize local risposte state from saved data
+    useEffect(() => {
+        if (data?.risposte_utente) {
+            const saved = {};
+            Object.entries(data.risposte_utente).forEach(([idx, val]) => {
+                saved[idx] = val.risposta || '';
+            });
+            setRisposte(saved);
+        }
+    }, [data?.risposte_utente]);
+
+    const handleRispostaChange = (idx, value) => {
+        setRisposte(prev => ({ ...prev, [String(idx)]: value }));
+    };
+
+    const handleSalvaRisposte = async () => {
+        if (!data?.istruttoria_id) return;
+        const payload = Object.entries(risposte)
+            .filter(([, v]) => v.trim())
+            .map(([idx, risposta]) => ({ domanda_idx: parseInt(idx), risposta }));
+        if (!payload.length) {
+            toast.warning('Inserisci almeno una risposta');
+            return;
+        }
+        setSavingRisposte(true);
+        try {
+            await apiRequest(`/istruttoria/${data.istruttoria_id}/rispondi`, {
+                method: 'POST',
+                body: { risposte: payload },
+            });
+            toast.success(`Risposte salvate (${payload.length})`);
+            fetchIstruttoria();
+        } catch (e) { toast.error(e.message); }
+        finally { setSavingRisposte(false); }
+    };
 
     const handleAnalizza = async () => {
         setAnalyzing(true);
@@ -417,36 +456,78 @@ export default function IstruttoriaPage() {
                     </Card>
                 </div>
 
-                {/* Row 4: Residual Questions — THE KEY SECTION */}
+                {/* Row 4: Residual Questions — INTERACTIVE SECTION */}
                 {domande_residue?.length > 0 && (
                     <Card className="border-blue-300 bg-blue-50/30" data-testid="card-domande-residue">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-bold text-blue-800 flex items-center gap-2">
                                 <HelpCircle className="h-4 w-4" />
                                 E. Domande Residue ({domande_residue.length})
-                                <span className="text-[10px] font-normal text-blue-600 ml-2">
+                                {data?.n_risposte > 0 && (
+                                    <Badge className="bg-emerald-100 text-emerald-700 text-[9px] ml-2 gap-1">
+                                        <MessageSquare className="h-2.5 w-2.5" />
+                                        {data.n_risposte}/{data.n_domande_totali} risposte
+                                    </Badge>
+                                )}
+                                <span className="text-[10px] font-normal text-blue-600 ml-auto">
                                     Rispondi a queste per completare l'istruttoria
                                 </span>
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-2">
-                                {domande_residue.map((q, i) => (
-                                    <div key={i} className="flex items-start gap-3 p-2.5 bg-white rounded-lg border border-blue-200">
-                                        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white ${q.impatto === 'alto' ? 'bg-red-500' : q.impatto === 'medio' ? 'bg-amber-500' : 'bg-slate-400'}`}>
-                                            {i + 1}
+                            <div className="space-y-3">
+                                {domande_residue.map((q, i) => {
+                                    const savedAnswer = data?.risposte_utente?.[String(i)];
+                                    const localValue = risposte[String(i)] || '';
+                                    return (
+                                        <div key={i} className="p-3 bg-white rounded-lg border border-blue-200" data-testid={`domanda-${i}`}>
+                                            <div className="flex items-start gap-3 mb-2">
+                                                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white ${q.impatto === 'alto' ? 'bg-red-500' : q.impatto === 'medio' ? 'bg-amber-500' : 'bg-slate-400'}`}>
+                                                    {i + 1}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className="text-xs font-semibold text-slate-800">{q.domanda}</p>
+                                                    <p className="text-[10px] text-slate-500 mt-0.5">
+                                                        <Badge className={`text-[8px] px-1 py-0 mr-1 ${q.impatto === 'alto' ? 'bg-red-100 text-red-700' : q.impatto === 'medio' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                                                            {q.impatto}
+                                                        </Badge>
+                                                        {q.perche_serve}
+                                                    </p>
+                                                </div>
+                                                {savedAnswer && (
+                                                    <Badge className="bg-emerald-100 text-emerald-700 text-[8px] shrink-0 gap-0.5">
+                                                        <CheckCircle2 className="h-2.5 w-2.5" /> Risposto
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            <div className="ml-10">
+                                                <Textarea
+                                                    placeholder="Scrivi la tua risposta..."
+                                                    value={localValue}
+                                                    onChange={(e) => handleRispostaChange(i, e.target.value)}
+                                                    className="text-xs min-h-[60px] border-blue-200 focus:border-blue-400 bg-blue-50/20"
+                                                    data-testid={`risposta-input-${i}`}
+                                                />
+                                                {savedAnswer && (
+                                                    <p className="text-[9px] text-slate-400 mt-1">
+                                                        Risposto da {savedAnswer.risposto_da_nome} il {new Date(savedAnswer.risposto_il).toLocaleDateString('it-IT')}
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="flex-1">
-                                            <p className="text-xs font-semibold text-slate-800">{q.domanda}</p>
-                                            <p className="text-[10px] text-slate-500 mt-0.5">
-                                                <Badge className={`text-[8px] px-1 py-0 mr-1 ${q.impatto === 'alto' ? 'bg-red-100 text-red-700' : q.impatto === 'medio' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
-                                                    {q.impatto}
-                                                </Badge>
-                                                {q.perche_serve}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
+                            </div>
+                            <div className="flex justify-end mt-4">
+                                <Button
+                                    onClick={handleSalvaRisposte}
+                                    disabled={savingRisposte || !Object.values(risposte).some(v => v.trim())}
+                                    className="bg-blue-700 hover:bg-blue-800 text-white"
+                                    data-testid="btn-salva-risposte"
+                                >
+                                    {savingRisposte ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Save className="h-4 w-4 mr-1.5" />}
+                                    {savingRisposte ? 'Salvataggio...' : 'Salva Risposte'}
+                                </Button>
                             </div>
                         </CardContent>
                     </Card>

@@ -1,0 +1,84 @@
+{
+  "summary": "Iteration 219 — Testing POST /api/istruttoria/{id}/rispondi endpoint and frontend Domande Residue UI. Backend: 12/12 tests passed (100%). Frontend: All features verified — Textarea inputs visible for each question, pre-populated with saved answers, 'Salva Risposte' button functional, 'Risposto' badges appear on answered questions, author/date info displayed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "IstruttoriaPage",
+        "issues": ["Minor HTML nesting warning in console: <div> cannot be descendant of <p> in Badge component - cosmetic only, no functional impact"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration219_rispondi_domande.py",
+    "/app/test_reports/pytest/iteration219_rispondi_domande_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration219_rispondi_domande.py"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 passed)",
+    "frontend": "100% (all features working)"
+  },
+  "seed_data_creation": "Used existing test data: istr_701cc0cc1ddc with 3 domande_residue, 2 pre-existing answers (Q0, Q1), Q2 unanswered",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 219 rispondi domande feature fully tested. Key features: 1) POST /api/istruttoria/{id}/rispondi saves user answers to domande_residue. 2) Payload format: {risposte: [{domanda_idx: 0, risposta: 'text'}, ...]}. 3) Endpoint validates empty payload (400), non-existent istruttoria (404). 4) Answers merge with existing (don't replace). 5) Frontend Textarea inputs have data-testid='risposta-input-{i}'. 6) Save button has data-testid='btn-salva-risposte'. 7) 'Risposto' badge appears on answered questions. 8) Author/date info shown below each answered question.",
+  "features_tested": {
+    "backend_endpoint_rispondi": {
+      "endpoint": "POST /api/istruttoria/{id}/rispondi",
+      "tests_passed": [
+        "Saves answer correctly with valid payload",
+        "Returns 400 for empty risposte array",
+        "Returns 400 for missing risposte key",
+        "Returns 404 for non-existent istruttoria",
+        "Merges with existing answers (doesn't replace)",
+        "Ignores invalid question indices (out of range, negative)",
+        "Ignores empty/whitespace answers"
+      ],
+      "response_fields": ["message", "risposte_utente", "n_risposte", "n_domande_totali"]
+    },
+    "backend_endpoint_get_istruttoria": {
+      "endpoint": "GET /api/istruttoria/{id}",
+      "tests_passed": [
+        "Returns risposte_utente with saved answers",
+        "Returns n_risposte and n_domande_totali counts"
+      ]
+    },
+    "backend_auth_validation": {
+      "tests_passed": [
+        "Returns 401 without auth cookie",
+        "Returns 401 with invalid session token"
+      ]
+    },
+    "frontend_domande_residue_section": {
+      "verified_elements": [
+        "card-domande-residue visible",
+        "risposta-input-0 textarea visible and pre-populated",
+        "risposta-input-1 textarea visible and pre-populated",
+        "risposta-input-2 textarea visible and pre-populated",
+        "btn-salva-risposte button visible and enabled",
+        "'Risposto' badges on answered questions (6 total)",
+        "'Risposto da {name} il {date}' info displayed (3 elements)"
+      ],
+      "functional_tests": [
+        "Textarea accepts user input",
+        "Save button triggers API call",
+        "Success toast 'Risposte salvate (3)' appears after save",
+        "Page refreshes with updated data after save"
+      ]
+    }
+  },
+  "test_credentials": {
+    "session_token": "c87bbcfe2ef64f5c9e48c4cf73f7b2ff",
+    "test_istruttoria_id": "istr_701cc0cc1ddc",
+    "test_preventivo_id": "prev_625826c752ac"
+  }
+}
