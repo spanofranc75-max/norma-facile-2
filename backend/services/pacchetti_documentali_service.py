@@ -1,9 +1,11 @@
 """
-Pacchetti Documentali — Service (D1 + D2 + D3)
-================================================
+Pacchetti Documentali — Service (D1 + D2 + D3 + D4 + D5)
+==========================================================
 D1: Archivio documenti strutturato
 D2: Template pacchetti + creazione pacchetto
 D3: Motore verifica presenza/scadenze + matching
+D4: Prepara invio (email draft + warnings)
+D5: Invio email via Resend + log
 """
 
 import logging
@@ -532,3 +534,231 @@ async def get_tipi_documento(user_id: str) -> list:
     return await db.lib_tipi_documento.find(
         {"user_id": user_id, "active": True}, {"_id": 0}
     ).sort("sort_order", 1).to_list(100)
+
+
+
+# ═══════════════════════════════════════════════════════════════
+#  D4 — PREPARA INVIO (email draft + warnings)
+# ═══════════════════════════════════════════════════════════════
+
+async def prepara_invio(pack_id: str, user_id: str) -> dict:
+    """D4: Prepare send — generate email draft, attachment list, warnings."""
+    pack = await db.pacchetti_documentali.find_one(
+        {"pack_id": pack_id, "user_id": user_id}, {"_id": 0}
+    )
+    if not pack:
+        return {"error": "Pacchetto non trovato"}
+
+    # Auto-verify first
+    result = await verifica_pacchetto(pack_id, user_id)
+    if result.get("error"):
+        return result
+    pack = await db.pacchetti_documentali.find_one(
+        {"pack_id": pack_id, "user_id": user_id}, {"_id": 0}
+    )
+
+    company = await db.company_settings.find_one({"user_id": user_id}, {"_id": 0}) or {}
+    bn = company.get("business_name", "")
+
+    # Collect attachable documents
+    attachments = []
+    warnings = []
+    items = pack.get("items", [])
+
+    for item in items:
+        if item.get("status") == "attached" and item.get("document_id"):
+            doc = await db.documenti_archivio.find_one(
+                {"doc_id": item["document_id"], "user_id": user_id}, {"_id": 0}
+            )
+            if doc and doc.get("file_id"):
+                attachments.append({
+                    "doc_id": doc["doc_id"],
+                    "title": doc.get("title", doc.get("file_name", "")),
+                    "file_id": doc["file_id"],
+                    "file_name": doc.get("file_name", ""),
+                    "mime_type": doc.get("mime_type", ""),
+                    "privacy_level": doc.get("privacy_level", "cliente_condivisibile"),
+                })
+                if doc.get("privacy_level") == "sensibile":
+                    warnings.append(f"Documento sensibile incluso: {doc.get('title', '')}")
+
+        elif item.get("status") == "missing" and item.get("required"):
+            tipo = item.get("document_type_code", "")
+            warnings.append(f"Documento obbligatorio mancante: {tipo}")
+        elif item.get("status") == "expired":
+            warnings.append(f"Documento scaduto: {item.get('document_type_code', '')}")
+
+    # Generate email draft
+    label = pack.get("label", pack.get("template_code", "Pacchetto documentale"))
+    summary = pack.get("summary", {})
+    n_attached = summary.get("attached", 0)
+    n_missing = summary.get("missing", 0)
+
+    subject = f"Invio documentazione: {label} - {bn}"
+    body = (
+        f"Spett.le destinatario,\n\n"
+        f"in allegato trasmettiamo la documentazione richiesta ({label}).\n\n"
+        f"Documenti allegati: {n_attached}\n"
+    )
+    if n_missing > 0:
+        body += f"Documenti ancora mancanti: {n_missing}\n"
+    body += f"\nRestiamo a disposizione per qualsiasi chiarimento.\n\nCordiali saluti,\n{bn}"
+
+    email_draft = {
+        "subject": subject,
+        "body": body,
+        "attachments_count": len(attachments),
+        "attachments_ready": len(attachments) > 0,
+    }
+
+    # Save draft to package
+    now = datetime.now(timezone.utc).isoformat()
+    await db.pacchetti_documentali.update_one(
+        {"pack_id": pack_id, "user_id": user_id},
+        {"$set": {"email_draft": email_draft, "updated_at": now}}
+    )
+
+    return {
+        "pack_id": pack_id,
+        "email_draft": email_draft,
+        "attachments": attachments,
+        "warnings": warnings,
+        "pack_status": pack.get("status", "draft"),
+        "summary": summary,
+        "recipient": pack.get("recipient", {"to": [], "cc": []}),
+    }
+
+
+# ═══════════════════════════════════════════════════════════════
+#  D5 — INVIO EMAIL + LOG
+# ═══════════════════════════════════════════════════════════════
+
+async def invia_email_pacchetto(pack_id: str, user_id: str, send_data: dict) -> dict:
+    """D5: Send package email via Resend and log the send."""
+    pack = await db.pacchetti_documentali.find_one(
+        {"pack_id": pack_id, "user_id": user_id}, {"_id": 0}
+    )
+    if not pack:
+        return {"error": "Pacchetto non trovato"}
+
+    to_emails = send_data.get("to", [])
+    cc_emails = send_data.get("cc", [])
+    subject = send_data.get("subject", "")
+    body = send_data.get("body", "")
+
+    if not to_emails:
+        return {"error": "Nessun destinatario specificato"}
+    if not subject:
+        return {"error": "Oggetto email mancante"}
+
+    # Get company info
+    company = await db.company_settings.find_one({"user_id": user_id}, {"_id": 0}) or {}
+
+    # Get attached document files
+    doc_ids = []
+    attachments_data = []
+    for item in pack.get("items", []):
+        if item.get("status") == "attached" and item.get("document_id"):
+            doc = await db.documenti_archivio.find_one(
+                {"doc_id": item["document_id"], "user_id": user_id}, {"_id": 0}
+            )
+            if doc and doc.get("file_id"):
+                # Download from object storage
+                try:
+                    from services.object_storage import get_object
+                    file_data = get_object(doc["file_id"])
+                    if file_data:
+                        attachments_data.append({
+                            "filename": doc.get("file_name", f"{doc['doc_id']}.pdf"),
+                            "content": file_data,
+                            "content_type": doc.get("mime_type", "application/octet-stream"),
+                        })
+                        doc_ids.append(doc["doc_id"])
+                except Exception as e:
+                    logger.warning(f"Could not download file {doc['file_id']}: {e}")
+
+    # Send email via Resend
+    from services.email_service import _init_resend, _email_wrapper, _get_company_name
+    try:
+        import resend as resend_lib
+    except ImportError:
+        return {"error": "Libreria Resend non installata"}
+
+    if not _init_resend():
+        return {"error": "RESEND_API_KEY non configurata"}
+
+    bn = await _get_company_name(user_id)
+    from core.config import settings as app_settings
+
+    try:
+        body_html = body.replace("\n", "<br/>")
+        inner = f'<p style="color:#1e293b;font-size:15px;line-height:1.7;margin:0;">{body_html}</p>'
+
+        params = {
+            "from": f"{bn} <{app_settings.sender_email}>",
+            "to": to_emails,
+            "subject": subject,
+            "html": _email_wrapper(bn, inner),
+        }
+        if cc_emails:
+            params["cc"] = cc_emails
+
+        # Add file attachments
+        if attachments_data:
+            import base64
+            params["attachments"] = []
+            for att in attachments_data:
+                params["attachments"].append({
+                    "filename": att["filename"],
+                    "content": base64.b64encode(att["content"]).decode("utf-8"),
+                    "content_type": att["content_type"],
+                })
+
+        result = resend_lib.Emails.send(params)
+        msg_id = result.get("id", "") if isinstance(result, dict) else str(result)
+        send_status = "sent"
+        logger.info(f"[EMAIL] Package {pack_id} sent to {to_emails}")
+
+    except Exception as e:
+        logger.error(f"[EMAIL ERROR] Package {pack_id}: {e}")
+        msg_id = ""
+        send_status = "failed"
+
+    # Log the send
+    now = datetime.now(timezone.utc).isoformat()
+    send_log = {
+        "send_id": f"send_{uuid.uuid4().hex[:12]}",
+        "user_id": user_id,
+        "package_id": pack_id,
+        "email_to": to_emails,
+        "email_cc": cc_emails,
+        "subject": subject,
+        "document_ids": doc_ids,
+        "attachment_count": len(attachments_data),
+        "status": send_status,
+        "provider": "resend",
+        "provider_message_id": msg_id,
+        "sent_at": now,
+    }
+    await db.pacchetti_invii.insert_one(send_log)
+    send_log.pop("_id", None)
+
+    # Update package status
+    new_status = "inviato" if send_status == "sent" else pack.get("status", "draft")
+    await db.pacchetti_documentali.update_one(
+        {"pack_id": pack_id, "user_id": user_id},
+        {"$set": {"status": new_status, "updated_at": now}}
+    )
+
+    return {
+        "success": send_status == "sent",
+        "send_log": send_log,
+        "pack_status": new_status,
+    }
+
+
+async def get_invii(pack_id: str, user_id: str) -> list:
+    """Get send history for a package."""
+    return await db.pacchetti_invii.find(
+        {"package_id": pack_id, "user_id": user_id}, {"_id": 0}
+    ).sort("sent_at", -1).to_list(50)
