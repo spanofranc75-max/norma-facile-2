@@ -98,6 +98,39 @@ Carpenterie metalliche italiane, certificazione EN 1090, contratti PNRR.
 - Riferimenti normativi (DM 23/06/2022, Art. 57 D.Lgs. 36/2023)
 - Bottone "Report CAM Mensile (PDF)" nella Dashboard Executive
 
+### Motore di Istruttoria Automatica da Preventivo — Fase 1 (Completato 22/03/2026)
+**Il cambio di paradigma: da generatore documentale a copilota tecnico-normativo.**
+
+- **Livello 1A — Estrazione Tecnica** (GPT-4o):
+  - Estrae: elementi strutturali, materiali, profili, spessori, saldature, trattamenti, montaggio, destinazione uso
+  - Ogni dato ha stato: dedotto/confermato/mancante/incerto + fonte nel testo + confidenza
+  - Rileva ambiguita e parole chiave di rischio
+
+- **Livello 1B — Classificazione Normativa** (GPT-4o + Rules):
+  - Classifica: EN 1090 / EN 13241 / Generica / Mista con motivazione
+  - Propone EXC (1-4) con motivazione
+  - Lista fasi produttive attese
+  - Documenti e controlli richiesti
+  - Prerequisiti saldatura (WPS/WPQR/qualifiche) e tracciabilita (cert 3.1/DDT)
+  - 3-7 domande residue ad alto impatto (linguaggio da officina)
+
+- **Motore Regole Deterministiche**:
+  - Valida/arricchisce la proposta AI
+  - Aggiunge cert 3.1 se EN 1090 e AI li ha omessi
+  - Aggiunge CND se EXC3+
+  - Aggiunge documenti subfornitore se zincatura esterna
+  - Genera warnings per incoerenze
+
+- **Frontend IstruttoriaPage**: Pagina dedicata con:
+  - Card classificazione + EXC + stato conoscenza (%)
+  - Elementi estratti con badge stato (dedotto/confermato/mancante/incerto)
+  - Saldature + trattamenti + lavorazioni
+  - Documenti e controlli richiesti
+  - Domande residue con impatto e motivazione
+  - Bottone "Istruttoria" nel PreventivoEditorPage
+
+- **Validato su casi reali**: EN 1090 (struttura S355) e EN 13241 (cancello carraio)
+
 ## Backlog Prioritizzato
 
 ### P1
