@@ -1,0 +1,96 @@
+{
+  "summary": "Iteration 220 — Testing P0.1 UI Redesign of IstruttoriaPage. All 16 tests passed (100%). Backend: 2/2 API tests passed. Frontend: 14/14 UI tests passed. New features verified: Card 'Esito Istruttoria' with normativa/profilo/confidenza/motivazione, Progress bar (3/3 conferme), Quick response buttons with toggle behavior, 'Proposta AI' badge, 'Completate' badge, Collapsible tech details section, Punti incerti box, CTA bar with green 'Conferma Istruttoria' button.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_220.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100% (2/2 API tests passed)",
+    "frontend": "100% (14/14 UI tests passed)"
+  },
+  "seed_data_creation": "Used existing test data: istr_701cc0cc1ddc with 3 domande_residue, all 3 answered",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 220 P0.1 redesign fully tested. Key features: 1) Card 'Esito Istruttoria' (data-testid='card-esito-istruttoria') shows normativa, profilo, confidenza, motivazione AI. 2) Progress section (data-testid='progress-section') shows N/M conferme date. 3) Quick buttons (data-testid='quick-btn-{i}-{option}') fill textarea on click, clear on second click (toggle). 4) 'Proposta AI' badge visible when not confirmed. 5) 'Completate' badge when all questions answered. 6) CTA bar (data-testid='card-conferma') shows green 'Conferma Istruttoria' when all answered, grey 'Conferma Comunque' otherwise. 7) Collapsible tech details (data-testid='toggle-tech-details'). 8) Punti incerti box visible when ambiguities exist.",
+  "features_tested": {
+    "card_esito_istruttoria": {
+      "status": "PASSED",
+      "elements_verified": ["normativa badge (EN 1090)", "profilo valore (N/D)", "confidenza (alta)", "motivazione AI text"]
+    },
+    "progress_section": {
+      "status": "PASSED",
+      "elements_verified": ["3/3 conferme date", "green progress bar at 100%", "text 'Tutte le conferme date'"]
+    },
+    "quick_response_buttons": {
+      "status": "PASSED",
+      "elements_verified": ["12 quick buttons total", "domain-specific options per question", "toggle behavior (click fills, click again clears)", "selected button turns blue"]
+    },
+    "badges": {
+      "status": "PASSED",
+      "elements_verified": ["'Proposta AI' badge visible", "'Completate' badge when all answered"]
+    },
+    "cta_bar": {
+      "status": "PASSED",
+      "elements_verified": ["green border when all answered", "'Pronta per la conferma' text", "green 'Conferma Istruttoria' button"]
+    },
+    "collapsible_tech_details": {
+      "status": "PASSED",
+      "elements_verified": ["collapsed by default (ChevronDown)", "expands on click (ChevronUp)", "collapses again on second click"]
+    },
+    "punti_incerti": {
+      "status": "PASSED",
+      "elements_verified": ["'Punti incerti da verificare' section visible", "ambiguity details shown"]
+    },
+    "save_button": {
+      "status": "PASSED",
+      "elements_verified": ["'Salva Risposte' button visible", "enabled when answers present", "success toast on save"]
+    },
+    "backend_api_get_istruttoria": {
+      "status": "PASSED",
+      "endpoint": "GET /api/istruttoria/{id}",
+      "response": "istruttoria_id, n_risposte, confermata fields returned"
+    },
+    "backend_api_rispondi": {
+      "status": "PASSED",
+      "endpoint": "POST /api/istruttoria/{id}/rispondi",
+      "response": "message: 'Risposte salvate: 3/3'"
+    }
+  },
+  "test_credentials": {
+    "session_token": "c87bbcfe2ef64f5c9e48c4cf73f7b2ff",
+    "test_istruttoria_id": "istr_701cc0cc1ddc",
+    "test_preventivo_id": "prev_625826c752ac"
+  },
+  "data_testid_elements_verified": [
+    "istruttoria-page",
+    "card-esito-istruttoria",
+    "badge-normativa",
+    "profilo-valore",
+    "motivazione-ai",
+    "progress-section",
+    "card-domande-residue",
+    "domanda-0",
+    "domanda-1",
+    "domanda-2",
+    "risposta-input-0",
+    "risposta-input-1",
+    "risposta-input-2",
+    "btn-salva-risposte",
+    "toggle-tech-details",
+    "card-conferma",
+    "btn-conferma-istruttoria",
+    "btn-indietro",
+    "btn-riesegui-istruttoria"
+  ]
+}
