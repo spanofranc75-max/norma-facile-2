@@ -34,6 +34,7 @@ import ControlloFinaleSection from '../components/ControlloFinaleSection';
 import ReportIspezioniSection from '../components/ReportIspezioniSection';
 import RamiNormativiSection from '../components/RamiNormativiSection';
 import ObbrighiCommessaSection from '../components/ObbrighiCommessaSection';
+import VerificaCommittenzaSection from '../components/VerificaCommittenzaSection';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
@@ -530,6 +531,16 @@ export default function CommessaHubPage() {
 
                 {/* ══ REGISTRO OBBLIGHI COMMESSA ══ */}
                 <ObbrighiCommessaSection commessaId={commessaId} />
+
+                {/* ══ VERIFICA COMMITTENZA ══ */}
+                <Card className="border-gray-200">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Verifica Committenza</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <VerificaCommittenzaSection commessaId={commessaId} />
+                    </CardContent>
+                </Card>
 
                 {/* Banner Normativa + Checklist documentale */}
                 {c.normativa_tipo && NORMATIVA_CONFIG[c.normativa_tipo] && (() => {

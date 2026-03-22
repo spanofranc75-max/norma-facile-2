@@ -93,6 +93,7 @@ from routes.commesse_normative import router as commesse_normative_router
 from routes.cantieri_sicurezza import router as cantieri_sicurezza_router
 from routes.pacchetti_documentali import router as pacchetti_documentali_router
 from routes.obblighi_commessa import router as obblighi_commessa_router
+from routes.committenza import router as committenza_router
 
 # Configure logging
 logging.basicConfig(
@@ -230,6 +231,7 @@ app.include_router(commesse_normative_router, prefix="/api")
 app.include_router(cantieri_sicurezza_router, prefix="/api")
 app.include_router(pacchetti_documentali_router, prefix="/api")
 app.include_router(obblighi_commessa_router, prefix="/api")
+app.include_router(committenza_router, prefix="/api")
 
 
 @app.on_event("startup")
@@ -293,6 +295,19 @@ async def startup_event():
         await db.obblighi_commessa.create_index(
             [("user_id", 1), ("blocking_level_sort", 1), ("severity_sort", 1)],
             name="idx_obblighi_priority"
+        )
+        # Indici Verifica Committenza (C1)
+        await db.pacchetti_committenza.create_index(
+            [("package_id", 1), ("user_id", 1)], unique=True, name="uq_pkg_committenza"
+        )
+        await db.pacchetti_committenza.create_index(
+            [("commessa_id", 1), ("user_id", 1)], name="idx_pkg_commessa"
+        )
+        await db.analisi_committenza.create_index(
+            [("analysis_id", 1), ("user_id", 1)], unique=True, name="uq_analisi_committenza"
+        )
+        await db.analisi_committenza.create_index(
+            [("commessa_id", 1), ("user_id", 1)], name="idx_analisi_commessa"
         )
     except Exception as e:
         logger.warning(f"Index creation (may already exist): {e}")
