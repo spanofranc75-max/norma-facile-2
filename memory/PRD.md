@@ -1,66 +1,73 @@
 # NormaFacile 2.0 — PRD
 
 ## Problema Originale
-ERP per aziende di carpenteria metallica che gestisce commesse, compliance EN 1090/13241, generazione documenti (DoP, POS), fatturazione, pianificazione, tracciabilita materiali e sicurezza cantieri.
+ERP per aziende di carpenteria metallica: commesse, compliance EN 1090/13241, generazione documenti, fatturazione, pianificazione, tracciabilita materiali e sicurezza cantieri.
 
 ## Architettura
 - **Frontend**: React + shadcn/ui + TailwindCSS (porta 3000)
 - **Backend**: FastAPI + MongoDB (porta 8001)
-- **AI**: OpenAI GPT-4o via emergentintegrations (Emergent LLM Key)
-- **PDF**: WeasyPrint per generazione server-side
-- **Email**: Resend per notifiche
+- **AI**: OpenAI GPT-4o via emergentintegrations
+- **PDF**: WeasyPrint | **Email**: Resend
 
-## Modello Dati Gerarchico (Fase A — COMPLETATO)
+## Modello Gerarchico (Fase A — COMPLETATO)
 `Commessa Madre -> Ramo Normativo -> Emissione Documentale`
-- Collezioni: `commesse_normative`, `emissioni_documentali`
-- Legacy adapter per commesse vecchie
 
 ## Evidence Gate Avanzato (Fase B — COMPLETATO)
-- Engine rule-based in `evidence_gate_engine.py`
-- Logica condizionale EN 1090 / EN 13241
-- Blocco generazione documenti se gate non superato
+Engine rule-based in `evidence_gate_engine.py`
 
-## Collegamento Segmentazione → Rami (Fase S0 — COMPLETATO)
-- Auto-creazione rami normativi dopo conferma istruttoria
-- Idempotenza garantita
+## Collegamento Segmentazione-Rami (S0 — COMPLETATO)
+Auto-creazione rami normativi dopo conferma istruttoria
 
-## Safety Branch MVP (Fase S1 + S2 — COMPLETATO 2026-03-22)
-### S1: Analisi Template POS
-- Analizzato template `POS STEEL PROJECT.doc` (459 KB, 1760 righe, 31 sezioni)
-- Prodotto `SPEC_POS_TEMPLATE_MAPPING.md` con mapping completo
+## Safety Branch MVP (S1 + S2 — COMPLETATO 2026-03-22)
+- S1: Analizzato template POS (459 KB, 31 sezioni) → `SPEC_POS_TEMPLATE_MAPPING.md`
+- S2: Backend + Frontend con 4-step wizard
 
-### S2: Implementazione
-- **Backend**: Collezioni `cantieri_sicurezza` e `libreria_rischi` con CRUD completo
-- **Seed**: 20 entries iniziali (10 fasi lavoro + 10 DPI) per carpenteria metallica
-- **Gate POS**: Engine di verifica completezza con campi obbligatori/opzionali
-- **Frontend**: Pagina lista `/sicurezza` + form multi-step `/scheda-cantiere/{id}`
-- **4 Steps**: Dati Cantiere, Fasi Lavoro, Macchine & DPI, Riepilogo & Gate
-- **Testing**: 24/24 backend, 100% frontend
+## Libreria Rischi 3 Livelli (Step 0 + Step 1 — COMPLETATO 2026-03-23)
+Refactor completo da modello flat a 3 collezioni separate:
+
+### Livello 1: `lib_fasi_lavoro` (11 fasi)
+- Codice, nome, descrizione, categoria, trigger.keywords, rischi_ids[]
+- Ogni fase attiva N rischi tramite codici
+
+### Livello 2: `lib_rischi_sicurezza` (20 rischi)
+- Codice, nome, categoria, sottocategoria, gate_critical
+- trigger.keywords + condizioni_esclusione
+- valutazione_default (P, D, Classe)
+- dpi_ids[], misure_ids[], apprestamenti_ids[] (separati)
+- documenti_richiesti[], domande_verifica[] con impatto e gate_critical
+
+### Livello 3: `lib_dpi_misure` (31 entries)
+- 12 DPI, 11 Misure organizzative, 8 Apprestamenti
+- Tipo, sottotipo, norma UNI EN, obbligatorieta
+- Campi governance: active, version, source, sort_order
+
+### Catena automatica
+Fase → rischi_ids → dpi_ids + misure_ids + apprestamenti_ids + domande_verifica
+- Deduplicazione automatica
+- Confidenza: dedotto | confermato | incerto | mancante
+- Gate POS con blockers per domande gate_critical aperte
+
+### Testing: 29/29 backend, 100% frontend
 
 ## File Chiave
-- `/app/backend/services/cantieri_sicurezza_service.py` — Service Safety Branch
-- `/app/backend/routes/cantieri_sicurezza.py` — API endpoints
+- `/app/backend/services/cantieri_sicurezza_service.py` — Service 3 livelli
+- `/app/backend/routes/cantieri_sicurezza.py` — API (libreria + cantieri + gate)
+- `/app/frontend/src/pages/SchedaCantierePage.js` — Form 4-step con catena
 - `/app/frontend/src/pages/SicurezzaPage.js` — Lista cantieri
-- `/app/frontend/src/pages/SchedaCantierePage.js` — Form multi-step
+- `/app/SPEC_LIBRERIA_RISCHI_3_LIVELLI.md` — Spec definitiva v2
 - `/app/SPEC_POS_TEMPLATE_MAPPING.md` — Mapping template POS
 
 ## Backlog Prioritizzato
 
 ### P0 (Prossimi)
-- Motore AI Sicurezza: analisi dati progetto → proposta rischi/fasi automatica
-- Generazione DOCX: merge template POS + dati dinamici → bozza POS editabile
+- **S3: Motore AI Sicurezza** — precompilazione da commessa (fasi, rischi, DPI, domande residue)
+- **S4: Generazione DOCX** — merge template POS + dati strutturati
 
 ### P1
-- Dashboard Cantiere Multilivello (Madre → Ramo → Emissione)
+- Dashboard Cantiere Multilivello
 - Modulo Verifica Committenza / Contratti
 - Stability Guard deterministico
 
-### P2
-- Multi-Tenant Architecture
-- Automatic ML model training
-- Intelligent cost overrun alerts
-
-### P3
-- Unificazione servizi PDF legacy
-- Portale clienti read-only
-- Fix warning minori (exhaustive-deps, hydration)
+### P2-P3
+- Multi-Tenant, ML Training, Alert costi
+- Unificazione PDF, Portale Clienti, Fix warning minori
