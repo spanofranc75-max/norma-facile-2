@@ -143,6 +143,17 @@ Carpenterie metalliche italiane, certificazione EN 1090, contratti PNRR.
   - Dettaglio tecnico collapsible (chiuso di default)
   - Punti incerti consolidati in unico box
 
+- **P0.15 — Dipendenze dinamiche minime** (Completato 22/03/2026):
+  - Motore applicabilita backend (applicabilita_engine.py) con 4 rami: saldatura, zincatura, montaggio, commessa mista
+  - Reason codes strutturati: NO_WELDING, NO_GALVANIZING, EXTERNAL_GALVANIZING, NO_INSTALLATION, MIXED_ORDER_REQUIRES_SEGMENTATION
+  - Backend come fonte di verita: applicabilita calcolata e persistita dopo ogni salvataggio risposte
+  - Frontend mirror real-time: calcolaApplicabilitaLocale aggiorna UI al cambio risposta prima del salvataggio
+  - Riepilogo decisioni nell'Esito card (pills colorate per ogni categoria)
+  - Items non applicabili grayed out con reason code e motivo
+  - Items condizionali (es: documenti subfornitore per zincatura esterna)
+  - Blocco conferma per commessa mista (HTTP 409 + CTA "Richiede segmentazione")
+  - Prerequisiti saldatura visualmente disattivati quando saldatura=No
+
 ## Backlog Prioritizzato
 
 ### P1
