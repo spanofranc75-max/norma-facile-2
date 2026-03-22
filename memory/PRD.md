@@ -108,28 +108,23 @@ Carpenterie metalliche italiane, certificazione EN 1090, contratti PNRR.
 
 - **Livello 1B — Classificazione Normativa** (GPT-4o + Rules):
   - Classifica: EN 1090 / EN 13241 / Generica / Mista con motivazione
-  - Propone EXC (1-4) con motivazione
-  - Lista fasi produttive attese
-  - Documenti e controlli richiesti
-  - Prerequisiti saldatura (WPS/WPQR/qualifiche) e tracciabilita (cert 3.1/DDT)
-  - 3-7 domande residue ad alto impatto (linguaggio da officina)
+  - **Profilo tecnico specifico per normativa** (corretto: EXC solo per EN 1090):
+    - EN 1090: tipo=exc, valore=EXC1-4
+    - EN 13241: tipo=categorie_prestazione (resistenza vento, permeabilita aria, etc.)
+    - Generica: tipo=complessita (bassa/media/alta)
+  - Rule engine deterministico auto-corregge se AI assegna EXC a EN 13241
 
-- **Motore Regole Deterministiche**:
-  - Valida/arricchisce la proposta AI
-  - Aggiunge cert 3.1 se EN 1090 e AI li ha omessi
-  - Aggiunge CND se EXC3+
-  - Aggiunge documenti subfornitore se zincatura esterna
-  - Genera warnings per incoerenze
+- **Override Umano Tracciato**:
+  - Endpoint POST /api/istruttoria/{id}/revisione
+  - Salva: valore_ai, valore_umano, corretto_da, corretto_il, motivazione_correzione
+  - Checkpoint conferma obbligatorio (POST /api/istruttoria/{id}/conferma) prima di Fase 2
 
-- **Frontend IstruttoriaPage**: Pagina dedicata con:
-  - Card classificazione + EXC + stato conoscenza (%)
-  - Elementi estratti con badge stato (dedotto/confermato/mancante/incerto)
-  - Saldature + trattamenti + lavorazioni
-  - Documenti e controlli richiesti
-  - Domande residue con impatto e motivazione
-  - Bottone "Istruttoria" nel PreventivoEditorPage
-
-- **Validato su casi reali**: EN 1090 (struttura S355) e EN 13241 (cancello carraio)
+- **Frontend IstruttoriaPage** con:
+  - Card classificazione + profilo tecnico + stato conoscenza
+  - Elementi estratti con badge stato
+  - Domande residue con impatto
+  - Sezione revisioni umane (valore AI barrato → valore umano verde)
+  - Barra conferma con checkpoint pre-Fase 2
 
 ## Backlog Prioritizzato
 
