@@ -645,6 +645,17 @@ export default function PreventivoEditorPage() {
                             </Button>
                         )}
 
+                        {/* Istruttoria AI */}
+                        {!isNew && (
+                            <Button
+                                data-testid="btn-istruttoria-ai"
+                                onClick={() => navigate(`/istruttoria/${prevId}`)}
+                                className="bg-blue-700 text-white hover:bg-blue-800 h-9 text-xs shadow-sm"
+                            >
+                                <Brain className="h-3.5 w-3.5 mr-1.5" /> Istruttoria
+                            </Button>
+                        )}
+
                         {/* Compliance */}
                         <DisabledTooltip show={isNew} reason="Salva il preventivo prima di verificare la compliance">
                         <Button data-testid="btn-check-compliance" variant="outline" onClick={handleCheckCompliance} disabled={checking || isNew} className="border-slate-300 text-slate-600 hover:bg-slate-50 h-9 text-xs">

@@ -68,6 +68,7 @@ import ScadenziarioManutenzioniPage from './pages/ScadenziarioManutenzioniPage';
 import VerbaliITTPage from './pages/VerbaliITTPage';
 import ExecutiveDashboardPage from './pages/ExecutiveDashboardPage';
 import ArchivioStoricoPage from './pages/ArchivioStoricoPage';
+import IstruttoriaPage from './pages/IstruttoriaPage';
 import PreventivatoreWizard from './pages/PreventivatoreWizard';
 import ManualePage from './pages/ManualePage';
 import KPIDashboard from './pages/KPIDashboard';
@@ -278,6 +279,7 @@ function AppRouter() {
             <Route path="/verbali-itt" element={<ProtectedRoute><VerbaliITTPage /></ProtectedRoute>} />
             <Route path="/executive" element={<ProtectedRoute><ExecutiveDashboardPage /></ProtectedRoute>} />
             <Route path="/archivio-storico" element={<ProtectedRoute><ArchivioStoricoPage /></ProtectedRoute>} />
+            <Route path="/istruttoria/:preventivoId" element={<ProtectedRoute><IstruttoriaPage /></ProtectedRoute>} />
             <Route path="/preventivatore" element={<ProtectedRoute><PreventivatoreWizard /></ProtectedRoute>} />
             <Route path="/manuale" element={<ProtectedRoute><ManualePage /></ProtectedRoute>} />
             <Route path="/kpi" element={<ProtectedRoute><KPIDashboard /></ProtectedRoute>} />

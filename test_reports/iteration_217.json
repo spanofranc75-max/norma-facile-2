@@ -1,0 +1,134 @@
+{
+  "summary": "Iteration 217 — Istruttoria AI (Motore di Istruttoria Automatica da Preventivo) Testing. Backend: 18/18 tests passed (100%). Frontend: All features verified — IstruttoriaPage renders classification, extracted data, questions, knowledge state correctly. PreventivoEditorPage has 'Istruttoria' button (data-testid='btn-istruttoria-ai') that navigates to /istruttoria/{preventivoId}.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "IstruttoriaPage",
+        "issues": ["Minor hydration warning: <div> inside <p> in Badge component inside controlli_richiesti section - does not affect functionality"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration217_istruttoria_ai.py",
+    "/app/test_reports/pytest/iteration217_istruttoria_ai_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration217_istruttoria_ai.py"
+  ],
+  "success_rate": {
+    "backend": "100% (18/18 passed)",
+    "frontend": "100% (all features working)"
+  },
+  "seed_data_creation": "Used existing test data: prev_625826c752ac (EN 1090 S355 structure), prev_62e2e4b9c088 (EN 13241 Cancello carraio) - both already have istruttorie saved in DB",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 217 Istruttoria AI features fully tested. 1) GET /api/istruttoria lists all istruttorie with summary fields. 2) GET /api/istruttoria/preventivo/{preventivo_id} returns full istruttoria with classificazione, exc_proposta, estrazione_tecnica, domande_residue, stato_conoscenza, documenti_richiesti, controlli_richiesti, prerequisiti_saldatura, prerequisiti_tracciabilita, warnings_regole, enrichments_regole. 3) GET /api/istruttoria/{istruttoria_id} returns istruttoria by ID. 4) POST /api/istruttoria/analizza-preventivo/{preventivo_id} runs full AI analysis (GPT-4o, takes 15-30s) - existing istruttorie in DB prove this works. 5) Frontend IstruttoriaPage (data-testid='istruttoria-page') renders all sections correctly. 6) PreventivoEditorPage has 'Istruttoria' button (data-testid='btn-istruttoria-ai') that navigates to /istruttoria/{preventivoId}.",
+  "features_tested": {
+    "feature_1_list_istruttorie": {
+      "description": "GET /api/istruttoria - list all istruttorie for user",
+      "backend_endpoints": [
+        {
+          "endpoint": "GET /api/istruttoria",
+          "status": "PASS",
+          "response_fields": ["istruttorie", "total"],
+          "istruttoria_summary_fields": ["istruttoria_id", "preventivo_id", "preventivo_number", "classificazione", "exc_proposta", "stato_conoscenza", "stato", "versione", "created_at", "updated_at"]
+        }
+      ]
+    },
+    "feature_2_get_istruttoria_by_preventivo": {
+      "description": "GET /api/istruttoria/preventivo/{preventivo_id} - get saved istruttoria",
+      "backend_endpoints": [
+        {
+          "endpoint": "GET /api/istruttoria/preventivo/prev_625826c752ac",
+          "status": "PASS",
+          "classificazione": {"normativa_proposta": "EN_1090", "confidenza": "alta"}
+        },
+        {
+          "endpoint": "GET /api/istruttoria/preventivo/prev_62e2e4b9c088",
+          "status": "PASS",
+          "classificazione": {"normativa_proposta": "EN_13241", "confidenza": "alta"}
+        },
+        {
+          "endpoint": "GET /api/istruttoria/preventivo/prev_nonexistent",
+          "status": "PASS (404 as expected)"
+        }
+      ]
+    },
+    "feature_3_classificazione_structure": {
+      "description": "Analysis result includes classificazione with normativa_proposta, confidenza, motivazione",
+      "verified_fields": ["normativa_proposta (EN_1090|EN_13241|GENERICA|MISTA)", "confidenza (alta|media|bassa)", "motivazione (string)"],
+      "status": "PASS"
+    },
+    "feature_4_exc_proposta_structure": {
+      "description": "Analysis result includes exc_proposta with classe and motivazione",
+      "verified_fields": ["classe (EXC1|EXC2|EXC3|EXC4|non_determinabile)", "motivazione (string)"],
+      "status": "PASS"
+    },
+    "feature_5_estrazione_tecnica_structure": {
+      "description": "Analysis result includes estrazione_tecnica with elementi_strutturali, each having stato",
+      "verified_sections": ["elementi_strutturali", "lavorazioni_rilevate", "saldature", "trattamenti_superficiali", "montaggio_posa", "destinazione_uso", "ambiguita_rilevate", "parole_chiave_rischio", "note_tecnico"],
+      "stato_values": ["dedotto", "confermato", "mancante", "incerto"],
+      "status": "PASS"
+    },
+    "feature_6_domande_residue_structure": {
+      "description": "Analysis result includes domande_residue (3-7 questions with impatto and perche_serve)",
+      "verified_fields": ["domanda (string)", "impatto (alto|medio|basso)", "perche_serve (string)"],
+      "status": "PASS"
+    },
+    "feature_7_stato_conoscenza_structure": {
+      "description": "Analysis result includes stato_conoscenza with completezza_pct and counts per stato",
+      "verified_fields": ["confermato (int)", "dedotto (int)", "mancante (int)", "incerto (int)", "completezza_pct (0-100)"],
+      "status": "PASS"
+    },
+    "feature_8_deterministic_rules": {
+      "description": "Deterministic rules engine adds warnings when AI misses required items",
+      "verified": [
+        "enrichments_regole for zincatura esterna subfornitore (DDT + certificato)",
+        "prerequisiti_tracciabilita.certificati_31_richiesti = true for EN 1090"
+      ],
+      "status": "PASS"
+    },
+    "feature_9_frontend_istruttoria_page": {
+      "description": "Frontend IstruttoriaPage renders classification, extracted data, questions, and knowledge state",
+      "data_testids_verified": ["istruttoria-page", "card-classificazione", "card-exc", "card-stato-conoscenza", "card-domande-residue", "btn-riesegui-istruttoria"],
+      "status": "PASS"
+    },
+    "feature_10_frontend_preventivo_button": {
+      "description": "Frontend PreventivoEditorPage has 'Istruttoria' button (data-testid='btn-istruttoria-ai')",
+      "button_text": "Istruttoria",
+      "navigation": "/istruttoria/{preventivoId}",
+      "status": "PASS"
+    }
+  },
+  "data_verified": {
+    "test_preventivo_en1090": {
+      "preventivo_id": "prev_625826c752ac",
+      "preventivo_number": "PRV-2026-0003",
+      "classificazione": "EN_1090",
+      "exc_proposta": "EXC2",
+      "completezza_pct": 50.0,
+      "domande_residue_count": 3
+    },
+    "test_preventivo_en13241": {
+      "preventivo_id": "prev_62e2e4b9c088",
+      "preventivo_number": "PRV-2026-0030",
+      "classificazione": "EN_13241",
+      "exc_proposta": "EXC1",
+      "completezza_pct": 100.0,
+      "domande_residue_count": 4,
+      "enrichments": ["Zincatura a caldo esterna: richiedere DDT + certificato trattamento dal subfornitore"]
+    }
+  },
+  "test_credentials": {
+    "session_token": "fresh_4f69b847846148459e91",
+    "user_id": "user_97c773827822"
+  }
+}

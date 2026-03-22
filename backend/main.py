@@ -87,6 +87,7 @@ from routes.template_111 import router as template_111_router
 from routes.report_ispezioni import router as report_ispezioni_router
 from routes.scadenziario_manutenzioni import router as scad_manut_router
 from routes.verbali_itt import router as verbali_itt_router
+from routes.istruttoria import router as istruttoria_router
 
 # Configure logging
 logging.basicConfig(
@@ -218,6 +219,7 @@ app.include_router(template_111_router, prefix="/api")
 app.include_router(report_ispezioni_router, prefix="/api")
 app.include_router(scad_manut_router, prefix="/api")
 app.include_router(verbali_itt_router, prefix="/api")
+app.include_router(istruttoria_router, prefix="/api")
 
 
 @app.on_event("startup")
