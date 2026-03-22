@@ -94,9 +94,16 @@ company_settings.figure_aziendali -> cantiere.soggetti (status: "precompilato")
 - **S3: Motore AI Sicurezza** — precompilazione da commessa (fasi, rischi, DPI, domande residue)
 - **S4: Generazione DOCX** — merge template POS + dati strutturati
 
-### P1
+### P1 (Subito dopo S3/S4)
+- **D1-D5: Pacchetti Documentali Intelligenti** — Cabina di regia documenti da mandare al cliente. Spec completa in `/app/SPEC_PACCHETTI_DOCUMENTALI.md`
+  - D1: Libreria tipi documento + archivio documenti centralizzato (azienda, persona, mezzo, cantiere)
+  - D2: Template pacchetti (ingresso cantiere, qualifica fornitore, personale, mezzi, sicurezza)
+  - D3: Matching automatico + verifica presenza/scadenza (valido, mancante, scaduto, in_scadenza)
+  - D4: UI pacchetto documentale (checklist 3 colonne: richiesto/trovato/problemi)
+  - D5: Invio email one-click + log invii (via Resend)
+  - D6: Profili documentali per committente ricorrente
+- Modulo Verifica Committenza / Contratti (si integra con Pacchetti Documentali)
 - Dashboard Cantiere Multilivello
-- Modulo Verifica Committenza / Contratti
 - Stability Guard deterministico
 
 ### P2-P3
