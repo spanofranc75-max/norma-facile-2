@@ -133,6 +133,16 @@ Carpenterie metalliche italiane, certificazione EN 1090, contratti PNRR.
   - Badge "Risposto" verde + autore/data per risposte esistenti
   - Contatore risposte/domande totali nell'header sezione
 
+- **Redesign P0.1 — Da analisi a cockpit operativo** (Completato 22/03/2026):
+  - Card "Esito Istruttoria" dominante con normativa, profilo, confidenza, motivazione AI
+  - Progress bar: N/M conferme date con feedback visivo
+  - Domande residue con bottoni rapidi contestuali (risposte suggerite per dominio: montaggio, zincatura, tolleranze, saldatura, materiali)
+  - Toggle behavior sui bottoni + textarea per risposta personalizzata
+  - Badge "Proposta AI" / "Confermata" per distinzione visiva
+  - CTA contestuale: verde "Conferma Istruttoria" quando tutto risposto, grigio "Conferma Comunque" altrimenti
+  - Dettaglio tecnico collapsible (chiuso di default)
+  - Punti incerti consolidati in unico box
+
 ## Backlog Prioritizzato
 
 ### P1
