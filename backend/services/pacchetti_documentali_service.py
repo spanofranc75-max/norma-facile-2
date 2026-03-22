@@ -666,12 +666,12 @@ async def invia_email_pacchetto(pack_id: str, user_id: str, send_data: dict) -> 
                 # Download from object storage
                 try:
                     from services.object_storage import get_object
-                    file_data = get_object(doc["file_id"])
-                    if file_data:
+                    file_bytes, file_ct = get_object(doc["file_id"])
+                    if file_bytes:
                         attachments_data.append({
                             "filename": doc.get("file_name", f"{doc['doc_id']}.pdf"),
-                            "content": file_data,
-                            "content_type": doc.get("mime_type", "application/octet-stream"),
+                            "content": file_bytes,
+                            "content_type": file_ct or doc.get("mime_type", "application/octet-stream"),
                         })
                         doc_ids.append(doc["doc_id"])
                 except Exception as e:

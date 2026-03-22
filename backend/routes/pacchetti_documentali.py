@@ -1,9 +1,11 @@
 """
-Pacchetti Documentali — API Routes (D1 + D2 + D3)
-===================================================
+Pacchetti Documentali — API Routes (D1 + D2 + D3 + D4 + D5)
+=============================================================
 D1: /api/documenti/* — Archivio documenti
 D2: /api/pacchetti-documentali/* — Template e pacchetti
 D3: /api/pacchetti-documentali/{id}/verifica — Motore verifica
+D4: /api/pacchetti-documentali/{id}/prepara-invio — Preview email
+D5: /api/pacchetti-documentali/{id}/invia — Invio + log
 """
 
 import logging
@@ -14,6 +16,7 @@ from core.security import get_current_user
 from services.pacchetti_documentali_service import (
     get_tipi_documento, upload_documento, list_documenti, get_documento, update_documento,
     get_templates, crea_pacchetto, get_pacchetto, list_pacchetti, verifica_pacchetto,
+    prepara_invio, invia_email_pacchetto, get_invii,
 )
 
 router = APIRouter()
@@ -145,3 +148,54 @@ async def api_verifica_pacchetto(pack_id: str, user: dict = Depends(get_current_
     if result.get("error"):
         raise HTTPException(status_code=404, detail=result["error"])
     return result
+
+
+@router.patch("/pacchetti-documentali/{pack_id}")
+async def api_update_pacchetto(pack_id: str, updates: dict, user: dict = Depends(get_current_user)):
+    """Update package fields (recipient, label, etc.)."""
+    from core.database import db
+    from datetime import datetime, timezone
+    pack = await get_pacchetto(pack_id, user["user_id"])
+    if not pack:
+        raise HTTPException(status_code=404, detail="Pacchetto non trovato")
+    allowed = {"label", "recipient", "commessa_id", "cantiere_id"}
+    filtered = {k: v for k, v in updates.items() if k in allowed and v is not None}
+    if not filtered:
+        return pack
+    filtered["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.pacchetti_documentali.update_one(
+        {"pack_id": pack_id, "user_id": user["user_id"]}, {"$set": filtered}
+    )
+    return await get_pacchetto(pack_id, user["user_id"])
+
+
+# ═══════════════════════════════════════════════════════════════
+#  D4 — PREPARA INVIO (preview email)
+# ═══════════════════════════════════════════════════════════════
+
+@router.post("/pacchetti-documentali/{pack_id}/prepara-invio")
+async def api_prepara_invio(pack_id: str, user: dict = Depends(get_current_user)):
+    """D4: Prepare send — generate email draft + attachment list + warnings."""
+    result = await prepara_invio(pack_id, user["user_id"])
+    if result.get("error"):
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+
+# ═══════════════════════════════════════════════════════════════
+#  D5 — INVIO EMAIL + LOG
+# ═══════════════════════════════════════════════════════════════
+
+@router.post("/pacchetti-documentali/{pack_id}/invia")
+async def api_invia_pacchetto(pack_id: str, send_data: dict, user: dict = Depends(get_current_user)):
+    """D5: Send package email via Resend and log the send."""
+    result = await invia_email_pacchetto(pack_id, user["user_id"], send_data)
+    if result.get("error"):
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+
+@router.get("/pacchetti-documentali/{pack_id}/invii")
+async def api_get_invii(pack_id: str, user: dict = Depends(get_current_user)):
+    """D5: Get send history for a package."""
+    return await get_invii(pack_id, user["user_id"])

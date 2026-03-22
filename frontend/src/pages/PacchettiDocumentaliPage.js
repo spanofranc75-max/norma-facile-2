@@ -1,19 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
+import { Textarea } from '../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Separator } from '../components/ui/separator';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { toast } from 'sonner';
 import { apiRequest } from '../lib/utils';
 import {
     FileInput, Upload, Package, CheckCircle2, AlertTriangle, XCircle,
-    Clock, Shield, Eye, Loader2, Plus, Search, Filter, RefreshCw,
-    FileText, ChevronRight,
+    Clock, Shield, Eye, Loader2, Plus, Search, RefreshCw,
+    Send, Mail, ArrowLeft, Paperclip, History, ChevronRight,
+    AlertCircle, ShieldAlert, FileText,
 } from 'lucide-react';
 
 const STATUS_CONFIG = {
@@ -25,6 +28,15 @@ const STATUS_CONFIG = {
     valido: { label: 'Valido', color: 'bg-emerald-100 text-emerald-800', icon: CheckCircle2 },
     scaduto: { label: 'Scaduto', color: 'bg-red-100 text-red-800', icon: AlertTriangle },
     non_verificato: { label: 'Non verificato', color: 'bg-gray-100 text-gray-600', icon: Eye },
+};
+
+const PACK_STATUS_CONFIG = {
+    draft: { label: 'Bozza', color: 'bg-gray-100 text-gray-600' },
+    in_preparazione: { label: 'In preparazione', color: 'bg-blue-100 text-blue-700' },
+    pronto_invio: { label: 'Pronto invio', color: 'bg-emerald-100 text-emerald-800' },
+    inviato: { label: 'Inviato', color: 'bg-violet-100 text-violet-800' },
+    incompleto: { label: 'Incompleto', color: 'bg-amber-100 text-amber-800' },
+    annullato: { label: 'Annullato', color: 'bg-red-100 text-red-700' },
 };
 
 const PRIVACY_BADGE = {
@@ -144,14 +156,17 @@ function DocumentList({ documenti, tipiMap }) {
     );
 }
 
-// ── Package Checklist ──
-function PackageChecklist({ pack, tipiMap, onVerifica }) {
-    if (!pack) return null;
+// ── Package Card (list view) ──
+function PackageCard({ pack, tipiMap, onVerifica, onOpen }) {
     const s = pack.summary || {};
-    const statusColor = pack.status === 'pronto_invio' ? 'border-emerald-300 bg-emerald-50/30' : pack.status === 'incompleto' ? 'border-amber-300 bg-amber-50/30' : 'border-gray-200';
+    const ps = PACK_STATUS_CONFIG[pack.status] || PACK_STATUS_CONFIG.draft;
+    const borderColor = pack.status === 'pronto_invio' ? 'border-emerald-300 bg-emerald-50/30'
+        : pack.status === 'inviato' ? 'border-violet-300 bg-violet-50/30'
+        : pack.status === 'incompleto' ? 'border-amber-300 bg-amber-50/30'
+        : 'border-gray-200';
 
     return (
-        <Card className={statusColor} data-testid={`pack-${pack.pack_id}`}>
+        <Card className={`${borderColor} cursor-pointer hover:shadow-md transition-shadow`} data-testid={`pack-${pack.pack_id}`} onClick={() => onOpen(pack.pack_id)}>
             <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                     <CardTitle className="text-base flex items-center gap-2">
@@ -159,10 +174,11 @@ function PackageChecklist({ pack, tipiMap, onVerifica }) {
                         {pack.label || pack.template_code}
                     </CardTitle>
                     <div className="flex items-center gap-2">
-                        <Badge className={pack.status === 'pronto_invio' ? 'bg-emerald-100 text-emerald-800' : pack.status === 'incompleto' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600'}>{pack.status}</Badge>
-                        <Button size="sm" variant="outline" onClick={() => onVerifica(pack.pack_id)} data-testid={`btn-verifica-${pack.pack_id}`}>
+                        <Badge className={ps.color}>{ps.label}</Badge>
+                        <Button size="sm" variant="outline" onClick={e => { e.stopPropagation(); onVerifica(pack.pack_id); }} data-testid={`btn-verifica-${pack.pack_id}`}>
                             <RefreshCw className="h-3 w-3 mr-1" /> Verifica
                         </Button>
+                        <ChevronRight className="h-4 w-4 text-slate-400" />
                     </div>
                 </div>
                 {s.total_required > 0 && (
@@ -175,30 +191,305 @@ function PackageChecklist({ pack, tipiMap, onVerifica }) {
                     </div>
                 )}
             </CardHeader>
-            <CardContent>
-                <div className="space-y-1">
-                    {(pack.items || []).map((item, i) => {
-                        const sc = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
-                        const Icon = sc.icon;
-                        const tipo = tipiMap[item.document_type_code];
-                        return (
-                            <div key={i} className={`flex items-center gap-2 p-2 rounded text-sm ${item.blocking ? 'bg-red-50' : ''}`}>
-                                <Icon className={`h-3.5 w-3.5 flex-shrink-0 ${item.status === 'attached' ? 'text-emerald-600' : item.status === 'missing' || item.status === 'expired' ? 'text-red-500' : 'text-amber-500'}`} />
-                                <span className="flex-1">{tipo?.label || item.document_type_code}
-                                    {item.entity_label ? <span className="text-slate-400 ml-1">({item.entity_label})</span> : ''}
-                                </span>
-                                <Badge className={`text-[10px] ${sc.color}`}>{sc.label}</Badge>
-                                {item.required && <Badge className="text-[10px] bg-blue-50 text-blue-700">obb.</Badge>}
-                                {item.blocking && <Badge className="text-[10px] bg-red-50 text-red-700">blocco</Badge>}
-                                {item.document_title && <span className="text-xs text-slate-400 truncate max-w-[150px]">{item.document_title}</span>}
-                            </div>
-                        );
-                    })}
-                </div>
-            </CardContent>
         </Card>
     );
 }
+
+// ── Package Detail View (D4+D5) ──
+function PackageDetailView({ packId, tipiMap, onBack }) {
+    const [pack, setPack] = useState(null);
+    const [preview, setPreview] = useState(null);
+    const [invii, setInvii] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [preparing, setPreparing] = useState(false);
+    const [sending, setSending] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
+
+    // Editable email fields
+    const [emailTo, setEmailTo] = useState('');
+    const [emailCc, setEmailCc] = useState('');
+    const [emailSubject, setEmailSubject] = useState('');
+    const [emailBody, setEmailBody] = useState('');
+
+    const loadDetail = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [p, hist] = await Promise.all([
+                apiRequest(`/pacchetti-documentali/${packId}`),
+                apiRequest(`/pacchetti-documentali/${packId}/invii`),
+            ]);
+            setPack(p);
+            setInvii(hist);
+            // Pre-fill recipient from pack
+            const r = p.recipient || {};
+            setEmailTo((r.to || []).join(', '));
+            setEmailCc((r.cc || []).join(', '));
+        } catch (err) { toast.error('Errore caricamento pacchetto'); }
+        finally { setLoading(false); }
+    }, [packId]);
+
+    useEffect(() => { loadDetail(); }, [loadDetail]);
+
+    const handlePrepare = async () => {
+        setPreparing(true);
+        try {
+            const result = await apiRequest(`/pacchetti-documentali/${packId}/prepara-invio`, { method: 'POST' });
+            setPreview(result);
+            setPack(prev => ({ ...prev, status: result.pack_status, summary: result.summary, items: result.items || prev?.items }));
+            setEmailSubject(result.email_draft?.subject || '');
+            setEmailBody(result.email_draft?.body || '');
+            // Update recipient if empty
+            if (!emailTo && result.recipient?.to?.length) {
+                setEmailTo(result.recipient.to.join(', '));
+            }
+            if (!emailCc && result.recipient?.cc?.length) {
+                setEmailCc(result.recipient.cc.join(', '));
+            }
+            toast.success('Preview email preparata');
+        } catch (err) { toast.error(err.message || 'Errore preparazione'); }
+        finally { setPreparing(false); }
+    };
+
+    const handleSend = async () => {
+        setShowConfirm(false);
+        const toList = emailTo.split(',').map(e => e.trim()).filter(Boolean);
+        const ccList = emailCc.split(',').map(e => e.trim()).filter(Boolean);
+        if (!toList.length) { toast.error('Inserisci almeno un destinatario'); return; }
+        if (!emailSubject) { toast.error('Inserisci l\'oggetto dell\'email'); return; }
+
+        // Save recipient to pack first
+        await apiRequest(`/pacchetti-documentali/${packId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ recipient: { to: toList, cc: ccList } }),
+        }).catch(() => {});
+
+        setSending(true);
+        try {
+            const result = await apiRequest(`/pacchetti-documentali/${packId}/invia`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ to: toList, cc: ccList, subject: emailSubject, body: emailBody }),
+            });
+            if (result.success) {
+                toast.success('Email inviata con successo!');
+                setPack(prev => ({ ...prev, status: 'inviato' }));
+                setInvii(prev => [result.send_log, ...prev]);
+            } else {
+                toast.error('Invio fallito. Controlla i log.');
+                if (result.send_log) setInvii(prev => [result.send_log, ...prev]);
+            }
+        } catch (err) { toast.error(err.message || 'Errore invio email'); }
+        finally { setSending(false); }
+    };
+
+    if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-[#0055FF]" /></div>;
+    if (!pack) return <p className="text-center text-slate-400 py-8">Pacchetto non trovato</p>;
+
+    const s = pack.summary || {};
+    const ps = PACK_STATUS_CONFIG[pack.status] || PACK_STATUS_CONFIG.draft;
+    const hasWarnings = preview?.warnings?.length > 0;
+    const hasSensitive = (preview?.attachments || []).some(a => a.privacy_level === 'sensibile');
+
+    return (
+        <div className="space-y-5" data-testid="pack-detail-view">
+            {/* Header */}
+            <div className="flex items-center gap-3">
+                <Button variant="ghost" size="sm" onClick={onBack} data-testid="btn-back-to-list">
+                    <ArrowLeft className="h-4 w-4 mr-1" /> Lista
+                </Button>
+                <div className="flex-1">
+                    <h2 className="text-lg font-bold text-slate-900">{pack.label || pack.template_code}</h2>
+                    <p className="text-xs text-slate-400">ID: {pack.pack_id}</p>
+                </div>
+                <Badge className={ps.color}>{ps.label}</Badge>
+            </div>
+
+            {/* Summary bar */}
+            {s.total_required > 0 && (
+                <div className="flex gap-4 text-sm p-3 rounded-lg bg-slate-50 border">
+                    <span className="text-emerald-700 font-medium">{s.attached} presenti</span>
+                    <span className="text-red-700 font-medium">{s.missing} mancanti</span>
+                    <span className="text-red-600 font-medium">{s.expired} scaduti</span>
+                    <span className="text-amber-600 font-medium">{s.in_scadenza} in scadenza</span>
+                    {s.sensibile > 0 && <span className="text-red-500 font-medium">{s.sensibile} sensibili</span>}
+                </div>
+            )}
+
+            {/* Checklist items */}
+            <Card>
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2"><FileText className="h-4 w-4" /> Checklist Documenti</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-1">
+                        {(pack.items || []).map((item, i) => {
+                            const sc = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
+                            const Icon = sc.icon;
+                            const tipo = tipiMap[item.document_type_code];
+                            return (
+                                <div key={i} className={`flex items-center gap-2 p-2 rounded text-sm ${item.blocking ? 'bg-red-50' : ''}`} data-testid={`item-${i}`}>
+                                    <Icon className={`h-3.5 w-3.5 flex-shrink-0 ${item.status === 'attached' ? 'text-emerald-600' : item.status === 'missing' || item.status === 'expired' ? 'text-red-500' : 'text-amber-500'}`} />
+                                    <span className="flex-1">{tipo?.label || item.document_type_code}
+                                        {item.entity_label ? <span className="text-slate-400 ml-1">({item.entity_label})</span> : ''}
+                                    </span>
+                                    <Badge className={`text-[10px] ${sc.color}`}>{sc.label}</Badge>
+                                    {item.required && <Badge className="text-[10px] bg-blue-50 text-blue-700">obb.</Badge>}
+                                    {item.blocking && <Badge className="text-[10px] bg-red-50 text-red-700">blocco</Badge>}
+                                    {item.document_title && <span className="text-xs text-slate-400 truncate max-w-[150px]">{item.document_title}</span>}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* D4: Prepara Invio */}
+            <Card className="border-blue-200">
+                <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm flex items-center gap-2"><Mail className="h-4 w-4" /> Prepara e Invia Email</CardTitle>
+                        <Button size="sm" onClick={handlePrepare} disabled={preparing} className="bg-[#0055FF] text-white hover:bg-[#0044CC]" data-testid="btn-prepara-invio">
+                            {preparing ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+                            Prepara Invio
+                        </Button>
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {/* Recipient fields */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <Label className="text-xs">Destinatari (To) *</Label>
+                            <Input placeholder="email@cliente.it, altro@cliente.it" value={emailTo} onChange={e => setEmailTo(e.target.value)} data-testid="input-email-to" />
+                        </div>
+                        <div>
+                            <Label className="text-xs">CC</Label>
+                            <Input placeholder="cc@cliente.it" value={emailCc} onChange={e => setEmailCc(e.target.value)} data-testid="input-email-cc" />
+                        </div>
+                    </div>
+
+                    {/* Subject + Body (show after prepare) */}
+                    {preview && (
+                        <>
+                            <div>
+                                <Label className="text-xs">Oggetto</Label>
+                                <Input value={emailSubject} onChange={e => setEmailSubject(e.target.value)} data-testid="input-email-subject" />
+                            </div>
+                            <div>
+                                <Label className="text-xs">Testo email</Label>
+                                <Textarea rows={6} value={emailBody} onChange={e => setEmailBody(e.target.value)} className="text-sm" data-testid="input-email-body" />
+                            </div>
+
+                            {/* Attachments list */}
+                            {preview.attachments?.length > 0 && (
+                                <div>
+                                    <Label className="text-xs mb-2 block">Allegati ({preview.attachments.length})</Label>
+                                    <div className="space-y-1 max-h-40 overflow-y-auto">
+                                        {preview.attachments.map((att, i) => (
+                                            <div key={i} className="flex items-center gap-2 p-2 rounded bg-slate-50 text-sm">
+                                                <Paperclip className="h-3.5 w-3.5 text-slate-400" />
+                                                <span className="flex-1 truncate">{att.file_name || att.title}</span>
+                                                <Badge className={`text-[10px] ${PRIVACY_BADGE[att.privacy_level] || ''}`}>{att.privacy_level}</Badge>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Warnings */}
+                            {hasWarnings && (
+                                <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 space-y-1" data-testid="warnings-box">
+                                    <div className="flex items-center gap-2 text-amber-800 font-medium text-sm">
+                                        <AlertCircle className="h-4 w-4" /> Attenzione
+                                    </div>
+                                    {preview.warnings.map((w, i) => (
+                                        <p key={i} className="text-xs text-amber-700 pl-6">{w}</p>
+                                    ))}
+                                </div>
+                            )}
+
+                            {hasSensitive && (
+                                <div className="p-3 rounded-lg bg-red-50 border border-red-200 flex items-center gap-2" data-testid="sensitive-warning">
+                                    <ShieldAlert className="h-4 w-4 text-red-600" />
+                                    <p className="text-xs text-red-700">Stai per inviare documenti contrassegnati come <strong>sensibili</strong>. Verifica che i destinatari siano autorizzati.</p>
+                                </div>
+                            )}
+
+                            <Separator />
+
+                            {/* Send button */}
+                            <div className="flex justify-end">
+                                <Button
+                                    onClick={() => setShowConfirm(true)}
+                                    disabled={sending || !emailTo.trim()}
+                                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                                    data-testid="btn-invia-email"
+                                >
+                                    {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                                    Invia Email
+                                </Button>
+                            </div>
+                        </>
+                    )}
+
+                    {!preview && (
+                        <p className="text-xs text-slate-400 text-center py-2">Clicca "Prepara Invio" per generare la preview dell'email con l'elenco allegati.</p>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Send History */}
+            {invii.length > 0 && (
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm flex items-center gap-2"><History className="h-4 w-4" /> Storico Invii ({invii.length})</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-2">
+                            {invii.map((inv, i) => (
+                                <div key={inv.send_id || i} className="flex items-center gap-3 p-2 rounded bg-slate-50 text-sm" data-testid={`invio-${inv.send_id}`}>
+                                    {inv.status === 'sent'
+                                        ? <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                        : <XCircle className="h-4 w-4 text-red-500" />
+                                    }
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-medium truncate">{inv.subject}</p>
+                                        <p className="text-[11px] text-slate-400">A: {(inv.email_to || []).join(', ')}</p>
+                                    </div>
+                                    <Badge className={inv.status === 'sent' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}>
+                                        {inv.status === 'sent' ? 'Inviato' : 'Fallito'}
+                                    </Badge>
+                                    <span className="text-[11px] text-slate-400">{inv.attachment_count} allegati</span>
+                                    <span className="text-[11px] text-slate-400">{inv.sent_at ? new Date(inv.sent_at).toLocaleString('it-IT') : ''}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Confirm dialog */}
+            <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+                <DialogContent data-testid="confirm-send-dialog">
+                    <DialogHeader>
+                        <DialogTitle>Conferma invio email</DialogTitle>
+                        <DialogDescription>
+                            Stai per inviare {preview?.attachments?.length || 0} allegati a {emailTo}.
+                            {hasWarnings && <span className="block mt-1 text-amber-600">Ci sono avvertimenti attivi. Sei sicuro?</span>}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-2">
+                        <Button variant="outline" onClick={() => setShowConfirm(false)} data-testid="btn-cancel-send">Annulla</Button>
+                        <Button onClick={handleSend} className="bg-emerald-600 text-white hover:bg-emerald-700" data-testid="btn-confirm-send">
+                            <Send className="h-4 w-4 mr-2" /> Conferma Invio
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}
+
 
 // ── Main Page ──
 export default function PacchettiDocumentaliPage() {
@@ -216,6 +507,9 @@ export default function PacchettiDocumentaliPage() {
     const [selectedTemplate, setSelectedTemplate] = useState('');
     const [packLabel, setPackLabel] = useState('');
     const [creating, setCreating] = useState(false);
+
+    // Detail view
+    const [selectedPackId, setSelectedPackId] = useState(null);
 
     const tipiMap = Object.fromEntries(tipiDoc.map(t => [t.code, t]));
 
@@ -290,7 +584,7 @@ export default function PacchettiDocumentaliPage() {
                     </div>
                 </div>
 
-                <Tabs value={tab} onValueChange={setTab}>
+                <Tabs value={tab} onValueChange={v => { setTab(v); setSelectedPackId(null); }}>
                     <TabsList>
                         <TabsTrigger value="archivio" className="gap-2" data-testid="tab-archivio">
                             <FileInput className="h-4 w-4" /> Archivio
@@ -333,44 +627,54 @@ export default function PacchettiDocumentaliPage() {
 
                     {/* ── TAB: Pacchetti ── */}
                     <TabsContent value="pacchetti" className="space-y-4">
-                        <Card className="border-dashed border-2 border-violet-200" data-testid="new-pack-form">
-                            <CardHeader className="pb-3">
-                                <CardTitle className="text-base flex items-center gap-2"><Plus className="h-4 w-4" /> Nuovo Pacchetto</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <div>
-                                        <Label className="text-xs">Template *</Label>
-                                        <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-                                            <SelectTrigger data-testid="select-template"><SelectValue placeholder="Seleziona template..." /></SelectTrigger>
-                                            <SelectContent>{templates.map(t => <SelectItem key={t.code} value={t.code}>{t.label} ({t.rules.length} regole)</SelectItem>)}</SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div>
-                                        <Label className="text-xs">Nome pacchetto</Label>
-                                        <Input placeholder="es. Cantiere Milano Nord" value={packLabel} onChange={e => setPackLabel(e.target.value)} data-testid="input-pack-label" />
-                                    </div>
-                                    <div className="flex items-end">
-                                        <Button onClick={handleCreatePack} disabled={creating} className="bg-violet-600 text-white hover:bg-violet-700 w-full" data-testid="btn-crea-pacchetto">
-                                            {creating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Package className="h-4 w-4 mr-2" />}
-                                            Crea e Verifica
-                                        </Button>
-                                    </div>
-                                </div>
-                                {selectedTemplate && (
-                                    <div className="mt-3 text-xs text-slate-500">
-                                        {templates.find(t => t.code === selectedTemplate)?.description}
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        {pacchetti.length === 0 ? (
-                            <p className="text-sm text-slate-400 py-8 text-center">Nessun pacchetto creato. Usa il form sopra per creare il primo.</p>
+                        {selectedPackId ? (
+                            <PackageDetailView
+                                packId={selectedPackId}
+                                tipiMap={tipiMap}
+                                onBack={() => { setSelectedPackId(null); loadData(); }}
+                            />
                         ) : (
-                            pacchetti.map(pack => (
-                                <PackageChecklist key={pack.pack_id} pack={pack} tipiMap={tipiMap} onVerifica={handleVerifica} />
-                            ))
+                            <>
+                                <Card className="border-dashed border-2 border-violet-200" data-testid="new-pack-form">
+                                    <CardHeader className="pb-3">
+                                        <CardTitle className="text-base flex items-center gap-2"><Plus className="h-4 w-4" /> Nuovo Pacchetto</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            <div>
+                                                <Label className="text-xs">Template *</Label>
+                                                <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+                                                    <SelectTrigger data-testid="select-template"><SelectValue placeholder="Seleziona template..." /></SelectTrigger>
+                                                    <SelectContent>{templates.map(t => <SelectItem key={t.code} value={t.code}>{t.label} ({t.rules.length} regole)</SelectItem>)}</SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div>
+                                                <Label className="text-xs">Nome pacchetto</Label>
+                                                <Input placeholder="es. Cantiere Milano Nord" value={packLabel} onChange={e => setPackLabel(e.target.value)} data-testid="input-pack-label" />
+                                            </div>
+                                            <div className="flex items-end">
+                                                <Button onClick={handleCreatePack} disabled={creating} className="bg-violet-600 text-white hover:bg-violet-700 w-full" data-testid="btn-crea-pacchetto">
+                                                    {creating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Package className="h-4 w-4 mr-2" />}
+                                                    Crea e Verifica
+                                                </Button>
+                                            </div>
+                                        </div>
+                                        {selectedTemplate && (
+                                            <div className="mt-3 text-xs text-slate-500">
+                                                {templates.find(t => t.code === selectedTemplate)?.description}
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+
+                                {pacchetti.length === 0 ? (
+                                    <p className="text-sm text-slate-400 py-8 text-center">Nessun pacchetto creato. Usa il form sopra per creare il primo.</p>
+                                ) : (
+                                    pacchetti.map(pack => (
+                                        <PackageCard key={pack.pack_id} pack={pack} tipiMap={tipiMap} onVerifica={handleVerifica} onOpen={setSelectedPackId} />
+                                    ))
+                                )}
+                            </>
                         )}
                     </TabsContent>
                 </Tabs>

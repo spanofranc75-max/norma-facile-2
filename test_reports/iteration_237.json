@@ -1,0 +1,135 @@
+{
+  "summary": "Iteration 237 — Pacchetti Documentali D4+D5 Testing Complete. Backend: 21/21 tests passed. Frontend: All D4+D5 features verified including PackageDetailView, email preview, recipient form, send confirmation dialog, and send history.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration237_d4_d5_pacchetti_email.py",
+    "/app/test_reports/pytest/iteration237_d4_d5_pacchetti_email_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration237_d4_d5_pacchetti_email.py"
+  ],
+  "success_rate": {
+    "backend": "100% (21/21 tests passed)",
+    "frontend": "100% (all D4+D5 UI flows verified)"
+  },
+  "seed_data_creation": "Used existing test session from iteration_235: session token BccyJvnOyrPXRRYy4GfxR5osuF51RWcYWWnUUoHx434, user_id user_6988e9b9316c",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Pacchetti Documentali D1-D5 fully working. D4+D5 features verified: (1) POST /api/pacchetti-documentali/{id}/prepara-invio generates email draft with subject, body, attachments list, and warnings for missing/expired docs. (2) POST /api/pacchetti-documentali/{id}/invia sends email via Resend (or returns graceful error if not configured) and logs send to pacchetti_invii collection. (3) GET /api/pacchetti-documentali/{id}/invii returns send history. (4) PATCH /api/pacchetti-documentali/{id} updates recipient and label fields. Frontend PackageDetailView shows checklist, email form with To/CC inputs, Prepara Invio button, email subject/body after prepare, warnings box, Invia Email button with confirmation dialog, and send history section.",
+  "features_tested": {
+    "d4_prepara_invio": {
+      "POST /api/pacchetti-documentali/{id}/prepara-invio": "PASSED - Returns email_draft, attachments, warnings, summary",
+      "email_draft_structure": "PASSED - Has subject, body, attachments_count, attachments_ready",
+      "auto_verify": "PASSED - Auto-verifies package before generating draft",
+      "warnings_generation": "PASSED - Generates warnings for missing/expired required docs",
+      "404_for_invalid_pack": "PASSED - Returns 404 for non-existent package"
+    },
+    "d5_invia_email": {
+      "POST /api/pacchetti-documentali/{id}/invia": "PASSED - Sends email or returns graceful error",
+      "validation_recipient": "PASSED - Returns 400 if no recipient",
+      "validation_subject": "PASSED - Returns 400 if no subject",
+      "send_logging": "PASSED - Logs send to pacchetti_invii collection",
+      "404_for_invalid_pack": "PASSED - Returns error for non-existent package"
+    },
+    "d5_invii_history": {
+      "GET /api/pacchetti-documentali/{id}/invii": "PASSED - Returns list of send records",
+      "empty_for_new_package": "PASSED - New packages have empty history"
+    },
+    "patch_update_package": {
+      "PATCH /api/pacchetti-documentali/{id}": "PASSED - Updates recipient and label",
+      "ignores_disallowed_fields": "PASSED - Status and items cannot be changed via PATCH",
+      "404_for_invalid_pack": "PASSED - Returns 404 for non-existent package"
+    },
+    "get_single_package": {
+      "GET /api/pacchetti-documentali/{id}": "PASSED - Returns full package data with items, summary, recipient",
+      "404_for_invalid_id": "PASSED - Returns 404 for non-existent package"
+    },
+    "integration_flow": {
+      "full_d4_d5_workflow": "PASSED - Create → Verify → Prepara → Update recipient → Invia → Check invii"
+    },
+    "frontend_package_detail_view": {
+      "pack_detail_view": "PASSED - PackageDetailView loads with data-testid='pack-detail-view'",
+      "btn_back_to_list": "PASSED - Back button navigates to package list",
+      "checklist_documenti": "PASSED - Shows document checklist with status badges (Presente/Mancante/Scaduto)",
+      "input_email_to": "PASSED - Email To input field working",
+      "input_email_cc": "PASSED - Email CC input field working",
+      "btn_prepara_invio": "PASSED - Prepara Invio button triggers email draft generation",
+      "input_email_subject": "PASSED - Email subject input appears after prepare",
+      "input_email_body": "PASSED - Email body textarea appears after prepare",
+      "warnings_box": "PASSED - Warnings box shows for incomplete packages",
+      "btn_invia_email": "PASSED - Invia Email button triggers confirmation dialog",
+      "confirm_send_dialog": "PASSED - Confirmation dialog with Conferma Invio and Annulla buttons",
+      "storico_invii": "PASSED - Send history section shows previous sends with status"
+    },
+    "frontend_pacchetti_tab": {
+      "new_pack_form": "PASSED - New package form visible",
+      "select_template": "PASSED - Template selector shows 5 templates with rule counts",
+      "btn_verifica": "PASSED - Verifica buttons on package cards",
+      "package_status_badges": "PASSED - Shows Bozza, Incompleto, Inviato status badges"
+    }
+  },
+  "test_credentials": {
+    "session_token": "BccyJvnOyrPXRRYy4GfxR5osuF51RWcYWWnUUoHx434",
+    "user_id": "user_6988e9b9316c"
+  },
+  "frontend_data_testid_verified": [
+    "pacchetti-documentali-page",
+    "tab-archivio",
+    "tab-pacchetti",
+    "new-pack-form",
+    "select-template",
+    "input-pack-label",
+    "btn-crea-pacchetto",
+    "btn-verifica-{pack_id}",
+    "pack-{pack_id}",
+    "pack-detail-view",
+    "btn-back-to-list",
+    "input-email-to",
+    "input-email-cc",
+    "btn-prepara-invio",
+    "input-email-subject",
+    "input-email-body",
+    "warnings-box",
+    "btn-invia-email",
+    "confirm-send-dialog",
+    "btn-confirm-send",
+    "btn-cancel-send",
+    "invio-{send_id}"
+  ],
+  "api_responses_verified": {
+    "prepara_invio": {
+      "endpoint": "POST /api/pacchetti-documentali/{id}/prepara-invio",
+      "response_fields": ["pack_id", "email_draft", "attachments", "warnings", "pack_status", "summary", "recipient"],
+      "email_draft_fields": ["subject", "body", "attachments_count", "attachments_ready"]
+    },
+    "invia": {
+      "endpoint": "POST /api/pacchetti-documentali/{id}/invia",
+      "request_fields": ["to", "cc", "subject", "body"],
+      "response_fields": ["success", "send_log", "pack_status"],
+      "send_log_fields": ["send_id", "email_to", "email_cc", "subject", "document_ids", "attachment_count", "status", "provider", "sent_at"]
+    },
+    "invii": {
+      "endpoint": "GET /api/pacchetti-documentali/{id}/invii",
+      "response_type": "array of send_log objects"
+    },
+    "patch_package": {
+      "endpoint": "PATCH /api/pacchetti-documentali/{id}",
+      "allowed_fields": ["label", "recipient", "commessa_id", "cantiere_id"]
+    }
+  },
+  "code_quality_notes": {
+    "object_storage_fix": "get_object() correctly returns tuple (bytes, content_type) - previous bug was treating it as just bytes",
+    "email_service": "_init_resend(), _email_wrapper(), _get_company_name() functions properly integrated",
+    "error_handling": "Graceful error handling when Resend API key not configured"
+  }
+}
