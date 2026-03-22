@@ -150,11 +150,24 @@ Preparazione, invio email con allegati, e tracciabilita invii.
 - Frontend: PackageDetailView con checklist, form destinatari To/CC, preview email editabile, warnings sensibili/scaduti, dialog conferma invio, storico invii
 ### Testing: 21/21 backend, 100% frontend (iteration_237)
 
+## Registro Obblighi Commessa MVP (COMPLETATO 2026-03-22)
+Modulo "collante" che centralizza tutti gli obblighi, blockers e requisiti per ogni commessa.
+- Sync engine con 5 fonti: Evidence Gate, Gate POS, Soggetti, Istruttoria, Rami Normativi
+- Deduplicazione via `dedupe_key` (formato: `{commessa_id}|{source_module}|{source_entity_id}|{code}`)
+- Auto-close con `resolution_note` quando la condizione sorgente sparisce
+- Riapertura automatica se un obbligo chiuso torna attivo
+- 7 API: CRUD + sync + commessa + bloccanti + summary
+- UI: Sezione collapsabile in CommessaHubPage con 4 gruppi (Bloccanti/Da completare/Da verificare/Chiusi)
+- Filtri per fonte e categoria, cambio stato inline, link navigazione ai moduli sorgente
+- Indici MongoDB: dedupe_key unique, commessa_id+status, priority sort
+### Testing: 23/23 backend, 100% frontend (iteration_238)
+
 ## Backlog Prioritizzato
 
 ### P0 (Prossimi — COMPLETATI)
 - ~~S3: Motore AI Sicurezza~~ — COMPLETATO
 - ~~S4: Generazione DOCX~~ — COMPLETATO
+- ~~Registro Obblighi Commessa MVP~~ — COMPLETATO
 
 ### P1 (Prossimi)
 - **D1-D5: Pacchetti Documentali Intelligenti** — COMPLETATO (D1-D5)
@@ -163,7 +176,8 @@ Preparazione, invio email con allegati, e tracciabilita invii.
   - ~~D3: Matching automatico + verifica presenza/scadenza~~ COMPLETATO
   - ~~D4: UI pacchetto documentale (preview invio)~~ COMPLETATO
   - ~~D5: Invio email one-click + log invii (via Resend)~~ COMPLETATO
-  - D6: Profili documentali per committente ricorrente — PROSSIMO
+  - D6: Profili documentali per committente ricorrente
+- **Registro Obblighi Fase 2**: aggiungere pacchetti documentali, verifica committenza, documenti scaduti, assegnazione responsabili, scadenze
 - Modulo Verifica Committenza / Contratti (si integra con Pacchetti Documentali)
 - Dashboard Cantiere Multilivello
 - Stability Guard deterministico
