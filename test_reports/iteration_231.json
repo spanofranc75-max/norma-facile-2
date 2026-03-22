@@ -1,0 +1,149 @@
+{
+  "summary": "Iteration 231 — Safety Branch v2 with 3-Level Risk Library Testing Complete. Backend: 29/29 tests passed. Frontend: All features verified including 3-level chain (Fase → Rischi → DPI/Misure), auto-calculation, Gate POS with blockers.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration231_safety_branch_v2.py",
+    "/app/test_reports/pytest/iteration231_safety_branch_v2_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration231_safety_branch_v2.py"
+  ],
+  "success_rate": {
+    "backend": "100% (29/29 tests passed)",
+    "frontend": "100% (all UI flows verified)"
+  },
+  "seed_data_creation": "Used existing test data: session token test_perizia_205a45704b22, user_id user_perizia_de75ff42. Created test cantieri during testing which were cleaned up.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Safety Branch v2 with 3-level library fully working. Key changes from v1: (1) Old single libreria_rischi collection replaced with 3 collections: lib_fasi_lavoro (11 items), lib_rischi_sicurezza (20 items), lib_dpi_misure (31 items = 12 DPI + 11 misure + 8 apprestamenti). (2) Chain resolution: Fase.rischi_ids → Rischio.dpi_ids/misure_ids/apprestamenti_ids. (3) Gate POS now includes 'blockers' field for gate_critical domande. (4) Backward compatibility maintained via /api/libreria-rischi endpoints.",
+  "features_tested": {
+    "libreria_seed": {
+      "POST /api/libreria/seed": "PASSED - Seeds 3 collections (idempotent)",
+      "seed_counts": "fasi=11, rischi=20, dpi_misure=31"
+    },
+    "libreria_fasi": {
+      "GET /api/libreria/fasi": "PASSED - Returns 11 fasi lavoro",
+      "GET /api/libreria/fasi?normativa=EN_1090": "PASSED - Filters by normativa",
+      "GET /api/libreria/fasi?normativa=EN_13241": "PASSED - Filters by normativa"
+    },
+    "libreria_rischi": {
+      "GET /api/libreria/rischi": "PASSED - Returns 20 rischi with gate_critical, dpi_ids, misure_ids, apprestamenti_ids",
+      "GET /api/libreria/rischi?categoria=sicurezza": "PASSED - Filters by categoria",
+      "GET /api/libreria/rischi?categoria=salute": "PASSED - Filters by categoria",
+      "domande_verifica": "PASSED - Rischi have domande_verifica with gate_critical flag"
+    },
+    "libreria_dpi_misure": {
+      "GET /api/libreria/dpi-misure": "PASSED - Returns 31 entries (12 dpi + 11 misure + 8 apprestamenti)",
+      "GET /api/libreria/dpi-misure?tipo=dpi": "PASSED - Returns 12 DPI",
+      "GET /api/libreria/dpi-misure?tipo=misura": "PASSED - Returns 11 misure",
+      "GET /api/libreria/dpi-misure?tipo=apprestamento": "PASSED - Returns 8 apprestamenti"
+    },
+    "libreria_resolve": {
+      "POST /api/libreria/resolve-rischi": "PASSED - Resolves rischi codici to full objects",
+      "POST /api/libreria/resolve-dpi": "PASSED - Resolves dpi codici to full objects"
+    },
+    "cantieri_sicurezza_crud": {
+      "POST /api/cantieri-sicurezza": "PASSED - Creates cantiere with v2 schema",
+      "PUT /api/cantieri-sicurezza/{id}": "PASSED - Updates with v2 fields including domande_residue",
+      "GET /api/cantieri-sicurezza": "PASSED - Lists all cantieri",
+      "DELETE /api/cantieri-sicurezza/{id}": "PASSED - Deletes cantiere"
+    },
+    "gate_pos": {
+      "GET /api/cantieri-sicurezza/{id}/gate": "PASSED - Returns gate_pos with blockers field",
+      "blockers_for_gate_critical": "PASSED - Shows blockers when gate_critical domande are open",
+      "pronto_per_generazione": "PASSED - False when blockers exist, True when all clear"
+    },
+    "backward_compatibility": {
+      "GET /api/libreria-rischi": "PASSED - Returns all library entries (fasi + rischi + dpi)",
+      "GET /api/libreria-rischi?tipo=fase_lavoro": "PASSED - Returns fasi",
+      "GET /api/libreria-rischi?tipo=dpi": "PASSED - Returns DPI",
+      "POST /api/libreria-rischi/seed": "PASSED - Still works (calls v2 seed)"
+    },
+    "chain_resolution": {
+      "fase_to_rischi": "PASSED - fase.rischi_ids resolved to full rischi objects",
+      "rischio_to_dpi": "PASSED - rischio.dpi_ids resolved to full DPI objects",
+      "full_chain": "PASSED - Fase → Rischi → DPI complete chain works"
+    },
+    "frontend_sicurezza_page": {
+      "list_display": "PASSED - Shows table with Cantiere, Committente, Lavoratori, Fasi, Gate, Stato columns",
+      "new_button": "PASSED - 'Nuova Scheda Cantiere' creates and navigates to detail page"
+    },
+    "frontend_scheda_cantiere_page": {
+      "step_navigation": "PASSED - 4 step tabs (Cantiere, Fasi & Rischi, Macchine & DPI, Riepilogo)",
+      "step1_cantiere": "PASSED - Form fields for dati_cantiere, soggetti_riferimento, lavoratori",
+      "step2_fasi_rischi": "PASSED - Shows 11 fasi with expandable rischi chain (click chevron)",
+      "step2_auto_calculation": "PASSED - Selecting fase auto-calculates dpi_calcolati, misure_calcolate, apprestamenti_calcolati, domande_residue",
+      "step3_calculated_sections": "PASSED - Shows DPI Calcolati (5), Misure Organizzative (3), Apprestamenti (1) sections",
+      "step4_gate_pos": "PASSED - Shows Gate POS with progress bar, blockers section",
+      "step4_catena": "PASSED - Shows Catena Fase → Rischi with confidence badges",
+      "save_button": "PASSED - Persists data to backend via PUT"
+    }
+  },
+  "test_credentials": {
+    "session_token": "test_perizia_205a45704b22",
+    "user_id": "user_perizia_de75ff42"
+  },
+  "api_responses_verified": {
+    "libreria_seed": {
+      "endpoint": "POST /api/libreria/seed",
+      "response_fields": ["seeded", "fasi", "rischi", "dpi_misure"]
+    },
+    "libreria_fasi": {
+      "endpoint": "GET /api/libreria/fasi",
+      "response_fields": ["codice", "nome", "descrizione", "categoria", "applicabile_a", "rischi_ids", "macchine_tipiche"]
+    },
+    "libreria_rischi": {
+      "endpoint": "GET /api/libreria/rischi",
+      "response_fields": ["codice", "nome", "categoria", "sottocategoria", "gate_critical", "dpi_ids", "misure_ids", "apprestamenti_ids", "domande_verifica"]
+    },
+    "libreria_dpi_misure": {
+      "endpoint": "GET /api/libreria/dpi-misure",
+      "response_fields": ["codice", "nome", "tipo", "sottotipo", "descrizione", "rif_normativo", "obbligatorieta"]
+    },
+    "gate_pos": {
+      "endpoint": "GET /api/cantieri-sicurezza/{id}/gate",
+      "response_fields": ["completezza_percentuale", "campi_mancanti", "blockers", "pronto_per_generazione"]
+    }
+  },
+  "frontend_data_testid_verified": [
+    "sicurezza-page",
+    "btn-new-cantiere",
+    "scheda-cantiere-page",
+    "step-btn-1", "step-btn-2", "step-btn-3", "step-btn-4",
+    "btn-save-cantiere",
+    "btn-back-sicurezza",
+    "input-attivita", "input-indirizzo", "input-citta", "input-provincia",
+    "input-data-inizio", "input-data-fine", "input-committente",
+    "btn-add-lavoratore", "lavoratore-row-{idx}",
+    "fase-card-FL-001 through FL-011",
+    "btn-add-macchina",
+    "input-stoccaggio", "input-servizi",
+    "input-data-dichiarazione",
+    "btn-save-final"
+  ],
+  "v2_schema_changes": {
+    "new_collections": [
+      "lib_fasi_lavoro (11 work phases)",
+      "lib_rischi_sicurezza (20 risks)",
+      "lib_dpi_misure (31 items: 12 DPI + 11 misure + 8 apprestamenti)"
+    ],
+    "cantiere_v2_fields": [
+      "fasi_lavoro_selezionate (with rischi_attivati nested)",
+      "dpi_calcolati",
+      "misure_calcolate",
+      "apprestamenti_calcolati",
+      "domande_residue (with gate_critical flag)"
+    ],
+    "gate_pos_v2": "Now includes 'blockers' field for gate_critical domande that are open"
+  }
+}

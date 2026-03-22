@@ -260,9 +260,24 @@ async def startup_event():
             [("user_id", 1), ("parent_commessa_id", 1)],
             name="idx_cantiere_commessa"
         )
-        await db.libreria_rischi.create_index(
-            [("user_id", 1), ("tipo", 1), ("codice", 1)],
-            unique=True, name="uq_libreria_rischi"
+        # Libreria 3 livelli
+        await db.lib_fasi_lavoro.create_index(
+            [("user_id", 1), ("codice", 1)], unique=True, name="uq_lib_fasi"
+        )
+        await db.lib_fasi_lavoro.create_index(
+            [("user_id", 1), ("categoria", 1)], name="idx_fasi_cat"
+        )
+        await db.lib_rischi_sicurezza.create_index(
+            [("user_id", 1), ("codice", 1)], unique=True, name="uq_lib_rischi"
+        )
+        await db.lib_rischi_sicurezza.create_index(
+            [("user_id", 1), ("categoria", 1), ("sottocategoria", 1)], name="idx_rischi_cat"
+        )
+        await db.lib_dpi_misure.create_index(
+            [("user_id", 1), ("codice", 1)], unique=True, name="uq_lib_dpi"
+        )
+        await db.lib_dpi_misure.create_index(
+            [("user_id", 1), ("tipo", 1)], name="idx_dpi_tipo"
         )
     except Exception as e:
         logger.warning(f"Index creation (may already exist): {e}")

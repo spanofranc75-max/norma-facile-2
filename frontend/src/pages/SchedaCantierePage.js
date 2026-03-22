@@ -1,7 +1,6 @@
 /**
- * SchedaCantierePage — Safety Branch MVP
- * Multi-step form for cantiere_sicurezza (Scheda Cantiere POS)
- * Steps: 1. Dati Cantiere  2. Fasi Lavoro  3. Macchine & DPI  4. Riepilogo & Gate
+ * SchedaCantierePage — Safety Branch v2
+ * Multi-step form with 3-level library: Fasi → Rischi → DPI/Misure
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -13,21 +12,27 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Textarea } from '../components/ui/textarea';
 import { Checkbox } from '../components/ui/checkbox';
 import { Badge } from '../components/ui/badge';
-import { Separator } from '../components/ui/separator';
 import { toast } from 'sonner';
 import {
-    Save, ArrowLeft, ArrowRight, HardHat, Loader2, CheckCircle2, 
+    Save, ArrowLeft, ArrowRight, Loader2, CheckCircle2,
     Shield, AlertTriangle, Plus, Trash2, Users, Wrench, ClipboardCheck,
-    ChevronRight, MapPin, Building2, Phone,
+    ChevronDown, ChevronRight, MapPin, Building2, CircleAlert,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
 const STEPS = [
     { num: 1, label: 'Cantiere', icon: MapPin },
-    { num: 2, label: 'Fasi Lavoro', icon: ClipboardCheck },
+    { num: 2, label: 'Fasi & Rischi', icon: ClipboardCheck },
     { num: 3, label: 'Macchine & DPI', icon: Wrench },
     { num: 4, label: 'Riepilogo', icon: Shield },
 ];
+
+const CONFIDENCE_BADGE = {
+    dedotto: 'bg-blue-100 text-blue-800',
+    confermato: 'bg-emerald-100 text-emerald-800',
+    incerto: 'bg-amber-100 text-amber-800',
+    mancante: 'bg-red-100 text-red-800',
+};
 
 export default function SchedaCantierePage() {
     const navigate = useNavigate();
@@ -40,29 +45,22 @@ export default function SchedaCantierePage() {
     const [cantiereIdState, setCantiereIdState] = useState(cantiereId || null);
     const [gate, setGate] = useState(null);
 
-    // Libreria rischi (from backend)
-    const [fasiDisponibili, setFasiDisponibili] = useState([]);
-    const [dpiDisponibili, setDpiDisponibili] = useState([]);
+    // Libreria 3 livelli
+    const [fasiLib, setFasiLib] = useState([]);
+    const [rischiLib, setRischiLib] = useState([]);
+    const [dpiMisureLib, setDpiMisureLib] = useState([]);
+    const [expandedFasi, setExpandedFasi] = useState({});
 
-    // Form data matching cantieri_sicurezza model
     const [formData, setFormData] = useState({
         status: 'bozza',
         revisioni: [{ rev: '00', motivazione: 'Emissione', data: '' }],
         dati_cantiere: {
-            attivita_cantiere: '',
-            data_inizio_lavori: '',
-            data_fine_prevista: '',
-            indirizzo_cantiere: '',
-            citta_cantiere: '',
-            provincia_cantiere: '',
+            attivita_cantiere: '', data_inizio_lavori: '', data_fine_prevista: '',
+            indirizzo_cantiere: '', citta_cantiere: '', provincia_cantiere: '',
         },
         soggetti_riferimento: {
-            committente: '',
-            responsabile_lavori: '',
-            direttore_lavori: '',
-            progettista: '',
-            csp: '',
-            cse: '',
+            committente: '', responsabile_lavori: '', direttore_lavori: '',
+            progettista: '', csp: '', cse: '',
         },
         lavoratori_coinvolti: [],
         turni_lavoro: { mattina: '08:00-13:00', pomeriggio: '14:00-17:00', note: '' },
@@ -73,26 +71,38 @@ export default function SchedaCantierePage() {
         stoccaggio_materiali: '',
         servizi_igienici: '',
         fasi_lavoro_selezionate: [],
+        dpi_calcolati: [],
+        misure_calcolate: [],
+        apprestamenti_calcolati: [],
+        domande_residue: [],
         numeri_utili: [],
         includi_covid19: false,
         data_dichiarazione: '',
         note_aggiuntive: '',
     });
 
-    // Load reference data
+    // Load library
     useEffect(() => {
-        const fetchRef = async () => {
+        const fetchLib = async () => {
             try {
-                const [fasi, dpi] = await Promise.all([
-                    apiRequest('/libreria-rischi?tipo=fase_lavoro'),
-                    apiRequest('/libreria-rischi?tipo=dpi'),
+                const [fasi, rischi, dpiM] = await Promise.all([
+                    apiRequest('/libreria/fasi'),
+                    apiRequest('/libreria/rischi'),
+                    apiRequest('/libreria/dpi-misure'),
                 ]);
-                setFasiDisponibili(fasi || []);
-                setDpiDisponibili(dpi || []);
-            } catch { /* ignore */ }
+                setFasiLib(fasi || []);
+                setRischiLib(rischi || []);
+                setDpiMisureLib(dpiM || []);
+            } catch { /* */ }
         };
-        fetchRef();
+        fetchLib();
     }, []);
+
+    // Build lookup maps
+    const rischiMap = {};
+    rischiLib.forEach(r => { rischiMap[r.codice] = r; });
+    const dpiMap = {};
+    dpiMisureLib.forEach(d => { dpiMap[d.codice] = d; });
 
     // Load existing cantiere
     useEffect(() => {
@@ -100,43 +110,26 @@ export default function SchedaCantierePage() {
         const fetchCantiere = async () => {
             try {
                 const data = await apiRequest(`/cantieri-sicurezza/${cantiereId}`);
-                setFormData({
-                    status: data.status || 'bozza',
-                    revisioni: data.revisioni || [{ rev: '00', motivazione: 'Emissione', data: '' }],
-                    dati_cantiere: data.dati_cantiere || {},
-                    soggetti_riferimento: data.soggetti_riferimento || {},
-                    lavoratori_coinvolti: data.lavoratori_coinvolti || [],
-                    turni_lavoro: data.turni_lavoro || { mattina: '08:00-13:00', pomeriggio: '14:00-17:00', note: '' },
-                    subappalti: data.subappalti || [],
-                    dpi_presenti: data.dpi_presenti || [],
-                    macchine_attrezzature: data.macchine_attrezzature || [],
-                    sostanze_chimiche: data.sostanze_chimiche || [],
-                    stoccaggio_materiali: data.stoccaggio_materiali || '',
-                    servizi_igienici: data.servizi_igienici || '',
-                    fasi_lavoro_selezionate: data.fasi_lavoro_selezionate || [],
-                    numeri_utili: data.numeri_utili || [],
-                    includi_covid19: data.includi_covid19 || false,
-                    data_dichiarazione: data.data_dichiarazione || '',
-                    note_aggiuntive: data.note_aggiuntive || '',
-                });
+                setFormData(prev => ({
+                    ...prev,
+                    ...Object.fromEntries(
+                        Object.entries(data).filter(([k]) =>
+                            k !== 'cantiere_id' && k !== 'user_id' && k !== '_id' &&
+                            k !== 'created_at' && k !== 'updated_at' && k !== 'gate_pos_status' && k !== 'ai_precompilazione'
+                        )
+                    ),
+                }));
                 setGate(data.gate_pos_status || null);
             } catch {
                 toast.error('Errore nel caricamento');
                 navigate('/sicurezza');
-            } finally {
-                setLoading(false);
-            }
+            } finally { setLoading(false); }
         };
         fetchCantiere();
     }, [isEditing, cantiereId, navigate]);
 
-    const updateDatiCantiere = (field, value) => {
-        setFormData(p => ({ ...p, dati_cantiere: { ...p.dati_cantiere, [field]: value } }));
-    };
-
-    const updateSoggetti = (field, value) => {
-        setFormData(p => ({ ...p, soggetti_riferimento: { ...p.soggetti_riferimento, [field]: value } }));
-    };
+    const updateDatiCantiere = (f, v) => setFormData(p => ({ ...p, dati_cantiere: { ...p.dati_cantiere, [f]: v } }));
+    const updateSoggetti = (f, v) => setFormData(p => ({ ...p, soggetti_riferimento: { ...p.soggetti_riferimento, [f]: v } }));
 
     const handleSave = useCallback(async () => {
         setSaving(true);
@@ -151,101 +144,100 @@ export default function SchedaCantierePage() {
                 setCantiereIdState(res.cantiere_id);
                 setGate(res.gate_pos_status || null);
                 toast.success('Scheda cantiere creata');
-                // Update URL without remount
                 window.history.replaceState(null, '', `/scheda-cantiere/${res.cantiere_id}`);
             }
         } catch (err) {
             toast.error(err.message || 'Errore nel salvataggio');
-        } finally {
-            setSaving(false);
-        }
+        } finally { setSaving(false); }
     }, [formData, isEditing, cantiereId, cantiereIdState]);
 
-    // Add/remove workers
-    const addLavoratore = () => {
-        setFormData(p => ({
-            ...p,
-            lavoratori_coinvolti: [...p.lavoratori_coinvolti, { nominativo: '', mansione: '', addetto_primo_soccorso: false, addetto_antincendio: false }],
-        }));
-    };
-    const updateLavoratore = (idx, field, value) => {
-        setFormData(p => {
-            const arr = [...p.lavoratori_coinvolti];
-            arr[idx] = { ...arr[idx], [field]: value };
-            return { ...p, lavoratori_coinvolti: arr };
-        });
-    };
-    const removeLavoratore = (idx) => {
-        setFormData(p => ({ ...p, lavoratori_coinvolti: p.lavoratori_coinvolti.filter((_, i) => i !== idx) }));
-    };
+    // ── Workers ──
+    const addLavoratore = () => setFormData(p => ({ ...p, lavoratori_coinvolti: [...p.lavoratori_coinvolti, { nominativo: '', mansione: '', addetto_primo_soccorso: false, addetto_antincendio: false }] }));
+    const updateLavoratore = (i, f, v) => setFormData(p => { const a = [...p.lavoratori_coinvolti]; a[i] = { ...a[i], [f]: v }; return { ...p, lavoratori_coinvolti: a }; });
+    const removeLavoratore = (i) => setFormData(p => ({ ...p, lavoratori_coinvolti: p.lavoratori_coinvolti.filter((_, j) => j !== i) }));
 
-    // Add/remove subappalti
-    const addSubappalto = () => {
-        setFormData(p => ({ ...p, subappalti: [...p.subappalti, { lavorazione: '', impresa: '', durata_prevista: '' }] }));
-    };
-    const updateSubappalto = (idx, field, value) => {
-        setFormData(p => {
-            const arr = [...p.subappalti];
-            arr[idx] = { ...arr[idx], [field]: value };
-            return { ...p, subappalti: arr };
-        });
-    };
-    const removeSubappalto = (idx) => {
-        setFormData(p => ({ ...p, subappalti: p.subappalti.filter((_, i) => i !== idx) }));
-    };
+    // ── Subappalti ──
+    const addSubappalto = () => setFormData(p => ({ ...p, subappalti: [...p.subappalti, { lavorazione: '', impresa: '', durata_prevista: '' }] }));
+    const updateSubappalto = (i, f, v) => setFormData(p => { const a = [...p.subappalti]; a[i] = { ...a[i], [f]: v }; return { ...p, subappalti: a }; });
+    const removeSubappalto = (i) => setFormData(p => ({ ...p, subappalti: p.subappalti.filter((_, j) => j !== i) }));
 
-    // Toggle fase lavoro
+    // ── Macchine ──
+    const addMacchina = () => setFormData(p => ({ ...p, macchine_attrezzature: [...p.macchine_attrezzature, { nome: '', marcata_ce: true, verifiche_periodiche: true }] }));
+    const updateMacchina = (i, f, v) => setFormData(p => { const a = [...p.macchine_attrezzature]; a[i] = { ...a[i], [f]: v }; return { ...p, macchine_attrezzature: a }; });
+    const removeMacchina = (i) => setFormData(p => ({ ...p, macchine_attrezzature: p.macchine_attrezzature.filter((_, j) => j !== i) }));
+
+    // ── Toggle DPI ──
+    const toggleDpi = (i) => setFormData(p => { const a = [...p.dpi_presenti]; a[i] = { ...a[i], presente: !a[i].presente }; return { ...p, dpi_presenti: a }; });
+
+    // ── Toggle Fase (v2: with rischi_ids resolution) ──
     const toggleFase = (fase) => {
         setFormData(p => {
-            const existing = p.fasi_lavoro_selezionate.find(f => f.fase_id === fase.codice);
+            const existing = p.fasi_lavoro_selezionate.find(f => f.fase_codice === fase.codice);
             if (existing) {
-                return { ...p, fasi_lavoro_selezionate: p.fasi_lavoro_selezionate.filter(f => f.fase_id !== fase.codice) };
+                // Deselect
+                const newFasi = p.fasi_lavoro_selezionate.filter(f => f.fase_codice !== fase.codice);
+                return { ...p, fasi_lavoro_selezionate: newFasi, ...recalcDpiMisure(newFasi) };
             }
-            return {
-                ...p,
-                fasi_lavoro_selezionate: [...p.fasi_lavoro_selezionate, {
-                    fase_id: fase.codice,
-                    nome_fase: fase.nome,
-                    rischi_valutati: fase.rischi_associati || [],
-                    dpi_richiesti: fase.dpi_richiesti || [],
-                    misure_aggiuntive: '',
-                }],
+            // Select — resolve rischi from library
+            const rischiAttivati = (fase.rischi_ids || []).map(rc => {
+                const rischio = rischiMap[rc];
+                return {
+                    rischio_codice: rc,
+                    confidence: 'dedotto',
+                    origin: 'rules',
+                    reasoning: `Attivato da fase ${fase.codice}`,
+                    valutazione_override: null,
+                    overridden_by_user: false,
+                };
+            }).filter(Boolean);
+
+            const newEntry = {
+                fase_codice: fase.codice,
+                confidence: 'confermato',
+                origin: 'user',
+                reasoning: 'Selezionata manualmente dall\'utente',
+                source_refs: [],
+                overridden_by_user: false,
+                rischi_attivati: rischiAttivati,
+                note_utente: '',
             };
+            const newFasi = [...p.fasi_lavoro_selezionate, newEntry];
+            return { ...p, fasi_lavoro_selezionate: newFasi, ...recalcDpiMisure(newFasi) };
         });
     };
 
-    // Add/remove macchine
-    const addMacchina = () => {
-        setFormData(p => ({ ...p, macchine_attrezzature: [...p.macchine_attrezzature, { nome: '', marcata_ce: true, verifiche_periodiche: true }] }));
-    };
-    const updateMacchina = (idx, field, value) => {
-        setFormData(p => {
-            const arr = [...p.macchine_attrezzature];
-            arr[idx] = { ...arr[idx], [field]: value };
-            return { ...p, macchine_attrezzature: arr };
-        });
-    };
-    const removeMacchina = (idx) => {
-        setFormData(p => ({ ...p, macchine_attrezzature: p.macchine_attrezzature.filter((_, i) => i !== idx) }));
-    };
+    // Recalculate DPI/Misure/Apprestamenti from selected fasi + rischi
+    const recalcDpiMisure = (fasiSel) => {
+        const dpiSet = new Map();
+        const misSet = new Map();
+        const appSet = new Map();
+        const domande = [];
 
-    // Toggle DPI
-    const toggleDpi = (idx) => {
-        setFormData(p => {
-            const arr = [...p.dpi_presenti];
-            arr[idx] = { ...arr[idx], presente: !arr[idx].presente };
-            return { ...p, dpi_presenti: arr };
+        fasiSel.forEach(f => {
+            (f.rischi_attivati || []).forEach(ra => {
+                const rischio = rischiMap[ra.rischio_codice];
+                if (!rischio) return;
+                (rischio.dpi_ids || []).forEach(c => { if (!dpiSet.has(c)) dpiSet.set(c, { codice: c, origin: 'rules', da_rischi: [] }); dpiSet.get(c).da_rischi.push(ra.rischio_codice); });
+                (rischio.misure_ids || []).forEach(c => { if (!misSet.has(c)) misSet.set(c, { codice: c, origin: 'rules', da_rischi: [] }); misSet.get(c).da_rischi.push(ra.rischio_codice); });
+                (rischio.apprestamenti_ids || []).forEach(c => { if (!appSet.has(c)) appSet.set(c, { codice: c, origin: 'rules', da_rischi: [], confidence: 'dedotto' }); appSet.get(c).da_rischi.push(ra.rischio_codice); });
+                (rischio.domande_verifica || []).forEach(d => {
+                    if (!domande.find(x => x.testo === d.testo)) {
+                        domande.push({ testo: d.testo, origine_rischio: ra.rischio_codice, impatto: d.impatto || 'medio', gate_critical: d.gate_critical || false, risposta: null, stato: 'aperta' });
+                    }
+                });
+            });
         });
+
+        return {
+            dpi_calcolati: Array.from(dpiSet.values()),
+            misure_calcolate: Array.from(misSet.values()),
+            apprestamenti_calcolati: Array.from(appSet.values()),
+            domande_residue: domande,
+        };
     };
 
     if (loading) {
-        return (
-            <DashboardLayout>
-                <div className="flex items-center justify-center py-20">
-                    <Loader2 className="h-8 w-8 animate-spin text-[#0055FF]" />
-                </div>
-            </DashboardLayout>
-        );
+        return <DashboardLayout><div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-[#0055FF]" /></div></DashboardLayout>;
     }
 
     return (
@@ -254,44 +246,32 @@ export default function SchedaCantierePage() {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <Button variant="ghost" size="icon" onClick={() => navigate('/sicurezza')} data-testid="btn-back-sicurezza">
-                            <ArrowLeft className="h-5 w-5" />
-                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => navigate('/sicurezza')} data-testid="btn-back-sicurezza"><ArrowLeft className="h-5 w-5" /></Button>
                         <div>
                             <h1 className="font-sans text-2xl font-bold text-[#1E293B]">Scheda Cantiere Sicurezza</h1>
-                            <p className="text-sm text-slate-500">Compilazione POS — D.Lgs. 81/2008</p>
+                            <p className="text-sm text-slate-500">POS — D.Lgs. 81/2008 | Libreria 3 livelli</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
                         {gate && (
                             <Badge className={gate.pronto_per_generazione ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}>
-                                {gate.completezza_percentuale}% completo
+                                {gate.completezza_percentuale}%
                             </Badge>
                         )}
                         <Button onClick={handleSave} disabled={saving} className="bg-[#0055FF] text-white hover:bg-[#0044CC]" data-testid="btn-save-cantiere">
-                            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                            Salva
+                            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />} Salva
                         </Button>
                     </div>
                 </div>
 
-                {/* Step navigation */}
+                {/* Step nav */}
                 <div className="flex items-center gap-1 bg-slate-50 rounded-lg p-1">
-                    {STEPS.map((s) => {
+                    {STEPS.map(s => {
                         const Icon = s.icon;
                         return (
-                            <button
-                                key={s.num}
-                                onClick={() => handleSave().then(() => setStep(s.num))}
-                                data-testid={`step-btn-${s.num}`}
-                                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md text-sm font-medium transition-all ${
-                                    step === s.num
-                                        ? 'bg-white text-[#0055FF] shadow-sm'
-                                        : 'text-slate-500 hover:text-slate-700'
-                                }`}
-                            >
-                                <Icon className="h-4 w-4" />
-                                <span className="hidden sm:inline">{s.label}</span>
+                            <button key={s.num} onClick={() => setStep(s.num)} data-testid={`step-btn-${s.num}`}
+                                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-md text-sm font-medium transition-all ${step === s.num ? 'bg-white text-[#0055FF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                                <Icon className="h-4 w-4" /><span className="hidden sm:inline">{s.label}</span>
                             </button>
                         );
                     })}
@@ -301,203 +281,176 @@ export default function SchedaCantierePage() {
                 {step === 1 && (
                     <div className="space-y-6">
                         <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2"><MapPin className="h-5 w-5 text-[#0055FF]" /> Dati Cantiere</CardTitle>
-                            </CardHeader>
+                            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><MapPin className="h-5 w-5 text-[#0055FF]" /> Dati Cantiere</CardTitle></CardHeader>
                             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="md:col-span-2">
-                                    <Label>Attivita cantiere</Label>
-                                    <Textarea data-testid="input-attivita" value={formData.dati_cantiere.attivita_cantiere} onChange={e => updateDatiCantiere('attivita_cantiere', e.target.value)} placeholder="Descrizione attivita..." rows={2} />
-                                </div>
-                                <div>
-                                    <Label>Indirizzo cantiere *</Label>
-                                    <Input data-testid="input-indirizzo" value={formData.dati_cantiere.indirizzo_cantiere} onChange={e => updateDatiCantiere('indirizzo_cantiere', e.target.value)} placeholder="Via/Piazza..." />
-                                </div>
+                                <div className="md:col-span-2"><Label>Attivita cantiere</Label><Textarea data-testid="input-attivita" value={formData.dati_cantiere.attivita_cantiere} onChange={e => updateDatiCantiere('attivita_cantiere', e.target.value)} rows={2} /></div>
+                                <div><Label>Indirizzo cantiere *</Label><Input data-testid="input-indirizzo" value={formData.dati_cantiere.indirizzo_cantiere} onChange={e => updateDatiCantiere('indirizzo_cantiere', e.target.value)} /></div>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <Label>Citta *</Label>
-                                        <Input data-testid="input-citta" value={formData.dati_cantiere.citta_cantiere} onChange={e => updateDatiCantiere('citta_cantiere', e.target.value)} placeholder="Citta" />
-                                    </div>
-                                    <div>
-                                        <Label>Provincia</Label>
-                                        <Input data-testid="input-provincia" value={formData.dati_cantiere.provincia_cantiere} onChange={e => updateDatiCantiere('provincia_cantiere', e.target.value)} placeholder="PR" />
-                                    </div>
+                                    <div><Label>Citta *</Label><Input data-testid="input-citta" value={formData.dati_cantiere.citta_cantiere} onChange={e => updateDatiCantiere('citta_cantiere', e.target.value)} /></div>
+                                    <div><Label>Provincia</Label><Input data-testid="input-provincia" value={formData.dati_cantiere.provincia_cantiere} onChange={e => updateDatiCantiere('provincia_cantiere', e.target.value)} /></div>
                                 </div>
-                                <div>
-                                    <Label>Data inizio lavori *</Label>
-                                    <Input data-testid="input-data-inizio" type="date" value={formData.dati_cantiere.data_inizio_lavori} onChange={e => updateDatiCantiere('data_inizio_lavori', e.target.value)} />
-                                </div>
-                                <div>
-                                    <Label>Data fine prevista</Label>
-                                    <Input data-testid="input-data-fine" type="date" value={formData.dati_cantiere.data_fine_prevista} onChange={e => updateDatiCantiere('data_fine_prevista', e.target.value)} />
-                                </div>
+                                <div><Label>Data inizio lavori *</Label><Input data-testid="input-data-inizio" type="date" value={formData.dati_cantiere.data_inizio_lavori} onChange={e => updateDatiCantiere('data_inizio_lavori', e.target.value)} /></div>
+                                <div><Label>Data fine prevista</Label><Input data-testid="input-data-fine" type="date" value={formData.dati_cantiere.data_fine_prevista} onChange={e => updateDatiCantiere('data_fine_prevista', e.target.value)} /></div>
                             </CardContent>
                         </Card>
-
                         <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2"><Building2 className="h-5 w-5 text-[#0055FF]" /> Soggetti di Riferimento</CardTitle>
-                            </CardHeader>
+                            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Building2 className="h-5 w-5 text-[#0055FF]" /> Soggetti di Riferimento</CardTitle></CardHeader>
                             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <Label>Committente *</Label>
-                                    <Input data-testid="input-committente" value={formData.soggetti_riferimento.committente} onChange={e => updateSoggetti('committente', e.target.value)} />
-                                </div>
-                                <div>
-                                    <Label>Responsabile Lavori</Label>
-                                    <Input value={formData.soggetti_riferimento.responsabile_lavori} onChange={e => updateSoggetti('responsabile_lavori', e.target.value)} />
-                                </div>
-                                <div>
-                                    <Label>Direttore Lavori</Label>
-                                    <Input value={formData.soggetti_riferimento.direttore_lavori} onChange={e => updateSoggetti('direttore_lavori', e.target.value)} />
-                                </div>
-                                <div>
-                                    <Label>Progettista</Label>
-                                    <Input value={formData.soggetti_riferimento.progettista} onChange={e => updateSoggetti('progettista', e.target.value)} />
-                                </div>
-                                <div>
-                                    <Label>CSP (Coordinatore Sicurezza Progettazione)</Label>
-                                    <Input value={formData.soggetti_riferimento.csp} onChange={e => updateSoggetti('csp', e.target.value)} />
-                                </div>
-                                <div>
-                                    <Label>CSE (Coordinatore Sicurezza Esecuzione)</Label>
-                                    <Input value={formData.soggetti_riferimento.cse} onChange={e => updateSoggetti('cse', e.target.value)} />
-                                </div>
+                                <div><Label>Committente *</Label><Input data-testid="input-committente" value={formData.soggetti_riferimento.committente} onChange={e => updateSoggetti('committente', e.target.value)} /></div>
+                                <div><Label>Responsabile Lavori</Label><Input value={formData.soggetti_riferimento.responsabile_lavori} onChange={e => updateSoggetti('responsabile_lavori', e.target.value)} /></div>
+                                <div><Label>Direttore Lavori</Label><Input value={formData.soggetti_riferimento.direttore_lavori} onChange={e => updateSoggetti('direttore_lavori', e.target.value)} /></div>
+                                <div><Label>Progettista</Label><Input value={formData.soggetti_riferimento.progettista} onChange={e => updateSoggetti('progettista', e.target.value)} /></div>
+                                <div><Label>CSP</Label><Input value={formData.soggetti_riferimento.csp} onChange={e => updateSoggetti('csp', e.target.value)} /></div>
+                                <div><Label>CSE</Label><Input value={formData.soggetti_riferimento.cse} onChange={e => updateSoggetti('cse', e.target.value)} /></div>
                             </CardContent>
                         </Card>
-
                         <Card>
                             <CardHeader>
                                 <div className="flex items-center justify-between">
-                                    <CardTitle className="text-lg flex items-center gap-2"><Users className="h-5 w-5 text-[#0055FF]" /> Lavoratori Coinvolti</CardTitle>
-                                    <Button variant="outline" size="sm" onClick={addLavoratore} data-testid="btn-add-lavoratore">
-                                        <Plus className="h-4 w-4 mr-1" /> Aggiungi
-                                    </Button>
+                                    <CardTitle className="text-lg flex items-center gap-2"><Users className="h-5 w-5 text-[#0055FF]" /> Lavoratori</CardTitle>
+                                    <Button variant="outline" size="sm" onClick={addLavoratore} data-testid="btn-add-lavoratore"><Plus className="h-4 w-4 mr-1" /> Aggiungi</Button>
                                 </div>
                             </CardHeader>
                             <CardContent>
                                 {formData.lavoratori_coinvolti.length === 0 ? (
-                                    <p className="text-sm text-slate-400 text-center py-4">Nessun lavoratore aggiunto. Clicca "Aggiungi" per iniziare.</p>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {formData.lavoratori_coinvolti.map((lav, idx) => (
-                                            <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg" data-testid={`lavoratore-row-${idx}`}>
-                                                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                    <Input placeholder="Nominativo" value={lav.nominativo} onChange={e => updateLavoratore(idx, 'nominativo', e.target.value)} />
-                                                    <Input placeholder="Mansione" value={lav.mansione} onChange={e => updateLavoratore(idx, 'mansione', e.target.value)} />
-                                                </div>
-                                                <div className="flex items-center gap-4 pt-2">
-                                                    <label className="flex items-center gap-1.5 text-xs">
-                                                        <Checkbox checked={lav.addetto_primo_soccorso} onCheckedChange={v => updateLavoratore(idx, 'addetto_primo_soccorso', v)} />
-                                                        PS
-                                                    </label>
-                                                    <label className="flex items-center gap-1.5 text-xs">
-                                                        <Checkbox checked={lav.addetto_antincendio} onCheckedChange={v => updateLavoratore(idx, 'addetto_antincendio', v)} />
-                                                        AI
-                                                    </label>
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => removeLavoratore(idx)}>
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        ))}
+                                    <p className="text-sm text-slate-400 text-center py-4">Nessun lavoratore aggiunto.</p>
+                                ) : formData.lavoratori_coinvolti.map((lav, i) => (
+                                    <div key={i} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg mb-2" data-testid={`lavoratore-row-${i}`}>
+                                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            <Input placeholder="Nominativo" value={lav.nominativo} onChange={e => updateLavoratore(i, 'nominativo', e.target.value)} />
+                                            <Input placeholder="Mansione" value={lav.mansione} onChange={e => updateLavoratore(i, 'mansione', e.target.value)} />
+                                        </div>
+                                        <div className="flex items-center gap-4 pt-2">
+                                            <label className="flex items-center gap-1.5 text-xs"><Checkbox checked={lav.addetto_primo_soccorso} onCheckedChange={v => updateLavoratore(i, 'addetto_primo_soccorso', v)} />PS</label>
+                                            <label className="flex items-center gap-1.5 text-xs"><Checkbox checked={lav.addetto_antincendio} onCheckedChange={v => updateLavoratore(i, 'addetto_antincendio', v)} />AI</label>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => removeLavoratore(i)}><Trash2 className="h-4 w-4" /></Button>
+                                        </div>
                                     </div>
-                                )}
+                                ))}
                             </CardContent>
                         </Card>
-
                         <Card>
                             <CardHeader>
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="text-lg">Subappalti</CardTitle>
-                                    <Button variant="outline" size="sm" onClick={addSubappalto} data-testid="btn-add-subappalto">
-                                        <Plus className="h-4 w-4 mr-1" /> Aggiungi
-                                    </Button>
+                                    <Button variant="outline" size="sm" onClick={addSubappalto} data-testid="btn-add-subappalto"><Plus className="h-4 w-4 mr-1" /> Aggiungi</Button>
                                 </div>
                             </CardHeader>
                             <CardContent>
                                 {formData.subappalti.length === 0 ? (
-                                    <p className="text-sm text-slate-400 text-center py-4">Nessun subappalto previsto.</p>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {formData.subappalti.map((sub, idx) => (
-                                            <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
-                                                <Input className="flex-1" placeholder="Lavorazione" value={sub.lavorazione} onChange={e => updateSubappalto(idx, 'lavorazione', e.target.value)} />
-                                                <Input className="flex-1" placeholder="Impresa" value={sub.impresa} onChange={e => updateSubappalto(idx, 'impresa', e.target.value)} />
-                                                <Input className="w-28" placeholder="Durata" value={sub.durata_prevista} onChange={e => updateSubappalto(idx, 'durata_prevista', e.target.value)} />
-                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => removeSubappalto(idx)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        ))}
+                                    <p className="text-sm text-slate-400 text-center py-4">Nessun subappalto.</p>
+                                ) : formData.subappalti.map((s, i) => (
+                                    <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg mb-2">
+                                        <Input className="flex-1" placeholder="Lavorazione" value={s.lavorazione} onChange={e => updateSubappalto(i, 'lavorazione', e.target.value)} />
+                                        <Input className="flex-1" placeholder="Impresa" value={s.impresa} onChange={e => updateSubappalto(i, 'impresa', e.target.value)} />
+                                        <Input className="w-28" placeholder="Durata" value={s.durata_prevista} onChange={e => updateSubappalto(i, 'durata_prevista', e.target.value)} />
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => removeSubappalto(i)}><Trash2 className="h-4 w-4" /></Button>
                                     </div>
-                                )}
+                                ))}
                             </CardContent>
                         </Card>
                     </div>
                 )}
 
-                {/* ── Step 2: Fasi di Lavoro ── */}
+                {/* ── Step 2: Fasi & Rischi (3 livelli) ── */}
                 {step === 2 && (
                     <div className="space-y-6">
                         <Card>
                             <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2"><ClipboardCheck className="h-5 w-5 text-[#0055FF]" /> Fasi di Lavoro</CardTitle>
-                                <CardDescription>Seleziona le fasi di lavoro pertinenti dalla Libreria Rischi. Per ogni fase, il sistema associa automaticamente rischi, misure e DPI.</CardDescription>
+                                <CardTitle className="text-lg flex items-center gap-2"><ClipboardCheck className="h-5 w-5 text-[#0055FF]" /> Fasi di Lavoro & Rischi Associati</CardTitle>
+                                <CardDescription>Seleziona le fasi pertinenti. Il sistema attiva automaticamente rischi, DPI e misure collegate (catena Fase → Rischi → DPI/Misure).</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-3">
-                                {fasiDisponibili.map((fase) => {
-                                    const isSelected = formData.fasi_lavoro_selezionate.some(f => f.fase_id === fase.codice);
+                                {fasiLib.map(fase => {
+                                    const isSelected = formData.fasi_lavoro_selezionate.some(f => f.fase_codice === fase.codice);
+                                    const isExpanded = expandedFasi[fase.codice];
+                                    const rischiFase = (fase.rischi_ids || []).map(rc => rischiMap[rc]).filter(Boolean);
                                     return (
-                                        <div
-                                            key={fase.codice}
-                                            data-testid={`fase-card-${fase.codice}`}
-                                            onClick={() => toggleFase(fase)}
-                                            className={`cursor-pointer border rounded-lg p-4 transition-all ${
-                                                isSelected
-                                                    ? 'border-[#0055FF] bg-blue-50/50 shadow-sm'
-                                                    : 'border-gray-200 hover:border-gray-300'
-                                            }`}
-                                        >
-                                            <div className="flex items-start justify-between">
+                                        <div key={fase.codice} data-testid={`fase-card-${fase.codice}`}
+                                            className={`border rounded-lg transition-all ${isSelected ? 'border-[#0055FF] bg-blue-50/30 shadow-sm' : 'border-gray-200 hover:border-gray-300'}`}>
+                                            <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={() => toggleFase(fase)}>
+                                                <Checkbox checked={isSelected} />
                                                 <div className="flex-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <Checkbox checked={isSelected} />
+                                                    <div className="flex items-center gap-2 flex-wrap">
                                                         <span className="font-medium text-[#1E293B]">{fase.nome}</span>
                                                         <Badge variant="outline" className="text-xs">{fase.codice}</Badge>
                                                         <Badge className="text-xs bg-slate-100 text-slate-600">{fase.categoria}</Badge>
+                                                        {(fase.applicabile_a || []).map(n => <Badge key={n} className="text-[10px] bg-blue-100 text-blue-700">{n}</Badge>)}
                                                     </div>
+                                                    {fase.descrizione && <p className="text-xs text-slate-500 mt-1">{fase.descrizione}</p>}
+                                                </div>
+                                                <div className="flex items-center gap-1 text-xs text-slate-400">
+                                                    <span>{rischiFase.length} rischi</span>
                                                     {isSelected && (
-                                                        <div className="mt-3 ml-7 space-y-2">
-                                                            <div className="text-xs text-slate-500">
-                                                                <span className="font-semibold">Rischi:</span>{' '}
-                                                                {(fase.rischi_associati || []).map(r => r.descrizione).join(' | ')}
-                                                            </div>
-                                                            <div className="text-xs text-slate-500">
-                                                                <span className="font-semibold">DPI:</span>{' '}
-                                                                {(fase.dpi_richiesti || []).join(', ')}
-                                                            </div>
-                                                            <div className="text-xs text-slate-500">
-                                                                <span className="font-semibold">Misure:</span>{' '}
-                                                                {(fase.misure_prevenzione || []).join(' | ')}
-                                                            </div>
-                                                        </div>
+                                                        <button onClick={e => { e.stopPropagation(); setExpandedFasi(p => ({ ...p, [fase.codice]: !p[fase.codice] })); }}
+                                                            className="ml-2 p-1 hover:bg-white rounded">
+                                                            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                                        </button>
                                                     )}
                                                 </div>
-                                                <div className="flex gap-1">
-                                                    {(fase.applicabile_a || []).map(n => (
-                                                        <Badge key={n} className="text-[10px] bg-blue-100 text-blue-700">{n}</Badge>
-                                                    ))}
-                                                </div>
                                             </div>
+                                            {/* Expanded: show rischi chain */}
+                                            {isSelected && isExpanded && (
+                                                <div className="px-4 pb-4 border-t border-blue-100">
+                                                    <div className="mt-3 space-y-2">
+                                                        {rischiFase.map(rischio => (
+                                                            <div key={rischio.codice} className="ml-4 p-3 bg-white border border-gray-100 rounded-md">
+                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                    <CircleAlert className={`h-3.5 w-3.5 ${rischio.gate_critical ? 'text-red-500' : 'text-amber-500'}`} />
+                                                                    <span className="text-sm font-medium">{rischio.nome}</span>
+                                                                    <Badge className={`text-[10px] ${rischio.gate_critical ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                                                                        {rischio.valutazione_default?.classe || ''}
+                                                                    </Badge>
+                                                                    {rischio.gate_critical && <Badge className="text-[10px] bg-red-50 text-red-600">CRITICO</Badge>}
+                                                                </div>
+                                                                <p className="text-xs text-slate-500 mt-1">{rischio.descrizione_breve}</p>
+                                                                <div className="mt-2 flex flex-wrap gap-1">
+                                                                    {(rischio.dpi_ids || []).map(d => (
+                                                                        <Badge key={d} className="text-[10px] bg-emerald-50 text-emerald-700">{dpiMap[d]?.nome || d}</Badge>
+                                                                    ))}
+                                                                    {(rischio.misure_ids || []).map(m => (
+                                                                        <Badge key={m} className="text-[10px] bg-purple-50 text-purple-700">{dpiMap[m]?.nome || m}</Badge>
+                                                                    ))}
+                                                                    {(rischio.apprestamenti_ids || []).map(a => (
+                                                                        <Badge key={a} className="text-[10px] bg-orange-50 text-orange-700">{dpiMap[a]?.nome || a}</Badge>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })}
-                                {fasiDisponibili.length === 0 && (
-                                    <p className="text-sm text-slate-400 text-center py-8">Caricamento libreria rischi...</p>
-                                )}
+                                {fasiLib.length === 0 && <p className="text-sm text-slate-400 text-center py-8">Caricamento libreria...</p>}
                             </CardContent>
                         </Card>
+
+                        {/* Domande residue generate */}
+                        {formData.domande_residue.length > 0 && (
+                            <Card className="border-amber-200">
+                                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-600" /> Domande Residue ({formData.domande_residue.length})</CardTitle></CardHeader>
+                                <CardContent className="space-y-2">
+                                    {formData.domande_residue.map((d, i) => (
+                                        <div key={i} className={`p-3 rounded-lg border ${d.gate_critical ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'}`}>
+                                            <div className="flex items-start gap-2">
+                                                <CircleAlert className={`h-4 w-4 mt-0.5 ${d.gate_critical ? 'text-red-500' : 'text-amber-500'}`} />
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-medium">{d.testo}</p>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <Badge className="text-[10px]" variant="outline">Da: {d.origine_rischio}</Badge>
+                                                        <Badge className={`text-[10px] ${d.gate_critical ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                            {d.gate_critical ? 'Blocca POS' : `Impatto: ${d.impatto}`}
+                                                        </Badge>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        )}
                     </div>
                 )}
 
@@ -508,75 +461,78 @@ export default function SchedaCantierePage() {
                             <CardHeader>
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="text-lg flex items-center gap-2"><Wrench className="h-5 w-5 text-[#0055FF]" /> Macchine / Attrezzature</CardTitle>
-                                    <Button variant="outline" size="sm" onClick={addMacchina} data-testid="btn-add-macchina">
-                                        <Plus className="h-4 w-4 mr-1" /> Aggiungi
-                                    </Button>
+                                    <Button variant="outline" size="sm" onClick={addMacchina} data-testid="btn-add-macchina"><Plus className="h-4 w-4 mr-1" /> Aggiungi</Button>
                                 </div>
                             </CardHeader>
                             <CardContent>
                                 {formData.macchine_attrezzature.length === 0 ? (
-                                    <p className="text-sm text-slate-400 text-center py-4">Nessuna macchina aggiunta.</p>
-                                ) : (
-                                    <div className="space-y-2">
-                                        {formData.macchine_attrezzature.map((m, idx) => (
-                                            <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg" data-testid={`macchina-row-${idx}`}>
-                                                <Input className="flex-1" placeholder="Nome macchina/attrezzatura" value={m.nome} onChange={e => updateMacchina(idx, 'nome', e.target.value)} />
-                                                <label className="flex items-center gap-1.5 text-xs whitespace-nowrap">
-                                                    <Checkbox checked={m.marcata_ce} onCheckedChange={v => updateMacchina(idx, 'marcata_ce', v)} />
-                                                    CE
-                                                </label>
-                                                <label className="flex items-center gap-1.5 text-xs whitespace-nowrap">
-                                                    <Checkbox checked={m.verifiche_periodiche} onCheckedChange={v => updateMacchina(idx, 'verifiche_periodiche', v)} />
-                                                    Verifiche
-                                                </label>
-                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => removeMacchina(idx)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        ))}
+                                    <p className="text-sm text-slate-400 text-center py-4">Nessuna macchina.</p>
+                                ) : formData.macchine_attrezzature.map((m, i) => (
+                                    <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg mb-2" data-testid={`macchina-row-${i}`}>
+                                        <Input className="flex-1" placeholder="Nome" value={m.nome} onChange={e => updateMacchina(i, 'nome', e.target.value)} />
+                                        <label className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Checkbox checked={m.marcata_ce} onCheckedChange={v => updateMacchina(i, 'marcata_ce', v)} />CE</label>
+                                        <label className="flex items-center gap-1.5 text-xs whitespace-nowrap"><Checkbox checked={m.verifiche_periodiche} onCheckedChange={v => updateMacchina(i, 'verifiche_periodiche', v)} />Verifiche</label>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500" onClick={() => removeMacchina(i)}><Trash2 className="h-4 w-4" /></Button>
                                     </div>
-                                )}
+                                ))}
                             </CardContent>
                         </Card>
-
                         <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2"><Shield className="h-5 w-5 text-[#0055FF]" /> DPI Presenti in Cantiere</CardTitle>
-                            </CardHeader>
+                            <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Shield className="h-5 w-5 text-[#0055FF]" /> DPI Presenti in Cantiere</CardTitle></CardHeader>
                             <CardContent>
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                    {formData.dpi_presenti.map((dpi, idx) => (
-                                        <label
-                                            key={idx}
-                                            className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${
-                                                dpi.presente ? 'border-emerald-300 bg-emerald-50' : 'border-gray-200'
-                                            }`}
-                                        >
-                                            <Checkbox checked={dpi.presente} onCheckedChange={() => toggleDpi(idx)} />
+                                    {formData.dpi_presenti.map((dpi, i) => (
+                                        <label key={i} className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${dpi.presente ? 'border-emerald-300 bg-emerald-50' : 'border-gray-200'}`}>
+                                            <Checkbox checked={dpi.presente} onCheckedChange={() => toggleDpi(i)} />
                                             <span className="text-sm">{dpi.tipo_dpi}</span>
                                         </label>
                                     ))}
                                 </div>
                             </CardContent>
                         </Card>
-
+                        {/* DPI calcolati da rischi */}
+                        {formData.dpi_calcolati.length > 0 && (
+                            <Card className="border-emerald-200">
+                                <CardHeader><CardTitle className="text-base text-emerald-800">DPI Calcolati da Rischi ({formData.dpi_calcolati.length})</CardTitle></CardHeader>
+                                <CardContent>
+                                    <div className="flex flex-wrap gap-2">
+                                        {formData.dpi_calcolati.map((d, i) => (
+                                            <Badge key={i} className="bg-emerald-50 text-emerald-800 text-xs">{dpiMap[d.codice]?.nome || d.codice}</Badge>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+                        {formData.misure_calcolate.length > 0 && (
+                            <Card className="border-purple-200">
+                                <CardHeader><CardTitle className="text-base text-purple-800">Misure Organizzative ({formData.misure_calcolate.length})</CardTitle></CardHeader>
+                                <CardContent>
+                                    <div className="flex flex-wrap gap-2">
+                                        {formData.misure_calcolate.map((m, i) => (
+                                            <Badge key={i} className="bg-purple-50 text-purple-800 text-xs">{dpiMap[m.codice]?.nome || m.codice}</Badge>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+                        {formData.apprestamenti_calcolati.length > 0 && (
+                            <Card className="border-orange-200">
+                                <CardHeader><CardTitle className="text-base text-orange-800">Apprestamenti ({formData.apprestamenti_calcolati.length})</CardTitle></CardHeader>
+                                <CardContent>
+                                    <div className="flex flex-wrap gap-2">
+                                        {formData.apprestamenti_calcolati.map((a, i) => (
+                                            <Badge key={i} className="bg-orange-50 text-orange-800 text-xs">{dpiMap[a.codice]?.nome || a.codice}</Badge>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
                         <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg">Altre Informazioni</CardTitle>
-                            </CardHeader>
+                            <CardHeader><CardTitle className="text-lg">Altre Informazioni</CardTitle></CardHeader>
                             <CardContent className="space-y-4">
-                                <div>
-                                    <Label>Stoccaggio materiali e/o rifiuti</Label>
-                                    <Textarea data-testid="input-stoccaggio" value={formData.stoccaggio_materiali} onChange={e => setFormData(p => ({ ...p, stoccaggio_materiali: e.target.value }))} rows={2} placeholder="Descrivi le modalita di stoccaggio..." />
-                                </div>
-                                <div>
-                                    <Label>Servizi igienico-assistenziali</Label>
-                                    <Textarea data-testid="input-servizi" value={formData.servizi_igienici} onChange={e => setFormData(p => ({ ...p, servizi_igienici: e.target.value }))} rows={2} placeholder="Descrivi i servizi disponibili..." />
-                                </div>
-                                <div>
-                                    <Label>Note aggiuntive</Label>
-                                    <Textarea value={formData.note_aggiuntive} onChange={e => setFormData(p => ({ ...p, note_aggiuntive: e.target.value }))} rows={2} placeholder="Note..." />
-                                </div>
+                                <div><Label>Stoccaggio materiali e/o rifiuti</Label><Textarea data-testid="input-stoccaggio" value={formData.stoccaggio_materiali} onChange={e => setFormData(p => ({ ...p, stoccaggio_materiali: e.target.value }))} rows={2} /></div>
+                                <div><Label>Servizi igienico-assistenziali</Label><Textarea data-testid="input-servizi" value={formData.servizi_igienici} onChange={e => setFormData(p => ({ ...p, servizi_igienici: e.target.value }))} rows={2} /></div>
+                                <div><Label>Note aggiuntive</Label><Textarea value={formData.note_aggiuntive} onChange={e => setFormData(p => ({ ...p, note_aggiuntive: e.target.value }))} rows={2} /></div>
                             </CardContent>
                         </Card>
                     </div>
@@ -585,45 +541,40 @@ export default function SchedaCantierePage() {
                 {/* ── Step 4: Riepilogo & Gate ── */}
                 {step === 4 && (
                     <div className="space-y-6">
-                        {/* Gate POS Status */}
                         <Card className={gate?.pronto_per_generazione ? 'border-emerald-300' : 'border-amber-300'}>
                             <CardHeader>
                                 <CardTitle className="text-lg flex items-center gap-2">
-                                    {gate?.pronto_per_generazione ? (
-                                        <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                                    ) : (
-                                        <AlertTriangle className="h-5 w-5 text-amber-600" />
-                                    )}
-                                    Gate POS — Stato Completezza
+                                    {gate?.pronto_per_generazione ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <AlertTriangle className="h-5 w-5 text-amber-600" />}
+                                    Gate POS
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="flex items-center gap-4 mb-4">
                                     <div className="flex-1 bg-gray-200 rounded-full h-3">
-                                        <div
-                                            className={`h-3 rounded-full transition-all ${gate?.pronto_per_generazione ? 'bg-emerald-500' : 'bg-amber-500'}`}
-                                            style={{ width: `${gate?.completezza_percentuale || 0}%` }}
-                                        />
+                                        <div className={`h-3 rounded-full transition-all ${gate?.pronto_per_generazione ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                                            style={{ width: `${gate?.completezza_percentuale || 0}%` }} />
                                     </div>
                                     <span className="text-sm font-bold">{gate?.completezza_percentuale || 0}%</span>
                                 </div>
                                 {gate?.campi_mancanti?.length > 0 && (
-                                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
                                         <p className="text-sm font-medium text-amber-800 mb-1">Campi mancanti:</p>
-                                        <ul className="text-sm text-amber-700 list-disc list-inside">
-                                            {gate.campi_mancanti.map((c, i) => <li key={i}>{c}</li>)}
-                                        </ul>
+                                        <ul className="text-sm text-amber-700 list-disc list-inside">{gate.campi_mancanti.map((c, i) => <li key={i}>{c}</li>)}</ul>
+                                    </div>
+                                )}
+                                {gate?.blockers?.length > 0 && (
+                                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
+                                        <p className="text-sm font-medium text-red-800 mb-1">Blockers:</p>
+                                        <ul className="text-sm text-red-700 list-disc list-inside">{gate.blockers.map((b, i) => <li key={i}>{b}</li>)}</ul>
                                     </div>
                                 )}
                                 {gate?.pronto_per_generazione && (
                                     <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                                        <p className="text-sm text-emerald-800">Tutti i campi obbligatori sono compilati. La scheda e pronta per la generazione del POS DOCX.</p>
+                                        <p className="text-sm text-emerald-800">Scheda pronta per la generazione POS DOCX.</p>
                                     </div>
                                 )}
                             </CardContent>
                         </Card>
-
-                        {/* Summary cards */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <Card>
                                 <CardHeader><CardTitle className="text-base">Dati Cantiere</CardTitle></CardHeader>
@@ -635,42 +586,49 @@ export default function SchedaCantierePage() {
                                 </CardContent>
                             </Card>
                             <Card>
-                                <CardHeader><CardTitle className="text-base">Riepilogo</CardTitle></CardHeader>
+                                <CardHeader><CardTitle className="text-base">Contatori</CardTitle></CardHeader>
                                 <CardContent className="text-sm space-y-1">
                                     <p><span className="text-slate-500">Lavoratori:</span> {formData.lavoratori_coinvolti.length}</p>
                                     <p><span className="text-slate-500">Fasi lavoro:</span> {formData.fasi_lavoro_selezionate.length}</p>
-                                    <p><span className="text-slate-500">Macchine:</span> {formData.macchine_attrezzature.length}</p>
-                                    <p><span className="text-slate-500">DPI attivi:</span> {formData.dpi_presenti.filter(d => d.presente).length}/{formData.dpi_presenti.length}</p>
+                                    <p><span className="text-slate-500">Rischi attivati:</span> {formData.fasi_lavoro_selezionate.reduce((a, f) => a + (f.rischi_attivati?.length || 0), 0)}</p>
+                                    <p><span className="text-slate-500">DPI calcolati:</span> {formData.dpi_calcolati.length}</p>
+                                    <p><span className="text-slate-500">Misure:</span> {formData.misure_calcolate.length}</p>
+                                    <p><span className="text-slate-500">Apprestamenti:</span> {formData.apprestamenti_calcolati.length}</p>
+                                    <p><span className="text-slate-500">Domande residue:</span> {formData.domande_residue.length}</p>
                                 </CardContent>
                             </Card>
                         </div>
-
-                        {/* Fasi selezionate riepilogo */}
                         {formData.fasi_lavoro_selezionate.length > 0 && (
                             <Card>
-                                <CardHeader><CardTitle className="text-base">Fasi di Lavoro Selezionate</CardTitle></CardHeader>
-                                <CardContent>
-                                    <div className="space-y-2">
-                                        {formData.fasi_lavoro_selezionate.map((f, i) => (
-                                            <div key={i} className="flex items-center gap-2 p-2 bg-blue-50 rounded-md">
-                                                <ChevronRight className="h-4 w-4 text-[#0055FF]" />
-                                                <span className="text-sm font-medium">{f.nome_fase}</span>
-                                                <Badge variant="outline" className="text-xs ml-auto">{(f.rischi_valutati || []).length} rischi</Badge>
+                                <CardHeader><CardTitle className="text-base">Catena Fase → Rischi</CardTitle></CardHeader>
+                                <CardContent className="space-y-2">
+                                    {formData.fasi_lavoro_selezionate.map((f, i) => {
+                                        const faseLib = fasiLib.find(fl => fl.codice === f.fase_codice);
+                                        return (
+                                            <div key={i} className="p-3 bg-blue-50 rounded-md">
+                                                <div className="flex items-center gap-2">
+                                                    <ChevronRight className="h-4 w-4 text-[#0055FF]" />
+                                                    <span className="text-sm font-medium">{faseLib?.nome || f.fase_codice}</span>
+                                                    <Badge className={`text-[10px] ${CONFIDENCE_BADGE[f.confidence] || ''}`}>{f.confidence}</Badge>
+                                                    <Badge variant="outline" className="text-xs ml-auto">{(f.rischi_attivati || []).length} rischi</Badge>
+                                                </div>
+                                                <div className="mt-1 ml-6 flex flex-wrap gap-1">
+                                                    {(f.rischi_attivati || []).map((ra, j) => (
+                                                        <Badge key={j} className={`text-[10px] ${rischiMap[ra.rischio_codice]?.gate_critical ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                                                            {rischiMap[ra.rischio_codice]?.nome || ra.rischio_codice}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        ))}
-                                    </div>
+                                        );
+                                    })}
                                 </CardContent>
                             </Card>
                         )}
-
-                        {/* Data dichiarazione */}
                         <Card>
                             <CardHeader><CardTitle className="text-base">Dichiarazione</CardTitle></CardHeader>
                             <CardContent>
-                                <div className="max-w-xs">
-                                    <Label>Data dichiarazione</Label>
-                                    <Input type="date" value={formData.data_dichiarazione} onChange={e => setFormData(p => ({ ...p, data_dichiarazione: e.target.value }))} data-testid="input-data-dichiarazione" />
-                                </div>
+                                <div className="max-w-xs"><Label>Data dichiarazione</Label><Input type="date" value={formData.data_dichiarazione} onChange={e => setFormData(p => ({ ...p, data_dichiarazione: e.target.value }))} data-testid="input-data-dichiarazione" /></div>
                             </CardContent>
                         </Card>
                     </div>
@@ -678,18 +636,13 @@ export default function SchedaCantierePage() {
 
                 {/* Navigation footer */}
                 <div className="flex items-center justify-between pt-4 border-t">
-                    <Button variant="outline" onClick={() => step > 1 && setStep(s => s - 1)} disabled={step === 1}>
-                        <ArrowLeft className="h-4 w-4 mr-2" /> Precedente
-                    </Button>
+                    <Button variant="outline" onClick={() => step > 1 && setStep(s => s - 1)} disabled={step === 1}><ArrowLeft className="h-4 w-4 mr-2" /> Precedente</Button>
                     <span className="text-sm text-slate-400">Passo {step} di {STEPS.length}</span>
                     {step < STEPS.length ? (
-                        <Button onClick={() => { handleSave(); setStep(s => s + 1); }} className="bg-[#0055FF] text-white hover:bg-[#0044CC]">
-                            Successivo <ArrowRight className="h-4 w-4 ml-2" />
-                        </Button>
+                        <Button onClick={() => { handleSave(); setStep(s => s + 1); }} className="bg-[#0055FF] text-white hover:bg-[#0044CC]">Successivo <ArrowRight className="h-4 w-4 ml-2" /></Button>
                     ) : (
                         <Button onClick={handleSave} disabled={saving} className="bg-emerald-600 text-white hover:bg-emerald-700" data-testid="btn-save-final">
-                            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                            Salva Scheda Finale
+                            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />} Salva Scheda Finale
                         </Button>
                     )}
                 </div>

@@ -1,9 +1,7 @@
 # SPEC_LIBRERIA_RISCHI_3_LIVELLI.md
 ## Modello Libreria Sicurezza a 3 Livelli — NormaFacile 2.0
 
-**Data**: 2026-03-23
-**Versione**: 1.0 — BOZZA PER REVISIONE UTENTE
-**Scopo**: Definire il modello dati a 3 livelli separati (Fasi → Rischi → DPI/Misure) per la libreria sicurezza, sostituendo il modello flat attuale.
+**Data**: 2026-03-23  |  **Versione**: 2.0 — DEFINITIVA (con 7 integrazioni utente)
 
 ---
 
@@ -14,77 +12,57 @@ FASE LAVORATIVA ──attiva──> RISCHIO SICUREZZA ──richiede──> DPI 
      (cosa fai)              (cosa puoi subire)              (come ti proteggi)
 ```
 
-**Regola fondamentale**: Ogni livello e un'entita indipendente.
-- Una **fase** puo attivare N rischi
-- Un **rischio** puo essere attivato da N fasi
-- Un **rischio** richiede N DPI/misure
-- Un **DPI/misura** puo servire per N rischi
-
-Relazione **many-to-many** gestita tramite array di codici (non embedding).
+Relazione **many-to-many** gestita tramite array di codici.
 
 ---
 
 ## 2. Collezione 1: `lib_fasi_lavoro`
 
-Rappresenta le attivita lavorative concrete svolte in cantiere.
-
 ```json
 {
   "codice": "FL-001",
-  "user_id": "string (owner)",
-  "nome": "Taglio e preparazione profili",
-  "descrizione": "Taglio di lamiere e profili metallici con utensili manuali e automatici",
-  "categoria": "carpenteria_metallica",
+  "user_id": "string",
+  "nome": "Scarico e movimentazione materiali",
+  "descrizione": "Scarico materiali dal mezzo di trasporto e movimentazione in area cantiere",
+  "categoria": "movimentazione",
   "applicabile_a": ["EN_1090", "EN_13241", "GENERICA"],
 
   "trigger": {
-    "keywords": ["taglio", "lamiera", "profilo", "cesoia", "plasma"],
-    "contesto": ["officina", "cantiere"]
+    "keywords": ["scarico", "movimentazione", "trasporto", "consegna"],
+    "contesto": ["cantiere"]
   },
+  "condizioni_esclusione": ["solo_officina"],
 
-  "rischi_ids": ["RS-PROIEZIONE", "RS-RUMORE", "RS-VIBRAZIONI", "RS-TAGLI"],
+  "rischi_ids": ["RS-MMC", "RS-INVESTIMENTO", "RS-SCHIACCIAMENTO"],
+  "macchine_tipiche": ["Carrello elevatore", "Carroponte", "Transpallet"],
 
-  "macchine_tipiche": ["Sega circolare", "Flessibile", "Cesoie", "Taglio plasma"],
-
-  "is_default": true,
-  "attivo": true,
+  "active": true,
+  "version": 1,
+  "source": "seed",
+  "sort_order": 10,
   "created_at": "datetime",
   "updated_at": "datetime"
 }
 ```
 
-### Campi chiave:
-| Campo | Tipo | Descrizione |
-|-------|------|-------------|
-| `codice` | string | Identificativo univoco (FL-001, FL-002, ...) |
-| `nome` | string | Label leggibile |
-| `descrizione` | string | Descrizione estesa per l'AI |
-| `categoria` | string | Raggruppamento logico |
-| `applicabile_a` | string[] | Normative pertinenti |
-| `trigger.keywords` | string[] | Parole chiave che l'AI usa per matchare la fase con i dati della commessa |
-| `trigger.contesto` | string[] | Dove si svolge (officina / cantiere / entrambi) |
-| `rischi_ids` | string[] | Codici rischi attivati da questa fase |
-| `macchine_tipiche` | string[] | Macchine/attrezzature tipicamente usate |
-
 ---
 
 ## 3. Collezione 2: `lib_rischi_sicurezza`
 
-Rappresenta i pericoli concreti a cui il lavoratore e esposto.
-
 ```json
 {
   "codice": "RS-CADUTA-ALTO",
-  "user_id": "string (owner)",
+  "user_id": "string",
   "nome": "Caduta dall'alto",
   "categoria": "sicurezza",
   "sottocategoria": "cadute",
-  "descrizione": "Rischio di caduta da altezza superiore a 2 metri durante lavori in quota",
+  "descrizione_breve": "Rischio di caduta da altezza superiore a 2 metri",
 
   "trigger": {
     "keywords": ["quota", "altezza", "ponteggio", "trabattello", "copertura", "tetto"],
     "condizioni": ["montaggio_cantiere", "lavori_quota"]
   },
+  "condizioni_esclusione": ["solo_lavorazioni_a_terra", "altezza_inferiore_2m"],
 
   "valutazione_default": {
     "probabilita": "Medio Alta",
@@ -98,51 +76,43 @@ Rappresenta i pericoli concreti a cui il lavoratore e esposto.
     "Cintura di sicurezza con fune di trattenuta",
     "Formazione specifica lavori in quota"
   ],
+  "note_pos_template": "Valutare necessita di piano di montaggio ponteggio (Pi.M.U.S.)",
 
   "dpi_ids": ["DPI-CASCO", "DPI-CINTURA", "DPI-SCARPE"],
+  "misure_ids": [],
   "apprestamenti_ids": ["APP-PONTEGGIO", "APP-TRABATTELLO", "APP-PARAPETTI", "APP-LINEAVITA"],
 
-  "documenti_correlati": ["formazione_lavori_quota", "idoneita_sanitaria"],
+  "documenti_richiesti": [
+    { "codice": "DOC-FORMAZIONE-QUOTA", "nome": "Attestato formazione lavori in quota", "obbligatorio": true, "condizione": null },
+    { "codice": "DOC-IDONEITA", "nome": "Idoneita sanitaria", "obbligatorio": true, "condizione": null },
+    { "codice": "DOC-PIMUS", "nome": "Pi.M.U.S.", "obbligatorio": false, "condizione": "uso_ponteggio" }
+  ],
+
   "domande_verifica": [
-    "Sono previsti lavori ad altezza superiore a 2 m?",
-    "Quale sistema anticaduta e previsto?"
+    { "testo": "Sono previsti lavori ad altezza superiore a 2 m?", "impatto": "alto", "gate_critical": true },
+    { "testo": "Quale sistema anticaduta e previsto?", "impatto": "alto", "gate_critical": true }
   ],
 
   "rif_normativo": "D.Lgs. 81/08 Titolo IV Capo II",
-  "is_default": true,
-  "attivo": true,
+  "gate_critical": true,
+
+  "active": true,
+  "version": 1,
+  "source": "seed",
+  "sort_order": 10,
   "created_at": "datetime",
   "updated_at": "datetime"
 }
 ```
 
-### Campi chiave:
-| Campo | Tipo | Descrizione |
-|-------|------|-------------|
-| `codice` | string | Identificativo univoco (RS-XXX) |
-| `nome` | string | Label leggibile |
-| `categoria` | string | Macro-famiglia: `sicurezza`, `salute`, `trasversale` |
-| `sottocategoria` | string | Sotto-gruppo: `cadute`, `meccanico`, `chimico`, `fisico`, `elettrico`, `biologico`, `ergonomico`, `incendio` |
-| `trigger.keywords` | string[] | L'AI usa queste per capire se il rischio e pertinente |
-| `trigger.condizioni` | string[] | Condizioni operative che attivano il rischio |
-| `valutazione_default` | object | P x D → Classe di rischio pre-calcolata |
-| `misure_prevenzione` | string[] | Testo delle misure da inserire nel POS |
-| `dpi_ids` | string[] | Codici DPI richiesti |
-| `apprestamenti_ids` | string[] | Codici apprestamenti/attrezzature di sicurezza |
-| `documenti_correlati` | string[] | Documenti/formazione necessari |
-| `domande_verifica` | string[] | Domande che l'AI pone all'utente per confermare |
-| `rif_normativo` | string | Riferimento normativo |
-
 ---
 
 ## 4. Collezione 3: `lib_dpi_misure`
 
-Raggruppa DPI, misure organizzative e apprestamenti di sicurezza.
-
 ```json
 {
   "codice": "DPI-CASCO",
-  "user_id": "string (owner)",
+  "user_id": "string",
   "nome": "Casco protettivo",
   "tipo": "dpi",
   "sottotipo": "protezione_capo",
@@ -151,33 +121,26 @@ Raggruppa DPI, misure organizzative e apprestamenti di sicurezza.
   "obbligatorieta": "sempre",
   "condizioni": [],
 
-  "is_default": true,
-  "attivo": true,
+  "active": true,
+  "version": 1,
+  "source": "seed",
+  "sort_order": 10,
   "created_at": "datetime",
   "updated_at": "datetime"
 }
 ```
 
-### Valori `tipo`:
-| Tipo | Descrizione | Prefisso codice |
-|------|-------------|-----------------|
-| `dpi` | Dispositivo di Protezione Individuale | DPI-XXX |
-| `misura` | Misura organizzativa / procedurale | MIS-XXX |
-| `apprestamento` | Attrezzatura/opera provvisionale di sicurezza | APP-XXX |
-
-### Valori `obbligatorieta`:
-- `sempre` — richiesto in ogni cantiere
-- `condizionale` — richiesto solo se attivato da un rischio specifico
-- `raccomandato` — suggerito ma non obbligatorio
+### Valori `tipo`:  `dpi | misura | apprestamento`
+### Valori `obbligatorieta`:  `sempre | condizionale | raccomandato`
 
 ---
 
 ## 5. Seed Data MVP
 
-### 5.1 Fasi di Lavoro (11 fasi)
+### 5.1 Fasi di Lavoro (11)
 
-| Codice | Nome | Categoria | Contesto | Rischi attivati |
-|--------|------|-----------|----------|-----------------|
+| Codice | Nome | Categoria | Contesto | Rischi |
+|--------|------|-----------|----------|--------|
 | FL-001 | Scarico e movimentazione materiali | movimentazione | cantiere | RS-MMC, RS-INVESTIMENTO, RS-SCHIACCIAMENTO |
 | FL-002 | Tracciamento e predisposizione area | preparazione | cantiere | RS-URTI, RS-INVESTIMENTO |
 | FL-003 | Taglio e preparazione profili | carpenteria_metallica | officina, cantiere | RS-PROIEZIONE, RS-RUMORE, RS-VIBRAZIONI, RS-TAGLI |
@@ -190,36 +153,36 @@ Raggruppa DPI, misure organizzative e apprestamenti di sicurezza.
 | FL-010 | Installazione cancelli/portoni | montaggio_en13241 | cantiere | RS-CADUTA-ALTO, RS-SCHIACCIAMENTO, RS-ELETTRICO, RS-TAGLI |
 | FL-011 | Collaudo e messa in esercizio | collaudo | cantiere | RS-ELETTRICO, RS-SCHIACCIAMENTO |
 
-### 5.2 Rischi Sicurezza (15 rischi)
+### 5.2 Rischi Sicurezza (18)
 
-| Codice | Nome | Categoria | Sottocategoria | P | D | Classe | DPI richiesti | Apprestamenti |
-|--------|------|-----------|----------------|---|---|--------|---------------|---------------|
-| RS-CADUTA-ALTO | Caduta dall'alto | sicurezza | cadute | Medio Alta | Ingente | Gravissimo | DPI-CASCO, DPI-CINTURA, DPI-SCARPE | APP-PONTEGGIO, APP-TRABATTELLO, APP-PARAPETTI, APP-LINEAVITA |
-| RS-CADUTA-MATERIALI | Caduta materiali dall'alto | sicurezza | cadute | Medio Alta | Notevole | Grave | DPI-CASCO, DPI-SCARPE | APP-RETI-PROTEZIONE |
-| RS-URTI | Urti, colpi, impatti | sicurezza | meccanico | Medio Alta | Modesta | Modesto | DPI-CASCO, DPI-GUANTI-CROSTA, DPI-SCARPE | — |
-| RS-SCHIACCIAMENTO | Schiacciamento | sicurezza | meccanico | Medio Bassa | Ingente | Grave | DPI-SCARPE, DPI-GUANTI-CROSTA, DPI-CASCO | — |
-| RS-CESOIAMENTO | Cesoiamento | sicurezza | meccanico | Medio Bassa | Ingente | Grave | DPI-GUANTI-CROSTA, DPI-SCARPE | — |
-| RS-PROIEZIONE | Proiezione schegge/detriti | sicurezza | meccanico | Medio Alta | Notevole | Grave | DPI-OCCHIALI, DPI-GUANTI-CROSTA, DPI-TUTA | — |
-| RS-TAGLI | Tagli e abrasioni | sicurezza | meccanico | Medio Alta | Modesta | Modesto | DPI-GUANTI-CROSTA, DPI-TUTA | — |
-| RS-IMPIGLIAMENTO | Impigliamento | sicurezza | meccanico | Medio Bassa | Notevole | Modesto | DPI-TUTA | MIS-INDUMENTI-ADERENTI |
-| RS-RUMORE | Rumore | salute | fisico | Elevata | Modesta | Grave | DPI-CUFFIE | MIS-VALUTAZIONE-RUMORE |
-| RS-VIBRAZIONI | Vibrazioni meccaniche | salute | fisico | Medio Alta | Modesta | Modesto | DPI-GUANTI-CROSTA | MIS-VALUTAZIONE-VIBRAZIONI |
-| RS-RADIAZIONI-UV | Radiazioni UV/IR (saldatura) | salute | fisico | Elevata | Notevole | Gravissimo | DPI-SCHERMO-SALD, DPI-TUTA | MIS-SCHERMATURA-AREA |
-| RS-FUMI | Fumi di saldatura / polveri | salute | chimico | Elevata | Notevole | Gravissimo | DPI-MASCHERA, DPI-TUTA | MIS-ASPIRAZIONE-FUMI |
-| RS-CHIMICO | Rischio chimico (solventi, vernici) | salute | chimico | Medio Alta | Notevole | Grave | DPI-MASCHERA, DPI-GUANTI-CROSTA, DPI-OCCHIALI, DPI-TUTA | MIS-VENTILAZIONE-FORZATA |
-| RS-INALAZIONE | Inalazione vapori/solventi | salute | chimico | Medio Alta | Notevole | Grave | DPI-MASCHERA | MIS-VENTILAZIONE-FORZATA |
-| RS-ELETTRICO | Rischio elettrico | sicurezza | elettrico | Medio Bassa | Ingente | Grave | DPI-GUANTI-ISOLANTI, DPI-SCARPE | MIS-SEZIONAMENTO-LINEA |
-| RS-INCENDIO | Incendio / esplosione | sicurezza | incendio | Medio Bassa | Ingente | Grave | — | APP-ESTINTORE, MIS-ALLONTANARE-INFIAMMABILI |
-| RS-INVESTIMENTO | Investimento da mezzi | sicurezza | meccanico | Medio Bassa | Ingente | Grave | DPI-GILET-AV, DPI-SCARPE, DPI-CASCO | MIS-PERCORSI-SEGNALATI |
-| RS-RIBALTAMENTO | Ribaltamento mezzo | sicurezza | meccanico | Bassa | Ingente | Grave | DPI-CASCO | MIS-VERIFICA-PORTATA |
-| RS-MMC | Movimentazione manuale carichi | salute | ergonomico | Medio Alta | Modesta | Modesto | DPI-GUANTI-CROSTA, DPI-SCARPE | MIS-AUSILI-MECCANICI |
-| RS-USTIONI | Ustioni | sicurezza | termico | Medio Alta | Modesta | Modesto | DPI-GUANTI-CALORE, DPI-TUTA, DPI-SCARPE | — |
+| Codice | Nome | Cat. | Sotto | P | D | Classe | gate_critical | DPI | Misure | Appr. |
+|--------|------|------|-------|---|---|--------|---------------|-----|--------|-------|
+| RS-CADUTA-ALTO | Caduta dall'alto | sicurezza | cadute | MedioAlta | Ingente | Gravissimo | true | CASCO,CINTURA,SCARPE | — | PONTEGGIO,TRABATTELLO,PARAPETTI,LINEAVITA |
+| RS-CADUTA-MAT | Caduta materiali dall'alto | sicurezza | cadute | MedioAlta | Notevole | Grave | true | CASCO,SCARPE | — | RETI-PROTEZIONE |
+| RS-URTI | Urti, colpi, impatti | sicurezza | meccanico | MedioAlta | Modesta | Modesto | false | CASCO,GUANTI-CROSTA,SCARPE | — | — |
+| RS-SCHIACCIAMENTO | Schiacciamento | sicurezza | meccanico | MedioBassa | Ingente | Grave | true | SCARPE,GUANTI-CROSTA,CASCO | — | — |
+| RS-CESOIAMENTO | Cesoiamento | sicurezza | meccanico | MedioBassa | Ingente | Grave | false | GUANTI-CROSTA,SCARPE | — | — |
+| RS-PROIEZIONE | Proiezione schegge/detriti | sicurezza | meccanico | MedioAlta | Notevole | Grave | false | OCCHIALI,GUANTI-CROSTA,TUTA | — | — |
+| RS-TAGLI | Tagli e abrasioni | sicurezza | meccanico | MedioAlta | Modesta | Modesto | false | GUANTI-CROSTA,TUTA | — | — |
+| RS-IMPIGLIAMENTO | Impigliamento | sicurezza | meccanico | MedioBassa | Notevole | Modesto | false | TUTA | INDUMENTI-ADERENTI | — |
+| RS-RUMORE | Rumore | salute | fisico | Elevata | Modesta | Grave | false | CUFFIE | VALUTAZIONE-RUMORE | — |
+| RS-VIBRAZIONI | Vibrazioni meccaniche | salute | fisico | MedioAlta | Modesta | Modesto | false | GUANTI-CROSTA | VALUTAZIONE-VIBRAZIONI | — |
+| RS-RADIAZIONI-UV | Radiazioni UV/IR | salute | fisico | Elevata | Notevole | Gravissimo | true | SCHERMO-SALD,TUTA | SCHERMATURA-AREA | — |
+| RS-FUMI | Fumi saldatura/polveri | salute | chimico | Elevata | Notevole | Gravissimo | true | MASCHERA,TUTA | ASPIRAZIONE-FUMI | — |
+| RS-CHIMICO | Rischio chimico | salute | chimico | MedioAlta | Notevole | Grave | false | MASCHERA,GUANTI-CROSTA,OCCHIALI,TUTA | VENTILAZIONE-FORZATA | — |
+| RS-INALAZIONE | Inalazione vapori | salute | chimico | MedioAlta | Notevole | Grave | false | MASCHERA | VENTILAZIONE-FORZATA | — |
+| RS-ELETTRICO | Rischio elettrico | sicurezza | elettrico | MedioBassa | Ingente | Grave | true | GUANTI-ISOLANTI,SCARPE | SEZIONAMENTO-LINEA | — |
+| RS-INCENDIO | Incendio/esplosione | sicurezza | incendio | MedioBassa | Ingente | Grave | true | — | ALLONTANARE-INFIAMMABILI | ESTINTORE |
+| RS-INVESTIMENTO | Investimento da mezzi | sicurezza | meccanico | MedioBassa | Ingente | Grave | true | GILET-AV,SCARPE,CASCO | PERCORSI-SEGNALATI | — |
+| RS-RIBALTAMENTO | Ribaltamento mezzo | sicurezza | meccanico | Bassa | Ingente | Grave | true | CASCO | VERIFICA-PORTATA | — |
+| RS-MMC | Movimentazione manuale carichi | salute | ergonomico | MedioAlta | Modesta | Modesto | false | GUANTI-CROSTA,SCARPE | AUSILI-MECCANICI | — |
+| RS-USTIONI | Ustioni | sicurezza | termico | MedioAlta | Modesta | Modesto | false | GUANTI-CALORE,TUTA,SCARPE | — | — |
 
-### 5.3 DPI / Misure / Apprestamenti (30 entries)
+### 5.3 DPI (12) + Misure (11) + Apprestamenti (8) = 31
 
-#### DPI (12)
-| Codice | Nome | Sottotipo | Norma | Obbligatorieta |
-|--------|------|-----------|-------|----------------|
+#### DPI
+| Codice | Nome | Sottotipo | Norma | Obbl. |
+|--------|------|-----------|-------|-------|
 | DPI-CASCO | Casco protettivo | protezione_capo | UNI EN 397 | sempre |
 | DPI-GUANTI-CROSTA | Guanti in crosta | protezione_mani | UNI EN 388 | sempre |
 | DPI-GUANTI-CALORE | Guanti protezione calore | protezione_mani | UNI EN 407 | condizionale |
@@ -233,178 +196,77 @@ Raggruppa DPI, misure organizzative e apprestamenti di sicurezza.
 | DPI-TUTA | Tuta di protezione | protezione_corpo | UNI EN 340 | sempre |
 | DPI-GILET-AV | Gilet alta visibilita | protezione_visibilita | UNI EN ISO 20471 | condizionale |
 
-#### Misure organizzative (10)
-| Codice | Nome | Descrizione |
-|--------|------|-------------|
-| MIS-INDUMENTI-ADERENTI | Indumenti aderenti | Non indossare abiti larghi, anelli, catene vicino a organi in movimento |
-| MIS-VALUTAZIONE-RUMORE | Valutazione rischio rumore | Allegare valutazione fonometrica al POS |
-| MIS-VALUTAZIONE-VIBRAZIONI | Valutazione rischio vibrazioni | Allegare valutazione vibrometrica al POS |
-| MIS-SCHERMATURA-AREA | Schermatura area saldatura | Schermare l'area con teli ignifughi per proteggere terzi |
-| MIS-ASPIRAZIONE-FUMI | Aspirazione localizzata fumi | Predisporre aspirazione forzata nell'area di saldatura |
-| MIS-VENTILAZIONE-FORZATA | Ventilazione forzata | Garantire ricambio aria in area verniciatura/chimici |
-| MIS-SEZIONAMENTO-LINEA | Sezionamento linea elettrica | Sezionare e verificare assenza tensione prima di operare |
-| MIS-ALLONTANARE-INFIAMMABILI | Allontanare materiali infiammabili | Rimuovere materiali combustibili dall'area di lavoro |
-| MIS-PERCORSI-SEGNALATI | Percorsi obbligati e segnalati | Segnalare con segnaletica i percorsi pedonali e veicolari |
-| MIS-AUSILI-MECCANICI | Utilizzo ausili meccanici | Utilizzare mezzi meccanici per carichi > 25 kg |
-| MIS-VERIFICA-PORTATA | Verifica portata terreno/mezzo | Verificare la portata del mezzo e del terreno prima del sollevamento |
+#### Misure organizzative
+| Codice | Nome |
+|--------|------|
+| MIS-INDUMENTI-ADERENTI | Indumenti aderenti obbligatori |
+| MIS-VALUTAZIONE-RUMORE | Valutazione rischio rumore allegata |
+| MIS-VALUTAZIONE-VIBRAZIONI | Valutazione rischio vibrazioni allegata |
+| MIS-SCHERMATURA-AREA | Schermatura area saldatura |
+| MIS-ASPIRAZIONE-FUMI | Aspirazione localizzata fumi |
+| MIS-VENTILAZIONE-FORZATA | Ventilazione forzata area |
+| MIS-SEZIONAMENTO-LINEA | Sezionamento e verifica assenza tensione |
+| MIS-ALLONTANARE-INFIAMMABILI | Allontanamento materiali infiammabili |
+| MIS-PERCORSI-SEGNALATI | Percorsi obbligati e segnalati |
+| MIS-AUSILI-MECCANICI | Utilizzo ausili meccanici per carichi > 25 kg |
+| MIS-VERIFICA-PORTATA | Verifica portata terreno e mezzo |
 
-#### Apprestamenti (8)
-| Codice | Nome | Descrizione |
-|--------|------|-------------|
-| APP-PONTEGGIO | Ponteggio regolamentare | Ponteggio metallico conforme D.Lgs. 81/08 Allegato XVIII |
-| APP-TRABATTELLO | Trabattello | Ponte su ruote conforme UNI EN 1004 |
-| APP-PARAPETTI | Parapetti provvisori | Parapetti temporanei su bordi non protetti (h >= 100 cm) |
-| APP-LINEAVITA | Linea vita | Sistema anticaduta fisso o temporaneo conforme UNI EN 795 |
-| APP-RETI-PROTEZIONE | Reti di protezione | Reti sotto area di lavoro per caduta oggetti |
-| APP-ESTINTORE | Estintore | Estintore a polvere o CO2 nelle vicinanze dell'area di lavoro |
-| APP-PLE | PLE (Piattaforma Elevabile) | Piattaforma di lavoro elevabile conforme a norme specifiche |
-| APP-BARRIERE | Barriere di delimitazione | Recinzione/nastro per delimitare area di lavoro |
-
----
-
-## 6. Matrice Relazionale Fase → Rischi → DPI
-
-Questa e la tabella che l'AI usa per ragionare:
-
-```
-FL-001 Scarico materiali
-  └── RS-MMC ──── DPI-GUANTI-CROSTA, DPI-SCARPE + MIS-AUSILI-MECCANICI
-  └── RS-INVESTIMENTO ──── DPI-GILET-AV, DPI-SCARPE, DPI-CASCO + MIS-PERCORSI-SEGNALATI
-  └── RS-SCHIACCIAMENTO ──── DPI-SCARPE, DPI-GUANTI-CROSTA, DPI-CASCO
-
-FL-006 Saldatura
-  └── RS-RADIAZIONI-UV ──── DPI-SCHERMO-SALD, DPI-TUTA + MIS-SCHERMATURA-AREA
-  └── RS-FUMI ──── DPI-MASCHERA, DPI-TUTA + MIS-ASPIRAZIONE-FUMI
-  └── RS-USTIONI ──── DPI-GUANTI-CALORE, DPI-TUTA, DPI-SCARPE
-  └── RS-INCENDIO ──── APP-ESTINTORE + MIS-ALLONTANARE-INFIAMMABILI
-
-FL-008 Montaggio strutture
-  └── RS-CADUTA-ALTO ──── DPI-CASCO, DPI-CINTURA, DPI-SCARPE + APP-PONTEGGIO, APP-LINEAVITA
-  └── RS-CADUTA-MATERIALI ──── DPI-CASCO, DPI-SCARPE + APP-RETI-PROTEZIONE
-  └── RS-URTI ──── DPI-CASCO, DPI-GUANTI-CROSTA, DPI-SCARPE
-  └── RS-SCHIACCIAMENTO ──── DPI-SCARPE, DPI-GUANTI-CROSTA, DPI-CASCO
-```
+#### Apprestamenti
+| Codice | Nome |
+|--------|------|
+| APP-PONTEGGIO | Ponteggio regolamentare |
+| APP-TRABATTELLO | Trabattello UNI EN 1004 |
+| APP-PARAPETTI | Parapetti provvisori |
+| APP-LINEAVITA | Linea vita UNI EN 795 |
+| APP-RETI-PROTEZIONE | Reti di protezione |
+| APP-ESTINTORE | Estintore |
+| APP-PLE | PLE (Piattaforma Elevabile) |
+| APP-BARRIERE | Barriere di delimitazione |
 
 ---
 
-## 7. Come il Motore AI usa i 3 livelli
+## 6. Schema istanziato in `cantieri_sicurezza`
 
-### Flusso logico:
+Quando l'AI (o l'utente) attiva fasi/rischi, nella scheda cantiere si salva:
 
-```
-1. AI legge dati commessa (istruttoria, segmentazione, preventivo)
-2. AI matcha trigger.keywords delle FASI con il contesto della commessa
-3. Per ogni fase attivata, raccoglie i rischi_ids
-4. Per ogni rischio, raccoglie dpi_ids + apprestamenti_ids + misure
-5. Deduplica DPI/misure (un DPI appare una sola volta anche se richiesto da 3 rischi)
-6. Classifica ogni elemento come: dedotto | incerto | mancante
-7. Genera domande_verifica dai rischi incerti
-8. Output strutturato pronto per precompilare la scheda cantiere
-```
-
-### Esempio concreto:
-
-**Input**: Commessa "Fornitura e posa struttura metallica capannone industriale - Verona"
-- Istruttoria: acciaio S355, saldatura MIG, EXC2
-- Segmentazione: EN 1090 + montaggio previsto
-- Preventivo: include voci "montaggio cantiere", "verniciatura"
-
-**AI ragiona**:
-1. **FL-008 Montaggio** → dedotto (da "montaggio cantiere" nel preventivo)
-2. **FL-006 Saldatura** → dedotto (da istruttoria: saldatura MIG)
-3. **FL-003 Taglio profili** → dedotto (carpenteria metallica standard)
-4. **FL-007 Verniciatura** → dedotto (da voce preventivo)
-5. **FL-009 Sollevamento** → incerto (probabile per montaggio capannone, da confermare)
-6. **FL-001 Scarico materiali** → dedotto (sempre presente in cantiere)
-
-**Rischi attivati**: RS-CADUTA-ALTO, RS-RADIAZIONI-UV, RS-FUMI, RS-PROIEZIONE, RS-CHIMICO, RS-CADUTA-MATERIALI, ...
-**DPI raccolti** (deduplicati): Casco, Cintura, Scarpe, Schermo saldatura, Maschera, Occhiali, ...
-**Apprestamenti**: Ponteggio/trabattello, Estintore, Aspirazione fumi, ...
-
-**Domande residue**:
-1. Sono previsti lavori in quota > 2m? → per confermare RS-CADUTA-ALTO
-2. E previsto l'uso di autogrù o carroponte? → per confermare FL-009
-3. Sono previste saldature in opera (non solo officina)? → per RS-INCENDIO in cantiere
-4. Il cantiere e in area con interferenze (altri lavori)? → per RS-INVESTIMENTO
-5. Sono previsti subappalti? → per documentazione aggiuntiva
-
----
-
-## 8. Differenze dal Modello Attuale
-
-| Aspetto | Modello attuale (v1) | Modello proposto (v2) |
-|---------|---------------------|----------------------|
-| Collezioni | 1 (`libreria_rischi`) | 3 (`lib_fasi_lavoro`, `lib_rischi_sicurezza`, `lib_dpi_misure`) |
-| Rischi | Annidati dentro le fasi | Entita indipendenti con codice proprio |
-| DPI | Lista di codici nelle fasi | Entita indipendenti con norma, tipo, obbligatorieta |
-| Misure | Stringhe nelle fasi | Entita indipendenti, referenziabili |
-| Relazioni | Implicite (embedded) | Esplicite (tramite `_ids[]`) |
-| Trigger AI | Nessuno | Keywords + condizioni per fase e rischio |
-| Domande | Nessuna | `domande_verifica[]` per rischio |
-| Valutazione | Dentro il rischio embedded | Campo `valutazione_default` con P, D, Classe |
-
----
-
-## 9. Indici MongoDB
-
-```javascript
-// lib_fasi_lavoro
-db.lib_fasi_lavoro.createIndex({ user_id: 1, codice: 1 }, { unique: true })
-db.lib_fasi_lavoro.createIndex({ user_id: 1, categoria: 1 })
-
-// lib_rischi_sicurezza
-db.lib_rischi_sicurezza.createIndex({ user_id: 1, codice: 1 }, { unique: true })
-db.lib_rischi_sicurezza.createIndex({ user_id: 1, categoria: 1, sottocategoria: 1 })
-
-// lib_dpi_misure
-db.lib_dpi_misure.createIndex({ user_id: 1, codice: 1 }, { unique: true })
-db.lib_dpi_misure.createIndex({ user_id: 1, tipo: 1 })
-```
-
----
-
-## 10. Impatto su `cantieri_sicurezza`
-
-Il campo `fasi_lavoro_selezionate` nella scheda cantiere cambia da:
-
-**PRIMA (v1)**:
 ```json
 {
   "fasi_lavoro_selezionate": [
     {
-      "fase_id": "FL-001",
-      "nome_fase": "Taglio...",
-      "rischi_valutati": [{ embedded }],
-      "dpi_richiesti": ["DPI-..."]
-    }
-  ]
-}
-```
-
-**DOPO (v2)**:
-```json
-{
-  "fasi_lavoro_selezionate": [
-    {
-      "fase_codice": "FL-003",
-      "confidenza": "dedotto",
+      "fase_codice": "FL-008",
+      "confidence": "dedotto",
+      "origin": "ai",
+      "reasoning": "Rilevato 'montaggio cantiere' nel preventivo e segmentazione EN 1090",
+      "source_refs": ["preventivo.voce_3", "istruttoria.segmentazione"],
+      "overridden_by_user": false,
       "rischi_attivati": [
         {
-          "rischio_codice": "RS-PROIEZIONE",
-          "confidenza": "dedotto",
-          "valutazione_override": null
+          "rischio_codice": "RS-CADUTA-ALTO",
+          "confidence": "incerto",
+          "origin": "ai",
+          "reasoning": "Montaggio strutture implica possibile lavoro in quota, da confermare altezza",
+          "valutazione_override": null,
+          "overridden_by_user": false
         }
       ],
       "note_utente": ""
     }
   ],
-  "dpi_calcolati": ["DPI-CASCO", "DPI-OCCHIALI", "DPI-GUANTI-CROSTA", ...],
-  "apprestamenti_calcolati": ["APP-ESTINTORE", ...],
-  "misure_calcolate": ["MIS-VALUTAZIONE-RUMORE", ...],
+  "dpi_calcolati": [
+    { "codice": "DPI-CASCO", "origin": "rules", "da_rischi": ["RS-CADUTA-ALTO", "RS-URTI"] }
+  ],
+  "misure_calcolate": [
+    { "codice": "MIS-VALUTAZIONE-RUMORE", "origin": "rules", "da_rischi": ["RS-RUMORE"] }
+  ],
+  "apprestamenti_calcolati": [
+    { "codice": "APP-PONTEGGIO", "origin": "ai", "da_rischi": ["RS-CADUTA-ALTO"], "confidence": "incerto" }
+  ],
   "domande_residue": [
     {
-      "testo": "Sono previsti lavori in quota > 2m?",
+      "testo": "Sono previsti lavori ad altezza superiore a 2 m?",
       "origine_rischio": "RS-CADUTA-ALTO",
+      "impatto": "alto",
+      "gate_critical": true,
       "risposta": null,
       "stato": "aperta"
     }
@@ -414,9 +276,14 @@ Il campo `fasi_lavoro_selezionate` nella scheda cantiere cambia da:
 
 ---
 
-## 11. Prossimi Passi (dopo approvazione)
+## 7. Le 7 integrazioni applicate
 
-1. **Refactor backend**: Creare le 3 collezioni, migrare il seed, aggiornare gli endpoint
-2. **Refactor frontend**: Aggiornare SchedaCantierePage Step 2 per mostrare la catena Fase→Rischi→DPI
-3. **Motore AI**: Implementare l'endpoint `ai-precompila` che usa trigger + dati commessa
-4. **DOCX**: Generare il documento usando i 3 livelli come fonte dati strutturata
+| # | Integrazione | Dove applicata |
+|---|-------------|----------------|
+| 1 | Campi governance (active, version, source, sort_order, timestamps) | Tutte e 3 le collezioni |
+| 2 | `documenti_richiesti[]` con obbligatorieta e condizione | `lib_rischi_sicurezza` |
+| 3 | Separazione netta `dpi_ids[]`, `misure_ids[]`, `apprestamenti_ids[]` | `lib_rischi_sicurezza` |
+| 4 | `condizioni_esclusione[]` | `lib_fasi_lavoro` e `lib_rischi_sicurezza` |
+| 5 | `impatto` (alto/medio/basso) + `gate_critical` su domande | `domande_verifica[]` nei rischi |
+| 6 | `origin`, `reasoning`, `source_refs`, `confidence`, `overridden_by_user` | Schema istanziato in `cantieri_sicurezza` |
+| 7 | `gate_critical` a livello rischio | `lib_rischi_sicurezza` + `domande_residue` nel cantiere |
