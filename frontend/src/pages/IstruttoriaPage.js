@@ -108,13 +108,33 @@ export default function IstruttoriaPage() {
         </DashboardLayout>
     );
 
-    const { classificazione, exc_proposta, estrazione_tecnica, stato_conoscenza,
+    const { classificazione, profilo_tecnico, estrazione_tecnica, stato_conoscenza,
         fasi_produttive_attese, documenti_richiesti, controlli_richiesti,
         prerequisiti_saldatura, prerequisiti_tracciabilita,
-        domande_residue, warnings_regole, enrichments_regole } = data;
+        domande_residue, warnings_regole, enrichments_regole,
+        revisioni_umane, confermata, stato_revisione } = data;
 
     const normativa = classificazione?.normativa_proposta || 'N/D';
     const conf = classificazione?.confidenza || 'bassa';
+
+    const handleRevisione = async (campo, valoreCorretto, motivazione = '') => {
+        try {
+            await apiRequest(`/istruttoria/${data.istruttoria_id}/revisione`, {
+                method: 'POST',
+                body: { campo, valore_corretto: valoreCorretto, motivazione },
+            });
+            toast.success(`Revisione salvata: ${campo}`);
+            fetchIstruttoria();
+        } catch (e) { toast.error(e.message); }
+    };
+
+    const handleConferma = async () => {
+        try {
+            await apiRequest(`/istruttoria/${data.istruttoria_id}/conferma`, { method: 'POST' });
+            toast.success('Istruttoria confermata — pronta per Fase 2');
+            fetchIstruttoria();
+        } catch (e) { toast.error(e.message); }
+    };
 
     return (
         <DashboardLayout>
@@ -180,15 +200,18 @@ export default function IstruttoriaPage() {
                         </CardContent>
                     </Card>
 
-                    <Card data-testid="card-exc">
+                    <Card data-testid="card-profilo-tecnico">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                                Classe Esecuzione Proposta
+                                Profilo Tecnico {profilo_tecnico?.tipo === 'exc' ? '(Classe Esecuzione)' : profilo_tecnico?.tipo === 'categorie_prestazione' ? '(Categorie Prestazione)' : '(Complessita)'}
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-2">
-                            <div className="text-2xl font-black text-blue-800">{exc_proposta?.classe || 'N/D'}</div>
-                            <p className="text-[10px] text-slate-600 leading-relaxed">{exc_proposta?.motivazione}</p>
+                            <div className="text-2xl font-black text-blue-800">{profilo_tecnico?.valore || 'N/D'}</div>
+                            <p className="text-[10px] text-slate-600 leading-relaxed">{profilo_tecnico?.motivazione}</p>
+                            <Badge className="text-[8px] bg-slate-100 text-slate-500">
+                                Applicabile a: {profilo_tecnico?.applicabile_a}
+                            </Badge>
                         </CardContent>
                     </Card>
 
@@ -502,6 +525,71 @@ export default function IstruttoriaPage() {
                         </CardContent>
                     </Card>
                 )}
+
+                {/* Human Revisions Log */}
+                {revisioni_umane?.length > 0 && (
+                    <Card className="border-indigo-200">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-xs font-bold text-indigo-700 uppercase tracking-wider">
+                                Revisioni Umane ({revisioni_umane.length})
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-1">
+                                {revisioni_umane.map((r, i) => (
+                                    <div key={i} className="flex items-start gap-2 text-[10px] py-1 border-b border-slate-100 last:border-0">
+                                        <CheckCircle2 className="h-3 w-3 text-indigo-500 mt-0.5 shrink-0" />
+                                        <div>
+                                            <span className="font-medium text-slate-700">{r.campo}: </span>
+                                            <span className="line-through text-red-400 mr-1">{String(r.valore_ai)}</span>
+                                            <span className="text-emerald-700 font-bold">{String(r.valore_umano)}</span>
+                                            {r.motivazione_correzione && (
+                                                <span className="text-slate-400 ml-1">— {r.motivazione_correzione}</span>
+                                            )}
+                                            <span className="text-slate-300 ml-1">({r.corretto_da_nome})</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Confirmation Bar */}
+                <Card className={`${confermata ? 'border-emerald-300 bg-emerald-50/30' : 'border-blue-300 bg-blue-50/30'}`}>
+                    <CardContent className="p-4 flex items-center justify-between">
+                        <div>
+                            <p className={`text-sm font-bold ${confermata ? 'text-emerald-800' : 'text-blue-800'}`}>
+                                {confermata ? 'Istruttoria Confermata' : 'Revisione e Conferma'}
+                            </p>
+                            <p className="text-[10px] text-slate-500 mt-0.5">
+                                {confermata
+                                    ? `Confermata da ${data.confermata_da_nome} — Pronta per Fase 2`
+                                    : 'Revisiona i dati proposti e conferma per procedere alla generazione commessa'
+                                }
+                            </p>
+                            {stato_revisione === 'revisionato' && !confermata && (
+                                <Badge className="bg-indigo-100 text-indigo-700 text-[9px] mt-1">
+                                    {revisioni_umane?.length || 0} correzioni applicate
+                                </Badge>
+                            )}
+                        </div>
+                        {!confermata && (
+                            <Button
+                                onClick={handleConferma}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                data-testid="btn-conferma-istruttoria"
+                            >
+                                <ShieldCheck className="h-4 w-4 mr-1.5" /> Conferma Istruttoria
+                            </Button>
+                        )}
+                        {confermata && (
+                            <Badge className="bg-emerald-100 text-emerald-700 text-sm px-3 py-1 gap-1">
+                                <ShieldCheck className="h-4 w-4" /> Confermata
+                            </Badge>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
         </DashboardLayout>
     );

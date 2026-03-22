@@ -1,0 +1,138 @@
+{
+  "summary": "Iteration 218 — Istruttoria AI Phase 1 Corrections Testing. Backend: 15/15 tests passed (100%). Frontend: All features verified — Profilo Tecnico card shows 'categorie_prestazione' for EN 13241, Revisioni Umane section displays AI vs human values with strikethrough/green styling, Conferma bar shows confirmation status with user info.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration218_istruttoria_phase1_corrections.py",
+    "/app/test_reports/pytest/iteration218_istruttoria_phase1_corrections_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration218_istruttoria_phase1_corrections.py"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 passed)",
+    "frontend": "100% (all features working)"
+  },
+  "seed_data_creation": "Used existing test data: istr_13dae9f83919 (EN 13241 Cancello carraio with profilo_tecnico, revisioni_umane, and confermata fields)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration 218 Phase 1 Corrections fully tested. Key changes: 1) profilo_tecnico field replaces exc_proposta with {tipo, valore, applicabile_a, motivazione}. 2) EN 13241 returns tipo='categorie_prestazione', EN 1090 returns tipo='exc', GENERICA returns tipo='complessita'. 3) Rules engine Rule 0 auto-corrects if AI assigns EXC to non-EN-1090. 4) POST /api/istruttoria/{id}/revisione saves override with valore_ai, valore_umano, corretto_da, corretto_da_nome, corretto_il. 5) POST /api/istruttoria/{id}/conferma sets confermata=true with user info. 6) Frontend IstruttoriaPage shows Profilo Tecnico card with dynamic subtitle based on tipo, Revisioni Umane section with strikethrough AI value and green human value, Conferma bar with button or Confermata badge.",
+  "features_tested": {
+    "feature_1_profilo_tecnico_structure": {
+      "description": "profilo_tecnico field with tipo/valore/applicabile_a/motivazione",
+      "backend_endpoints": [
+        {
+          "endpoint": "GET /api/istruttoria/{id}",
+          "status": "PASS",
+          "verified_fields": ["profilo_tecnico.tipo", "profilo_tecnico.valore", "profilo_tecnico.applicabile_a", "profilo_tecnico.motivazione"]
+        }
+      ],
+      "frontend_verification": [
+        "Profilo Tecnico card shows dynamic subtitle: (Categorie Prestazione) for EN 13241, (Classe Esecuzione) for EN 1090, (Complessita) for GENERICA"
+      ]
+    },
+    "feature_2_en13241_categorie_prestazione": {
+      "description": "EN 13241 returns profilo_tecnico.tipo='categorie_prestazione' NOT 'exc'",
+      "backend_endpoints": [
+        {
+          "endpoint": "GET /api/istruttoria/istr_13dae9f83919",
+          "status": "PASS",
+          "profilo_tecnico": {
+            "tipo": "categorie_prestazione",
+            "valore": "Classe 3 resistenza vento, Classe 2 permeabilita aria",
+            "applicabile_a": "EN_13241"
+          }
+        }
+      ],
+      "frontend_verification": [
+        "Card header shows 'PROFILO TECNICO (CATEGORIE PRESTAZIONE)'",
+        "Value shows 'Classe 3 resistenza vento, Classe 2 permeabilita aria'"
+      ]
+    },
+    "feature_3_revisione_endpoint": {
+      "description": "POST /api/istruttoria/{id}/revisione saves override with AI and human values",
+      "backend_endpoints": [
+        {
+          "endpoint": "POST /api/istruttoria/{id}/revisione",
+          "status": "PASS",
+          "request_body": {"campo": "string", "valore_corretto": "any", "motivazione": "string (optional)"},
+          "response_fields": ["message", "override"],
+          "override_fields": ["campo", "valore_ai", "valore_umano", "motivazione_correzione", "corretto_da", "corretto_da_nome", "corretto_il"]
+        }
+      ],
+      "validation_tests": [
+        "Returns 400 if 'campo' missing",
+        "Returns 400 if 'valore_corretto' missing",
+        "Returns 404 for non-existent istruttoria"
+      ]
+    },
+    "feature_4_conferma_endpoint": {
+      "description": "POST /api/istruttoria/{id}/conferma sets confermata=true with user info",
+      "backend_endpoints": [
+        {
+          "endpoint": "POST /api/istruttoria/{id}/conferma",
+          "status": "PASS",
+          "response_fields": ["message", "istruttoria_id"],
+          "sets_fields": ["confermata", "confermata_da", "confermata_da_nome", "confermata_il"]
+        }
+      ],
+      "validation_tests": [
+        "Returns 404 for non-existent istruttoria"
+      ]
+    },
+    "feature_5_revisioni_umane_display": {
+      "description": "Frontend shows human revisions log with strikethrough AI value and green human value",
+      "frontend_verification": [
+        "Revisioni Umane section header shows count: 'REVISIONI UMANE (3)'",
+        "Each revision shows: campo, valore_ai (strikethrough red), valore_umano (green), motivazione, corretto_da_nome",
+        "Uses .line-through class for AI values",
+        "Uses .text-emerald-700 class for human values"
+      ]
+    },
+    "feature_6_conferma_bar": {
+      "description": "Frontend shows Conferma Istruttoria button and confirmation status badge",
+      "frontend_verification": [
+        "Confirmation bar at bottom of page",
+        "Shows 'Conferma Istruttoria' button (data-testid='btn-conferma-istruttoria') when not confirmed",
+        "Shows 'Istruttoria Confermata' text and 'Confermata' badge when confirmed",
+        "Shows 'Confermata da {name} — Pronta per Fase 2' when confirmed"
+      ]
+    },
+    "feature_7_rules_engine_rule0": {
+      "description": "Rules engine adds warning if AI incorrectly assigns EXC to EN 13241",
+      "backend_verification": [
+        "Rule 0 in apply_deterministic_rules() checks if normativa is EN_13241 or GENERICA",
+        "If profilo_tecnico.tipo == 'exc', it auto-corrects to 'categorie_prestazione' or 'complessita'",
+        "Adds warning with tipo='semantica_normativa' to warnings_regole"
+      ]
+    }
+  },
+  "data_verified": {
+    "test_istruttoria_en13241": {
+      "istruttoria_id": "istr_13dae9f83919",
+      "preventivo_id": "prev_62e2e4b9c088",
+      "classificazione": "EN_13241",
+      "profilo_tecnico": {
+        "tipo": "categorie_prestazione",
+        "valore": "Classe 3 resistenza vento, Classe 2 permeabilita aria",
+        "applicabile_a": "EN_13241"
+      },
+      "revisioni_umane_count": 3,
+      "confermata": true,
+      "confermata_da_nome": "Francesco Spano'"
+    }
+  },
+  "test_credentials": {
+    "session_token": "fresh_4f69b847846148459e91",
+    "user_id": "user_97c773827822"
+  }
+}

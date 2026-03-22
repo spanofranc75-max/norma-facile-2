@@ -102,6 +102,106 @@ async def get_istruttoria(istruttoria_id: str, user: dict = Depends(get_current_
     return doc
 
 
+@router.post("/{istruttoria_id}/revisione")
+async def revisione_umana(istruttoria_id: str, body: dict, user: dict = Depends(get_current_user)):
+    """Override umano tracciato. L'utente corregge/conferma i dati proposti dall'AI.
+    Salva sia il valore AI originale sia la correzione umana con chi/quando.
+
+    Body: {
+        "campo": "classificazione.normativa_proposta" | "profilo_tecnico.valore" | ...,
+        "valore_corretto": "EN_1090",
+        "motivazione": "Il preventivo include anche parti strutturali" (opzionale)
+    }
+    """
+    uid = user["user_id"]
+    doc = await db.istruttorie.find_one(
+        {"istruttoria_id": istruttoria_id, "user_id": uid},
+        {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "Istruttoria non trovata")
+
+    campo = body.get("campo", "")
+    valore_corretto = body.get("valore_corretto")
+    motivazione = body.get("motivazione", "")
+
+    if not campo or valore_corretto is None:
+        raise HTTPException(400, "Specificare 'campo' e 'valore_corretto'")
+
+    now = datetime.now(timezone.utc)
+
+    # Navigate to the field to get the AI value
+    parts = campo.split(".")
+    ai_value = doc
+    for p in parts:
+        if isinstance(ai_value, dict):
+            ai_value = ai_value.get(p)
+        else:
+            ai_value = None
+            break
+
+    override_entry = {
+        "campo": campo,
+        "valore_ai": ai_value,
+        "valore_umano": valore_corretto,
+        "motivazione_correzione": motivazione,
+        "corretto_da": uid,
+        "corretto_da_nome": user.get("name", user.get("email", uid)),
+        "corretto_il": now.isoformat(),
+    }
+
+    # Apply the correction to the document
+    update_ops = {
+        "$push": {"revisioni_umane": override_entry},
+        "$set": {"updated_at": now, "stato_revisione": "revisionato"},
+    }
+
+    # Also set the corrected value in the actual field
+    if len(parts) >= 1:
+        update_ops["$set"][campo] = valore_corretto
+
+    await db.istruttorie.update_one(
+        {"istruttoria_id": istruttoria_id},
+        update_ops
+    )
+
+    logger.info(f"[ISTRUTTORIA] Revisione umana: {campo} = {valore_corretto} (era: {ai_value})")
+
+    return {
+        "message": f"Revisione salvata: {campo}",
+        "override": override_entry,
+    }
+
+
+@router.post("/{istruttoria_id}/conferma")
+async def conferma_istruttoria(istruttoria_id: str, user: dict = Depends(get_current_user)):
+    """L'utente conferma l'istruttoria come base per la Fase 2 (generazione commessa).
+    Questo checkpoint e obbligatorio prima di generare la commessa pre-istruita."""
+    uid = user["user_id"]
+    doc = await db.istruttorie.find_one(
+        {"istruttoria_id": istruttoria_id, "user_id": uid},
+        {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "Istruttoria non trovata")
+
+    now = datetime.now(timezone.utc)
+    await db.istruttorie.update_one(
+        {"istruttoria_id": istruttoria_id},
+        {"$set": {
+            "confermata": True,
+            "confermata_da": uid,
+            "confermata_da_nome": user.get("name", user.get("email", uid)),
+            "confermata_il": now.isoformat(),
+            "updated_at": now,
+        }}
+    )
+
+    logger.info(f"[ISTRUTTORIA] Confermata {istruttoria_id} da {uid}")
+    return {"message": "Istruttoria confermata. Pronta per la Fase 2.", "istruttoria_id": istruttoria_id}
+
+
+
 @router.get("")
 async def list_istruttorie(user: dict = Depends(get_current_user)):
     """Lista tutte le istruttorie dell'utente."""

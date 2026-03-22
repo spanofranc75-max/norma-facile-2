@@ -129,7 +129,11 @@ Dati i seguenti dati tecnici estratti da un preventivo, devi:
    - "GENERICA": lavorazione metallica senza marcatura CE
    - "MISTA": parti strutturali + parti non strutturali
 
-2. PROPORRE la Classe di Esecuzione (EXC1, EXC2, EXC3, EXC4) CON MOTIVAZIONE
+2. PROPORRE il PROFILO TECNICO specifico per la normativa:
+   - Se EN_1090: proponi la Classe di Esecuzione (EXC1, EXC2, EXC3, EXC4) con motivazione
+   - Se EN_13241: proponi le categorie di prestazione pertinenti (resistenza vento, permeabilita aria, tenuta acqua, sicurezza uso) — NON usare EXC che e esclusivo di EN 1090
+   - Se GENERICA: indica il livello di complessita (bassa/media/alta)
+   - Se MISTA: separa le parti EN 1090 (con EXC) dalle parti EN 13241 (con categorie)
 
 3. ELENCARE i documenti e controlli richiesti
 
@@ -138,6 +142,7 @@ Dati i seguenti dati tecnici estratti da un preventivo, devi:
 REGOLE:
 - Ogni conclusione DEVE avere una motivazione chiara
 - NON dichiarare conformita. Proponi istruttoria.
+- NON assegnare EXC a prodotti EN 13241 o GENERICA — EXC e SOLO per EN 1090
 - Le domande devono essere specifiche e ad alto impatto operativo
 - Se i dati sono insufficienti per classificare, dillo chiaramente
 
@@ -148,8 +153,10 @@ Rispondi SOLO con JSON valido:
     "confidenza": "alta|media|bassa",
     "motivazione": "string (2-3 frasi che spiegano PERCHE questa classificazione)"
   },
-  "exc_proposta": {
-    "classe": "EXC1|EXC2|EXC3|EXC4|non_determinabile",
+  "profilo_tecnico": {
+    "tipo": "exc|categorie_prestazione|complessita",
+    "valore": "string (es: EXC2, oppure 'Classe 2 resistenza vento, Classe 3 permeabilita aria', oppure 'media')",
+    "applicabile_a": "EN_1090|EN_13241|GENERICA|MISTA",
     "motivazione": "string"
   },
   "fasi_produttive_attese": [
@@ -170,7 +177,7 @@ Rispondi SOLO con JSON valido:
   ],
   "controlli_richiesti": [
     {
-      "tipo": "VT|dimensionale|CND_UT|CND_MT|CND_PT|prova_carico|altro",
+      "tipo": "VT|dimensionale|CND_UT|CND_MT|CND_PT|prova_carico|collaudo_funzionale|altro",
       "descrizione": "string",
       "fase": "string (in quale fase produttiva)",
       "motivazione": "string"
@@ -412,14 +419,25 @@ def apply_deterministic_rules(classification: dict, extraction: dict) -> dict:
     Questo livello NON usa LLM — e puro codice."""
 
     normativa = classification.get("classificazione", {}).get("normativa_proposta", "GENERICA")
-    exc = classification.get("exc_proposta", {}).get("classe", "EXC2")
+    profilo = classification.get("profilo_tecnico", {})
+    profilo_valore = profilo.get("valore", "")
     saldature = extraction.get("saldature", {})
     trattamenti = extraction.get("trattamenti_superficiali", {})
 
     warnings = []
     enrichments = []
 
-    # Rule 1: Se c'e saldatura strutturale, servono WPS/WPQR/qualifica
+    # Rule 0: EXC non deve apparire per EN 13241/GENERICA
+    if normativa in ("EN_13241", "GENERICA"):
+        if profilo.get("tipo") == "exc":
+            warnings.append({
+                "tipo": "semantica_normativa",
+                "messaggio": f"Correzione: EXC non e applicabile a {normativa}. EXC e esclusiva di EN 1090-2. Riclassificato come profilo prestazionale.",
+                "correzione_applicata": True,
+            })
+            classification["profilo_tecnico"]["tipo"] = "categorie_prestazione" if normativa == "EN_13241" else "complessita"
+
+    # Rule 1: Se c'e saldatura strutturale EN 1090, servono WPS/WPQR/qualifica
     if saldature.get("presenti") and normativa in ("EN_1090", "MISTA"):
         prereq = classification.get("prerequisiti_saldatura", {})
         if not prereq.get("wps_necessarie"):
@@ -455,22 +473,22 @@ def apply_deterministic_rules(classification: dict, extraction: dict) -> dict:
                 "stato_attuale": "mancante",
             })
 
-    # Rule 3: Se EXC >= 3, servono CND
-    if exc in ("EXC3", "EXC4"):
+    # Rule 3: Se EXC >= 3 (solo EN 1090), servono CND
+    if normativa in ("EN_1090", "MISTA") and profilo.get("tipo") == "exc" and profilo_valore in ("EXC3", "EXC4"):
         controls = classification.get("controlli_richiesti", [])
         ctrl_types = [c["tipo"] for c in controls]
         for cnd in ["CND_UT", "CND_MT"]:
             if cnd not in ctrl_types:
                 warnings.append({
                     "tipo": "controllo_mancante",
-                    "messaggio": f"{cnd} obbligatorio per {exc} ma non proposto dall'AI. Aggiunto.",
+                    "messaggio": f"{cnd} obbligatorio per {profilo_valore} ma non proposto dall'AI. Aggiunto.",
                     "correzione_applicata": True,
                 })
                 controls.append({
                     "tipo": cnd,
-                    "descrizione": f"Controllo non distruttivo {cnd} obbligatorio per classe {exc}",
+                    "descrizione": f"Controllo non distruttivo {cnd} obbligatorio per classe {profilo_valore}",
                     "fase": "post_saldatura",
-                    "motivazione": f"EN 1090-2 Tab. 24 richiede {cnd} per {exc}",
+                    "motivazione": f"EN 1090-2 Tab. 24 richiede {cnd} per {profilo_valore}",
                 })
 
     # Rule 4: Certificati 3.1 sempre obbligatori per EN 1090
@@ -555,7 +573,7 @@ async def analizza_preventivo_completo(preventivo: dict) -> dict:
 
         # Sezione A: Classificazione
         "classificazione": rules_result["classification_corretta"].get("classificazione", {}),
-        "exc_proposta": rules_result["classification_corretta"].get("exc_proposta", {}),
+        "profilo_tecnico": rules_result["classification_corretta"].get("profilo_tecnico", {}),
 
         # Sezione B: Dati estratti
         "estrazione_tecnica": {
