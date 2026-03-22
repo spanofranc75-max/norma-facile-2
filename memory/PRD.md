@@ -165,6 +165,14 @@ Carpenterie metalliche italiane, certificazione EN 1090, contratti PNRR.
   - Pulsante "Salva Contestuali" separato
   - Fix bug: ordine priorita keyword matching (_parse_answer) — "esterno" non matcha piu come "no"
 
+- **P0.2 — Spiegabilita + Punti incerti + Linguaggio officina** (Completato 22/03/2026):
+  - Box "Perche propone EN 1090" con evidenze strutturate (forti/da confermare) + badge confermato/dedotto
+  - Box "Punti da chiarire" consolida ambiguita + dati mancanti + domande non risposte, con impatto
+  - Linguaggio officina: "Conferme che mancano", "Cosa ha rilevato dal preventivo", "Documenti da raccogliere", "Controlli da fare", "Nota tecnica"
+  - Riordino visuale: Esito → Perche → Punti → Conferme → Dettagli collapsible → CTA
+  - Rimossa card ambiguita separata (contenuto in Punti da chiarire)
+  - Ridotte occorrenze "AI" (max badge "Proposta AI")
+
 ## Backlog Prioritizzato
 
 ### P1
