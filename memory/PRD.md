@@ -88,6 +88,30 @@ company_settings.figure_aziendali -> cantiere.soggetti (status: "precompilato")
 - `/app/SPEC_LIBRERIA_RISCHI_3_LIVELLI.md` — Spec definitiva v2
 - `/app/SPEC_POS_TEMPLATE_MAPPING.md` — Mapping template POS
 
+## S3 — Motore AI Sicurezza (COMPLETATO 2026-03-22)
+Pipeline AI per pre-compilazione intelligente della scheda cantiere sicurezza.
+
+### Pipeline 5 step:
+1. **Raccolta contesto**: commessa, istruttoria, preventivo, sopralluogo, company_settings
+2. **AI GPT-4o**: Analisi semantica → propone fasi lavorative + contesto operativo
+3. **Rules engine**: Espansione catena fasi → rischi → DPI/misure/apprestamenti
+4. **Merge domande**: AI + libreria deduplicati con gate_critical
+5. **Pre-fill soggetti**: Da figure aziendali + committente da commessa
+
+### Endpoint: `POST /api/cantieri-sicurezza/{id}/ai-precompila`
+### Output salvato in cantiere:
+- fasi_lavoro_selezionate (con confidence: dedotto/confermato/incerto, origin: ai/rules)
+- rischi_attivati (per ogni fase)
+- dpi_calcolati, misure_calcolate, apprestamenti_calcolati
+- domande_residue (con gate_critical)
+- ai_precompilazione (metadata: timestamp, modello, sources_used, contesto_operativo)
+- soggetti precompilati
+- Gate POS ricalcolato automaticamente
+
+### Frontend: Bottone "Pre-compila con AI" + banner risultato + review/conferma dati
+
+### Testing: 26/26 backend, 100% frontend (iteration_233)
+
 ## Backlog Prioritizzato
 
 ### P0 (Prossimi)
