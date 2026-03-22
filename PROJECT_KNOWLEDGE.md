@@ -700,6 +700,37 @@ FIRMA ──→ SERVICE
 Collezioni nuove: `sicurezza_cantiere`, `dnsh_data`, `targhe_ce`, `scadenzario_manutenzioni`
 Pacco Documenti: CAP. 1-5 (EN 1090, EN 13241, Relazione Tecnica, Montaggio, Sostenibilita')
 
+### 22 Marzo 2026 — Fork 6: Modello Gerarchico Commessa (Fase A)
+
+#### Architettura 4 Livelli — Commessa Madre -> Ramo -> Emissione (COMPLETATO)
+- **Nuova collezione `commesse_normative`:**
+  - CRUD per rami normativi (EN_1090, EN_13241, GENERICA) per commessa
+  - Creazione idempotente: se il ramo esiste, restituisce quello esistente aggiornato
+  - Indice univoco `(commessa_id, normativa, user_id)`
+  - Tracciamento origine: `created_from` (manuale/segmentazione/legacy_wrap)
+  - `source_istruttoria_id` e `source_segmentation_snapshot` per tracciabilita
+- **Nuova collezione `emissioni_documentali`:**
+  - Emissioni progressive per ramo con numerazione strutturata
+  - Codice: `NF-2026-000125-1090-D01` (base-suffisso-tipo+seq)
+  - Counter atomico per progressivo (collezione `counters`)
+  - Indice univoco `(ramo_id, emission_type, emission_seq, user_id)`
+  - Stati: draft, in_preparazione, bloccata, emettibile, emessa, annullata
+  - Link sottoinsiemi: line_ids, voce_lavoro_ids, batch_ids, ddt_ids, document_ids
+- **Evidence Gate per emissione:**
+  - EN 1090: certificati 3.1, WPS/WPQR, riesame tecnico, controllo finale
+  - EN 13241: documentazione tecnica, verifiche sicurezza, manuale uso
+  - GENERICA: nessun requisito
+  - Calcolo on-demand con salvataggio stato
+- **Legacy adapter centralizzato:**
+  - `get_normative_branches()` con wrapping virtuale per commesse legacy
+  - `materializza_ramo_legacy()` per conversione lazy on-access
+  - Nessuna migrazione massiva: commesse legacy funzionano invariate
+- **Backend `services/commesse_normative_service.py`:** Logica business completa
+- **Backend `routes/commesse_normative.py`:** 11 endpoint API
+- **Frontend `RamiNormativiSection.js`:** Card con rami espandibili, emissioni, Evidence Gate
+- **Campi su commessa madre:** `normative_presenti[]`, `has_mixed_normative`, `primary_normativa`
+- Test: 100% backend (21/21) + 100% frontend (iteration_227)
+
 ### FASE 6 — Smistatore Intelligente Avanzato (PROSSIMO)
 - Certificati cumulativi: AI analizza ogni pagina, matching per numero colata
 - DDT Multi-Commessa: spacchettamento automatico per commessa/voce
