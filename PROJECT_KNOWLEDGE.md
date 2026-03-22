@@ -731,6 +731,27 @@ Pacco Documenti: CAP. 1-5 (EN 1090, EN 13241, Relazione Tecnica, Montaggio, Sost
 - **Campi su commessa madre:** `normative_presenti[]`, `has_mixed_normative`, `primary_normativa`
 - Test: 100% backend (21/21) + 100% frontend (iteration_227)
 
+#### Fase B — Evidence Gate Avanzato (COMPLETATO)
+- **B1 Motore gate completo** (`evidence_gate_engine.py`):
+  - 3 check comuni: scope emissione, stato ramo, gia emessa
+  - 10+ regole EN 1090: cert 3.1, WPS/WPQR, saldatori, registro saldatura, VT, controllo finale, riesame tecnico, doc terzista/zincatura, strumenti/ITT
+  - 6 regole EN 13241: identificazione prodotto, manuale uso, collaudo, dispositivi, posa
+  - Gate minimo GENERICA
+  - Matrice condizionale: `branch_flags` (saldatura_attiva, zincatura_esterna, montaggio_attivo, has_automation, requires_force_test, has_safety_devices)
+  - Output standardizzato: `checks[]`, `blockers[]`, `warnings[]`, `completion_percent`
+  - `completion_percent` esclude `not_applicable` dal denominatore
+  - Codici blockers standardizzati: MATERIAL_CERT_MISSING, WPS_MISSING, FINAL_CONTROL_NOT_COMPLETED, etc.
+- **B2 UI EmissioneDetailPanel** (`EmissioneDetailPanel.js`):
+  - 3 colonne: Cosa serve | Cosa c'e | Cosa manca
+  - Barra progresso colore-codificata
+  - Pulsante "collega" per evidenze mancanti linkabili
+  - Pulsante "Emetti" solo se emittable=true
+- **B3 Blocco reale emissione**:
+  - `/emetti` ricalcola SEMPRE il gate, 409 se bloccata
+  - Nessun bypass UI-only
+- **Snapshot cache**: last_gate_status, last_completion_percent, last_blockers_count
+- Test: 100% backend (24/24) + 100% frontend (iteration_228)
+
 ### FASE 6 — Smistatore Intelligente Avanzato (PROSSIMO)
 - Certificati cumulativi: AI analizza ogni pagina, matching per numero colata
 - DDT Multi-Commessa: spacchettamento automatico per commessa/voce
