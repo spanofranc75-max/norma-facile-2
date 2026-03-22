@@ -578,7 +578,18 @@ async def genera_commessa_preistruita(preventivo_id: str, user: dict = Depends(g
     )
 
     logger.info(f"[PHASE2] Commessa pre-istruita generata: {commessa['commessa_id']} per {preventivo_id}")
-    return {"commessa": commessa, "warnings": elig.get("warnings", [])}
+
+    # Auto-genera rami normativi dalla segmentazione/classificazione
+    rami_generati = []
+    try:
+        from services.commesse_normative_service import genera_rami_da_segmentazione
+        rami = await genera_rami_da_segmentazione(commessa["commessa_id"], uid, istr)
+        rami_generati = [{"ramo_id": r["ramo_id"], "normativa": r["normativa"], "codice_ramo": r["codice_ramo"]} for r in rami]
+        logger.info(f"[PHASE2] Auto-generati {len(rami)} rami normativi per {commessa['commessa_id']}")
+    except Exception as e:
+        logger.warning(f"[PHASE2] Generazione rami fallita (non bloccante): {e}")
+
+    return {"commessa": commessa, "warnings": elig.get("warnings", []), "rami_generati": rami_generati}
 
 
 @router.get("/phase2/commessa/{preventivo_id}")

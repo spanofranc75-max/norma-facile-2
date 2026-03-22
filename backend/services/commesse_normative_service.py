@@ -96,11 +96,20 @@ async def crea_ramo(
     if normativa not in NORMATIVE_VALIDE:
         raise ValueError(f"Normativa non valida: {normativa}")
 
-    # Recupera numero commessa madre
+    # Recupera numero commessa madre (cerca in commesse e commesse_preistruite)
     commessa = await db.commesse.find_one(
         {"commessa_id": commessa_id, "user_id": user_id},
         {"_id": 0, "numero": 1, "commessa_id": 1}
     )
+    if not commessa:
+        # Fallback: cerca in commesse_preistruite
+        commessa = await db.commesse_preistruite.find_one(
+            {"commessa_id": commessa_id, "user_id": user_id},
+            {"_id": 0, "commessa_id": 1, "preventivo_number": 1}
+        )
+        if commessa:
+            # Usa preventivo_number come base per il codice ramo
+            commessa["numero"] = commessa.get("preventivo_number", commessa_id)
     if not commessa:
         raise ValueError(f"Commessa {commessa_id} non trovata")
 
@@ -202,17 +211,24 @@ async def genera_rami_da_segmentazione(
         )
         rami_creati.append(ramo)
 
-    # Aggiorna commessa madre con metadati normativi
+    # Aggiorna commessa madre con metadati normativi (cerca in entrambe le collezioni)
     normative_list = sorted(normative_set)
-    await db.commesse.update_one(
+    update_fields = {
+        "normative_presenti": normative_list,
+        "has_mixed_normative": len(normative_list) > 1,
+        "primary_normativa": normative_list[0] if len(normative_list) == 1 else classif.get("normativa_proposta", normative_list[0]),
+        "updated_at": datetime.now(timezone.utc),
+    }
+    result = await db.commesse.update_one(
         {"commessa_id": commessa_id, "user_id": user_id},
-        {"$set": {
-            "normative_presenti": normative_list,
-            "has_mixed_normative": len(normative_list) > 1,
-            "primary_normativa": normative_list[0] if len(normative_list) == 1 else classif.get("normativa_proposta", normative_list[0]),
-            "updated_at": datetime.now(timezone.utc),
-        }}
+        {"$set": update_fields}
     )
+    if result.matched_count == 0:
+        # Fallback: aggiorna commesse_preistruite
+        await db.commesse_preistruite.update_one(
+            {"commessa_id": commessa_id, "user_id": user_id},
+            {"$set": update_fields}
+        )
 
     logger.info(f"[RAMI] Generati {len(rami_creati)} rami per commessa {commessa_id}: {normative_list}")
     return rami_creati
@@ -429,6 +445,14 @@ async def get_normative_branches(commessa_id: str, user_id: str, include_legacy_
         {"commessa_id": commessa_id, "user_id": user_id},
         {"_id": 0, "numero": 1, "normativa_tipo": 1, "commessa_id": 1}
     )
+    if not commessa:
+        commessa = await db.commesse_preistruite.find_one(
+            {"commessa_id": commessa_id, "user_id": user_id},
+            {"_id": 0, "commessa_id": 1, "normativa": 1, "preventivo_number": 1}
+        )
+        if commessa:
+            commessa["numero"] = commessa.get("preventivo_number", commessa_id)
+            commessa["normativa_tipo"] = commessa.get("normativa", "")
     if not commessa:
         return []
 

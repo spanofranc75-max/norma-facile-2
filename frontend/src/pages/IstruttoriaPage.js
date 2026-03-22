@@ -14,7 +14,7 @@ import {
     Hammer, Flame, Ruler, Package, Truck, Eye, Wrench,
     ArrowLeft, RefreshCw, CircleAlert, Lightbulb, Save,
     Target, ChevronDown, ChevronUp, Zap, Ban, ShieldAlert,
-    Layers, ArrowRightLeft,
+    Layers, ArrowRightLeft, GitBranch,
 } from 'lucide-react';
 
 /* ───────────── CONSTANTS ───────────── */
@@ -317,6 +317,7 @@ export default function IstruttoriaPage() {
     const [phase2Elig, setPhase2Elig] = useState(null);
     const [phase2Loading, setPhase2Loading] = useState(false);
     const [phase2Commessa, setPhase2Commessa] = useState(null);
+    const [ramiGenerati, setRamiGenerati] = useState([]);
 
     const fetchIstruttoria = useCallback(async () => {
         setLoading(true);
@@ -504,10 +505,17 @@ export default function IstruttoriaPage() {
         try {
             const res = await apiRequest(`/istruttoria/phase2/genera/${preventivoId}`, { method: 'POST' });
             setPhase2Commessa(res.commessa);
+            setRamiGenerati(res.rami_generati || []);
             if (res.warnings?.length) {
                 res.warnings.forEach(w => toast.warning(w));
             }
-            toast.success('Commessa pre-istruita generata');
+            // Show auto-generated branches
+            if (res.rami_generati?.length) {
+                const ramiNames = res.rami_generati.map(r => r.codice_ramo).join(', ');
+                toast.success(`Commessa pre-istruita generata con ${res.rami_generati.length} rami normativi: ${ramiNames}`);
+            } else {
+                toast.success('Commessa pre-istruita generata');
+            }
             fetchIstruttoria();
         } catch (e) {
             const detail = e.message;
@@ -1625,6 +1633,22 @@ export default function IstruttoriaPage() {
                                             </Badge>
                                         ))}
                                     </div>
+
+                                    {/* Rami Normativi generati automaticamente */}
+                                    {ramiGenerati.length > 0 && (
+                                        <div className="p-2 rounded border border-emerald-200 bg-emerald-50/30">
+                                            <p className="text-[10px] font-bold text-emerald-700 mb-1.5 flex items-center gap-1" data-testid="rami-generati-label">
+                                                <GitBranch className="h-3 w-3" /> Rami normativi generati dalla segmentazione
+                                            </p>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {ramiGenerati.map(r => (
+                                                    <Badge key={r.ramo_id} className="bg-emerald-100 text-emerald-800 text-[9px] px-2">
+                                                        {r.codice_ramo}
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Detail lists */}
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
