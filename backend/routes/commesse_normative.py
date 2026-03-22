@@ -75,6 +75,9 @@ async def create_ramo_normativo(commessa_id: str, body: CreaRamoRequest, user: d
             line_ids=body.line_ids,
             created_from="manuale",
         )
+        # R0: Auto-sync obblighi after branch creation
+        from services.obblighi_auto_sync import trigger_sync_obblighi
+        await trigger_sync_obblighi(commessa_id, user["user_id"], "rami_normativi", ramo.get("ramo_id", ""))
         return ramo
     except ValueError as e:
         raise HTTPException(400, str(e))
@@ -145,6 +148,9 @@ async def genera_rami_da_istruttoria(preventivo_id: str, user: dict = Depends(ge
 
     try:
         rami = await genera_rami_da_segmentazione(commessa_id, uid, istr)
+        # R0: Auto-sync obblighi after branches generated from istruttoria
+        from services.obblighi_auto_sync import trigger_sync_obblighi
+        await trigger_sync_obblighi(commessa_id, uid, "rami_normativi", preventivo_id)
         return {"rami": rami, "commessa_id": commessa_id, "total": len(rami)}
     except ValueError as e:
         raise HTTPException(400, str(e))
@@ -206,6 +212,11 @@ async def update_emissione(ramo_id: str, emissione_id: str, body: AggiornaEmissi
 
     try:
         updated = await aggiorna_emissione(emissione_id, user["user_id"], update_fields)
+        # R0: Auto-sync obblighi after emission update (may change gate state)
+        commessa_id = updated.get("commessa_id") or em.get("commessa_id")
+        if commessa_id:
+            from services.obblighi_auto_sync import trigger_sync_obblighi
+            await trigger_sync_obblighi(commessa_id, user["user_id"], "evidence_gate", emissione_id)
         return updated
     except ValueError as e:
         raise HTTPException(400, str(e))
@@ -221,6 +232,11 @@ async def get_evidence_gate(ramo_id: str, emissione_id: str, user: dict = Depend
 
     try:
         gate = await check_evidence_gate(emissione_id, user["user_id"])
+        # R0: Auto-sync obblighi after gate recalculation
+        commessa_id = em.get("commessa_id")
+        if commessa_id:
+            from services.obblighi_auto_sync import trigger_sync_obblighi
+            await trigger_sync_obblighi(commessa_id, user["user_id"], "evidence_gate", emissione_id)
         return gate
     except ValueError as e:
         raise HTTPException(400, str(e))
@@ -238,6 +254,11 @@ async def emetti(ramo_id: str, emissione_id: str, user: dict = Depends(get_curre
             emissione_id, user["user_id"],
             user_name=user.get("name", user.get("email", ""))
         )
+        # R0: Auto-sync obblighi after emission completed
+        commessa_id = em.get("commessa_id")
+        if commessa_id:
+            from services.obblighi_auto_sync import trigger_sync_obblighi
+            await trigger_sync_obblighi(commessa_id, user["user_id"], "evidence_gate", emissione_id)
         return result
     except ValueError as e:
         raise HTTPException(409, str(e))

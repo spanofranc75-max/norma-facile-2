@@ -1,0 +1,76 @@
+{
+  "summary": "Iteration 239 — R0: Auto-Sync Registro Obblighi Testing Complete. Backend: 15/15 tests passed. Fixed a bug in sync service where cantiere lookup used only 'commessa_id' but cantieri use 'parent_commessa_id'. Auto-sync triggers working correctly with 5-second debounce.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration239_obblighi_auto_sync.py",
+    "/app/test_reports/pytest/iteration239_obblighi_auto_sync_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration239_obblighi_auto_sync.py",
+    "/app/backend/services/obblighi_commessa_service.py"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 tests passed)"
+  },
+  "seed_data_creation": "Created test commessa and cantiere_sicurezza for testing auto-sync triggers. Cleaned up after tests.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "R0 Auto-Sync Registro Obblighi fully working. Key features: (1) trigger_sync_obblighi() in obblighi_auto_sync.py with 5-second debounce. (2) Triggers placed in: PUT cantieri-sicurezza (substantive fields: soggetti, dati_cantiere, rischi_confermati, rischi_selezionati, fasi_lavoro), PATCH/GET/POST emissioni endpoints, POST istruttoria rispondi/review, POST commesse-normative crea_ramo/genera_da_istruttoria. (3) Fixed bug: sync service now queries cantiere with $or: [commessa_id, parent_commessa_id]. (4) Non-substantive updates (note_aggiuntive, status) do NOT trigger auto-sync. (5) Debounce prevents spam - two rapid calls within 5 seconds only trigger one sync.",
+  "features_tested": {
+    "manual_sync": {
+      "POST /api/obblighi/sync/{commessa_id}": "PASSED - Returns created/updated/closed/total_expected",
+      "idempotency": "PASSED - Second sync creates 0 new (all deduplicated)"
+    },
+    "auto_sync_triggers": {
+      "PUT /api/cantieri-sicurezza/{id} with soggetti": "PASSED - Triggers auto-sync",
+      "PUT /api/cantieri-sicurezza/{id} with dati_cantiere": "PASSED - Triggers auto-sync",
+      "PUT /api/cantieri-sicurezza/{id} with note_aggiuntive": "PASSED - Does NOT trigger auto-sync (non-substantive)",
+      "PUT /api/cantieri-sicurezza/{id} with status": "PASSED - Does NOT trigger auto-sync (non-substantive)"
+    },
+    "debounce": {
+      "rapid_updates": "PASSED - Two updates within 5 seconds only trigger one sync"
+    },
+    "summary_reflects_changes": {
+      "GET /api/obblighi/summary/{commessa_id}": "PASSED - Reflects auto-synced data"
+    },
+    "module_imports": {
+      "obblighi_auto_sync.py": "PASSED - Module imports and executes correctly"
+    },
+    "route_files_compile": {
+      "cantieri_sicurezza.py": "PASSED - All routes work after trigger additions",
+      "commesse_normative.py": "PASSED - All routes work after trigger additions",
+      "istruttoria.py": "PASSED - All routes work after trigger additions",
+      "obblighi.py": "PASSED - All routes work"
+    },
+    "backend_resilience": {
+      "auto_sync_failure": "PASSED - Endpoint doesn't crash even if auto-sync fails internally"
+    }
+  },
+  "bug_fixed": {
+    "description": "Sync service cantiere lookup used only 'commessa_id' but cantieri use 'parent_commessa_id'",
+    "file": "/app/backend/services/obblighi_commessa_service.py",
+    "fix": "Changed _collect_gate_pos and _collect_soggetti to use $or: [commessa_id, parent_commessa_id] query",
+    "impact": "Sync now correctly finds cantieri linked via parent_commessa_id"
+  },
+  "test_credentials": {
+    "session_token": "BccyJvnOyrPXRRYy4GfxR5osuF51RWcYWWnUUoHx434",
+    "user_id": "user_6988e9b9316c"
+  },
+  "auto_sync_implementation_details": {
+    "debounce_seconds": 5,
+    "debounce_mechanism": "In-memory dict _last_sync with monotonic time",
+    "execution": "asyncio.create_task() for fire-and-forget",
+    "error_handling": "Silently logged, never breaks caller's flow",
+    "substantive_fields_cantiere": ["soggetti", "dati_cantiere", "rischi_confermati", "rischi_selezionati", "fasi_lavoro"]
+  }
+}

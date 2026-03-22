@@ -91,6 +91,13 @@ async def api_aggiorna_cantiere(cantiere_id: str, body: AggiornaCantiereSicurezz
     result = await aggiorna_cantiere(cantiere_id, user["user_id"], updates)
     if not result:
         raise HTTPException(status_code=404, detail="Cantiere sicurezza non trovato")
+    # R0: Auto-sync obblighi if substantive fields changed
+    substantive = {"soggetti", "dati_cantiere", "rischi_confermati", "rischi_selezionati", "fasi_lavoro"}
+    if substantive & set(updates.keys()):
+        commessa_id = result.get("parent_commessa_id") or result.get("commessa_id")
+        if commessa_id:
+            from services.obblighi_auto_sync import trigger_sync_obblighi
+            await trigger_sync_obblighi(commessa_id, user["user_id"], "gate_pos", cantiere_id)
     return result
 
 

@@ -286,6 +286,14 @@ async def rispondi_domande(istruttoria_id: str, body: dict, user: dict = Depends
 
     logger.info(f"[ISTRUTTORIA] Risposte salvate: {n_risposte}/{n_domande} per {istruttoria_id}")
 
+    # R0: Auto-sync obblighi after answers saved
+    prev_id = doc.get("preventivo_id")
+    if prev_id:
+        from services.obblighi_auto_sync import trigger_sync_obblighi, resolve_commessa_from_preventivo
+        commessa_id = await resolve_commessa_from_preventivo(prev_id, uid)
+        if commessa_id:
+            await trigger_sync_obblighi(commessa_id, uid, "istruttoria", istruttoria_id)
+
     return {
         "message": f"Risposte salvate: {n_risposte}/{n_domande}",
         "risposte_utente": risposte_esistenti,
@@ -494,6 +502,12 @@ async def review_segmentazione(preventivo_id: str, body: dict, user: dict = Depe
                 "updated_at": datetime.now(timezone.utc),
             }}
         )
+
+        # R0: Auto-sync obblighi after segmentation confirmed
+        from services.obblighi_auto_sync import trigger_sync_obblighi, resolve_commessa_from_preventivo
+        commessa_id = await resolve_commessa_from_preventivo(preventivo_id, uid)
+        if commessa_id:
+            await trigger_sync_obblighi(commessa_id, uid, "istruttoria", istr["istruttoria_id"])
 
         return {"status": "confirmed", "official_segmentation": official}
     else:

@@ -383,9 +383,9 @@ async def _collect_gate_pos(commessa: dict, user_id: str) -> list:
     obligations = []
     cid = commessa["commessa_id"]
 
-    # Find cantiere sicurezza linked to this commessa
+    # Find cantiere sicurezza linked to this commessa (check both commessa_id and parent_commessa_id)
     cantiere = await db.cantieri_sicurezza.find_one(
-        {"commessa_id": cid, "user_id": user_id}, {"_id": 0}
+        {"$or": [{"commessa_id": cid}, {"parent_commessa_id": cid}], "user_id": user_id}, {"_id": 0}
     )
     if not cantiere:
         return obligations
@@ -456,8 +456,9 @@ async def _collect_soggetti(commessa: dict, user_id: str) -> list:
     obligations = []
     cid = commessa["commessa_id"]
 
+    # Find cantiere sicurezza linked to this commessa (check both commessa_id and parent_commessa_id)
     cantiere = await db.cantieri_sicurezza.find_one(
-        {"commessa_id": cid, "user_id": user_id}, {"_id": 0}
+        {"$or": [{"commessa_id": cid}, {"parent_commessa_id": cid}], "user_id": user_id}, {"_id": 0}
     )
     if not cantiere:
         return obligations
