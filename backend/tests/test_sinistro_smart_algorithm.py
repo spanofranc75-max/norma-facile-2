@@ -19,7 +19,7 @@ import uuid
 from datetime import datetime, timezone
 
 # Use public URL for testing
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://normativa-hub-1.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://compliance-gateway-7.preview.emergentagent.com").rstrip("/")
 
 from pymongo import MongoClient
 

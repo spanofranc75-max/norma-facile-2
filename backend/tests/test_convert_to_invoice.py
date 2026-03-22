@@ -21,7 +21,7 @@ import time
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = 'https://normativa-hub-1.preview.emergentagent.com'
+    BASE_URL = 'https://compliance-gateway-7.preview.emergentagent.com'
 
 
 # ── Fixtures ───────────────────────────────────────────────────────

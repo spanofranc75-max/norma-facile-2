@@ -1,0 +1,119 @@
+{
+  "summary": "Iteration 214 — Riesame Tecnico Selettivo Testing. Backend: 12/12 tests passed (100%). Frontend: All features verified — normative badges (EN 1090, EN 13241, Generica) display correctly, non-applicable checks are grayed out with strikethrough and (N/A) indicator, progress bar uses n_applicabili as denominator.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "TracciabilitaMaterialiSection",
+        "issues": ["Minor hydration warning in console about <tr> inside <span> - does not affect functionality (same as previous iterations)"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration214_riesame_selettivo.py",
+    "/app/test_reports/pytest/iteration214_riesame_selettivo_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration214_riesame_selettivo.py"
+  ],
+  "success_rate": {
+    "backend": "100% (12/12 passed)",
+    "frontend": "100% (all features working)"
+  },
+  "seed_data_creation": "Used existing test data: mixed_commessa=com_2c57c1283871 (EN_1090 + EN_13241 + GENERICA), generica_only=com_test_generica_only, en13241_only=com_test_en13241_only",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Riesame Tecnico Selettivo feature fully tested. The CHECKS_DEFINITION in riesame_tecnico.py has 12 checks with normativa field (None=universal, ['EN_1090']=EN_1090 specific, ['EN_1090','EN_13241']=shared). The _filter_checks function returns all checks with 'applicabile' boolean. Frontend RiesameTecnicoSection correctly displays normative badges, grays out N/A checks with opacity-40 and line-through, shows (N/A) indicator, and uses n_applicabili for progress calculation.",
+  "features_tested": {
+    "backend_endpoints": [
+      {
+        "endpoint": "GET /api/riesame/{commessa_id}",
+        "test_cases": [
+          {
+            "scenario": "Mixed commessa (EN_1090 + EN_13241 + GENERICA)",
+            "status": "PASS",
+            "result": "All 12 checks applicable, normative_attive=['EN_1090','EN_13241','GENERICA']"
+          },
+          {
+            "scenario": "GENERICA-only commessa",
+            "status": "PASS",
+            "result": "3 applicable (universal), 9 non-applicable, normative_attive=['GENERICA']"
+          },
+          {
+            "scenario": "EN_13241-only commessa",
+            "status": "PASS",
+            "result": "5 applicable (3 universal + 2 shared), 7 non-applicable, normative_attive=['EN_13241']"
+          }
+        ]
+      },
+      {
+        "endpoint": "POST /api/riesame/{commessa_id}/approva",
+        "status": "PASS",
+        "description": "Correctly skips validation for non-applicable checks"
+      },
+      {
+        "endpoint": "GET /api/riesame/{commessa_id}/pdf",
+        "status": "PASS",
+        "description": "Generates valid PDF with normative info and N/A styling"
+      }
+    ],
+    "frontend_pages": [
+      {
+        "page": "CommessaHubPage - RiesameTecnicoSection",
+        "features_verified": [
+          "Normative badges (EN 1090, EN 13241, Generica) display in header",
+          "Progress bar shows 'X/Y superati (Z%)' where Y = n_applicabili (not n_totale)",
+          "N/A count indicator '(9 N/A)' displays in header for GENERICA-only",
+          "Non-applicable checks have opacity-40 class (grayed out)",
+          "Non-applicable checks have line-through class (strikethrough)",
+          "Non-applicable checks show '(N/A)' indicator after label",
+          "Non-applicable checks show 'Non richiesto per GENERICA' as nota",
+          "Universal checks (disegni_validati, attrezzature_idonee, documenti_aziendali) are NOT grayed out",
+          "Minus icon used for N/A checks instead of CheckCircle/XCircle"
+        ]
+      }
+    ]
+  },
+  "data_verified": {
+    "test_commesse": {
+      "mixed": {
+        "commessa_id": "com_2c57c1283871",
+        "numero": "NF-2026-000036",
+        "voci_lavoro": ["EN_1090", "EN_13241", "GENERICA"],
+        "n_applicabili": 12,
+        "n_non_applicabili": 0
+      },
+      "generica_only": {
+        "commessa_id": "com_test_generica_only",
+        "numero": "TEST-GEN-001",
+        "voci_lavoro": ["GENERICA"],
+        "n_applicabili": 3,
+        "n_non_applicabili": 9
+      },
+      "en13241_only": {
+        "commessa_id": "com_test_en13241_only",
+        "numero": "TEST-13241-001",
+        "voci_lavoro": ["EN_13241"],
+        "n_applicabili": 5,
+        "n_non_applicabili": 7
+      }
+    },
+    "checks_definition": {
+      "total_checks": 12,
+      "universal_checks": ["disegni_validati", "attrezzature_idonee", "documenti_aziendali"],
+      "en1090_only_checks": ["exc_class", "tolleranze_en1090", "wps_assegnate", "saldatori_qualificati", "tolleranza_calibro", "consumabili_disponibili", "itt_processi_qualificati"],
+      "shared_checks": ["materiali_confermati", "strumenti_tarati"]
+    }
+  },
+  "test_credentials": {
+    "session_token": "test_riesame_e19148d8f838452d",
+    "user_id": "user_97c773827822"
+  }
+}

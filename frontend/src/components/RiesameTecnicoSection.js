@@ -13,7 +13,7 @@ import { Textarea } from './ui/textarea';
 import { toast } from 'sonner';
 import {
     ShieldCheck, ShieldAlert, CheckCircle, XCircle, FileText,
-    Loader2, Lock, Download, RefreshCw, Pen,
+    Loader2, Lock, Download, RefreshCw, Pen, Minus,
 } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
@@ -25,6 +25,18 @@ const SEZ_COLORS = {
     Attrezzature: 'bg-cyan-100 text-cyan-700',
     Sicurezza: 'bg-emerald-100 text-emerald-700',
     Approvvigionamento: 'bg-amber-100 text-amber-700',
+};
+
+const NORM_COLORS = {
+    EN_1090: 'bg-blue-700 text-white',
+    EN_13241: 'bg-indigo-600 text-white',
+    GENERICA: 'bg-slate-500 text-white',
+};
+
+const NORM_LABELS = {
+    EN_1090: 'EN 1090',
+    EN_13241: 'EN 13241',
+    GENERICA: 'Generica',
 };
 
 export default function RiesameTecnicoSection({ commessaId }) {
@@ -102,8 +114,8 @@ export default function RiesameTecnicoSection({ commessaId }) {
 
     if (!data) return null;
 
-    const { checks, superato, n_ok, n_totale, approvato, firma } = data;
-    const pct = n_totale > 0 ? Math.round(n_ok / n_totale * 100) : 0;
+    const { checks, superato, n_ok, n_totale, n_applicabili, n_non_applicabili, normative_attive, approvato, firma } = data;
+    const pct = n_applicabili > 0 ? Math.round(n_ok / n_applicabili * 100) : 0;
 
     // Group by sezione
     const sezioni = {};
@@ -125,8 +137,18 @@ export default function RiesameTecnicoSection({ commessaId }) {
                             </Badge>
                         ) : (
                             <Badge className="bg-amber-100 text-amber-700 border border-amber-200 text-[10px]">
-                                {n_ok}/{n_totale} superati ({pct}%)
+                                {n_ok}/{n_applicabili} superati ({pct}%)
                             </Badge>
+                        )}
+                        {(normative_attive || []).map(n => (
+                            <Badge key={n} className={`text-[9px] px-1.5 py-0 ${NORM_COLORS[n] || 'bg-slate-400 text-white'}`}>
+                                {NORM_LABELS[n] || n}
+                            </Badge>
+                        ))}
+                        {n_non_applicabili > 0 && (
+                            <span className="text-[10px] text-slate-400 font-normal ml-1">
+                                ({n_non_applicabili} N/A)
+                            </span>
                         )}
                     </CardTitle>
                     <div className="flex items-center gap-2">
@@ -163,9 +185,15 @@ export default function RiesameTecnicoSection({ commessaId }) {
                                 <Badge className={`text-[10px] px-2 py-0.5 ${SEZ_COLORS[sez] || 'bg-slate-100 text-slate-600'}`}>{sez}</Badge>
                             </div>
                             <div className="space-y-1.5">
-                                {items.map(ck => (
-                                    <div key={ck.id} className="flex items-start gap-2.5" data-testid={`check-${ck.id}`}>
-                                        {ck.auto ? (
+                                {items.map(ck => {
+                                    const isNA = ck.applicabile === false;
+                                    return (
+                                    <div key={ck.id}
+                                        className={`flex items-start gap-2.5 ${isNA ? 'opacity-40' : ''}`}
+                                        data-testid={`check-${ck.id}`}>
+                                        {isNA ? (
+                                            <Minus className="w-4 h-4 text-slate-300 mt-0.5 shrink-0" />
+                                        ) : ck.auto ? (
                                             ck.esito
                                                 ? <CheckCircle className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
                                                 : <XCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
@@ -179,16 +207,23 @@ export default function RiesameTecnicoSection({ commessaId }) {
                                             />
                                         )}
                                         <div className="flex-1 min-w-0">
-                                            <div className="text-xs font-medium text-slate-700">{ck.label}</div>
+                                            <div className={`text-xs font-medium ${isNA ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                                                {ck.label}
+                                                {isNA && <span className="ml-1.5 text-[9px] font-normal no-underline text-slate-300">(N/A)</span>}
+                                            </div>
                                             <div className="text-[10px] text-slate-400">{ck.desc}</div>
-                                            {ck.valore && (
+                                            {isNA && ck.nota && (
+                                                <div className="text-[10px] mt-0.5 text-slate-300 italic">{ck.nota}</div>
+                                            )}
+                                            {!isNA && ck.valore && (
                                                 <div className={`text-[10px] mt-0.5 ${ck.esito ? 'text-emerald-600' : 'text-red-500'}`}>
                                                     {ck.valore}{ck.nota ? ` — ${ck.nota}` : ''}
                                                 </div>
                                             )}
                                         </div>
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     ))}

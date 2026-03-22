@@ -31,6 +31,7 @@ CHECKS_DEFINITION = [
         "label": "Classe di Esecuzione confermata",
         "desc": "EXC2 (default) o EXC3 specificata nel contratto/ordine",
         "auto": True,
+        "normativa": ["EN_1090"],
     },
     {
         "id": "materiali_confermati",
@@ -38,6 +39,7 @@ CHECKS_DEFINITION = [
         "label": "Materiali base confermati",
         "desc": "S355J2 per travi, S275JR per piastre — coerenti con ordine",
         "auto": True,
+        "normativa": ["EN_1090", "EN_13241"],
     },
     {
         "id": "disegni_validati",
@@ -45,6 +47,7 @@ CHECKS_DEFINITION = [
         "label": "Disegni validati e revisionati",
         "desc": "Disegni costruttivi approvati con revisione corrente",
         "auto": False,
+        "normativa": None,
     },
     {
         "id": "tolleranze_en1090",
@@ -52,6 +55,7 @@ CHECKS_DEFINITION = [
         "label": "Tolleranze conformi EN 1090-2",
         "desc": "Tolleranze essenziali e funzionali verificate sul disegno",
         "auto": False,
+        "normativa": ["EN_1090"],
     },
     {
         "id": "wps_assegnate",
@@ -59,6 +63,7 @@ CHECKS_DEFINITION = [
         "label": "WPS assegnate alla commessa",
         "desc": "Almeno una WPS disponibile e conforme al materiale",
         "auto": True,
+        "normativa": ["EN_1090"],
     },
     {
         "id": "saldatori_qualificati",
@@ -66,6 +71,7 @@ CHECKS_DEFINITION = [
         "label": "Saldatori qualificati disponibili",
         "desc": "Almeno un saldatore con patentino valido per il processo richiesto",
         "auto": True,
+        "normativa": ["EN_1090"],
     },
     {
         "id": "attrezzature_idonee",
@@ -73,6 +79,7 @@ CHECKS_DEFINITION = [
         "label": "Attrezzature con manutenzione valida",
         "desc": "Sega, Trapano, Saldatrice — nessuna in stato fuori servizio",
         "auto": True,
+        "normativa": None,
     },
     {
         "id": "strumenti_tarati",
@@ -80,6 +87,7 @@ CHECKS_DEFINITION = [
         "label": "Strumenti di misura tarati",
         "desc": "Calibro, metro, livella — taratura in corso di validita",
         "auto": True,
+        "normativa": ["EN_1090", "EN_13241"],
     },
     {
         "id": "tolleranza_calibro",
@@ -87,6 +95,7 @@ CHECKS_DEFINITION = [
         "label": "Tolleranza calibro conforme (configurabile per strumento)",
         "desc": "Verifica che la tolleranza di ogni strumento di misura rispetti la soglia impostata (racc. RINA audit 2025)",
         "auto": True,
+        "normativa": ["EN_1090"],
     },
     {
         "id": "documenti_aziendali",
@@ -94,6 +103,7 @@ CHECKS_DEFINITION = [
         "label": "Documenti aziendali validi",
         "desc": "DURC, Visura, DVR — non scaduti per la durata della commessa",
         "auto": True,
+        "normativa": None,
     },
     {
         "id": "consumabili_disponibili",
@@ -101,6 +111,7 @@ CHECKS_DEFINITION = [
         "label": "Consumabili di saldatura disponibili",
         "desc": "Filo/elettrodi con lotto e certificato assegnati alla commessa",
         "auto": True,
+        "normativa": ["EN_1090"],
     },
     {
         "id": "itt_processi_qualificati",
@@ -108,8 +119,40 @@ CHECKS_DEFINITION = [
         "label": "Processi produttivi qualificati (ITT)",
         "desc": "Verbali ITT validi per taglio, foratura e altri processi usati nella commessa",
         "auto": True,
+        "normativa": ["EN_1090"],
     },
 ]
+
+
+def _get_active_normative(voci_lavoro: list) -> set:
+    """Determine which normativa types are active for a commessa based on its voci_lavoro."""
+    norms = set()
+    for v in voci_lavoro:
+        nt = v.get("normativa_tipo", "")
+        if nt:
+            norms.add(nt)
+    return norms or {"EN_1090"}
+
+
+def _filter_checks(normative_attive: set) -> list:
+    """Filter CHECKS_DEFINITION to only include checks applicable to the active normativa types.
+    - normativa=None means universal (always applies)
+    - normativa=["EN_1090"] means only applies if EN_1090 is in normative_attive
+    """
+    applicable = []
+    for ck in CHECKS_DEFINITION:
+        norm_req = ck.get("normativa")
+        if norm_req is None:
+            applicable.append({**ck, "applicabile": True, "motivo_esclusione": None})
+        elif any(n in normative_attive for n in norm_req):
+            applicable.append({**ck, "applicabile": True, "motivo_esclusione": None})
+        else:
+            applicable.append({
+                **ck,
+                "applicabile": False,
+                "motivo_esclusione": f"Non richiesto per {', '.join(sorted(normative_attive))}"
+            })
+    return applicable
 
 
 async def _run_auto_checks(commessa_id: str, user_id: str) -> dict:
@@ -320,13 +363,20 @@ class RiesameApprova(BaseModel):
 
 @router.get("/{commessa_id}")
 async def get_riesame(commessa_id: str, user: dict = Depends(get_current_user)):
-    """Stato del riesame tecnico con check automatici in tempo reale."""
+    """Stato del riesame tecnico con check selettivi per normativa."""
     commessa = await db.commesse.find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"]},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "stato": 1, "exc_class": 1}
     )
     if not commessa:
         raise HTTPException(404, "Commessa non trovata")
+
+    # Detect active normativa from voci_lavoro
+    voci = await db.voci_lavoro.find(
+        {"commessa_id": commessa_id}, {"_id": 0, "normativa_tipo": 1}
+    ).to_list(200)
+    normative_attive = _get_active_normative(voci)
+    checks_filtered = _filter_checks(normative_attive)
 
     # Run auto checks
     auto_results = await _run_auto_checks(commessa_id, user["user_id"])
@@ -338,10 +388,27 @@ async def get_riesame(commessa_id: str, user: dict = Depends(get_current_user)):
 
     # Merge auto + manual checks
     checks = []
-    for ck in CHECKS_DEFINITION:
+    for ck in checks_filtered:
         cid = ck["id"]
         auto_res = auto_results.get(cid, {})
         manual_override = (saved or {}).get("checks_manuali", {}).get(cid)
+        applicabile = ck["applicabile"]
+
+        if not applicabile:
+            # Non-applicable checks are automatically "passed"
+            checks.append({
+                "id": cid,
+                "sezione": ck["sezione"],
+                "label": ck["label"],
+                "desc": ck["desc"],
+                "auto": ck["auto"],
+                "esito": True,
+                "valore": "N/A",
+                "nota": ck.get("motivo_esclusione", "Non applicabile"),
+                "applicabile": False,
+                "normativa": ck.get("normativa"),
+            })
+            continue
 
         if ck["auto"]:
             esito = auto_res.get("ok", False)
@@ -361,20 +428,28 @@ async def get_riesame(commessa_id: str, user: dict = Depends(get_current_user)):
             "esito": esito,
             "valore": valore,
             "nota": nota,
+            "applicabile": True,
+            "normativa": ck.get("normativa"),
         })
 
-    # Aggregate
-    superato = all(c["esito"] for c in checks)
-    n_ok = sum(1 for c in checks if c["esito"])
+    # Aggregate — only applicable checks count
+    applicable_checks = [c for c in checks if c.get("applicabile", True)]
+    superato = all(c["esito"] for c in applicable_checks)
+    n_ok = sum(1 for c in applicable_checks if c["esito"])
+    n_applicabili = len(applicable_checks)
+    n_na = sum(1 for c in checks if not c.get("applicabile", True))
 
     return {
         "commessa_id": commessa_id,
         "numero": commessa.get("numero", ""),
         "stato_commessa": commessa.get("stato", ""),
+        "normative_attive": sorted(normative_attive),
         "checks": checks,
         "superato": superato,
         "n_ok": n_ok,
         "n_totale": len(checks),
+        "n_applicabili": n_applicabili,
+        "n_non_applicabili": n_na,
         "approvato": (saved or {}).get("approvato", False),
         "data_approvazione": (saved or {}).get("data_approvazione"),
         "firma": (saved or {}).get("firma"),
@@ -432,11 +507,20 @@ async def approva_riesame(commessa_id: str, data: RiesameApprova, user: dict = D
     if saved and saved.get("approvato"):
         raise HTTPException(409, "Riesame gia approvato")
 
-    # Verify all auto checks pass
+    # Detect normative and filter checks
+    voci = await db.voci_lavoro.find(
+        {"commessa_id": commessa_id}, {"_id": 0, "normativa_tipo": 1}
+    ).to_list(200)
+    normative_attive = _get_active_normative(voci)
+    checks_filtered = _filter_checks(normative_attive)
+
+    # Verify only APPLICABLE checks pass
     auto_results = await _run_auto_checks(commessa_id, user["user_id"])
     manual_checks = (saved or {}).get("checks_manuali", {})
 
-    for ck in CHECKS_DEFINITION:
+    for ck in checks_filtered:
+        if not ck["applicabile"]:
+            continue  # Skip non-applicable checks
         cid = ck["id"]
         if ck["auto"]:
             if not auto_results.get(cid, {}).get("ok", False):
@@ -492,6 +576,13 @@ async def genera_pdf_riesame(commessa_id: str, user: dict = Depends(get_current_
     saved = await db.riesami_tecnici.find_one({"commessa_id": commessa_id}, {"_id": 0})
     auto_results = await _run_auto_checks(commessa_id, user["user_id"])
 
+    # Detect normative
+    voci = await db.voci_lavoro.find(
+        {"commessa_id": commessa_id}, {"_id": 0, "normativa_tipo": 1, "descrizione": 1}
+    ).to_list(200)
+    normative_attive = _get_active_normative(voci)
+    checks_filtered = _filter_checks(normative_attive)
+
     company = await db.settings.find_one({"type": "company"}, {"_id": 0})
     cs = await db.company_settings.find_one({}, {"_id": 0, "logo_url": 1})
     company_name = (company or {}).get("ragione_sociale", "Steel Project Design")
@@ -506,21 +597,44 @@ async def genera_pdf_riesame(commessa_id: str, user: dict = Depends(get_current_
     firma = (saved or {}).get("firma", {})
     manual_checks = (saved or {}).get("checks_manuali", {})
 
-    # Build check rows
+    # Normativa badges
+    norm_labels = {"EN_1090": "EN 1090", "EN_13241": "EN 13241", "GENERICA": "Generica"}
+    norm_badges = " ".join(
+        f'<span style="display:inline-block;background:{"#1a3a6b" if n=="EN_1090" else "#2563eb" if n=="EN_13241" else "#64748b"};color:#fff;padding:2px 8px;border-radius:3px;font-size:8pt;font-weight:700;margin-right:4px;">{norm_labels.get(n, n)}</span>'
+        for n in sorted(normative_attive)
+    )
+
+    # Voci lavoro summary
+    voci_summary = ""
+    for v in voci[:6]:
+        nt = v.get("normativa_tipo", "")
+        voci_summary += f'<span style="font-size:7.5pt;color:#475569;">{v.get("descrizione", "")[:40]} <span style="color:#94a3b8;">({norm_labels.get(nt, nt)})</span></span><br/>'
+
+    # Build check rows with applicability styling
     rows_html = ""
     prev_sezione = ""
-    for ck in CHECKS_DEFINITION:
+    for ck in checks_filtered:
         cid = ck["id"]
         auto_res = auto_results.get(cid, {})
-        if ck["auto"]:
-            esito = auto_res.get("ok", False)
-            valore = auto_res.get("valore", "")
-        else:
-            esito = manual_checks.get(cid, False)
-            valore = "Confermato" if esito else "Non confermato"
+        applicabile = ck["applicabile"]
 
-        icon = "&#10004;" if esito else "&#10008;"
-        color = "#16A34A" if esito else "#DC2626"
+        if applicabile:
+            if ck["auto"]:
+                esito = auto_res.get("ok", False)
+                valore = auto_res.get("valore", "")
+            else:
+                esito = manual_checks.get(cid, False)
+                valore = "Confermato" if esito else "Non confermato"
+            icon = "&#10004;" if esito else "&#10008;"
+            color = "#16A34A" if esito else "#DC2626"
+            row_style = ""
+        else:
+            esito = True
+            valore = "N/A"
+            icon = "&#8212;"
+            color = "#94A3B8"
+            row_style = 'style="opacity:0.5;background:#f8fafc;"'
+
         sez_cell = ""
         if ck["sezione"] != prev_sezione:
             sez_cell = f'<td rowspan="1" class="sezione">{ck["sezione"]}</td>'
@@ -528,13 +642,21 @@ async def genera_pdf_riesame(commessa_id: str, user: dict = Depends(get_current_
         else:
             sez_cell = '<td class="sezione"></td>'
 
+        nota_extra = ""
+        if not applicabile:
+            nota_extra = f'<br/><span style="font-size:6.5pt;color:#94A3B8;font-style:italic;">{ck.get("motivo_esclusione", "")}</span>'
+
         rows_html += f"""
-        <tr>
+        <tr {row_style}>
             {sez_cell}
-            <td>{ck['label']}<br><span class="desc">{ck['desc']}</span></td>
+            <td>{ck['label']}<br><span class="desc">{ck['desc']}</span>{nota_extra}</td>
             <td class="centro" style="color:{color};font-size:14pt;">{icon}</td>
             <td class="val">{valore}</td>
         </tr>"""
+
+    n_applicabili = sum(1 for c in checks_filtered if c["applicabile"])
+    n_ok = sum(1 for c in checks_filtered if c["applicabile"] and (auto_results.get(c["id"], {}).get("ok", False) if c["auto"] else manual_checks.get(c["id"], False)))
+    n_na = len(checks_filtered) - n_applicabili
 
     firma_html = ""
     if approvato and firma:
@@ -584,7 +706,8 @@ tr:nth-child(even) {{ background:#FAFBFC; }}
 </div>
 
 <h1>Verbale di Riesame Tecnico</h1>
-<p style="font-size:9pt;color:#64748B;margin-bottom:4mm;">Riesame dei requisiti contrattuali e verifica idoneita alla produzione — EN 1090-1</p>
+<p style="font-size:9pt;color:#64748B;margin-bottom:2mm;">Riesame dei requisiti contrattuali e verifica idoneita alla produzione</p>
+<p style="font-size:8pt;color:#475569;margin-bottom:4mm;">Normative attive: {norm_badges}</p>
 
 <div class="meta">
     <div class="meta-box"><div class="meta-label">Commessa</div><div class="meta-value">{commessa.get('numero','')}</div></div>
@@ -599,6 +722,8 @@ tr:nth-child(even) {{ background:#FAFBFC; }}
 </table>
 
 {f'<div class="note"><strong>Note:</strong> {(saved or {}).get("note_generali","")}</div>' if (saved or {}).get("note_generali") else ''}
+
+<p style="font-size:8pt;color:#64748B;margin-top:5mm;">Riepilogo: {n_ok}/{n_applicabili} check applicabili superati{f", {n_na} non applicabili (esclusi)" if n_na > 0 else ""}.</p>
 
 {firma_html}
 
