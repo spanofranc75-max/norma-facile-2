@@ -1,0 +1,136 @@
+{
+  "summary": "Iteration 232 — S2.5 Modello Soggetti & Ruoli Testing Complete. Backend: 16/16 tests passed. Frontend: All features verified including Settings Sicurezza tab with Figure Aziendali form, SchedaCantierePage with 3 categories of soggetti (14 total roles), and pre-fill chain from company settings to cantiere.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Settings Sicurezza tab", "issues": ["Minor: Console warning about 'value prop on input should not be null' - should use empty string instead"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration232_figure_aziendali_soggetti.py",
+    "/app/test_reports/pytest/iteration232_figure_aziendali_soggetti_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration232_figure_aziendali_soggetti.py"
+  ],
+  "success_rate": {
+    "backend": "100% (16/16 tests passed)",
+    "frontend": "100% (all UI flows verified)"
+  },
+  "seed_data_creation": "Used existing test data: session token BccyJvnOyrPXRRYy4GfxR5osuF51RWcYWWnUUoHx434, user_id user_6988e9b9316c. Created test cantieri during testing which were cleaned up.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "S2.5 Modello Soggetti & Ruoli fully working. Key features verified: (1) PUT /api/company/settings saves figure_aziendali array correctly (critical bug fix confirmed), (2) GET /api/company/settings returns persisted figure_aziendali, (3) POST /api/cantieri-sicurezza creates cantiere with pre-filled soggetti from company figure_aziendali, (4) PUT /api/cantieri-sicurezza/{id} updates soggetti correctly, (5) GET /api/cantieri-sicurezza/{id} returns soggetti with all 14 roles, (6) GET /api/ruoli-disponibili returns all 14 available roles. Frontend: Settings page has 'Sicurezza' tab with FigureAziendaliTab component showing 5 company roles (DATORE_LAVORO, RSPP, MEDICO_COMPETENTE, PREPOSTO_CANTIERE, DIRETTORE_TECNICO). SchedaCantierePage shows 'Soggetti & Referenti' section with 3 categories: Figure Aziendali (5), Figure Committente/Cantiere (6), Figure Tecniche (3). Pre-fill chain works: company_settings.figure_aziendali → cantiere.soggetti with 'precompilato' status badge.",
+  "features_tested": {
+    "ruoli_disponibili_endpoint": {
+      "GET /api/ruoli-disponibili": "PASSED - Returns all 14 roles",
+      "role_structure": "PASSED - Each role has ruolo, label, categoria, obbligatorio fields",
+      "categories_distribution": "PASSED - 5 azienda, 6 committente, 3 tecnico"
+    },
+    "company_settings_figure_aziendali": {
+      "PUT /api/company/settings": "PASSED - Saves figure_aziendali array correctly (critical bug fix)",
+      "GET /api/company/settings": "PASSED - Returns persisted figure_aziendali",
+      "preserves_other_settings": "PASSED - Updating figure_aziendali doesn't affect other fields"
+    },
+    "cantiere_prefill_from_company": {
+      "POST /api/cantieri-sicurezza": "PASSED - Pre-fills soggetti from company figure_aziendali",
+      "all_14_roles": "PASSED - New cantiere has all 14 soggetti roles",
+      "soggetti_structure": "PASSED - Each soggetto has required fields (ruolo, label, categoria, obbligatorio, status, nome, telefono, email)"
+    },
+    "cantiere_update_soggetti": {
+      "PUT /api/cantieri-sicurezza/{id}": "PASSED - Updates soggetti correctly",
+      "GET /api/cantieri-sicurezza/{id}": "PASSED - Returns persisted soggetti updates"
+    },
+    "soggetti_categories": {
+      "azienda": "PASSED - 5 roles (DATORE_LAVORO, RSPP, MEDICO_COMPETENTE, PREPOSTO_CANTIERE, DIRETTORE_TECNICO)",
+      "committente": "PASSED - 6 roles (COMMITTENTE, REFERENTE_COMMITTENTE, RESPONSABILE_LAVORI, DIRETTORE_LAVORI, CSP, CSE)",
+      "tecnico": "PASSED - 3 roles (PROGETTISTA, STRUTTURISTA, COLLAUDATORE)"
+    },
+    "gate_pos_with_soggetti": {
+      "missing_obbligatorio": "PASSED - Gate reports missing obbligatorio soggetti",
+      "completeness_improves": "PASSED - Gate completeness improves when soggetti are filled"
+    },
+    "responsabile_nome_mapping": {
+      "maps_to_datore_lavoro": "PASSED - Company responsabile_nome maps to DATORE_LAVORO in cantiere"
+    },
+    "frontend_settings_sicurezza_tab": {
+      "tab_visible": "PASSED - Sicurezza tab visible in Settings page",
+      "figure_aziendali_form": "PASSED - Shows 5 company roles with Nome, Telefono, Email fields",
+      "obbligatorio_badge": "PASSED - Shows 'obbligatorio' badge for required roles",
+      "compilato_badge": "PASSED - Shows 'compilato' badge when field is filled",
+      "save_button": "PASSED - Saves figure_aziendali to backend"
+    },
+    "frontend_scheda_cantiere_soggetti": {
+      "soggetti_section": "PASSED - Shows 'Soggetti & Referenti' section in Step 1",
+      "three_categories": "PASSED - Shows 3 categories (Figure Aziendali, Figure Committente/Cantiere, Figure Tecniche)",
+      "all_14_soggetti": "PASSED - All 14 soggetti displayed with data-testid attributes",
+      "precompilato_badge": "PASSED - Shows 'precompilato' badge for pre-filled soggetti",
+      "mancante_badge": "PASSED - Shows 'mancante' badge for missing required soggetti"
+    }
+  },
+  "test_credentials": {
+    "session_token": "BccyJvnOyrPXRRYy4GfxR5osuF51RWcYWWnUUoHx434",
+    "user_id": "user_6988e9b9316c"
+  },
+  "api_responses_verified": {
+    "ruoli_disponibili": {
+      "endpoint": "GET /api/ruoli-disponibili",
+      "response_fields": ["ruolo", "label", "categoria", "obbligatorio"],
+      "count": 14
+    },
+    "company_settings": {
+      "endpoint": "PUT/GET /api/company/settings",
+      "response_fields": ["figure_aziendali", "business_name", "partita_iva", "..."],
+      "figure_aziendali_structure": ["ruolo", "label", "nome", "telefono", "email"]
+    },
+    "cantieri_sicurezza": {
+      "endpoint": "POST/PUT/GET /api/cantieri-sicurezza",
+      "soggetti_count": 14,
+      "soggetti_structure": ["ruolo", "label", "categoria", "obbligatorio", "status", "nome", "azienda", "telefono", "email", "titolo", "note"]
+    }
+  },
+  "frontend_data_testid_verified": [
+    "tab-sicurezza",
+    "btn-save-settings",
+    "input-figura-nome-DATORE_LAVORO",
+    "input-figura-tel-DATORE_LAVORO",
+    "input-figura-email-DATORE_LAVORO",
+    "input-figura-nome-RSPP",
+    "input-figura-tel-RSPP",
+    "input-figura-email-RSPP",
+    "input-figura-nome-MEDICO_COMPETENTE",
+    "figura-DATORE_LAVORO",
+    "figura-RSPP",
+    "figura-MEDICO_COMPETENTE",
+    "figura-PREPOSTO_CANTIERE",
+    "figura-DIRETTORE_TECNICO",
+    "btn-new-cantiere",
+    "soggetto-DATORE_LAVORO",
+    "soggetto-RSPP",
+    "soggetto-MEDICO_COMPETENTE",
+    "soggetto-PREPOSTO_CANTIERE",
+    "soggetto-DIRETTORE_TECNICO",
+    "soggetto-COMMITTENTE",
+    "soggetto-REFERENTE_COMMITTENTE",
+    "soggetto-RESPONSABILE_LAVORI",
+    "soggetto-DIRETTORE_LAVORI",
+    "soggetto-CSP",
+    "soggetto-CSE",
+    "soggetto-PROGETTISTA",
+    "soggetto-STRUTTURISTA",
+    "soggetto-COLLAUDATORE"
+  ],
+  "bug_fix_verified": {
+    "issue": "PUT /api/company/settings was not saving figure_aziendali array",
+    "root_cause": "1) Duplicate figure_aziendali field in CompanySettings model, 2) Missing figure_aziendali in CompanySettingsUpdate model, 3) Missing explicit handling for figure_aziendali in PUT route",
+    "fix_applied": "1) Removed duplicate field, 2) Added figure_aziendali to CompanySettingsUpdate, 3) Added explicit handling in PUT route (lines 61-62)",
+    "verification": "PASSED - figure_aziendali now saves and persists correctly"
+  }
+}

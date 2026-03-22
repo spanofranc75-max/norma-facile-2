@@ -24,6 +24,7 @@ import DeployTab from '../components/settings/DeployTab';
 import NotificheTab from '../components/settings/NotificheTab';
 import DocumentiAziendaTab from '../components/settings/DocumentiAziendaTab';
 import AllegatiPosTab from '../components/settings/AllegatiPosTab';
+import FigureAziendaliTab from '../components/settings/FigureAziendaliTab';
 
 export default function SettingsPage() {
     const { user } = useAuth();
@@ -67,6 +68,7 @@ export default function SettingsPage() {
         aruba_sandbox: true,
         fic_company_id: '',
         fic_access_token: '',
+        figure_aziendali: [],
     });
 
     useEffect(() => {
@@ -95,6 +97,7 @@ export default function SettingsPage() {
                     aruba_sandbox: data.aruba_sandbox !== false,
                     fic_company_id: data.fic_company_id || '',
                     fic_access_token: data.fic_access_token || '',
+                    figure_aziendali: data.figure_aziendali || [],
                 }));
             } catch (error) {
                 console.error('Error loading settings:', error);
@@ -199,6 +202,10 @@ export default function SettingsPage() {
                             <Shield className="h-4 w-4" />
                             Documenti
                         </TabsTrigger>
+                        <TabsTrigger value="sicurezza" className="gap-2" data-testid="tab-sicurezza">
+                            <Users className="h-4 w-4" />
+                            Sicurezza
+                        </TabsTrigger>
                         {user?.role === 'admin' && (
                             <TabsTrigger value="team" className="gap-2" data-testid="tab-team">
                                 <Users className="h-4 w-4" />
@@ -247,6 +254,9 @@ export default function SettingsPage() {
                                 <AllegatiPosTab />
                             </div>
                         </div>
+                    </TabsContent>
+                    <TabsContent value="sicurezza">
+                        <FigureAziendaliTab settings={settings} setSettings={setSettings} />
                     </TabsContent>
                     {user?.role === 'admin' && (
                         <TabsContent value="team">

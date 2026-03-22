@@ -57,6 +57,10 @@ async def update_company_settings(
         if settings_data.bank_accounts is not None:
             update_dict["bank_accounts"] = settings_data.bank_accounts
         
+        # Handle figure_aziendali list
+        if settings_data.figure_aziendali is not None:
+            update_dict["figure_aziendali"] = settings_data.figure_aziendali
+        
         update_dict["updated_at"] = now
         
         await db.company_settings.update_one(
@@ -80,6 +84,10 @@ async def update_company_settings(
         # Handle bank_accounts list
         if settings_data.bank_accounts is not None:
             settings_doc["bank_accounts"] = settings_data.bank_accounts
+        
+        # Handle figure_aziendali list
+        if settings_data.figure_aziendali is not None:
+            settings_doc["figure_aziendali"] = settings_data.figure_aziendali
         
         await db.company_settings.insert_one(settings_doc)
     
