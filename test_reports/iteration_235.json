@@ -1,0 +1,137 @@
+{
+  "summary": "Iteration 235 — Pacchetti Documentali D1+D2+D3 Testing Complete. Backend: 38/38 tests passed. Frontend: All features verified including document upload, package creation from templates, D3 verification engine with status calculation.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration235_pacchetti_documentali.py",
+    "/app/test_reports/pytest/iteration235_pacchetti_documentali_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration235_pacchetti_documentali.py"
+  ],
+  "success_rate": {
+    "backend": "100% (38/38 tests passed)",
+    "frontend": "100% (all UI flows verified)"
+  },
+  "seed_data_creation": "Used existing test data: session token BccyJvnOyrPXRRYy4GfxR5osuF51RWcYWWnUUoHx434, user_id user_6988e9b9316c. Existing DURC document doc_1f3432425c4c and package pack_f6581a6a70e5.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Pacchetti Documentali D1+D2+D3 fully working. Key features verified: (1) GET /api/documenti/tipi returns 26 document types with correct entity_type, has_expiry, privacy_level. (2) POST /api/documenti uploads document with form-data and calculates status (valido/in_scadenza/scaduto). (3) GET /api/documenti lists documents with filters. (4) PATCH /api/documenti/{id} updates metadata. (5) GET /api/pacchetti-documentali/templates returns 5 templates (INGRESSO_CANTIERE 11 rules, QUALIFICA_FORNITORE 8 rules, PERSONALE_OPERATIVO 7 rules, DOCUMENTI_MEZZI 4 rules, PACCHETTO_SICUREZZA 7 rules). (6) POST /api/pacchetti-documentali creates package from template with expanded items. (7) POST /api/pacchetti-documentali/{id}/verifica runs D3 verification engine - matches items against archive, calculates status (attached/missing/expired/in_scadenza), sets blocking flag, calculates summary counters, determines pack status (pronto_invio/incompleto/draft). (8) Frontend /pacchetti-documentali page has 2 tabs (Archivio, Pacchetti). (9) Archivio tab shows upload form, search, filters, document list with status badges. (10) Pacchetti tab shows new package form with template selector, package checklist with 3-column status display.",
+  "features_tested": {
+    "d1_tipi_documento": {
+      "GET /api/documenti/tipi": "PASSED - Returns 26 document types",
+      "structure": "PASSED - code, label, category, entity_type, has_expiry, privacy_level",
+      "entity_types": "PASSED - azienda, persona, mezzo, cantiere",
+      "privacy_levels": "PASSED - cliente_condivisibile, interno, riservato, sensibile",
+      "durc_type": "PASSED - entity_type=azienda, has_expiry=true, privacy_level=cliente_condivisibile"
+    },
+    "d1_archivio_documenti": {
+      "GET /api/documenti": "PASSED - Lists documents with filters",
+      "GET /api/documenti/{id}": "PASSED - Returns document with calculated status",
+      "POST /api/documenti": "PASSED - Uploads document with form-data",
+      "PATCH /api/documenti/{id}": "PASSED - Updates document metadata",
+      "status_calculation": "PASSED - valido (>30 days), in_scadenza (<=30 days), scaduto (past expiry)"
+    },
+    "d2_templates": {
+      "GET /api/pacchetti-documentali/templates": "PASSED - Returns 5 templates",
+      "template_codes": "PASSED - INGRESSO_CANTIERE, QUALIFICA_FORNITORE, PERSONALE_OPERATIVO, DOCUMENTI_MEZZI, PACCHETTO_SICUREZZA",
+      "ingresso_cantiere_rules": "PASSED - 11 rules with scope:all_assigned_workers for persona",
+      "qualifica_fornitore_rules": "PASSED - 8 rules, azienda only"
+    },
+    "d2_pacchetti": {
+      "GET /api/pacchetti-documentali": "PASSED - Lists packages",
+      "GET /api/pacchetti-documentali/{id}": "PASSED - Returns package with items",
+      "POST /api/pacchetti-documentali": "PASSED - Creates package from template with expanded items"
+    },
+    "d3_verifica": {
+      "POST /api/pacchetti-documentali/{id}/verifica": "PASSED - Runs verification engine",
+      "summary_counters": "PASSED - total_required, attached, missing, expired, in_scadenza, sensibile",
+      "pack_status": "PASSED - pronto_invio (no missing/expired), incompleto (some attached), draft (none attached)",
+      "item_status": "PASSED - attached, missing, expired, in_scadenza",
+      "blocking_flag": "PASSED - True for required missing/expired items",
+      "durc_matching": "PASSED - Uploaded DURC found as 'attached' for items requiring DURC",
+      "sensibile_flagging": "PASSED - Documents with sensibile privacy flagged in summary"
+    },
+    "frontend_archivio_tab": {
+      "upload_form": "PASSED - Visible with data-testid='upload-form'",
+      "select_tipo_doc": "PASSED - Document type selector working",
+      "input_fields": "PASSED - owner, title, issue_date, expiry_date, file",
+      "btn_upload": "PASSED - Upload button triggers form-data POST",
+      "search_docs": "PASSED - Search input working",
+      "filter_entity": "PASSED - Entity type filter working",
+      "filter_status": "PASSED - Status filter working",
+      "documenti_list": "PASSED - Shows documents with status badges (Valido, Scaduto, In scadenza)"
+    },
+    "frontend_pacchetti_tab": {
+      "new_pack_form": "PASSED - Visible with data-testid='new-pack-form'",
+      "select_template": "PASSED - Template selector shows 5 templates with rule counts",
+      "input_pack_label": "PASSED - Package label input working",
+      "btn_crea_pacchetto": "PASSED - Creates package and auto-verifies",
+      "package_checklist": "PASSED - Shows 3-column status (Presente/Mancante/Scaduto)",
+      "blocking_indicators": "PASSED - Shows 'obb.' and 'blocco' badges",
+      "btn_verifica": "PASSED - Verify button triggers verification",
+      "success_toasts": "PASSED - 'Pacchetto creato' and 'Verifica completata' toasts shown"
+    }
+  },
+  "test_credentials": {
+    "session_token": "BccyJvnOyrPXRRYy4GfxR5osuF51RWcYWWnUUoHx434",
+    "user_id": "user_6988e9b9316c"
+  },
+  "existing_test_data": {
+    "durc_doc_id": "doc_1f3432425c4c",
+    "existing_pack_id": "pack_f6581a6a70e5"
+  },
+  "frontend_data_testid_verified": [
+    "pacchetti-documentali-page",
+    "tab-archivio",
+    "tab-pacchetti",
+    "upload-form",
+    "select-tipo-doc",
+    "input-owner",
+    "input-title",
+    "input-issue-date",
+    "input-expiry-date",
+    "input-file",
+    "btn-upload",
+    "search-docs",
+    "filter-entity",
+    "filter-status",
+    "documenti-list",
+    "new-pack-form",
+    "select-template",
+    "input-pack-label",
+    "btn-crea-pacchetto",
+    "btn-verifica-{pack_id}"
+  ],
+  "api_responses_verified": {
+    "documenti_tipi": {
+      "endpoint": "GET /api/documenti/tipi",
+      "response_count": 26,
+      "sample_fields": ["code", "label", "category", "entity_type", "has_expiry", "privacy_level"]
+    },
+    "documenti_upload": {
+      "endpoint": "POST /api/documenti",
+      "content_type": "multipart/form-data",
+      "response_fields": ["doc_id", "document_type_code", "entity_type", "title", "status"]
+    },
+    "templates": {
+      "endpoint": "GET /api/pacchetti-documentali/templates",
+      "response_count": 5,
+      "template_codes": ["INGRESSO_CANTIERE", "QUALIFICA_FORNITORE", "PERSONALE_OPERATIVO", "DOCUMENTI_MEZZI", "PACCHETTO_SICUREZZA"]
+    },
+    "verifica": {
+      "endpoint": "POST /api/pacchetti-documentali/{id}/verifica",
+      "response_fields": ["pack_id", "status", "summary", "items"],
+      "summary_fields": ["total_required", "attached", "missing", "expired", "in_scadenza", "sensibile"]
+    }
+  }
+}

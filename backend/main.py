@@ -91,6 +91,7 @@ from routes.istruttoria import router as istruttoria_router
 from routes.validation import router as validation_router
 from routes.commesse_normative import router as commesse_normative_router
 from routes.cantieri_sicurezza import router as cantieri_sicurezza_router
+from routes.pacchetti_documentali import router as pacchetti_documentali_router
 
 # Configure logging
 logging.basicConfig(
@@ -226,6 +227,7 @@ app.include_router(istruttoria_router, prefix="/api")
 app.include_router(validation_router, prefix="/api")
 app.include_router(commesse_normative_router, prefix="/api")
 app.include_router(cantieri_sicurezza_router, prefix="/api")
+app.include_router(pacchetti_documentali_router, prefix="/api")
 
 
 @app.on_event("startup")
