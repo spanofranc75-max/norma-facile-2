@@ -54,12 +54,30 @@ Carpenterie metalliche italiane, certificazione EN 1090, contratti PNRR.
 - DDT, Fatturazione attiva/passiva, Analisi finanziaria
 - Notifiche (base), QR Code, Team management
 
+### Safety Gate CAM (Completato 22/03/2026)
+- Endpoint /api/dashboard/executive arricchito con campo cam_safety_gate
+- Calcolo aggregato % riciclato su tutte le commesse attive con material_batches
+- Alert "RISCHIO NON CONFORMITA" nella Dashboard Executive se % < 75%
+- Badge per-commessa con link diretto alle commesse sotto soglia
+- Avviso CAM proattivo nel Preventivatore (Step 3) per normativa EN_1090
+
+### PDF Restyling Audit-Proof (Completato 22/03/2026)
+- Footer DOP migliorato: "DoP {num} — Commessa {num}" + "Pag. X di Y"
+- Dichiarazione CAM: verdetto CONFORME/NON CONFORME con stamp "ESITO VERIFICA"
+- Quadro normativo arricchito: DM 23/06/2022 n.256, GU n.183, Art. 57 D.Lgs. 36/2023
+- Footer CAM: "Dichiarazione CAM — DM 23/06/2022" + numerazione pagine
+
+### Pacco Documenti RINA (Completato 22/03/2026)
+- Endpoint GET /api/fascicolo-tecnico/{cid}/pacco-rina
+- ZIP organizzato e numerato: 01_DOP, 02_CE, 03_CAM, 04_Rintracciabilità, 05_Riesame + 00_INDICE.txt
+- Gestione errori per documenti non generabili (errori elencati nell'indice)
+- Bottone "Pacco RINA" nella CommessaHub (rosso, prominente)
+
 ## Backlog Prioritizzato
 
 ### P1
 1. Ponte Perizie -> Preventivatore: Trasferimento auto dati AI perizia -> preventivo
 2. Sistema Notifiche Proattive: Email 30/7/1gg prima di scadenze
-3. Pacco Documenti RINA: ZIP con pacchetto conformità completo (DOP, CE, CAM, Rintracciabilità, Riesame)
 
 ### P2
 4. Architettura Multi-Tenant: tenant_id su tutte le collection
