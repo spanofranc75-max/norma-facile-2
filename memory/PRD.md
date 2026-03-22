@@ -87,6 +87,9 @@ company_settings.figure_aziendali -> cantiere.soggetti (status: "precompilato")
 - `/app/frontend/src/components/settings/FigureAziendaliTab.js` — Form figure aziendali
 - `/app/backend/services/ai_safety_engine.py` — Motore AI S3
 - `/app/backend/services/pos_docx_generator.py` — Generatore DOCX S4
+- `/app/backend/services/pacchetti_documentali_service.py` — D1+D2+D3 service
+- `/app/backend/routes/pacchetti_documentali.py` — API pacchetti documentali
+- `/app/frontend/src/pages/PacchettiDocumentaliPage.js` — Pagina pacchetti documentali
 - `/app/SPEC_LIBRERIA_RISCHI_3_LIVELLI.md` — Spec definitiva v2
 - `/app/SPEC_POS_TEMPLATE_MAPPING.md` — Mapping template POS
 - `/app/SPEC_PACCHETTI_DOCUMENTALI.md` — Spec pacchetti documentali
@@ -129,18 +132,26 @@ Emergenza, Dichiarazione.
 
 ### Testing: 23/23 backend, 100% frontend (iteration_234)
 
+
+## D1+D2+D3 — Pacchetti Documentali (COMPLETATO 2026-03-22)
+Archivio documenti + template pacchetti + motore verifica.
+- D1: 26 tipi documento, archivio con upload/metadati/scadenza/privacy, API CRUD
+- D2: 5 template (Ingresso Cantiere, Qualifica, Personale, Mezzi, Sicurezza), espansione scope
+- D3: Verifica matching archivio->items, stato attached/missing/expired/in_scadenza, blocking, summary
+- Frontend: `/pacchetti-documentali`, 2 tab (Archivio+Pacchetti), upload, checklist 3 colonne
+### Testing: 38/38 backend, 100% frontend (iteration_235)
 ## Backlog Prioritizzato
 
 ### P0 (Prossimi — COMPLETATI)
 - ~~S3: Motore AI Sicurezza~~ — COMPLETATO
 - ~~S4: Generazione DOCX~~ — COMPLETATO
 
-### P1 (Subito dopo S3/S4)
+### P1 (Prossimi)
 - **D1-D5: Pacchetti Documentali Intelligenti** — Cabina di regia documenti da mandare al cliente. Spec completa in `/app/SPEC_PACCHETTI_DOCUMENTALI.md`
-  - D1: Libreria tipi documento + archivio documenti centralizzato (azienda, persona, mezzo, cantiere)
-  - D2: Template pacchetti (ingresso cantiere, qualifica fornitore, personale, mezzi, sicurezza)
-  - D3: Matching automatico + verifica presenza/scadenza (valido, mancante, scaduto, in_scadenza)
-  - D4: UI pacchetto documentale (checklist 3 colonne: richiesto/trovato/problemi)
+  - ~~D1: Libreria tipi documento + archivio documenti~~ COMPLETATO
+  - ~~D2: Template pacchetti~~ COMPLETATO
+  - ~~D3: Matching automatico + verifica presenza/scadenza~~ COMPLETATO
+  - D4: UI pacchetto documentale (preview invio) — PROSSIMO
   - D5: Invio email one-click + log invii (via Resend)
   - D6: Profili documentali per committente ricorrente
 - Modulo Verifica Committenza / Contratti (si integra con Pacchetti Documentali)
