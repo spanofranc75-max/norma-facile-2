@@ -162,6 +162,15 @@ Modulo "collante" che centralizza tutti gli obblighi, blockers e requisiti per o
 - Indici MongoDB: dedupe_key unique, commessa_id+status, priority sort
 ### Testing: 23/23 backend, 100% frontend (iteration_238)
 
+## R0 — Auto-Sync Registro Obblighi (COMPLETATO 2026-03-22)
+Trigger automatici asincroni per sincronizzare il registro senza click manuale.
+- 8 trigger inseriti in 4 moduli: cantiere sicurezza (PUT con campi sostanziali), emissioni (PATCH/gate/emetti), istruttoria (risposte + conferma segmentazione), rami normativi (creazione manuale + da istruttoria)
+- Debounce in-memory 5s (v1 single-instance), `asyncio.create_task()` non-blocking
+- Log strutturato: commessa_id, trigger_source, entity, skip/start/complete/fail
+- Helper `resolve_commessa_from_preventivo()` per risalire da preventivo a commessa madre
+- Bug fix: query cantiere con `$or: [commessa_id, parent_commessa_id]`
+### Testing: 15/15 backend (iteration_239)
+
 ## Backlog Prioritizzato
 
 ### P0 (Prossimi — COMPLETATI)
