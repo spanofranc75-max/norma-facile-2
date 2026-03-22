@@ -1,0 +1,143 @@
+{
+  "summary": "Iteration 227 — Commesse Normative (Rami Normativi + Emissioni Documentali) Testing Complete. Backend: 21/21 tests passed (100%). Frontend: All UI features verified. Hierarchical model Commessa Madre → Ramo Normativo → Emissione Documentale fully functional.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "TracciabilitaMaterialiSection",
+        "issues": ["Minor: HTML nesting warning in console (<tr> inside <span>, <span> inside <tbody>) from React dev tools overlay - cosmetic only, does not affect functionality"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration227_commesse_normative.py",
+    "/app/test_reports/pytest/iteration227_commesse_normative_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration227_commesse_normative.py"
+  ],
+  "success_rate": {
+    "backend": "100% (21/21 tests passed)",
+    "frontend": "100% (all Rami Normativi features verified)"
+  },
+  "seed_data_creation": "Created test session: test_session_rami_normativi_227. Used existing commessa: com_e8c4810ad476 (NF-2026-000001, EN_13241). Created EN_1090 and GENERICA branches with multiple emissions.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Commesse Normative feature fully working. Key data-testids: card-rami-normativi, btn-nuovo-ramo, dialog-nuovo-ramo, select-normativa-ramo, btn-conferma-ramo, ramo-{normativa}, btn-nuova-emissione-{normativa}, dialog-nuova-emissione, input-desc-emissione, btn-conferma-emissione, emissione-{codice}, btn-gate-{codice}. Test session: test_session_rami_normativi_227. Commessa: com_e8c4810ad476 has 2 branches (EN_1090 with 6 emissions, GENERICA with 3 emissions).",
+  "features_tested": {
+    "GET_commesse_normative_list": {
+      "status": "PASSED",
+      "details": "GET /api/commesse-normative/{commessa_id} returns list of branches including legacy wrap"
+    },
+    "POST_commesse_normative_create": {
+      "status": "PASSED",
+      "details": "POST /api/commesse-normative/{commessa_id} creates manual branch, idempotent behavior verified"
+    },
+    "POST_commesse_normative_invalid_400": {
+      "status": "PASSED",
+      "details": "POST /api/commesse-normative/{commessa_id} with invalid normativa returns 400"
+    },
+    "GET_commesse_normative_detail": {
+      "status": "PASSED",
+      "details": "GET /api/commesse-normative/{commessa_id}/{ramo_id} returns branch detail with emissions"
+    },
+    "POST_emissioni_create": {
+      "status": "PASSED",
+      "details": "POST /api/emissioni/{ramo_id} creates emission with progressive numbering (D01, D02 for EN_1090, L01 for GENERICA)"
+    },
+    "GET_emissioni_gate": {
+      "status": "PASSED",
+      "details": "GET /api/emissioni/{ramo_id}/{emissione_id}/gate returns Evidence Gate with checks (certificati_31, riesame_tecnico, controllo_finale, wps_wpqr)"
+    },
+    "POST_emissioni_emetti_blocked_409": {
+      "status": "PASSED",
+      "details": "POST /api/emissioni/{ramo_id}/{emissione_id}/emetti returns 409 when gate NOT OK"
+    },
+    "PATCH_emissioni_update": {
+      "status": "PASSED",
+      "details": "PATCH /api/emissioni/{ramo_id}/{emissione_id} updates emission fields"
+    },
+    "GET_commesse_gerarchia": {
+      "status": "PASSED",
+      "details": "GET /api/commesse/{commessa_id}/gerarchia returns aggregated view with branches and nested emissions"
+    },
+    "POST_materializza_legacy": {
+      "status": "PASSED",
+      "details": "POST /api/commesse-normative/{commessa_id}/materializza-legacy converts legacy to real branch"
+    },
+    "unique_index_enforcement": {
+      "status": "PASSED",
+      "details": "Cannot create 2 branches with same normativa for same commessa (idempotent behavior)"
+    },
+    "frontend_card_rami_normativi": {
+      "status": "PASSED",
+      "details": "Rami Normativi card visible with data-testid='card-rami-normativi'"
+    },
+    "frontend_dialog_nuovo_ramo": {
+      "status": "PASSED",
+      "details": "Dialog for creating new branch opens with select normativa dropdown"
+    },
+    "frontend_dialog_nuova_emissione": {
+      "status": "PASSED",
+      "details": "Dialog for creating new emission opens with description input"
+    },
+    "frontend_evidence_gate_display": {
+      "status": "PASSED",
+      "details": "Evidence Gate button shows check results with blocking reasons"
+    },
+    "frontend_emission_list": {
+      "status": "PASSED",
+      "details": "Emissions displayed with code, status (Bloccata/Bozza), and description"
+    }
+  },
+  "test_credentials": {
+    "session_token": "test_session_rami_normativi_227",
+    "user_id": "user_97c773827822",
+    "email": "spano.franc75@gmail.com",
+    "commessa_id": "com_e8c4810ad476",
+    "commessa_numero": "NF-2026-000001"
+  },
+  "data_testid_elements_verified": [
+    "card-rami-normativi",
+    "btn-nuovo-ramo",
+    "dialog-nuovo-ramo",
+    "select-normativa-ramo",
+    "btn-conferma-ramo",
+    "ramo-EN_1090",
+    "ramo-GENERICA",
+    "btn-nuova-emissione-EN_1090",
+    "dialog-nuova-emissione",
+    "input-desc-emissione",
+    "btn-conferma-emissione",
+    "btn-gate-*"
+  ],
+  "api_responses_verified": {
+    "list_rami": {
+      "endpoint": "GET /api/commesse-normative/{commessa_id}",
+      "response": {"rami": "[array of branches]", "total": "int"}
+    },
+    "create_ramo": {
+      "endpoint": "POST /api/commesse-normative/{commessa_id}",
+      "response": {"ramo_id": "string", "normativa": "EN_1090|EN_13241|GENERICA", "codice_ramo": "string", "status": "active"}
+    },
+    "create_emissione": {
+      "endpoint": "POST /api/emissioni/{ramo_id}",
+      "response": {"emissione_id": "string", "codice_emissione": "string", "emission_seq": "int", "stato": "draft"}
+    },
+    "evidence_gate": {
+      "endpoint": "GET /api/emissioni/{ramo_id}/{emissione_id}/gate",
+      "response": {"emittable": "bool", "checks": {"certificati_31": "bool", "riesame_tecnico": "bool", "controllo_finale": "bool", "wps_wpqr": "bool"}, "blocking_reasons": "[array]"}
+    },
+    "gerarchia": {
+      "endpoint": "GET /api/commesse/{commessa_id}/gerarchia",
+      "response": {"commessa": "object", "rami": "[array with nested emissioni]", "n_rami": "int", "has_branches": "bool"}
+    }
+  }
+}

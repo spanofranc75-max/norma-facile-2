@@ -89,6 +89,7 @@ from routes.scadenziario_manutenzioni import router as scad_manut_router
 from routes.verbali_itt import router as verbali_itt_router
 from routes.istruttoria import router as istruttoria_router
 from routes.validation import router as validation_router
+from routes.commesse_normative import router as commesse_normative_router
 
 # Configure logging
 logging.basicConfig(
@@ -222,17 +223,34 @@ app.include_router(scad_manut_router, prefix="/api")
 app.include_router(verbali_itt_router, prefix="/api")
 app.include_router(istruttoria_router, prefix="/api")
 app.include_router(validation_router, prefix="/api")
+app.include_router(commesse_normative_router, prefix="/api")
 
 
 @app.on_event("startup")
 async def startup_event():
-    """Startup tasks: migrate existing users to have admin role."""
+    """Startup tasks: migrate existing users to have admin role + create indices."""
     logger.info("Norma Facile 2.0 starting up...")
     # Ensure all existing users without a role get 'admin' (legacy migration)
     await db.users.update_many(
         {"role": {"$exists": False}},
         {"$set": {"role": "admin"}},
     )
+
+    # Indici univoci per modello gerarchico commesse
+    try:
+        await db.commesse_normative.create_index(
+            [("commessa_id", 1), ("normativa", 1), ("user_id", 1)],
+            unique=True, name="uq_commessa_normativa"
+        )
+        await db.emissioni_documentali.create_index(
+            [("ramo_id", 1), ("emission_type", 1), ("emission_seq", 1), ("user_id", 1)],
+            unique=True, name="uq_emissione"
+        )
+        await db.emissioni_documentali.create_index(
+            [("commessa_id", 1)], name="idx_emissioni_commessa"
+        )
+    except Exception as e:
+        logger.warning(f"Index creation (may already exist): {e}")
 
 
 @app.get("/api/")

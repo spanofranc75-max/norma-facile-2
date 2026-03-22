@@ -32,6 +32,7 @@ import RegistroSaldaturaSection from '../components/RegistroSaldaturaSection';
 import TracciabilitaMaterialiSection from '../components/TracciabilitaMaterialiSection';
 import ControlloFinaleSection from '../components/ControlloFinaleSection';
 import ReportIspezioniSection from '../components/ReportIspezioniSection';
+import RamiNormativiSection from '../components/RamiNormativiSection';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
@@ -781,6 +782,9 @@ export default function CommessaHubPage() {
                                 <VociLavoroSection commessaId={commessaId} onVociChange={setVociLavoro} />
                             </CardContent>
                         </Card>
+
+                        {/* Rami Normativi + Emissioni Documentali */}
+                        <RamiNormativiSection commessaId={commessaId} />
 
                         {/* Operational Panels: Approvvigionamento, Produzione, C/L, Repository */}
                         <CommessaOpsPanel commessaId={commessaId} commessaNumero={c?.numero} normativaTipo={c?.normativa_tipo} vociLavoro={vociLavoro} onRefresh={fetchHub} />
