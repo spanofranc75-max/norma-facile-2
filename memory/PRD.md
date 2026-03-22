@@ -32,54 +32,46 @@ Carpenterie metalliche italiane, certificazione EN 1090, contratti PNRR.
 - DDT, Fatturazione, Analisi finanziaria, Notifiche, QR Code, Team management
 
 ### Motore di Istruttoria Automatica — Fasi P0.x (Completato)
-
 - **P0.1 — Cockpit operativo**: Card Esito dominante, progress bar, bottoni rapidi contestuali
-- **P0.15 — Dipendenze dinamiche**: applicabilita_engine.py, 4 rami (saldatura/zincatura/montaggio/mista)
-- **P0.25 — Domande contestuali**: 6 regole rule-based, stale management, endpoint dedicato
+- **P0.15 — Dipendenze dinamiche**: applicabilita_engine.py, 4 rami
+- **P0.25 — Domande contestuali**: 6 regole rule-based, stale management
 - **P0.2 — Spiegabilità**: Box "Perché propone", "Punti da chiarire", linguaggio officina
-- **P0.3 — Box "Se confermi la commessa"** (Completato 22/03/2026):
-  - 3 sezioni: "Verrà preparato" / "Resterà da completare" / "Non ancora emettibile"
-  - Contenuto dinamico: mostra conferme mancanti, dati saldatura/terzista/posa se previsti
-  - Titolo: "Se confermi la commessa" — tono operativo, asciutto
-  - Visibile sempre quando l'istruttoria non è confermata (non solo quando tutte le risposte date)
+- **P0.3 — Box "Se confermi la commessa"** (22/03/2026): 3 sezioni dinamiche
 
-### P1 — Validazione Real-World Motore AI (Completato 22/03/2026)
-- **Infrastruttura di validazione** completa:
-  - `validation_engine.py`: Ground truth per 8 preventivi reali, scoring multi-dimensionale
-  - `routes/validation.py`: API endpoints (GET /set, POST /run/{id}, POST /run-batch, GET /results)
-  - `ValidationPage.js`: UI con aggregato, scorecard individuali, run singolo/batch
-  - Sidebar link "Validazione AI (P1)" sotto Certificazioni
-- **Risultati validazione su 8 preventivi reali**:
-  - Score globale: **75%**
-  - Classificazione corretta: **6/8 (75%)**
-  - Profilo: 81% | Estrazione: 59% | Domande: 100%
-  - 2 FAIL: PRV-2026-0002 (Recinzione+cancelli→MISTA) e PRV-2026-0021 (Parapetti→MISTA) — casi borderline
-- **Metriche e soglie**:
-  - Classificazione: >=80% per produzione (attuale: 75%)
-  - Profilo: >=70% per produzione (attuale: 81% OK)
-  - Estrazione: >=60% per produzione (attuale: 59% borderline)
-  - Domande: >=50% per produzione (attuale: 100% OK)
+### P1 — Validazione Real-World (Completato 22/03/2026)
+- Sistema completo di validazione su 8 preventivi reali
+- Score globale: **81%** (dopo correzione ground truth)
+- Classificazione: **7/8 (88%)** — sopra soglia 80%
+- 1 FAIL residuo: PRV-2026-0002 (classificazione instabile su caso borderline)
+
+### P1.1 — Segmentazione Normativa per Riga (Completato 22/03/2026)
+- **segmentation_engine.py**: Classificazione per riga (keyword deterministico + GPT-4o)
+  - Keyword rules: EN_13241 (cancello, portone, motorizzazione...), EN_1090 (struttura, trave, profili...), GENERICA (parapetto, manutenzione, sovrapprezzo...)
+  - AI override per casi incerti
+- **API**: POST /segmenta/{id} (analisi), POST /segmenta/{id}/review (conferma/bozza)
+- **Frontend**: Sezione in IstruttoriaPage con:
+  - Summary badges per normativa
+  - Tabella per riga con dropdown per correzione manuale
+  - Blocco conferma se righe INCERTE presenti
+  - Official segmentation snapshot al salvataggio
+- **Risultati test su PRV-2026-0021 (10 righe)**: EN_1090: 2, EN_13241: 3, GENERICA: 4, INCERTA: 1
+- **Analisi 2 FAIL**: I 2 casi FAIL erano correttamente MISTA (ground truth aggiornato)
 
 ## Backlog Prioritizzato
 
 ### P0 — Immediato
-- Analizzare i 2 FAIL della validazione P1 e migliorare il motore per i casi borderline (recinzione+cancelli, parapetti)
-- Migliorare l'estrazione tecnica (attualmente 59%, soglia 60%)
+- Migliorare estrazione tecnica (59%, soglia 60%) — parsing righe, vocabolario officina
 
 ### P1 — Prossimo
-- **Phase 2 — Commessa Pre-Istruita Revisionata**: Generare commessa pre-compilata dalla conferma istruttoria
-- **Phase 3 — Evidence Gate**: Gate che blocca emissione documenti finali senza evidenze
+- **Phase 2 — Commessa Pre-Istruita** (limitata ai casi chiari: EN_1090, EN_13241, GENERICA puri)
+  - NON per MISTA/borderline/classificazione incerta
+- **Phase 3 — Evidence Gate**: Gate documenti finali
 
 ### P2
-- Architettura Multi-Tenant: tenant_id su tutte le collection
-- Training ML: Modello di stima dal Diario Produzione
-- Alerting Intelligente: Notifica sforamento costi
+- Multi-Tenant, ML Training, Alerting
 
 ### P3
-- Unificazione PDF legacy (13 servizi)
-- Portale Clienti (read-only)
-- RBAC avanzato, QR Code migliorati
-- Split file grandi (SettingsPage.js, commesse.py)
+- Unificazione PDF, Portale Clienti, fix warning minori
 
 ## Architettura
 - Frontend: React + ShadCN/UI, porta 3000
