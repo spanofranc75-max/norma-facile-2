@@ -122,9 +122,16 @@ Carpenterie metalliche italiane, certificazione EN 1090, contratti PNRR.
 - **Frontend IstruttoriaPage** con:
   - Card classificazione + profilo tecnico + stato conoscenza
   - Elementi estratti con badge stato
-  - Domande residue con impatto
+  - Domande residue INTERATTIVE: Textarea per ogni domanda, pulsante "Salva Risposte", badge "Risposto", info autore/data
   - Sezione revisioni umane (valore AI barrato → valore umano verde)
   - Barra conferma con checkpoint pre-Fase 2
+
+- **Risposte Domande Residue** (Completato 22/03/2026):
+  - Endpoint POST /api/istruttoria/{id}/rispondi per salvare risposte utente
+  - Merge risposte (non sovrascrive), validazione payload, gestione errori
+  - Frontend: Textarea per ogni domanda, pre-popolate con risposte salvate
+  - Badge "Risposto" verde + autore/data per risposte esistenti
+  - Contatore risposte/domande totali nell'header sezione
 
 ## Backlog Prioritizzato
 
