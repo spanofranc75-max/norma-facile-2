@@ -154,6 +154,17 @@ Carpenterie metalliche italiane, certificazione EN 1090, contratti PNRR.
   - Blocco conferma per commessa mista (HTTP 409 + CTA "Richiede segmentazione")
   - Prerequisiti saldatura visualmente disattivati quando saldatura=No
 
+- **P0.25 — Domande dinamiche contestuali** (Completato 22/03/2026):
+  - 6 regole rule-based per 3 rami: zincatura esterna (2Q), saldatura presente (2Q), montaggio confermato (2Q)
+  - Backend: genera_domande_contestuali() in applicabilita_engine.py, persistite nel DB
+  - Endpoint POST /api/istruttoria/{id}/rispondi-contestuale per salvare risposte
+  - Stale management: risposte preservate ma marcate inactive/stale quando il trigger cambia
+  - Frontend: domande figlie appaiono sotto la domanda madre con bordo sinistro blu
+  - Label trigger "Comparsa perche hai indicato..." per spiegabilita
+  - Quick buttons contestuali per domande a scelta + textarea per domande aperte
+  - Pulsante "Salva Contestuali" separato
+  - Fix bug: ordine priorita keyword matching (_parse_answer) — "esterno" non matcha piu come "no"
+
 ## Backlog Prioritizzato
 
 ### P1
