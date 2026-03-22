@@ -310,6 +310,25 @@ export default function CommessaHubPage() {
         } catch (e) { toast.error(e.message); }
     };
 
+    const handlePaccoRina = async () => {
+        try {
+            toast.info('Generazione Pacco RINA in corso (potrebbe richiedere qualche secondo)...');
+            const API = process.env.REACT_APP_BACKEND_URL;
+            const res = await fetch(`${API}/api/fascicolo-tecnico/${commessaId}/pacco-rina`, {
+                credentials: 'include',
+            });
+            if (!res.ok) throw new Error('Errore generazione Pacco RINA');
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Pacco_RINA_${hub?.commessa?.numero?.replace(/\//g, '-') || commessaId}.zip`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            toast.success('Pacco RINA scaricato');
+        } catch (e) { toast.error(e.message); }
+    };
+
     const handleCloseSimple = async () => {
         setClosingSimple(true);
         try {
@@ -402,6 +421,12 @@ export default function CommessaHubPage() {
                                     data-testid="btn-cam-dichiarazione-pdf"
                                 >
                                     <FileText className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">CAM PNRR</span>
+                                </Button>
+                                <Button size="sm" onClick={handlePaccoRina}
+                                    className="bg-red-700 text-white hover:bg-red-800 text-xs px-2 sm:px-3 shadow-lg shadow-red-700/20"
+                                    data-testid="btn-pacco-rina"
+                                >
+                                    <Download className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Pacco RINA</span>
                                 </Button>
                             </>
                         )}

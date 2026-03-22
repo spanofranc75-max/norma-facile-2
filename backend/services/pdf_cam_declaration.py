@@ -47,12 +47,12 @@ CAM_EXTRA_CSS = """
 .cam-conforme { color: #28a745; }
 .cam-non-conforme { color: #dc3545; }
 .result-box {
-    padding: 15px;
+    padding: 18px 15px;
     margin: 15px 0;
     text-align: center;
-    font-size: 14pt;
-    font-weight: 700;
+    font-weight: 800;
     border: 3px solid;
+    position: relative;
 }
 .result-box.conforme {
     background: #d4edda;
@@ -63,6 +63,29 @@ CAM_EXTRA_CSS = """
     background: #f8d7da;
     border-color: #dc3545;
     color: #721c24;
+}
+.result-box .verdict {
+    font-size: 18pt;
+    letter-spacing: 2px;
+    display: block;
+    margin-bottom: 4px;
+}
+.result-box .verdict-sub {
+    font-size: 9pt;
+    font-weight: 600;
+    opacity: 0.85;
+}
+.result-box .stamp {
+    position: absolute;
+    top: -10px;
+    right: 15px;
+    background: #1e3a5f;
+    color: #fff;
+    font-size: 7pt;
+    font-weight: 700;
+    padding: 3px 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
 }
 .normativa-ref {
     background: #f8f9fa;
@@ -91,6 +114,18 @@ CAM_EXTRA_CSS = """
     text-align: center;
     font-size: 9pt;
     color: #555;
+}
+@page {
+    size: A4;
+    margin: 18mm 14mm 22mm 14mm;
+    @bottom-left {
+        content: "Dichiarazione CAM — DM 23/06/2022";
+        font-size: 7pt; color: #999; font-family: Helvetica, Arial, sans-serif;
+    }
+    @bottom-right {
+        content: "Pag. " counter(page) " di " counter(pages);
+        font-size: 7pt; color: #777; font-family: Helvetica, Arial, sans-serif;
+    }
 }
 """
 
@@ -175,8 +210,9 @@ def generate_cam_declaration_pdf(
     conforme = calcolo.get("conforme_cam", False)
 
     conf_color = "#276749" if conforme else "#c53030"
-    conf_bg = "#d4edda" if conforme else "#f8d7da"
-    conf_text = "CONFORME AI CRITERI AMBIENTALI MINIMI" if conforme else "NON CONFORME AI CRITERI AMBIENTALI MINIMI"
+    conf_class = "conforme" if conforme else "non-conforme"
+    conf_verdict = "CONFORME" if conforme else "NON CONFORME"
+    conf_sub = "ai Criteri Ambientali Minimi — DM 23/06/2022" if conforme else "ATTENZIONE — Contenuto riciclato insufficiente"
 
     summary_html = f"""
     <div class="cam-summary">
@@ -198,8 +234,10 @@ def generate_cam_declaration_pdf(
         </div>
     </div>
 
-    <div style="text-align:center;padding:12px;margin:10px 0;background:{conf_bg};border:3px solid {conf_color};font-size:13pt;font-weight:800;color:{conf_color};">
-        {conf_text}
+    <div class="result-box {conf_class}">
+        <span class="stamp">ESITO VERIFICA</span>
+        <span class="verdict">{conf_verdict}</span>
+        <span class="verdict-sub">{conf_sub}</span>
     </div>
     """
 
@@ -268,24 +306,33 @@ def generate_cam_declaration_pdf(
     </table>
     """
 
-    # Normativa reference (enriched for PNRR)
+    # Normativa reference (enriched for PNRR — DM 23/06/2022)
     normativa_html = """
-    <div class="normativa-ref" style="margin-top:16px;">
-        <strong>Riferimento normativo:</strong><br/>
-        DM 23 giugno 2022 n. 256 — Criteri Ambientali Minimi per l'affidamento del servizio di progettazione
-        di interventi edilizi, per l'affidamento dei lavori per interventi edilizi e per l'affidamento congiunto
-        di progettazione e lavori per interventi edilizi.<br/><br/>
-        <strong>Requisiti acciaio strutturale (Allegato, par. 2.5.4):</strong><br/>
-        Il contenuto di materia recuperata o riciclata deve essere almeno pari a:
+    <h3 style="color:#1e3a5f;font-size:11pt;margin:20px 0 8px 0;border-bottom:2px solid #1e3a5f;padding-bottom:4px;">
+        QUADRO NORMATIVO DI RIFERIMENTO
+    </h3>
+    <div class="normativa-ref">
+        <strong>DM 23 giugno 2022, n. 256</strong> — <em>Criteri Ambientali Minimi per l'affidamento
+        del servizio di progettazione di interventi edilizi, per l'affidamento dei lavori per
+        interventi edilizi e per l'affidamento congiunto di progettazione e lavori per
+        interventi edilizi.</em><br/><br/>
+        <strong>Pubblicazione:</strong> Gazzetta Ufficiale n. 183 del 06/08/2022<br/>
+        <strong>Entrata in vigore:</strong> 04/12/2022<br/><br/>
+        <strong>Art. 57, D.Lgs. 36/2023 (Codice dei Contratti Pubblici):</strong><br/>
+        Obbligo di applicazione al 100% dei CAM negli appalti pubblici, con particolare
+        rilevanza per opere finanziate PNRR/PNC.
+    </div>
+    <div class="normativa-ref" style="border-left-color: #d4a017;">
+        <strong>Requisiti specifici acciaio strutturale (Allegato, par. 2.5.4):</strong><br/>
+        Contenuto minimo di materia recuperata o riciclata:
         <ul style="margin:4px 0 4px 16px;padding:0;">
             <li><strong>75%</strong> — Acciaio non legato da forno elettrico (EAF)</li>
             <li><strong>60%</strong> — Acciaio legato da forno elettrico (EAF)</li>
             <li><strong>12%</strong> — Acciaio da ciclo integrale (BOF/BF)</li>
         </ul>
-        <strong>Verifica:</strong> Mediante certificati di colata EN 10204 3.1, EPD (ISO 14025, EN 15804),
-        certificazione ReMade in Italy, o dichiarazione del produttore sotto propria responsabilita.<br/><br/>
-        <strong>Obbligo PNRR:</strong> Applicazione obbligatoria al 100% per appalti pubblici
-        finanziati con fondi PNRR (Art. 57, D.Lgs. 36/2023).
+        <strong>Mezzi di verifica ammessi:</strong> Certificati di colata EN 10204 3.1,
+        EPD (ISO 14025 / EN 15804), certificazione ReMade in Italy,
+        dichiarazione del produttore sotto propria responsabilita.
     </div>
     """
 

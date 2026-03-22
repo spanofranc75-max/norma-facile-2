@@ -1,0 +1,128 @@
+{
+  "summary": "Iteration 215 — Sprint Urgente 4 Features Testing. Backend: 16/16 tests passed (100%). Frontend: All 4 features verified — CAM Safety Gate in Executive Dashboard shows 'RISCHIO NON CONFORMITA' badge with 73.6% < 75% threshold, Pacco RINA ZIP endpoint returns valid ZIP with 5+ PDFs, CommessaHub shows 'Pacco RINA' button (data-testid='btn-pacco-rina'), Preventivatore shows CAM Safety Gate reminder with DM 23/06/2022 reference.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "TracciabilitaMaterialiSection",
+        "issues": ["Minor hydration warning in console about <tr> inside <span> - does not affect functionality (same as previous iterations)"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration215_sprint_features.py",
+    "/app/test_reports/pytest/iteration215_sprint_features_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration215_sprint_features.py"
+  ],
+  "success_rate": {
+    "backend": "100% (16/16 passed)",
+    "frontend": "100% (all 4 features working)"
+  },
+  "seed_data_creation": "Used existing test data: commessa_id=com_2c57c1283871 (NF-2026-000036) with 4 material batches containing CAM data (73.6% riciclato < 75% threshold)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Sprint 215 features fully tested. 1) CAM Safety Gate in Executive Dashboard shows danger level when commesse have <75% recycled content - endpoint GET /api/dashboard/executive returns cam_safety_gate with level, percentuale_globale, soglia, commesse, n_non_conformi. 2) Pacco RINA ZIP endpoint GET /api/fascicolo-tecnico/{cid}/pacco-rina returns valid ZIP with DOP, CE Label, CAM Declaration, Rintracciabilita, Riesame PDFs + 00_INDICE.txt. 3) CommessaHub shows btn-pacco-rina button for EN_1090 commesse. 4) Preventivatore shows CAM Safety Gate reminder (data-testid='cam-safety-preventivatore') in Step 3 when normativa=EN_1090.",
+  "features_tested": {
+    "feature_1_safety_gate_cam": {
+      "description": "Safety Gate CAM - alert proattivo in Dashboard Executive e Preventivatore",
+      "backend_endpoints": [
+        {
+          "endpoint": "GET /api/dashboard/executive",
+          "status": "PASS",
+          "description": "Returns cam_safety_gate with level='danger', percentuale_globale=73.6, soglia=75, n_non_conformi=1, commesse list"
+        }
+      ],
+      "frontend_verification": [
+        "Executive Dashboard shows 'Safety Gate CAM — DM 23/06/2022' card",
+        "Shows '73.6% riciclato globale (8516 kg) — Soglia: 75%'",
+        "Shows 'RISCHIO NON CONFORMITA' badge in red",
+        "Shows '1 COMMESSE SOTTO SOGLIA:' with NF-2026-000036 — 73.6%",
+        "Preventivatore Step 3 shows CAM Safety Gate reminder with DM 23/06/2022 reference"
+      ]
+    },
+    "feature_2_pdf_restyling": {
+      "description": "Restyling PDF Audit-Proof con footer Commessa + Pag X di Y, verdetto CAM con DM 23/06/2022",
+      "backend_endpoints": [
+        {
+          "endpoint": "GET /api/cam/dichiarazione-pdf/{cid}",
+          "status": "PASS",
+          "description": "Returns valid PDF with DM 23/06/2022 legal references"
+        },
+        {
+          "endpoint": "GET /api/fascicolo-tecnico/{cid}/dop-frazionata/{dop_id}/pdf",
+          "status": "PASS",
+          "description": "Returns multi-page PDF with footer 'DoP {numero} — Commessa {numero}' and 'Pag. X di Y'"
+        }
+      ],
+      "pdf_features_verified": [
+        "CAM Declaration PDF has 'DM 23 giugno 2022 n. 256' reference",
+        "CAM Declaration PDF has 'ESITO VERIFICA' stamp",
+        "DOP PDF has footer with Commessa number",
+        "DOP PDF has page numbers 'Pag. X di Y'"
+      ]
+    },
+    "feature_3_pacco_rina_zip": {
+      "description": "Pacco Documenti RINA - endpoint ZIP con tutti i documenti di conformità",
+      "backend_endpoints": [
+        {
+          "endpoint": "GET /api/fascicolo-tecnico/{cid}/pacco-rina",
+          "status": "PASS",
+          "description": "Returns valid ZIP file with Content-Type: application/zip"
+        }
+      ],
+      "zip_contents_verified": [
+        "00_INDICE.txt - Index file with commessa info and file list",
+        "01_DOP_{num}.pdf - Dichiarazione di Prestazione",
+        "02_Etichetta_CE_{num}.pdf - CE Label EN 1090",
+        "03_Dichiarazione_CAM_{num}.pdf - CAM PNRR Declaration",
+        "04_Rintracciabilita_{num}.pdf - Material Traceability Sheet",
+        "05_Riesame_Tecnico_{num}.pdf - Technical Review Report"
+      ]
+    },
+    "feature_4_pacco_rina_button": {
+      "description": "Bottone Pacco RINA nella CommessaHub",
+      "frontend_verification": [
+        "CommessaHub shows 'Pacco RINA' button with data-testid='btn-pacco-rina'",
+        "Button is visible and clickable for EN_1090 commesse",
+        "Button text: 'Pacco RINA'",
+        "Button has red background (bg-red-700)"
+      ]
+    }
+  },
+  "data_verified": {
+    "test_commessa": {
+      "commessa_id": "com_2c57c1283871",
+      "numero": "NF-2026-000036",
+      "normativa_tipo": "EN_1090",
+      "material_batches": 4,
+      "percentuale_riciclato": 73.6,
+      "soglia_cam": 75,
+      "cam_status": "NON CONFORME (danger level)"
+    },
+    "cam_safety_gate_response": {
+      "level": "danger",
+      "percentuale_globale": 73.6,
+      "soglia": 75,
+      "peso_totale_kg": 8516,
+      "n_commesse_cam": 1,
+      "n_non_conformi": 1
+    },
+    "pacco_rina_zip": {
+      "file_count": "6 files (5 PDFs + 00_INDICE.txt)",
+      "content_type": "application/zip"
+    }
+  },
+  "test_credentials": {
+    "session_token": "test_riesame_e19148d8f838452d",
+    "user_id": "user_97c773827822"
+  }
+}

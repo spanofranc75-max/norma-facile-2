@@ -19,7 +19,7 @@ import { toast } from 'sonner';
 import {
     Upload, Sparkles, Loader2, ChevronRight, ChevronLeft,
     Scale, Calculator, FileText, Check, Brain, TrendingUp,
-    Factory, Package, Wrench, CircleDollarSign,
+    Factory, Package, Wrench, CircleDollarSign, Leaf, AlertTriangle,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
@@ -400,6 +400,27 @@ export default function PreventivatoreWizard() {
                                             </div>
                                         </div>
                                     </div>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {/* CAM Safety Gate — Alert PNRR */}
+                        {normativa === 'EN_1090' && (
+                            <Card className="border-amber-300 bg-amber-50/50" data-testid="cam-safety-preventivatore">
+                                <CardContent className="p-3 flex items-start gap-2.5">
+                                    <Leaf className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                                    <div>
+                                        <p className="text-xs font-bold text-amber-800">
+                                            Safety Gate CAM — DM 23/06/2022
+                                        </p>
+                                        <p className="text-[10px] text-amber-700 mt-0.5">
+                                            Per opere PNRR: acciaio con min. <strong>75%</strong> contenuto riciclato (EAF non legato).
+                                            Verifica i certificati di colata (EN 10204 3.1) e la % riciclato in fase di approvvigionamento.
+                                        </p>
+                                    </div>
+                                    <Badge className="bg-amber-100 text-amber-700 text-[8px] px-1.5 py-0 shrink-0">
+                                        <AlertTriangle className="h-2.5 w-2.5 mr-0.5" /> PNRR
+                                    </Badge>
                                 </CardContent>
                             </Card>
                         )}

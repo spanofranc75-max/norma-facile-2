@@ -2,6 +2,7 @@
 import io
 import os
 import zipfile
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from datetime import datetime, timezone, timedelta, date
@@ -9,6 +10,7 @@ from core.security import get_current_user
 from core.database import db
 from services.profiles_data import calculate_bars_needed
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
@@ -1633,9 +1635,60 @@ async def get_executive_dashboard(user: dict = Depends(get_current_user)):
 
     scadenze.sort(key=lambda x: x.get("giorni", 999))
 
+    # ── 8. CAM Safety Gate — aggregate recycled content across active commesse ──
+    cam_safety = {"level": "info", "message": "Nessun dato CAM", "commesse": []}
+    try:
+        all_batches = await db.material_batches.find(
+            {"commessa_id": {"$in": cid_list}, "user_id": uid, "percentuale_riciclato": {"$ne": None}},
+            {"_id": 0, "commessa_id": 1, "peso_kg": 1, "percentuale_riciclato": 1, "metodo_produttivo": 1}
+        ).to_list(1000)
+
+        if all_batches:
+            peso_tot = sum(b.get("peso_kg", 0) or 0 for b in all_batches)
+            peso_ric = sum((b.get("peso_kg", 0) or 0) * (b.get("percentuale_riciclato", 0) or 0) / 100 for b in all_batches)
+            perc_glob = round(peso_ric / peso_tot * 100, 1) if peso_tot > 0 else 0
+            soglia = 75
+
+            # Per-commessa breakdown
+            cam_per_com = {}
+            for b in all_batches:
+                cid_b = b["commessa_id"]
+                if cid_b not in cam_per_com:
+                    cam_per_com[cid_b] = {"peso": 0, "peso_ric": 0}
+                cam_per_com[cid_b]["peso"] += b.get("peso_kg", 0) or 0
+                cam_per_com[cid_b]["peso_ric"] += (b.get("peso_kg", 0) or 0) * (b.get("percentuale_riciclato", 0) or 0) / 100
+
+            cam_commesse = []
+            for cid_b, v in cam_per_com.items():
+                perc_c = round(v["peso_ric"] / v["peso"] * 100, 1) if v["peso"] > 0 else 0
+                # Find commessa numero
+                numero = next((c["numero"] for c in commesse if c["commessa_id"] == cid_b), cid_b)
+                cam_commesse.append({
+                    "commessa_id": cid_b, "numero": numero,
+                    "percentuale_riciclato": perc_c,
+                    "peso_kg": round(v["peso"], 1),
+                    "conforme": perc_c >= soglia,
+                })
+
+            n_non_conf = sum(1 for c in cam_commesse if not c["conforme"])
+            level = "success" if n_non_conf == 0 else "danger"
+            cam_safety = {
+                "level": level,
+                "percentuale_globale": perc_glob,
+                "soglia": soglia,
+                "peso_totale_kg": round(peso_tot, 1),
+                "n_commesse_cam": len(cam_commesse),
+                "n_non_conformi": n_non_conf,
+                "message": f"CAM {'OK' if n_non_conf == 0 else 'ATTENZIONE'}: {perc_glob:.1f}% riciclato globale — {n_non_conf} commesse non conformi" if n_non_conf else f"CAM CONFORME: {perc_glob:.1f}% riciclato globale",
+                "commesse": sorted(cam_commesse, key=lambda x: x["percentuale_riciclato"]),
+            }
+    except Exception as e:
+        logger.warning(f"CAM Safety Gate error: {e}")
+
     return {
         "settori": settori,
         "scadenze_imminenti": scadenze,
         "totale_commesse": len(commesse),
         "totale_valore": sum((c.get("value") or 0) for c in commesse),
+        "cam_safety_gate": cam_safety,
     }

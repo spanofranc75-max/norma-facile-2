@@ -12,7 +12,8 @@ import {
 } from '../components/ui/table';
 import {
     RefreshCw, Shield, AlertTriangle, CheckCircle2, Clock,
-    TrendingUp, Factory, Hammer, DoorOpen, Package, FileText
+    TrendingUp, Factory, Hammer, DoorOpen, Package, FileText,
+    Leaf, ArrowDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiRequest } from '../lib/utils';
@@ -266,6 +267,56 @@ export default function ExecutiveDashboardPage() {
                         );
                     })}
                 </div>
+
+                {/* CAM Safety Gate */}
+                {data?.cam_safety_gate && data.cam_safety_gate.level !== 'info' && (
+                    <Card className={`overflow-hidden ${data.cam_safety_gate.level === 'danger' ? 'border-red-300 bg-red-50/50' : 'border-emerald-200 bg-emerald-50/30'}`}
+                        data-testid="cam-safety-gate">
+                        <CardContent className="p-4">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className={`p-2 rounded-lg ${data.cam_safety_gate.level === 'danger' ? 'bg-red-100' : 'bg-emerald-100'}`}>
+                                    <Leaf className={`h-5 w-5 ${data.cam_safety_gate.level === 'danger' ? 'text-red-600' : 'text-emerald-600'}`} />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className={`text-sm font-bold ${data.cam_safety_gate.level === 'danger' ? 'text-red-800' : 'text-emerald-800'}`}>
+                                        Safety Gate CAM — DM 23/06/2022
+                                    </h3>
+                                    <p className="text-xs text-slate-600 mt-0.5">
+                                        {data.cam_safety_gate.percentuale_globale?.toFixed(1)}% riciclato globale ({data.cam_safety_gate.peso_totale_kg?.toLocaleString('it-IT')} kg)
+                                        — Soglia: {data.cam_safety_gate.soglia}%
+                                    </p>
+                                </div>
+                                {data.cam_safety_gate.level === 'danger' && (
+                                    <Badge className="bg-red-600 text-white text-[10px] gap-1 px-2.5 py-1">
+                                        <AlertTriangle className="h-3 w-3" /> RISCHIO NON CONFORMITA
+                                    </Badge>
+                                )}
+                                {data.cam_safety_gate.level === 'success' && (
+                                    <Badge className="bg-emerald-600 text-white text-[10px] gap-1 px-2.5 py-1">
+                                        <CheckCircle2 className="h-3 w-3" /> CONFORME
+                                    </Badge>
+                                )}
+                            </div>
+                            {data.cam_safety_gate.n_non_conformi > 0 && (
+                                <div className="space-y-1.5">
+                                    <p className="text-[10px] font-semibold text-red-700 uppercase tracking-wider">
+                                        {data.cam_safety_gate.n_non_conformi} commesse sotto soglia:
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {(data.cam_safety_gate.commesse || []).filter(c => !c.conforme).map(c => (
+                                            <Badge key={c.commessa_id} variant="outline"
+                                                className="text-[9px] px-2 py-0.5 border-red-300 text-red-700 cursor-pointer hover:bg-red-100"
+                                                onClick={() => navigate(`/commesse/${c.commessa_id}`)}>
+                                                <ArrowDown className="h-2.5 w-2.5 mr-0.5" />
+                                                {c.numero} — {c.percentuale_riciclato}%
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Three Sector Sections */}
                 {['EN_1090', 'EN_13241', 'GENERICA'].map(skey => (

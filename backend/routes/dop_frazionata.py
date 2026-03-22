@@ -952,7 +952,7 @@ def _generate_dop_pdf(dop: dict, commessa: dict, company: dict, client_name: str
         size: A4;
         margin: 18mm 14mm 22mm 14mm;
         @bottom-left {{
-            content: "DoP {dop_num} — {biz}";
+            content: "DoP {dop_num} — Commessa {comm_num}";
             font-size: 7pt; color: #999; font-family: Helvetica, Arial, sans-serif;
         }}
         @bottom-right {{
@@ -1277,4 +1277,289 @@ async def generate_rintracciabilita_totale_pdf(cid: str, user: dict = Depends(ge
         BytesIO(buf.getvalue()),
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{fname}"'}
+    )
+
+
+@router.get("/{cid}/pacco-rina")
+async def download_pacco_rina(cid: str, user: dict = Depends(get_current_user)):
+    """Genera il Pacco Documenti RINA — ZIP con tutta la documentazione di conformità:
+    1. DOP EN 1090 (ultimo generato o auto)
+    2. Etichetta CE 1090
+    3. Dichiarazione CAM PNRR
+    4. Scheda Rintracciabilità Totale
+    5. Verbale Riesame Tecnico
+    """
+    import zipfile
+    from fastapi.responses import StreamingResponse as SR
+
+    commessa = await _get_commessa(cid, user["user_id"])
+    num = commessa.get("numero", cid).replace("/", "-")
+
+    zip_buf = BytesIO()
+    errors = []
+
+    with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        idx = 1
+
+        # ── 1. DOP PDF ──
+        try:
+            latest_dop = await db.dop_frazionate.find(
+                {"commessa_id": cid, "user_id": user["user_id"]},
+                {"_id": 0}
+            ).sort("created_at", -1).to_list(1)
+            if latest_dop:
+                company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+                client_name = ""
+                if commessa.get("client_id"):
+                    cl = await db.clients.find_one({"client_id": commessa["client_id"]}, {"_id": 0, "business_name": 1, "name": 1})
+                    if cl:
+                        client_name = cl.get("business_name") or cl.get("name", "")
+                pdf_bytes = _generate_dop_pdf(latest_dop[0], commessa, company, client_name)
+                zf.writestr(f"{idx:02d}_DOP_{num}.pdf", pdf_bytes)
+                idx += 1
+        except Exception as e:
+            errors.append(f"DOP: {e}")
+            logger.warning(f"Pacco RINA - DOP error: {e}")
+
+        # ── 2. Etichetta CE ──
+        try:
+            from weasyprint import HTML as WP_HTML
+            import html as html_mod
+            _e = html_mod.escape
+
+            company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+            exc_class = commessa.get("exc_class") or commessa.get("classe_esecuzione", "EXC2")
+            biz = _e(company.get("business_name", ""))
+            addr = _e(f"{company.get('address', '')} {company.get('cap', '')} {company.get('city', '')}")
+            cert_num = _e(company.get("certificato_en1090_numero", ""))
+            ente = _e(company.get("ente_certificatore", ""))
+            ente_num = _e(company.get("ente_certificatore_numero", ""))
+            logo = company.get("logo_url", "")
+            logo_html = f'<img src="{logo}" style="max-height:30px;max-width:120px;margin-bottom:4px;" />' if logo else ""
+            anno = datetime.now().year
+            ce_num = _e(commessa.get("numero", ""))
+            dop_ref = f"{ce_num}/A"
+
+            ce_html = f"""<!DOCTYPE html><html><head><style>
+            @page {{ size: 148mm 105mm; margin: 4mm; }}
+            body {{ font-family: Helvetica, Arial, sans-serif; font-size: 9pt; color: #1E293B; margin: 0; }}
+            .ce-box {{ border: 3px solid #1E293B; padding: 5mm; height: 92mm; position: relative; }}
+            .ce {{ font-size: 38pt; font-weight: 900; letter-spacing: 4mm; margin: 0; text-align: center; }}
+            .info-table {{ width: 94%; margin: 2mm auto 0; font-size: 8pt; border-collapse: collapse; }}
+            .info-table td {{ border: none; padding: 1.5mm 3mm; vertical-align: top; }}
+            .info-table .lbl {{ text-align: right; width: 42%; font-weight: 700; color: #475569; }}
+            </style></head><body>
+            <div class="ce-box">
+                <div style="display:table;width:100%;margin-bottom:2mm;">
+                    <div style="display:table-cell;width:50%;vertical-align:middle;">{logo_html}</div>
+                    <div style="display:table-cell;width:50%;text-align:right;vertical-align:middle;">
+                        <span style="display:inline-block;background:#1E293B;color:#fff;padding:2px 8px;font-size:7pt;font-weight:700;">EN 1090-1:2009+A1:2011</span>
+                    </div>
+                </div>
+                <div class="ce">CE</div>
+                <p style="font-size:11pt;font-weight:700;margin:1mm 0 0;text-align:center;">{biz}</p>
+                <p style="font-size:7pt;color:#64748b;margin:0.5mm 0 0;text-align:center;">{addr}</p>
+                <hr style="margin:2mm auto;border:none;border-top:1.5px solid #1E293B;width:85%;"/>
+                <table class="info-table">
+                    <tr><td class="lbl">Certificato FPC:</td><td><strong>{cert_num}</strong></td></tr>
+                    <tr><td class="lbl">Ente Notificato:</td><td>{ente} (N. {ente_num})</td></tr>
+                    <tr><td class="lbl">Classe Esecuzione:</td><td><strong style="font-size:10pt;">{_e(exc_class)}</strong></td></tr>
+                    <tr><td class="lbl">Commessa:</td><td>{ce_num}</td></tr>
+                    <tr><td class="lbl">DoP Rif.:</td><td>{dop_ref}</td></tr>
+                    <tr><td class="lbl">Anno Produzione:</td><td>{anno}</td></tr>
+                </table>
+                <div style="position:absolute;bottom:4mm;left:0;right:0;text-align:center;">
+                    <span style="font-size:6.5pt;color:#94A3B8;">Reg. UE n. 305/2011 — Prodotti da Costruzione</span>
+                </div>
+            </div></body></html>"""
+            ce_pdf = WP_HTML(string=ce_html).write_pdf()
+            zf.writestr(f"{idx:02d}_Etichetta_CE_{num}.pdf", ce_pdf)
+            idx += 1
+        except Exception as e:
+            errors.append(f"CE Label: {e}")
+            logger.warning(f"Pacco RINA - CE Label error: {e}")
+
+        # ── 3. Dichiarazione CAM ──
+        try:
+            from models.cam import calcola_cam_commessa, calcola_co2_risparmiata
+            batches = await db.material_batches.find(
+                {"commessa_id": cid, "user_id": user["user_id"], "percentuale_riciclato": {"$ne": None}},
+                {"_id": 0, "certificate_base64": 0}
+            ).to_list(200)
+            if batches:
+                lotti_input = [{
+                    "descrizione": b.get("dimensions") or b.get("material_type", "Acciaio"),
+                    "peso_kg": b.get("peso_kg", 0),
+                    "percentuale_riciclato": b.get("percentuale_riciclato", 0),
+                    "metodo_produttivo": b.get("metodo_produttivo", "forno_elettrico_non_legato"),
+                    "uso_strutturale": True,
+                    "certificazione": b.get("certificazione_epd", "dichiarazione_produttore"),
+                    "fornitore": b.get("supplier_name", ""),
+                    "numero_colata": b.get("heat_number", ""),
+                } for b in batches]
+                calcolo = calcola_cam_commessa(lotti_input)
+                calcolo["commessa_id"] = cid
+
+                company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+                from services.pdf_cam_declaration import generate_cam_declaration_pdf
+                cam_pdf = generate_cam_declaration_pdf(calcolo, commessa, company)
+                zf.writestr(f"{idx:02d}_Dichiarazione_CAM_{num}.pdf", cam_pdf)
+                idx += 1
+        except Exception as e:
+            errors.append(f"CAM: {e}")
+            logger.warning(f"Pacco RINA - CAM error: {e}")
+
+        # ── 4. Rintracciabilità Totale ──
+        try:
+            batch_docs = await db.material_batches.find(
+                {"commessa_id": cid, "user_id": user["user_id"]},
+                {"_id": 0, "certificate_base64": 0, "certificato_31_base64": 0}
+            ).to_list(500)
+            if batch_docs:
+                import html as html_mod
+                _e = html_mod.escape
+                company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+                biz_r = _e(company.get("business_name", ""))
+                cert_r = _e(company.get("certificato_en1090_numero", ""))
+                logo_r = company.get("logo_url", "")
+                now_r = datetime.now(timezone.utc)
+
+                rows_r = ""
+                total_peso_r = 0
+                for i, b in enumerate(batch_docs, 1):
+                    peso = b.get("peso_kg", 0) or 0
+                    total_peso_r += peso
+                    perc_ric = b.get("percentuale_riciclato")
+                    rows_r += f"""<tr>
+                        <td style="text-align:center;">{i}</td>
+                        <td>{_e(b.get('dimensions', '') or '')}</td>
+                        <td>{_e(b.get('material_type', ''))}</td>
+                        <td style="font-family:monospace;font-weight:700;color:#1a3a6b;">{_e(b.get('heat_number', ''))}</td>
+                        <td>{_e(b.get('numero_certificato', ''))}</td>
+                        <td>{_e(b.get('supplier_name', ''))}</td>
+                        <td>{_e(b.get('ddt_numero', ''))}</td>
+                        <td style="text-align:right;">{f'{peso:,.1f}' if peso else '—'}</td>
+                        <td style="text-align:center;">{f'{perc_ric:.1f}%' if perc_ric is not None else '—'}</td>
+                    </tr>"""
+
+                rint_html = f"""<!DOCTYPE html><html><head><style>
+                @page {{ size: A4 landscape; margin: 14mm 10mm 18mm 10mm;
+                    @bottom-left {{ content: "Rintracciabilita — {_e(commessa.get('numero', ''))}"; font-size: 7pt; color: #999; font-family: Helvetica; }}
+                    @bottom-right {{ content: "Pag. " counter(page) " di " counter(pages); font-size: 7pt; color: #777; font-family: Helvetica; }}
+                }}
+                body {{ font-family: Helvetica, Arial, sans-serif; font-size: 8.5pt; color: #111; }}
+                h1 {{ font-size: 14pt; color: #1a3a6b; text-align: center; font-weight: 800; }}
+                table {{ width: 100%; border-collapse: collapse; margin: 8px 0; }}
+                td, th {{ padding: 4px 5px; font-size: 7.5pt; border: 1px solid #aaa; }}
+                th {{ background: #1a3a6b; color: #fff; font-size: 7pt; font-weight: 600; text-transform: uppercase; }}
+                tr:nth-child(even) {{ background: #f8f9fb; }}
+                </style></head><body>
+                <div style="background:#1a3a6b;color:#fff;padding:8px 12px;margin-bottom:10px;">
+                    <table style="margin:0;"><tr>
+                        <td style="width:60%;border:none;color:#fff;vertical-align:middle;">
+                            {f'<img src="{logo_r}" style="max-height:30px;max-width:140px;margin-right:10px;vertical-align:middle;" />' if logo_r else ''}
+                            <span style="font-size:12pt;font-weight:800;">{biz_r}</span>
+                        </td>
+                        <td style="width:40%;text-align:right;font-size:7.5pt;border:none;color:#fff;">Cert. EN 1090: {cert_r}</td>
+                    </tr></table>
+                </div>
+                <h1>SCHEDA DI RINTRACCIABILITA MATERIALI</h1>
+                <p style="text-align:center;font-size:9pt;color:#555;">Commessa {_e(commessa.get('numero', ''))} — {now_r.strftime('%d/%m/%Y')}</p>
+                <table>
+                    <tr><th>N.</th><th>Profilo/Dim.</th><th>Qualita</th><th>N. Colata</th><th>Cert. 3.1</th><th>Fornitore</th><th>DDT</th><th>Peso (kg)</th><th>% Ric.</th></tr>
+                    {rows_r}
+                    <tr style="font-weight:700;background:#e8f0f7;"><td colspan="7" style="text-align:right;">TOTALE</td><td style="text-align:right;">{total_peso_r:,.1f}</td><td></td></tr>
+                </table></body></html>"""
+                from weasyprint import HTML as WP_HTML
+                rint_pdf = WP_HTML(string=rint_html).write_pdf()
+                zf.writestr(f"{idx:02d}_Rintracciabilita_{num}.pdf", rint_pdf)
+                idx += 1
+        except Exception as e:
+            errors.append(f"Rintracciabilità: {e}")
+            logger.warning(f"Pacco RINA - Rintracciabilità error: {e}")
+
+        # ── 5. Riesame Tecnico PDF ──
+        try:
+            from routes.riesame_tecnico import _run_auto_checks, _get_active_normative, _filter_checks
+            from weasyprint import HTML as WP_HTML
+
+            saved_ries = await db.riesami_tecnici.find_one({"commessa_id": cid}, {"_id": 0})
+            auto_results = await _run_auto_checks(cid, user["user_id"])
+
+            voci_ries = await db.voci_lavoro.find({"commessa_id": cid}, {"_id": 0, "normativa_tipo": 1}).to_list(200)
+            normative_attive = _get_active_normative(voci_ries)
+            checks_filtered = _filter_checks(normative_attive)
+
+            company_s = await db.settings.find_one({"type": "company"}, {"_id": 0})
+            manual_checks = (saved_ries or {}).get("checks_manuali", {})
+
+            rows_ries = ""
+            for ck in checks_filtered:
+                cid_ck = ck["id"]
+                auto_res = auto_results.get(cid_ck, {})
+                app = ck["applicabile"]
+                if app:
+                    if ck["auto"]:
+                        esito = auto_res.get("ok", False)
+                        valore = auto_res.get("valore", "")
+                    else:
+                        esito = manual_checks.get(cid_ck, False)
+                        valore = "Confermato" if esito else "Non confermato"
+                    icon = "&#10004;" if esito else "&#10008;"
+                    color = "#16A34A" if esito else "#DC2626"
+                    style = ""
+                else:
+                    icon = "&#8212;"
+                    color = "#94A3B8"
+                    valore = "N/A"
+                    style = 'style="opacity:0.5;"'
+
+                rows_ries += f'<tr {style}><td>{ck["sezione"]}</td><td>{ck["label"]}</td><td style="text-align:center;color:{color};font-size:14pt;">{icon}</td><td>{valore}</td></tr>'
+
+            ries_html = f"""<!DOCTYPE html><html><head><style>
+            @page {{ size: A4; margin: 18mm;
+                @bottom-right {{ content: "Pag. " counter(page) " di " counter(pages) " — Commessa {commessa.get('numero', '')}"; font-size: 7pt; color: #999; font-family: Helvetica; }}
+            }}
+            body {{ font-family: Helvetica, Arial, sans-serif; font-size: 9pt; color: #1E293B; }}
+            h1 {{ font-size: 14pt; color: #1E293B; }}
+            table {{ width: 100%; border-collapse: collapse; }}
+            th {{ background: #1E293B; color: white; padding: 2.5mm 3mm; font-size: 8pt; text-align: left; }}
+            td {{ padding: 2mm 3mm; border-bottom: 0.5px solid #E2E8F0; font-size: 8.5pt; }}
+            tr:nth-child(even) {{ background: #FAFBFC; }}
+            </style></head><body>
+            <h1>Verbale di Riesame Tecnico</h1>
+            <p style="font-size:9pt;color:#64748B;">Commessa {commessa.get('numero', '')} — {commessa.get('title', '')}</p>
+            <table><thead><tr><th>Sezione</th><th>Punto di Verifica</th><th>Esito</th><th>Dettaglio</th></tr></thead>
+            <tbody>{rows_ries}</tbody></table>
+            </body></html>"""
+
+            ries_pdf = WP_HTML(string=ries_html).write_pdf()
+            zf.writestr(f"{idx:02d}_Riesame_Tecnico_{num}.pdf", ries_pdf)
+            idx += 1
+        except Exception as e:
+            errors.append(f"Riesame: {e}")
+            logger.warning(f"Pacco RINA - Riesame error: {e}")
+
+        # ── 6. Indice del pacco ──
+        indice = f"""PACCO DOCUMENTI RINA
+Commessa: {commessa.get('numero', '')}
+Oggetto:  {commessa.get('title', '')}
+Data:     {datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M')}
+
+Contenuto:
+"""
+        for name in zf.namelist():
+            indice += f"  - {name}\n"
+        if errors:
+            indice += "\nDocumenti non generati (errori):\n"
+            for err in errors:
+                indice += f"  - {err}\n"
+        zf.writestr("00_INDICE.txt", indice)
+
+    zip_buf.seek(0)
+    fname = f"Pacco_RINA_{num}.zip"
+    return SR(
+        zip_buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'}
     )
