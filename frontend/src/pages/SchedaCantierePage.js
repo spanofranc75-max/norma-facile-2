@@ -17,6 +17,7 @@ import {
     Save, ArrowLeft, ArrowRight, Loader2, CheckCircle2,
     Shield, AlertTriangle, Plus, Trash2, Users, Wrench, ClipboardCheck,
     ChevronDown, ChevronRight, MapPin, Building2, CircleAlert, Sparkles,
+    Download, FileText,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
@@ -44,6 +45,7 @@ export default function SchedaCantierePage() {
     const [saving, setSaving] = useState(false);
     const [aiLoading, setAiLoading] = useState(false);
     const [aiResult, setAiResult] = useState(null);
+    const [posGenerating, setPosGenerating] = useState(false);
     const [cantiereIdState, setCantiereIdState] = useState(cantiereId || null);
     const [gate, setGate] = useState(null);
 
@@ -184,6 +186,39 @@ export default function SchedaCantierePage() {
         } catch (err) {
             toast.error(err.message || 'Errore AI precompilazione');
         } finally { setAiLoading(false); }
+    }, [cantiereIdState, cantiereId]);
+
+    // ── Genera POS DOCX ──
+    const handleGeneraPos = useCallback(async () => {
+        const id = cantiereIdState || cantiereId;
+        if (!id) { toast.error('Salva prima la scheda cantiere'); return; }
+        setPosGenerating(true);
+        try {
+            const API = process.env.REACT_APP_BACKEND_URL;
+            const res = await fetch(`${API}/api/cantieri-sicurezza/${id}/genera-pos`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || 'Errore generazione POS');
+            }
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const cd = res.headers.get('Content-Disposition') || '';
+            const match = cd.match(/filename="?([^"]+)"?/);
+            a.download = match ? match[1] : `POS_${id}.docx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            const versione = res.headers.get('X-POS-Versione') || '1';
+            toast.success(`POS DOCX generato (versione ${versione})`);
+        } catch (err) {
+            toast.error(err.message || 'Errore generazione POS');
+        } finally { setPosGenerating(false); }
     }, [cantiereIdState, cantiereId]);
 
     // ── Workers ──
@@ -722,6 +757,37 @@ export default function SchedaCantierePage() {
                             <CardHeader><CardTitle className="text-base">Dichiarazione</CardTitle></CardHeader>
                             <CardContent>
                                 <div className="max-w-xs"><Label>Data dichiarazione</Label><Input type="date" value={formData.data_dichiarazione} onChange={e => setFormData(p => ({ ...p, data_dichiarazione: e.target.value }))} data-testid="input-data-dichiarazione" /></div>
+                            </CardContent>
+                        </Card>
+                        {/* ── Genera POS DOCX ── */}
+                        <Card className="border-[#0055FF]/30 bg-blue-50/30" data-testid="pos-generation-card">
+                            <CardHeader>
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                    <FileText className="h-5 w-5 text-[#0055FF]" />
+                                    Generazione Bozza POS
+                                </CardTitle>
+                                <p className="text-sm text-slate-500">
+                                    Genera il documento POS in formato DOCX modificabile a partire dai dati confermati.
+                                </p>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                {gate && !gate.pronto_per_generazione && (
+                                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                        <p className="text-sm text-amber-800">
+                                            <AlertTriangle className="h-4 w-4 inline mr-1" />
+                                            Il gate POS non e completo ({gate.completezza_percentuale}%). La bozza verra generata con i dati disponibili.
+                                        </p>
+                                    </div>
+                                )}
+                                <Button
+                                    onClick={handleGeneraPos}
+                                    disabled={posGenerating || (!cantiereIdState && !cantiereId)}
+                                    className="bg-[#0055FF] text-white hover:bg-[#0044CC] gap-2"
+                                    data-testid="btn-genera-pos"
+                                >
+                                    {posGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                                    {posGenerating ? 'Generazione in corso...' : 'Genera bozza POS (.docx)'}
+                                </Button>
                             </CardContent>
                         </Card>
                     </div>

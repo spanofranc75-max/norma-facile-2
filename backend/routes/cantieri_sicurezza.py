@@ -6,6 +6,7 @@ Libreria a 3 livelli: lib_fasi_lavoro → lib_rischi_sicurezza → lib_dpi_misur
 
 import logging
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import Optional, List
 
@@ -19,6 +20,7 @@ from services.cantieri_sicurezza_service import (
     ALL_RUOLI,
 )
 from services.ai_safety_engine import ai_precompila_cantiere
+from services.pos_docx_generator import genera_pos_docx
 
 router = APIRouter(tags=["cantieri_sicurezza"])
 logger = logging.getLogger(__name__)
@@ -114,6 +116,36 @@ async def api_ai_precompila(cantiere_id: str, user: dict = Depends(get_current_u
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])
     return result
+
+
+@router.post("/cantieri-sicurezza/{cantiere_id}/genera-pos")
+async def api_genera_pos(cantiere_id: str, user: dict = Depends(get_current_user)):
+    """S4 — Generate POS DOCX draft from cantiere data."""
+    result = await genera_pos_docx(cantiere_id, user["user_id"])
+    if result.get("error"):
+        raise HTTPException(status_code=400, detail=result["error"])
+    return Response(
+        content=result["file_bytes"],
+        media_type=result["content_type"],
+        headers={
+            "Content-Disposition": f"attachment; filename=\"{result['filename']}\"",
+            "X-POS-Versione": str(result["generazione"]["versione"]),
+            "X-POS-Completezza": str(result["gate_completezza"]),
+        },
+    )
+
+
+@router.get("/cantieri-sicurezza/{cantiere_id}/pos-generazioni")
+async def api_pos_generazioni(cantiere_id: str, user: dict = Depends(get_current_user)):
+    """Get POS generation history for a cantiere."""
+    doc = await get_cantiere(cantiere_id, user["user_id"])
+    if not doc:
+        raise HTTPException(status_code=404, detail="Cantiere non trovato")
+    return {
+        "cantiere_id": cantiere_id,
+        "generazioni": doc.get("pos_generazioni", []),
+        "ultima_generazione": doc.get("ultima_generazione_pos"),
+    }
 
 
 
