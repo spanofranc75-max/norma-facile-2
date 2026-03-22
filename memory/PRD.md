@@ -171,6 +171,18 @@ Trigger automatici asincroni per sincronizzare il registro senza click manuale.
 - Bug fix: query cantiere con `$or: [commessa_id, parent_commessa_id]`
 ### Testing: 15/15 backend (iteration_239)
 
+## C1 — Verifica Committenza MVP (COMPLETATO 2026-03-22)
+Modulo per analisi AI dei documenti committenza (contratti, ordini, capitolati, PSC).
+- C1.1: Package analisi sopra repository esistente (no duplicazione file), referenzia doc_id da documenti_archivio
+- C1.2: Motore AI GPT-4o: parsing → estrazione semantica → classificazione → confronto con preventivo/istruttoria/cantiere
+- C1.3: Review umana: conferma/rifiuta obblighi, anomalie, mismatch. Domande con risposte. Approve → official_snapshot
+- C1.4: Generazione obblighi nel Registro con dedupe_key `{commessa_id}|committenza|{analysis_id}|{code}`
+- Collections: `pacchetti_committenza`, `analisi_committenza` con indici unique
+- 12 categorie documenti committenza, 5 categorie obblighi, output strutturato JSON
+- UI: VerificaCommittenzaSection integrata in CommessaHubPage con 3 viste (lista/package/analisi)
+- 6 blocchi UI: documenti, sintesi AI, obblighi estratti, anomalie, mismatch, domande residue
+### Testing: 16/16 backend + 5 skipped (LLM key req), 100% frontend (iteration_240)
+
 ## Backlog Prioritizzato
 
 ### P0 (Prossimi — COMPLETATI)
@@ -180,14 +192,11 @@ Trigger automatici asincroni per sincronizzare il registro senza click manuale.
 
 ### P1 (Prossimi)
 - **D1-D5: Pacchetti Documentali Intelligenti** — COMPLETATO (D1-D5)
-  - ~~D1: Libreria tipi documento + archivio documenti~~ COMPLETATO
-  - ~~D2: Template pacchetti~~ COMPLETATO
-  - ~~D3: Matching automatico + verifica presenza/scadenza~~ COMPLETATO
-  - ~~D4: UI pacchetto documentale (preview invio)~~ COMPLETATO
-  - ~~D5: Invio email one-click + log invii (via Resend)~~ COMPLETATO
+  - ~~D1-D5~~ COMPLETATO
   - D6: Profili documentali per committente ricorrente
-- **Registro Obblighi Fase 2**: aggiungere pacchetti documentali, verifica committenza, documenti scaduti, assegnazione responsabili, scadenze
-- Modulo Verifica Committenza / Contratti (si integra con Pacchetti Documentali)
+- ~~**Registro Obblighi Fase 2**: aggiungere pacchetti documentali, verifica committenza, documenti scaduti, assegnazione responsabili, scadenze~~
+  → Committenza ora alimenta il Registro. Prossimi: pacchetti documentali, scadenze, responsabili
+- ~~Modulo Verifica Committenza / Contratti~~ — COMPLETATO (C1)
 - Dashboard Cantiere Multilivello
 - Stability Guard deterministico
 
