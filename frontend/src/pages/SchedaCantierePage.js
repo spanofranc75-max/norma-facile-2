@@ -46,6 +46,7 @@ export default function SchedaCantierePage() {
     const [aiLoading, setAiLoading] = useState(false);
     const [aiResult, setAiResult] = useState(null);
     const [posGenerating, setPosGenerating] = useState(false);
+    const [posMode, setPosMode] = useState('bozza_revisione');
     const [cantiereIdState, setCantiereIdState] = useState(cantiereId || null);
     const [gate, setGate] = useState(null);
 
@@ -195,7 +196,7 @@ export default function SchedaCantierePage() {
         setPosGenerating(true);
         try {
             const API = process.env.REACT_APP_BACKEND_URL;
-            const res = await fetch(`${API}/api/cantieri-sicurezza/${id}/genera-pos`, {
+            const res = await fetch(`${API}/api/cantieri-sicurezza/${id}/genera-pos?mode=${posMode}`, {
                 method: 'POST',
                 credentials: 'include',
             });
@@ -767,7 +768,7 @@ export default function SchedaCantierePage() {
                                     Generazione Bozza POS
                                 </CardTitle>
                                 <p className="text-sm text-slate-500">
-                                    Genera il documento POS in formato DOCX modificabile a partire dai dati confermati.
+                                    Genera il documento POS in formato DOCX modificabile, fedele al modello aziendale.
                                 </p>
                             </CardHeader>
                             <CardContent className="space-y-3">
@@ -775,19 +776,31 @@ export default function SchedaCantierePage() {
                                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                                         <p className="text-sm text-amber-800">
                                             <AlertTriangle className="h-4 w-4 inline mr-1" />
-                                            Il gate POS non e completo ({gate.completezza_percentuale}%). La bozza verra generata con i dati disponibili.
+                                            Gate POS al {gate.completezza_percentuale}%. La bozza verra generata con i dati disponibili.
                                         </p>
                                     </div>
                                 )}
-                                <Button
-                                    onClick={handleGeneraPos}
-                                    disabled={posGenerating || (!cantiereIdState && !cantiereId)}
-                                    className="bg-[#0055FF] text-white hover:bg-[#0044CC] gap-2"
-                                    data-testid="btn-genera-pos"
-                                >
-                                    {posGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                                    {posGenerating ? 'Generazione in corso...' : 'Genera bozza POS (.docx)'}
-                                </Button>
+                                <div className="flex items-center gap-3">
+                                    <select
+                                        value={posMode}
+                                        onChange={e => setPosMode(e.target.value)}
+                                        className="text-sm border rounded-md px-3 py-2 bg-white"
+                                        data-testid="select-pos-mode"
+                                    >
+                                        <option value="bozza_interna">Bozza interna</option>
+                                        <option value="bozza_revisione">Bozza revisione</option>
+                                        <option value="finale_stampabile">Finale stampabile</option>
+                                    </select>
+                                    <Button
+                                        onClick={handleGeneraPos}
+                                        disabled={posGenerating || (!cantiereIdState && !cantiereId)}
+                                        className="bg-[#0055FF] text-white hover:bg-[#0044CC] gap-2"
+                                        data-testid="btn-genera-pos"
+                                    >
+                                        {posGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                                        {posGenerating ? 'Generazione in corso...' : 'Genera POS (.docx)'}
+                                    </Button>
+                                </div>
                             </CardContent>
                         </Card>
                     </div>
