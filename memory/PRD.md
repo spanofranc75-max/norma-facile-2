@@ -37,10 +37,16 @@ Carpenterie metalliche italiane, certificazione EN 1090, contratti PNRR.
 - Scheda Rintracciabilità Totale: A4 landscape, 12 colonne, catena completa, legenda tecnica
 - Banner CAM Alert nel CommessaHub: rosso (danger), verde (success), arancio (warning) con suggerimenti
 
-### Multi-Normativa (Parziale)
+### Multi-Normativa (Completo)
 - Executive Dashboard con vista EN 1090 / EN 13241 / Generica
 - normativa_tipo su voci_lavoro
-- Riesame Selettivo: DA IMPLEMENTARE
+- Riesame Tecnico Selettivo: check condizionali per normativa (completato 22/03/2026)
+  - CHECKS_DEFINITION con campo `normativa` per ogni check
+  - Filtraggio automatico basato su normativa_tipo delle voci lavoro della commessa
+  - Check non applicabili marcati N/A con `applicabile: false` e motivo esclusione
+  - Approvazione valida solo check applicabili (non-applicable auto-superati)
+  - PDF con badge normative attive e riepilogo applicabili/N/A
+  - Frontend: check N/A grayed out, strikethrough, icona "—", badge normativa nell'header
 
 ### Moduli Aggiuntivi (Completato)
 - Scadenziario Manutenzioni Digitalizzato, Verbali ITT
@@ -51,9 +57,9 @@ Carpenterie metalliche italiane, certificazione EN 1090, contratti PNRR.
 ## Backlog Prioritizzato
 
 ### P1
-1. Riesame Tecnico Selettivo: Check condizionali per normativa nelle commesse miste
-2. Ponte Perizie -> Preventivatore: Trasferimento auto dati AI perizia -> preventivo
-3. Sistema Notifiche Proattive: Email 30/7/1gg prima di scadenze
+1. Ponte Perizie -> Preventivatore: Trasferimento auto dati AI perizia -> preventivo
+2. Sistema Notifiche Proattive: Email 30/7/1gg prima di scadenze
+3. Pacco Documenti RINA: ZIP con pacchetto conformità completo (DOP, CE, CAM, Rintracciabilità, Riesame)
 
 ### P2
 4. Architettura Multi-Tenant: tenant_id su tutte le collection
