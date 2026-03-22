@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from core.security import get_current_user
 from core.database import db
 from services.ai_compliance_engine import analizza_preventivo_completo
+from services.applicabilita_engine import calcola_applicabilita
 
 router = APIRouter(prefix="/istruttoria", tags=["istruttoria"])
 logger = logging.getLogger(__name__)
@@ -176,7 +177,8 @@ async def revisione_umana(istruttoria_id: str, body: dict, user: dict = Depends(
 @router.post("/{istruttoria_id}/conferma")
 async def conferma_istruttoria(istruttoria_id: str, user: dict = Depends(get_current_user)):
     """L'utente conferma l'istruttoria come base per la Fase 2 (generazione commessa).
-    Questo checkpoint e obbligatorio prima di generare la commessa pre-istruita."""
+    Questo checkpoint e obbligatorio prima di generare la commessa pre-istruita.
+    Blocca conferma se ci sono blocchi strutturali (es. commessa mista non segmentata)."""
     uid = user["user_id"]
     doc = await db.istruttorie.find_one(
         {"istruttoria_id": istruttoria_id, "user_id": uid},
@@ -184,6 +186,16 @@ async def conferma_istruttoria(istruttoria_id: str, user: dict = Depends(get_cur
     )
     if not doc:
         raise HTTPException(404, "Istruttoria non trovata")
+
+    # Check for blocking conditions
+    applicabilita = doc.get("applicabilita", {})
+    blocchi = applicabilita.get("blocchi_conferma", [])
+    blocchi_bloccanti = [b for b in blocchi if b.get("bloccante")]
+    if blocchi_bloccanti:
+        raise HTTPException(
+            409,
+            f"Conferma bloccata: {blocchi_bloccanti[0]['messaggio']}"
+        )
 
     now = datetime.now(timezone.utc)
     await db.istruttorie.update_one(
@@ -251,12 +263,16 @@ async def rispondi_domande(istruttoria_id: str, body: dict, user: dict = Depends
     n_risposte = len(risposte_esistenti)
     n_domande = len(domande)
 
+    # Calcola applicabilita condizionale
+    applicabilita = calcola_applicabilita(domande, risposte_esistenti)
+
     await db.istruttorie.update_one(
         {"istruttoria_id": istruttoria_id},
         {"$set": {
             "risposte_utente": risposte_esistenti,
             "n_risposte": n_risposte,
             "n_domande_totali": n_domande,
+            "applicabilita": applicabilita,
             "updated_at": now,
         }}
     )
@@ -268,6 +284,7 @@ async def rispondi_domande(istruttoria_id: str, body: dict, user: dict = Depends
         "risposte_utente": risposte_esistenti,
         "n_risposte": n_risposte,
         "n_domande_totali": n_domande,
+        "applicabilita": applicabilita,
     }
 
 
