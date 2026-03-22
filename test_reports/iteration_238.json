@@ -1,0 +1,119 @@
+{
+  "summary": "Iteration 238 — Registro Obblighi Commessa MVP Testing Complete. Backend: 23/23 tests passed. Frontend: All UI features verified including sync button, 4 groups (Bloccanti, Da completare, Da verificare, Chiusi), filters by source/category, status dropdowns, and collapsible section.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration238_obblighi_commessa.py",
+    "/app/test_reports/pytest/iteration238_obblighi_commessa_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration238_obblighi_commessa.py"
+  ],
+  "success_rate": {
+    "backend": "100% (23/23 tests passed)",
+    "frontend": "100% (all UI flows verified)"
+  },
+  "seed_data_creation": "Created test commessa, ramo_normativo, cantiere_sicurezza, and emissione_documentale for testing sync engine. Cleaned up after tests.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Registro Obblighi Commessa MVP fully working. Key features: (1) POST /api/obblighi/sync/{commessa_id} collects obligations from 5 sources (Evidence Gate, Gate POS, Soggetti, Istruttoria, Rami Normativi). (2) Deduplication via dedupe_key prevents duplicates on repeated sync. (3) Auto-close when source condition is removed. (4) Route ordering correct - specific paths before generic {id}. (5) Frontend ObbrighiCommessaSection shows in CommessaHubPage with Shield icon, sync button, 4 groups, filters, and status change dropdowns.",
+  "features_tested": {
+    "backend_api": {
+      "GET /api/obblighi": "PASSED - List all obligations for user with optional filters",
+      "GET /api/obblighi/{id}": "PASSED - Get single obligation by ID",
+      "PATCH /api/obblighi/{id}": "PASSED - Update status, resolution_note, sets resolved_at",
+      "POST /api/obblighi/sync/{commessa_id}": "PASSED - Trigger sync, returns created/updated/closed counts",
+      "GET /api/obblighi/commessa/{commessa_id}": "PASSED - List obligations for specific commessa",
+      "GET /api/obblighi/bloccanti/{commessa_id}": "PASSED - List only hard_block obligations",
+      "GET /api/obblighi/summary/{commessa_id}": "PASSED - Returns total, bloccanti, aperti, chiusi, da_verificare counts"
+    },
+    "route_ordering": {
+      "/obblighi/commessa/{id}": "PASSED - Not captured by generic /{id}",
+      "/obblighi/summary/{id}": "PASSED - Not captured by generic /{id}",
+      "/obblighi/bloccanti/{id}": "PASSED - Not captured by generic /{id}",
+      "/obblighi/sync/{id}": "PASSED - Not captured by generic /{id}"
+    },
+    "sync_engine": {
+      "creates_obligations": "PASSED - Creates obligations from source modules",
+      "deduplication": "PASSED - Second sync creates 0 new (all deduplicated)",
+      "auto_close": "PASSED - Closes obligations when source condition removed",
+      "dedupe_key_format": "PASSED - Format: {commessa_id}|{source_module}|{source_entity_id}|{code}"
+    },
+    "source_modules": {
+      "evidence_gate": "PASSED - Collects from emissioni blockers/warnings",
+      "gate_pos": "PASSED - Collects from cantiere sicurezza campi_mancanti/blockers",
+      "soggetti": "PASSED - Collects missing mandatory roles (DATORE_LAVORO, RSPP, COMMITTENTE, etc.)",
+      "istruttoria": "PASSED - Collects segmentation pending, classification uncertain, high-impact questions",
+      "rami_normativi": "PASSED - Collects incomplete/draft branches"
+    },
+    "frontend_ui": {
+      "obblighi_section": "PASSED - data-testid='obblighi-section' renders in CommessaHubPage",
+      "shield_icon": "PASSED - Shield icon with 'Registro Obblighi' title",
+      "sync_button": "PASSED - data-testid='btn-sync-obblighi' triggers sync",
+      "summary_badges": "PASSED - Shows bloccanti/aperti/da_verificare/chiusi counts",
+      "group_bloccanti": "PASSED - data-testid='group-bloccanti' shows hard_block items",
+      "group_da_completare": "PASSED - data-testid='group-da-completare' shows nuovo/in_corso items",
+      "group_da_verificare": "PASSED - data-testid='group-da-verificare' shows da_verificare items",
+      "group_chiusi": "PASSED - data-testid='group-chiusi' with toggle button",
+      "filter_source": "PASSED - data-testid='filter-source' dropdown with 5 sources",
+      "filter_category": "PASSED - data-testid='filter-category' dropdown with 8 categories",
+      "status_select": "PASSED - data-testid='status-select-{id}' dropdowns on each row",
+      "header_toggle": "PASSED - data-testid='obblighi-header-toggle' collapses/expands section",
+      "linked_route_buttons": "PASSED - 'Apri scheda cantiere' navigation links"
+    }
+  },
+  "test_credentials": {
+    "session_token": "BccyJvnOyrPXRRYy4GfxR5osuF51RWcYWWnUUoHx434",
+    "user_id": "user_6988e9b9316c"
+  },
+  "frontend_data_testid_verified": [
+    "obblighi-section",
+    "obblighi-section-empty",
+    "obblighi-header-toggle",
+    "btn-sync-obblighi",
+    "btn-sync-obblighi-empty",
+    "count-bloccanti",
+    "count-aperti",
+    "count-da-verificare",
+    "count-chiusi",
+    "filter-source",
+    "filter-category",
+    "group-bloccanti",
+    "group-da-completare",
+    "group-da-verificare",
+    "group-chiusi",
+    "btn-toggle-chiusi",
+    "all-clear",
+    "obbligo-{obbligo_id}",
+    "status-select-{obbligo_id}",
+    "btn-open-{obbligo_id}"
+  ],
+  "api_responses_verified": {
+    "sync": {
+      "endpoint": "POST /api/obblighi/sync/{commessa_id}",
+      "response_fields": ["created", "updated", "closed", "total_expected"]
+    },
+    "summary": {
+      "endpoint": "GET /api/obblighi/summary/{commessa_id}",
+      "response_fields": ["total", "bloccanti", "aperti", "chiusi", "da_verificare"]
+    },
+    "obligation": {
+      "fields": ["obbligo_id", "commessa_id", "user_id", "source_module", "source_entity_type", "source_entity_id", "code", "title", "description", "category", "severity", "blocking_level", "status", "dedupe_key", "created_at", "updated_at", "resolved_at", "resolution_note"]
+    }
+  },
+  "code_quality_notes": {
+    "route_ordering": "Specific sub-paths (/commessa/, /summary/, /bloccanti/, /sync/) correctly placed BEFORE generic /{obbligo_id} in FastAPI router",
+    "dedupe_key": "Format {commessa_id}|{source_module}|{source_entity_id}|{code} ensures uniqueness",
+    "auto_close": "Obligations auto-closed with resolution_note when source condition removed",
+    "mongodb_indices": "Indices created for dedupe_key, commessa_id+status, blocking_level_sort+severity_sort"
+  }
+}

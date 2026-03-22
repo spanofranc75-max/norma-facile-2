@@ -33,6 +33,7 @@ import TracciabilitaMaterialiSection from '../components/TracciabilitaMaterialiS
 import ControlloFinaleSection from '../components/ControlloFinaleSection';
 import ReportIspezioniSection from '../components/ReportIspezioniSection';
 import RamiNormativiSection from '../components/RamiNormativiSection';
+import ObbrighiCommessaSection from '../components/ObbrighiCommessaSection';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
@@ -526,6 +527,9 @@ export default function CommessaHubPage() {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* ══ REGISTRO OBBLIGHI COMMESSA ══ */}
+                <ObbrighiCommessaSection commessaId={commessaId} />
 
                 {/* Banner Normativa + Checklist documentale */}
                 {c.normativa_tipo && NORMATIVA_CONFIG[c.normativa_tipo] && (() => {

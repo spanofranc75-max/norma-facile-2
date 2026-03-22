@@ -92,6 +92,7 @@ from routes.validation import router as validation_router
 from routes.commesse_normative import router as commesse_normative_router
 from routes.cantieri_sicurezza import router as cantieri_sicurezza_router
 from routes.pacchetti_documentali import router as pacchetti_documentali_router
+from routes.obblighi_commessa import router as obblighi_commessa_router
 
 # Configure logging
 logging.basicConfig(
@@ -228,6 +229,7 @@ app.include_router(validation_router, prefix="/api")
 app.include_router(commesse_normative_router, prefix="/api")
 app.include_router(cantieri_sicurezza_router, prefix="/api")
 app.include_router(pacchetti_documentali_router, prefix="/api")
+app.include_router(obblighi_commessa_router, prefix="/api")
 
 
 @app.on_event("startup")
@@ -280,6 +282,17 @@ async def startup_event():
         )
         await db.lib_dpi_misure.create_index(
             [("user_id", 1), ("tipo", 1)], name="idx_dpi_tipo"
+        )
+        # Indici Registro Obblighi Commessa
+        await db.obblighi_commessa.create_index(
+            [("dedupe_key", 1), ("user_id", 1)], unique=True, name="uq_obbligo_dedupe"
+        )
+        await db.obblighi_commessa.create_index(
+            [("commessa_id", 1), ("user_id", 1), ("status", 1)], name="idx_obblighi_commessa"
+        )
+        await db.obblighi_commessa.create_index(
+            [("user_id", 1), ("blocking_level_sort", 1), ("severity_sort", 1)],
+            name="idx_obblighi_priority"
         )
     except Exception as e:
         logger.warning(f"Index creation (may already exist): {e}")
