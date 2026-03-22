@@ -183,6 +183,16 @@ Modulo per analisi AI dei documenti committenza (contratti, ordini, capitolati, 
 - 6 blocchi UI: documenti, sintesi AI, obblighi estratti, anomalie, mismatch, domande residue
 ### Testing: 16/16 backend + 5 skipped (LLM key req), 100% frontend (iteration_240)
 
+## Registro Obblighi Fase 2 (COMPLETATO 2026-03-22)
+Evoluzione del registro con responsabilita, scadenze e 3 nuove fonti.
+- Nuovi campi: `sla_source` (manuale/da_documento_cliente/da_scadenza_documento/da_pacchetto_documentale/da_emissione/da_cantiere), `due_date` operativo
+- Source F: documenti_scadenza — documenti scaduti (alta/hard_block) e in scadenza 30gg (media/warning)
+- Source G: pacchetti_documentali — documenti mancanti/scaduti nei pacchetti
+- Source H: committenza — obblighi/anomalie/mismatch da analisi approvate
+- UI: assegnazione inline ruolo (6 ruoli), date picker scadenza, sla_source label, color-coding scadenze
+- Totale: 8 fonti integrate nel sync engine (A-H)
+### Testing: 16/16 backend, 100% frontend (iteration_241)
+
 ## Backlog Prioritizzato
 
 ### P0 (Prossimi — COMPLETATI)
