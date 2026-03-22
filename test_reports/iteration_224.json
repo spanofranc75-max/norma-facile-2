@@ -84,8 +84,8 @@
   "test_credentials": {
     "main_user_session_token": "fEQQyik5bSdSU_dnWx_8QR1am6kyw543-sOFR12E7sk",
     "test_user_session_token": "test_perizia_205a45704b22",
-    "istruttoria_page_url": "https://istruttoria-hub-1.preview.emergentagent.com/istruttoria/prev_4db2a68b44",
-    "validation_page_url": "https://istruttoria-hub-1.preview.emergentagent.com/validazione-p1"
+    "istruttoria_page_url": "https://preistruita-preview.preview.emergentagent.com/istruttoria/prev_4db2a68b44",
+    "validation_page_url": "https://preistruita-preview.preview.emergentagent.com/validazione-p1"
   },
   "data_testid_elements_verified": [
     "istruttoria-page",

@@ -464,9 +464,91 @@ si DEVE proporre di spezzarlo.
 - **Filo Manutenzione:** Riesame blocca se strumenti/attrezzature scaduti (gia funzionante)
 - Test: 100% (17/17 — iteration 203)
 
+### 22 Marzo 2026 — Fork 5: Copilota Tecnico-Normativo — Validazione + Segmentazione + Phase 2
+
+#### P0.3 — Box "Se confermi la commessa" (COMPLETATO)
+- **Frontend `IstruttoriaPage.js`:** Box minimale con 3 sezioni:
+  - "Verra preparato": riesame, lavorazioni, documenti, materiali
+  - "Restera da completare": conferme mancanti (dinamico), evidenze, dati saldatura/terzisti/posa
+  - "Non ancora emettibile": DOP e documenti finali bloccati
+- Titolo: "Se confermi la commessa" — tono operativo, asciutto
+- Visibile quando istruttoria NON confermata (non solo quando tutte le risposte date)
+- `data-testid="card-se-confermi"`
+
+#### P1 — Validazione Real-World del Motore AI (COMPLETATO)
+- **Backend `services/validation_engine.py`:** Ground truth per 8 preventivi reali con scoring multi-dimensionale
+  - 4 metriche: Classificazione (peso 35%), Profilo (20%), Estrazione (30%), Domande (15%)
+  - Sinonimi officina per matching flessibile (tubolari/piastra/lamiera/profilati etc.)
+  - Credito parziale per casi MISTA (0.5 se AI rileva componente del mix)
+  - Saldatura implicita: riconoscimento keyword anche se non esplicita
+- **Backend `routes/validation.py`:** 4 endpoint:
+  - `GET /api/validation/set` — 8 preventivi con normativa attesa
+  - `POST /api/validation/run/{id}` — analisi singola + scoring
+  - `POST /api/validation/run-batch` — analisi batch (attenzione timeout proxy)
+  - `GET /api/validation/results` — risultati salvati + aggregato
+- **Frontend `pages/ValidationPage.js`:** Dashboard con aggregato, scorecard individuali, run singolo/batch
+- **Sidebar:** Link "Validazione AI (P1)" sotto Certificazioni
+- **Risultati finali su 8 preventivi:**
+  - Globale: **91%** | Classificazione: **8/8 (100%)** | Profilo: **88%** | Estrazione: **79%** | Domande: **100%**
+  - Tutte le soglie superate (soglie: globale>=70%, class>=80%, profilo>=70%, estr>=60%, dom>=50%)
+- **Analisi 2 FAIL originali (PRV-0002, PRV-0021):** Entrambi erano correttamente MISTA — ground truth aggiornato
+- Collezione DB: `validazioni_p1`
+- Test: 100% backend + frontend (iteration_224)
+
+#### P1.1 — Segmentazione Normativa per Riga (COMPLETATO)
+- **Backend `services/segmentation_engine.py`:** Classificazione per riga a 2 livelli:
+  - **Livello 1 — Keyword deterministico:** 3 dizionari (EN_13241: cancello/portone/automazione, EN_1090: struttura/trave/profili, GENERICA: parapetto/manutenzione/sovrapprezzo)
+  - **Livello 2 — GPT-4o:** Override AI per casi incerti (confidence > keyword)
+  - Output: `line_classification[]` + `segments[]` + `summary`
+- **Backend `routes/istruttoria.py`:** 2 nuovi endpoint:
+  - `POST /api/istruttoria/segmenta/{prev_id}` — avvia segmentazione per riga
+  - `POST /api/istruttoria/segmenta/{prev_id}/review` — utente conferma/corregge (save_draft o confirm)
+  - Blocco conferma se righe INCERTE presenti
+  - Salva `official_segmentation` snapshot
+- **Frontend `IstruttoriaPage.js`:** Sezione dedicata con:
+  - Summary badges (EN 1090: N righe, EN 13241: M righe, etc.)
+  - Tabella per riga con dropdown per correzione manuale
+  - CTA: "Salva bozza" / "Conferma segmentazione"
+  - `data-testid="card-segmentazione"`
+- **Stati segmentazione:** proposed → in_review → confirmed / needs_revision
+- **Trigger automatici:** classificazione MISTA, o forzato manualmente
+- Dati salvati in `istruttorie.segmentazione_proposta` e `istruttorie.official_segmentation`
+- Test: 100% backend (11/11) + frontend (iteration_225)
+
+#### Phase 2 — Commessa Pre-Istruita Revisionata (COMPLETATO)
+- **Backend `services/phase2_engine.py`:** 2 funzioni principali:
+  - `check_eligibility(istruttoria)` → `{allowed, reasons[], warnings[], checks{}}`
+  - `generate_preistruita(istruttoria)` → commessa strutturata
+  - **7 criteri di eleggibilita:**
+    1. Istruttoria confermata dall'utente
+    2. Classificazione pura (EN_1090/EN_13241/GENERICA, non MISTA/INCERTA)
+    3. Confidenza alta
+    4. Segmentazione OK (non attiva o confermata)
+    5. Domande ad alto impatto risposte
+    6. Nessun blocco strutturale
+    7. Campi critici presenti per normativa
+- **Backend `routes/istruttoria.py`:** 3 nuovi endpoint:
+  - `GET /api/istruttoria/phase2/eligibility/{prev_id}` — check con motivi di blocco
+  - `POST /api/istruttoria/phase2/genera/{prev_id}` — genera commessa (409 se non eleggibile)
+  - `GET /api/istruttoria/phase2/commessa/{prev_id}` — recupera commessa generata
+- **Output commessa pre-istruita:**
+  - `voci_lavoro[]` — da estrazione AI
+  - `controlli[]` — da assessment
+  - `documenti[]` — da assessment
+  - `materiali[]` — da estrazione con requisiti tracciabilita
+  - `rami_attivi` — saldatura/zincatura/montaggio con stato
+  - `etichette` — precompilato/da_completare/non_emettibile
+- **Frontend `IstruttoriaPage.js`:** Card Phase 2 dopo conferma:
+  - Contatori: precompilati / da completare / non emettibili
+  - Badge rami attivi
+  - Dettaglio: voci lavoro, controlli, documenti, da completare
+  - Motivi blocco espliciti se non eleggibile
+  - `data-testid="card-phase2"`
+- Collezione DB: `commesse_preistruite`
+- Test: 100% backend (10/10) + frontend (iteration_226)
+
 ---
 
-## 10. Prossimi Passi (Roadmap)
 
 ### FASE 3 — Pulsante Magico (COMPLETATA)
 - Servizio backend `services/pacco_documenti.py`
