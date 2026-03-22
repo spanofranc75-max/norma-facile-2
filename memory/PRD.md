@@ -85,8 +85,11 @@ company_settings.figure_aziendali -> cantiere.soggetti (status: "precompilato")
 - `/app/frontend/src/pages/SicurezzaPage.js` — Lista cantieri
 - `/app/frontend/src/pages/SettingsPage.js` — Impostazioni con tab Sicurezza
 - `/app/frontend/src/components/settings/FigureAziendaliTab.js` — Form figure aziendali
+- `/app/backend/services/ai_safety_engine.py` — Motore AI S3
+- `/app/backend/services/pos_docx_generator.py` — Generatore DOCX S4
 - `/app/SPEC_LIBRERIA_RISCHI_3_LIVELLI.md` — Spec definitiva v2
 - `/app/SPEC_POS_TEMPLATE_MAPPING.md` — Mapping template POS
+- `/app/SPEC_PACCHETTI_DOCUMENTALI.md` — Spec pacchetti documentali
 
 ## S3 — Motore AI Sicurezza (COMPLETATO 2026-03-22)
 Pipeline AI per pre-compilazione intelligente della scheda cantiere sicurezza.
@@ -112,11 +115,25 @@ Pipeline AI per pre-compilazione intelligente della scheda cantiere sicurezza.
 
 ### Testing: 26/26 backend, 100% frontend (iteration_233)
 
+## S4 — Generazione DOCX POS (COMPLETATO 2026-03-22)
+Generatore bozza POS DOCX modificabile (Allegato XV D.Lgs. 81/2008).
+
+### 15 sezioni, 21 tabelle:
+Copertina, Intro, Anagrafica, Mansionario, Dati Cantiere, Soggetti, Turni, Subappalti,
+Misure Prevenzione, DPI, Macchine, Valutazione Rischi, **Schede Rischio per Fase** (CORE),
+Emergenza, Dichiarazione.
+
+### Endpoint: `POST /api/cantieri-sicurezza/{id}/genera-pos` (DOCX binary)
+### Storico: `GET /api/cantieri-sicurezza/{id}/pos-generazioni`
+### Frontend: Card "Genera bozza POS" in Step 4 con download + warning gate
+
+### Testing: 23/23 backend, 100% frontend (iteration_234)
+
 ## Backlog Prioritizzato
 
-### P0 (Prossimi)
-- **S3: Motore AI Sicurezza** — precompilazione da commessa (fasi, rischi, DPI, domande residue)
-- **S4: Generazione DOCX** — merge template POS + dati strutturati
+### P0 (Prossimi — COMPLETATI)
+- ~~S3: Motore AI Sicurezza~~ — COMPLETATO
+- ~~S4: Generazione DOCX~~ — COMPLETATO
 
 ### P1 (Subito dopo S3/S4)
 - **D1-D5: Pacchetti Documentali Intelligenti** — Cabina di regia documenti da mandare al cliente. Spec completa in `/app/SPEC_PACCHETTI_DOCUMENTALI.md`
