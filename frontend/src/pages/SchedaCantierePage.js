@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import {
     Save, ArrowLeft, ArrowRight, Loader2, CheckCircle2,
     Shield, AlertTriangle, Plus, Trash2, Users, Wrench, ClipboardCheck,
-    ChevronDown, ChevronRight, MapPin, Building2, CircleAlert,
+    ChevronDown, ChevronRight, MapPin, Building2, CircleAlert, Sparkles,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
@@ -42,6 +42,8 @@ export default function SchedaCantierePage() {
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(isEditing);
     const [saving, setSaving] = useState(false);
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiResult, setAiResult] = useState(null);
     const [cantiereIdState, setCantiereIdState] = useState(cantiereId || null);
     const [gate, setGate] = useState(null);
 
@@ -155,6 +157,35 @@ export default function SchedaCantierePage() {
         } finally { setSaving(false); }
     }, [formData, isEditing, cantiereId, cantiereIdState]);
 
+    // ── AI Precompila ──
+    const handleAiPrecompila = useCallback(async () => {
+        const id = cantiereIdState || cantiereId;
+        if (!id) {
+            toast.error('Salva prima la scheda cantiere');
+            return;
+        }
+        setAiLoading(true);
+        try {
+            const res = await apiRequest(`/cantieri-sicurezza/${id}/ai-precompila`, { method: 'POST' });
+            setAiResult(res);
+            // Reload cantiere data to get AI results
+            const updated = await apiRequest(`/cantieri-sicurezza/${id}`);
+            setFormData(prev => ({
+                ...prev,
+                ...Object.fromEntries(
+                    Object.entries(updated).filter(([k]) =>
+                        k !== 'cantiere_id' && k !== 'user_id' && k !== '_id' &&
+                        k !== 'created_at' && k !== 'updated_at' && k !== 'gate_pos_status' && k !== 'ai_precompilazione'
+                    )
+                ),
+            }));
+            setGate(updated.gate_pos_status || null);
+            toast.success(`AI ha proposto ${res.fasi_proposte} fasi, ${res.rischi_attivati} rischi, ${res.dpi_calcolati} DPI`);
+        } catch (err) {
+            toast.error(err.message || 'Errore AI precompilazione');
+        } finally { setAiLoading(false); }
+    }, [cantiereIdState, cantiereId]);
+
     // ── Workers ──
     const addLavoratore = () => setFormData(p => ({ ...p, lavoratori_coinvolti: [...p.lavoratori_coinvolti, { nominativo: '', mansione: '', addetto_primo_soccorso: false, addetto_antincendio: false }] }));
     const updateLavoratore = (i, f, v) => setFormData(p => { const a = [...p.lavoratori_coinvolti]; a[i] = { ...a[i], [f]: v }; return { ...p, lavoratori_coinvolti: a }; });
@@ -262,6 +293,16 @@ export default function SchedaCantierePage() {
                                 {gate.completezza_percentuale}%
                             </Badge>
                         )}
+                        <Button
+                            onClick={handleAiPrecompila}
+                            disabled={aiLoading || (!cantiereIdState && !cantiereId)}
+                            variant="outline"
+                            className="border-violet-300 text-violet-700 hover:bg-violet-50"
+                            data-testid="btn-ai-precompila"
+                        >
+                            {aiLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                            {aiLoading ? 'Analisi AI...' : 'Pre-compila con AI'}
+                        </Button>
                         <Button onClick={handleSave} disabled={saving} className="bg-[#0055FF] text-white hover:bg-[#0044CC]" data-testid="btn-save-cantiere">
                             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />} Salva
                         </Button>
@@ -280,6 +321,30 @@ export default function SchedaCantierePage() {
                         );
                     })}
                 </div>
+
+                {/* AI Result Banner */}
+                {aiResult && (
+                    <Card className="border-violet-200 bg-violet-50/50" data-testid="ai-result-banner">
+                        <CardContent className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                                <Sparkles className="h-5 w-5 text-violet-600 flex-shrink-0" />
+                                <div className="flex-1">
+                                    <p className="text-sm font-medium text-violet-900">
+                                        AI ha pre-compilato la scheda
+                                    </p>
+                                    <p className="text-xs text-violet-600">
+                                        {aiResult.fasi_proposte} fasi, {aiResult.rischi_attivati} rischi, {aiResult.dpi_calcolati} DPI, {aiResult.misure_calcolate} misure, {aiResult.domande_residue} domande
+                                        {aiResult.ai_precompilazione?.sources_used?.length > 0 &&
+                                            ` | Fonti: ${aiResult.ai_precompilazione.sources_used.join(', ')}`}
+                                    </p>
+                                </div>
+                                <Badge className="bg-violet-100 text-violet-800 text-xs">
+                                    Revisiona e conferma
+                                </Badge>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* ── Step 1: Dati Cantiere ── */}
                 {step === 1 && (

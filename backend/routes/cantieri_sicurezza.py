@@ -18,6 +18,7 @@ from services.cantieri_sicurezza_service import (
     seed_libreria_v2, calcola_gate_pos,
     ALL_RUOLI,
 )
+from services.ai_safety_engine import ai_precompila_cantiere
 
 router = APIRouter(tags=["cantieri_sicurezza"])
 logger = logging.getLogger(__name__)
@@ -104,6 +105,15 @@ async def api_gate_pos(cantiere_id: str, user: dict = Depends(get_current_user))
     if not doc:
         raise HTTPException(status_code=404, detail="Cantiere sicurezza non trovato")
     return calcola_gate_pos(doc)
+
+
+@router.post("/cantieri-sicurezza/{cantiere_id}/ai-precompila")
+async def api_ai_precompila(cantiere_id: str, user: dict = Depends(get_current_user)):
+    """S3 — AI precompilation of safety cantiere from commessa/istruttoria/preventivo data."""
+    result = await ai_precompila_cantiere(cantiere_id, user["user_id"])
+    if result.get("error"):
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
 
 
 
