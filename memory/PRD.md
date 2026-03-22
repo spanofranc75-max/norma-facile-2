@@ -73,11 +73,35 @@ Carpenterie metalliche italiane, certificazione EN 1090, contratti PNRR.
 - Gestione errori per documenti non generabili (errori elencati nell'indice)
 - Bottone "Pacco RINA" nella CommessaHub (rosso, prominente)
 
+### Ponte Perizie → Preventivatore (Completato 22/03/2026)
+- Endpoint POST /api/perizie/{id}/genera-preventivo
+- Trasferimento automatico voci_costo perizia → righe preventivo
+- Calcolo automatico normativa da tipo_danno (strutturale→EN_1090, automatismi→EN_13241)
+- Link bidirezionale perizia↔preventivo (perizia.preventivo_id + preventivo.perizia_source)
+- Bottone "Genera Preventivo da Perizia" nel Riepilogo della PeriziaEditorPage
+- Log activity e navigazione diretta al preventivo creato
+
+### Sistema Notifiche Proattive (Completato 22/03/2026)
+- 3 tipi di check: Qualifiche Saldatori, Tarature Strumenti, Scadenze ITT
+- 4 livelli di urgenza: Alert (30gg), Urgente (7gg), Critico (1gg), Scaduto (<0)
+- Email template potenziato con badge colore per urgenza + sezione ITT dedicata
+- Subject email dinamico con conteggio scadenze critiche
+- Invio reale tramite Resend (API key configurata)
+- Destinatario: utenti admin/ufficio_tecnico (da _get_notification_recipients)
+
+### Report CAM Mensile (Completato 22/03/2026)
+- Endpoint GET /api/cam/report-mensile/pdf
+- KPI: % riciclato globale, peso totale acciaio, n. conformi/non conformi
+- Tabella dettaglio per commessa con esito CONFORME/NON CONFORME
+- Trend mensile ultimi 6 mesi con barre colorate e soglia tratteggiata
+- Proiezione trimestrale automatica basata su media delta mensile
+- Riferimenti normativi (DM 23/06/2022, Art. 57 D.Lgs. 36/2023)
+- Bottone "Report CAM Mensile (PDF)" nella Dashboard Executive
+
 ## Backlog Prioritizzato
 
 ### P1
-1. Ponte Perizie -> Preventivatore: Trasferimento auto dati AI perizia -> preventivo
-2. Sistema Notifiche Proattive: Email 30/7/1gg prima di scadenze
+- (Completati: Ponte Perizie, Notifiche Proattive, Report CAM Mensile)
 
 ### P2
 4. Architettura Multi-Tenant: tenant_id su tutte le collection
