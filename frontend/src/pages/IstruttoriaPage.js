@@ -314,6 +314,9 @@ export default function IstruttoriaPage() {
     const [segRunning, setSegRunning] = useState(false);
     const [segReviews, setSegReviews] = useState({});
     const [segSaving, setSegSaving] = useState(false);
+    const [phase2Elig, setPhase2Elig] = useState(null);
+    const [phase2Loading, setPhase2Loading] = useState(false);
+    const [phase2Commessa, setPhase2Commessa] = useState(null);
 
     const fetchIstruttoria = useCallback(async () => {
         setLoading(true);
@@ -354,7 +357,14 @@ export default function IstruttoriaPage() {
             });
             setSegReviews(reviews);
         }
-    }, [data?.risposte_utente, data?.domande_contestuali, data?.segmentazione_proposta]);
+        // Check Phase 2 eligibility
+        if (data?.confermata) {
+            apiRequest(`/istruttoria/phase2/eligibility/${preventivoId}`)
+                .then(setPhase2Elig).catch(() => {});
+            apiRequest(`/istruttoria/phase2/commessa/${preventivoId}`)
+                .then(r => setPhase2Commessa(r.commessa)).catch(() => {});
+        }
+    }, [data?.risposte_utente, data?.domande_contestuali, data?.segmentazione_proposta, data?.confermata, preventivoId]);
 
     const handleRispostaChange = (idx, value) => {
         setRisposte(prev => ({ ...prev, [String(idx)]: value }));
@@ -487,6 +497,23 @@ export default function IstruttoriaPage() {
             fetchIstruttoria();
         } catch (e) { toast.error(e.message); }
         finally { setSegSaving(false); }
+    };
+
+    const handleGeneraCommessa = async () => {
+        setPhase2Loading(true);
+        try {
+            const res = await apiRequest(`/istruttoria/phase2/genera/${preventivoId}`, { method: 'POST' });
+            setPhase2Commessa(res.commessa);
+            if (res.warnings?.length) {
+                res.warnings.forEach(w => toast.warning(w));
+            }
+            toast.success('Commessa pre-istruita generata');
+            fetchIstruttoria();
+        } catch (e) {
+            const detail = e.message;
+            toast.error(typeof detail === 'string' ? detail : 'Generazione non consentita');
+        }
+        finally { setPhase2Loading(false); }
     };
 
     // ── Real-time applicability (local, mirrors backend) ──
@@ -1516,6 +1543,143 @@ export default function IstruttoriaPage() {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* ════════════════ PHASE 2 — COMMESSA PRE-ISTRUITA ════════════════ */}
+                {confermata && (
+                    <Card className={`border-2 ${
+                        phase2Commessa ? 'border-indigo-300 bg-indigo-50/30' :
+                        phase2Elig?.allowed ? 'border-emerald-200 bg-emerald-50/20' :
+                        'border-amber-200 bg-amber-50/20'
+                    }`} data-testid="card-phase2">
+                        <CardContent className="p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-indigo-600" />
+                                    <span className="text-xs font-bold text-slate-700">Fase 2 — Commessa Pre-Istruita</span>
+                                    {phase2Commessa && (
+                                        <Badge className="bg-indigo-100 text-indigo-700 text-[9px]">{phase2Commessa.status}</Badge>
+                                    )}
+                                </div>
+                                {!phase2Commessa && phase2Elig?.allowed && (
+                                    <Button size="sm" onClick={handleGeneraCommessa} disabled={phase2Loading}
+                                        className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
+                                        data-testid="btn-genera-commessa">
+                                        {phase2Loading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Zap className="h-3 w-3 mr-1" />}
+                                        Genera Commessa
+                                    </Button>
+                                )}
+                            </div>
+
+                            {/* Motivi di blocco */}
+                            {!phase2Commessa && phase2Elig && !phase2Elig.allowed && (
+                                <div className="space-y-1.5">
+                                    <p className="text-[10px] font-bold text-amber-700">Perche non puoi generare la commessa pre-istruita:</p>
+                                    {phase2Elig.reasons.map((r, i) => (
+                                        <p key={i} className="text-[10px] text-amber-600 flex items-start gap-1.5">
+                                            <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" /> {r}
+                                        </p>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Warnings */}
+                            {phase2Elig?.warnings?.length > 0 && !phase2Commessa && (
+                                <div className="space-y-1">
+                                    {phase2Elig.warnings.map((w, i) => (
+                                        <p key={i} className="text-[9px] text-slate-500 flex items-start gap-1.5">
+                                            <HelpCircle className="h-2.5 w-2.5 mt-0.5 shrink-0" /> {w}
+                                        </p>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Commessa generata */}
+                            {phase2Commessa && (
+                                <div className="space-y-3">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        <div className="rounded-lg bg-white border border-slate-100 p-2.5 text-center">
+                                            <p className="text-2xl font-black text-indigo-700">{phase2Commessa.etichette?.precompilato || 0}</p>
+                                            <p className="text-[9px] text-slate-500">Precompilati</p>
+                                        </div>
+                                        <div className="rounded-lg bg-white border border-slate-100 p-2.5 text-center">
+                                            <p className="text-2xl font-black text-amber-600">{phase2Commessa.etichette?.da_completare || 0}</p>
+                                            <p className="text-[9px] text-slate-500">Da completare</p>
+                                        </div>
+                                        <div className="rounded-lg bg-white border border-slate-100 p-2.5 text-center">
+                                            <p className="text-2xl font-black text-red-600">{phase2Commessa.etichette?.non_emettibile?.length || 0}</p>
+                                            <p className="text-[9px] text-slate-500">Non emettibili</p>
+                                        </div>
+                                        <div className="rounded-lg bg-white border border-slate-100 p-2.5 text-center">
+                                            <p className="text-2xl font-black text-slate-800">{phase2Commessa.normativa}</p>
+                                            <p className="text-[9px] text-slate-500">Normativa</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Rami attivi */}
+                                    <div className="flex flex-wrap gap-2">
+                                        {Object.entries(phase2Commessa.rami_attivi || {}).map(([k, v]) => (
+                                            <Badge key={k} className={`text-[9px] ${
+                                                v.attivo ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-400'
+                                            }`}>
+                                                {k}: {v.attivo ? 'attivo' : 'n/a'}
+                                            </Badge>
+                                        ))}
+                                    </div>
+
+                                    {/* Detail lists */}
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        {phase2Commessa.voci_lavoro?.length > 0 && (
+                                            <div>
+                                                <p className="text-[10px] font-bold text-emerald-700 mb-1">Voci lavoro precompilate</p>
+                                                {phase2Commessa.voci_lavoro.map((v, i) => (
+                                                    <p key={i} className="text-[10px] text-slate-600 flex items-start gap-1">
+                                                        <span className="text-emerald-400 mt-0.5">-</span> {v.descrizione?.substring(0, 60)}
+                                                    </p>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {phase2Commessa.controlli?.length > 0 && (
+                                            <div>
+                                                <p className="text-[10px] font-bold text-blue-700 mb-1">Controlli proposti</p>
+                                                {phase2Commessa.controlli.map((c, i) => (
+                                                    <p key={i} className="text-[10px] text-slate-600 flex items-start gap-1">
+                                                        <span className="text-blue-400 mt-0.5">-</span> {c.descrizione?.substring(0, 60)}
+                                                    </p>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {phase2Commessa.documenti?.length > 0 && (
+                                            <div>
+                                                <p className="text-[10px] font-bold text-violet-700 mb-1">Documenti da raccogliere</p>
+                                                {phase2Commessa.documenti.map((d, i) => (
+                                                    <p key={i} className="text-[10px] text-slate-600 flex items-start gap-1">
+                                                        <span className="text-violet-400 mt-0.5">-</span> {d.documento?.substring(0, 60)}
+                                                    </p>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {phase2Commessa.da_completare?.length > 0 && (
+                                        <div>
+                                            <p className="text-[10px] font-bold text-amber-700 mb-1">Da completare manualmente</p>
+                                            {phase2Commessa.da_completare.map((d, i) => (
+                                                <p key={i} className="text-[10px] text-amber-600 flex items-start gap-1">
+                                                    <span className="text-amber-400 mt-0.5">-</span> {d.descrizione?.substring(0, 80)}
+                                                </p>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    <p className="text-[9px] text-red-500 flex items-center gap-1 pt-1 border-t border-slate-100">
+                                        <ShieldAlert className="h-3 w-3" />
+                                        DOP, Etichetta CE e Dichiarazione prestazione non emettibili senza le evidenze richieste
+                                    </p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
             </div>
         </DashboardLayout>
     );

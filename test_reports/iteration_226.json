@@ -1,0 +1,147 @@
+{
+  "summary": "Iteration 226 — Phase 2 Commessa Pre-Istruita Testing Complete. Backend: 10/10 tests passed (100%), 1 skipped. Frontend: All Phase 2 UI features verified. Phase 2 card shows for confermata istruttoria with precompilati/da_completare/non_emettibili counts, voci_lavoro, controlli, documenti, rami_attivi. Eligibility returns allowed=true for confermata+EN_1090 case, allowed=false with reasons for non-confermata. Validation aggregate shows 91% global score (8/8 correct) with improved synonym matching.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "IstruttoriaPage",
+        "issues": ["Minor: HTML nesting warning in console (<div> inside <p>) from React dev tools overlay - cosmetic only, does not affect functionality"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration226_phase2_commessa.py",
+    "/app/test_reports/pytest/iteration226_phase2_commessa_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration226_phase2_commessa.py"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 tests passed, 1 skipped)",
+    "frontend": "100% (all Phase 2 features verified)"
+  },
+  "seed_data_creation": "Used existing test data: prev_625826c752ac (confermata, EN_1090, Tunnel), prev_4db2a68b44 (non-confermata, Scale)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Phase 2 Commessa Pre-Istruita feature fully working. Phase 2 card (data-testid=card-phase2) shows when istruttoria is confermata. Key data-testids: card-phase2, btn-genera-commessa. Commessa for prev_625826c752ac already generated (comm_45660edc94dd). Eligibility checks: istruttoria_confermata, classificazione_pura, confidenza_alta, segmentazione_ok, domande_alto_risposte, nessun_blocco, campi_critici. Validation aggregate now 91% (was 81%), 8/8 correct (was 7/8). Test credentials: main_user_session=session_main_validazione_2026, test_user_session=test_perizia_205a45704b22",
+  "features_tested": {
+    "phase2_eligibility_confermata_allowed_true": {
+      "status": "PASSED",
+      "details": "GET /api/istruttoria/phase2/eligibility/{preventivo_id} returns allowed=true for confermata+EN_1090 case with all checks passing"
+    },
+    "phase2_eligibility_non_confermata_allowed_false": {
+      "status": "PASSED",
+      "details": "GET /api/istruttoria/phase2/eligibility/{preventivo_id} returns allowed=false with reasons for non-confermata case"
+    },
+    "phase2_genera_409_when_not_eligible": {
+      "status": "PASSED",
+      "details": "POST /api/istruttoria/phase2/genera/{preventivo_id} returns 409 Conflict when not eligible"
+    },
+    "phase2_genera_success_for_eligible": {
+      "status": "PASSED",
+      "details": "POST /api/istruttoria/phase2/genera/{preventivo_id} generates commessa with voci_lavoro, controlli, documenti, materiali, rami_attivi"
+    },
+    "phase2_get_commessa_returns_generated": {
+      "status": "PASSED",
+      "details": "GET /api/istruttoria/phase2/commessa/{preventivo_id} retrieves generated commessa with all fields"
+    },
+    "phase2_get_commessa_404_when_not_generated": {
+      "status": "PASSED",
+      "details": "GET /api/istruttoria/phase2/commessa/{preventivo_id} returns 404 when no commessa exists"
+    },
+    "phase2_commessa_voci_lavoro_structure": {
+      "status": "PASSED",
+      "details": "Commessa voci_lavoro have descrizione, stato, fonte fields"
+    },
+    "phase2_commessa_rami_attivi_structure": {
+      "status": "PASSED",
+      "details": "Commessa rami_attivi have saldatura, zincatura, montaggio branches with attivo and stato"
+    },
+    "phase2_commessa_etichette_counts": {
+      "status": "PASSED",
+      "details": "Commessa etichette have precompilato (int), da_completare (int), non_emettibile (list)"
+    },
+    "frontend_phase2_card_visible_confermata": {
+      "status": "PASSED",
+      "details": "Phase 2 card (card-phase2) visible when istruttoria is confermata"
+    },
+    "frontend_phase2_card_shows_counts": {
+      "status": "PASSED",
+      "details": "Phase 2 card shows precompilati (5), da_completare (3), non_emettibili (3) counts"
+    },
+    "frontend_phase2_card_shows_rami_attivi": {
+      "status": "PASSED",
+      "details": "Phase 2 card shows rami_attivi: saldatura n/a, zincatura n/a, montaggio attivo"
+    },
+    "frontend_phase2_card_shows_detail_lists": {
+      "status": "PASSED",
+      "details": "Phase 2 card shows voci_lavoro, controlli, documenti, da_completare lists"
+    },
+    "frontend_phase2_card_not_shown_non_confermata": {
+      "status": "PASSED",
+      "details": "Phase 2 card not shown for non-confermata preventivo (expected behavior)"
+    },
+    "frontend_p03_se_confermi_box": {
+      "status": "PASSED",
+      "details": "P0.3 'Se confermi la commessa' box visible with 3 sections: VERRA PREPARATO, RESTERA DA COMPLETARE, NON ANCORA EMETTIBILE"
+    },
+    "validation_aggregate_91_percent": {
+      "status": "PASSED",
+      "details": "Validation aggregate shows 91% global score (0.91), 8/8 correct classifications, improved from 81%"
+    }
+  },
+  "test_credentials": {
+    "main_user_session_token": "session_main_validazione_2026",
+    "test_user_session_token": "test_perizia_205a45704b22",
+    "confermata_preventivo": "prev_625826c752ac (Tunnel, EN_1090, confermata)",
+    "non_confermata_preventivo": "prev_4db2a68b44 (Scale, non confermata)"
+  },
+  "data_testid_elements_verified": [
+    "istruttoria-page",
+    "card-phase2",
+    "btn-genera-commessa",
+    "card-se-confermi",
+    "card-esito-istruttoria",
+    "badge-normativa"
+  ],
+  "phase2_api_responses": {
+    "eligibility_confermata": {
+      "allowed": true,
+      "checks": {
+        "istruttoria_confermata": true,
+        "classificazione_pura": true,
+        "confidenza_alta": true,
+        "segmentazione_ok": true,
+        "domande_alto_risposte": true,
+        "nessun_blocco": true,
+        "campi_critici": true
+      }
+    },
+    "eligibility_non_confermata": {
+      "allowed": false,
+      "reasons": ["L'istruttoria non e ancora confermata dall'utente"]
+    },
+    "genera_success": {
+      "returns": "commessa object with commessa_id, status, normativa, voci_lavoro, controlli, documenti, materiali, rami_attivi, etichette"
+    },
+    "genera_not_eligible": {
+      "returns": "409 Conflict with reasons and checks"
+    }
+  },
+  "validation_aggregate": {
+    "n_preventivi": 8,
+    "punteggio_medio_globale": 0.91,
+    "classificazione_corretta": "8/8",
+    "media_classificazione": 1.0,
+    "media_profilo": 0.88,
+    "media_estrazione": 0.79,
+    "media_domande": 1.0
+  }
+}

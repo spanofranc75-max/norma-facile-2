@@ -50,6 +50,10 @@ REGOLE FONDAMENTALI:
 
 4. Ragiona come un fabbro esperto: cosa vedi, cosa capisci, cosa ti manca.
 
+5. SALDATURA: se il preventivo descrive manufatti in acciaio assemblati (cancelli, ringhiere, recinzioni, parapetti, strutture), la saldatura e QUASI SEMPRE necessaria anche se non menzionata esplicitamente. In quel caso segna presenti=true con stato="dedotto".
+
+6. MATERIALI E PROFILI: riporta TUTTI i profili/sezioni citati nelle righe (tubolari, IPE, HEB, piatti, lamiere) includendo dimensioni. Non omettere nulla.
+
 Rispondi SOLO con JSON valido, senza commenti. Schema:
 {
   "elementi_strutturali": [

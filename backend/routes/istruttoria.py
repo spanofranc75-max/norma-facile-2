@@ -14,6 +14,7 @@ from core.database import db
 from services.ai_compliance_engine import analizza_preventivo_completo
 from services.applicabilita_engine import calcola_applicabilita, genera_domande_contestuali
 from services.segmentation_engine import segmenta_preventivo
+from services.phase2_engine import check_eligibility, generate_preistruita
 
 router = APIRouter(prefix="/istruttoria", tags=["istruttoria"])
 logger = logging.getLogger(__name__)
@@ -506,4 +507,91 @@ async def review_segmentazione(preventivo_id: str, body: dict, user: dict = Depe
         )
 
         return {"status": "in_review", "segmentazione": seg}
+
+
+
+# ═══════════════════════════════════════════════════════════════
+#  PHASE 2 — COMMESSA PRE-ISTRUITA REVISIONATA
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/phase2/eligibility/{preventivo_id}")
+async def check_phase2_eligibility(preventivo_id: str, user: dict = Depends(get_current_user)):
+    """Verifica se l'istruttoria e' eleggibile per la Phase 2.
+    Restituisce allowed=true/false con lista motivi di blocco."""
+    uid = user["user_id"]
+
+    istr = await db.istruttorie.find_one(
+        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"_id": 0}
+    )
+    if not istr:
+        raise HTTPException(404, "Istruttoria non trovata")
+
+    result = check_eligibility(istr)
+    return result
+
+
+@router.post("/phase2/genera/{preventivo_id}")
+async def genera_commessa_preistruita(preventivo_id: str, user: dict = Depends(get_current_user)):
+    """Genera la commessa pre-istruita revisionata.
+    Bloccata se non tutti i criteri di eleggibilita' sono soddisfatti."""
+    uid = user["user_id"]
+
+    istr = await db.istruttorie.find_one(
+        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"_id": 0}
+    )
+    if not istr:
+        raise HTTPException(404, "Istruttoria non trovata")
+
+    # Check eligibility
+    elig = check_eligibility(istr)
+    if not elig["allowed"]:
+        raise HTTPException(409, {
+            "message": "Commessa pre-istruita non generabile",
+            "reasons": elig["reasons"],
+            "checks": elig["checks"],
+        })
+
+    # Generate
+    commessa = generate_preistruita(istr)
+
+    # Save to DB
+    await db.commesse_preistruite.update_one(
+        {"preventivo_id": preventivo_id, "created_by": uid},
+        {"$set": {
+            **commessa,
+            "user_id": uid,
+        }},
+        upsert=True
+    )
+
+    # Update istruttoria
+    await db.istruttorie.update_one(
+        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"$set": {
+            "phase2_generata": True,
+            "phase2_commessa_id": commessa["commessa_id"],
+            "phase2_generata_il": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc),
+        }}
+    )
+
+    logger.info(f"[PHASE2] Commessa pre-istruita generata: {commessa['commessa_id']} per {preventivo_id}")
+    return {"commessa": commessa, "warnings": elig.get("warnings", [])}
+
+
+@router.get("/phase2/commessa/{preventivo_id}")
+async def get_commessa_preistruita(preventivo_id: str, user: dict = Depends(get_current_user)):
+    """Recupera la commessa pre-istruita per un preventivo."""
+    uid = user["user_id"]
+
+    doc = await db.commesse_preistruite.find_one(
+        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "Commessa pre-istruita non trovata")
+
+    return {"commessa": doc}
 

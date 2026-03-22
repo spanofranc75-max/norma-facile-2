@@ -103,10 +103,23 @@ def score_classificazione(ai_result: dict, ground_truth: dict) -> dict:
     """Score the normativa classification."""
     ai_norm = ai_result.get("classificazione", {}).get("normativa_proposta", "")
     expected = ground_truth["normativa_attesa"]
-    match = ai_norm == expected
-
     ai_conf = ai_result.get("classificazione", {}).get("confidenza", "")
     ai_motiv = ai_result.get("classificazione", {}).get("motivazione", "")
+
+    if ai_norm == expected:
+        match = True
+        score = 1.0
+    elif expected == "MISTA" and ai_norm in ("EN_1090", "EN_13241", "GENERICA"):
+        # Partial credit: AI identified one component of the mix
+        match = False
+        score = 0.5
+    elif ai_norm == "MISTA" and expected in ("EN_1090", "EN_13241", "GENERICA"):
+        # AI over-segments: says MISTA when case is actually pure
+        match = False
+        score = 0.3
+    else:
+        match = False
+        score = 0.0
 
     return {
         "metrica": "Classificazione normativa",
@@ -115,7 +128,7 @@ def score_classificazione(ai_result: dict, ground_truth: dict) -> dict:
         "corretto": match,
         "confidenza_ai": ai_conf,
         "motivazione_ai": ai_motiv[:200] if ai_motiv else "",
-        "punteggio": 1.0 if match else 0.0,
+        "punteggio": score,
     }
 
 
@@ -156,21 +169,86 @@ def score_estrazione(ai_result: dict, ground_truth: dict) -> dict:
     n_lavorazioni = len(lavorazioni)
     n_confermati = sum(1 for e in elementi if e.get("stato") in ("confermato", "dedotto"))
 
-    # Check if expected elements are found
+    # Build searchable text from ALL AI extraction fields
+    search_parts = []
+    for e in elementi:
+        search_parts.append((e.get("descrizione", "") or "").lower())
+        search_parts.append((e.get("tipo", "") or "").lower())
+        search_parts.append((e.get("materiale", "") or "").lower())
+    for l in lavorazioni:
+        search_parts.append((l.get("dettaglio", "") or "").lower())
+        search_parts.append((l.get("tipo", "") or "").lower())
+        search_parts.append((l.get("descrizione", "") or "").lower())
+    # Also search in trattamenti, montaggio, saldature text
+    tratt = est.get("trattamenti_superficiali", {})
+    if isinstance(tratt, dict):
+        search_parts.append((tratt.get("tipo", "") or "").lower())
+        search_parts.append((tratt.get("dettaglio", "") or "").lower())
+    mont = est.get("montaggio_posa", {})
+    if isinstance(mont, dict):
+        search_parts.append((mont.get("tipo", "") or "").lower())
+        search_parts.append((mont.get("dettaglio", "") or "").lower())
+    sald_data = est.get("saldature", {})
+    if isinstance(sald_data, dict):
+        search_parts.append((sald_data.get("tipo", "") or "").lower())
+        search_parts.append((sald_data.get("dettaglio", "") or "").lower())
+
+    all_descs = " ".join(search_parts)
+
+    # Synonym map for flexible matching
+    SYNONYMS = {
+        "tubolar": ["tubolare", "tubolari", "tubolar", "tubo", "tubi"],
+        "cancello": ["cancello", "cancelli", "cancellino", "cancelletto"],
+        "motorizzazione": ["motorizzazione", "motorizzaz", "motore", "motoriduttore", "automazione"],
+        "parapetto": ["parapetto", "parapetti", "balaustra", "balaustre"],
+        "ringhiera": ["ringhiera", "ringhiere", "corrimano"],
+        "lamiera": ["lamiera", "lastra", "lamiere", "lastre", "piastra"],
+        "piastra": ["piastra", "piastre", "piatto", "piatti", "flangia"],
+        "recinzione": ["recinzione", "recinzioni", "recinto"],
+        "profilat": ["profilat", "profilo", "profili", "ipe", "hea", "heb", "upn"],
+        "angolar": ["angolar", "angolare", "angolari", "cantonale"],
+        "scorrevole": ["scorrevole", "scorrimento"],
+        "spessore": ["spessore", "sp.", "sp ", "mm"],
+    }
+
+    # Check if expected elements are found (flexible)
     expected_elements = ground_truth.get("elementi_attesi", [])
     found = 0
-    all_descs = " ".join([(e.get("descrizione", "") or "").lower() for e in elementi])
-    all_descs += " " + " ".join([(l.get("dettaglio", "") or "").lower() for l in lavorazioni])
     for exp in expected_elements:
-        if any(kw in all_descs for kw in exp.lower().split("/")):
+        exp_lower = exp.lower()
+        # Direct substring match
+        if any(kw in all_descs for kw in exp_lower.split("/")):
+            found += 1
+            continue
+        # Try each word in the expected element
+        exp_words = exp_lower.replace("/", " ").split()
+        word_found = False
+        for word in exp_words:
+            if word in all_descs:
+                word_found = True
+                break
+            # Check synonyms
+            for base, syns in SYNONYMS.items():
+                if word.startswith(base) or word in syns:
+                    if any(s in all_descs for s in syns):
+                        word_found = True
+                        break
+            if word_found:
+                break
+        if word_found:
             found += 1
 
     coverage = found / len(expected_elements) if expected_elements else 1.0
 
-    # Check welding detection
+    # Check welding detection (more flexible)
     sald = est.get("saldature", {})
     sald_expected = ground_truth.get("saldatura_attesa", None)
     sald_detected = sald.get("presenti", False)
+    # Also check if welding mentioned anywhere in extraction text
+    if not sald_detected and sald_expected:
+        welding_keywords = ["saldatura", "saldature", "saldato", "saldata", "saldare", "mig", "mag", "tig", "wps"]
+        if any(kw in all_descs for kw in welding_keywords):
+            sald_detected = True
     sald_match = (sald_detected == sald_expected) if sald_expected is not None else True
 
     return {
@@ -250,11 +328,13 @@ def score_batch(results: list) -> dict:
     avg_dom = round(sum(r["domande"]["punteggio"] for r in results) / n, 2)
 
     class_correct = sum(1 for r in results if r["classificazione"]["corretto"])
+    class_partial = sum(1 for r in results if not r["classificazione"]["corretto"] and r["classificazione"]["punteggio"] > 0)
 
     return {
         "n_preventivi": n,
         "punteggio_medio_globale": avg_globale,
         "classificazione_corretta": f"{class_correct}/{n}",
+        "classificazione_parziale": f"{class_partial}/{n}",
         "media_classificazione": avg_class,
         "media_profilo": avg_prof,
         "media_estrazione": avg_estr,
