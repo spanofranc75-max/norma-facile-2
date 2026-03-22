@@ -140,6 +140,16 @@ Archivio documenti + template pacchetti + motore verifica.
 - D3: Verifica matching archivio->items, stato attached/missing/expired/in_scadenza, blocking, summary
 - Frontend: `/pacchetti-documentali`, 2 tab (Archivio+Pacchetti), upload, checklist 3 colonne
 ### Testing: 38/38 backend, 100% frontend (iteration_235)
+
+## D4+D5 — Preview Invio, Email & Log (COMPLETATO 2026-03-22)
+Preparazione, invio email con allegati, e tracciabilita invii.
+- D4: `POST /prepara-invio` genera email_draft (oggetto, testo, allegati, warnings privacy/scadenza)
+- D5: `POST /invia` invio via Resend + log in `pacchetti_invii`, gestione errori graceful
+- `GET /invii` storico invii per pacchetto, `PATCH /{id}` aggiornamento destinatari
+- Bug fix: `get_object()` ritornava tupla (bytes, content_type) — ora correttamente destrutturato
+- Frontend: PackageDetailView con checklist, form destinatari To/CC, preview email editabile, warnings sensibili/scaduti, dialog conferma invio, storico invii
+### Testing: 21/21 backend, 100% frontend (iteration_237)
+
 ## Backlog Prioritizzato
 
 ### P0 (Prossimi — COMPLETATI)
@@ -147,13 +157,13 @@ Archivio documenti + template pacchetti + motore verifica.
 - ~~S4: Generazione DOCX~~ — COMPLETATO
 
 ### P1 (Prossimi)
-- **D1-D5: Pacchetti Documentali Intelligenti** — Cabina di regia documenti da mandare al cliente. Spec completa in `/app/SPEC_PACCHETTI_DOCUMENTALI.md`
+- **D1-D5: Pacchetti Documentali Intelligenti** — COMPLETATO (D1-D5)
   - ~~D1: Libreria tipi documento + archivio documenti~~ COMPLETATO
   - ~~D2: Template pacchetti~~ COMPLETATO
   - ~~D3: Matching automatico + verifica presenza/scadenza~~ COMPLETATO
-  - D4: UI pacchetto documentale (preview invio) — PROSSIMO
-  - D5: Invio email one-click + log invii (via Resend)
-  - D6: Profili documentali per committente ricorrente
+  - ~~D4: UI pacchetto documentale (preview invio)~~ COMPLETATO
+  - ~~D5: Invio email one-click + log invii (via Resend)~~ COMPLETATO
+  - D6: Profili documentali per committente ricorrente — PROSSIMO
 - Modulo Verifica Committenza / Contratti (si integra con Pacchetti Documentali)
 - Dashboard Cantiere Multilivello
 - Stability Guard deterministico
