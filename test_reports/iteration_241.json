@@ -1,0 +1,74 @@
+{
+  "summary": "Iteration 241 - Registro Obblighi Fase 2 Testing Complete. All backend APIs working correctly. Frontend UI displays new sources (F, G, H) and inline editing controls (owner_role, due_date, sla_source) properly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration241_obblighi_fase2.py",
+    "/app/test_reports/pytest/iteration241_obblighi_fase2_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "obblighi_commessa_service.py: _make_obbligo correctly includes due_date and sla_source parameters",
+    "Source F (_collect_documenti_scadenza): Correctly creates alta/hard_block for expired docs, media/warning for expiring docs within 30 days",
+    "Source G (_collect_pacchetti_documentali): Correctly creates obligations for missing required docs and expired docs in packages",
+    "Source H (_collect_committenza): Correctly creates obligations from approved analisi_committenza with official_snapshot",
+    "ObbrighiCommessaSection.js: Properly displays owner_role badge, due_date, sla_source label, and inline editing controls",
+    "SOURCE_LABELS, ROLE_LABELS, SLA_LABELS constants are correctly defined for all new sources"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration241_obblighi_fase2.py"
+  ],
+  "success_rate": {
+    "backend": "100% (16/16 passed)",
+    "frontend": "100% (UI renders correctly, inline editing works)"
+  },
+  "seed_data_creation": "Created test documents with expiry dates, pacchetto_documentale with missing/expired items, and approved analisi_committenza with official_snapshot",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Registro Obblighi Fase 2 is fully functional. All 8 source modules (A-H) are working. PATCH endpoint accepts owner_role, due_date, sla_source fields. Frontend displays all new sources in filter dropdown and shows inline editing controls. Test session: obblighi_fase2_session_1774203898386, user_id: user_obblighi_fase2_1774203898386, commessa_id: commessa_fase2_1774203898386",
+  "test_credentials": {
+    "session_token": "obblighi_fase2_session_1774203898386",
+    "user_id": "user_obblighi_fase2_1774203898386",
+    "test_commessa_id": "commessa_fase2_1774203898386"
+  },
+  "api_endpoints_tested": {
+    "PATCH /api/obblighi/{id} with owner_role": "PASSED - Updates owner_role field correctly",
+    "PATCH /api/obblighi/{id} with due_date": "PASSED - Updates due_date field correctly",
+    "PATCH /api/obblighi/{id} with sla_source": "PASSED - Updates sla_source field correctly",
+    "POST /api/obblighi/sync/{commessa_id} Source F": "PASSED - Creates obligations for expired/expiring documents",
+    "POST /api/obblighi/sync/{commessa_id} Source G": "PASSED - Creates obligations for missing/expired docs in packages",
+    "POST /api/obblighi/sync/{commessa_id} Source H": "PASSED - Creates obligations from approved committenza analysis",
+    "Deduplication across all sources": "PASSED - Second sync creates 0 new obligations",
+    "Auto-close when source fixed": "PASSED - Obligations auto-close when pack item status changes to valid",
+    "Filter by documenti_scadenza": "PASSED",
+    "Filter by pacchetti_documentali": "PASSED",
+    "Filter by committenza": "PASSED"
+  },
+  "frontend_components_tested": {
+    "ObbrighiCommessaSection": "PASSED - Renders with all obligations from 8 sources",
+    "Filter dropdown (source)": "PASSED - Shows all 8 sources including Scadenze Doc., Pacchetti Doc., Committenza",
+    "Inline role dropdown": "PASSED - Shows all 6 roles, updates via PATCH API",
+    "Inline date picker": "PASSED - 8 date inputs found, updates via PATCH API",
+    "Inline status dropdown": "PASSED - 8 status selects found",
+    "Owner role badge": "PASSED - Displays correctly (Uff. Tecnico, Amm.ne, Sicurezza, etc.)",
+    "Due date display": "PASSED - Shows dates with color coding (red for overdue, amber for soon)",
+    "SLA source label": "PASSED - Shows da scadenza, da pacchetto, da cliente labels"
+  },
+  "features_verified": {
+    "Source F - Expired docs": "Creates alta/hard_block obligation with due_date=expiry_date, sla_source=da_scadenza_documento",
+    "Source F - Expiring docs (30 days)": "Creates media/warning obligation with due_date=expiry_date, sla_source=da_scadenza_documento",
+    "Source F - OK docs (>30 days)": "Does NOT create obligation (correct behavior)",
+    "Source G - Missing required docs": "Creates obligation with blocking_level based on item.blocking flag, sla_source=da_pacchetto_documentale",
+    "Source G - Expired docs in package": "Creates alta/warning obligation with sla_source=da_pacchetto_documentale",
+    "Source H - Obligations from snapshot": "Creates obligations with category mapping, owner_role based on category, sla_source=da_documento_cliente",
+    "Source H - Anomalies from snapshot": "Creates obligations with ANOM_ prefix, owner_role from recommended_action",
+    "Source H - Mismatches from snapshot": "Creates obligations with MISMATCH_ prefix"
+  }
+}

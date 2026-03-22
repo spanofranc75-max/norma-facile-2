@@ -62,7 +62,7 @@ async def list_obblighi(user_id: str, commessa_id: str = None,
 
 
 async def update_obbligo(obbligo_id: str, user_id: str, updates: dict) -> Optional[dict]:
-    allowed = {"status", "owner_role", "owner_user_id", "due_date", "resolution_note"}
+    allowed = {"status", "owner_role", "owner_user_id", "due_date", "sla_source", "resolution_note"}
     filtered = {k: v for k, v in updates.items() if k in allowed}
     if not filtered:
         return await get_obbligo(obbligo_id, user_id)
@@ -123,7 +123,8 @@ def _make_obbligo(commessa_id: str, user_id: str, *,
                    linked_route: str = "", linked_label: str = "",
                    context: dict = None,
                    ramo_id: str = "", emissione_id: str = "",
-                   cantiere_id: str = "") -> dict:
+                   cantiere_id: str = "",
+                   due_date: str = None, sla_source: str = None) -> dict:
     """Build an expected obligation dict with dedupe_key."""
     dedupe_key = f"{commessa_id}|{source_module}|{source_entity_id}|{code}"
     now = datetime.now(timezone.utc).isoformat()
@@ -151,7 +152,8 @@ def _make_obbligo(commessa_id: str, user_id: str, *,
         "auto_generated": True,
         "owner_role": owner_role,
         "owner_user_id": None,
-        "due_date": None,
+        "due_date": due_date,
+        "sla_source": sla_source,
         "linked_route": linked_route,
         "linked_label": linked_label,
         "context": context or {},
@@ -192,6 +194,15 @@ async def sync_obblighi_commessa(commessa_id: str, user_id: str) -> dict:
 
     # Source E: Rami normativi
     expected.extend(await _collect_rami(commessa, user_id))
+
+    # Source F: Documenti archivio scaduti/in scadenza (Fase 2)
+    expected.extend(await _collect_documenti_scadenza(commessa, user_id))
+
+    # Source G: Pacchetti documentali - documenti mancanti (Fase 2)
+    expected.extend(await _collect_pacchetti_documentali(commessa, user_id))
+
+    # Source H: Verifica committenza - obblighi confermati (Fase 2)
+    expected.extend(await _collect_committenza(commessa, user_id))
 
     # Reconcile with DB
     stats = await _reconcile(commessa_id, user_id, expected)
@@ -619,3 +630,235 @@ async def _collect_rami(commessa: dict, user_id: str) -> list:
             ))
 
     return obligations
+
+
+# ═══════════════════════════════════════════════════════════════
+#  SOURCE F: DOCUMENTI ARCHIVIO SCADUTI / IN SCADENZA (Fase 2)
+# ═══════════════════════════════════════════════════════════════
+
+async def _collect_documenti_scadenza(commessa: dict, user_id: str) -> list:
+    """Collect obligations from expired or expiring archive documents linked to this commessa."""
+    from datetime import timedelta
+    obligations = []
+    cid = commessa["commessa_id"]
+    now_dt = datetime.now(timezone.utc)
+    today_str = now_dt.strftime("%Y-%m-%d")
+    soon_str = (now_dt + timedelta(days=30)).strftime("%Y-%m-%d")
+
+    # Find documents with expiry dates that are linked to this commessa
+    # Documents can be linked via entity (azienda docs are global, cantiere/persona are per-commessa)
+    docs = await db.documenti_archivio.find(
+        {"user_id": user_id, "expiry_date": {"$exists": True, "$nin": [None, ""]}},
+        {"_id": 0}
+    ).to_list(500)
+
+    for doc in docs:
+        expiry = doc.get("expiry_date", "")
+        if not expiry or len(expiry) < 10:
+            continue
+
+        expiry_date = expiry[:10]
+        doc_id = doc.get("doc_id", "")
+        title = doc.get("title", doc.get("file_name", doc.get("document_type_code", "")))
+        owner = doc.get("owner_label", "")
+
+        if expiry_date < today_str:
+            # SCADUTO
+            obligations.append(_make_obbligo(
+                cid, user_id,
+                source_module="documenti_scadenza",
+                source_entity_type="documento_archivio",
+                source_entity_id=doc_id,
+                code=f"DOC_EXPIRED_{doc.get('document_type_code', 'UNKNOWN')}",
+                title=f"Documento scaduto: {title}" + (f" ({owner})" if owner else ""),
+                description=f"Il documento '{title}' e scaduto il {expiry_date}. Necessario rinnovo.",
+                category="documentale",
+                severity="alta",
+                blocking_level="hard_block",
+                owner_role="ufficio_tecnico",
+                linked_route="/pacchetti-documentali",
+                linked_label="Vai all'archivio documenti",
+                due_date=expiry_date,
+                sla_source="da_scadenza_documento",
+            ))
+        elif expiry_date <= soon_str:
+            # IN SCADENZA (entro 30 giorni)
+            obligations.append(_make_obbligo(
+                cid, user_id,
+                source_module="documenti_scadenza",
+                source_entity_type="documento_archivio",
+                source_entity_id=doc_id,
+                code=f"DOC_EXPIRING_{doc.get('document_type_code', 'UNKNOWN')}",
+                title=f"Documento in scadenza: {title}" + (f" ({owner})" if owner else ""),
+                description=f"Il documento '{title}' scade il {expiry_date}. Pianificare rinnovo.",
+                category="documentale",
+                severity="media",
+                blocking_level="warning",
+                owner_role="ufficio_tecnico",
+                linked_route="/pacchetti-documentali",
+                linked_label="Vai all'archivio documenti",
+                due_date=expiry_date,
+                sla_source="da_scadenza_documento",
+            ))
+
+    return obligations
+
+
+# ═══════════════════════════════════════════════════════════════
+#  SOURCE G: PACCHETTI DOCUMENTALI — DOCUMENTI MANCANTI (Fase 2)
+# ═══════════════════════════════════════════════════════════════
+
+async def _collect_pacchetti_documentali(commessa: dict, user_id: str) -> list:
+    """Collect obligations from document packages with missing/expired items."""
+    obligations = []
+    cid = commessa["commessa_id"]
+
+    packs = await db.pacchetti_documentali.find(
+        {"user_id": user_id, "commessa_id": cid, "status": {"$ne": "annullato"}},
+        {"_id": 0}
+    ).to_list(50)
+
+    for pack in packs:
+        pack_id = pack.get("pack_id", "")
+        pack_label = pack.get("label", pack.get("template_code", ""))
+        items = pack.get("items", [])
+
+        for item in items:
+            item_status = item.get("status", "")
+            doc_code = item.get("document_type_code", "")
+            blocking = item.get("blocking", False)
+            required = item.get("required", False)
+
+            if item_status == "missing" and required:
+                obligations.append(_make_obbligo(
+                    cid, user_id,
+                    source_module="pacchetti_documentali",
+                    source_entity_type="pacchetto_documentale",
+                    source_entity_id=pack_id,
+                    code=f"PACK_DOC_MISSING_{doc_code}",
+                    title=f"Documento mancante: {doc_code} ({pack_label})",
+                    description=f"Il documento '{doc_code}' e obbligatorio nel pacchetto '{pack_label}' ma non presente.",
+                    category="documentale",
+                    severity="alta" if blocking else "media",
+                    blocking_level="hard_block" if blocking else "warning",
+                    owner_role="ufficio_tecnico",
+                    linked_route="/pacchetti-documentali",
+                    linked_label=f"Apri pacchetto {pack_label}",
+                    sla_source="da_pacchetto_documentale",
+                ))
+            elif item_status == "expired":
+                obligations.append(_make_obbligo(
+                    cid, user_id,
+                    source_module="pacchetti_documentali",
+                    source_entity_type="pacchetto_documentale",
+                    source_entity_id=pack_id,
+                    code=f"PACK_DOC_EXPIRED_{doc_code}",
+                    title=f"Documento scaduto nel pacchetto: {doc_code} ({pack_label})",
+                    description=f"Il documento '{doc_code}' nel pacchetto '{pack_label}' risulta scaduto.",
+                    category="documentale",
+                    severity="alta",
+                    blocking_level="hard_block" if blocking else "warning",
+                    owner_role="ufficio_tecnico",
+                    linked_route="/pacchetti-documentali",
+                    linked_label=f"Apri pacchetto {pack_label}",
+                    sla_source="da_pacchetto_documentale",
+                ))
+
+    return obligations
+
+
+# ═══════════════════════════════════════════════════════════════
+#  SOURCE H: VERIFICA COMMITTENZA — OBBLIGHI CONFERMATI (Fase 2)
+# ═══════════════════════════════════════════════════════════════
+
+async def _collect_committenza(commessa: dict, user_id: str) -> list:
+    """Collect obligations from approved committenza analyses."""
+    obligations = []
+    cid = commessa["commessa_id"]
+
+    analyses = await db.analisi_committenza.find(
+        {"commessa_id": cid, "user_id": user_id, "status": "approved"},
+        {"_id": 0}
+    ).to_list(10)
+
+    for analysis in analyses:
+        snapshot = analysis.get("official_snapshot")
+        if not snapshot:
+            continue
+
+        analysis_id = analysis.get("analysis_id", "")
+
+        for obl in snapshot.get("obligations", []):
+            code = obl.get("code", "UNKNOWN")
+            category_map = {
+                "contrattuale": "commessa", "tecnico": "qualita",
+                "documentale": "documentale", "sicurezza": "sicurezza",
+                "logistico_temporale": "commessa",
+            }
+            obligations.append(_make_obbligo(
+                cid, user_id,
+                source_module="committenza",
+                source_entity_type="analisi_committenza",
+                source_entity_id=analysis_id,
+                code=code,
+                title=obl.get("title", ""),
+                description=obl.get("description", ""),
+                category=category_map.get(obl.get("category", ""), "commessa"),
+                severity=obl.get("severity", "media"),
+                blocking_level=obl.get("blocking_level", "warning"),
+                owner_role=_suggest_owner_committenza(obl.get("category", "")),
+                linked_route=f"/commesse/{cid}",
+                linked_label="Apri commessa",
+                sla_source="da_documento_cliente",
+                context={"source_excerpt": obl.get("source_excerpt", "")[:200]},
+            ))
+
+        for anom in snapshot.get("anomalies", []):
+            code = f"ANOM_{anom.get('code', 'UNKNOWN')}"
+            obligations.append(_make_obbligo(
+                cid, user_id,
+                source_module="committenza",
+                source_entity_type="analisi_committenza",
+                source_entity_id=analysis_id,
+                code=code,
+                title=f"Anomalia: {anom.get('title', '')}",
+                description=anom.get("description", ""),
+                category="commessa",
+                severity=anom.get("severity", "media"),
+                blocking_level="warning",
+                owner_role=anom.get("recommended_action", "amministrazione"),
+                linked_route=f"/commesse/{cid}",
+                linked_label="Apri commessa",
+                sla_source="da_documento_cliente",
+            ))
+
+        for mm in snapshot.get("mismatches", []):
+            code = f"MISMATCH_{mm.get('code', 'UNKNOWN')}"
+            obligations.append(_make_obbligo(
+                cid, user_id,
+                source_module="committenza",
+                source_entity_type="analisi_committenza",
+                source_entity_id=analysis_id,
+                code=code,
+                title=f"Mismatch: {mm.get('title', '')}",
+                description=mm.get("description", ""),
+                category="commessa",
+                severity=mm.get("severity", "media"),
+                blocking_level=mm.get("blocking_level", "warning"),
+                owner_role="ufficio_tecnico",
+                linked_route=f"/commesse/{cid}",
+                linked_label="Apri commessa",
+                sla_source="da_documento_cliente",
+            ))
+
+    return obligations
+
+
+def _suggest_owner_committenza(category: str) -> str:
+    return {
+        "contrattuale": "amministrazione",
+        "tecnico": "ufficio_tecnico",
+        "documentale": "ufficio_tecnico",
+        "sicurezza": "sicurezza",
+        "logistico_temporale": "produzione",
+    }.get(category, "ufficio_tecnico")

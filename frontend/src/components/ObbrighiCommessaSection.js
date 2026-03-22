@@ -38,6 +38,9 @@ const SOURCE_LABELS = {
     soggetti: 'Soggetti',
     istruttoria: 'Istruttoria',
     rami_normativi: 'Rami Normativi',
+    documenti_scadenza: 'Scadenze Doc.',
+    pacchetti_documentali: 'Pacchetti Doc.',
+    committenza: 'Committenza',
 };
 
 const CATEGORY_LABELS = {
@@ -50,10 +53,38 @@ const CATEGORY_LABELS = {
     commessa: 'Commessa',
 };
 
-function ObbligRow({ obl, onNavigate, onUpdateStatus }) {
+const ROLE_LABELS = {
+    ufficio_tecnico: 'Uff. Tecnico',
+    sicurezza: 'Sicurezza',
+    amministrazione: 'Amm.ne',
+    produzione: 'Produzione',
+    qualita: 'Qualita',
+    commerciale: 'Commerciale',
+};
+
+const SLA_LABELS = {
+    manuale: '',
+    da_documento_cliente: 'da cliente',
+    da_scadenza_documento: 'da scadenza',
+    da_emissione: 'da emissione',
+    da_cantiere: 'da cantiere',
+    da_pacchetto_documentale: 'da pacchetto',
+};
+
+function ObbligRow({ obl, onNavigate, onUpdateStatus, onUpdateField }) {
     const sc = STATUS_CONFIG[obl.status] || STATUS_CONFIG.nuovo;
     const bl = BLOCKING_ICON[obl.blocking_level] || BLOCKING_ICON.none;
     const BlIcon = bl.Icon;
+
+    // Due date coloring
+    const dueDateCls = (() => {
+        if (!obl.due_date) return '';
+        const today = new Date().toISOString().slice(0, 10);
+        if (obl.due_date.slice(0, 10) < today) return 'text-red-600 font-medium';
+        const soon = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+        if (obl.due_date.slice(0, 10) <= soon) return 'text-amber-600';
+        return 'text-slate-500';
+    })();
 
     return (
         <div
@@ -72,6 +103,9 @@ function ObbligRow({ obl, onNavigate, onUpdateStatus }) {
                     <Badge className={`text-[10px] ${SEVERITY_COLORS[obl.severity] || ''}`}>{obl.severity}</Badge>
                     <Badge className="text-[10px] bg-slate-100 text-slate-600">{SOURCE_LABELS[obl.source_module] || obl.source_module}</Badge>
                     {obl.category && <Badge className="text-[10px] bg-violet-50 text-violet-700">{CATEGORY_LABELS[obl.category] || obl.category}</Badge>}
+                    {obl.owner_role && <Badge className="text-[10px] bg-cyan-50 text-cyan-700">{ROLE_LABELS[obl.owner_role] || obl.owner_role}</Badge>}
+                    {obl.due_date && <span className={`text-[10px] ${dueDateCls}`}>{obl.due_date.slice(0, 10)}</span>}
+                    {obl.sla_source && <span className="text-[10px] text-slate-400">{SLA_LABELS[obl.sla_source] || ''}</span>}
                 </div>
                 {obl.description && obl.description !== obl.title && (
                     <p className="text-xs text-slate-500 mt-1 line-clamp-2">{obl.description}</p>
@@ -82,18 +116,35 @@ function ObbligRow({ obl, onNavigate, onUpdateStatus }) {
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">
                 {obl.status !== 'completato' && obl.status !== 'chiuso' && obl.status !== 'non_applicabile' && (
-                    <Select value={obl.status} onValueChange={v => onUpdateStatus(obl.obbligo_id, v)}>
-                        <SelectTrigger className="h-7 text-[10px] w-[100px]" data-testid={`status-select-${obl.obbligo_id}`}>
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="nuovo">Nuovo</SelectItem>
-                            <SelectItem value="da_verificare">Da verificare</SelectItem>
-                            <SelectItem value="in_corso">In corso</SelectItem>
-                            <SelectItem value="completato">Completato</SelectItem>
-                            <SelectItem value="non_applicabile">N/A</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <>
+                        <Select value={obl.owner_role || ''} onValueChange={v => onUpdateField(obl.obbligo_id, 'owner_role', v)}>
+                            <SelectTrigger className="h-7 text-[10px] w-[90px]" data-testid={`role-select-${obl.obbligo_id}`}>
+                                <SelectValue placeholder="Ruolo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Object.entries(ROLE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <input
+                            type="date"
+                            className="h-7 text-[10px] border rounded px-1 w-[105px] text-slate-600"
+                            value={obl.due_date?.slice(0, 10) || ''}
+                            onChange={e => onUpdateField(obl.obbligo_id, 'due_date', e.target.value || null)}
+                            data-testid={`date-${obl.obbligo_id}`}
+                        />
+                        <Select value={obl.status} onValueChange={v => onUpdateStatus(obl.obbligo_id, v)}>
+                            <SelectTrigger className="h-7 text-[10px] w-[100px]" data-testid={`status-select-${obl.obbligo_id}`}>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="nuovo">Nuovo</SelectItem>
+                                <SelectItem value="da_verificare">Da verificare</SelectItem>
+                                <SelectItem value="in_corso">In corso</SelectItem>
+                                <SelectItem value="completato">Completato</SelectItem>
+                                <SelectItem value="non_applicabile">N/A</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </>
                 )}
                 {obl.linked_route && (
                     <Button
@@ -163,6 +214,21 @@ export default function ObbrighiCommessaSection({ commessaId }) {
                 o.obbligo_id === obblId ? { ...o, status: newStatus } : o
             ));
             toast.success('Stato aggiornato');
+        } catch (err) {
+            toast.error('Errore aggiornamento');
+        }
+    };
+
+    const handleUpdateField = async (obblId, field, value) => {
+        try {
+            await apiRequest(`/obblighi/${obblId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ [field]: value }),
+            });
+            setObblighi(prev => prev.map(o =>
+                o.obbligo_id === obblId ? { ...o, [field]: value } : o
+            ));
         } catch (err) {
             toast.error('Errore aggiornamento');
         }
@@ -267,7 +333,7 @@ export default function ObbrighiCommessaSection({ commessaId }) {
                         <div data-testid="group-bloccanti">
                             <p className="text-xs font-bold text-red-700 mb-1.5 uppercase tracking-wider">Bloccanti</p>
                             <div className="space-y-1.5">
-                                {applyFilter(bloccanti).map(o => <ObbligRow key={o.obbligo_id} obl={o} onNavigate={handleNavigate} onUpdateStatus={handleUpdateStatus} />)}
+                                {applyFilter(bloccanti).map(o => <ObbligRow key={o.obbligo_id} obl={o} onNavigate={handleNavigate} onUpdateStatus={handleUpdateStatus} onUpdateField={handleUpdateField} />)}
                             </div>
                         </div>
                     )}
@@ -277,7 +343,7 @@ export default function ObbrighiCommessaSection({ commessaId }) {
                         <div data-testid="group-da-completare">
                             <p className="text-xs font-bold text-amber-700 mb-1.5 uppercase tracking-wider">Da completare</p>
                             <div className="space-y-1.5">
-                                {applyFilter(daCompletare).map(o => <ObbligRow key={o.obbligo_id} obl={o} onNavigate={handleNavigate} onUpdateStatus={handleUpdateStatus} />)}
+                                {applyFilter(daCompletare).map(o => <ObbligRow key={o.obbligo_id} obl={o} onNavigate={handleNavigate} onUpdateStatus={handleUpdateStatus} onUpdateField={handleUpdateField} />)}
                             </div>
                         </div>
                     )}
@@ -287,7 +353,7 @@ export default function ObbrighiCommessaSection({ commessaId }) {
                         <div data-testid="group-da-verificare">
                             <p className="text-xs font-bold text-sky-700 mb-1.5 uppercase tracking-wider">Da verificare</p>
                             <div className="space-y-1.5">
-                                {applyFilter(daVerificare).map(o => <ObbligRow key={o.obbligo_id} obl={o} onNavigate={handleNavigate} onUpdateStatus={handleUpdateStatus} />)}
+                                {applyFilter(daVerificare).map(o => <ObbligRow key={o.obbligo_id} obl={o} onNavigate={handleNavigate} onUpdateStatus={handleUpdateStatus} onUpdateField={handleUpdateField} />)}
                             </div>
                         </div>
                     )}
@@ -304,7 +370,7 @@ export default function ObbrighiCommessaSection({ commessaId }) {
                             </Button>
                             {showClosed && (
                                 <div className="space-y-1.5 mt-1.5 opacity-60">
-                                    {applyFilter(chiusi).map(o => <ObbligRow key={o.obbligo_id} obl={o} onNavigate={handleNavigate} onUpdateStatus={handleUpdateStatus} />)}
+                                    {applyFilter(chiusi).map(o => <ObbligRow key={o.obbligo_id} obl={o} onNavigate={handleNavigate} onUpdateStatus={handleUpdateStatus} onUpdateField={handleUpdateField} />)}
                                 </div>
                             )}
                         </div>
