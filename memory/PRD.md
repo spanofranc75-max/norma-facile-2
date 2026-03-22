@@ -19,7 +19,7 @@ Engine rule-based in `evidence_gate_engine.py`
 Auto-creazione rami normativi dopo conferma istruttoria
 
 ## Safety Branch MVP (S1 + S2 — COMPLETATO 2026-03-22)
-- S1: Analizzato template POS (459 KB, 31 sezioni) → `SPEC_POS_TEMPLATE_MAPPING.md`
+- S1: Analizzato template POS (459 KB, 31 sezioni) -> `SPEC_POS_TEMPLATE_MAPPING.md`
 - S2: Backend + Frontend con 4-step wizard
 
 ## Libreria Rischi 3 Livelli (Step 0 + Step 1 — COMPLETATO 2026-03-23)
@@ -42,18 +42,49 @@ Refactor completo da modello flat a 3 collezioni separate:
 - Campi governance: active, version, source, sort_order
 
 ### Catena automatica
-Fase → rischi_ids → dpi_ids + misure_ids + apprestamenti_ids + domande_verifica
+Fase -> rischi_ids -> dpi_ids + misure_ids + apprestamenti_ids + domande_verifica
 - Deduplicazione automatica
 - Confidenza: dedotto | confermato | incerto | mancante
 - Gate POS con blockers per domande gate_critical aperte
 
 ### Testing: 29/29 backend, 100% frontend
 
+## S2.5 — Modello Soggetti & Ruoli (COMPLETATO 2026-03-22)
+Gestione strutturata del personale chiave per sicurezza cantiere (POS).
+
+### Architettura a 2 livelli:
+1. **Livello azienda** (`company_settings.figure_aziendali`): default RSPP, Datore Lavoro, Medico Competente ecc.
+2. **Livello cantiere** (`cantieri_sicurezza.soggetti`): 14 ruoli in 3 categorie
+
+### Ruoli (14 totali):
+- **Azienda (5)**: DATORE_LAVORO*, RSPP*, MEDICO_COMPETENTE*, PREPOSTO_CANTIERE, DIRETTORE_TECNICO
+- **Committente (6)**: COMMITTENTE*, REFERENTE_COMMITTENTE, RESPONSABILE_LAVORI, DIRETTORE_LAVORI, CSP, CSE
+- **Tecnico (3)**: PROGETTISTA, STRUTTURISTA, COLLAUDATORE
+(* = obbligatorio per Gate POS)
+
+### Pre-fill automatico:
+company_settings.figure_aziendali -> cantiere.soggetti (status: "precompilato")
+
+### Frontend:
+- Tab "Sicurezza" in Impostazioni con form Figure Aziendali
+- Sezione "Soggetti & Referenti" in SchedaCantierePage Step 1 con 3 categorie
+
+### Bug fix applicato:
+- Rimosso campo duplicato figure_aziendali in CompanySettings
+- Aggiunto figure_aziendali a CompanySettingsUpdate
+- Aggiunta gestione esplicita in PUT /api/company/settings
+
+### Testing: 16/16 backend, 100% frontend (iteration_232)
+
 ## File Chiave
-- `/app/backend/services/cantieri_sicurezza_service.py` — Service 3 livelli
-- `/app/backend/routes/cantieri_sicurezza.py` — API (libreria + cantieri + gate)
-- `/app/frontend/src/pages/SchedaCantierePage.js` — Form 4-step con catena
+- `/app/backend/services/cantieri_sicurezza_service.py` — Service 3 livelli + soggetti
+- `/app/backend/routes/cantieri_sicurezza.py` — API (libreria + cantieri + gate + ruoli)
+- `/app/backend/routes/company.py` — Settings con figure_aziendali
+- `/app/backend/models/company.py` — Modello CompanySettings + Update
+- `/app/frontend/src/pages/SchedaCantierePage.js` — Form 4-step con catena + soggetti
 - `/app/frontend/src/pages/SicurezzaPage.js` — Lista cantieri
+- `/app/frontend/src/pages/SettingsPage.js` — Impostazioni con tab Sicurezza
+- `/app/frontend/src/components/settings/FigureAziendaliTab.js` — Form figure aziendali
 - `/app/SPEC_LIBRERIA_RISCHI_3_LIVELLI.md` — Spec definitiva v2
 - `/app/SPEC_POS_TEMPLATE_MAPPING.md` — Mapping template POS
 
@@ -70,4 +101,5 @@ Fase → rischi_ids → dpi_ids + misure_ids + apprestamenti_ids + domande_verif
 
 ### P2-P3
 - Multi-Tenant, ML Training, Alert costi
-- Unificazione PDF, Portale Clienti, Fix warning minori
+- Unificazione PDF, Portale Clienti
+- Fix warning minori (exhaustive-deps, hydration)
