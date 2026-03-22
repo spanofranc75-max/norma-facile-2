@@ -19,6 +19,7 @@ import CertificazioniPage from './pages/CertificazioniPage';
 import CertificazioneWizardPage from './pages/CertificazioneWizardPage';
 import SicurezzaPage from './pages/SicurezzaPage';
 import PosWizardPage from './pages/PosWizardPage';
+import SchedaCantierePage from './pages/SchedaCantierePage';
 import CatalogoPage from './pages/CatalogoPage';
 import PreventiviPage from './pages/PreventiviPage';
 import PreventivoEditorPage from './pages/PreventivoEditorPage';
@@ -212,6 +213,9 @@ function AppRouter() {
             <Route path="/sicurezza" element={<ProtectedRoute><SicurezzaPage /></ProtectedRoute>} />
             <Route path="/sicurezza/new" element={<ProtectedRoute><PosWizardPage /></ProtectedRoute>} />
             <Route path="/sicurezza/:posId" element={<ProtectedRoute><PosWizardPage /></ProtectedRoute>} />
+            {/* Scheda Cantiere Sicurezza (Safety Branch MVP) */}
+            <Route path="/scheda-cantiere/new" element={<ProtectedRoute><SchedaCantierePage /></ProtectedRoute>} />
+            <Route path="/scheda-cantiere/:cantiereId" element={<ProtectedRoute><SchedaCantierePage /></ProtectedRoute>} />
             {/* Catalogo Profili */}
             <Route path="/catalogo" element={<ProtectedRoute><CatalogoPage /></ProtectedRoute>} />
             {/* Fascicolo Cantiere */}

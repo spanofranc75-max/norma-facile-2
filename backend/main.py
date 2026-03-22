@@ -90,6 +90,7 @@ from routes.verbali_itt import router as verbali_itt_router
 from routes.istruttoria import router as istruttoria_router
 from routes.validation import router as validation_router
 from routes.commesse_normative import router as commesse_normative_router
+from routes.cantieri_sicurezza import router as cantieri_sicurezza_router
 
 # Configure logging
 logging.basicConfig(
@@ -224,6 +225,7 @@ app.include_router(verbali_itt_router, prefix="/api")
 app.include_router(istruttoria_router, prefix="/api")
 app.include_router(validation_router, prefix="/api")
 app.include_router(commesse_normative_router, prefix="/api")
+app.include_router(cantieri_sicurezza_router, prefix="/api")
 
 
 @app.on_event("startup")
@@ -248,6 +250,19 @@ async def startup_event():
         )
         await db.emissioni_documentali.create_index(
             [("commessa_id", 1)], name="idx_emissioni_commessa"
+        )
+        # Indici per Safety Branch
+        await db.cantieri_sicurezza.create_index(
+            [("user_id", 1), ("cantiere_id", 1)],
+            unique=True, name="uq_cantiere_sicurezza"
+        )
+        await db.cantieri_sicurezza.create_index(
+            [("user_id", 1), ("parent_commessa_id", 1)],
+            name="idx_cantiere_commessa"
+        )
+        await db.libreria_rischi.create_index(
+            [("user_id", 1), ("tipo", 1), ("codice", 1)],
+            unique=True, name="uq_libreria_rischi"
         )
     except Exception as e:
         logger.warning(f"Index creation (may already exist): {e}")
