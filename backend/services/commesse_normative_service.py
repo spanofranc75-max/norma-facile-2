@@ -337,112 +337,62 @@ async def aggiorna_emissione(
 
 
 async def check_evidence_gate(emissione_id: str, user_id: str) -> dict:
-    """Calcola l'Evidence Gate per una singola emissione.
-    Fase B implementera i check reali — per ora struttura pronta."""
+    """Calcola l'Evidence Gate completo per una singola emissione.
+    Usa il motore in evidence_gate_engine.py con output standardizzato."""
+    from services.evidence_gate_engine import evaluate_gate
+
     emissione = await get_emissione(emissione_id, user_id)
     if not emissione:
         raise ValueError(f"Emissione {emissione_id} non trovata")
 
-    normativa = emissione["branch_type"]
-    checks = {}
-    blocking = []
+    ramo = await get_ramo(emissione["ramo_id"], user_id)
+    if not ramo:
+        raise ValueError(f"Ramo {emissione['ramo_id']} non trovato")
 
-    if normativa == "EN_1090":
-        # Check certificati 3.1 per ogni batch
-        batch_ids = emissione.get("batch_ids", [])
-        if batch_ids:
-            batches = await db.material_batches.find(
-                {"batch_id": {"$in": batch_ids}},
-                {"_id": 0, "batch_id": 1, "certificato_31_url": 1, "certificato_31": 1}
-            ).to_list(100)
-            batch_map = {b["batch_id"]: b for b in batches}
-            missing_certs = []
-            for bid in batch_ids:
-                b = batch_map.get(bid, {})
-                has_cert = bool(b.get("certificato_31_url") or b.get("certificato_31"))
-                if not has_cert:
-                    missing_certs.append(bid)
-            checks["certificati_31"] = len(missing_certs) == 0
-            if missing_certs:
-                blocking.append(f"Manca certificato 3.1 per {len(missing_certs)} batch: {', '.join(missing_certs[:3])}")
-        else:
-            checks["certificati_31"] = True  # Nessun batch assegnato ancora
+    commessa = await db.commesse.find_one(
+        {"commessa_id": emissione["commessa_id"], "user_id": user_id},
+        {"_id": 0}
+    )
+    if not commessa:
+        commessa = {}
 
-        # Check riesame tecnico
-        riesame = await db.riesami_tecnici.find_one(
-            {"commessa_id": emissione["commessa_id"], "approvato": True},
-            {"_id": 0}
-        )
-        checks["riesame_tecnico"] = riesame is not None
-        if not riesame:
-            blocking.append("Riesame Tecnico non completato o non approvato")
+    gate_result = await evaluate_gate(emissione, ramo, commessa)
 
-        # Check controllo finale
-        ctrl = await db.controlli_finali.find_one(
-            {"commessa_id": emissione["commessa_id"], "approvato": True},
-            {"_id": 0}
-        )
-        checks["controllo_finale"] = ctrl is not None
-        if not ctrl:
-            blocking.append("Controllo Finale non completato o non approvato")
-
-        # Check WPS se saldatura attiva
-        wps_count = await db.wps.count_documents({"commessa_id": emissione["commessa_id"]})
-        reg_sald = await db.registro_saldatura.count_documents({"commessa_id": emissione["commessa_id"]})
-        if reg_sald > 0:
-            checks["wps_wpqr"] = wps_count > 0
-            if wps_count == 0:
-                blocking.append("Saldature registrate ma nessuna WPS presente")
-        else:
-            checks["wps_wpqr"] = True
-
-    elif normativa == "EN_13241":
-        # Check documenti sicurezza
-        docs = await db.commessa_documents.find(
-            {"commessa_id": emissione["commessa_id"], "metadata_estratti.tipo": {"$in": ["foto", "certificato"]}},
-            {"_id": 0}
-        ).to_list(100)
-        checks["documentazione_tecnica"] = len(docs) > 0
-        if not docs:
-            blocking.append("Documentazione tecnica mancante")
-
-        checks["manuale_uso"] = True  # Placeholder per Fase B
-        checks["verifiche_sicurezza"] = True  # Placeholder per Fase B
-
-    elif normativa == "GENERICA":
-        # Nessun requisito normativo
-        checks["nessun_requisito"] = True
-
-    emittable = len(blocking) == 0
-    now = datetime.now(timezone.utc).isoformat()
-
-    gate = {
-        "emittable": emittable,
-        "checked_at": now,
-        "blocking_reasons": blocking,
-        "checks": checks,
+    # Snapshot cache su emissione
+    now = gate_result["updated_at"]
+    snapshot = {
+        "evidence_gate": {
+            "emittable": gate_result["emittable"],
+            "checked_at": now,
+            "completion_percent": gate_result["completion_percent"],
+            "blocking_reasons": [b["message"] for b in gate_result["blockers"]],
+            "checks": {c["code"]: c["status"] for c in gate_result["checks"]},
+        },
+        "last_gate_status": gate_result["stato_gate"],
+        "last_gate_check_at": now,
+        "last_completion_percent": gate_result["completion_percent"],
+        "last_blockers_count": len(gate_result["blockers"]),
+        "updated_at": now,
     }
 
-    # Salva il gate nell'emissione
-    new_stato = emissione["stato"]
-    if emissione["stato"] not in ("emessa", "annullata"):
-        new_stato = "emettibile" if emittable else "bloccata"
-        if emissione["stato"] == "draft" and not emittable:
-            new_stato = "in_preparazione"
+    # Update stato if not already emessa/annullata
+    if emissione.get("stato") not in ("emessa", "annullata"):
+        snapshot["stato"] = gate_result["stato_gate"]
 
     await db.emissioni_documentali.update_one(
         {"emissione_id": emissione_id},
-        {"$set": {"evidence_gate": gate, "stato": new_stato, "updated_at": now}}
+        {"$set": snapshot}
     )
 
-    return {**gate, "stato": new_stato, "emissione_id": emissione_id, "codice": emissione["codice_emissione"]}
+    return gate_result
 
 
 async def emetti_emissione(emissione_id: str, user_id: str, user_name: str = "") -> dict:
-    """Emetti l'emissione (solo se gate OK)."""
+    """Emetti l'emissione (solo se gate OK). Ricalcola SEMPRE il gate prima di emettere."""
     gate = await check_evidence_gate(emissione_id, user_id)
     if not gate["emittable"]:
-        raise ValueError(f"Emissione non emettibile: {'; '.join(gate['blocking_reasons'])}")
+        reasons = "; ".join(b["message"] for b in gate.get("blockers", []))
+        raise ValueError(f"Emissione non emettibile: {reasons}")
 
     now = datetime.now(timezone.utc).isoformat()
     await db.emissioni_documentali.update_one(

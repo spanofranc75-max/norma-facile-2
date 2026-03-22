@@ -16,6 +16,7 @@ import {
     Lock, Unlock, ChevronDown, ChevronRight, Loader2,
     AlertTriangle, CheckCircle2, Clock, Eye,
 } from 'lucide-react';
+import EmissioneDetailPanel from './EmissioneDetailPanel';
 
 const NORM_CONFIG = {
     EN_1090:  { label: 'EN 1090', color: 'bg-blue-100 text-blue-800 border-blue-300', icon: Shield, accent: 'border-l-blue-500' },
@@ -44,6 +45,7 @@ export default function RamiNormativiSection({ commessaId }) {
     const [creatingEm, setCreatingEm] = useState(false);
     const [gateResult, setGateResult] = useState({}); // emissione_id → gate
     const [checkingGate, setCheckingGate] = useState({});
+    const [selectedEmissione, setSelectedEmissione] = useState(null); // {emissione, ramoId}
 
     const fetchGerarchia = useCallback(async () => {
         try {
@@ -196,7 +198,8 @@ export default function RamiNormativiSection({ commessaId }) {
                                         const isChecking = checkingGate[em.emissione_id];
 
                                         return (
-                                            <div key={em.emissione_id} className="flex items-center justify-between p-2 bg-white rounded border text-xs" data-testid={`emissione-${em.codice_emissione}`}>
+                                            <div key={em.emissione_id} className="flex items-center justify-between p-2 bg-white rounded border text-xs cursor-pointer hover:bg-slate-50 transition-colors" data-testid={`emissione-${em.codice_emissione}`}
+                                                onClick={() => setSelectedEmissione({ emissione: em, ramoId: ramo.ramo_id })}>
                                                 <div className="flex items-center gap-2 flex-1 min-w-0">
                                                     <FileOutput className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                                                     <span className="font-mono font-medium">{em.codice_emissione}</span>
@@ -204,6 +207,16 @@ export default function RamiNormativiSection({ commessaId }) {
                                                     {em.descrizione && <span className="text-slate-500 truncate">{em.descrizione}</span>}
                                                 </div>
                                                 <div className="flex items-center gap-1.5 shrink-0">
+                                                    {/* Completion percent bar */}
+                                                    {em.last_completion_percent !== undefined && em.last_completion_percent !== null && (
+                                                        <div className="flex items-center gap-1">
+                                                            <div className="w-12 h-1 bg-slate-200 rounded-full overflow-hidden">
+                                                                <div className={`h-full rounded-full ${em.last_completion_percent >= 80 ? 'bg-emerald-500' : em.last_completion_percent >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                                                    style={{ width: `${em.last_completion_percent}%` }} />
+                                                            </div>
+                                                            <span className="text-[9px] font-mono text-slate-400">{em.last_completion_percent}%</span>
+                                                        </div>
+                                                    )}
                                                     {/* Contatori risorse collegate */}
                                                     {(em.batch_ids?.length > 0 || em.ddt_ids?.length > 0) && (
                                                         <span className="text-[10px] text-slate-400">
@@ -233,32 +246,67 @@ export default function RamiNormativiSection({ commessaId }) {
                                         const gate = gateResult[em.emissione_id];
                                         if (!gate) return null;
                                         return (
-                                            <div key={`gate-${em.emissione_id}`} className="p-2 rounded border bg-white text-[11px] space-y-1">
-                                                <div className="flex items-center gap-1.5 font-medium">
-                                                    <Eye className="h-3 w-3" />
-                                                    Evidence Gate: {em.codice_emissione}
-                                                    {gate.emittable ? (
-                                                        <Badge className="bg-emerald-100 text-emerald-700 text-[10px] px-1 py-0">EMETTIBILE</Badge>
-                                                    ) : (
-                                                        <Badge className="bg-red-100 text-red-700 text-[10px] px-1 py-0">BLOCCATA</Badge>
+                                            <div key={`gate-${em.emissione_id}`} className="p-2.5 rounded border bg-white text-[11px] space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-1.5 font-medium">
+                                                        <Eye className="h-3 w-3" />
+                                                        Evidence Gate: {em.codice_emissione}
+                                                        {gate.emittable ? (
+                                                            <Badge className="bg-emerald-100 text-emerald-700 text-[10px] px-1 py-0">EMETTIBILE</Badge>
+                                                        ) : (
+                                                            <Badge className="bg-red-100 text-red-700 text-[10px] px-1 py-0">BLOCCATA</Badge>
+                                                        )}
+                                                    </div>
+                                                    {gate.completion_percent !== undefined && (
+                                                        <div className="flex items-center gap-1.5">
+                                                            <div className="w-20 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                                                <div className={`h-full rounded-full transition-all ${gate.completion_percent >= 80 ? 'bg-emerald-500' : gate.completion_percent >= 50 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                                                    style={{ width: `${gate.completion_percent}%` }} />
+                                                            </div>
+                                                            <span className="font-mono text-[10px] text-slate-500">{gate.completion_percent}%</span>
+                                                        </div>
                                                     )}
                                                 </div>
-                                                {/* Checks */}
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {Object.entries(gate.checks || {}).map(([k, v]) => (
-                                                        <span key={k} className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded ${v ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-                                                            {v ? <CheckCircle2 className="h-2.5 w-2.5" /> : <AlertTriangle className="h-2.5 w-2.5" />}
-                                                            {k.replace(/_/g, ' ')}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                                {/* Blocking reasons */}
-                                                {gate.blocking_reasons?.length > 0 && (
-                                                    <div className="space-y-0.5 mt-1">
-                                                        {gate.blocking_reasons.map((r, i) => (
+                                                {/* Checks grid */}
+                                                {gate.checks && gate.checks.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {gate.checks.map((c) => {
+                                                            const isPassing = ['linked', 'uploaded', 'verified'].includes(c.status);
+                                                            const isNA = c.status === 'not_applicable';
+                                                            return (
+                                                                <span key={c.code} className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] ${
+                                                                    isNA ? 'bg-slate-50 text-slate-400' :
+                                                                    isPassing ? 'bg-emerald-50 text-emerald-700' :
+                                                                    'bg-red-50 text-red-700'
+                                                                }`} title={c.message}>
+                                                                    {isNA ? <Clock className="h-2.5 w-2.5" /> : isPassing ? <CheckCircle2 className="h-2.5 w-2.5" /> : <AlertTriangle className="h-2.5 w-2.5" />}
+                                                                    {c.code.replace(/_/g, ' ').toLowerCase()}
+                                                                    {c.status === 'uploaded' && <span className="text-[8px] opacity-70">(upload)</span>}
+                                                                </span>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                                {/* Blockers */}
+                                                {gate.blockers?.length > 0 && (
+                                                    <div className="space-y-0.5 border-t pt-1.5">
+                                                        <span className="text-[10px] font-medium text-red-600">Blocchi:</span>
+                                                        {gate.blockers.map((b, i) => (
                                                             <div key={i} className="flex items-start gap-1 text-red-600">
+                                                                <Lock className="h-3 w-3 mt-0.5 shrink-0" />
+                                                                <span>{b.message}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {/* Warnings */}
+                                                {gate.warnings?.length > 0 && (
+                                                    <div className="space-y-0.5 border-t pt-1.5">
+                                                        <span className="text-[10px] font-medium text-amber-600">Avvisi:</span>
+                                                        {gate.warnings.map((w, i) => (
+                                                            <div key={i} className="flex items-start gap-1 text-amber-600">
                                                                 <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
-                                                                <span>{r}</span>
+                                                                <span>{w.message}</span>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -283,6 +331,18 @@ export default function RamiNormativiSection({ commessaId }) {
                     );
                 })}
             </CardContent>
+
+            {/* Pannello dettaglio emissione */}
+            {selectedEmissione && (
+                <div className="px-3 pb-3">
+                    <EmissioneDetailPanel
+                        emissione={selectedEmissione.emissione}
+                        ramoId={selectedEmissione.ramoId}
+                        onClose={() => setSelectedEmissione(null)}
+                        onRefresh={() => { fetchGerarchia(); setSelectedEmissione(null); }}
+                    />
+                </div>
+            )}
 
             {/* Dialog: Nuovo Ramo */}
             <Dialog open={newRamoOpen} onOpenChange={setNewRamoOpen}>

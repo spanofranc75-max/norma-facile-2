@@ -1,0 +1,186 @@
+{
+  "summary": "Iteration 228 — Evidence Gate Engine (Fase B) Testing Complete. Backend: 24/24 tests passed (1 skipped - no EN_13241 ramo). Frontend: All UI features verified. Evidence Gate engine correctly evaluates emissions based on branch_flags (saldatura_attiva, zincatura_esterna) and normative requirements.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "TracciabilitaMaterialiSection",
+        "issues": ["Minor: HTML nesting warning in console (<tr> inside <span>, <span> inside <tbody>) from React dev tools overlay - cosmetic only, does not affect functionality"]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration228_evidence_gate_fase_b.py",
+    "/app/test_reports/pytest/iteration228_evidence_gate_fase_b_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration228_evidence_gate_fase_b.py"
+  ],
+  "success_rate": {
+    "backend": "100% (24/24 tests passed, 1 skipped)",
+    "frontend": "100% (all Evidence Gate UI features verified)"
+  },
+  "seed_data_creation": "Used existing test session: test_session_rami_normativi_227. Existing data: commessa com_e8c4810ad476, ramo ramo_96d7f4219812 (EN_1090 with saldatura_attiva=true, zincatura_esterna=true), ramo ramo_b5c133e2a6e9 (GENERICA), emissions em_0effb0357e67 (D01) and em_65e0c1bf6fbd (L01).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Evidence Gate Fase B fully working. Key features tested: EN 1090 with saldatura_attiva=true requires WPS_WPQR, WELDER_QUALIFICATION, WELDING_REGISTER. EN 1090 with zincatura_esterna=true requires SUBCONTRACT_DOC. GENERICA has minimal checks (scope only) + GENERIC_NO_DOP_CE warning. Emission without scope is blocked with EMISSION_SCOPE_MISSING. completion_percent excludes not_applicable checks. POST /emetti returns 409 with blockers when gate fails. Snapshot cache fields (last_gate_status, last_gate_check_at, last_completion_percent, last_blockers_count) are saved after gate check.",
+  "features_tested": {
+    "EN1090_saldatura_WPS_required": {
+      "status": "PASSED",
+      "details": "WPS_WPQR check is required=true when saldatura_attiva=true, blocks emission if missing"
+    },
+    "EN1090_saldatura_welder_required": {
+      "status": "PASSED",
+      "details": "WELDER_QUALIFICATION check is required=true when saldatura_attiva=true"
+    },
+    "EN1090_saldatura_register_required": {
+      "status": "PASSED",
+      "details": "WELDING_REGISTER check is required=true when saldatura_attiva=true"
+    },
+    "EN1090_zincatura_subcontract_required": {
+      "status": "PASSED",
+      "details": "SUBCONTRACT_DOC check is required=true when zincatura_esterna=true, blocks emission if missing"
+    },
+    "emission_scope_missing_blocks": {
+      "status": "PASSED",
+      "details": "Emission without scope (no batch/ddt/line/voce) is blocked with EMISSION_SCOPE_MISSING"
+    },
+    "completion_percent_excludes_not_applicable": {
+      "status": "PASSED",
+      "details": "completion_percent only counts required checks, excludes not_applicable from denominator"
+    },
+    "gate_output_format_checks": {
+      "status": "PASSED",
+      "details": "checks[] array has code/status/required/message for each check"
+    },
+    "gate_output_format_blockers": {
+      "status": "PASSED",
+      "details": "blockers[] array has code/message for each blocker"
+    },
+    "gate_output_format_warnings": {
+      "status": "PASSED",
+      "details": "warnings[] array has code/message for each warning"
+    },
+    "GENERICA_no_dop_ce_warning": {
+      "status": "PASSED",
+      "details": "GENERICA normative has GENERIC_NO_DOP_CE warning"
+    },
+    "GENERICA_minimal_checks": {
+      "status": "PASSED",
+      "details": "GENERICA only requires scope check + branch status, no EN 1090 specific checks"
+    },
+    "emetti_blocked_409": {
+      "status": "PASSED",
+      "details": "POST /emetti returns 409 when emission is blocked with blockers detail"
+    },
+    "emetti_recalculates_gate": {
+      "status": "PASSED",
+      "details": "POST /emetti recalculates gate before attempting to emit"
+    },
+    "snapshot_cache_fields": {
+      "status": "PASSED",
+      "details": "Emission has last_gate_status, last_gate_check_at, last_completion_percent, last_blockers_count after gate check"
+    },
+    "EN1090_all_checks_present": {
+      "status": "PASSED",
+      "details": "EN 1090 gate has all 13 expected checks (EMISSION_SCOPE, BRANCH_STATUS, EMISSION_NOT_ISSUED, MATERIAL_BATCHES, CERT_31, WPS_WPQR, WELDER_QUALIFICATION, WELDING_REGISTER, VT_INSPECTION, FINAL_CONTROL, TECHNICAL_REVIEW, SUBCONTRACT_DOC, TOOLING_STATUS)"
+    },
+    "frontend_3_column_layout": {
+      "status": "PASSED",
+      "details": "EmissioneDetailPanel shows 3 columns: Cosa serve | Cosa c'e | Cosa manca"
+    },
+    "frontend_progress_bar": {
+      "status": "PASSED",
+      "details": "Progress bar with % and color coding (red<50, amber<80, green>=80)"
+    },
+    "frontend_blockers_warnings_visible": {
+      "status": "PASSED",
+      "details": "Blockers and warnings sections visible with codes and messages"
+    },
+    "frontend_link_buttons": {
+      "status": "PASSED",
+      "details": "Link buttons (collega) present for linkable missing checks"
+    },
+    "frontend_emetti_button_hidden_when_blocked": {
+      "status": "PASSED",
+      "details": "Emetti button not visible when emission is blocked (emittable=false)"
+    },
+    "frontend_click_emission_opens_detail": {
+      "status": "PASSED",
+      "details": "Clicking on emission in list opens EmissioneDetailPanel"
+    }
+  },
+  "test_credentials": {
+    "session_token": "test_session_rami_normativi_227",
+    "user_id": "user_97c773827822",
+    "email": "spano.franc75@gmail.com",
+    "commessa_id": "com_e8c4810ad476",
+    "ramo_en1090_id": "ramo_96d7f4219812",
+    "ramo_generica_id": "ramo_b5c133e2a6e9",
+    "emissione_en1090_id": "em_0effb0357e67",
+    "emissione_generica_id": "em_65e0c1bf6fbd"
+  },
+  "data_testid_elements_verified": [
+    "emissione-detail-panel",
+    "gate-status-banner",
+    "blockers-detail",
+    "warnings-detail",
+    "btn-emetti-emissione",
+    "btn-link-CERT_31",
+    "btn-link-SUBCONTRACT_DOC",
+    "dialog-link-evidence",
+    "input-link-ids"
+  ],
+  "api_responses_verified": {
+    "evidence_gate": {
+      "endpoint": "GET /api/emissioni/{ramo_id}/{emissione_id}/gate",
+      "response": {
+        "emissione_id": "string",
+        "codice": "string",
+        "normativa": "EN_1090|EN_13241|GENERICA",
+        "stato_gate": "bloccata|emettibile|emessa|annullata",
+        "emittable": "bool",
+        "completion_percent": "int (0-100)",
+        "blockers": "[{code, message}]",
+        "warnings": "[{code, message}]",
+        "checks": "[{code, status, required, message}]",
+        "updated_at": "ISO datetime"
+      }
+    },
+    "emetti_blocked": {
+      "endpoint": "POST /api/emissioni/{ramo_id}/{emissione_id}/emetti",
+      "response_code": 409,
+      "response": "Error with blockers detail"
+    }
+  },
+  "evidence_gate_checks_verified": {
+    "EN_1090": [
+      "EMISSION_SCOPE (required)",
+      "BRANCH_STATUS (required)",
+      "EMISSION_NOT_ISSUED (required)",
+      "MATERIAL_BATCHES (required)",
+      "CERT_31 (required if batches)",
+      "WPS_WPQR (required if saldatura_attiva)",
+      "WELDER_QUALIFICATION (required if saldatura_attiva)",
+      "WELDING_REGISTER (required if saldatura_attiva)",
+      "VT_INSPECTION (required)",
+      "FINAL_CONTROL (required)",
+      "TECHNICAL_REVIEW (required)",
+      "SUBCONTRACT_DOC (required if zincatura_esterna)",
+      "TOOLING_STATUS (not required)"
+    ],
+    "GENERICA": [
+      "EMISSION_SCOPE (required)",
+      "BRANCH_STATUS (required)",
+      "EMISSION_NOT_ISSUED (required)",
+      "NO_NORMATIVE_REQUIRED (not required)"
+    ]
+  }
+}

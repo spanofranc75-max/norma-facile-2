@@ -213,7 +213,8 @@ async def update_emissione(ramo_id: str, emissione_id: str, body: AggiornaEmissi
 
 @router.get("/emissioni/{ramo_id}/{emissione_id}/gate")
 async def get_evidence_gate(ramo_id: str, emissione_id: str, user: dict = Depends(get_current_user)):
-    """Check Evidence Gate per una singola emissione."""
+    """Check Evidence Gate completo per una singola emissione.
+    Restituisce: checks[], blockers[], warnings[], completion_percent, emittable."""
     em = await get_emissione(emissione_id, user["user_id"])
     if not em or em["ramo_id"] != ramo_id:
         raise HTTPException(404, "Emissione non trovata")
