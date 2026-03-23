@@ -260,6 +260,33 @@ Sistema per salvare, gestire e riutilizzare profili documentali per committenti 
 
 ### Testing: 18/18 backend, 100% frontend (iteration_244)
 
+## Notifiche Intelligenti In-App N1+N2 (COMPLETATO 2026-03-23)
+Sistema di notifiche in-app con trigger da eventi critici e deduplicazione.
+
+### Backend: `/api/notifiche-smart`
+- CRUD: list (con filtro status), count unread, mark read, mark all read, archive
+- Deduplicazione via `dedupe_key`: stessa notifica non duplicata se unread
+- Collection: `notifiche_smart` con severity (critica/alta/media/bassa)
+
+### Trigger Engine (N2): 6 eventi
+1. **Semaforo peggiorato**: verde→giallo, giallo→rosso (con cache semaforo)
+2. **Nuovo hard block**: obbligo bloccante creato durante sync
+3. **Documento scaduto**: da watchdog scadenze
+4. **Emissione bloccata**: blocco su evidence gate
+5. **Gate POS peggiorato**: POS non piu pronto
+6. **Pacchetto incompleto**: dopo verifica con mancanti/scaduti
+
+### Wiring:
+- `obblighi_commessa.py` sync → trigger post-sync + semaforo check
+- `pacchetti_documentali.py` verifica → trigger pacchetto incompleto
+
+### Frontend:
+- Bell icon in topbar con badge count (polling 30s)
+- Drawer laterale: titolo, messaggio, severity colors, "Apri", "Letta", "Segna tutte lette"
+- Link "Vedi tutte le notifiche" → /notifiche
+
+### Testing: 17/17 backend, 100% frontend (iteration_245)
+
 ## Backlog Prioritizzato
 
 ### P0 (Prossimi — COMPLETATI)
@@ -277,7 +304,8 @@ Sistema per salvare, gestire e riutilizzare profili documentali per committenti 
 - ~~Dashboard Cantiere Multilivello~~ — COMPLETATO (2026-03-23)
 - ~~Audit Log~~ — COMPLETATO (2026-03-23)
 - ~~D6: Profili documentali per committente ricorrente~~ — COMPLETATO (2026-03-23)
-- Notifiche intelligenti (in-app, poi email)
+- ~~Notifiche intelligenti (in-app, poi email)~~ — In-App COMPLETATO (2026-03-23)
+- Email automatiche selettive (post in-app)
 - Stability Guard deterministico
 
 ### P2-P3
