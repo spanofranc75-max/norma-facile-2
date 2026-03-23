@@ -101,6 +101,7 @@ from routes.notifiche_smart import router as notifiche_smart_router
 from routes.onboarding import router as onboarding_router
 from routes.admin_integrity import router as admin_integrity_router
 from routes.demo import router as demo_router
+from routes.content_engine import router as content_engine_router
 
 # Configure logging
 logging.basicConfig(
@@ -399,6 +400,7 @@ app.include_router(notifiche_smart_router, prefix="/api")
 app.include_router(onboarding_router, prefix="/api")
 app.include_router(admin_integrity_router, prefix="/api")
 app.include_router(demo_router, prefix="/api")
+app.include_router(content_engine_router, prefix="/api")
 
 
 # Health endpoint with index verification

@@ -21,7 +21,7 @@ import time
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = 'https://accordion-layout.preview.emergentagent.com'
+    BASE_URL = 'https://content-engine-86.preview.emergentagent.com'
 
 
 # ── Fixtures ───────────────────────────────────────────────────────
