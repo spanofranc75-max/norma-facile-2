@@ -1,0 +1,98 @@
+{
+  "summary": "Iteration 244 - D6 Profili Documentali per Committente Ricorrente Testing Complete. All backend APIs (18/18 tests passed) and frontend UI components working correctly. The profile management system allows creating, editing, deleting profiles with document rules, applying profiles to commesse to create pre-populated packages, and saving existing packages as reusable profiles.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration244_profili_committente.py",
+    "/app/test_reports/pytest/iteration244_profili_committente_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "GET /api/profili-committente: Returns list of profiles with client_name, rules[], notes, warnings[], usage_count",
+    "POST /api/profili-committente: Creates profile with validation (empty client_name returns 400)",
+    "GET /api/profili-committente/{profile_id}: Returns single profile with all fields",
+    "PUT /api/profili-committente/{profile_id}: Updates allowed fields (client_name, description, rules, notes, warnings)",
+    "DELETE /api/profili-committente/{profile_id}: Deletes profile, returns 404 for non-existent",
+    "POST /api/profili-committente/da-pacchetto/{pack_id}: Creates profile from existing package items (semi-automatic)",
+    "POST /api/profili-committente/{profile_id}/applica: Creates new pacchetto_documentale with template_code='profilo:{profile_id}'",
+    "Applied pack items have correct structure (document_type_code, entity_type, status='pending')",
+    "Profile usage_count increments after apply, last_used_at is set",
+    "GET /api/profili-committente/suggest/{commessa_id}: Returns matching profile by client_name (or null)",
+    "Audit log entries created for profile CRUD operations (entity_type=profilo_committente)",
+    "Frontend: 3 tabs (Archivio, Pacchetti, Profili Committente) with correct data-testid attributes",
+    "Frontend: Profile cards show rules preview badges, notes, warnings, usage count",
+    "Frontend: 'Nuovo Profilo' button opens editor with rule management (add/remove/toggle required)",
+    "Frontend: 'Modifica' button opens pre-filled editor with existing profile data",
+    "Frontend: 'Elimina' button deletes profile (with browser confirmation)",
+    "Frontend: 'Applica a Commessa' button opens dialog with commessa selector",
+    "Frontend: 'Salva come Profilo' button in PackageDetailView header opens save dialog"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration244_profili_committente.py"
+  ],
+  "success_rate": {
+    "backend": "100% (18/18 passed)",
+    "frontend": "100% (All UI components render correctly, dialogs work, buttons clickable)"
+  },
+  "seed_data_creation": "Used existing user data with session_token K6fH_AIOSlUNVh8nGj5yAOjYtEyW-Ifsc4X5SFRVQYQ (user_97c773827822). Created test profiles with TEST_D6_ prefix during testing, cleaned up after tests.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "D6 Profili Committente is fully functional. Existing test profile prof_00bad461c118 (Impresa Edile Rossi S.r.l.) has 5 rules and usage_count >= 1. The /pacchetti-documentali page has 3 tabs. Profile CRUD, apply, and suggest endpoints all working. Audit logging for profile operations is active.",
+  "test_credentials": {
+    "session_token": "K6fH_AIOSlUNVh8nGj5yAOjYtEyW-Ifsc4X5SFRVQYQ",
+    "user_id": "user_97c773827822",
+    "email": "spano.franc75@gmail.com"
+  },
+  "api_endpoints_tested": {
+    "GET /api/profili-committente": "PASSED - Returns list of profiles",
+    "POST /api/profili-committente": "PASSED - Creates profile with client_name, rules[], notes, warnings[]",
+    "POST /api/profili-committente (empty client_name)": "PASSED - Returns 400 error",
+    "GET /api/profili-committente/{profile_id}": "PASSED - Returns single profile",
+    "PUT /api/profili-committente/{profile_id}": "PASSED - Updates profile fields",
+    "DELETE /api/profili-committente/{profile_id}": "PASSED - Deletes profile",
+    "GET /api/profili-committente/{invalid_id}": "PASSED - Returns 404",
+    "POST /api/profili-committente/da-pacchetto/{pack_id}": "PASSED - Creates profile from package",
+    "POST /api/profili-committente/da-pacchetto/{invalid_pack_id}": "PASSED - Returns 400",
+    "POST /api/profili-committente/{profile_id}/applica": "PASSED - Creates pacchetto_documentale from profile",
+    "POST /api/profili-committente/{invalid_id}/applica": "PASSED - Returns 400",
+    "GET /api/profili-committente/suggest/{commessa_id}": "PASSED - Returns suggested profile or null",
+    "GET /api/activity-log?entity_type=profilo_committente": "PASSED - Returns audit entries"
+  },
+  "frontend_components_tested": {
+    "PacchettiDocumentaliPage": "PASSED - Loads with data-testid='pacchetti-documentali-page'",
+    "Tab Archivio": "PASSED - data-testid='tab-archivio'",
+    "Tab Pacchetti": "PASSED - data-testid='tab-pacchetti'",
+    "Tab Profili Committente": "PASSED - data-testid='tab-profili'",
+    "Profili list": "PASSED - data-testid='profili-list' shows profile cards",
+    "Profile card": "PASSED - Shows client_name, description, rules badges, notes, warnings, usage count",
+    "Nuovo Profilo button": "PASSED - data-testid='btn-nuovo-profilo' opens editor",
+    "Profile editor": "PASSED - data-testid='profilo-editor' with input fields and rule management",
+    "Add rule button": "PASSED - data-testid='btn-add-rule' adds rule row",
+    "Rule row": "PASSED - data-testid='rule-{idx}' with document type selector, entity type, required toggle",
+    "Remove rule button": "PASSED - data-testid='btn-remove-rule-{idx}'",
+    "Save profile button": "PASSED - data-testid='btn-save-profilo'",
+    "Edit button": "PASSED - data-testid='btn-edit-{profile_id}' opens pre-filled editor",
+    "Delete button": "PASSED - data-testid='btn-delete-{profile_id}'",
+    "Apply button": "PASSED - data-testid='btn-apply-{profile_id}' opens dialog",
+    "Apply dialog": "PASSED - data-testid='apply-profile-dialog' with commessa selector",
+    "Save as Profile button": "PASSED - data-testid='btn-save-as-profile' in PackageDetailView header",
+    "Save profile dialog": "PASSED - data-testid='save-profile-dialog' with client name and description inputs"
+  },
+  "features_verified": {
+    "Profile CRUD": "Create, Read, Update, Delete all working",
+    "Profile from package": "Semi-automatic creation extracts rules from existing package items",
+    "Apply profile": "Creates new pacchetto_documentale with template_code='profilo:{profile_id}'",
+    "Usage tracking": "usage_count increments, last_used_at updated after apply",
+    "Profile suggestion": "Returns matching profile by client_name for commessa",
+    "Audit logging": "Profile operations logged with entity_type=profilo_committente",
+    "Rule management": "Add/remove rules, toggle required/optional, select document type and entity type",
+    "Italian language": "All labels in Italian (Nome Committente, Regole Documentali, Applica a Commessa, etc.)"
+  }
+}

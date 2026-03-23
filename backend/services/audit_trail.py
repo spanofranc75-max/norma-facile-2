@@ -25,7 +25,7 @@ ENTITY_TYPES = [
     # New modules
     "cantiere_sicurezza", "obbligo", "pacchetto_documentale",
     "documento_archivio", "committenza_package", "committenza_analisi",
-    "emissione", "ramo_normativo",
+    "emissione", "ramo_normativo", "profilo_committente",
 ]
 
 ACTION_TYPES = [

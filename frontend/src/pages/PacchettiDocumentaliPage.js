@@ -16,7 +16,8 @@ import {
     FileInput, Upload, Package, CheckCircle2, AlertTriangle, XCircle,
     Clock, Shield, Eye, Loader2, Plus, Search, RefreshCw,
     Send, Mail, ArrowLeft, Paperclip, History, ChevronRight,
-    AlertCircle, ShieldAlert, FileText,
+    AlertCircle, ShieldAlert, FileText, UserCheck, Save, Trash2, Play,
+    Edit, Info,
 } from 'lucide-react';
 
 const STATUS_CONFIG = {
@@ -303,6 +304,7 @@ function PackageDetailView({ packId, tipiMap, onBack }) {
                     <p className="text-xs text-slate-400">ID: {pack.pack_id}</p>
                 </div>
                 <Badge className={ps.color}>{ps.label}</Badge>
+                <SaveAsProfileButton packId={packId} />
             </div>
 
             {/* Summary bar */}
@@ -490,6 +492,419 @@ function PackageDetailView({ packId, tipiMap, onBack }) {
     );
 }
 
+// ── Profile Management (D6) ──
+function ProfiliTab({ tipiDoc, onProfileApplied }) {
+    const [profili, setProfili] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [editing, setEditing] = useState(null); // profile_id or 'new'
+    const [form, setForm] = useState({ client_name: '', description: '', notes: '', warnings: [], rules: [] });
+    const [saving, setSaving] = useState(false);
+    const [applyDialog, setApplyDialog] = useState(null); // profile to apply
+    const [applyCommessa, setApplyCommessa] = useState('');
+    const [applyLabel, setApplyLabel] = useState('');
+    const [commesse, setCommesse] = useState([]);
+
+    const tipiMap = Object.fromEntries((tipiDoc || []).map(t => [t.code, t]));
+
+    const loadProfili = useCallback(async () => {
+        try {
+            const data = await apiRequest('/profili-committente');
+            setProfili(data);
+        } catch { toast.error('Errore caricamento profili'); }
+        finally { setLoading(false); }
+    }, []);
+
+    useEffect(() => { loadProfili(); }, [loadProfili]);
+
+    const startNew = () => {
+        setForm({ client_name: '', description: '', notes: '', warnings: [], rules: [] });
+        setEditing('new');
+    };
+
+    const startEdit = (p) => {
+        setForm({
+            client_name: p.client_name || '',
+            description: p.description || '',
+            notes: p.notes || '',
+            warnings: p.warnings || [],
+            rules: p.rules || [],
+        });
+        setEditing(p.profile_id);
+    };
+
+    const addRule = () => {
+        setForm(f => ({ ...f, rules: [...f.rules, { document_type_code: '', entity_type: 'azienda', required: true }] }));
+    };
+
+    const updateRule = (idx, field, val) => {
+        setForm(f => {
+            const rules = [...f.rules];
+            rules[idx] = { ...rules[idx], [field]: val };
+            return { ...f, rules };
+        });
+    };
+
+    const removeRule = (idx) => {
+        setForm(f => ({ ...f, rules: f.rules.filter((_, i) => i !== idx) }));
+    };
+
+    const handleSave = async () => {
+        if (!form.client_name.trim()) { toast.error('Nome committente obbligatorio'); return; }
+        if (form.rules.length === 0) { toast.error('Aggiungi almeno una regola'); return; }
+        setSaving(true);
+        try {
+            if (editing === 'new') {
+                await apiRequest('/profili-committente', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(form),
+                });
+                toast.success('Profilo creato');
+            } else {
+                await apiRequest(`/profili-committente/${editing}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(form),
+                });
+                toast.success('Profilo aggiornato');
+            }
+            setEditing(null);
+            loadProfili();
+        } catch (e) { toast.error(e.message); }
+        finally { setSaving(false); }
+    };
+
+    const handleDelete = async (profileId) => {
+        if (!window.confirm('Eliminare questo profilo?')) return;
+        try {
+            await apiRequest(`/profili-committente/${profileId}`, { method: 'DELETE' });
+            toast.success('Profilo eliminato');
+            loadProfili();
+        } catch (e) { toast.error(e.message); }
+    };
+
+    const openApply = async (profilo) => {
+        setApplyDialog(profilo);
+        setApplyCommessa('');
+        setApplyLabel(`${profilo.client_name} — ${new Date().toISOString().slice(0, 10)}`);
+        try {
+            const c = await apiRequest('/commesse');
+            setCommesse(c.filter(x => x.stato !== 'chiuso').slice(0, 50));
+        } catch { setCommesse([]); }
+    };
+
+    const handleApply = async () => {
+        if (!applyCommessa) { toast.error('Seleziona una commessa'); return; }
+        try {
+            const result = await apiRequest(`/profili-committente/${applyDialog.profile_id}/applica`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ commessa_id: applyCommessa, label: applyLabel }),
+            });
+            toast.success(`Pacchetto creato: ${result.pack?.label}`);
+            setApplyDialog(null);
+            loadProfili();
+            if (onProfileApplied) onProfileApplied();
+        } catch (e) { toast.error(e.message); }
+    };
+
+    if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div>;
+
+    // Edit / New form
+    if (editing) {
+        return (
+            <div className="space-y-4" data-testid="profilo-editor">
+                <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="sm" onClick={() => setEditing(null)} data-testid="btn-back-profili">
+                        <ArrowLeft className="h-4 w-4 mr-1" /> Indietro
+                    </Button>
+                    <h3 className="text-base font-bold text-slate-800">
+                        {editing === 'new' ? 'Nuovo Profilo Committente' : 'Modifica Profilo'}
+                    </h3>
+                </div>
+
+                <Card>
+                    <CardContent className="pt-4 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                                <Label className="text-xs">Nome Committente *</Label>
+                                <Input value={form.client_name} onChange={e => setForm(f => ({ ...f, client_name: e.target.value }))}
+                                    placeholder="es. Impresa Edile Rossi S.r.l." data-testid="input-client-name" />
+                            </div>
+                            <div>
+                                <Label className="text-xs">Descrizione</Label>
+                                <Input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                                    placeholder="es. Committente cantieri residenziali" data-testid="input-description" />
+                            </div>
+                        </div>
+                        <div>
+                            <Label className="text-xs">Note operative</Label>
+                            <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                                rows={2} placeholder="Note per l'utilizzo di questo profilo..." data-testid="input-notes" />
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-sm">Regole Documentali ({form.rules.length})</CardTitle>
+                            <Button size="sm" variant="outline" onClick={addRule} data-testid="btn-add-rule">
+                                <Plus className="h-3 w-3 mr-1" /> Aggiungi Regola
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        {form.rules.length === 0 && (
+                            <p className="text-xs text-slate-400 py-4 text-center">Nessuna regola. Aggiungi i documenti richiesti da questo committente.</p>
+                        )}
+                        {form.rules.map((rule, idx) => (
+                            <div key={idx} className="flex items-center gap-2 p-2 rounded border border-slate-100 bg-slate-50" data-testid={`rule-${idx}`}>
+                                <Select value={rule.document_type_code}
+                                    onValueChange={v => updateRule(idx, 'document_type_code', v)}>
+                                    <SelectTrigger className="flex-1 h-8 text-xs" data-testid={`rule-doctype-${idx}`}>
+                                        <SelectValue placeholder="Tipo documento..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {tipiDoc.map(t => (
+                                            <SelectItem key={t.code} value={t.code}>{t.label} ({ENTITY_LABELS[t.entity_type]})</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Select value={rule.entity_type}
+                                    onValueChange={v => updateRule(idx, 'entity_type', v)}>
+                                    <SelectTrigger className="w-[110px] h-8 text-xs">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="azienda">Azienda</SelectItem>
+                                        <SelectItem value="persona">Persona</SelectItem>
+                                        <SelectItem value="mezzo">Mezzo</SelectItem>
+                                        <SelectItem value="cantiere">Cantiere</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Button size="sm" variant={rule.required ? 'default' : 'outline'}
+                                    className={`h-8 text-[10px] ${rule.required ? 'bg-red-600 hover:bg-red-700' : ''}`}
+                                    onClick={() => updateRule(idx, 'required', !rule.required)}>
+                                    {rule.required ? 'Obbligatorio' : 'Opzionale'}
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-400 hover:text-red-600"
+                                    onClick={() => removeRule(idx)} data-testid={`btn-remove-rule-${idx}`}>
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+
+                <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setEditing(null)}>Annulla</Button>
+                    <Button onClick={handleSave} disabled={saving} className="bg-violet-600 text-white hover:bg-violet-700"
+                        data-testid="btn-save-profilo">
+                        {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                        {editing === 'new' ? 'Crea Profilo' : 'Salva Modifiche'}
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
+    // List view
+    return (
+        <div className="space-y-4" data-testid="profili-list">
+            <div className="flex items-center justify-between">
+                <p className="text-sm text-slate-500">{profili.length} profili committente</p>
+                <Button size="sm" onClick={startNew} className="bg-violet-600 text-white hover:bg-violet-700"
+                    data-testid="btn-nuovo-profilo">
+                    <Plus className="h-4 w-4 mr-1" /> Nuovo Profilo
+                </Button>
+            </div>
+
+            {profili.length === 0 ? (
+                <Card className="border-dashed border-2 border-violet-200">
+                    <CardContent className="py-12 text-center">
+                        <UserCheck className="h-10 w-10 text-violet-300 mx-auto mb-3" />
+                        <p className="text-sm text-slate-500">Nessun profilo committente creato.</p>
+                        <p className="text-xs text-slate-400 mt-1">Crea un profilo per precompilare automaticamente i pacchetti per i clienti ricorrenti.</p>
+                    </CardContent>
+                </Card>
+            ) : (
+                profili.map(p => (
+                    <Card key={p.profile_id} className="hover:shadow-md transition-shadow border-slate-200"
+                        data-testid={`profilo-${p.profile_id}`}>
+                        <CardHeader className="pb-2">
+                            <div className="flex items-center justify-between">
+                                <div className="flex-1 min-w-0">
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <UserCheck className="h-4 w-4 text-violet-600" />
+                                        {p.client_name}
+                                    </CardTitle>
+                                    <CardDescription className="text-xs mt-0.5">{p.description}</CardDescription>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Badge variant="outline" className="text-[10px]">{p.rules?.length || 0} regole</Badge>
+                                    {p.usage_count > 0 && (
+                                        <Badge className="text-[10px] bg-violet-100 text-violet-700">Usato {p.usage_count}x</Badge>
+                                    )}
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                            {/* Rules preview */}
+                            <div className="flex gap-1.5 flex-wrap mb-3">
+                                {(p.rules || []).slice(0, 6).map((r, i) => (
+                                    <Badge key={i} variant="outline" className={`text-[9px] ${r.required ? 'border-red-200 text-red-700 bg-red-50' : 'border-slate-200 text-slate-600'}`}>
+                                        {tipiMap[r.document_type_code]?.label || r.document_type_code}
+                                    </Badge>
+                                ))}
+                                {(p.rules || []).length > 6 && (
+                                    <Badge variant="outline" className="text-[9px]">+{p.rules.length - 6}</Badge>
+                                )}
+                            </div>
+                            {p.notes && (
+                                <p className="text-[10px] text-slate-500 flex items-start gap-1 mb-2">
+                                    <Info className="h-3 w-3 mt-0.5 shrink-0" /> {p.notes}
+                                </p>
+                            )}
+                            {p.warnings?.length > 0 && (
+                                <div className="mb-2">
+                                    {p.warnings.map((w, i) => (
+                                        <p key={i} className="text-[10px] text-amber-600 flex items-start gap-1">
+                                            <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" /> {w}
+                                        </p>
+                                    ))}
+                                </div>
+                            )}
+                            {/* Actions */}
+                            <Separator className="my-2" />
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Button size="sm" variant="outline" className="h-7 text-[10px]"
+                                        onClick={() => startEdit(p)} data-testid={`btn-edit-${p.profile_id}`}>
+                                        <Edit className="h-3 w-3 mr-1" /> Modifica
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-7 text-[10px] text-red-500 hover:text-red-700"
+                                        onClick={() => handleDelete(p.profile_id)} data-testid={`btn-delete-${p.profile_id}`}>
+                                        <Trash2 className="h-3 w-3 mr-1" /> Elimina
+                                    </Button>
+                                </div>
+                                <Button size="sm" className="h-7 text-[10px] bg-emerald-600 text-white hover:bg-emerald-700"
+                                    onClick={() => openApply(p)} data-testid={`btn-apply-${p.profile_id}`}>
+                                    <Play className="h-3 w-3 mr-1" /> Applica a Commessa
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))
+            )}
+
+            {/* Apply Dialog */}
+            <Dialog open={!!applyDialog} onOpenChange={(o) => !o && setApplyDialog(null)}>
+                <DialogContent data-testid="apply-profile-dialog">
+                    <DialogHeader>
+                        <DialogTitle>Applica Profilo: {applyDialog?.client_name}</DialogTitle>
+                        <DialogDescription>
+                            Seleziona la commessa per creare un pacchetto precompilato con {applyDialog?.rules?.length || 0} regole.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3 py-2">
+                        <div>
+                            <Label className="text-xs">Commessa *</Label>
+                            <Select value={applyCommessa} onValueChange={setApplyCommessa}>
+                                <SelectTrigger data-testid="select-apply-commessa">
+                                    <SelectValue placeholder="Seleziona commessa..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {commesse.map(c => (
+                                        <SelectItem key={c.commessa_id} value={c.commessa_id}>
+                                            {c.numero} — {c.title || c.client_name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label className="text-xs">Nome Pacchetto</Label>
+                            <Input value={applyLabel} onChange={e => setApplyLabel(e.target.value)}
+                                data-testid="input-apply-label" />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setApplyDialog(null)}>Annulla</Button>
+                        <Button onClick={handleApply} className="bg-emerald-600 text-white hover:bg-emerald-700"
+                            data-testid="btn-confirm-apply">
+                            <Play className="h-4 w-4 mr-2" /> Crea Pacchetto
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}
+
+// ── Save as Profile Button (used in PackageDetailView) ──
+function SaveAsProfileButton({ packId }) {
+    const [showDialog, setShowDialog] = useState(false);
+    const [clientName, setClientName] = useState('');
+    const [description, setDescription] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    const handleSave = async () => {
+        if (!clientName.trim()) { toast.error('Nome committente obbligatorio'); return; }
+        setSaving(true);
+        try {
+            await apiRequest(`/profili-committente/da-pacchetto/${packId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ client_name: clientName, description }),
+            });
+            toast.success('Profilo salvato');
+            setShowDialog(false);
+        } catch (e) { toast.error(e.message); }
+        finally { setSaving(false); }
+    };
+
+    return (
+        <>
+            <Button size="sm" variant="outline" className="h-7 text-[10px] border-violet-300 text-violet-700"
+                onClick={() => setShowDialog(true)} data-testid="btn-save-as-profile">
+                <UserCheck className="h-3 w-3 mr-1" /> Salva come Profilo
+            </Button>
+            <Dialog open={showDialog} onOpenChange={setShowDialog}>
+                <DialogContent data-testid="save-profile-dialog">
+                    <DialogHeader>
+                        <DialogTitle>Salva come Profilo Committente</DialogTitle>
+                        <DialogDescription>
+                            Il sistema creera un profilo riutilizzabile basato sulle regole di questo pacchetto.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3 py-2">
+                        <div>
+                            <Label className="text-xs">Nome Committente *</Label>
+                            <Input value={clientName} onChange={e => setClientName(e.target.value)}
+                                placeholder="es. Impresa Edile Rossi" data-testid="input-profile-client" />
+                        </div>
+                        <div>
+                            <Label className="text-xs">Descrizione</Label>
+                            <Input value={description} onChange={e => setDescription(e.target.value)}
+                                placeholder="es. Cantieri residenziali Nord Italia" data-testid="input-profile-desc" />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowDialog(false)}>Annulla</Button>
+                        <Button onClick={handleSave} disabled={saving} className="bg-violet-600 text-white hover:bg-violet-700"
+                            data-testid="btn-confirm-save-profile">
+                            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                            Salva Profilo
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
+    );
+}
+
+
 
 // ── Main Page ──
 export default function PacchettiDocumentaliPage() {
@@ -592,6 +1007,9 @@ export default function PacchettiDocumentaliPage() {
                         <TabsTrigger value="pacchetti" className="gap-2" data-testid="tab-pacchetti">
                             <Package className="h-4 w-4" /> Pacchetti
                         </TabsTrigger>
+                        <TabsTrigger value="profili" className="gap-2" data-testid="tab-profili">
+                            <UserCheck className="h-4 w-4" /> Profili Committente
+                        </TabsTrigger>
                     </TabsList>
 
                     {/* ── TAB: Archivio Documenti ── */}
@@ -676,6 +1094,11 @@ export default function PacchettiDocumentaliPage() {
                                 )}
                             </>
                         )}
+                    </TabsContent>
+
+                    {/* ── TAB: Profili Committente (D6) ── */}
+                    <TabsContent value="profili" className="space-y-4">
+                        <ProfiliTab tipiDoc={tipiDoc} onProfileApplied={loadData} />
                     </TabsContent>
                 </Tabs>
             </div>

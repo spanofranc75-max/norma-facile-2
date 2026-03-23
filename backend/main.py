@@ -94,6 +94,7 @@ from routes.cantieri_sicurezza import router as cantieri_sicurezza_router
 from routes.pacchetti_documentali import router as pacchetti_documentali_router
 from routes.obblighi_commessa import router as obblighi_commessa_router
 from routes.committenza import router as committenza_router
+from routes.profili_committente import router as profili_committente_router
 
 # Configure logging
 logging.basicConfig(
@@ -232,6 +233,7 @@ app.include_router(cantieri_sicurezza_router, prefix="/api")
 app.include_router(pacchetti_documentali_router, prefix="/api")
 app.include_router(obblighi_commessa_router, prefix="/api")
 app.include_router(committenza_router, prefix="/api")
+app.include_router(profili_committente_router, prefix="/api")
 
 
 @app.on_event("startup")
