@@ -1692,3 +1692,343 @@ async def get_executive_dashboard(user: dict = Depends(get_current_user)):
         "totale_valore": sum((c.get("value") or 0) for c in commesse),
         "cam_safety_gate": cam_safety,
     }
+
+
+
+# ── Dashboard Cantiere Multilivello ──────────────────────────────
+
+@router.get("/cantiere-multilivello")
+async def get_cantiere_multilivello(user: dict = Depends(get_current_user)):
+    """Dashboard Cantiere Multilivello — aggregazione obblighi, POS, emissioni, pacchetti, committenza."""
+    uid = user["user_id"]
+
+    # 1. Fetch all active commesse
+    commesse = await db.commesse.find(
+        {"user_id": uid, "stato": {"$nin": ["chiuso"]}},
+        {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "stato": 1,
+         "normativa_tipo": 1, "client_name": 1, "value": 1, "deadline": 1,
+         "classe_esecuzione": 1, "moduli": 1, "created_at": 1}
+    ).sort("created_at", -1).to_list(200)
+
+    if not commesse:
+        return {"commesse": [], "global_summary": {
+            "totale": 0, "verdi": 0, "gialli": 0, "rossi": 0,
+            "bloccanti_totali": 0, "aperti_totali": 0,
+        }}
+
+    cid_list = [c["commessa_id"] for c in commesse]
+
+    # 2. Fetch obblighi in bulk per commessa via aggregation
+    obblighi_pipeline = [
+        {"$match": {"user_id": uid, "commessa_id": {"$in": cid_list}}},
+        {"$group": {
+            "_id": {
+                "commessa_id": "$commessa_id",
+                "status": "$status",
+                "blocking_level": "$blocking_level",
+                "source_module": "$source_module",
+                "severity": "$severity",
+            },
+            "count": {"$sum": 1},
+        }},
+    ]
+    obblighi_raw = await db.obblighi_commessa.aggregate(obblighi_pipeline).to_list(5000)
+
+    # Build nested map: commessa_id -> { stats, by_source, by_severity, by_blocking }
+    obblighi_map = {}
+    for row in obblighi_raw:
+        cid = row["_id"]["commessa_id"]
+        if cid not in obblighi_map:
+            obblighi_map[cid] = {
+                "totale": 0, "bloccanti": 0, "aperti": 0, "chiusi": 0,
+                "da_verificare": 0, "warnings": 0,
+                "by_source": {}, "by_severity": {},
+            }
+        m = obblighi_map[cid]
+        cnt = row["count"]
+        status = row["_id"]["status"]
+        blocking = row["_id"]["blocking_level"]
+        source = row["_id"]["source_module"]
+        severity = row["_id"]["severity"]
+
+        m["totale"] += cnt
+        if status in ("nuovo", "da_verificare", "in_corso", "bloccante"):
+            m["aperti"] += cnt
+        if status in ("completato", "chiuso", "non_applicabile"):
+            m["chiusi"] += cnt
+        if status == "da_verificare":
+            m["da_verificare"] += cnt
+        if blocking == "hard_block" and status in ("nuovo", "da_verificare", "in_corso", "bloccante"):
+            m["bloccanti"] += cnt
+        if blocking == "warning" and status in ("nuovo", "da_verificare", "in_corso", "bloccante"):
+            m["warnings"] += cnt
+
+        # By source (only open)
+        if status in ("nuovo", "da_verificare", "in_corso", "bloccante"):
+            m["by_source"][source] = m["by_source"].get(source, 0) + cnt
+        # By severity (only open)
+        if status in ("nuovo", "da_verificare", "in_corso", "bloccante"):
+            m["by_severity"][severity] = m["by_severity"].get(severity, 0) + cnt
+
+    # 3. Fetch top blockers per commessa (limit 5 per commessa for the card)
+    top_blockers_raw = await db.obblighi_commessa.find(
+        {"user_id": uid, "commessa_id": {"$in": cid_list},
+         "blocking_level": "hard_block",
+         "status": {"$in": ["nuovo", "da_verificare", "in_corso", "bloccante"]}},
+        {"_id": 0, "commessa_id": 1, "title": 1, "source_module": 1,
+         "severity": 1, "code": 1, "linked_route": 1, "due_date": 1}
+    ).sort([("commessa_id", 1), ("created_at", -1)]).to_list(1000)
+
+    blockers_map = {}
+    for b in top_blockers_raw:
+        cid = b["commessa_id"]
+        blockers_map.setdefault(cid, [])
+        if len(blockers_map[cid]) < 5:
+            b.pop("commessa_id", None)
+            blockers_map[cid].append(b)
+
+    # 4. Fetch cantieri sicurezza per commessa (for POS gate status)
+    cantieri = await db.cantieri_sicurezza.find(
+        {"user_id": uid, "$or": [
+            {"commessa_id": {"$in": cid_list}},
+            {"parent_commessa_id": {"$in": cid_list}},
+        ]},
+        {"_id": 0, "cantiere_id": 1, "commessa_id": 1, "parent_commessa_id": 1,
+         "gate_pos_status": 1, "nome_cantiere": 1}
+    ).to_list(200)
+
+    cantieri_map = {}
+    for ct in cantieri:
+        cid = ct.get("commessa_id") or ct.get("parent_commessa_id")
+        if cid:
+            gate = ct.get("gate_pos_status", {})
+            cantieri_map[cid] = {
+                "cantiere_id": ct.get("cantiere_id", ""),
+                "nome": ct.get("nome_cantiere", ""),
+                "gate_pos_ready": gate.get("ready", False),
+                "campi_mancanti": len(gate.get("campi_mancanti", [])),
+                "blockers": len(gate.get("blockers", [])),
+            }
+
+    # 5. Fetch rami normativi per commessa
+    rami = await db.rami_normativi.find(
+        {"user_id": uid, "commessa_id": {"$in": cid_list}},
+        {"_id": 0, "ramo_id": 1, "commessa_id": 1, "codice_ramo": 1,
+         "normativa": 1, "stato": 1}
+    ).to_list(500)
+
+    rami_map = {}
+    for r in rami:
+        cid = r["commessa_id"]
+        rami_map.setdefault(cid, [])
+        rami_map[cid].append({
+            "ramo_id": r.get("ramo_id", ""),
+            "codice": r.get("codice_ramo", ""),
+            "normativa": r.get("normativa", ""),
+            "stato": r.get("stato", "draft"),
+        })
+
+    # 6. Fetch emissioni per ramo
+    all_ramo_ids = [r.get("ramo_id") for ramo_list in rami_map.values() for r in ramo_list]
+    emissioni = await db.emissioni_documentali.find(
+        {"user_id": uid, "ramo_id": {"$in": all_ramo_ids}},
+        {"_id": 0, "emissione_id": 1, "ramo_id": 1, "codice_emissione": 1,
+         "stato": 1, "gate_result": 1}
+    ).to_list(1000)
+
+    # Build emissioni map: ramo_id -> list
+    emissioni_by_ramo = {}
+    for e in emissioni:
+        rid = e.get("ramo_id", "")
+        emissioni_by_ramo.setdefault(rid, [])
+        gate = e.get("gate_result", {})
+        emissioni_by_ramo[rid].append({
+            "emissione_id": e.get("emissione_id", ""),
+            "codice": e.get("codice_emissione", ""),
+            "stato": e.get("stato", ""),
+            "gate_ready": gate.get("ready", False) if gate else False,
+            "blockers": len(gate.get("blockers", [])) if gate else 0,
+            "warnings": len(gate.get("warnings", [])) if gate else 0,
+        })
+
+    # Enrich rami with emissioni
+    for cid, ramo_list in rami_map.items():
+        for ramo in ramo_list:
+            ramo["emissioni"] = emissioni_by_ramo.get(ramo["ramo_id"], [])
+            total_emi = len(ramo["emissioni"])
+            ready_emi = sum(1 for e in ramo["emissioni"] if e["gate_ready"])
+            ramo["emissioni_totali"] = total_emi
+            ramo["emissioni_pronte"] = ready_emi
+
+    # 7. Fetch pacchetti documentali per commessa
+    pacchetti = await db.pacchetti_documentali.find(
+        {"user_id": uid, "commessa_id": {"$in": cid_list}, "status": {"$ne": "annullato"}},
+        {"_id": 0, "pack_id": 1, "commessa_id": 1, "label": 1,
+         "template_code": 1, "items": 1}
+    ).to_list(200)
+
+    pacchetti_map = {}
+    for p in pacchetti:
+        cid = p["commessa_id"]
+        pacchetti_map.setdefault(cid, [])
+        items = p.get("items", [])
+        total_items = len(items)
+        attached = sum(1 for i in items if i.get("status") == "attached")
+        missing = sum(1 for i in items if i.get("status") == "missing")
+        expired = sum(1 for i in items if i.get("status") == "expired")
+        pacchetti_map[cid].append({
+            "pack_id": p.get("pack_id", ""),
+            "label": p.get("label", p.get("template_code", "")),
+            "totale_items": total_items,
+            "attached": attached,
+            "missing": missing,
+            "expired": expired,
+            "completo": missing == 0 and expired == 0 and total_items > 0,
+        })
+
+    # 8. Fetch committenza analyses per commessa
+    analisi_raw = await db.analisi_committenza.find(
+        {"user_id": uid, "commessa_id": {"$in": cid_list}},
+        {"_id": 0, "analysis_id": 1, "commessa_id": 1, "status": 1,
+         "extracted_obligations": 1, "anomalies": 1, "mismatches": 1}
+    ).to_list(200)
+
+    committenza_map = {}
+    for a in analisi_raw:
+        cid = a.get("commessa_id", "")
+        committenza_map.setdefault(cid, [])
+        committenza_map[cid].append({
+            "analysis_id": a.get("analysis_id", ""),
+            "status": a.get("status", ""),
+            "n_obblighi": len(a.get("extracted_obligations", []) or []),
+            "n_anomalie": len(a.get("anomalies", []) or []),
+            "n_mismatch": len(a.get("mismatches", []) or []),
+        })
+
+    # 9. Fetch pacchetti committenza
+    pkg_committenza = await db.pacchetti_committenza.find(
+        {"user_id": uid, "commessa_id": {"$in": cid_list}},
+        {"_id": 0, "package_id": 1, "commessa_id": 1, "title": 1,
+         "status": 1, "document_ids": 1}
+    ).to_list(200)
+
+    pkg_committenza_map = {}
+    for pkg in pkg_committenza:
+        cid = pkg.get("commessa_id", "")
+        pkg_committenza_map.setdefault(cid, [])
+        pkg_committenza_map[cid].append({
+            "package_id": pkg.get("package_id", ""),
+            "title": pkg.get("title", ""),
+            "status": pkg.get("status", ""),
+            "n_documenti": len(pkg.get("document_ids", []) or []),
+        })
+
+    # 10. Build response
+    today = date.today()
+    result_commesse = []
+    global_bloccanti = 0
+    global_aperti = 0
+    colors = {"verde": 0, "giallo": 0, "rosso": 0}
+
+    for c in commesse:
+        cid = c["commessa_id"]
+        obl = obblighi_map.get(cid, {
+            "totale": 0, "bloccanti": 0, "aperti": 0, "chiusi": 0,
+            "da_verificare": 0, "warnings": 0, "by_source": {}, "by_severity": {},
+        })
+
+        # Compute semaphore
+        if obl["bloccanti"] > 0:
+            semaforo = "rosso"
+        elif obl["warnings"] > 0 or obl["aperti"] > 3:
+            semaforo = "giallo"
+        else:
+            semaforo = "verde"
+
+        colors[semaforo] += 1
+        global_bloccanti += obl["bloccanti"]
+        global_aperti += obl["aperti"]
+
+        # Deadline info
+        deadline = c.get("deadline")
+        days_left = None
+        if deadline:
+            try:
+                dl = datetime.strptime(deadline, "%Y-%m-%d").date()
+                days_left = (dl - today).days
+            except (ValueError, TypeError):
+                pass
+
+        # POS readiness
+        pos_info = cantieri_map.get(cid)
+
+        # Rami summary
+        rami_list = rami_map.get(cid, [])
+        rami_summary = {
+            "totale": len(rami_list),
+            "pronti": sum(1 for r in rami_list if r.get("stato") in ("confermato", "completato", "pronto")),
+            "emissioni_totali": sum(r.get("emissioni_totali", 0) for r in rami_list),
+            "emissioni_pronte": sum(r.get("emissioni_pronte", 0) for r in rami_list),
+        }
+
+        # Pacchetti summary
+        packs = pacchetti_map.get(cid, [])
+        pacchetti_summary = {
+            "totale": len(packs),
+            "completi": sum(1 for p in packs if p["completo"]),
+            "missing_totali": sum(p["missing"] for p in packs),
+            "expired_totali": sum(p["expired"] for p in packs),
+        }
+
+        # Committenza summary
+        analisi_list = committenza_map.get(cid, [])
+        pkg_list = pkg_committenza_map.get(cid, [])
+        committenza_summary = {
+            "pacchetti": len(pkg_list),
+            "analisi_totali": len(analisi_list),
+            "analisi_approvate": sum(1 for a in analisi_list if a["status"] == "approved"),
+            "analisi_pending": sum(1 for a in analisi_list if a["status"] in ("completed", "in_review")),
+            "obblighi_estratti": sum(a["n_obblighi"] for a in analisi_list),
+            "anomalie_totali": sum(a["n_anomalie"] for a in analisi_list),
+            "mismatch_totali": sum(a["n_mismatch"] for a in analisi_list),
+        }
+
+        result_commesse.append({
+            "commessa_id": cid,
+            "numero": c.get("numero", ""),
+            "title": c.get("title", ""),
+            "stato": c.get("stato", ""),
+            "normativa_tipo": c.get("normativa_tipo", ""),
+            "client_name": c.get("client_name", ""),
+            "value": c.get("value", 0),
+            "deadline": deadline,
+            "days_left": days_left,
+            "semaforo": semaforo,
+            # Obblighi summary
+            "obblighi": obl,
+            "top_blockers": blockers_map.get(cid, []),
+            # L2: Rami
+            "rami": rami_list,
+            "rami_summary": rami_summary,
+            # L3: Sicurezza (POS)
+            "pos": pos_info,
+            # L3b: Pacchetti documentali
+            "pacchetti": packs,
+            "pacchetti_summary": pacchetti_summary,
+            # L4: Committenza
+            "committenza_packages": pkg_list,
+            "committenza_analisi": analisi_list,
+            "committenza_summary": committenza_summary,
+        })
+
+    return {
+        "commesse": result_commesse,
+        "global_summary": {
+            "totale": len(result_commesse),
+            "verdi": colors["verde"],
+            "gialli": colors["giallo"],
+            "rossi": colors["rosso"],
+            "bloccanti_totali": global_bloccanti,
+            "aperti_totali": global_aperti,
+        },
+    }

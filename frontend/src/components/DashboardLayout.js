@@ -48,6 +48,14 @@ const NAV_GROUPS = [
         roles: ['admin'],
     },
     {
+        id: 'cruscotto-cantiere',
+        label: 'Dashboard Cantiere',
+        icon: ClipboardCheck,
+        type: 'link',
+        path: '/cruscotto-cantiere',
+        roles: ['admin', 'ufficio_tecnico'],
+    },
+    {
         id: 'ebitda',
         label: 'Analisi Finanziaria',
         icon: TrendingUp,

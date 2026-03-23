@@ -69,6 +69,7 @@ import AttrezzaturePage from './pages/AttrezzaturePage';
 import ScadenziarioManutenzioniPage from './pages/ScadenziarioManutenzioniPage';
 import VerbaliITTPage from './pages/VerbaliITTPage';
 import ExecutiveDashboardPage from './pages/ExecutiveDashboardPage';
+import DashboardCantierePage from './pages/DashboardCantierePage';
 import ArchivioStoricoPage from './pages/ArchivioStoricoPage';
 import IstruttoriaPage from './pages/IstruttoriaPage';
 import ValidationPage from './pages/ValidationPage';
@@ -286,6 +287,7 @@ function AppRouter() {
             <Route path="/manutenzioni" element={<ProtectedRoute><ScadenziarioManutenzioniPage /></ProtectedRoute>} />
             <Route path="/verbali-itt" element={<ProtectedRoute><VerbaliITTPage /></ProtectedRoute>} />
             <Route path="/executive" element={<ProtectedRoute><ExecutiveDashboardPage /></ProtectedRoute>} />
+            <Route path="/cruscotto-cantiere" element={<ProtectedRoute><DashboardCantierePage /></ProtectedRoute>} />
             <Route path="/archivio-storico" element={<ProtectedRoute><ArchivioStoricoPage /></ProtectedRoute>} />
             <Route path="/istruttoria/:preventivoId" element={<ProtectedRoute><IstruttoriaPage /></ProtectedRoute>} />
             <Route path="/validazione-p1" element={<ProtectedRoute><ValidationPage /></ProtectedRoute>} />
