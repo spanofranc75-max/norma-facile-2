@@ -32,67 +32,39 @@ Sistema operativo verticale per carpenteria metallica / EN 1090 / EN 13241 / sic
 17. Notifiche intelligenti in-app
 18. Repository documentale interno alla commessa
 
-## Stato attuale — Post-Audit (2026-03-23)
+## Stato attuale — Post-Audit e Post-Hardening
 
-### Audit completato
-Prodotti 7 report di audit approfondito:
-- `MASTER_AUDIT_REPORT.md` — Executive summary
-- `CODEBASE_INVENTORY.md` — Inventario 100 collezioni, 78 routes, 58 services
-- `FLOW_GAPS_REPORT.md` — 7 flussi analizzati, mappa collegamenti
-- `TECH_DEBT_BACKLOG.md` — 15 issue prioritizzate
-- `UX_AND_PRODUCT_GAPS.md` — 12 gap UX/prodotto
-- `CLEANUP_LIST.md` — Dead code, directory, collezioni da eliminare
-- `COMPLIANCE_RISKS.md` — 10 rischi sicurezza/GDPR/AI
+### Hardening completato (2026-03-23)
+- **TD-001**: Indici MongoDB — 24 indici su 12 collezioni critiche
+- **TD-002**: Rimosso router sicurezza duplicato
+- **TD-005**: Rate limiting su 15 endpoint AI (slowapi)
+- **TD-009**: Error handling su background tasks (safe_background_task)
+- **TD-010**: Filtro user_id su 7 route multi-tenant
+- **TD-004**: Cleanup dead code (2 service, 5 file legacy, 158 import)
+- **CR-001/002**: JWT secret hardened, chiave LLM unificata, cleanup sessioni
+- **Data Integrity**: 0 CRITICAL, 0 WARNING — backfill user_id, eliminati orfani
 
-### Finding critici
-1. ~~**BLOCKER**: Indici MongoDB non creati (lifespan/on_event conflict)~~ **RISOLTO (2026-03-23)**
-2. ~~**Alta**: Router sicurezza duplicato in main.py~~ **RISOLTO (2026-03-23)**
-3. ~~**Alta**: Nessun rate limiting~~ **RISOLTO (2026-03-23)** — 15 endpoint AI protetti (10/min per user)
-4. **Alta**: ~3.200 righe dead code
-5. **Alta**: 78/100 collezioni senza indici (12 critiche ora indicizzate con 24 indici)
+### UX-001 Completato (2026-03-23)
+- **Semplificazione CommessaHubPage**: Refactoring da 1063 a ~975 righe
+- **CommessaActionsMenu.js**: Dropdown menu per generazione documenti (Dossier, Pacco, Template 111, DoP, Etichetta CE, Rintracciabilita, CAM, Pacco RINA)
+- **NextStepCard.js**: Guida contestuale "Cosa devo fare adesso?" basata sullo stato della commessa
+- **Layout migliorato**: Accordion collassabili (Dati Economici, Rami Normativi, Qualita), layout 2 colonne, lifecycle bar visuale
+- **Bug fix**: Componente CostRow mancante ripristinato
+- **Testing**: 100% frontend pass (3 commesse diverse, 11 componenti, 3 dialog)
 
-### Fix completati (2026-03-23)
-- **TD-001 RISOLTO**: Spostato startup da `on_event("startup")` a `lifespan()`. 24 indici creati su 12 collezioni critiche (9 unique + 15 lookup). Indici idempotenti — safe ad ogni restart.
-- **TD-002 RISOLTO**: Rimosso import + registrazione duplicata `sicurezza_router` da main.py.
-- **TD-005 RISOLTO**: Rate limiting su 15 endpoint AI (10/min per user, 5/min batch). slowapi con key_func basata su user_id.
-- **TD-009 RISOLTO**: Error handling su asyncio.create_task() — 5 fire-and-forget wrappati con safe_background_task + crash callback sullo scheduler.
-- **TD-010 RISOLTO**: Filtro user_id aggiunto su audits.py, instruments.py, welders.py, quality_hub.py, verbale_posa.py, montaggio.py. Protezione multi-tenant su read/write/delete.
-- **Endpoint /api/health/indexes**: Nuovo endpoint per verifica runtime degli indici critici.
+## Backlog prioritizzato
 
-### Data Integrity (2026-03-23)
-- **Check script**: `/app/backend/scripts/data_integrity_check.py` — verifica 6 aree (duplicati, ref rotti, stati, campi, snapshot, legacy)
-- **Fix script**: `/app/backend/scripts/data_integrity_fix.py` — fix batch a-e
-- **Risultato finale**: 0 CRITICAL, 0 WARNING su 20 check
-- **Fix applicati**:
-  - Backfill `user_id` su 4 non_conformities legacy
-  - Eliminati 4 commesse_normative + 24 obblighi_commessa orfani (backup salvato)
-  - Eliminati 1 instrument + 1 welder corrotti (backup salvato)
-  - Eliminati 21 pacchetti_documentali di test senza commessa_id (backup salvato)
-  - Ricalcolati 24 summary pacchetti documentali
-  - Regola `documenti_archivio`: commessa_id opzionale per entity_type azienda/persona/mezzo
-### Sicurezza Credenziali CR-001/002 (2026-03-23)
-- **JWT_SECRET**: rimosso default fallback pericoloso, generato secret crittografico 86 char (secrets.token_urlsafe(64)), startup check con fail fast se mancante o < 32 char
-- **Chiave LLM unificata**: allineato `committenza_analysis_service.py` a `EMERGENT_LLM_KEY`, rimosso `EMERGENT_API_KEY` duplicato da .env
-- **Indici auth**: `uq_session_token` e `uq_download_token` (unique) + expiry indexes
-- **Cleanup periodico**: scheduler pulisce sessioni/token scaduti ogni 24h
-- **Startup security checks**: verifica JWT_SECRET, EMERGENT_LLM_KEY, RESEND_API_KEY all'avvio
-- **Scoperta**: `download_tokens` NON è zombie — attivamente usata da `create_download_token()`
-- **Nota**: `user_sessions` aveva già TTL index (`idx_expires`) — auto-cleanup MongoDB nativo
+### P0 — Prossimi task
+- **UX-003**: Onboarding primo utilizzo (empty states intelligenti, percorsi guidati per nuovi utenti)
 
-### Scoperte importanti dall'audit
-- Le 6 route "orfane" nel report di audit erano ERRATE — sono sub-moduli di `commessa_ops.py`, attivamente registrati
-- Le 6 collezioni "zombie" nel report erano ERRATE — tutte referenziate dal codice attivo
-- Solo 2 vere collezioni zombie: `download_tokens`, `sessions`
-- Il vero dead code confermato era: 2 service (aruba_sdi, pos_pdf_service), 5 file root legacy, 158 import inutilizzati
+### P1 — Task tecnici
+- Finalizzare Data Integrity Check come tool admin riutilizzabile (endpoint protetto o job periodico)
+- **TD-003**: Aggiungere indici MongoDB alle collezioni rimanenti non critiche
 
-### Backlog prioritizzato (in attesa approvazione utente)
-- TD-001 a TD-015: Tech debt (TECH_DEBT_BACKLOG.md)
-- UX-001 a UX-012: Gap UX (UX_AND_PRODUCT_GAPS.md)
-- CR-001 a CR-010: Compliance (COMPLIANCE_RISKS.md)
-
-## Task ON HOLD (fino ad approvazione post-audit)
+### P2 — Backlog futuro
+- Revisione collezioni "zombie" (download_tokens, sessions)
+- Refactoring altri file monolitici
 - Email automatiche selettive
-- Monetizzazione / Stripe
+- Integrazione Stripe per monetizzazione
 - Stability Guard AI
-- Multi-Tenant Architecture
-- Fix warning minori
+- Architettura Multi-Tenant
