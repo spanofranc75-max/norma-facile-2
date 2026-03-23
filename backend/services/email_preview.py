@@ -7,7 +7,23 @@ from core.config import settings
 
 
 def _company():
-    return settings.sender_name or "Steel Project Design Srls"
+    """Fallback company name from env. Should NOT be used in production — all builders should receive company_name from DB."""
+    return settings.sender_name or ""
+
+
+def check_company_warnings(company: dict) -> list:
+    """Return list of warnings about missing company data."""
+    warnings = []
+    if not company:
+        warnings.append("Dati aziendali non configurati. Vai in Impostazioni per configurarli.")
+        return warnings
+    if not company.get("business_name") and not company.get("name"):
+        warnings.append("Ragione sociale mancante nelle Impostazioni aziendali.")
+    if not company.get("address"):
+        warnings.append("Indirizzo aziendale mancante nelle Impostazioni.")
+    if not company.get("piva") and not company.get("vat_number"):
+        warnings.append("P.IVA mancante nelle Impostazioni aziendali.")
+    return warnings
 
 
 def _fmt_eur(val):
@@ -67,8 +83,8 @@ def build_invoice_email(client_name: str, document_number: str, document_type: s
 
 # ── DDT ──────────────────────────────────────────────────
 
-def build_ddt_email(client_name: str, ddt_number: str, ddt_type: str) -> dict:
-    company = _company()
+def build_ddt_email(client_name: str, ddt_number: str, ddt_type: str, company_name: str = None) -> dict:
+    company = company_name or _company()
     type_labels = {"vendita": "Vendita", "conto_lavoro": "Conto Lavoro", "rientro": "Rientro"}
     type_label = type_labels.get(ddt_type, "Trasporto")
     subject = f"Invio DDT n. {ddt_number} ({type_label}) da {company}"

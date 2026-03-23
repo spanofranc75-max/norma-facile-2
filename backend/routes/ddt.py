@@ -443,12 +443,15 @@ async def preview_ddt_email(ddt_id: str, user: dict = Depends(get_current_user))
                         to_email = contact["email"]
                         break
 
-    from services.email_preview import build_ddt_email
+    from services.email_preview import build_ddt_email, check_company_warnings
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company_warnings = check_company_warnings(company)
     ddt_number = doc.get("number", ddt_id)
     preview = build_ddt_email(
         client_name=client_name,
         ddt_number=ddt_number,
         ddt_type=doc.get("ddt_type", "vendita"),
+        company_name=company.get("business_name", ""),
     )
 
     suggested_contacts = []
@@ -471,6 +474,7 @@ async def preview_ddt_email(ddt_id: str, user: dict = Depends(get_current_user))
         "has_attachment": True,
         "attachment_name": f"DDT_{ddt_number}.pdf",
         "suggested_contacts": suggested_contacts,
+        "company_warnings": company_warnings,
     }
 
 

@@ -64,7 +64,14 @@
 - SAFE_MODE rimosso (sostituito dal guard pattern)
 - Testing: 100% (14/14 frontend) — iteration_253
 
-### Outbound Guard Rollout Completo (2026-03-23)
+### Fix P0 — Intestazione email company data (2026-03-23)
+- Bug: preview email poteva usare dati aziendali errati (fallback config invece di DB)
+- Root cause: DDT e Invoice preview non leggevano company_settings dal DB
+- Fix: tutti i preview endpoint ora leggono `company_settings` filtrato per `user_id`
+- Aggiunto `check_company_warnings()` — mostra warning rosso se dati aziendali mancanti (ragione sociale, indirizzo, P.IVA)
+- Rimosso fallback hardcoded "Steel Project Design Srls" da `_company()`
+- `build_ddt_email()` ora riceve `company_name` come parametro (non più da config)
+- Frontend: EmailPreviewDialog mostra `company_warnings` in rosso prima della checkbox
 Copertura preview obbligatoria 9/9 moduli:
 - Fatture email: EmailPreviewDialog + checkbox
 - DDT email: EmailPreviewDialog + checkbox

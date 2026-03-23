@@ -294,6 +294,11 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
                     {/* Warnings */}
                     {preview && (
                         <div className="space-y-1.5">
+                            {preview.company_warnings?.map((w, i) => (
+                                <div key={`cw-${i}`} className="flex items-center gap-2 text-xs text-red-700 bg-red-50 p-2 rounded border border-red-200" data-testid="email-warn-company">
+                                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />{w}
+                                </div>
+                            ))}
                             {!preview.to_email && (
                                 <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200" data-testid="email-warn-no-dest">
                                     <AlertTriangle className="h-3.5 w-3.5 shrink-0" />Nessun destinatario configurato

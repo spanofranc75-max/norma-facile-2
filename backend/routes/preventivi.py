@@ -1339,7 +1339,7 @@ async def preview_preventivo_email(prev_id: str, user: dict = Depends(get_curren
                         to_email = contact["email"]
                         break
 
-    from services.email_preview import build_invoice_email
+    from services.email_preview import build_invoice_email, check_company_warnings
     prev_number = doc.get("number", prev_id)
     totals = doc.get("totals", {})
     total = totals.get("total_document") or totals.get("total", 0)
@@ -1348,6 +1348,7 @@ async def preview_preventivo_email(prev_id: str, user: dict = Depends(get_curren
         {"user_id": user["user_id"]}, {"_id": 0}
     ) or {}
     company_name = company.get("business_name") or company.get("name") or ""
+    company_warnings = check_company_warnings(company)
 
     preview = build_invoice_email(
         client_name=client_name,
@@ -1377,6 +1378,7 @@ async def preview_preventivo_email(prev_id: str, user: dict = Depends(get_curren
         "has_attachment": True,
         "attachment_name": f"Preventivo_{prev_number}.pdf",
         "suggested_contacts": suggested_contacts,
+        "company_warnings": company_warnings,
     }
 
 

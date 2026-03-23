@@ -1257,16 +1257,21 @@ async def preview_invoice_email(invoice_id: str, user: dict = Depends(get_curren
                     to_email = contact["email"]
                     break
 
-    from services.email_preview import build_invoice_email
+    from services.email_preview import build_invoice_email, check_company_warnings
     doc_num = invoice.get("document_number", "")
     doc_type = invoice.get("document_type", "FT")
     total = invoice.get("totals", {}).get("total_document", 0)
+
+    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company_name = company.get("business_name") or company.get("name") or ""
+    company_warnings = check_company_warnings(company)
 
     preview = build_invoice_email(
         client_name=client_name,
         document_number=doc_num,
         document_type=doc_type,
         total=total,
+        company_name=company_name,
     )
 
     # Collect suggested CC contacts
@@ -1290,6 +1295,7 @@ async def preview_invoice_email(invoice_id: str, user: dict = Depends(get_curren
         "has_attachment": True,
         "attachment_name": f"{doc_num}.pdf",
         "suggested_contacts": suggested_contacts,
+        "company_warnings": company_warnings,
     }
 
 
