@@ -1,0 +1,83 @@
+{
+  "summary": "Iteration 253 — Outbound Delivery Guard testing complete. All 14 features verified. EmailPreviewDialog shows mandatory checkbox 'Ho verificato destinatari, oggetto e allegati', send button disabled until checked, button text 'Conferma e Invia' with ShieldCheck icon, warnings for no attachment/recipient. SdiPreviewDialog shows validation checks (Cliente, Numero fattura, Totale, IVA, Stato, P.IVA/CF, Codice SDI/PEC), mandatory checkbox, blockers warning, send button disabled until confirmed. Both dialogs work from InvoiceEditorPage and InvoicesPage. SAFE_MODE removed from backend/.env.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_253.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Minor: Console warnings about '<span> cannot be a child of <select>' in InvoiceEditorPage - likely from React dev tools instrumentation, not a functional issue"
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (frontend-only testing)",
+    "frontend": "100% (All 14 test cases passed)"
+  },
+  "seed_data_creation": "Created test invoice 1/2026 for Condominio Residence Park (122.00 EUR)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Outbound Delivery Guard implemented. EmailPreviewDialog and SdiPreviewDialog both require mandatory checkbox confirmation before send. Demo mode simulates email/SDI sends. Backend audit logging via outbound_audit.py logs to 'outbound_audit_log' collection.",
+  "tests_performed": {
+    "email_preview_dialog": {
+      "checkbox_visible": "PASS - data-testid=email-confirm-checkbox visible",
+      "confirm_section_visible": "PASS - data-testid=email-confirm-section visible",
+      "send_button_disabled_before_checkbox": "PASS - Send button disabled until checkbox checked",
+      "send_button_text": "PASS - Button text 'Conferma e Invia' with ShieldCheck icon",
+      "send_button_enabled_after_checkbox": "PASS - Send button enabled after checkbox checked",
+      "warning_no_attachment": "PASS - data-testid=email-warn-no-attach shows when no attachment",
+      "warning_no_recipient": "PASS - data-testid=email-warn-no-dest shows when no recipient"
+    },
+    "sdi_preview_dialog": {
+      "dialog_opens": "PASS - data-testid=sdi-preview-dialog opens on btn-send-sdi click",
+      "validation_checks_visible": "PASS - data-testid=sdi-validation-checks shows all checks",
+      "checkbox_visible": "PASS - data-testid=sdi-confirm-checkbox visible",
+      "confirm_section_visible": "PASS - data-testid=sdi-confirm-section visible",
+      "send_button_disabled_before_checkbox": "PASS - Send button disabled until checkbox checked",
+      "send_button_text": "PASS - Button text 'Conferma e Invia a SDI'",
+      "send_button_enabled_after_checkbox": "PASS - Send button enabled after checkbox checked",
+      "blockers_warning": "PASS - data-testid=sdi-warn-blockers shows when validation fails"
+    },
+    "invoice_editor_page": {
+      "email_button": "PASS - data-testid=btn-send-email opens EmailPreviewDialog",
+      "sdi_button": "PASS - data-testid=btn-send-sdi opens SdiPreviewDialog (after emission)"
+    },
+    "invoices_page": {
+      "dropdown_email_option": "PASS - 'Invia via Email' opens EmailPreviewDialog",
+      "dropdown_sdi_option": "PASS - 'Invia a SDI' opens SdiPreviewDialog"
+    },
+    "backend_env": {
+      "safe_mode_removed": "PASS - SAFE_MODE not present in /app/backend/.env"
+    },
+    "audit_logging": {
+      "outbound_audit_service": "PASS - /app/backend/services/outbound_audit.py exists with log_outbound() function"
+    }
+  },
+  "features_verified": [
+    "1. EmailPreviewDialog: Shows checkbox 'Ho verificato destinatari, oggetto e allegati' (data-testid=email-confirm-checkbox)",
+    "2. EmailPreviewDialog: Send button is DISABLED until checkbox is checked",
+    "3. EmailPreviewDialog: Send button text changed to 'Conferma e Invia' with ShieldCheck icon",
+    "4. EmailPreviewDialog: Warning shown when no attachment (data-testid=email-warn-no-attach)",
+    "5. EmailPreviewDialog: Warning shown when no recipient (data-testid=email-warn-no-dest)",
+    "6. SdiPreviewDialog: Opens when clicking 'Invia SDI' on invoice editor (data-testid=btn-send-sdi)",
+    "7. SdiPreviewDialog: Shows validation checks (client, invoice number, total, P.IVA/CF, Codice SDI/PEC)",
+    "8. SdiPreviewDialog: Checkbox 'Ho verificato i dati e confermo l'invio a SDI' required before send",
+    "9. SdiPreviewDialog: Send button disabled until confirmed",
+    "10. InvoicesPage: SDI send goes through SdiPreviewDialog (not direct confirm dialog)",
+    "11. Backend: outbound_audit_log service exists for audit logging",
+    "12. Backend: outbound_audit.py logs email/SDI sends with action_type, recipient, status",
+    "13. All existing email flows still work (tested via InvoiceEditorPage)",
+    "14. SAFE_MODE removed from .env (guard pattern replaces it)"
+  ],
+  "test_credentials_used": {
+    "demo_session": "session_token=demo_session_token_normafacile",
+    "demo_user": "Marco Rossi (demo@normafacile.it)"
+  }
+}

@@ -33,6 +33,7 @@ import { PDFPreviewModal } from '../components/PDFPreviewModal';
 import { useConfirm } from '../components/ConfirmProvider';
 import EmptyState from '../components/EmptyState';
 import EmailPreviewDialog from '../components/EmailPreviewDialog';
+import SdiPreviewDialog from '../components/SdiPreviewDialog';
 
 const DOC_TYPES = {
     FT: { label: 'Fattura', color: 'bg-blue-100 text-blue-800' },
@@ -82,6 +83,7 @@ export default function InvoicesPage() {
     // PDF Preview state
     const [pdfPreview, setPdfPreview] = useState({ open: false, url: '', title: '' });
     const [emailPreview, setEmailPreview] = useState({ open: false, invoiceId: null });
+    const [sdiPreview, setSdiPreview] = useState({ open: false, invoice: null });
 
     const fetchInvoices = useCallback(async () => {
         try {
@@ -168,14 +170,7 @@ export default function InvoicesPage() {
     };
 
     const handleSendSDI = async (invoice) => {
-        if (!(await confirm('Confermi l\'invio al Sistema di Interscambio (SDI)?'))) return;
-        try {
-            const result = await apiRequest(`/invoices/${invoice.invoice_id}/send-sdi`, { method: 'POST' });
-            toast.success(result.message);
-            fetchInvoices();
-        } catch (error) {
-            toast.error(error.message, { duration: 10000, style: { maxWidth: '600px' } });
-        }
+        setSdiPreview({ open: true, invoice });
     };
 
     const handleChangeStatus = async (invoice, newStatus) => {
@@ -781,6 +776,12 @@ export default function InvoicesPage() {
                 previewUrl={emailPreview.invoiceId ? `/api/invoices/${emailPreview.invoiceId}/preview-email` : ''}
                 sendUrl={emailPreview.invoiceId ? `/api/invoices/${emailPreview.invoiceId}/send-email` : ''}
                 onSent={fetchInvoices}
+            />
+            <SdiPreviewDialog
+                open={sdiPreview.open}
+                onOpenChange={(open) => setSdiPreview(prev => ({ ...prev, open }))}
+                invoice={sdiPreview.invoice}
+                onSent={() => { setSdiPreview({ open: false, invoice: null }); fetchInvoices(); }}
             />
         </DashboardLayout>
     );

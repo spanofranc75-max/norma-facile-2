@@ -1369,6 +1369,17 @@ async def send_invoice_email(invoice_id: str, payload: dict = None, user: dict =
     )
 
     logger.info(f"Invoice {doc_num} sent via email to {', '.join(all_recipients)}")
+
+    # Audit log
+    from services.outbound_audit import log_outbound
+    await log_outbound(
+        user_id=user["user_id"],
+        action_type=f"email_{doc_type.lower()}",
+        recipient=", ".join(all_recipients),
+        details={"document_number": doc_num, "document_type": doc_type, "filename": filename},
+        status="sent",
+    )
+
     return {"message": f"Email inviata con successo a {', '.join(all_recipients)}", "to": to_email, "cc": cc_list}
 
 
@@ -1525,6 +1536,18 @@ async def _send_sdi_impl(invoice_id: str, user: dict):
 
     doc_num = invoice.get("document_number", "")
     logger.info(f"Invoice {doc_num} synced to FIC (id={fic_doc_id}) and sent to SDI")
+
+    # Audit log
+    from services.outbound_audit import log_outbound
+    await log_outbound(
+        user_id=user["user_id"],
+        action_type="sdi_send",
+        recipient=client_doc.get("business_name", ""),
+        details={"document_number": doc_num, "fic_document_id": fic_doc_id},
+        status="sent",
+        external_id=str(fic_doc_id),
+    )
+
     return {"message": f"Fattura {doc_num} inviata al SDI con successo", "fic_document_id": fic_doc_id}
 
 

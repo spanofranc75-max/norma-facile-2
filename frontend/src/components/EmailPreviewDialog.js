@@ -8,8 +8,9 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Textarea } from './ui/textarea';
+import { Checkbox } from './ui/checkbox';
 import { toast } from 'sonner';
-import { Mail, Send, Loader2, Paperclip, User, FileText, Pencil, Eye, Maximize2, Minimize2, Plus, X, Users, BookUser } from 'lucide-react';
+import { Mail, Send, Loader2, Paperclip, User, FileText, Pencil, Eye, Maximize2, Minimize2, Plus, X, Users, BookUser, AlertTriangle, ShieldCheck } from 'lucide-react';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -31,6 +32,7 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
     const [ccEmails, setCcEmails] = useState([]);
     const [ccInput, setCcInput] = useState('');
     const [showCc, setShowCc] = useState(false);
+    const [confirmed, setConfirmed] = useState(false);
     const iframeRef = useRef(null);
 
     useEffect(() => {
@@ -43,6 +45,7 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
             setCcEmails([]);
             setCcInput('');
             setShowCc(false);
+            setConfirmed(false);
             fetch(`${API}${previewUrl}`, { headers: getAuthHeaders(), credentials: 'include' })
                 .then(r => {
                     if (!r.ok) throw new Error('Errore caricamento anteprima');
@@ -287,14 +290,40 @@ export default function EmailPreviewDialog({ open, onOpenChange, previewUrl, sen
                     </div>
                 )}
 
-                <DialogFooter className="gap-2">
-                    <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Annulla</Button>
-                    <Button size="sm" className="bg-[#0055FF] text-white"
-                        disabled={sending || !preview?.to_email} onClick={handleSend}
-                        data-testid="email-preview-send-btn">
-                        {sending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Send className="h-4 w-4 mr-1" />}
-                        {sending ? 'Invio in corso...' : ccEmails.length > 0 ? `Invia a ${1 + ccEmails.length} destinatari` : 'Invia Email'}
-                    </Button>
+                <DialogFooter className="gap-2 flex-col items-stretch sm:flex-col">
+                    {/* Warnings */}
+                    {preview && (
+                        <div className="space-y-1.5">
+                            {!preview.to_email && (
+                                <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200" data-testid="email-warn-no-dest">
+                                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />Nessun destinatario configurato
+                                </div>
+                            )}
+                            {!preview.has_attachment && (
+                                <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200" data-testid="email-warn-no-attach">
+                                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />Nessun allegato — l'email verra inviata senza documenti
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Mandatory confirmation */}
+                    <div className="flex items-center gap-2 py-1" data-testid="email-confirm-section">
+                        <Checkbox id="email-confirm" checked={confirmed} onCheckedChange={setConfirmed} data-testid="email-confirm-checkbox" />
+                        <label htmlFor="email-confirm" className="text-xs text-slate-600 cursor-pointer select-none">
+                            Ho verificato destinatari, oggetto e allegati
+                        </label>
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Annulla</Button>
+                        <Button size="sm" className="bg-[#0055FF] text-white"
+                            disabled={sending || !preview?.to_email || !confirmed} onClick={handleSend}
+                            data-testid="email-preview-send-btn">
+                            {sending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <ShieldCheck className="h-4 w-4 mr-1" />}
+                            {sending ? 'Invio in corso...' : ccEmails.length > 0 ? `Conferma invio a ${1 + ccEmails.length}` : 'Conferma e Invia'}
+                        </Button>
+                    </div>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

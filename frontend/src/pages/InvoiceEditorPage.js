@@ -50,6 +50,7 @@ import { useConfirm } from '../components/ConfirmProvider';
 import { LivePDFPreview } from '../components/LivePDFPreview';
 import { AutoExpandTextarea } from '../components/AutoExpandTextarea';
 import EmailPreviewDialog from '../components/EmailPreviewDialog';
+import SdiPreviewDialog from '../components/SdiPreviewDialog';
 
 const DOC_TYPES = [
     { value: 'FT', label: 'Fattura' },
@@ -152,6 +153,7 @@ export default function InvoiceEditorPage() {
     });
 
     const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
+    const [sdiPreviewOpen, setSdiPreviewOpen] = useState(false);
     const [paymentTypes, setPaymentTypes] = useState([]);
     const [showLivePreview, setShowLivePreview] = useState(false);
 
@@ -518,18 +520,7 @@ export default function InvoiceEditorPage() {
                                 type="button"
                                 variant="outline"
                                 data-testid="btn-send-sdi"
-                                onClick={async () => {
-                                    if (!(await confirm('Confermi l\'invio al SDI?'))) return;
-                                    try {
-                                        const r = await apiRequest(`/invoices/${invoiceId}/send-sdi`, { method: 'POST' });
-                                        toast.success(r.message || 'Fattura inviata al SDI');
-                                        fetchInvoice();
-                                    } catch (sdiErr) {
-                                        console.error('Errore invio SDI:', sdiErr);
-                                        const errorMessage = (sdiErr && sdiErr.message) ? sdiErr.message : 'Errore sconosciuto durante l\'invio SDI';
-                                        toast.error(errorMessage, { duration: 12000, style: { maxWidth: '600px', whiteSpace: 'pre-line' } });
-                                    }
-                                }}
+                                onClick={() => setSdiPreviewOpen(true)}
                                 className="border-amber-400 text-amber-600 hover:bg-amber-50 text-xs h-9"
                             >
                                 <Send className="h-3.5 w-3.5 mr-1" /> Invia SDI
@@ -987,6 +978,12 @@ export default function InvoiceEditorPage() {
                 onOpenChange={setEmailPreviewOpen}
                 previewUrl={`/api/invoices/${invoiceId}/preview-email`}
                 sendUrl={`/api/invoices/${invoiceId}/send-email`}
+            />
+            <SdiPreviewDialog
+                open={sdiPreviewOpen}
+                onOpenChange={setSdiPreviewOpen}
+                invoice={formData}
+                onSent={() => { setSdiPreviewOpen(false); fetchInvoice(); }}
             />
         </DashboardLayout>
     );
