@@ -958,3 +958,15 @@ function QrLinkCard({ label, subtitle, color, url, testId }) {
         </div>
     );
 }
+
+function CostRow({ icon: Icon, color, label, value }) {
+    return (
+        <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+                <Icon className={`h-3 w-3 ${color}`} />
+                {label}
+            </span>
+            <span className="font-mono">{fmtEur(value)}</span>
+        </div>
+    );
+}
