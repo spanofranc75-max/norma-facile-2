@@ -172,6 +172,68 @@ async def _ensure_indexes():
     await _idx("download_tokens", [("token", 1)], unique=True, name="uq_download_token")
     await _idx("download_tokens", [("expires_at", 1)], name="idx_dl_token_expiry")
 
+    # ─── TD-003: Indici Fase 2 — Collezioni vive con query ricorrenti ───
+
+    # --- Gruppo A: Alta priorità ---
+
+    # company_settings — find_one({user_id}) chiamato da 61+ endpoint
+    await _idx("company_settings", [("user_id", 1)], unique=True, name="uq_company_user")
+
+    # audits — lista per utente ordinata per data, lookup per audit_id
+    await _idx("audits", [("user_id", 1), ("date", -1)], name="idx_audits_user_date")
+    await _idx("audits", [("audit_id", 1), ("user_id", 1)], unique=True, name="uq_audit")
+
+    # non_conformities — lista per utente, per audit, ordinata per data
+    await _idx("non_conformities", [("user_id", 1), ("date", -1)], name="idx_nc_user_date")
+    await _idx("non_conformities", [("audit_id", 1), ("user_id", 1)], name="idx_nc_audit")
+    await _idx("non_conformities", [("nc_id", 1), ("user_id", 1)], unique=True, name="uq_nc")
+
+    # voci_lavoro — filtro per commessa (dashboard, officina, qualita)
+    await _idx("voci_lavoro", [("commessa_id", 1), ("user_id", 1)], name="idx_voci_commessa")
+
+    # articoli — lista/filtro/sort per codice, 88 docs
+    await _idx("articoli", [("user_id", 1), ("codice", 1)], name="idx_articoli_codice")
+
+    # gate_certifications — lookup per cert_id, per commessa
+    await _idx("gate_certifications", [("cert_id", 1)], name="idx_gate_cert_id")
+    await _idx("gate_certifications", [("commessa_id", 1), ("user_id", 1)], name="idx_gate_commessa")
+
+    # pos_documents — dashboard KPI + count + filtro scadenze
+    await _idx("pos_documents", [("user_id", 1)], name="idx_pos_user")
+
+    # rilievi — 32 ref, filtro per user + commessa
+    await _idx("rilievi", [("user_id", 1), ("commessa_id", 1)], name="idx_rilievi_commessa")
+    await _idx("rilievi", [("rilievo_id", 1), ("user_id", 1)], unique=True, name="uq_rilievo")
+
+    # --- Gruppo B: Media priorità ---
+
+    # verbali_itt — lista per utente + ordinamento scadenza
+    await _idx("verbali_itt", [("user_id", 1), ("data_scadenza", 1)], name="idx_itt_user_scadenza")
+
+    # componenti — lista/search per tipo e codice
+    await _idx("componenti", [("user_id", 1), ("tipo", 1), ("codice", 1)], name="idx_componenti_tipo")
+
+    # dop_frazionate — filtro per commessa
+    await _idx("dop_frazionate", [("commessa_id", 1), ("user_id", 1)], name="idx_dop_commessa")
+
+    # fpc_projects — lookup per project_id, 19 ref
+    await _idx("fpc_projects", [("project_id", 1), ("user_id", 1)], unique=True, name="uq_fpc_project")
+
+    # report_ispezioni — lookup per commessa (dashboard, dop, controllo)
+    await _idx("report_ispezioni", [("commessa_id", 1)], name="idx_report_isp_commessa")
+
+    # archivio_certificati — filtro per utente (CAM)
+    await _idx("archivio_certificati", [("user_id", 1)], name="idx_cert_archivio_user")
+
+    # validazioni_p1 — filtro per commessa
+    await _idx("validazioni_p1", [("commessa_id", 1), ("user_id", 1)], name="idx_validazioni_commessa")
+
+    # verbali_posa — lookup per commessa
+    await _idx("verbali_posa", [("commessa_id", 1)], name="idx_verbali_posa_commessa")
+
+    # data_integrity_reports — sort per data (history endpoint)
+    await _idx("data_integrity_reports", [("generated_at", -1)], name="idx_dir_date")
+
     logger.info(f"MongoDB indexes verified: {len(created)} indexes ensured — {', '.join(created)}")
     return created
 

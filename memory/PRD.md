@@ -6,63 +6,61 @@ Sistema operativo verticale per carpenteria metallica / EN 1090 / EN 13241 / sic
 ## Architettura
 - **Frontend**: React + Tailwind + Shadcn/UI (porta 3000)
 - **Backend**: FastAPI + Motor (porta 8001)
-- **Database**: MongoDB (100+ collezioni)
+- **Database**: MongoDB (100+ collezioni, 49 indici)
 - **AI**: OpenAI GPT-4o via emergentintegrations
 - **Email**: Resend
 - **Storage**: Object Storage S3
 - **Auth**: Emergent Google OAuth + JWT
 
-## Moduli implementati (18)
-1. Preventivi — 2. Istruttoria AI — 3. Segmentazione normativa — 4. Commessa pre-istruita
-5. Commessa madre / rami normativi / emissioni — 6. Evidence Gate — 7. Sicurezza / Scheda cantiere
-8. Motore AI Sicurezza — 9. Generazione POS DOCX — 10. Pacchetti Documentali
-11. Invio email documenti — 12. Verifica Committenza — 13. Registro Obblighi (8 fonti)
-14. Dashboard multilivello — 15. Audit Log (16 moduli) — 16. Profili documentali
-17. Notifiche in-app — 18. Repository documentale
-
 ## Hardening completato (2026-03-23)
-- TD-001: Indici MongoDB (24 su 12 collezioni) | TD-002: Router duplicato | TD-005: Rate limiting (slowapi)
-- TD-009: Background task error handling | TD-010: user_id multi-tenant (7 route)
-- TD-004: Cleanup dead code | CR-001/002: JWT + LLM key | Data Integrity: 0 CRITICAL, 0 WARNING
+- TD-001: Indici MongoDB Fase 1 (27 indici su 12 collezioni critiche)
+- TD-002: Router duplicato | TD-005: Rate limiting (slowapi) | TD-009: Background task safety
+- TD-010: user_id multi-tenant (7 route) | TD-004: Cleanup dead code | CR-001/002: JWT + LLM key
+- Data Integrity: 0 CRITICAL, 0 WARNING
 
-## UX-001 Completato (2026-03-23)
-- CommessaHubPage refactorizzata con accordion, 2 colonne, lifecycle bar
-- CommessaActionsMenu.js (dropdown) + NextStepCard.js (guida contestuale)
+## UX-001 Completato — CommessaHubPage semplificata
+- Accordion, 2 colonne, lifecycle bar, CommessaActionsMenu, NextStepCard
 
-## UX-003 Completato (2026-03-23)
-- OnboardingChecklist sulla Dashboard (auto-detect 4 step, progress bar, dismiss)
-- SmartEmptyState riutilizzabile su PlanningPage e PreventiviPage
-- Backend: GET /api/onboarding/status + POST /api/onboarding/dismiss
+## UX-003 Completato — Onboarding primo utilizzo
+- OnboardingChecklist (Dashboard, auto-detect 4 step, progress, dismiss)
+- SmartEmptyState riutilizzabile (PlanningPage, PreventiviPage)
 
-## Data Integrity Tool Admin Completato (2026-03-23)
-- `POST /api/admin/data-integrity/run` — esegue 20 check su 6 aree, salva report
-- `GET /api/admin/data-integrity/latest` — ultimo report completo
-- `GET /api/admin/data-integrity/history` — storico report (summary only)
-- Protezione admin-only (403 per non-admin)
-- Summary leggibile: status (healthy/warning/critical), total_checks, critical/warning/ok count
-- Report persistito in collezione `data_integrity_reports`
+## Data Integrity Tool Admin Completato
+- POST /api/admin/data-integrity/run (20 check, 6 aree)
+- GET /api/admin/data-integrity/latest + /history
+- Protezione admin-only, report persistito
+
+## TD-003 Completato — Indici MongoDB Fase 2
+- **+22 indici nuovi** su 15 collezioni vive (totale: 49 indici)
+- Gruppo A (alta priorita): company_settings, audits, non_conformities, voci_lavoro, articoli, gate_certifications, pos_documents, rilievi
+- Gruppo B (media priorita): verbali_itt, componenti, dop_frazionate, fpc_projects, report_ispezioni, archivio_certificati, validazioni_p1, verbali_posa, data_integrity_reports
+- Ogni indice giustificato da query reali (endpoint + filtro documentati)
+
+## Widget Integrity Check Completato
+- IntegrityWidget sulla Dashboard (solo admin): semaforo verde/giallo/rosso, conteggi, timestamp, pulsante "Esegui"
 
 ## Backlog prioritizzato
 
-### P1 — Prossimo task
-- **TD-003**: Indici MongoDB su collezioni rimanenti (solo vive + query ricorrenti)
-
-### P2 — Backlog UX
+### P1 — Prossimi task
 - SmartEmptyState incrementale (Certificazioni, DDT, Fornitori)
 - UX Fase 4: Distinzione per ruolo (copy diverso admin/tecnico)
-- Tour guidato contestuale (backlog futuro)
 
-### P3 — Business/Architettura
+### P2 — Business
 - Integrazione Stripe per monetizzazione
 - Email automatiche selettive
 - Demo mode
+
+### P3 — Architettura
 - Refactoring file monolitici
 - Multi-tenant architecture
 - Stability Guard AI
+- Revisione collezioni zombie
 
 ## File chiave
-- `/app/backend/routes/admin_integrity.py` — Data Integrity Tool admin
+- `/app/backend/routes/admin_integrity.py` — Data Integrity Tool
 - `/app/backend/routes/onboarding.py` — Onboarding status
-- `/app/frontend/src/components/OnboardingChecklist.js` — Checklist Dashboard
-- `/app/frontend/src/components/SmartEmptyState.js` — Empty state riutilizzabile
-- `/app/frontend/src/pages/CommessaHubPage.js` — Hub commessa refactorizzato
+- `/app/frontend/src/components/IntegrityWidget.js` — Widget DB health
+- `/app/frontend/src/components/OnboardingChecklist.js` — Checklist
+- `/app/frontend/src/components/SmartEmptyState.js` — Empty state
+- `/app/frontend/src/pages/CommessaHubPage.js` — Hub commessa
+- `/app/backend/main.py` — 49 indici + startup checks
