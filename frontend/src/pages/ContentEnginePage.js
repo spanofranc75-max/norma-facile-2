@@ -3,6 +3,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '../lib/utils';
+import { toast } from 'sonner';
 import DashboardLayout from '../components/DashboardLayout';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -11,6 +12,7 @@ import {
     Sparkles, FileText, Send, Lightbulb, Loader2,
     Plus, Trash2, ChevronRight, CheckCircle2, XCircle,
     Clock, Eye, Pencil, BookOpen, Video, LayoutGrid, Target,
+    Copy, Hash,
 } from 'lucide-react';
 
 const CATEGORY_LABELS = {
@@ -377,6 +379,18 @@ function DraftDetail({ draft, onBack, onQueue }) {
     const fmt = FORMAT_LABELS[draft.format] || FORMAT_LABELS.linkedin_post;
     const FmtIcon = fmt.icon;
 
+    const copyTo = (text, label) => {
+        navigator.clipboard.writeText(text).then(() => {
+            toast.success(`${label} copiato`);
+        }).catch(() => toast.error('Copia fallita'));
+    };
+
+    const fullText = [
+        draft.body,
+        draft.cta ? `\n${draft.cta}` : '',
+        draft.hashtags?.length ? `\n${draft.hashtags.join(' ')}` : '',
+    ].filter(Boolean).join('\n');
+
     return (
         <div data-testid="draft-detail">
             <Button variant="ghost" className="mb-3 text-xs text-slate-500" onClick={onBack}>
@@ -384,15 +398,33 @@ function DraftDetail({ draft, onBack, onQueue }) {
             </Button>
             <Card>
                 <CardContent className="p-5">
-                    <div className="flex items-center gap-2 mb-3">
-                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium flex items-center gap-1.5 ${fmt.color}`}>
-                            <FmtIcon className="h-3.5 w-3.5" />{fmt.label}
-                        </span>
-                        {draft.suggested_asset_type && (
-                            <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded">Asset: {draft.suggested_asset_type}</span>
-                        )}
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                            <span className={`text-xs px-2.5 py-1 rounded-full font-medium flex items-center gap-1.5 ${fmt.color}`}>
+                                <FmtIcon className="h-3.5 w-3.5" />{fmt.label}
+                            </span>
+                            {draft.suggested_asset_type && (
+                                <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded">Asset: {draft.suggested_asset_type}</span>
+                            )}
+                        </div>
+                        <div className="flex gap-1.5">
+                            <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => copyTo(fullText, 'Testo completo')} data-testid="btn-copy-full">
+                                <Copy className="h-3 w-3" />Copia tutto
+                            </Button>
+                            {draft.hashtags?.length > 0 && (
+                                <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => copyTo(draft.hashtags.join(' '), 'Hashtag')} data-testid="btn-copy-hashtags">
+                                    <Hash className="h-3 w-3" />Hashtag
+                                </Button>
+                            )}
+                        </div>
                     </div>
-                    <h2 className="text-base font-bold text-slate-800 mb-3">{draft.title}</h2>
+
+                    <div className="flex items-center gap-2 mb-3">
+                        <h2 className="text-base font-bold text-slate-800">{draft.title}</h2>
+                        <button className="text-slate-400 hover:text-slate-600 transition-colors" onClick={() => copyTo(draft.title, 'Titolo')} title="Copia titolo" data-testid="btn-copy-title">
+                            <Copy className="h-3.5 w-3.5" />
+                        </button>
+                    </div>
 
                     {draft.format === 'carosello' && draft.slides?.length > 0 ? (
                         <div className="space-y-2 mb-4">
@@ -404,14 +436,20 @@ function DraftDetail({ draft, onBack, onQueue }) {
                             ))}
                         </div>
                     ) : (
-                        <div className="prose prose-sm max-w-none mb-4">
+                        <div className="prose prose-sm max-w-none mb-4 relative group">
                             <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{draft.body}</div>
+                            <button className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 bg-white/80 rounded-md border border-slate-200 text-slate-400 hover:text-slate-600" onClick={() => copyTo(draft.body, 'Corpo testo')} title="Copia corpo" data-testid="btn-copy-body">
+                                <Copy className="h-3.5 w-3.5" />
+                            </button>
                         </div>
                     )}
 
                     {draft.cta && (
-                        <div className="p-3 bg-blue-50 rounded-lg mb-3">
+                        <div className="p-3 bg-blue-50 rounded-lg mb-3 flex items-center justify-between group">
                             <p className="text-xs font-semibold text-blue-700">CTA: {draft.cta}</p>
+                            <button className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-400 hover:text-blue-600" onClick={() => copyTo(draft.cta, 'CTA')} title="Copia CTA" data-testid="btn-copy-cta">
+                                <Copy className="h-3 w-3" />
+                            </button>
                         </div>
                     )}
 
@@ -419,11 +457,13 @@ function DraftDetail({ draft, onBack, onQueue }) {
                         <p className="text-xs text-blue-500 mb-4">{draft.hashtags.join(' ')}</p>
                     )}
 
-                    {draft.status !== 'queued' && (
-                        <Button className="bg-emerald-600 text-white text-xs" onClick={() => onQueue(draft.draft_id)}>
-                            <Send className="h-3.5 w-3.5 mr-1.5" />Aggiungi alla Coda Editoriale
-                        </Button>
-                    )}
+                    <div className="flex gap-2">
+                        {draft.status !== 'queued' && (
+                            <Button className="bg-emerald-600 text-white text-xs" onClick={() => onQueue(draft.draft_id)} data-testid="btn-add-queue">
+                                <Send className="h-3.5 w-3.5 mr-1.5" />Aggiungi alla Coda Editoriale
+                            </Button>
+                        )}
+                    </div>
                 </CardContent>
             </Card>
         </div>
