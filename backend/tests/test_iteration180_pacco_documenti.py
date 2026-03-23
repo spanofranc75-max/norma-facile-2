@@ -21,7 +21,7 @@ from datetime import datetime
 # Using production URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://multi-level-dash.preview.emergentagent.com"
+    BASE_URL = "https://code-health-check-11.preview.emergentagent.com"
 
 # Test credentials provided by main agent
 TEST_SESSION_TOKEN = "4e8d7be03f734f639e57a76688f33654"

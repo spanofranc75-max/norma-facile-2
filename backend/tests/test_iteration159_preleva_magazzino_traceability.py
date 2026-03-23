@@ -18,7 +18,7 @@ from datetime import datetime
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://multi-level-dash.preview.emergentagent.com"
+    BASE_URL = "https://code-health-check-11.preview.emergentagent.com"
 
 
 class TestPrelevaMagazzinoTraceability:

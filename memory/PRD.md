@@ -1,314 +1,64 @@
-# NormaFacile 2.0 — PRD
+# NormaFacile 2.0 — PRD (Product Requirements Document)
 
-## Problema Originale
-ERP per aziende di carpenteria metallica: commesse, compliance EN 1090/13241, generazione documenti, fatturazione, pianificazione, tracciabilita materiali e sicurezza cantieri.
+## Problema originale
+Sistema operativo verticale per carpenteria metallica / EN 1090 / EN 13241 / sicurezza cantiere / documentazione / committenza. Copilota tecno-normativo-operativo.
 
 ## Architettura
-- **Frontend**: React + shadcn/ui + TailwindCSS (porta 3000)
-- **Backend**: FastAPI + MongoDB (porta 8001)
+- **Frontend**: React + Tailwind + Shadcn/UI (porta 3000)
+- **Backend**: FastAPI + Motor (porta 8001)
+- **Database**: MongoDB (100 collezioni)
 - **AI**: OpenAI GPT-4o via emergentintegrations
-- **PDF**: WeasyPrint | **Email**: Resend
+- **Email**: Resend
+- **Storage**: Object Storage S3
+- **Auth**: Emergent Google OAuth + JWT
 
-## Modello Gerarchico (Fase A — COMPLETATO)
-`Commessa Madre -> Ramo Normativo -> Emissione Documentale`
+## Moduli implementati (18)
+1. Preventivi
+2. Istruttoria AI
+3. Segmentazione normativa
+4. Commessa pre-istruita
+5. Commessa madre / rami normativi / emissioni documentali
+6. Evidence Gate per emissione
+7. Sicurezza / Scheda cantiere
+8. Motore AI Sicurezza
+9. Generazione POS DOCX
+10. Pacchetti Documentali intelligenti
+11. Invio email documenti
+12. Verifica Committenza / Contratti
+13. Registro Obblighi Commessa (8 fonti)
+14. Dashboard Cantiere / Commessa multilivello
+15. Audit Log (16 moduli)
+16. Profili documentali per committente
+17. Notifiche intelligenti in-app
+18. Repository documentale interno alla commessa
 
-## Evidence Gate Avanzato (Fase B — COMPLETATO)
-Engine rule-based in `evidence_gate_engine.py`
+## Stato attuale — Post-Audit (2026-03-23)
 
-## Collegamento Segmentazione-Rami (S0 — COMPLETATO)
-Auto-creazione rami normativi dopo conferma istruttoria
+### Audit completato
+Prodotti 7 report di audit approfondito:
+- `MASTER_AUDIT_REPORT.md` — Executive summary
+- `CODEBASE_INVENTORY.md` — Inventario 100 collezioni, 78 routes, 58 services
+- `FLOW_GAPS_REPORT.md` — 7 flussi analizzati, mappa collegamenti
+- `TECH_DEBT_BACKLOG.md` — 15 issue prioritizzate
+- `UX_AND_PRODUCT_GAPS.md` — 12 gap UX/prodotto
+- `CLEANUP_LIST.md` — Dead code, directory, collezioni da eliminare
+- `COMPLIANCE_RISKS.md` — 10 rischi sicurezza/GDPR/AI
 
-## Safety Branch MVP (S1 + S2 — COMPLETATO 2026-03-22)
-- S1: Analizzato template POS (459 KB, 31 sezioni) -> `SPEC_POS_TEMPLATE_MAPPING.md`
-- S2: Backend + Frontend con 4-step wizard
+### Finding critici
+1. **BLOCKER**: Indici MongoDB non creati (lifespan/on_event conflict)
+2. **Alta**: Router sicurezza duplicato in main.py
+3. **Alta**: Nessun rate limiting
+4. **Alta**: ~3.200 righe dead code
+5. **Alta**: 78/100 collezioni senza indici
 
-## Libreria Rischi 3 Livelli (Step 0 + Step 1 — COMPLETATO 2026-03-23)
-Refactor completo da modello flat a 3 collezioni separate:
+### Backlog prioritizzato (in attesa approvazione utente)
+- TD-001 a TD-015: Tech debt (TECH_DEBT_BACKLOG.md)
+- UX-001 a UX-012: Gap UX (UX_AND_PRODUCT_GAPS.md)
+- CR-001 a CR-010: Compliance (COMPLIANCE_RISKS.md)
 
-### Livello 1: `lib_fasi_lavoro` (11 fasi)
-- Codice, nome, descrizione, categoria, trigger.keywords, rischi_ids[]
-- Ogni fase attiva N rischi tramite codici
-
-### Livello 2: `lib_rischi_sicurezza` (20 rischi)
-- Codice, nome, categoria, sottocategoria, gate_critical
-- trigger.keywords + condizioni_esclusione
-- valutazione_default (P, D, Classe)
-- dpi_ids[], misure_ids[], apprestamenti_ids[] (separati)
-- documenti_richiesti[], domande_verifica[] con impatto e gate_critical
-
-### Livello 3: `lib_dpi_misure` (31 entries)
-- 12 DPI, 11 Misure organizzative, 8 Apprestamenti
-- Tipo, sottotipo, norma UNI EN, obbligatorieta
-- Campi governance: active, version, source, sort_order
-
-### Catena automatica
-Fase -> rischi_ids -> dpi_ids + misure_ids + apprestamenti_ids + domande_verifica
-- Deduplicazione automatica
-- Confidenza: dedotto | confermato | incerto | mancante
-- Gate POS con blockers per domande gate_critical aperte
-
-### Testing: 29/29 backend, 100% frontend
-
-## S2.5 — Modello Soggetti & Ruoli (COMPLETATO 2026-03-22)
-Gestione strutturata del personale chiave per sicurezza cantiere (POS).
-
-### Architettura a 2 livelli:
-1. **Livello azienda** (`company_settings.figure_aziendali`): default RSPP, Datore Lavoro, Medico Competente ecc.
-2. **Livello cantiere** (`cantieri_sicurezza.soggetti`): 14 ruoli in 3 categorie
-
-### Ruoli (14 totali):
-- **Azienda (5)**: DATORE_LAVORO*, RSPP*, MEDICO_COMPETENTE*, PREPOSTO_CANTIERE, DIRETTORE_TECNICO
-- **Committente (6)**: COMMITTENTE*, REFERENTE_COMMITTENTE, RESPONSABILE_LAVORI, DIRETTORE_LAVORI, CSP, CSE
-- **Tecnico (3)**: PROGETTISTA, STRUTTURISTA, COLLAUDATORE
-(* = obbligatorio per Gate POS)
-
-### Pre-fill automatico:
-company_settings.figure_aziendali -> cantiere.soggetti (status: "precompilato")
-
-### Frontend:
-- Tab "Sicurezza" in Impostazioni con form Figure Aziendali
-- Sezione "Soggetti & Referenti" in SchedaCantierePage Step 1 con 3 categorie
-
-### Bug fix applicato:
-- Rimosso campo duplicato figure_aziendali in CompanySettings
-- Aggiunto figure_aziendali a CompanySettingsUpdate
-- Aggiunta gestione esplicita in PUT /api/company/settings
-
-### Testing: 16/16 backend, 100% frontend (iteration_232)
-
-## File Chiave
-- `/app/backend/services/cantieri_sicurezza_service.py` — Service 3 livelli + soggetti
-- `/app/backend/routes/cantieri_sicurezza.py` — API (libreria + cantieri + gate + ruoli)
-- `/app/backend/routes/company.py` — Settings con figure_aziendali
-- `/app/backend/models/company.py` — Modello CompanySettings + Update
-- `/app/frontend/src/pages/SchedaCantierePage.js` — Form 4-step con catena + soggetti
-- `/app/frontend/src/pages/SicurezzaPage.js` — Lista cantieri
-- `/app/frontend/src/pages/SettingsPage.js` — Impostazioni con tab Sicurezza
-- `/app/frontend/src/components/settings/FigureAziendaliTab.js` — Form figure aziendali
-- `/app/backend/services/ai_safety_engine.py` — Motore AI S3
-- `/app/backend/services/pos_docx_generator.py` — Generatore DOCX S4
-- `/app/backend/services/pacchetti_documentali_service.py` — D1+D2+D3 service
-- `/app/backend/routes/pacchetti_documentali.py` — API pacchetti documentali
-- `/app/frontend/src/pages/PacchettiDocumentaliPage.js` — Pagina pacchetti documentali
-- `/app/SPEC_LIBRERIA_RISCHI_3_LIVELLI.md` — Spec definitiva v2
-- `/app/SPEC_POS_TEMPLATE_MAPPING.md` — Mapping template POS
-- `/app/SPEC_PACCHETTI_DOCUMENTALI.md` — Spec pacchetti documentali
-
-## S3 — Motore AI Sicurezza (COMPLETATO 2026-03-22)
-Pipeline AI per pre-compilazione intelligente della scheda cantiere sicurezza.
-
-### Pipeline 5 step:
-1. **Raccolta contesto**: commessa, istruttoria, preventivo, sopralluogo, company_settings
-2. **AI GPT-4o**: Analisi semantica → propone fasi lavorative + contesto operativo
-3. **Rules engine**: Espansione catena fasi → rischi → DPI/misure/apprestamenti
-4. **Merge domande**: AI + libreria deduplicati con gate_critical
-5. **Pre-fill soggetti**: Da figure aziendali + committente da commessa
-
-### Endpoint: `POST /api/cantieri-sicurezza/{id}/ai-precompila`
-### Output salvato in cantiere:
-- fasi_lavoro_selezionate (con confidence: dedotto/confermato/incerto, origin: ai/rules)
-- rischi_attivati (per ogni fase)
-- dpi_calcolati, misure_calcolate, apprestamenti_calcolati
-- domande_residue (con gate_critical)
-- ai_precompilazione (metadata: timestamp, modello, sources_used, contesto_operativo)
-- soggetti precompilati
-- Gate POS ricalcolato automaticamente
-
-### Frontend: Bottone "Pre-compila con AI" + banner risultato + review/conferma dati
-
-### Testing: 26/26 backend, 100% frontend (iteration_233)
-
-## S4 — Generazione DOCX POS (COMPLETATO 2026-03-22)
-Generatore bozza POS DOCX modificabile (Allegato XV D.Lgs. 81/2008).
-
-### 15 sezioni, 21 tabelle:
-Copertina, Intro, Anagrafica, Mansionario, Dati Cantiere, Soggetti, Turni, Subappalti,
-Misure Prevenzione, DPI, Macchine, Valutazione Rischi, **Schede Rischio per Fase** (CORE),
-Emergenza, Dichiarazione.
-
-### Endpoint: `POST /api/cantieri-sicurezza/{id}/genera-pos` (DOCX binary)
-### Storico: `GET /api/cantieri-sicurezza/{id}/pos-generazioni`
-### Frontend: Card "Genera bozza POS" in Step 4 con download + warning gate
-
-### Testing: 23/23 backend, 100% frontend (iteration_234)
-
-
-## D1+D2+D3 — Pacchetti Documentali (COMPLETATO 2026-03-22)
-Archivio documenti + template pacchetti + motore verifica.
-- D1: 26 tipi documento, archivio con upload/metadati/scadenza/privacy, API CRUD
-- D2: 5 template (Ingresso Cantiere, Qualifica, Personale, Mezzi, Sicurezza), espansione scope
-- D3: Verifica matching archivio->items, stato attached/missing/expired/in_scadenza, blocking, summary
-- Frontend: `/pacchetti-documentali`, 2 tab (Archivio+Pacchetti), upload, checklist 3 colonne
-### Testing: 38/38 backend, 100% frontend (iteration_235)
-
-## D4+D5 — Preview Invio, Email & Log (COMPLETATO 2026-03-22)
-Preparazione, invio email con allegati, e tracciabilita invii.
-- D4: `POST /prepara-invio` genera email_draft (oggetto, testo, allegati, warnings privacy/scadenza)
-- D5: `POST /invia` invio via Resend + log in `pacchetti_invii`, gestione errori graceful
-- `GET /invii` storico invii per pacchetto, `PATCH /{id}` aggiornamento destinatari
-- Bug fix: `get_object()` ritornava tupla (bytes, content_type) — ora correttamente destrutturato
-- Frontend: PackageDetailView con checklist, form destinatari To/CC, preview email editabile, warnings sensibili/scaduti, dialog conferma invio, storico invii
-### Testing: 21/21 backend, 100% frontend (iteration_237)
-
-## Registro Obblighi Commessa MVP (COMPLETATO 2026-03-22)
-Modulo "collante" che centralizza tutti gli obblighi, blockers e requisiti per ogni commessa.
-- Sync engine con 5 fonti: Evidence Gate, Gate POS, Soggetti, Istruttoria, Rami Normativi
-- Deduplicazione via `dedupe_key` (formato: `{commessa_id}|{source_module}|{source_entity_id}|{code}`)
-- Auto-close con `resolution_note` quando la condizione sorgente sparisce
-- Riapertura automatica se un obbligo chiuso torna attivo
-- 7 API: CRUD + sync + commessa + bloccanti + summary
-- UI: Sezione collapsabile in CommessaHubPage con 4 gruppi (Bloccanti/Da completare/Da verificare/Chiusi)
-- Filtri per fonte e categoria, cambio stato inline, link navigazione ai moduli sorgente
-- Indici MongoDB: dedupe_key unique, commessa_id+status, priority sort
-### Testing: 23/23 backend, 100% frontend (iteration_238)
-
-## R0 — Auto-Sync Registro Obblighi (COMPLETATO 2026-03-22)
-Trigger automatici asincroni per sincronizzare il registro senza click manuale.
-- 8 trigger inseriti in 4 moduli: cantiere sicurezza (PUT con campi sostanziali), emissioni (PATCH/gate/emetti), istruttoria (risposte + conferma segmentazione), rami normativi (creazione manuale + da istruttoria)
-- Debounce in-memory 5s (v1 single-instance), `asyncio.create_task()` non-blocking
-- Log strutturato: commessa_id, trigger_source, entity, skip/start/complete/fail
-- Helper `resolve_commessa_from_preventivo()` per risalire da preventivo a commessa madre
-- Bug fix: query cantiere con `$or: [commessa_id, parent_commessa_id]`
-### Testing: 15/15 backend (iteration_239)
-
-## C1 — Verifica Committenza MVP (COMPLETATO 2026-03-22)
-Modulo per analisi AI dei documenti committenza (contratti, ordini, capitolati, PSC).
-- C1.1: Package analisi sopra repository esistente (no duplicazione file), referenzia doc_id da documenti_archivio
-- C1.2: Motore AI GPT-4o: parsing → estrazione semantica → classificazione → confronto con preventivo/istruttoria/cantiere
-- C1.3: Review umana: conferma/rifiuta obblighi, anomalie, mismatch. Domande con risposte. Approve → official_snapshot
-- C1.4: Generazione obblighi nel Registro con dedupe_key `{commessa_id}|committenza|{analysis_id}|{code}`
-- Collections: `pacchetti_committenza`, `analisi_committenza` con indici unique
-- 12 categorie documenti committenza, 5 categorie obblighi, output strutturato JSON
-- UI: VerificaCommittenzaSection integrata in CommessaHubPage con 3 viste (lista/package/analisi)
-- 6 blocchi UI: documenti, sintesi AI, obblighi estratti, anomalie, mismatch, domande residue
-### Testing: 16/16 backend + 5 skipped (LLM key req), 100% frontend (iteration_240)
-
-## Registro Obblighi Fase 2 (COMPLETATO 2026-03-22)
-Evoluzione del registro con responsabilita, scadenze e 3 nuove fonti.
-- Nuovi campi: `sla_source` (manuale/da_documento_cliente/da_scadenza_documento/da_pacchetto_documentale/da_emissione/da_cantiere), `due_date` operativo
-- Source F: documenti_scadenza — documenti scaduti (alta/hard_block) e in scadenza 30gg (media/warning)
-- Source G: pacchetti_documentali — documenti mancanti/scaduti nei pacchetti
-- Source H: committenza — obblighi/anomalie/mismatch da analisi approvate
-- UI: assegnazione inline ruolo (6 ruoli), date picker scadenza, sla_source label, color-coding scadenze
-- Totale: 8 fonti integrate nel sync engine (A-H)
-### Testing: 16/16 backend, 100% frontend (iteration_241)
-
-## Dashboard Cantiere Multilivello (COMPLETATO 2026-03-23)
-Dashboard manageriale con visibilita multilivello su tutte le commesse attive.
-
-### Step A — Executive Dashboard:
-- Global summary: 6 KPI (commesse attive, verdi, gialli, rossi, bloccanti, aperti)
-- Card per commessa con semaforo (verde/giallo/rosso) basato su obblighi bloccanti/warnings
-- Filtri per stato semaforo (Tutte, Critiche, Attenzione, OK)
-- Quick stats: deadline, importo, obblighi aperti/bloccanti
-
-### Step B — Drill-down 4 Livelli:
-- **L1 Commessa**: 4 readiness mini-cards (Obblighi, Rami, POS, Pacchetti), top blockers, obblighi per fonte
-- **L2 Rami Normativi**: lista rami con stato, emissioni progress bar
-- **L3 Sicurezza**: Gate POS status, campi mancanti, link ad apertura cantiere
-- **L3b Pacchetti Documentali**: checklist con progress bar allegati/mancanti/scaduti
-- **L4 Committenza**: pacchetti analisi, obblighi estratti, anomalie e mismatch
-
-### Backend: `GET /api/dashboard/cantiere-multilivello`
-- Aggregazione dati da 9 collezioni MongoDB (commesse, obblighi_commessa, cantieri_sicurezza, rami_normativi, emissioni_documentali, pacchetti_documentali, analisi_committenza, pacchetti_committenza)
-- Pipeline aggregation per obblighi con grouping per commessa/status/source/severity
-
-### Frontend: `/cruscotto-cantiere` (DashboardCantierePage.js)
-- Collapsible per espansione card commessa e sezioni drill-down
-- Sidebar link "Dashboard Cantiere" in DashboardLayout
-
-### Testing: 17/17 backend, 100% frontend (iteration_242)
-
-## Audit Log Completamento (COMPLETATO 2026-03-23)
-Estensione del sistema audit trail esistente per coprire tutti i moduli nuovi.
-
-### Moduli instrumentati (6):
-1. **Cantiere Sicurezza**: create, update sostanziale, delete, AI precompilazione, genera POS
-2. **Registro Obblighi**: sync completato (summary), cambio stato manuale (before/after)
-3. **Pacchetti Documentali**: upload documento, creazione pacchetto, verifica, invio email (successo/fallimento)
-4. **Verifica Committenza**: creazione package, analisi AI, approvazione, generazione obblighi
-5. **Emissioni Documentali**: creazione, update, emissione documento finale
-6. **Rami Normativi**: creazione manuale, generazione da istruttoria
-
-### Nuovi campi nell'audit entry:
-- `commessa_id`: filtraggio per commessa
-- `actor_type`: "user" | "system" | "ai" per distinguere chi ha agito
-
-### Before/After tracking:
-- Cambio stato obbligo (status, owner, due_date, blocking_level)
-- Emissione documento (before_status -> after_status)
-
-### Backend: 24 entity types, 17 action types
-### Frontend: 6 filtri (cerca, tipo entita, azione, attore, data da, data a), colonna Attore con badge S/AI
-
-### Testing: 14/14 backend, 100% frontend (iteration_243)
-
-## D6 — Profili Documentali per Committente (COMPLETATO 2026-03-23)
-Sistema per salvare, gestire e riutilizzare profili documentali per committenti ricorrenti.
-
-### Backend: `/api/profili-committente`
-- CRUD profili: client_name, rules[], notes, warnings[], usage_count
-- `POST /da-pacchetto/{pack_id}`: creazione semi-automatica da pacchetto esistente
-- `POST /{profile_id}/applica`: crea pacchetto precompilato per commessa
-- `GET /suggest/{commessa_id}`: suggerisce profilo matching per committente della commessa
-
-### Frontend: Tab "Profili Committente" in PacchettiDocumentaliPage
-- Card profilo con preview regole (badge obbligatorio/opzionale), note, warning
-- Editor regole: aggiungi/rimuovi, toggle obbligatorio, seleziona tipo doc e entita
-- Dialog "Applica a Commessa" con selezione commessa
-- Bottone "Salva come Profilo" nel dettaglio pacchetto
-
-### Testing: 18/18 backend, 100% frontend (iteration_244)
-
-## Notifiche Intelligenti In-App N1+N2 (COMPLETATO 2026-03-23)
-Sistema di notifiche in-app con trigger da eventi critici e deduplicazione.
-
-### Backend: `/api/notifiche-smart`
-- CRUD: list (con filtro status), count unread, mark read, mark all read, archive
-- Deduplicazione via `dedupe_key`: stessa notifica non duplicata se unread
-- Collection: `notifiche_smart` con severity (critica/alta/media/bassa)
-
-### Trigger Engine (N2): 6 eventi
-1. **Semaforo peggiorato**: verde→giallo, giallo→rosso (con cache semaforo)
-2. **Nuovo hard block**: obbligo bloccante creato durante sync
-3. **Documento scaduto**: da watchdog scadenze
-4. **Emissione bloccata**: blocco su evidence gate
-5. **Gate POS peggiorato**: POS non piu pronto
-6. **Pacchetto incompleto**: dopo verifica con mancanti/scaduti
-
-### Wiring:
-- `obblighi_commessa.py` sync → trigger post-sync + semaforo check
-- `pacchetti_documentali.py` verifica → trigger pacchetto incompleto
-
-### Frontend:
-- Bell icon in topbar con badge count (polling 30s)
-- Drawer laterale: titolo, messaggio, severity colors, "Apri", "Letta", "Segna tutte lette"
-- Link "Vedi tutte le notifiche" → /notifiche
-
-### Testing: 17/17 backend, 100% frontend (iteration_245)
-
-## Backlog Prioritizzato
-
-### P0 (Prossimi — COMPLETATI)
-- ~~S3: Motore AI Sicurezza~~ — COMPLETATO
-- ~~S4: Generazione DOCX~~ — COMPLETATO
-- ~~Registro Obblighi Commessa MVP~~ — COMPLETATO
-
-### P1 (Prossimi)
-- **D1-D5: Pacchetti Documentali Intelligenti** — COMPLETATO (D1-D5)
-  - ~~D1-D5~~ COMPLETATO
-  - D6: Profili documentali per committente ricorrente
-- ~~**Registro Obblighi Fase 2**: aggiungere pacchetti documentali, verifica committenza, documenti scaduti, assegnazione responsabili, scadenze~~
-  → Committenza ora alimenta il Registro. Prossimi: pacchetti documentali, scadenze, responsabili
-- ~~Modulo Verifica Committenza / Contratti~~ — COMPLETATO (C1)
-- ~~Dashboard Cantiere Multilivello~~ — COMPLETATO (2026-03-23)
-- ~~Audit Log~~ — COMPLETATO (2026-03-23)
-- ~~D6: Profili documentali per committente ricorrente~~ — COMPLETATO (2026-03-23)
-- ~~Notifiche intelligenti (in-app, poi email)~~ — In-App COMPLETATO (2026-03-23)
-- Email automatiche selettive (post in-app)
-- Stability Guard deterministico
-
-### P2-P3
-- Multi-Tenant, ML Training, Alert costi
-- Unificazione PDF, Portale Clienti
-- Fix warning minori (exhaustive-deps, hydration)
+## Task ON HOLD (fino ad approvazione post-audit)
+- Email automatiche selettive
+- Monetizzazione / Stripe
+- Stability Guard AI
+- Multi-Tenant Architecture
+- Fix warning minori

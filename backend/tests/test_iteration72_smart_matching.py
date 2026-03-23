@@ -17,7 +17,7 @@ import subprocess
 import time
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://multi-level-dash.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://code-health-check-11.preview.emergentagent.com').rstrip('/')
 
 
 def create_test_session():
