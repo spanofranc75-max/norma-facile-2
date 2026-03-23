@@ -5,7 +5,7 @@ from core.security import get_current_user
 from core.database import db
 from models.gate_certification import (
     GateCertificationCreate, GateCertificationUpdate,
-    RischioItem, TipoChiusura, Azionamento
+    RischioItem, Azionamento
 )
 import uuid
 import logging

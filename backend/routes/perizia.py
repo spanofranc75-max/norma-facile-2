@@ -1,5 +1,5 @@
 """Perizia Sinistro (Damage Assessment) routes — CRUD + AI Analysis + PDF."""
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Request
 from fastapi.responses import StreamingResponse, Response
 from typing import Optional
 import os
@@ -12,7 +12,7 @@ from core.database import db
 from core.rate_limiter import limiter
 from models.perizia import PeriziaCreate, PeriziaUpdate, CODICI_DANNO, CODICI_DANNO_MAP
 from services.audit_trail import log_activity
-from services.object_storage import upload_photo, get_object
+from services.object_storage import get_object
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/perizie", tags=["perizie"])

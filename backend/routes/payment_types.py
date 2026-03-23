@@ -8,7 +8,7 @@ from core.security import get_current_user
 from core.database import db
 from models.payment_type import (
     PaymentTypeCreate, PaymentTypeUpdate, PaymentTypeResponse, PaymentTypeListResponse,
-    SimulateRequest, SimulateResponse, SimulateDeadlineItem, QuotaItem,
+    SimulateRequest, SimulateResponse, SimulateDeadlineItem,
 )
 import logging
 

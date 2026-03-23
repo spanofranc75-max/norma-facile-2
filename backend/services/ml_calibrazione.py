@@ -8,7 +8,6 @@ Applica regressione pesata per migliorare le stime future.
 import logging
 from datetime import datetime, timezone
 from typing import Optional
-import math
 
 logger = logging.getLogger(__name__)
 

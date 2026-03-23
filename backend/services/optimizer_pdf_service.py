@@ -6,8 +6,8 @@ from reportlab.platypus import (
     SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, KeepTogether,
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
-from reportlab.graphics.shapes import Drawing, Rect, String, Line
+from reportlab.lib.enums import TA_CENTER
+from reportlab.graphics.shapes import Drawing, Rect, String
 from io import BytesIO
 from datetime import datetime
 

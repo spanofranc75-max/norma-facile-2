@@ -3,9 +3,9 @@ PDF Generator for Procurement Documents (RdP, OdA)
 Uses WeasyPrint with shared template utilities.
 """
 from io import BytesIO
-from datetime import datetime, timezone
+from datetime import datetime
 import logging
-from typing import Optional, List
+from typing import Optional
 from services.pdf_template import COMMON_CSS, fmt_it, safe
 
 logger = logging.getLogger(__name__)

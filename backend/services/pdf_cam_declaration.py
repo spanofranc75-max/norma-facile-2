@@ -6,7 +6,7 @@ Generates the official compliance declaration document.
 from io import BytesIO
 from datetime import datetime, timezone
 import logging
-from typing import Dict, List, Any
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ try:
 except ImportError:
     WEASYPRINT_AVAILABLE = False
 
-from services.pdf_template_v2 import UNIFIED_CSS, safe, fmt_it, build_header
+from services.pdf_template_v2 import UNIFIED_CSS, safe, fmt_it
 
 
 CAM_EXTRA_CSS = """

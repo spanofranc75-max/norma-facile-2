@@ -7,7 +7,7 @@ Fili conduttori:
   - attrezzature saldatrici → Riesame Tecnico (check attrezzature_idonee)
   - attrezzature chiavi_dinam → Diario Montaggio (check taratura)
 """
-from datetime import datetime, timezone, date
+from datetime import date
 from fastapi import APIRouter, Depends
 from core.security import get_current_user
 from core.database import db

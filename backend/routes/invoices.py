@@ -2,7 +2,7 @@
 import os
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
-from typing import Optional, List
+from typing import Optional
 from io import BytesIO
 import uuid
 import calendar
@@ -10,8 +10,7 @@ from datetime import datetime, timezone, date, timedelta
 from core.security import get_current_user
 from core.database import db
 from models.invoice import (
-    InvoiceCreate, InvoiceUpdate, InvoiceResponse, InvoiceListResponse,
-    InvoiceStatusUpdate, ConvertInvoiceRequest, DocumentType, InvoiceStatus
+    InvoiceCreate, InvoiceUpdate, InvoiceResponse, InvoiceStatusUpdate, ConvertInvoiceRequest, DocumentType, InvoiceStatus
 )
 from services.invoice_service import invoice_service
 from services.pdf_service import pdf_service

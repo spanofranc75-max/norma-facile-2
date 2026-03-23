@@ -15,7 +15,7 @@ import logging
 
 from pypdf import PdfWriter, PdfReader
 from services.pdf_template import (
-    fmt_it, safe, COMMON_CSS, render_pdf, format_date,
+    safe, render_pdf,
 )
 
 logger = logging.getLogger(__name__)

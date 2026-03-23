@@ -1,7 +1,7 @@
 """Catalogo Profili Personalizzato (Custom Warehouse) routes."""
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional
 from enum import Enum
 import uuid
 from datetime import datetime, timezone

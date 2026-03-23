@@ -12,9 +12,9 @@ import uuid
 import base64
 import logging
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Request
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Request
 from pydantic import BaseModel
 
 from core.database import db

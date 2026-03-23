@@ -1,7 +1,5 @@
 """Sopralluogo & Messa a Norma AI routes."""
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, Response
-from typing import Optional
-import os
 import uuid
 import base64
 import logging

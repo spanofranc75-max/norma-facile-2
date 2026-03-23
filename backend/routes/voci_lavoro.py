@@ -4,7 +4,7 @@ Ogni commessa puo' contenere piu' voci, ognuna con la sua normativa.
 """
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime, timezone
 import uuid
 

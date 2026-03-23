@@ -1,11 +1,7 @@
 """PDF generation service for invoices — WeasyPrint unified template."""
-from io import BytesIO
-from datetime import datetime
-from typing import Optional
 import logging
 from services.pdf_template import (
-    fmt_it, safe, build_header_html, compute_iva_groups,
-    build_totals_html, build_conditions_html, render_pdf, format_date,
+    fmt_it, format_date,
 )
 
 logger = logging.getLogger(__name__)

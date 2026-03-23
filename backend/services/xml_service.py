@@ -2,7 +2,6 @@
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 from datetime import datetime
-from typing import Optional
 import logging
 
 logger = logging.getLogger(__name__)

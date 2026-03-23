@@ -1,12 +1,11 @@
 """PDF service for CE Certifications - DOP + CE Label."""
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import mm, cm
+from reportlab.lib.units import mm
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
-from reportlab.graphics.shapes import Drawing, Rect, String, Line
-from reportlab.graphics import renderPDF
+from reportlab.lib.enums import TA_CENTER
+from reportlab.graphics.shapes import Drawing, String
 from io import BytesIO
 from datetime import datetime
 

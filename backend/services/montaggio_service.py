@@ -7,12 +7,9 @@ Funzionalità:
 3. Tabella ISO 898-1 per coppie di serraggio (Nm) dato Diametro × Classe
 """
 import os
-import io
 import json
 import uuid
-import base64
 import logging
-from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)

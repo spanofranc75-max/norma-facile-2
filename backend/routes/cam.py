@@ -5,7 +5,7 @@ DM 23 giugno 2022 n. 256
 """
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse, Response
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime, timezone
 from pydantic import BaseModel
 from io import BytesIO
@@ -15,9 +15,7 @@ import logging
 from core.security import get_current_user
 from core.database import db
 from models.cam import (
-    DatiCAMMateriale, MetodoProduttivo, TipoCertificazioneCAM,
-    calcola_cam_commessa, calcola_conformita_cam, SOGLIE_CAM_ACCIAIO,
-    calcola_co2_risparmiata,
+    MetodoProduttivo, calcola_cam_commessa, calcola_conformita_cam, calcola_co2_risparmiata,
 )
 
 logger = logging.getLogger(__name__)
@@ -874,9 +872,8 @@ async def cam_alert(commessa_id: str, user: dict = Depends(get_current_user)):
 async def report_cam_mensile_pdf(user: dict = Depends(get_current_user)):
     """Report CAM Mensile — PDF con trend % riciclato, breakdown commesse, proiezione trimestrale."""
     import html as html_mod
-    from io import BytesIO
     from weasyprint import HTML as WP_HTML
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timezone
 
     _e = html_mod.escape
     uid = user["user_id"]

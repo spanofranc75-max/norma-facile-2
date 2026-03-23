@@ -5,7 +5,7 @@ import csv
 import io
 import uuid
 from datetime import date, datetime, timezone
-from typing import Optional, List
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel

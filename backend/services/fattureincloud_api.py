@@ -5,7 +5,7 @@ Sync fatture, clienti, fornitori, prodotti with Fatture in Cloud.
 import json
 import logging
 import httpx
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from core.config import settings
 
 logger = logging.getLogger(__name__)

@@ -4,9 +4,9 @@ Based on Steel Project Design Srls style.
 Used for: RdP, OdA, Fatture, DDT, Preventivi
 """
 from io import BytesIO
-from datetime import datetime, timezone
+from datetime import datetime
 import logging
-from typing import Optional, List, Dict, Any
+from typing import Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
 

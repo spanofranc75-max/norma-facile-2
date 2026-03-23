@@ -10,9 +10,7 @@ Funzionalita:
 import os
 import uuid
 import json
-import math
 import logging
-from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 

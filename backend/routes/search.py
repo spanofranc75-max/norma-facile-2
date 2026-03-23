@@ -1,6 +1,5 @@
 """Global search across commesse, preventivi, clienti, DDT."""
 
-from typing import Optional
 from fastapi import APIRouter, Depends, Query
 
 from core.database import db

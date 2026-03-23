@@ -5,7 +5,7 @@ Bilancio di Sostenibilità Ambientale aziendale.
 from io import BytesIO
 from datetime import datetime, timezone
 import logging
-from typing import Dict, List, Any
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 

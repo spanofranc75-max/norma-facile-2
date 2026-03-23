@@ -15,7 +15,6 @@ from datetime import datetime, timezone, date
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from typing import Optional, List
 from weasyprint import HTML
 
 from core.database import db

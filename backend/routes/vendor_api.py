@@ -3,7 +3,7 @@
 Multi-key system: each vendor gets a unique API key stored in vendor_keys collection.
 Vendor catalogs are stored in vendor_catalogs collection, separate from user profiles.
 """
-from fastapi import APIRouter, Depends, HTTPException, Header, Query
+from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel, Field
 from typing import Optional, List
 import uuid

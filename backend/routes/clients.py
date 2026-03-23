@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from core.security import get_current_user
 from core.database import db
 from models.client import (
-    ClientCreate, ClientUpdate, ClientResponse, ClientListResponse
+    ClientCreate, ClientUpdate
 )
 from services.audit_trail import log_activity
 import logging

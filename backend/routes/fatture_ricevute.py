@@ -4,13 +4,12 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from enum import Enum
 import uuid
-import calendar
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, date, timedelta
 from core.security import get_current_user
 from core.database import db
 from core.config import settings
-from services.payment_calculator import calculate_due_dates, calc_scadenze_from_supplier
+from services.payment_calculator import calc_scadenze_from_supplier
 from services.audit_trail import log_activity
 import logging
 import re

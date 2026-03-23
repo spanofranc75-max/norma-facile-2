@@ -6,7 +6,7 @@ Ogni 👎 crea automaticamente una riga nel Registro NC + alert admin.
 import uuid
 import logging
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel

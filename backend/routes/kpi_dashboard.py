@@ -10,7 +10,7 @@ GET /api/kpi/tempi-medi              — Tempi medi lavorazione per tipologia
 GET /api/kpi/overview                — Dashboard overview (tutti i KPI in una chiamata)
 """
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from collections import defaultdict
 
 from fastapi import APIRouter, Depends

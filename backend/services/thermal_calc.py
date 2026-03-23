@@ -7,9 +7,6 @@ from core.engine.thermal import (
     ThermalValidator,
     ThermalInput,
     ThermalResult,
-    GLASS_TYPES,
-    FRAME_TYPES,
-    SPACER_TYPES,
 )
 from core.engine.climate_zones import ZONE_LIMITS as _ENGINE_LIMITS
 

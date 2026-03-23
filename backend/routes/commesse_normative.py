@@ -13,7 +13,7 @@ from typing import Optional, List
 from core.security import get_current_user
 from core.database import db
 from services.commesse_normative_service import (
-    get_rami, get_ramo, crea_ramo,
+    get_ramo, crea_ramo,
     genera_rami_da_segmentazione,
     get_emissioni, get_emissione, crea_emissione,
     aggiorna_emissione, check_evidence_gate, emetti_emissione,

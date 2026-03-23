@@ -4,7 +4,7 @@ Provides consistent HTML/CSS styling, header layout, and helpers
 for Preventivi, Fatture, and DDT using WeasyPrint.
 """
 from io import BytesIO
-from datetime import datetime, timezone
+from datetime import datetime
 import html as html_mod
 import logging
 

@@ -1,7 +1,7 @@
 """
 API per il sistema ML di Calibrazione del Preventivatore Predittivo.
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import Optional
 from core.database import db

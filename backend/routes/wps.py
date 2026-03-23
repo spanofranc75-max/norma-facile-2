@@ -6,7 +6,7 @@ Matches qualified welders to the job requirements.
 import uuid
 from datetime import datetime, timezone
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, Query
 from core.database import db
 from core.security import get_current_user

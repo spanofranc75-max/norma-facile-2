@@ -4,17 +4,16 @@ from fastapi.responses import StreamingResponse, Response
 from typing import Optional
 from io import BytesIO
 import uuid
-import base64
 from datetime import datetime, timezone
 from core.security import get_current_user
 from core.database import db
 from models.rilievo import (
     RilievoCreate, RilievoUpdate, RilievoResponse, RilievoListResponse,
-    RilievoStatus, SketchData, PhotoData, TipologiaManufatto
+    RilievoStatus, SketchData, PhotoData
 )
 from services.rilievo_pdf_service import rilievo_pdf_service
 from services.audit_trail import log_activity
-from services.object_storage import upload_photo, get_object, put_object
+from services.object_storage import get_object, put_object
 import logging
 
 logger = logging.getLogger(__name__)

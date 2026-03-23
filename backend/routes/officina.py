@@ -7,7 +7,7 @@ import uuid
 import base64
 import logging
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import List
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel

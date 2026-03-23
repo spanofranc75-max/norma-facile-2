@@ -8,7 +8,6 @@ Debounce strategy: in-memory single-instance (temporaneo per v1).
 Non blocca la response principale. Log strutturato per debug.
 """
 
-import asyncio
 import logging
 import time
 from typing import Optional
@@ -39,9 +38,8 @@ async def resolve_commessa_from_preventivo(preventivo_id: str, user_id: str) -> 
     )
     return commessa["commessa_id"] if commessa else None
 
+
 # ─── Debounce in-memory (v1 — single instance) ───
-_last_sync: dict[str, float] = {}
-DEBOUNCE_SECONDS = 5.0
 
 
 async def trigger_sync_obblighi(

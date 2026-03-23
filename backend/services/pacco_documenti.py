@@ -16,13 +16,11 @@ Regole:
   - Ordine: CAP. 1 (1090) → CAP. 2 (13241) → CAP. 3 (Relazione Tecnica)
 """
 import logging
-import base64
 from io import BytesIO
 from datetime import datetime, timezone
-from typing import List, Dict, Any
+from typing import List, Dict
 import html as html_mod
 
-from pypdf import PdfWriter
 
 logger = logging.getLogger(__name__)
 

@@ -2,7 +2,7 @@
 Financial Service — Aggregatore ciclo attivo + passivo per il Cruscotto Artigiano.
 Corregge i campi fatture_ricevute (imposta, data_scadenza_pagamento, payment_status).
 """
-from datetime import datetime, timezone, timedelta, date
+from datetime import timedelta, date
 from core.database import db
 import logging
 

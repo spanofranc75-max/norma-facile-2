@@ -6,7 +6,6 @@ Portable: JSON format with manifest, independent of DB name.
 import io
 import json
 import os
-import asyncio
 import logging
 import tempfile
 from datetime import datetime, timezone

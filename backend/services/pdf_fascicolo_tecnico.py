@@ -3,9 +3,7 @@ DOP, CE Marking, Piano di Controllo, Rapporto VT, Registro Saldatura, Riesame Te
 Struttura identica ai modelli originali forniti dall'utente.
 """
 from io import BytesIO
-from datetime import datetime, timezone
 import logging
-from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
 

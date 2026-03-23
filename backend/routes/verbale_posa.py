@@ -7,7 +7,7 @@ import os
 import io
 import base64
 from datetime import datetime, timezone, date
-from typing import Optional, List
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from core.database import db

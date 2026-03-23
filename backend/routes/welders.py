@@ -9,7 +9,6 @@ from core.database import db
 from core.security import get_current_user
 from models.welder import (
     WelderCreate, WelderResponse, WelderList,
-    QualificationCreate, QualificationResponse,
 )
 
 router = APIRouter(prefix="/welders", tags=["welders"])

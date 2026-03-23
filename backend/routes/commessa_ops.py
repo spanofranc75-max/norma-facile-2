@@ -25,5 +25,3 @@ router.include_router(doc_router)
 router.include_router(cons_router)
 
 # Re-export for backward compatibility (used by tests)
-from routes.documenti_ops import _extract_profile_base, _normalize_profilo
-from routes.commessa_ops_common import get_commessa_or_404, ensure_ops_fields

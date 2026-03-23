@@ -3,7 +3,7 @@ import re
 import uuid
 import logging
 import base64
-from typing import Optional, List
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse

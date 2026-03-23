@@ -4,7 +4,6 @@ Aggregates: Anagrafica, Timeline eventi, Preventivo, Fatture, DDT,
 Certificazioni CE, FPC, Sicurezza into a single branded PDF.
 """
 import logging
-from io import BytesIO
 from datetime import datetime
 import html as html_mod
 

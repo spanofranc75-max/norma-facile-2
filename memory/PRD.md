@@ -61,6 +61,13 @@ Prodotti 7 report di audit approfondito:
 
 ### Test Report
 - **Test iteration 246**: 34/34 test superati (100%) — backend hardening verificato
+- **TD-004 cleanup**: Backend avvio pulito, tutti endpoint rispondono correttamente, 0 errori
+
+### Scoperte importanti dall'audit
+- Le 6 route "orfane" nel report di audit erano ERRATE — sono sub-moduli di `commessa_ops.py`, attivamente registrati
+- Le 6 collezioni "zombie" nel report erano ERRATE — tutte referenziate dal codice attivo
+- Solo 2 vere collezioni zombie: `download_tokens`, `sessions`
+- Il vero dead code confermato era: 2 service (aruba_sdi, pos_pdf_service), 5 file root legacy, 158 import inutilizzati
 
 ### Backlog prioritizzato (in attesa approvazione utente)
 - TD-001 a TD-015: Tech debt (TECH_DEBT_BACKLOG.md)

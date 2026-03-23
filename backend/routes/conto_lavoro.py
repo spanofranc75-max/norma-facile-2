@@ -12,7 +12,7 @@ from io import BytesIO
 from core.database import db
 from core.security import get_current_user
 from routes.commessa_ops_common import (
-    COLL, DOC_COLL, get_commessa_or_404, ensure_ops_fields,
+    COLL, get_commessa_or_404, ensure_ops_fields,
     ts, new_id, push_event, build_update_with_event,
 )
 

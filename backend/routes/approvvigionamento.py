@@ -1,10 +1,7 @@
 """Approvvigionamento (Procurement) — RdP, OdA, Arrivi, PDF, Email."""
 import uuid
 import re
-import logging
-import base64
 from typing import Optional, List
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Form
 from fastapi.responses import StreamingResponse

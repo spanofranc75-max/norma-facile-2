@@ -1,7 +1,6 @@
 """Payment calculator service - Calculates due dates from payment type configuration."""
 import calendar
 from datetime import date, timedelta
-from typing import Optional
 
 
 def calculate_due_dates(

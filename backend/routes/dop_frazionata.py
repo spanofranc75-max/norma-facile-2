@@ -1381,7 +1381,7 @@ async def download_pacco_rina(cid: str, user: dict = Depends(get_current_user)):
 
         # ── 3. Dichiarazione CAM ──
         try:
-            from models.cam import calcola_cam_commessa, calcola_co2_risparmiata
+            from models.cam import calcola_cam_commessa
             batches = await db.material_batches.find(
                 {"commessa_id": cid, "user_id": user["user_id"], "percentuale_riciclato": {"$ne": None}},
                 {"_id": 0, "certificate_base64": 0}

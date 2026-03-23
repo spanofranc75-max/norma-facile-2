@@ -13,7 +13,6 @@ from io import BytesIO
 from datetime import datetime, timezone
 import base64
 import logging
-from typing import Dict, Any, List, Optional
 
 from pypdf import PdfWriter, PdfReader
 

@@ -8,7 +8,6 @@ Layout multi-pagina A4:
 - SEZIONE 4: Tabella materiali/interventi con prezzi
 - SEZIONE 5: Note e firme
 """
-import base64
 import math
 import logging
 from datetime import datetime, timezone

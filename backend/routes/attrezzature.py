@@ -6,8 +6,8 @@ Il modulo serraggio nel Diario di Montaggio verifica lo stato taratura.
 """
 import uuid
 import logging
-from datetime import datetime, timezone, timedelta
-from typing import Optional, List
+from datetime import datetime, timezone
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel

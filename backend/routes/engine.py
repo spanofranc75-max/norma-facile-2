@@ -3,13 +3,12 @@
 Every norm is a NormaConfig object that injects rules into a universal validation engine.
 Adding a new norm = adding a new JSON config. Zero code changes.
 """
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List, Any
 from enum import Enum
 import uuid
-import math
 from datetime import datetime, timezone
 from core.security import get_current_user
 from core.database import db
@@ -831,7 +830,6 @@ async def generate_fascicolo(
 # ══════════════════════════════════════════════════════════════════
 
 import os
-import base64
 
 LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
 

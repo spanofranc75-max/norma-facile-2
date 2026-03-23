@@ -146,7 +146,6 @@ async def applica_profilo(user_id: str, profile_id: str, commessa_id: str, canti
         return {"error": "Profilo non trovato"}
 
     # Import crea_pacchetto logic — we'll construct template-like data
-    from services.pacchetti_documentali_service import crea_pacchetto
 
     pack_data = {
         "commessa_id": commessa_id,

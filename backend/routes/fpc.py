@@ -14,7 +14,7 @@ from models.fpc import (
 )
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/fpc", tags=["FPC - EN 1090"])
+router = APIRouter(prefix="/fpc", tags=["FPC - EN 1090"])
 
 
 # ═══════════════════════════════════════════════════════════════

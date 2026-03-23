@@ -8,13 +8,12 @@ Genera uno ZIP con struttura ordinata:
     - certificati_*.pdf
 """
 import io
-import os
 import uuid
 import zipfile
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional

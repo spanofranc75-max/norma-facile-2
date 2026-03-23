@@ -7,7 +7,7 @@ Includes company cost configuration and full hourly cost calculation.
 import uuid
 import logging
 from datetime import datetime, timezone, timedelta
-from typing import Optional, List, Literal
+from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
