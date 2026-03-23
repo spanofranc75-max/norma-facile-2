@@ -47,14 +47,20 @@ Prodotti 7 report di audit approfondito:
 ### Finding critici
 1. ~~**BLOCKER**: Indici MongoDB non creati (lifespan/on_event conflict)~~ **RISOLTO (2026-03-23)**
 2. ~~**Alta**: Router sicurezza duplicato in main.py~~ **RISOLTO (2026-03-23)**
-3. **Alta**: Nessun rate limiting
+3. ~~**Alta**: Nessun rate limiting~~ **RISOLTO (2026-03-23)** — 15 endpoint AI protetti (10/min per user)
 4. **Alta**: ~3.200 righe dead code
 5. **Alta**: 78/100 collezioni senza indici (12 critiche ora indicizzate con 24 indici)
 
 ### Fix completati (2026-03-23)
 - **TD-001 RISOLTO**: Spostato startup da `on_event("startup")` a `lifespan()`. 24 indici creati su 12 collezioni critiche (9 unique + 15 lookup). Indici idempotenti — safe ad ogni restart.
 - **TD-002 RISOLTO**: Rimosso import + registrazione duplicata `sicurezza_router` da main.py.
+- **TD-005 RISOLTO**: Rate limiting su 15 endpoint AI (10/min per user, 5/min batch). slowapi con key_func basata su user_id.
+- **TD-009 RISOLTO**: Error handling su asyncio.create_task() — 5 fire-and-forget wrappati con safe_background_task + crash callback sullo scheduler.
+- **TD-010 RISOLTO**: Filtro user_id aggiunto su audits.py, instruments.py, welders.py, quality_hub.py, verbale_posa.py, montaggio.py. Protezione multi-tenant su read/write/delete.
 - **Endpoint /api/health/indexes**: Nuovo endpoint per verifica runtime degli indici critici.
+
+### Test Report
+- **Test iteration 246**: 34/34 test superati (100%) — backend hardening verificato
 
 ### Backlog prioritizzato (in attesa approvazione utente)
 - TD-001 a TD-015: Tech debt (TECH_DEBT_BACKLOG.md)
