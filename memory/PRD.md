@@ -28,6 +28,14 @@ TD-001/002/004/005/009/010, CR-001/002, Data Integrity — tutto completato
 - **Reset**: POST /api/demo/reset ripristina tutti i dati demo
 - **Testing**: 100% (17/17 backend + 5/5 frontend)
 
+### Content Engine M1+M2 (2026-03-23) — Business Sprint
+- **Backend**: CRUD sorgenti, generazione idee AI (GPT-4o), generazione bozze AI, coda editoriale, stats
+- **Frontend**: Pagina `/contenuti` con 4 tab (Sorgenti, Idee, Bozze, Coda Editoriale)
+- **Nav**: Voce "Contenuti" nella sidebar (admin-only, icona PenSquare)
+- **Seed**: 10 sorgenti pre-configurate, canali LinkedIn/Reel/Carosello/Case Study
+- **Tono AI**: Italiano B2B tecnico
+- **Testing**: 100% (16/16 backend + 100% frontend) — iteration_251
+
 ## Backlog prioritizzato
 
 ### P1 — Business Sprint (prossimi)
@@ -51,3 +59,6 @@ TD-001/002/004/005/009/010, CR-001/002, Data Integrity — tutto completato
 - `/app/frontend/src/components/DemoBanner.js` — Banner demo
 - `/app/backend/routes/admin_integrity.py` — Data Integrity Tool
 - `/app/frontend/src/components/OnboardingChecklist.js` + `SmartEmptyState.js` + `IntegrityWidget.js`
+- `/app/backend/routes/content_engine.py` — Content Engine API (M1+M2)
+- `/app/frontend/src/pages/ContentEnginePage.js` — Content Engine UI
+- `/app/backend/scripts/content_sources_seed.py` — Seed 10 sorgenti marketing
