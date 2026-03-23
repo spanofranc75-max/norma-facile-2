@@ -7,7 +7,7 @@ import requests
 import os
 import json
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://pacchetto-email.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://multi-level-dash.preview.emergentagent.com').rstrip('/')
 
 # Test session token and user ID created for this test run
 TEST_SESSION_TOKEN = "test_session_1772904459711"

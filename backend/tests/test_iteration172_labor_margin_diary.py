@@ -20,7 +20,7 @@ import uuid
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://pacchetto-email.preview.emergentagent.com"
+    BASE_URL = "https://multi-level-dash.preview.emergentagent.com"
 
 # Test identifiers
 TEST_USER_ID = "test_user_margin_172"
