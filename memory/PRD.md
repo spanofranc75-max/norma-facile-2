@@ -219,6 +219,30 @@ Dashboard manageriale con visibilita multilivello su tutte le commesse attive.
 
 ### Testing: 17/17 backend, 100% frontend (iteration_242)
 
+## Audit Log Completamento (COMPLETATO 2026-03-23)
+Estensione del sistema audit trail esistente per coprire tutti i moduli nuovi.
+
+### Moduli instrumentati (6):
+1. **Cantiere Sicurezza**: create, update sostanziale, delete, AI precompilazione, genera POS
+2. **Registro Obblighi**: sync completato (summary), cambio stato manuale (before/after)
+3. **Pacchetti Documentali**: upload documento, creazione pacchetto, verifica, invio email (successo/fallimento)
+4. **Verifica Committenza**: creazione package, analisi AI, approvazione, generazione obblighi
+5. **Emissioni Documentali**: creazione, update, emissione documento finale
+6. **Rami Normativi**: creazione manuale, generazione da istruttoria
+
+### Nuovi campi nell'audit entry:
+- `commessa_id`: filtraggio per commessa
+- `actor_type`: "user" | "system" | "ai" per distinguere chi ha agito
+
+### Before/After tracking:
+- Cambio stato obbligo (status, owner, due_date, blocking_level)
+- Emissione documento (before_status -> after_status)
+
+### Backend: 24 entity types, 17 action types
+### Frontend: 6 filtri (cerca, tipo entita, azione, attore, data da, data a), colonna Attore con badge S/AI
+
+### Testing: 14/14 backend, 100% frontend (iteration_243)
+
 ## Backlog Prioritizzato
 
 ### P0 (Prossimi — COMPLETATI)
@@ -234,7 +258,8 @@ Dashboard manageriale con visibilita multilivello su tutte le commesse attive.
   → Committenza ora alimenta il Registro. Prossimi: pacchetti documentali, scadenze, responsabili
 - ~~Modulo Verifica Committenza / Contratti~~ — COMPLETATO (C1)
 - ~~Dashboard Cantiere Multilivello~~ — COMPLETATO (2026-03-23)
-- Audit Log (chi ha fatto cosa quando)
+- ~~Audit Log~~ — COMPLETATO (2026-03-23)
+- D6: Profili documentali per committente ricorrente
 - Stability Guard deterministico
 
 ### P2-P3
