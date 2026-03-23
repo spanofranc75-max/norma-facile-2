@@ -371,9 +371,9 @@ async def analizza_committenza(package_id: str, user_id: str) -> dict:
     if not LlmChat or not UserMessage:
         return {"error": "Motore AI non disponibile (emergentintegrations non installato)"}
 
-    api_key = os.environ.get("EMERGENT_API_KEY") or os.environ.get("LLM_API_KEY")
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
     if not api_key:
-        return {"error": "API key LLM non configurata"}
+        return {"error": "EMERGENT_LLM_KEY non configurata"}
 
     commessa_id = package["commessa_id"]
 

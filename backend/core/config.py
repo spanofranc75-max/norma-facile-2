@@ -19,7 +19,7 @@ class Settings(BaseModel):
     db_name: str = os.environ.get('DB_NAME', 'test_database')
 
     # Auth
-    jwt_secret: str = os.environ.get('JWT_SECRET', 'default-secret-change-in-production')
+    jwt_secret: str = os.environ.get('JWT_SECRET', '')
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
     session_expire_days: int = 7

@@ -70,7 +70,14 @@ Prodotti 7 report di audit approfondito:
   - Eliminati 21 pacchetti_documentali di test senza commessa_id (backup salvato)
   - Ricalcolati 24 summary pacchetti documentali
   - Regola `documenti_archivio`: commessa_id opzionale per entity_type azienda/persona/mezzo
-- **Collezioni zombie**: `download_tokens` (44 doc), `sessions` (3 doc) — candidate per removal, non droppate
+### Sicurezza Credenziali CR-001/002 (2026-03-23)
+- **JWT_SECRET**: rimosso default fallback pericoloso, generato secret crittografico 86 char (secrets.token_urlsafe(64)), startup check con fail fast se mancante o < 32 char
+- **Chiave LLM unificata**: allineato `committenza_analysis_service.py` a `EMERGENT_LLM_KEY`, rimosso `EMERGENT_API_KEY` duplicato da .env
+- **Indici auth**: `uq_session_token` e `uq_download_token` (unique) + expiry indexes
+- **Cleanup periodico**: scheduler pulisce sessioni/token scaduti ogni 24h
+- **Startup security checks**: verifica JWT_SECRET, EMERGENT_LLM_KEY, RESEND_API_KEY all'avvio
+- **Scoperta**: `download_tokens` NON è zombie — attivamente usata da `create_download_token()`
+- **Nota**: `user_sessions` aveva già TTL index (`idx_expires`) — auto-cleanup MongoDB nativo
 
 ### Scoperte importanti dall'audit
 - Le 6 route "orfane" nel report di audit erano ERRATE — sono sub-moduli di `commessa_ops.py`, attivamente registrati

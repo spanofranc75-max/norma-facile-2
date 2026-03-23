@@ -717,7 +717,28 @@ async def _scheduler_loop():
             await _run_auto_backup()
         except Exception as e:
             logger.error(f"[WATCHDOG] Errore nel backup automatico: {e}")
+        # Cleanup expired sessions and download tokens
+        try:
+            await _cleanup_expired_auth()
+        except Exception as e:
+            logger.error(f"[WATCHDOG] Errore nel cleanup sessioni: {e}")
         await asyncio.sleep(CHECK_INTERVAL_SECONDS)
+
+
+async def _cleanup_expired_auth():
+    """Remove expired sessions and one-time download tokens. Runs daily."""
+    now = datetime.now(timezone.utc)
+
+    # Expired sessions
+    result = await db.user_sessions.delete_many({"expires_at": {"$lt": now}})
+    if result.deleted_count:
+        logger.info(f"[WATCHDOG] Cleanup: {result.deleted_count} sessioni scadute rimosse")
+
+    # Expired download tokens (should self-clean via one-time use, but catch stragglers)
+    result = await db.download_tokens.delete_many({"expires_at": {"$lt": now}})
+    if result.deleted_count:
+        logger.info(f"[WATCHDOG] Cleanup: {result.deleted_count} download token scaduti rimossi")
+
 
 
 async def _run_auto_backup():
@@ -802,7 +823,7 @@ def start_scheduler():
     if _scheduler_task is None or _scheduler_task.done():
         _scheduler_task = asyncio.create_task(_scheduler_loop(), name="notification_scheduler")
         _scheduler_task.add_done_callback(
-            lambda t: logger.error(f"[WATCHDOG] Scheduler crashed: {t.exception()}") if t.exception() else None
+            lambda t: logger.error(f"[WATCHDOG] Scheduler crashed: {t.exception()}") if not t.cancelled() and t.exception() else None
         )
         logger.info("[WATCHDOG] Background task creato")
 

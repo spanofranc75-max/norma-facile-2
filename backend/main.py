@@ -164,6 +164,12 @@ async def _ensure_indexes():
     await _idx("istruttorie", [("user_id", 1), ("preventivo_id", 1)], name="idx_istruttorie_preventivo")
     await _idx("istruttorie", [("user_id", 1), ("commessa_id", 1)], name="idx_istruttorie_commessa")
 
+    # --- Auth: Sessions & Download Tokens ---
+    await _idx("user_sessions", [("session_token", 1)], unique=True, name="uq_session_token")
+    # user_sessions.user_id and expires_at already indexed (user_id_1, idx_expires TTL)
+    await _idx("download_tokens", [("token", 1)], unique=True, name="uq_download_token")
+    await _idx("download_tokens", [("expires_at", 1)], name="idx_dl_token_expiry")
+
     logger.info(f"MongoDB indexes verified: {len(created)} indexes ensured — {', '.join(created)}")
     return created
 
@@ -172,6 +178,16 @@ async def _ensure_indexes():
 async def lifespan(app: FastAPI):
     """Application lifespan events — single startup/shutdown entry point."""
     logger.info("Norma Facile 2.0 starting up...")
+
+    # 0. Security checks — fail fast on missing secrets
+    from core.config import settings
+    if not settings.jwt_secret or len(settings.jwt_secret) < 32:
+        raise RuntimeError("JWT_SECRET mancante o troppo corto (min 32 caratteri). Impostare in .env")
+    if not settings.emergent_llm_key:
+        logger.warning("EMERGENT_LLM_KEY non configurata — moduli AI non funzioneranno")
+    if not settings.resend_api_key:
+        logger.warning("RESEND_API_KEY non configurata — invio email disabilitato")
+    logger.info("Security checks passed")
 
     # 1. Legacy migration: ensure all users have a role
     await db.users.update_many(
