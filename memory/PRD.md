@@ -45,11 +45,16 @@ Prodotti 7 report di audit approfondito:
 - `COMPLIANCE_RISKS.md` — 10 rischi sicurezza/GDPR/AI
 
 ### Finding critici
-1. **BLOCKER**: Indici MongoDB non creati (lifespan/on_event conflict)
-2. **Alta**: Router sicurezza duplicato in main.py
+1. ~~**BLOCKER**: Indici MongoDB non creati (lifespan/on_event conflict)~~ **RISOLTO (2026-03-23)**
+2. ~~**Alta**: Router sicurezza duplicato in main.py~~ **RISOLTO (2026-03-23)**
 3. **Alta**: Nessun rate limiting
 4. **Alta**: ~3.200 righe dead code
-5. **Alta**: 78/100 collezioni senza indici
+5. **Alta**: 78/100 collezioni senza indici (12 critiche ora indicizzate con 24 indici)
+
+### Fix completati (2026-03-23)
+- **TD-001 RISOLTO**: Spostato startup da `on_event("startup")` a `lifespan()`. 24 indici creati su 12 collezioni critiche (9 unique + 15 lookup). Indici idempotenti — safe ad ogni restart.
+- **TD-002 RISOLTO**: Rimosso import + registrazione duplicata `sicurezza_router` da main.py.
+- **Endpoint /api/health/indexes**: Nuovo endpoint per verifica runtime degli indici critici.
 
 ### Backlog prioritizzato (in attesa approvazione utente)
 - TD-001 a TD-015: Tech debt (TECH_DEBT_BACKLOG.md)

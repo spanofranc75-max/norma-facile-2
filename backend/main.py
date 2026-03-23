@@ -73,7 +73,6 @@ from routes.qualita import router as qualita_router
 from routes.montaggio import router as montaggio_router
 from routes.attrezzature import router as attrezzature_router
 from routes.archivio import router as archivio_router
-from routes.sicurezza import router as sicurezza_router
 from routes.dop_frazionata import router as dop_frazionata_router
 from routes.sal_acconti import router as sal_acconti_router
 from routes.preventivatore import router as preventivatore_router
@@ -105,20 +104,94 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+async def _ensure_indexes():
+    """Create all critical MongoDB indexes. Idempotent — safe to call on every startup."""
+    created = []
+
+    async def _idx(collection_name, keys, unique=False, name=None, partial_filter=None):
+        try:
+            kwargs = {"unique": unique, "name": name}
+            if partial_filter:
+                kwargs["partialFilterExpression"] = partial_filter
+            result = await db[collection_name].create_index(keys, **kwargs)
+            created.append(f"{collection_name}.{result}")
+        except Exception as e:
+            logger.error(f"Index creation failed {collection_name}/{name}: {e}")
+
+    # --- Commesse Normative ---
+    await _idx("commesse_normative", [("commessa_id", 1), ("normativa", 1), ("user_id", 1)], unique=True, name="uq_commessa_normativa")
+
+    # --- Emissioni Documentali ---
+    await _idx("emissioni_documentali", [("ramo_id", 1), ("emission_type", 1), ("emission_seq", 1), ("user_id", 1)], unique=True, name="uq_emissione")
+    await _idx("emissioni_documentali", [("commessa_id", 1)], name="idx_emissioni_commessa")
+
+    # --- Cantieri Sicurezza ---
+    await _idx("cantieri_sicurezza", [("user_id", 1), ("cantiere_id", 1)], unique=True, name="uq_cantiere_sicurezza")
+    await _idx("cantieri_sicurezza", [("user_id", 1), ("parent_commessa_id", 1)], name="idx_cantiere_commessa")
+
+    # --- Libreria Rischi 3 livelli ---
+    await _idx("lib_fasi_lavoro", [("user_id", 1), ("codice", 1)], unique=True, name="uq_lib_fasi")
+    await _idx("lib_fasi_lavoro", [("user_id", 1), ("categoria", 1)], name="idx_fasi_cat")
+    await _idx("lib_rischi_sicurezza", [("user_id", 1), ("codice", 1)], unique=True, name="uq_lib_rischi")
+    await _idx("lib_rischi_sicurezza", [("user_id", 1), ("categoria", 1), ("sottocategoria", 1)], name="idx_rischi_cat")
+    await _idx("lib_dpi_misure", [("user_id", 1), ("codice", 1)], unique=True, name="uq_lib_dpi")
+    await _idx("lib_dpi_misure", [("user_id", 1), ("tipo", 1)], name="idx_dpi_tipo")
+
+    # --- Registro Obblighi Commessa ---
+    await _idx("obblighi_commessa", [("dedupe_key", 1), ("user_id", 1)], unique=True, name="uq_obbligo_dedupe")
+    await _idx("obblighi_commessa", [("commessa_id", 1), ("user_id", 1), ("status", 1)], name="idx_obblighi_commessa")
+    await _idx("obblighi_commessa", [("user_id", 1), ("blocking_level_sort", 1), ("severity_sort", 1)], name="idx_obblighi_priority")
+
+    # --- Verifica Committenza ---
+    await _idx("pacchetti_committenza", [("package_id", 1), ("user_id", 1)], unique=True, name="uq_pkg_committenza")
+    await _idx("pacchetti_committenza", [("commessa_id", 1), ("user_id", 1)], name="idx_pkg_commessa")
+    await _idx("analisi_committenza", [("analysis_id", 1), ("user_id", 1)], unique=True, name="uq_analisi_committenza")
+    await _idx("analisi_committenza", [("commessa_id", 1), ("user_id", 1)], name="idx_analisi_commessa")
+
+    # --- Documenti Archivio ---
+    await _idx("documenti_archivio", [("user_id", 1), ("commessa_id", 1)], name="idx_doc_archivio_commessa")
+    await _idx("documenti_archivio", [("user_id", 1), ("doc_type", 1)], name="idx_doc_archivio_tipo")
+
+    # --- Pacchetti Documentali ---
+    await _idx("pacchetti_documentali", [("user_id", 1), ("commessa_id", 1)], name="idx_pacchetti_commessa")
+    await _idx("pacchetti_documentali", [("pack_id", 1), ("user_id", 1)], unique=True, name="uq_pacchetto_documentale",
+              partial_filter={"pack_id": {"$type": "string"}})
+
+    # --- Istruttorie ---
+    await _idx("istruttorie", [("user_id", 1), ("preventivo_id", 1)], name="idx_istruttorie_preventivo")
+    await _idx("istruttorie", [("user_id", 1), ("commessa_id", 1)], name="idx_istruttorie_commessa")
+
+    logger.info(f"MongoDB indexes verified: {len(created)} indexes ensured — {', '.join(created)}")
+    return created
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan events."""
+    """Application lifespan events — single startup/shutdown entry point."""
     logger.info("Norma Facile 2.0 starting up...")
-    # Start the watchdog scheduler
+
+    # 1. Legacy migration: ensure all users have a role
+    await db.users.update_many(
+        {"role": {"$exists": False}},
+        {"$set": {"role": "admin"}},
+    )
+
+    # 2. Create/verify all MongoDB indexes
+    app.state.indexes_created = await _ensure_indexes()
+
+    # 3. Start the watchdog scheduler
     from services.notification_scheduler import start_scheduler, stop_scheduler
     start_scheduler()
-    # Init object storage
+
+    # 4. Init object storage
     try:
         from services.object_storage import init_storage
         init_storage()
     except Exception as e:
         logger.warning(f"Object storage init deferred: {e}")
+
     yield
+
     # Shutdown
     stop_scheduler()
     await close_database()
@@ -213,7 +286,6 @@ app.include_router(qualita_router, prefix="/api")
 app.include_router(montaggio_router, prefix="/api")
 app.include_router(attrezzature_router, prefix="/api")
 app.include_router(archivio_router, prefix="/api")
-app.include_router(sicurezza_router, prefix="/api")
 app.include_router(dop_frazionata_router, prefix="/api")
 app.include_router(sal_acconti_router, prefix="/api")
 app.include_router(preventivatore_router, prefix="/api")
@@ -238,83 +310,9 @@ app.include_router(profili_committente_router, prefix="/api")
 app.include_router(notifiche_smart_router, prefix="/api")
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Startup tasks: migrate existing users to have admin role + create indices."""
-    logger.info("Norma Facile 2.0 starting up...")
-    # Ensure all existing users without a role get 'admin' (legacy migration)
-    await db.users.update_many(
-        {"role": {"$exists": False}},
-        {"$set": {"role": "admin"}},
-    )
 
-    # Indici univoci per modello gerarchico commesse
-    try:
-        await db.commesse_normative.create_index(
-            [("commessa_id", 1), ("normativa", 1), ("user_id", 1)],
-            unique=True, name="uq_commessa_normativa"
-        )
-        await db.emissioni_documentali.create_index(
-            [("ramo_id", 1), ("emission_type", 1), ("emission_seq", 1), ("user_id", 1)],
-            unique=True, name="uq_emissione"
-        )
-        await db.emissioni_documentali.create_index(
-            [("commessa_id", 1)], name="idx_emissioni_commessa"
-        )
-        # Indici per Safety Branch
-        await db.cantieri_sicurezza.create_index(
-            [("user_id", 1), ("cantiere_id", 1)],
-            unique=True, name="uq_cantiere_sicurezza"
-        )
-        await db.cantieri_sicurezza.create_index(
-            [("user_id", 1), ("parent_commessa_id", 1)],
-            name="idx_cantiere_commessa"
-        )
-        # Libreria 3 livelli
-        await db.lib_fasi_lavoro.create_index(
-            [("user_id", 1), ("codice", 1)], unique=True, name="uq_lib_fasi"
-        )
-        await db.lib_fasi_lavoro.create_index(
-            [("user_id", 1), ("categoria", 1)], name="idx_fasi_cat"
-        )
-        await db.lib_rischi_sicurezza.create_index(
-            [("user_id", 1), ("codice", 1)], unique=True, name="uq_lib_rischi"
-        )
-        await db.lib_rischi_sicurezza.create_index(
-            [("user_id", 1), ("categoria", 1), ("sottocategoria", 1)], name="idx_rischi_cat"
-        )
-        await db.lib_dpi_misure.create_index(
-            [("user_id", 1), ("codice", 1)], unique=True, name="uq_lib_dpi"
-        )
-        await db.lib_dpi_misure.create_index(
-            [("user_id", 1), ("tipo", 1)], name="idx_dpi_tipo"
-        )
-        # Indici Registro Obblighi Commessa
-        await db.obblighi_commessa.create_index(
-            [("dedupe_key", 1), ("user_id", 1)], unique=True, name="uq_obbligo_dedupe"
-        )
-        await db.obblighi_commessa.create_index(
-            [("commessa_id", 1), ("user_id", 1), ("status", 1)], name="idx_obblighi_commessa"
-        )
-        await db.obblighi_commessa.create_index(
-            [("user_id", 1), ("blocking_level_sort", 1), ("severity_sort", 1)],
-            name="idx_obblighi_priority"
-        )
-        # Indici Verifica Committenza (C1)
-        await db.pacchetti_committenza.create_index(
-            [("package_id", 1), ("user_id", 1)], unique=True, name="uq_pkg_committenza"
-        )
-        await db.pacchetti_committenza.create_index(
-            [("commessa_id", 1), ("user_id", 1)], name="idx_pkg_commessa"
-        )
-        await db.analisi_committenza.create_index(
-            [("analysis_id", 1), ("user_id", 1)], unique=True, name="uq_analisi_committenza"
-        )
-        await db.analisi_committenza.create_index(
-            [("commessa_id", 1), ("user_id", 1)], name="idx_analisi_commessa"
-        )
-    except Exception as e:
-        logger.warning(f"Index creation (may already exist): {e}")
+# Health endpoint with index verification
+
 
 
 @app.get("/api/")
@@ -334,4 +332,30 @@ async def health_check():
         "status": "healthy",
         "service": "Norma Facile 2.0",
         "version": "2.1.0"
+    }
+
+
+@app.get("/api/health/indexes")
+async def health_indexes():
+    """Verify critical MongoDB indexes are present."""
+    critical_collections = [
+        "obblighi_commessa", "commesse_normative", "emissioni_documentali",
+        "cantieri_sicurezza", "lib_fasi_lavoro", "lib_rischi_sicurezza",
+        "lib_dpi_misure", "pacchetti_committenza", "analisi_committenza",
+        "documenti_archivio", "pacchetti_documentali", "istruttorie"
+    ]
+    results = {}
+    all_ok = True
+    for coll_name in critical_collections:
+        indexes = await db[coll_name].index_information()
+        custom_indexes = [n for n in indexes.keys() if n != "_id_"]
+        ok = len(custom_indexes) > 0
+        if not ok:
+            all_ok = False
+        results[coll_name] = {"ok": ok, "indexes": custom_indexes}
+    return {
+        "status": "healthy" if all_ok else "degraded",
+        "collections_checked": len(critical_collections),
+        "all_indexes_present": all_ok,
+        "details": results
     }
