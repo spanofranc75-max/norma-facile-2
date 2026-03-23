@@ -22,6 +22,7 @@ import QuickActionFAB from '../components/QuickActionFAB';
 import QualityScoreWidget from '../components/QualityScoreWidget';
 import ComplianceWidget from '../components/ComplianceWidget';
 import ComplianceDocsWidget from '../components/ComplianceDocsWidget';
+import OnboardingChecklist from '../components/OnboardingChecklist';
 
 const formatCurrency = (v) =>
     new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
@@ -159,6 +160,9 @@ export default function Dashboard() {
 
                 {/* Morning Briefing */}
                 {briefing && <MorningBriefing data={briefing} navigate={navigate} />}
+
+                {/* Onboarding Checklist — First-time user guidance */}
+                <OnboardingChecklist />
 
                 {/* NC Alert Banner — Avviso immediato Non Conformità */}
                 {ncAlerts.length > 0 && (

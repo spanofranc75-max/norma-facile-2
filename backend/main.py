@@ -98,6 +98,7 @@ from routes.obblighi_commessa import router as obblighi_commessa_router
 from routes.committenza import router as committenza_router
 from routes.profili_committente import router as profili_committente_router
 from routes.notifiche_smart import router as notifiche_smart_router
+from routes.onboarding import router as onboarding_router
 
 # Configure logging
 logging.basicConfig(
@@ -331,7 +332,7 @@ app.include_router(obblighi_commessa_router, prefix="/api")
 app.include_router(committenza_router, prefix="/api")
 app.include_router(profili_committente_router, prefix="/api")
 app.include_router(notifiche_smart_router, prefix="/api")
-
+app.include_router(onboarding_router, prefix="/api")
 
 
 # Health endpoint with index verification

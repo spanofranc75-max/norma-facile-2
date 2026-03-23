@@ -13,7 +13,7 @@ import {
 import { toast } from 'sonner';
 import { Plus, FileText, Trash2, CheckCircle2, XCircle, Minus, Copy, FolderOpen, ExternalLink } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
-import EmptyState from '../components/EmptyState';
+import SmartEmptyState from '../components/SmartEmptyState';
 import { useConfirm } from '../components/ConfirmProvider';
 
 const STATUS_MAP = {
@@ -126,13 +126,19 @@ export default function PreventiviPage() {
                         {loading ? (
                             <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#0055FF]" /></div>
                         ) : preventivi.length === 0 ? (
-                            <EmptyState
-                                type="preventivi"
+                            <div className="p-4">
+                            <SmartEmptyState
+                                icon={FileText}
+                                iconColor="text-emerald-600"
+                                iconBg="bg-emerald-50"
                                 title="Nessun preventivo ancora"
-                                description="Crea il tuo primo preventivo con controllo conformità integrato e converti direttamente in fattura."
-                                actionLabel="Crea il primo Preventivo"
-                                onAction={() => navigate('/preventivi/new')}
+                                description="Crea il tuo primo preventivo con controllo conformita integrato e converti direttamente in fattura."
+                                ctaLabel="Crea il primo Preventivo"
+                                ctaAction={() => navigate('/preventivi/new')}
+                                afterHint="Una volta accettato dal cliente, il preventivo diventa la base per generare la commessa e avviare la lavorazione."
+                                testId="preventivi-empty-state"
                             />
+                            </div>
                         ) : (
                             <div className="overflow-x-auto">
                             <Table>

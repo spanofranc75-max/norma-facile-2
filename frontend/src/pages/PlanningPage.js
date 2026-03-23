@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import { useConfirm } from '../components/ConfirmProvider';
+import SmartEmptyState from '../components/SmartEmptyState';
 
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
 
@@ -244,6 +245,18 @@ export default function PlanningPage() {
                     <div className="flex items-center justify-center py-20">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0055FF]" />
                     </div>
+                ) : totalCommesse === 0 && totalPreventivi === 0 ? (
+                    <SmartEmptyState
+                        icon={LayoutGrid}
+                        iconColor="text-[#0055FF]"
+                        iconBg="bg-blue-50"
+                        title="Nessuna commessa nel planning"
+                        description="Crea la tua prima commessa per iniziare a gestire lavorazioni, materiali e certificazioni."
+                        ctaLabel="Crea la prima commessa"
+                        ctaAction={() => setCreateOpen(true)}
+                        afterHint="Dopo la creazione, potrai trascinare le commesse tra le colonne del kanban per tracciare l'avanzamento."
+                        testId="planning-empty-state"
+                    />
                 ) : (
                     <ScrollableBoard
                         columns={columns}
