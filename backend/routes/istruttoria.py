@@ -8,9 +8,10 @@ Fase 1: Analisi AI + Classificazione + Regole deterministiche.
 import logging
 import uuid
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from core.security import get_current_user
 from core.database import db
+from core.rate_limiter import limiter
 from services.ai_compliance_engine import analizza_preventivo_completo
 from services.applicabilita_engine import calcola_applicabilita, genera_domande_contestuali
 from services.segmentation_engine import segmenta_preventivo
@@ -21,7 +22,8 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("/analizza-preventivo/{preventivo_id}")
-async def analizza_preventivo(preventivo_id: str, user: dict = Depends(get_current_user)):
+@limiter.limit("10/minute")
+async def analizza_preventivo(request: Request, preventivo_id: str, user: dict = Depends(get_current_user)):
     """Fase 1 — Analisi completa del preventivo:
     1A: Estrazione tecnica strutturata (GPT)
     1B: Classificazione normativa + proposta istruttoria (GPT + Rules)
@@ -380,7 +382,8 @@ async def list_istruttorie(user: dict = Depends(get_current_user)):
 # ═══════════════════════════════════════════════════════════════
 
 @router.post("/segmenta/{preventivo_id}")
-async def run_segmentazione(preventivo_id: str, user: dict = Depends(get_current_user)):
+@limiter.limit("10/minute")
+async def run_segmentazione(request: Request, preventivo_id: str, user: dict = Depends(get_current_user)):
     """Esegue la segmentazione per riga del preventivo.
     Analizza ogni riga e propone la normativa applicabile."""
     uid = user["user_id"]
@@ -546,7 +549,8 @@ async def check_phase2_eligibility(preventivo_id: str, user: dict = Depends(get_
 
 
 @router.post("/phase2/genera/{preventivo_id}")
-async def genera_commessa_preistruita(preventivo_id: str, user: dict = Depends(get_current_user)):
+@limiter.limit("10/minute")
+async def genera_commessa_preistruita(request: Request, preventivo_id: str, user: dict = Depends(get_current_user)):
     """Genera la commessa pre-istruita revisionata.
     Bloccata se non tutti i criteri di eleggibilita' sono soddisfatti."""
     uid = user["user_id"]

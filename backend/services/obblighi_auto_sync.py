@@ -73,7 +73,8 @@ async def trigger_sync_obblighi(
         return
 
     _last_sync[cache_key] = now
-    asyncio.create_task(_run_sync(commessa_id, user_id, trigger_source, trigger_entity_id))
+    from core.background import safe_background_task
+    safe_background_task(_run_sync(commessa_id, user_id, trigger_source, trigger_entity_id), "obblighi_sync")
 
 
 async def _run_sync(

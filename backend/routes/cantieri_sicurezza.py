@@ -5,12 +5,13 @@ Libreria a 3 livelli: lib_fasi_lavoro → lib_rischi_sicurezza → lib_dpi_misur
 """
 
 import logging
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import Optional, List
 
 from core.security import get_current_user
+from core.rate_limiter import limiter
 from services.cantieri_sicurezza_service import (
     crea_cantiere, get_cantiere, get_cantieri_by_commessa, list_cantieri,
     aggiorna_cantiere, elimina_cantiere,
@@ -131,7 +132,8 @@ async def api_gate_pos(cantiere_id: str, user: dict = Depends(get_current_user))
 
 
 @router.post("/cantieri-sicurezza/{cantiere_id}/ai-precompila")
-async def api_ai_precompila(cantiere_id: str, user: dict = Depends(get_current_user)):
+@limiter.limit("10/minute")
+async def api_ai_precompila(request: Request, cantiere_id: str, user: dict = Depends(get_current_user)):
     """S3 — AI precompilation of safety cantiere from commessa/istruttoria/preventivo data."""
     result = await ai_precompila_cantiere(cantiere_id, user["user_id"])
     if result.get("error"):
@@ -146,7 +148,9 @@ async def api_ai_precompila(cantiere_id: str, user: dict = Depends(get_current_u
 
 
 @router.post("/cantieri-sicurezza/{cantiere_id}/genera-pos")
+@limiter.limit("10/minute")
 async def api_genera_pos(
+    request: Request,
     cantiere_id: str,
     mode: str = "bozza_revisione",
     user: dict = Depends(get_current_user),

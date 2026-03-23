@@ -21,9 +21,12 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 # ── Helper: Load commessa + related data ──
 
-async def _load_commessa_context(commessa_id: str) -> dict:
+async def _load_commessa_context(commessa_id: str, user_id: str = None) -> dict:
     """Load commessa with related FPC batches, DDT, and company info."""
-    commessa = await db.commesse.find_one({"commessa_id": commessa_id}, {"_id": 0})
+    query = {"commessa_id": commessa_id}
+    if user_id:
+        query["user_id"] = user_id
+    commessa = await db.commesse.find_one(query, {"_id": 0})
 
     # Fallback: if commessa_id is actually a project_id, find commessa via FPC project
     if not commessa:
@@ -85,7 +88,7 @@ async def _load_commessa_context(commessa_id: str) -> dict:
 @router.get("/context/{commessa_id}")
 async def get_verbale_context(commessa_id: str, user: dict = Depends(get_current_user)):
     """Load all data needed to populate the verbale form."""
-    ctx = await _load_commessa_context(commessa_id)
+    ctx = await _load_commessa_context(commessa_id, user["user_id"])
     cm = ctx["commessa"]
     client = ctx["client"] or {}
     company = ctx["company"] or {}
@@ -255,7 +258,7 @@ async def save_verbale(
 @router.get("/{commessa_id}/pdf")
 async def generate_pdf(commessa_id: str, user: dict = Depends(get_current_user)):
     """Generate the Verbale di Posa PDF."""
-    ctx = await _load_commessa_context(commessa_id)
+    ctx = await _load_commessa_context(commessa_id, user["user_id"])
     verbale = await db.verbali_posa.find_one({"commessa_id": commessa_id}, {"_id": 0})
     if not verbale:
         raise HTTPException(404, "Verbale non ancora salvato")

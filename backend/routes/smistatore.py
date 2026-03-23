@@ -10,11 +10,12 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional, List
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 
 from core.security import get_current_user
 from core.database import db
+from core.rate_limiter import limiter
 from services.smistatore_intelligente import analyze_and_index_document, analyze_drawing_document
 
 router = APIRouter(prefix="/smistatore", tags=["smistatore"])
@@ -28,7 +29,8 @@ class CreateRdpFromDrawingRequest(BaseModel):
 
 
 @router.post("/analyze/{doc_id}")
-async def analyze_document(doc_id: str, user: dict = Depends(get_current_user)):
+@limiter.limit("10/minute")
+async def analyze_document(request: Request, doc_id: str, user: dict = Depends(get_current_user)):
     """
     Analizza un documento PDF caricato con AI Vision.
     Spacchetta le pagine, estrae metadati (numero colata, materiale, dimensioni),
@@ -102,7 +104,8 @@ async def get_scorte(user: dict = Depends(get_current_user)):
 
 
 @router.post("/analyze-drawing/{doc_id}")
-async def analyze_drawing(doc_id: str, user: dict = Depends(get_current_user)):
+@limiter.limit("10/minute")
+async def analyze_drawing(request: Request, doc_id: str, user: dict = Depends(get_current_user)):
     """
     Analizza un disegno tecnico (PDF/immagine) con AI Vision.
     Estrae la lista di bulloneria (diametro, classe, quantita) e propone una RdP.

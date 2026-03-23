@@ -112,9 +112,10 @@ async def list_instruments(
             {"manufacturer": {"$regex": search, "$options": "i"}},
         ]
 
-    all_docs = await db.instruments.find({}, {"_id": 0}).sort("name", 1).to_list(500)
+    all_docs = await db.instruments.find({"user_id": user["user_id"]}, {"_id": 0}).sort("name", 1).to_list(500)
     stats = _compute_stats(all_docs)
 
+    query["user_id"] = user["user_id"]
     filtered = await db.instruments.find(query, {"_id": 0}).sort("name", 1).to_list(500)
     items = [_doc_to_response(d) for d in filtered]
 
@@ -137,6 +138,7 @@ async def create_instrument(
 
     doc = {
         "instrument_id": instrument_id,
+        "user_id": user["user_id"],
         "name": payload.name.strip(),
         "serial_number": payload.serial_number.strip(),
         "type": payload.type,
@@ -163,7 +165,7 @@ async def update_instrument(
     payload: InstrumentCreate,
     user: dict = Depends(get_current_user),
 ):
-    existing = await db.instruments.find_one({"instrument_id": instrument_id}, {"_id": 0})
+    existing = await db.instruments.find_one({"instrument_id": instrument_id, "user_id": user["user_id"]}, {"_id": 0})
     if not existing:
         raise HTTPException(404, "Strumento non trovato")
 
@@ -185,16 +187,16 @@ async def update_instrument(
         "updated_at": now_iso,
     }
 
-    await db.instruments.update_one({"instrument_id": instrument_id}, {"$set": update})
-    updated = await db.instruments.find_one({"instrument_id": instrument_id}, {"_id": 0})
+    await db.instruments.update_one({"instrument_id": instrument_id, "user_id": user["user_id"]}, {"$set": update})
+    updated = await db.instruments.find_one({"instrument_id": instrument_id, "user_id": user["user_id"]}, {"_id": 0})
     return InstrumentResponse(**_doc_to_response(updated))
 
 
 @router.delete("/{instrument_id}")
 async def delete_instrument(instrument_id: str, user: dict = Depends(get_current_user)):
-    existing = await db.instruments.find_one({"instrument_id": instrument_id}, {"_id": 0})
+    existing = await db.instruments.find_one({"instrument_id": instrument_id, "user_id": user["user_id"]}, {"_id": 0})
     if not existing:
         raise HTTPException(404, "Strumento non trovato")
 
-    await db.instruments.delete_one({"instrument_id": instrument_id})
+    await db.instruments.delete_one({"instrument_id": instrument_id, "user_id": user["user_id"]})
     return {"message": "Strumento eliminato", "instrument_id": instrument_id}

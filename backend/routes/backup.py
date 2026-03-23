@@ -172,7 +172,8 @@ async def start_backup(user: dict = Depends(get_current_user)):
         "started_at": datetime.now(timezone.utc).isoformat(),
     }
 
-    asyncio.create_task(_run_backup_job(backup_id, uid, user.get("email", "")))
+    from core.background import safe_background_task
+    safe_background_task(_run_backup_job(backup_id, uid, user.get("email", "")), "backup")
     return {"backup_id": backup_id, "status": "in_corso"}
 
 

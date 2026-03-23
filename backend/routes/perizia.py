@@ -1,5 +1,5 @@
 """Perizia Sinistro (Damage Assessment) routes — CRUD + AI Analysis + PDF."""
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, Request
 from fastapi.responses import StreamingResponse, Response
 from typing import Optional
 import os
@@ -9,6 +9,7 @@ import logging
 from datetime import datetime, timezone
 from core.security import get_current_user
 from core.database import db
+from core.rate_limiter import limiter
 from models.perizia import PeriziaCreate, PeriziaUpdate, CODICI_DANNO, CODICI_DANNO_MAP
 from services.audit_trail import log_activity
 from services.object_storage import upload_photo, get_object
@@ -804,7 +805,8 @@ Scrivi in italiano formale, tono professionale e tecnico. Non usare markdown."""
 # ── Genera Lettera di Accompagnamento Tecnica ──
 
 @router.post("/{perizia_id}/genera-lettera")
-async def genera_lettera(perizia_id: str, user: dict = Depends(get_current_user)):
+@limiter.limit("10/minute")
+async def genera_lettera(request: Request, perizia_id: str, user: dict = Depends(get_current_user)):
     """Generate the formal technical cover letter for the insurance assessor using AI."""
     doc = await db[COLLECTION].find_one(
         {"perizia_id": perizia_id, "user_id": user["user_id"]}, {"_id": 0}

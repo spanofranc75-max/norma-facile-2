@@ -53,9 +53,9 @@ async def api_sync_obblighi(commessa_id: str, user: dict = Depends(get_current_u
                        actor_type="system")
     # N2: Trigger smart notifications for new hard blocks and semaphore changes
     from services.notifiche_trigger import check_and_notify_post_sync, check_and_notify_semaforo
-    import asyncio
-    asyncio.create_task(check_and_notify_post_sync(user["user_id"], commessa_id, result))
-    asyncio.create_task(check_and_notify_semaforo(user["user_id"], commessa_id))
+    from core.background import safe_background_task
+    safe_background_task(check_and_notify_post_sync(user["user_id"], commessa_id, result), "notify_post_sync")
+    safe_background_task(check_and_notify_semaforo(user["user_id"], commessa_id), "notify_semaforo")
     return result
 
 

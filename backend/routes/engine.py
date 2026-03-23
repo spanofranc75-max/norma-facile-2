@@ -3,7 +3,7 @@
 Every norm is a NormaConfig object that injects rules into a universal validation engine.
 Adding a new norm = adding a new JSON config. Zero code changes.
 """
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List, Any
@@ -13,6 +13,7 @@ import math
 from datetime import datetime, timezone
 from core.security import get_current_user
 from core.database import db
+from core.rate_limiter import limiter
 from core.engine.climate_zones import ZONE_LIMITS, ClimateZone
 from services.fascicolo_generator import generate_fascicolo_pdf, generate_fascicolo_zip
 import logging
@@ -846,7 +847,9 @@ class PhotoValidationRequest(BaseModel):
 
 
 @router.post("/validate-installation-photos")
+@limiter.limit("10/minute")
 async def validate_installation_photos(
+    request: Request,
     req: PhotoValidationRequest,
     user: dict = Depends(get_current_user),
 ):

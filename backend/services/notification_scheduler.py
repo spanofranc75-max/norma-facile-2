@@ -800,7 +800,10 @@ def start_scheduler():
     """Start the background scheduler as an asyncio task."""
     global _scheduler_task
     if _scheduler_task is None or _scheduler_task.done():
-        _scheduler_task = asyncio.create_task(_scheduler_loop())
+        _scheduler_task = asyncio.create_task(_scheduler_loop(), name="notification_scheduler")
+        _scheduler_task.add_done_callback(
+            lambda t: logger.error(f"[WATCHDOG] Scheduler crashed: {t.exception()}") if t.exception() else None
+        )
         logger.info("[WATCHDOG] Background task creato")
 
 

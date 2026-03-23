@@ -8,10 +8,11 @@ C1.4: Generazione obblighi
 """
 
 import logging
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import Optional
 
 from core.security import get_current_user
+from core.rate_limiter import limiter
 from services.committenza_analysis_service import (
     DOC_CATEGORIES,
     crea_package, get_package, list_packages,
@@ -87,7 +88,8 @@ async def api_remove_doc(package_id: str, doc_id: str, user: dict = Depends(get_
 # ─── C1.2: AI Analysis ───
 
 @router.post("/committenza/analizza/{package_id}")
-async def api_analizza(package_id: str, user: dict = Depends(get_current_user)):
+@limiter.limit("10/minute")
+async def api_analizza(request: Request, package_id: str, user: dict = Depends(get_current_user)):
     pkg = await get_package(package_id, user["user_id"])
     result = await analizza_committenza(package_id, user["user_id"])
     if result.get("error"):
@@ -140,7 +142,8 @@ async def api_approve(analysis_id: str, user: dict = Depends(get_current_user)):
 # ─── C1.4: Generate Obligations ───
 
 @router.post("/committenza/analisi/{analysis_id}/genera-obblighi")
-async def api_genera_obblighi(analysis_id: str, user: dict = Depends(get_current_user)):
+@limiter.limit("10/minute")
+async def api_genera_obblighi(request: Request, analysis_id: str, user: dict = Depends(get_current_user)):
     result = await genera_obblighi_da_analisi(analysis_id, user["user_id"])
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])

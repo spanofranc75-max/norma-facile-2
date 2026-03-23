@@ -171,12 +171,12 @@ async def api_verifica_pacchetto(pack_id: str, user: dict = Depends(get_current_
         cid = result.get("commessa_id", "")
         if cid:
             comm = await _db.commesse.find_one({"commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0, "numero": 1})
-            import asyncio
-            asyncio.create_task(notify_pacchetto_incompleto(
+            from core.background import safe_background_task
+            safe_background_task(notify_pacchetto_incompleto(
                 user["user_id"], cid, (comm or {}).get("numero", cid),
                 result.get("label", ""), pack_id,
                 summary.get("missing", 0), summary.get("expired", 0),
-            ))
+            ), "notify_pacchetto_incompleto")
     return result
 
 

@@ -7,9 +7,10 @@ Endpoints per la validazione del motore AI su preventivi reali.
 import logging
 import uuid
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from core.security import get_current_user
 from core.database import db
+from core.rate_limiter import limiter
 from services.ai_compliance_engine import analizza_preventivo_completo
 from services.validation_engine import (
     VALIDATION_SET, score_singolo_preventivo, score_batch
@@ -35,7 +36,8 @@ async def get_validation_set(user: dict = Depends(get_current_user)):
 
 
 @router.post("/run/{preventivo_id}")
-async def run_single_validation(preventivo_id: str, user: dict = Depends(get_current_user)):
+@limiter.limit("10/minute")
+async def run_single_validation(request: Request, preventivo_id: str, user: dict = Depends(get_current_user)):
     """Esegue la validazione su un singolo preventivo."""
     if preventivo_id not in VALIDATION_SET:
         raise HTTPException(400, "Preventivo non presente nel set di validazione")
@@ -96,7 +98,8 @@ async def run_single_validation(preventivo_id: str, user: dict = Depends(get_cur
 
 
 @router.post("/run-batch")
-async def run_batch_validation(body: dict = None, user: dict = Depends(get_current_user)):
+@limiter.limit("5/minute")
+async def run_batch_validation(request: Request, body: dict = None, user: dict = Depends(get_current_user)):
     """Esegue la validazione su tutto il set (o un sottoinsieme).
     Body opzionale: {"preventivo_ids": ["prev_xxx", ...]}
     """

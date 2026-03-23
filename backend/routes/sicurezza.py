@@ -17,12 +17,13 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional, List
 
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from core.database import db
 from core.security import get_current_user
+from core.rate_limiter import limiter
 
 router = APIRouter(prefix="/sicurezza", tags=["sicurezza"])
 logger = logging.getLogger(__name__)
@@ -162,7 +163,9 @@ RISPONDI SOLO con JSON:
 
 
 @router.post("/dnsh/analyze")
+@limiter.limit("10/minute")
 async def analyze_dnsh(
+    request: Request,
     file: UploadFile = File(...),
     commessa_id: str = Form(""),
     user: dict = Depends(get_current_user),
