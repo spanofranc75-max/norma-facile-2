@@ -9,17 +9,16 @@ import DashboardLayout from '../components/DashboardLayout';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Separator } from '../components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../components/ui/accordion';
 import { toast } from 'sonner';
 import {
     ArrowLeft, FileText, Receipt, Truck, Shield, Award,
     Ruler, Package, Play, Pause, CheckCircle2, XCircle,
-    Clock, User, ChevronRight, Download, Plus, Link2,
+    Clock, User, ChevronRight, Plus, Link2,
     AlertTriangle, Loader2, BookOpen, CalendarDays, TrendingUp,
     CircleDollarSign, Tag, Wrench as WrenchIcon, QrCode, Hammer,
 } from 'lucide-react';
@@ -35,6 +34,8 @@ import ReportIspezioniSection from '../components/ReportIspezioniSection';
 import RamiNormativiSection from '../components/RamiNormativiSection';
 import ObbrighiCommessaSection from '../components/ObbrighiCommessaSection';
 import VerificaCommittenzaSection from '../components/VerificaCommittenzaSection';
+import CommessaActionsMenu from '../components/CommessaActionsMenu';
+import NextStepCard from '../components/NextStepCard';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
@@ -376,7 +377,7 @@ export default function CommessaHubPage() {
     return (
         <DashboardLayout title={`Commessa ${c.numero || ''}`}>
             <div className="max-w-5xl mx-auto space-y-4" data-testid="commessa-hub">
-                {/* Header */}
+                {/* ══ HEADER: Back + Actions ══ */}
                 <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                     <Button variant="ghost" size="sm" onClick={() => navigate('/planning')} data-testid="btn-back" className="text-xs sm:text-sm">
                         <ArrowLeft className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Planning</span>
@@ -389,54 +390,95 @@ export default function CommessaHubPage() {
                         <Button variant="outline" size="sm" onClick={() => setQrOpen(true)} data-testid="btn-qr-code" className="text-xs px-2 sm:px-3">
                             <QrCode className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">QR Code</span>
                         </Button>
-                        <Button size="sm" onClick={handleDownloadDossier} className="bg-[#0055FF] text-white hover:bg-[#0044CC] text-xs px-2 sm:px-3" data-testid="btn-dossier">
-                            <Download className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Dossier PDF</span>
-                        </Button>
-                        <Button size="sm" onClick={handleDownloadPacco} className="bg-emerald-600 text-white hover:bg-emerald-700 text-xs px-2 sm:px-3 shadow-lg shadow-emerald-600/20" data-testid="btn-pacco-magico">
-                            <FileText className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Pacco Documenti</span>
-                        </Button>
-                        <Button size="sm" onClick={handleDownloadTemplate111} className="bg-amber-600 text-white hover:bg-amber-700 text-xs px-2 sm:px-3" data-testid="btn-template-111">
-                            <Award className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Template 111</span>
-                        </Button>
-                        {c?.normativa_tipo === 'EN_1090' && (
-                            <>
-                                <Button size="sm" onClick={handleDopAutomatica} disabled={generatingDopAuto}
-                                    className="bg-indigo-600 text-white hover:bg-indigo-700 text-xs px-2 sm:px-3 shadow-lg shadow-indigo-600/20"
-                                    data-testid="btn-dop-automatica"
-                                >
-                                    {generatingDopAuto ? <Loader2 className="h-3.5 w-3.5 animate-spin sm:mr-1.5" /> : <FileText className="h-3.5 w-3.5 sm:mr-1.5" />}
-                                    <span className="hidden sm:inline">DOP Auto</span>
-                                </Button>
-                                <Button size="sm" onClick={handleEtichettaCE1090}
-                                    className="bg-slate-800 text-white hover:bg-slate-900 text-xs px-2 sm:px-3"
-                                    data-testid="btn-etichetta-ce-1090"
-                                >
-                                    <Award className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Etichetta CE</span>
-                                </Button>
-                                <Button size="sm" onClick={handleRintracciabilitaPdf}
-                                    className="bg-teal-600 text-white hover:bg-teal-700 text-xs px-2 sm:px-3"
-                                    data-testid="btn-rintracciabilita-pdf"
-                                >
-                                    <FileText className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Rintracciabilita</span>
-                                </Button>
-                                <Button size="sm" onClick={handleCamDichiarazionePdf}
-                                    className="bg-amber-700 text-white hover:bg-amber-800 text-xs px-2 sm:px-3"
-                                    data-testid="btn-cam-dichiarazione-pdf"
-                                >
-                                    <FileText className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">CAM PNRR</span>
-                                </Button>
-                                <Button size="sm" onClick={handlePaccoRina}
-                                    className="bg-red-700 text-white hover:bg-red-800 text-xs px-2 sm:px-3 shadow-lg shadow-red-700/20"
-                                    data-testid="btn-pacco-rina"
-                                >
-                                    <Download className="h-3.5 w-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">Pacco RINA</span>
-                                </Button>
-                            </>
-                        )}
+                        <CommessaActionsMenu
+                            commessaId={commessaId} commessaNumero={c.numero} normativaTipo={c.normativa_tipo}
+                            onDownloadDossier={handleDownloadDossier} onDownloadPacco={handleDownloadPacco}
+                            onDownloadTemplate111={handleDownloadTemplate111} onDopAutomatica={handleDopAutomatica}
+                            onEtichettaCE={handleEtichettaCE1090} onRintracciabilita={handleRintracciabilitaPdf}
+                            onCamDichiarazione={handleCamDichiarazionePdf} onPaccoRina={handlePaccoRina}
+                            generatingDopAuto={generatingDopAuto}
+                        />
                     </div>
                 </div>
 
-                {/* ══ CAM Alert Banner — Pre-generation compliance check ══ */}
+                {/* ══ 1. COMMESSA INFO — Always visible, always first ══ */}
+                <Card className="border-gray-200" data-testid="commessa-info">
+                    <CardContent className="p-3 sm:p-5">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                            <div>
+                                <p className="font-mono text-xs text-slate-400">{c.numero}</p>
+                                <h1 className="text-lg sm:text-xl font-bold text-[#1E293B] mt-1">{c.title}</h1>
+                                <p className="text-sm text-slate-500 mt-1">{c.client_name || 'Nessun cliente'}</p>
+                                {c.riferimento && <p className="text-xs text-slate-400 mt-0.5">Rif: {c.riferimento}</p>}
+                                {(c.classe_exc || c.tipologia_chiusura) && (
+                                    <div className="flex items-center gap-2 mt-1.5">
+                                        {c.classe_exc && <Badge className="bg-blue-100 text-blue-800 text-[10px]" data-testid="badge-exc">{c.classe_exc}</Badge>}
+                                        {c.tipologia_chiusura && <Badge className="bg-slate-100 text-slate-700 text-[10px]" data-testid="badge-chiusura">{c.tipologia_chiusura.replace(/_/g, ' ')}</Badge>}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-1.5 sm:text-right">
+                                <Badge className={`${statoStyle.bg} ${statoStyle.text} text-xs px-2.5`} data-testid="stato-badge">
+                                    <span className={`w-1.5 h-1.5 rounded-full ${statoStyle.dot} inline-block mr-1.5`} />
+                                    {statoStyle.label}
+                                </Badge>
+                                <p className="font-mono text-lg font-bold text-[#0055FF]">{fmtEur(c.value)}</p>
+                                {c.deadline && <p className="text-xs text-slate-400 flex items-center gap-1"><CalendarDays className="h-3 w-3" /> {c.deadline}</p>}
+                            </div>
+                        </div>
+                        {c.cantiere?.indirizzo && (
+                            <div className="mt-3 p-2.5 bg-slate-50 rounded-lg text-xs text-slate-600">
+                                <span className="font-semibold">Cantiere:</span> {c.cantiere.indirizzo}{c.cantiere.citta ? `, ${c.cantiere.citta}` : ''}{c.cantiere.contesto ? ` (${c.cantiere.contesto})` : ''}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* ══ 2. NEXT STEP — "Cosa devo fare adesso?" ══ */}
+                <NextStepCard
+                    stato={stato}
+                    onEmitEvent={(ev) => setConfirmEvent(ev)}
+                    emitting={emitting}
+                />
+
+                {/* ══ 3. LIFECYCLE BAR ══ */}
+                <Card className="border-gray-200" data-testid="lifecycle-bar">
+                    <CardContent className="py-3 px-5">
+                        <div className="flex items-center gap-0">
+                            {LIFECYCLE_ORDER.map((s, i) => {
+                                const st = STATO_STYLES[s];
+                                const isActive = stato === s;
+                                const isPast = LIFECYCLE_ORDER.indexOf(stato) > i || stato === 'chiuso';
+                                const isSuspended = stato === 'sospesa';
+                                return (
+                                    <div key={s} className="flex items-center flex-1">
+                                        <div className="flex flex-col items-center flex-1">
+                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold transition-colors
+                                                ${isActive ? `${st.dot} text-white ring-2 ring-offset-1 ring-${st.dot.replace('bg-', '')}` :
+                                                  isPast && !isSuspended ? 'bg-emerald-500 text-white' :
+                                                  'bg-slate-200 text-slate-400'}`}>
+                                                {isPast && !isActive && !isSuspended ? <CheckCircle2 className="h-3.5 w-3.5" /> : (i + 1)}
+                                            </div>
+                                            <span className={`text-[9px] mt-1 text-center leading-tight ${isActive ? 'font-bold text-[#1E293B]' : 'text-slate-400'}`}>
+                                                {st.label}
+                                            </span>
+                                        </div>
+                                        {i < LIFECYCLE_ORDER.length - 1 && (
+                                            <div className={`h-0.5 flex-1 ${isPast && !isSuspended ? 'bg-emerald-400' : 'bg-slate-200'}`} />
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        {stato === 'sospesa' && (
+                            <div className="mt-2 flex items-center gap-1.5 text-xs text-red-600 bg-red-50 p-2 rounded">
+                                <Pause className="h-3.5 w-3.5" /> Commessa sospesa — stato precedente: {STATO_STYLES[c.stato_precedente]?.label || c.stato_precedente}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* ══ ALERTS (CAM + Compliance) — Only when relevant ══ */}
                 {camAlert && camAlert.level !== 'info' && (
                     <div data-testid="cam-alert-banner" className={`rounded-lg border-2 p-3 flex items-start gap-3 ${
                         camAlert.level === 'success' ? 'bg-emerald-50 border-emerald-400' :
@@ -475,185 +517,58 @@ export default function CommessaHubPage() {
                         </div>
                     </div>
                 )}
-
-                {/* Validazione Preventiva Documenti */}
                 <CommessaComplianceBanner commessaId={commessaId} />
 
-                {/* Riesame Tecnico — Gate pre-produzione */}
-                <RiesameTecnicoSection commessaId={commessaId} />
-
-                {/* Registro Saldatura — EN 1090 FPC Fase 2 */}
-                <RegistroSaldaturaSection commessaId={commessaId} />
-
-                {/* Tracciabilita Materiali — Link DDT → Lotti FPC */}
-                <TracciabilitaMaterialiSection commessaId={commessaId} />
-
-                {/* Report Ispezioni VT/Dimensionali — EN 1090-2 */}
-                <ReportIspezioniSection commessaId={commessaId} />
-
-                {/* Controllo Finale — Checklist pre-spedizione EN 1090-2:2024 */}
-                <ControlloFinaleSection commessaId={commessaId} />
-
-                {/* Commessa Info Card */}
-                <Card className="border-gray-200" data-testid="commessa-info">
-                    <CardContent className="p-3 sm:p-5">
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                            <div>
-                                <p className="font-mono text-xs text-slate-400">{c.numero}</p>
-                                <h1 className="text-lg sm:text-xl font-bold text-[#1E293B] mt-1">{c.title}</h1>
-                                <p className="text-sm text-slate-500 mt-1">{c.client_name || 'Nessun cliente'}</p>
-                                {c.riferimento && <p className="text-xs text-slate-400 mt-0.5">Rif: {c.riferimento}</p>}
-                                {(c.classe_exc || c.tipologia_chiusura) && (
-                                    <div className="flex items-center gap-2 mt-1.5">
-                                        {c.classe_exc && <Badge className="bg-blue-100 text-blue-800 text-[10px]" data-testid="badge-exc">{c.classe_exc}</Badge>}
-                                        {c.tipologia_chiusura && <Badge className="bg-slate-100 text-slate-700 text-[10px]" data-testid="badge-chiusura">{c.tipologia_chiusura.replace(/_/g, ' ')}</Badge>}
-                                    </div>
-                                )}
-                            </div>
-                            <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-1.5 sm:text-right">
-                                <Badge className={`${statoStyle.bg} ${statoStyle.text} text-xs px-2.5`} data-testid="stato-badge">
-                                    <span className={`w-1.5 h-1.5 rounded-full ${statoStyle.dot} inline-block mr-1.5`} />
-                                    {statoStyle.label}
-                                </Badge>
-                                <p className="font-mono text-lg font-bold text-[#0055FF]">{fmtEur(c.value)}</p>
-                                {c.deadline && <p className="text-xs text-slate-400 flex items-center gap-1"><CalendarDays className="h-3 w-3" /> {c.deadline}</p>}
-                            </div>
-                        </div>
-
-                        {/* Cantiere */}
-                        {c.cantiere?.indirizzo && (
-                            <div className="mt-3 p-2.5 bg-slate-50 rounded-lg text-xs text-slate-600">
-                                <span className="font-semibold">Cantiere:</span> {c.cantiere.indirizzo}{c.cantiere.citta ? `, ${c.cantiere.citta}` : ''}{c.cantiere.contesto ? ` (${c.cantiere.contesto})` : ''}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-
-                {/* ══ REGISTRO OBBLIGHI COMMESSA ══ */}
-                <ObbrighiCommessaSection commessaId={commessaId} />
-
-                {/* ══ VERIFICA COMMITTENZA ══ */}
-                <Card className="border-gray-200">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Verifica Committenza</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <VerificaCommittenzaSection commessaId={commessaId} />
-                    </CardContent>
-                </Card>
-
-                {/* Banner Normativa + Checklist documentale */}
-                {c.normativa_tipo && NORMATIVA_CONFIG[c.normativa_tipo] && (() => {
-                    const nc = NORMATIVA_CONFIG[c.normativa_tipo];
-                    const NIcon = nc.icon;
-                    const completed = nc.checklist.filter(item => checklistStato[item.key]?.checked).length;
-                    const total = nc.checklist.length;
-                    const allDone = completed === total;
-                    return (
-                        <Card className={`border ${nc.bg}`} data-testid="normativa-banner">
-                            <CardContent className="py-3 px-5">
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <NIcon className={`h-4 w-4 ${nc.text}`} />
-                                        <span className={`font-semibold text-sm ${nc.text}`}>{nc.label}</span>
-                                        {allDone && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
-                                    </div>
-                                    <span className={`text-xs font-mono ${allDone ? 'text-emerald-600 font-semibold' : 'text-slate-500'}`} data-testid="checklist-progress">{completed} / {total} completati</span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-1.5">
-                                    {nc.checklist.map((item) => {
-                                        const isChecked = !!checklistStato[item.key]?.checked;
-                                        return (
-                                            <label key={item.key} className={`flex items-center gap-2 text-xs cursor-pointer rounded p-1 transition-colors ${isChecked ? 'text-emerald-700 bg-emerald-50/50' : 'text-slate-600 hover:bg-white/50'}`}>
-                                                <input type="checkbox" className="rounded border-slate-300" checked={isChecked} onChange={() => handleChecklistToggle(item.key, isChecked)} data-testid={`checklist-${item.key}`} />
-                                                <span className={isChecked ? 'line-through opacity-70' : ''}>{item.label}</span>
-                                            </label>
-                                        );
-                                    })}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    );
-                })()}
-
-                {/* Lifecycle State Machine Bar */}
-                <Card className="border-gray-200" data-testid="lifecycle-bar">
-                    <CardContent className="py-3 px-5">
-                        <div className="flex items-center gap-0">
-                            {LIFECYCLE_ORDER.map((s, i) => {
-                                const st = STATO_STYLES[s];
-                                const isActive = stato === s;
-                                const isPast = LIFECYCLE_ORDER.indexOf(stato) > i || stato === 'chiuso';
-                                const isSuspended = stato === 'sospesa';
-                                return (
-                                    <div key={s} className="flex items-center flex-1">
-                                        <div className="flex flex-col items-center flex-1">
-                                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold transition-colors
-                                                ${isActive ? `${st.dot} text-white ring-2 ring-offset-1 ring-${st.dot.replace('bg-', '')}` :
-                                                  isPast && !isSuspended ? 'bg-emerald-500 text-white' :
-                                                  'bg-slate-200 text-slate-400'}`}>
-                                                {isPast && !isActive && !isSuspended ? <CheckCircle2 className="h-3.5 w-3.5" /> : (i + 1)}
-                                            </div>
-                                            <span className={`text-[9px] mt-1 text-center leading-tight ${isActive ? 'font-bold text-[#1E293B]' : 'text-slate-400'}`}>
-                                                {st.label}
-                                            </span>
-                                        </div>
-                                        {i < LIFECYCLE_ORDER.length - 1 && (
-                                            <div className={`h-0.5 flex-1 ${isPast && !isSuspended ? 'bg-emerald-400' : 'bg-slate-200'}`} />
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        {stato === 'sospesa' && (
-                            <div className="mt-2 flex items-center gap-1.5 text-xs text-red-600 bg-red-50 p-2 rounded">
-                                <Pause className="h-3.5 w-3.5" /> Commessa sospesa — stato precedente: {STATO_STYLES[c.stato_precedente]?.label || c.stato_precedente}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-
+                {/* ══ MAIN CONTENT: 2-column layout ══ */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    {/* Left: Modules + Invoicing */}
+                    {/* Left: Core content */}
                     <div className="lg:col-span-2 space-y-4">
 
-                        {/* Action Buttons */}
-                        {(availableEvents.length > 0 || canSuspend || canCloseDirect) && (
-                            <Card className="border-gray-200" data-testid="action-buttons">
-                                <CardHeader className="py-2 px-4"><CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Azioni Disponibili</CardTitle></CardHeader>
-                                <CardContent className="px-4 pb-3 flex flex-wrap gap-2">
-                                    {availableEvents.map(ev => (
-                                        <Button key={ev.tipo} size="sm" variant="outline"
-                                            onClick={() => setConfirmEvent(ev)}
-                                            className="text-xs border-[#0055FF] text-[#0055FF] hover:bg-blue-50"
-                                            data-testid={`action-${ev.tipo}`}
-                                        >
-                                            <ev.icon className="h-3.5 w-3.5 mr-1.5" /> {ev.label}
-                                        </Button>
-                                    ))}
-                                    {canCloseDirect && (
-                                        <Button size="sm" variant="outline"
-                                            onClick={() => setCloseSimpleOpen(true)}
-                                            className="text-xs border-emerald-500 text-emerald-700 hover:bg-emerald-50"
-                                            data-testid="action-CHIUSURA_DIRETTA"
-                                        >
-                                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Chiudi senza certificazione
-                                        </Button>
-                                    )}
-                                    {canSuspend && (
-                                        <Button size="sm" variant="outline"
-                                            onClick={() => setConfirmEvent({ tipo: 'SOSPENSIONE', label: 'Sospendi Commessa', icon: Pause })}
-                                            className="text-xs border-red-400 text-red-600 hover:bg-red-50"
-                                            data-testid="action-SOSPENSIONE"
-                                        >
-                                            <Pause className="h-3.5 w-3.5 mr-1.5" /> Sospendi
-                                        </Button>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
+                        {/* ══ OBBLIGHI + COMMITTENZA ══ */}
+                        <ObbrighiCommessaSection commessaId={commessaId} />
 
-                        {/* Linked Modules */}
+                        <Card className="border-gray-200">
+                            <CardHeader className="pb-2"><CardTitle className="text-sm">Verifica Committenza</CardTitle></CardHeader>
+                            <CardContent>
+                                <VerificaCommittenzaSection commessaId={commessaId} />
+                            </CardContent>
+                        </Card>
+
+                        {/* ══ NORMATIVA CHECKLIST ══ */}
+                        {c.normativa_tipo && NORMATIVA_CONFIG[c.normativa_tipo] && (() => {
+                            const nc = NORMATIVA_CONFIG[c.normativa_tipo];
+                            const NIcon = nc.icon;
+                            const completed = nc.checklist.filter(item => checklistStato[item.key]?.checked).length;
+                            const total = nc.checklist.length;
+                            const allDone = completed === total;
+                            return (
+                                <Card className={`border ${nc.bg}`} data-testid="normativa-banner">
+                                    <CardContent className="py-3 px-5">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <NIcon className={`h-4 w-4 ${nc.text}`} />
+                                                <span className={`font-semibold text-sm ${nc.text}`}>{nc.label}</span>
+                                                {allDone && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                                            </div>
+                                            <span className={`text-xs font-mono ${allDone ? 'text-emerald-600 font-semibold' : 'text-slate-500'}`} data-testid="checklist-progress">{completed} / {total} completati</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-1.5">
+                                            {nc.checklist.map((item) => {
+                                                const isChecked = !!checklistStato[item.key]?.checked;
+                                                return (
+                                                    <label key={item.key} className={`flex items-center gap-2 text-xs cursor-pointer rounded p-1 transition-colors ${isChecked ? 'text-emerald-700 bg-emerald-50/50' : 'text-slate-600 hover:bg-white/50'}`}>
+                                                        <input type="checkbox" className="rounded border-slate-300" checked={isChecked} onChange={() => handleChecklistToggle(item.key, isChecked)} data-testid={`checklist-${item.key}`} />
+                                                        <span className={isChecked ? 'line-through opacity-70' : ''}>{item.label}</span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })()}
+
+                        {/* ══ LINKED MODULES ══ */}
                         <Card className="border-gray-200" data-testid="linked-modules">
                             <CardHeader className="bg-[#1E293B] py-2.5 px-4 rounded-t-lg">
                                 <CardTitle className="text-xs font-semibold text-white flex items-center gap-2">
@@ -661,152 +576,134 @@ export default function CommessaHubPage() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="p-3 space-y-2">
-                                <ModuleCard
-                                    icon={Ruler} label="Rilievo" linked={!!moduli.rilievo_id}
-                                    detail={dettaglio.rilievo ? (dettaglio.rilievo.title || dettaglio.rilievo.rilievo_id) : null}
-                                    onClick={() => moduli.rilievo_id && navigate(`/rilievi/${moduli.rilievo_id}`)}
-                                />
-                                <ModuleCard
-                                    icon={Package} label="Distinta" linked={!!moduli.distinta_id}
-                                    detail={dettaglio.distinta ? (dettaglio.distinta.name || dettaglio.distinta.distinta_id) : null}
-                                    onClick={() => moduli.distinta_id && navigate(`/distinte/${moduli.distinta_id}`)}
-                                />
-                                <ModuleCard
-                                    icon={FileText} label="Preventivo" linked={!!moduli.preventivo_id}
-                                    detail={dettaglio.preventivo ? `${dettaglio.preventivo.number} — ${fmtEur(dettaglio.preventivo.totals?.total)}` : null}
-                                    onClick={() => moduli.preventivo_id && navigate(`/preventivi/${moduli.preventivo_id}`)}
-                                />
-                                <ModuleCard
-                                    icon={Receipt} label={`Fatture (${moduli.fatture_ids?.length || 0})`}
-                                    linked={(moduli.fatture_ids?.length || 0) > 0}
-                                    detail={dettaglio.fatture?.map(f => f.document_number).join(', ')}
-                                    onClick={() => (moduli.fatture_ids?.length > 0) && navigate('/invoices')}
-                                />
-                                <ModuleCard
-                                    icon={Truck} label={`DDT (${moduli.ddt_ids?.length || 0})`}
-                                    linked={(moduli.ddt_ids?.length || 0) > 0}
-                                    detail={dettaglio.ddt?.map(d => d.document_number).join(', ')}
-                                    onClick={() => (moduli.ddt_ids?.length > 0) && navigate('/ddt')}
-                                />
-                                <ModuleCard
-                                    icon={Shield} label="Progetto FPC" linked={!!moduli.fpc_project_id}
-                                    detail={dettaglio.fpc_project ? `${dettaglio.fpc_project.fpc_data?.execution_class || ''} — ${dettaglio.fpc_project.status}` : null}
-                                    onClick={() => moduli.fpc_project_id && navigate(`/tracciabilita/progetto/${moduli.fpc_project_id}`)}
-                                />
-                                <ModuleCard
-                                    icon={Award} label="Certificazione CE" linked={!!moduli.certificazione_id}
-                                    detail={dettaglio.certificazione ? dettaglio.certificazione.product_type : null}
-                                    onClick={() => moduli.certificazione_id && navigate(`/certificazioni/${moduli.certificazione_id}`)}
-                                />
+                                <ModuleCard icon={Ruler} label="Rilievo" linked={!!moduli.rilievo_id} detail={dettaglio.rilievo ? (dettaglio.rilievo.title || dettaglio.rilievo.rilievo_id) : null} onClick={() => moduli.rilievo_id && navigate(`/rilievi/${moduli.rilievo_id}`)} />
+                                <ModuleCard icon={Package} label="Distinta" linked={!!moduli.distinta_id} detail={dettaglio.distinta ? (dettaglio.distinta.name || dettaglio.distinta.distinta_id) : null} onClick={() => moduli.distinta_id && navigate(`/distinte/${moduli.distinta_id}`)} />
+                                <ModuleCard icon={FileText} label="Preventivo" linked={!!moduli.preventivo_id} detail={dettaglio.preventivo ? `${dettaglio.preventivo.number} — ${fmtEur(dettaglio.preventivo.totals?.total)}` : null} onClick={() => moduli.preventivo_id && navigate(`/preventivi/${moduli.preventivo_id}`)} />
+                                <ModuleCard icon={Receipt} label={`Fatture (${moduli.fatture_ids?.length || 0})`} linked={(moduli.fatture_ids?.length || 0) > 0} detail={dettaglio.fatture?.map(f => f.document_number).join(', ')} onClick={() => (moduli.fatture_ids?.length > 0) && navigate('/invoices')} />
+                                <ModuleCard icon={Truck} label={`DDT (${moduli.ddt_ids?.length || 0})`} linked={(moduli.ddt_ids?.length || 0) > 0} detail={dettaglio.ddt?.map(d => d.document_number).join(', ')} onClick={() => (moduli.ddt_ids?.length > 0) && navigate('/ddt')} />
+                                <ModuleCard icon={Shield} label="Progetto FPC" linked={!!moduli.fpc_project_id} detail={dettaglio.fpc_project ? `${dettaglio.fpc_project.fpc_data?.execution_class || ''} — ${dettaglio.fpc_project.status}` : null} onClick={() => moduli.fpc_project_id && navigate(`/tracciabilita/progetto/${moduli.fpc_project_id}`)} />
+                                <ModuleCard icon={Award} label="Certificazione CE" linked={!!moduli.certificazione_id} detail={dettaglio.certificazione ? dettaglio.certificazione.product_type : null} onClick={() => moduli.certificazione_id && navigate(`/certificazioni/${moduli.certificazione_id}`)} />
                             </CardContent>
                         </Card>
 
-                        {/* Invoicing Summary */}
-                        {fattSummary && (
-                            <Card className="border-gray-200" data-testid="invoicing-summary">
-                                <CardHeader className="py-2 px-4"><CardTitle className="text-xs font-semibold text-slate-500">Stato Fatturazione</CardTitle></CardHeader>
-                                <CardContent className="px-4 pb-3">
-                                    <div className="flex justify-between text-xs text-slate-500 mb-1.5">
-                                        <span>Fatturato: {fmtEur(fattSummary.total_invoiced)} di {fmtEur(fattSummary.total_preventivo)}</span>
-                                        <span className="font-semibold text-[#0055FF]">{fattSummary.percentage}%</span>
-                                    </div>
-                                    <div className="w-full bg-slate-200 rounded-full h-2">
-                                        <div className={`h-2 rounded-full transition-all ${fattSummary.percentage >= 100 ? 'bg-emerald-500' : 'bg-[#0055FF]'}`}
-                                             style={{ width: `${Math.min(fattSummary.percentage, 100)}%` }} />
-                                    </div>
-                                    <p className="text-xs text-slate-400 mt-1">Residuo: {fmtEur(fattSummary.remaining)}</p>
-                                </CardContent>
-                            </Card>
+                        {/* ══ FINANCIALS: Invoicing + Cost (collapsible) ══ */}
+                        {(fattSummary || (costAnalysis && (costAnalysis.costo_totale > 0 || costAnalysis.ricavo > 0))) && (
+                            <Accordion type="single" collapsible defaultValue="financials">
+                                <AccordionItem value="financials" className="border rounded-lg">
+                                    <AccordionTrigger className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:no-underline" data-testid="accordion-financials">
+                                        <span className="flex items-center gap-2"><CircleDollarSign className="h-3.5 w-3.5" /> Dati Economici</span>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="px-4 pb-3 space-y-3">
+                                        {fattSummary && (
+                                            <div data-testid="invoicing-summary">
+                                                <p className="text-[10px] font-semibold text-slate-400 uppercase mb-1.5">Fatturazione</p>
+                                                <div className="flex justify-between text-xs text-slate-500 mb-1.5">
+                                                    <span>Fatturato: {fmtEur(fattSummary.total_invoiced)} di {fmtEur(fattSummary.total_preventivo)}</span>
+                                                    <span className="font-semibold text-[#0055FF]">{fattSummary.percentage}%</span>
+                                                </div>
+                                                <div className="w-full bg-slate-200 rounded-full h-2">
+                                                    <div className={`h-2 rounded-full transition-all ${fattSummary.percentage >= 100 ? 'bg-emerald-500' : 'bg-[#0055FF]'}`}
+                                                         style={{ width: `${Math.min(fattSummary.percentage, 100)}%` }} />
+                                                </div>
+                                                <p className="text-xs text-slate-400 mt-1">Residuo: {fmtEur(fattSummary.remaining)}</p>
+                                            </div>
+                                        )}
+                                        {costAnalysis && (costAnalysis.costo_totale > 0 || costAnalysis.ricavo > 0) && (
+                                            <div data-testid="cost-analysis">
+                                                <p className="text-[10px] font-semibold text-slate-400 uppercase mb-1.5">Analisi Margine</p>
+                                                <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                                                    <div className="text-center p-1.5 sm:p-2 bg-blue-50 rounded-lg">
+                                                        <p className="text-[9px] sm:text-[10px] text-slate-500">Ricavo</p>
+                                                        <p className="text-xs sm:text-sm font-bold text-[#0055FF]">{fmtEur(costAnalysis.ricavo)}</p>
+                                                    </div>
+                                                    <div className="text-center p-1.5 sm:p-2 bg-red-50 rounded-lg">
+                                                        <p className="text-[9px] sm:text-[10px] text-slate-500">Costi</p>
+                                                        <p className="text-xs sm:text-sm font-bold text-red-600">{fmtEur(costAnalysis.costo_totale)}</p>
+                                                    </div>
+                                                    <div className={`text-center p-1.5 sm:p-2 rounded-lg ${costAnalysis.margine >= 0 ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                                                        <p className="text-[9px] sm:text-[10px] text-slate-500">Margine</p>
+                                                        <p className={`text-xs sm:text-sm font-bold ${costAnalysis.margine >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                            {fmtEur(costAnalysis.margine)} <span className="text-[9px] sm:text-[10px] font-normal">({costAnalysis.margine_pct}%)</span>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-1 text-xs mt-2">
+                                                    {costAnalysis.costo_materiali_totale > 0 && <CostRow icon={Tag} color="text-blue-500" label="Materiali" value={costAnalysis.costo_materiali_totale} />}
+                                                    {costAnalysis.costi_fatture_imputate > 0 && <CostRow icon={Tag} color="text-violet-500" label="Fatt. Imputate" value={costAnalysis.costi_fatture_imputate} />}
+                                                    {costAnalysis.costi_oda > 0 && <CostRow icon={Tag} color="text-indigo-500" label="Ordini (OdA)" value={costAnalysis.costi_oda} />}
+                                                    {costAnalysis.costi_esterni > 0 && <CostRow icon={WrenchIcon} color="text-amber-500" label="Lav. Esterne" value={costAnalysis.costi_esterni} />}
+                                                    {costAnalysis.costo_personale > 0 && <CostRow icon={TrendingUp} color="text-slate-400" label={`Manodopera (${costAnalysis.ore_lavorate}h)`} value={costAnalysis.costo_personale} />}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </AccordionContent>
+                                </AccordionItem>
+                            </Accordion>
                         )}
 
-                        {/* Cost Analysis / Margine Reale */}
-                        {costAnalysis && (costAnalysis.costo_totale > 0 || costAnalysis.ricavo > 0) && (
-                            <Card className="border-gray-200" data-testid="cost-analysis">
-                                <CardHeader className="py-2 px-4">
-                                    <CardTitle className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
-                                        <CircleDollarSign className="h-3.5 w-3.5" /> Analisi Margine Completa
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="px-4 pb-3 space-y-3">
-                                    {/* KPIs */}
-                                    <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                                        <div className="text-center p-1.5 sm:p-2 bg-blue-50 rounded-lg">
-                                            <p className="text-[9px] sm:text-[10px] text-slate-500">Ricavo</p>
-                                            <p className="text-xs sm:text-sm font-bold text-[#0055FF]">{fmtEur(costAnalysis.ricavo)}</p>
-                                        </div>
-                                        <div className="text-center p-1.5 sm:p-2 bg-red-50 rounded-lg">
-                                            <p className="text-[9px] sm:text-[10px] text-slate-500">Costi</p>
-                                            <p className="text-xs sm:text-sm font-bold text-red-600">{fmtEur(costAnalysis.costo_totale)}</p>
-                                        </div>
-                                        <div className={`text-center p-1.5 sm:p-2 rounded-lg ${costAnalysis.margine >= 0 ? 'bg-emerald-50' : 'bg-red-50'}`}>
-                                            <p className="text-[9px] sm:text-[10px] text-slate-500">Margine</p>
-                                            <p className={`text-xs sm:text-sm font-bold ${costAnalysis.margine >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                                {fmtEur(costAnalysis.margine)} <span className="text-[9px] sm:text-[10px] font-normal">({costAnalysis.margine_pct}%)</span>
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Cost Breakdown */}
-                                    <div className="space-y-1.5 text-xs">
-                                        {costAnalysis.costo_materiali_totale > 0 && (
-                                            <div className="flex justify-between py-1 border-b border-dashed">
-                                                <span className="text-slate-500 flex items-center gap-1"><Tag className="h-3 w-3 text-blue-500" /> Materiali</span>
-                                                <span className="font-mono text-slate-700">{fmtEur(costAnalysis.costo_materiali_totale)}</span>
-                                            </div>
-                                        )}
-                                        {costAnalysis.costi_fatture_imputate > 0 && (
-                                            <div className="flex justify-between py-1 border-b border-dashed">
-                                                <span className="text-slate-500 flex items-center gap-1"><Tag className="h-3 w-3 text-violet-500" /> Fatt. Imputate</span>
-                                                <span className="font-mono text-slate-700">{fmtEur(costAnalysis.costi_fatture_imputate)}</span>
-                                            </div>
-                                        )}
-                                        {costAnalysis.costi_oda > 0 && (
-                                            <div className="flex justify-between py-1 border-b border-dashed">
-                                                <span className="text-slate-500 flex items-center gap-1"><Tag className="h-3 w-3 text-indigo-500" /> Ordini (OdA)</span>
-                                                <span className="font-mono text-slate-700">{fmtEur(costAnalysis.costi_oda)}</span>
-                                            </div>
-                                        )}
-                                        {costAnalysis.costi_esterni > 0 && (
-                                            <div className="flex justify-between py-1 border-b border-dashed">
-                                                <span className="text-slate-500 flex items-center gap-1"><WrenchIcon className="h-3 w-3 text-amber-500" /> Lav. Esterne</span>
-                                                <span className="font-mono text-slate-700">{fmtEur(costAnalysis.costi_esterni)}</span>
-                                            </div>
-                                        )}
-                                        {costAnalysis.costo_personale > 0 && (
-                                            <div className="flex justify-between py-1 border-b border-dashed">
-                                                <span className="text-slate-500 flex items-center gap-1"><TrendingUp className="h-3 w-3 text-slate-400" /> Manodopera ({costAnalysis.ore_lavorate}h)</span>
-                                                <span className="font-mono text-slate-700">{fmtEur(costAnalysis.costo_personale)}</span>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Margin bar */}
-                                    <div className="w-full bg-slate-200 rounded-full h-2">
-                                        <div
-                                            className={`h-2 rounded-full transition-all ${costAnalysis.margine_pct > 20 ? 'bg-emerald-500' : costAnalysis.margine_pct > 0 ? 'bg-amber-500' : 'bg-red-500'}`}
-                                            style={{ width: `${Math.max(0, Math.min(100, costAnalysis.margine_pct))}%` }}
-                                        />
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {/* Voci di Lavoro — Cantieri Misti */}
+                        {/* ══ VOCI LAVORO ══ */}
                         <Card className="border-gray-200">
                             <CardContent className="p-4">
                                 <VociLavoroSection commessaId={commessaId} onVociChange={setVociLavoro} />
                             </CardContent>
                         </Card>
 
-                        {/* Rami Normativi + Emissioni Documentali */}
-                        <RamiNormativiSection commessaId={commessaId} />
+                        {/* ══ TECHNICAL SECTIONS (EN 1090 — collapsible) ══ */}
+                        <Accordion type="multiple" defaultValue={['rami-normativi']}>
+                            <AccordionItem value="rami-normativi" className="border rounded-lg mb-3">
+                                <AccordionTrigger className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:no-underline" data-testid="accordion-rami">
+                                    <span className="flex items-center gap-2"><Shield className="h-3.5 w-3.5 text-blue-600" /> Rami Normativi ed Emissioni</span>
+                                </AccordionTrigger>
+                                <AccordionContent className="px-1 pb-1">
+                                    <RamiNormativiSection commessaId={commessaId} />
+                                </AccordionContent>
+                            </AccordionItem>
 
-                        {/* Operational Panels: Approvvigionamento, Produzione, C/L, Repository */}
+                            <AccordionItem value="quality-sections" className="border rounded-lg mb-3">
+                                <AccordionTrigger className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:no-underline" data-testid="accordion-quality">
+                                    <span className="flex items-center gap-2"><Award className="h-3.5 w-3.5 text-amber-600" /> Qualita e Conformita</span>
+                                </AccordionTrigger>
+                                <AccordionContent className="space-y-3 px-1 pb-1">
+                                    <RiesameTecnicoSection commessaId={commessaId} />
+                                    <RegistroSaldaturaSection commessaId={commessaId} />
+                                    <TracciabilitaMaterialiSection commessaId={commessaId} />
+                                    <ReportIspezioniSection commessaId={commessaId} />
+                                    <ControlloFinaleSection commessaId={commessaId} />
+                                </AccordionContent>
+                            </AccordionItem>
+                        </Accordion>
+
+                        {/* ══ OPS PANEL ══ */}
                         <CommessaOpsPanel commessaId={commessaId} commessaNumero={c?.numero} normativaTipo={c?.normativa_tipo} vociLavoro={vociLavoro} onRefresh={fetchHub} />
                     </div>
 
-                    {/* Right: Timeline */}
-                    <div>
+                    {/* Right: Actions + Timeline */}
+                    <div className="space-y-4">
+                        {/* Quick Actions */}
+                        {(canSuspend || canCloseDirect) && (
+                            <Card className="border-gray-200" data-testid="action-buttons">
+                                <CardHeader className="py-2 px-4"><CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Azioni Rapide</CardTitle></CardHeader>
+                                <CardContent className="px-4 pb-3 flex flex-wrap gap-2">
+                                    {canCloseDirect && (
+                                        <Button size="sm" variant="outline" onClick={() => setCloseSimpleOpen(true)}
+                                            className="text-xs border-emerald-500 text-emerald-700 hover:bg-emerald-50 w-full justify-start"
+                                            data-testid="action-CHIUSURA_DIRETTA">
+                                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Chiudi senza certificazione
+                                        </Button>
+                                    )}
+                                    {canSuspend && (
+                                        <Button size="sm" variant="outline"
+                                            onClick={() => setConfirmEvent({ tipo: 'SOSPENSIONE', label: 'Sospendi Commessa', icon: Pause })}
+                                            className="text-xs border-red-400 text-red-600 hover:bg-red-50 w-full justify-start"
+                                            data-testid="action-SOSPENSIONE">
+                                            <Pause className="h-3.5 w-3.5 mr-1.5" /> Sospendi
+                                        </Button>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {/* Timeline */}
                         <Card className="border-gray-200" data-testid="events-timeline">
                             <CardHeader className="bg-[#1E293B] py-2.5 px-4 rounded-t-lg">
                                 <CardTitle className="text-xs font-semibold text-white flex items-center gap-2">
