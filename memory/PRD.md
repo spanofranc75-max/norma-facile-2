@@ -59,9 +59,18 @@ Prodotti 7 report di audit approfondito:
 - **TD-010 RISOLTO**: Filtro user_id aggiunto su audits.py, instruments.py, welders.py, quality_hub.py, verbale_posa.py, montaggio.py. Protezione multi-tenant su read/write/delete.
 - **Endpoint /api/health/indexes**: Nuovo endpoint per verifica runtime degli indici critici.
 
-### Test Report
-- **Test iteration 246**: 34/34 test superati (100%) — backend hardening verificato
-- **TD-004 cleanup**: Backend avvio pulito, tutti endpoint rispondono correttamente, 0 errori
+### Data Integrity (2026-03-23)
+- **Check script**: `/app/backend/scripts/data_integrity_check.py` — verifica 6 aree (duplicati, ref rotti, stati, campi, snapshot, legacy)
+- **Fix script**: `/app/backend/scripts/data_integrity_fix.py` — fix batch a-e
+- **Risultato finale**: 0 CRITICAL, 0 WARNING su 20 check
+- **Fix applicati**:
+  - Backfill `user_id` su 4 non_conformities legacy
+  - Eliminati 4 commesse_normative + 24 obblighi_commessa orfani (backup salvato)
+  - Eliminati 1 instrument + 1 welder corrotti (backup salvato)
+  - Eliminati 21 pacchetti_documentali di test senza commessa_id (backup salvato)
+  - Ricalcolati 24 summary pacchetti documentali
+  - Regola `documenti_archivio`: commessa_id opzionale per entity_type azienda/persona/mezzo
+- **Collezioni zombie**: `download_tokens` (44 doc), `sessions` (3 doc) — candidate per removal, non droppate
 
 ### Scoperte importanti dall'audit
 - Le 6 route "orfane" nel report di audit erano ERRATE — sono sub-moduli di `commessa_ops.py`, attivamente registrati

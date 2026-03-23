@@ -262,7 +262,7 @@ async def check_4_missing_fields():
         ("emissioni_documentali", ["user_id", "commessa_id", "ramo_id", "emission_type"]),
         ("cantieri_sicurezza", ["user_id", "cantiere_id"]),
         ("pacchetti_documentali", ["user_id", "commessa_id"]),
-        ("documenti_archivio", ["user_id", "commessa_id"]),
+        ("documenti_archivio", ["user_id"]),  # commessa_id is optional (docs can be azienda/persona/mezzo)
         ("analisi_committenza", ["user_id", "analysis_id"]),
         ("pacchetti_committenza", ["user_id", "package_id"]),
         ("audits", ["user_id", "audit_id", "date"]),
@@ -344,9 +344,14 @@ async def check_6_legacy_duplicates():
     else:
         add_issue("6_legacy_duplicati", "info", "commesse: nessun numero duplicato per utente")
 
-    # 6b. documenti_archivio: same doc_type + commessa_id duplicates
+    # 6b. documenti_archivio: actual duplicates (same entity+doc_type+filename when ALL populated)
     pipeline = [
-        {"$group": {"_id": {"commessa_id": "$commessa_id", "doc_type": "$doc_type", "filename": "$filename"}, "count": {"$sum": 1}}},
+        {"$match": {
+            "doc_type": {"$exists": True, "$nin": [None, ""]},
+            "filename": {"$exists": True, "$nin": [None, ""]},
+            "entity_id": {"$exists": True, "$nin": [None, ""]},
+        }},
+        {"$group": {"_id": {"entity_type": "$entity_type", "entity_id": "$entity_id", "doc_type": "$doc_type", "filename": "$filename"}, "count": {"$sum": 1}}},
         {"$match": {"count": {"$gt": 1}}}
     ]
     dupes = await db.documenti_archivio.aggregate(pipeline).to_list(100)

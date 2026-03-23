@@ -1,0 +1,2481 @@
+[
+  {
+    "pack_id": "pack_f6581a6a70e5",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "INGRESSO_CANTIERE",
+    "label": "Test Ingresso Cantiere",
+    "status": "incompleto",
+    "recipient": {
+      "to": [],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "DURC",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_1f3432425c4c",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "DURC Updated Title Test",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "VISURA_CAMERALE",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": "doc_99caaf5d8807",
+        "status": "expired",
+        "blocking": false,
+        "document_title": "TEST_Visura Scaduta",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "POLIZZA_RCT",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_38861764a257",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_Polizza RCT Test Upload",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "DENUNCIA_INAIL",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "DVR_ESTRATTO",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "interno"
+      },
+      {
+        "document_type_code": "POS",
+        "entity_type": "cantiere",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "ELENCO_LAVORATORI",
+        "entity_type": "cantiere",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "ELENCO_MEZZI",
+        "entity_type": "cantiere",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "ATTESTATO_SICUREZZA_BASE",
+        "entity_type": "persona",
+        "entity_id": "",
+        "entity_label": "(nessun lavoratore assegnato)",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "IDONEITA_SANITARIA",
+        "entity_type": "persona",
+        "entity_id": "",
+        "entity_label": "(nessun lavoratore assegnato)",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "sensibile"
+      },
+      {
+        "document_type_code": "UNILAV",
+        "entity_type": "persona",
+        "entity_id": "",
+        "entity_label": "(nessun lavoratore assegnato)",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "riservato"
+      }
+    ],
+    "summary": {
+      "total_required": 11,
+      "attached": 2,
+      "missing": 8,
+      "expired": 1
+    },
+    "created_at": "2026-03-22T16:33:15.105746+00:00",
+    "updated_at": "2026-03-22T16:37:23.973250+00:00",
+    "last_verified_at": "2026-03-22T16:37:23.973250+00:00"
+  },
+  {
+    "pack_id": "pack_aa6dae580002",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "QUALIFICA_FORNITORE",
+    "label": "TEST_Qualifica Fornitore Test",
+    "status": "draft",
+    "recipient": {
+      "to": [],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "DURC",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "VISURA_CAMERALE",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "POLIZZA_RCT",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "CERT_ISO_9001",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "CERT_ISO_3834",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "CERT_EN_1090",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "DVR_ESTRATTO",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "ORGANIGRAMMA",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      }
+    ],
+    "summary": {
+      "total_required": 8,
+      "attached": 0,
+      "missing": 0,
+      "expired": 0
+    },
+    "created_at": "2026-03-22T16:37:23.430119+00:00",
+    "updated_at": "2026-03-22T16:37:23.430119+00:00"
+  },
+  {
+    "pack_id": "pack_26420f53870e",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "INGRESSO_CANTIERE",
+    "label": "TEST_Ingresso Cantiere Test",
+    "status": "draft",
+    "recipient": {
+      "to": [],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "DURC",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "VISURA_CAMERALE",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "POLIZZA_RCT",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "DENUNCIA_INAIL",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "DVR_ESTRATTO",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "POS",
+        "entity_type": "cantiere",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "ELENCO_LAVORATORI",
+        "entity_type": "cantiere",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "ELENCO_MEZZI",
+        "entity_type": "cantiere",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "ATTESTATO_SICUREZZA_BASE",
+        "entity_type": "persona",
+        "entity_id": "",
+        "entity_label": "(nessun lavoratore assegnato)",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "IDONEITA_SANITARIA",
+        "entity_type": "persona",
+        "entity_id": "",
+        "entity_label": "(nessun lavoratore assegnato)",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "UNILAV",
+        "entity_type": "persona",
+        "entity_id": "",
+        "entity_label": "(nessun lavoratore assegnato)",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      }
+    ],
+    "summary": {
+      "total_required": 11,
+      "attached": 0,
+      "missing": 0,
+      "expired": 0
+    },
+    "created_at": "2026-03-22T16:37:23.534687+00:00",
+    "updated_at": "2026-03-22T16:37:23.534687+00:00"
+  },
+  {
+    "pack_id": "pack_a3dcca0f8119",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "QUALIFICA_FORNITORE",
+    "label": "TEST_Package for DURC Verification",
+    "status": "incompleto",
+    "recipient": {
+      "to": [],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "DURC",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_63d00b748cda",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_DURC for Verification",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "VISURA_CAMERALE",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_99caaf5d8807",
+        "status": "expired",
+        "blocking": true,
+        "document_title": "TEST_Visura Scaduta",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "POLIZZA_RCT",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_38861764a257",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_Polizza RCT Test Upload",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_9001",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_3834",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_EN_1090",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "DVR_ESTRATTO",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "interno"
+      },
+      {
+        "document_type_code": "ORGANIGRAMMA",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      }
+    ],
+    "summary": {
+      "total_required": 8,
+      "attached": 2,
+      "missing": 5,
+      "expired": 1
+    },
+    "created_at": "2026-03-22T16:37:24.275102+00:00",
+    "updated_at": "2026-03-22T16:37:24.380975+00:00",
+    "last_verified_at": "2026-03-22T16:37:24.380975+00:00"
+  },
+  {
+    "pack_id": "pack_281f1fde8be2",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "QUALIFICA_FORNITORE",
+    "label": "TEST_Valid Doc Test",
+    "status": "incompleto",
+    "recipient": {
+      "to": [],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "DURC",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_63d00b748cda",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_DURC for Verification",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "VISURA_CAMERALE",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_99caaf5d8807",
+        "status": "expired",
+        "blocking": true,
+        "document_title": "TEST_Visura Scaduta",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "POLIZZA_RCT",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_7348ea35c5b9",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_Valid Polizza",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_9001",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_3834",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_EN_1090",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "DVR_ESTRATTO",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "interno"
+      },
+      {
+        "document_type_code": "ORGANIGRAMMA",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      }
+    ],
+    "summary": {
+      "total_required": 8,
+      "attached": 2,
+      "missing": 5,
+      "expired": 1
+    },
+    "created_at": "2026-03-22T16:37:24.596571+00:00",
+    "updated_at": "2026-03-22T16:37:24.718988+00:00",
+    "last_verified_at": "2026-03-22T16:37:24.718988+00:00"
+  },
+  {
+    "pack_id": "pack_45c80d2d74c8",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "DOCUMENTI_MEZZI",
+    "label": "TEST_Missing Docs Test",
+    "status": "draft",
+    "recipient": {
+      "to": [],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "LIBRETTO_MEZZO",
+        "entity_type": "mezzo",
+        "entity_id": "",
+        "entity_label": "(nessun mezzo assegnato)",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "VERIFICA_PERIODICA",
+        "entity_type": "mezzo",
+        "entity_id": "",
+        "entity_label": "(nessun mezzo assegnato)",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "ASSICURAZIONE_MEZZO",
+        "entity_type": "mezzo",
+        "entity_id": "",
+        "entity_label": "(nessun mezzo assegnato)",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "MARCATURA_CE_MEZZO",
+        "entity_type": "mezzo",
+        "entity_id": "",
+        "entity_label": "(nessun mezzo assegnato)",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      }
+    ],
+    "summary": {
+      "total_required": 4,
+      "attached": 0,
+      "missing": 4,
+      "expired": 0
+    },
+    "created_at": "2026-03-22T16:37:24.827966+00:00",
+    "updated_at": "2026-03-22T16:37:24.932719+00:00",
+    "last_verified_at": "2026-03-22T16:37:24.932719+00:00"
+  },
+  {
+    "pack_id": "pack_45a24ff3b451",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "QUALIFICA_FORNITORE",
+    "label": "TEST_Expired Doc Test",
+    "status": "incompleto",
+    "recipient": {
+      "to": [],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "DURC",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_63d00b748cda",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_DURC for Verification",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "VISURA_CAMERALE",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_99caaf5d8807",
+        "status": "expired",
+        "blocking": true,
+        "document_title": "TEST_Visura Scaduta",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "POLIZZA_RCT",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_7348ea35c5b9",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_Valid Polizza",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_9001",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": "doc_75f0dde1c80c",
+        "status": "expired",
+        "blocking": false,
+        "document_title": "TEST_Expired ISO 9001",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_3834",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_EN_1090",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "DVR_ESTRATTO",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "interno"
+      },
+      {
+        "document_type_code": "ORGANIGRAMMA",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      }
+    ],
+    "summary": {
+      "total_required": 8,
+      "attached": 2,
+      "missing": 4,
+      "expired": 2
+    },
+    "created_at": "2026-03-22T16:37:25.154039+00:00",
+    "updated_at": "2026-03-22T16:37:25.274406+00:00",
+    "last_verified_at": "2026-03-22T16:37:25.274406+00:00"
+  },
+  {
+    "pack_id": "pack_a4c326defb57",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "PERSONALE_OPERATIVO",
+    "label": "TEST_Sensibile Test",
+    "status": "incompleto",
+    "recipient": {
+      "to": [],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "ATTESTATO_SICUREZZA_BASE",
+        "entity_type": "persona",
+        "entity_id": "",
+        "entity_label": "(nessun lavoratore assegnato)",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "ATTESTATO_SICUREZZA_SPEC",
+        "entity_type": "persona",
+        "entity_id": "",
+        "entity_label": "(nessun lavoratore assegnato)",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "ATTESTATO_PRIMO_SOCCORSO",
+        "entity_type": "persona",
+        "entity_id": "",
+        "entity_label": "(nessun lavoratore assegnato)",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "ATTESTATO_ANTINCENDIO",
+        "entity_type": "persona",
+        "entity_id": "",
+        "entity_label": "(nessun lavoratore assegnato)",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "IDONEITA_SANITARIA",
+        "entity_type": "persona",
+        "entity_id": "",
+        "entity_label": "(nessun lavoratore assegnato)",
+        "required": true,
+        "document_id": "doc_1be0929befed",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_Idoneita Sanitaria",
+        "privacy_level": "sensibile"
+      },
+      {
+        "document_type_code": "ATTESTATO_PLE",
+        "entity_type": "persona",
+        "entity_id": "",
+        "entity_label": "(nessun lavoratore assegnato)",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "ATTESTATO_LAVORI_QUOTA",
+        "entity_type": "persona",
+        "entity_id": "",
+        "entity_label": "(nessun lavoratore assegnato)",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      }
+    ],
+    "summary": {
+      "total_required": 7,
+      "attached": 1,
+      "missing": 6,
+      "expired": 0
+    },
+    "created_at": "2026-03-22T16:37:25.504588+00:00",
+    "updated_at": "2026-03-22T16:37:25.618699+00:00",
+    "last_verified_at": "2026-03-22T16:37:25.618699+00:00"
+  },
+  {
+    "pack_id": "pack_ede11be0bd6d",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "QUALIFICA_FORNITORE",
+    "label": "TEST_Qualifica Test Package",
+    "status": "incompleto",
+    "recipient": {
+      "to": [],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "DURC",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_63d00b748cda",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_DURC for Verification",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "VISURA_CAMERALE",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_99caaf5d8807",
+        "status": "expired",
+        "blocking": true,
+        "document_title": "TEST_Visura Scaduta",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "POLIZZA_RCT",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_7348ea35c5b9",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_Valid Polizza",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_9001",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": "doc_75f0dde1c80c",
+        "status": "expired",
+        "blocking": false,
+        "document_title": "TEST_Expired ISO 9001",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_3834",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_EN_1090",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "DVR_ESTRATTO",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "interno"
+      },
+      {
+        "document_type_code": "ORGANIGRAMMA",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      }
+    ],
+    "summary": {
+      "total_required": 8,
+      "attached": 2,
+      "missing": 4,
+      "expired": 2
+    },
+    "created_at": "2026-03-22T16:39:14.938362+00:00",
+    "updated_at": "2026-03-22T16:39:18.573890+00:00",
+    "last_verified_at": "2026-03-22T16:39:18.573890+00:00"
+  },
+  {
+    "pack_id": "pack_efe05e3c7284",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "QUALIFICA_FORNITORE",
+    "label": "TEST_D4D5_Package_171132",
+    "status": "incompleto",
+    "recipient": {
+      "to": [],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "DURC",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_63d00b748cda",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_DURC for Verification",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "VISURA_CAMERALE",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_99caaf5d8807",
+        "status": "expired",
+        "blocking": true,
+        "document_title": "TEST_Visura Scaduta",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "POLIZZA_RCT",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_7348ea35c5b9",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_Valid Polizza",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_9001",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": "doc_75f0dde1c80c",
+        "status": "expired",
+        "blocking": false,
+        "document_title": "TEST_Expired ISO 9001",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_3834",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_EN_1090",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "DVR_ESTRATTO",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "interno"
+      },
+      {
+        "document_type_code": "ORGANIGRAMMA",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      }
+    ],
+    "summary": {
+      "total_required": 8,
+      "attached": 2,
+      "missing": 4,
+      "expired": 2
+    },
+    "created_at": "2026-03-22T17:11:32.535373+00:00",
+    "updated_at": "2026-03-22T17:11:32.691403+00:00",
+    "last_verified_at": "2026-03-22T17:11:32.689524+00:00",
+    "email_draft": {
+      "subject": "Invio documentazione: TEST_D4D5_Package_171132 - Test Company S.r.l.",
+      "body": "Spett.le destinatario,\n\nin allegato trasmettiamo la documentazione richiesta (TEST_D4D5_Package_171132).\n\nDocumenti allegati: 2\nDocumenti ancora mancanti: 4\n\nRestiamo a disposizione per qualsiasi chiarimento.\n\nCordiali saluti,\nTest Company S.r.l.",
+      "attachments_count": 0,
+      "attachments_ready": false
+    }
+  },
+  {
+    "pack_id": "pack_a71f8c120f37",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "QUALIFICA_FORNITORE",
+    "label": "TEST_D4D5_Package_171132",
+    "status": "incompleto",
+    "recipient": {
+      "to": [],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "DURC",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_63d00b748cda",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_DURC for Verification",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "VISURA_CAMERALE",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_99caaf5d8807",
+        "status": "expired",
+        "blocking": true,
+        "document_title": "TEST_Visura Scaduta",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "POLIZZA_RCT",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_7348ea35c5b9",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_Valid Polizza",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_9001",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": "doc_75f0dde1c80c",
+        "status": "expired",
+        "blocking": false,
+        "document_title": "TEST_Expired ISO 9001",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_3834",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_EN_1090",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "DVR_ESTRATTO",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "interno"
+      },
+      {
+        "document_type_code": "ORGANIGRAMMA",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      }
+    ],
+    "summary": {
+      "total_required": 8,
+      "attached": 2,
+      "missing": 4,
+      "expired": 2
+    },
+    "created_at": "2026-03-22T17:11:32.801450+00:00",
+    "updated_at": "2026-03-22T17:11:32.956751+00:00",
+    "last_verified_at": "2026-03-22T17:11:32.955369+00:00",
+    "email_draft": {
+      "subject": "Invio documentazione: TEST_D4D5_Package_171132 - Test Company S.r.l.",
+      "body": "Spett.le destinatario,\n\nin allegato trasmettiamo la documentazione richiesta (TEST_D4D5_Package_171132).\n\nDocumenti allegati: 2\nDocumenti ancora mancanti: 4\n\nRestiamo a disposizione per qualsiasi chiarimento.\n\nCordiali saluti,\nTest Company S.r.l.",
+      "attachments_count": 0,
+      "attachments_ready": false
+    }
+  },
+  {
+    "pack_id": "pack_7aae9cc46617",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "QUALIFICA_FORNITORE",
+    "label": "TEST_D4D5_Package_171132",
+    "status": "incompleto",
+    "recipient": {
+      "to": [],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "DURC",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_63d00b748cda",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_DURC for Verification",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "VISURA_CAMERALE",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_99caaf5d8807",
+        "status": "expired",
+        "blocking": true,
+        "document_title": "TEST_Visura Scaduta",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "POLIZZA_RCT",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_7348ea35c5b9",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_Valid Polizza",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_9001",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": "doc_75f0dde1c80c",
+        "status": "expired",
+        "blocking": false,
+        "document_title": "TEST_Expired ISO 9001",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_3834",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_EN_1090",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "DVR_ESTRATTO",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "interno"
+      },
+      {
+        "document_type_code": "ORGANIGRAMMA",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      }
+    ],
+    "summary": {
+      "total_required": 8,
+      "attached": 2,
+      "missing": 4,
+      "expired": 2
+    },
+    "created_at": "2026-03-22T17:11:33.058850+00:00",
+    "updated_at": "2026-03-22T17:11:33.185975+00:00",
+    "last_verified_at": "2026-03-22T17:11:33.184530+00:00",
+    "email_draft": {
+      "subject": "Invio documentazione: TEST_D4D5_Package_171132 - Test Company S.r.l.",
+      "body": "Spett.le destinatario,\n\nin allegato trasmettiamo la documentazione richiesta (TEST_D4D5_Package_171132).\n\nDocumenti allegati: 2\nDocumenti ancora mancanti: 4\n\nRestiamo a disposizione per qualsiasi chiarimento.\n\nCordiali saluti,\nTest Company S.r.l.",
+      "attachments_count": 0,
+      "attachments_ready": false
+    }
+  },
+  {
+    "pack_id": "pack_d5eebad5cfa4",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "QUALIFICA_FORNITORE",
+    "label": "TEST_D4D5_Package_171133",
+    "status": "incompleto",
+    "recipient": {
+      "to": [],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "DURC",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_63d00b748cda",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_DURC for Verification",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "VISURA_CAMERALE",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_99caaf5d8807",
+        "status": "expired",
+        "blocking": true,
+        "document_title": "TEST_Visura Scaduta",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "POLIZZA_RCT",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_7348ea35c5b9",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_Valid Polizza",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_9001",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": "doc_75f0dde1c80c",
+        "status": "expired",
+        "blocking": false,
+        "document_title": "TEST_Expired ISO 9001",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_3834",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_EN_1090",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "DVR_ESTRATTO",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "interno"
+      },
+      {
+        "document_type_code": "ORGANIGRAMMA",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      }
+    ],
+    "summary": {
+      "total_required": 8,
+      "attached": 2,
+      "missing": 4,
+      "expired": 2
+    },
+    "created_at": "2026-03-22T17:11:33.389851+00:00",
+    "updated_at": "2026-03-22T17:11:33.505176+00:00",
+    "last_verified_at": "2026-03-22T17:11:33.503729+00:00",
+    "email_draft": {
+      "subject": "Invio documentazione: TEST_D4D5_Package_171133 - Test Company S.r.l.",
+      "body": "Spett.le destinatario,\n\nin allegato trasmettiamo la documentazione richiesta (TEST_D4D5_Package_171133).\n\nDocumenti allegati: 2\nDocumenti ancora mancanti: 4\n\nRestiamo a disposizione per qualsiasi chiarimento.\n\nCordiali saluti,\nTest Company S.r.l.",
+      "attachments_count": 0,
+      "attachments_ready": false
+    }
+  },
+  {
+    "pack_id": "pack_af0f27c06a5f",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "QUALIFICA_FORNITORE",
+    "label": "TEST_D5_Send_171133",
+    "status": "incompleto",
+    "recipient": {
+      "to": [],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "DURC",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_63d00b748cda",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_DURC for Verification",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "VISURA_CAMERALE",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_99caaf5d8807",
+        "status": "expired",
+        "blocking": true,
+        "document_title": "TEST_Visura Scaduta",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "POLIZZA_RCT",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_7348ea35c5b9",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_Valid Polizza",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_9001",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": "doc_75f0dde1c80c",
+        "status": "expired",
+        "blocking": false,
+        "document_title": "TEST_Expired ISO 9001",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_3834",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_EN_1090",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "DVR_ESTRATTO",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "interno"
+      },
+      {
+        "document_type_code": "ORGANIGRAMMA",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      }
+    ],
+    "summary": {
+      "total_required": 8,
+      "attached": 2,
+      "missing": 4,
+      "expired": 2
+    },
+    "created_at": "2026-03-22T17:11:33.614636+00:00",
+    "updated_at": "2026-03-22T17:11:33.724438+00:00",
+    "last_verified_at": "2026-03-22T17:11:33.723028+00:00",
+    "email_draft": {
+      "subject": "Invio documentazione: TEST_D5_Send_171133 - Test Company S.r.l.",
+      "body": "Spett.le destinatario,\n\nin allegato trasmettiamo la documentazione richiesta (TEST_D5_Send_171133).\n\nDocumenti allegati: 2\nDocumenti ancora mancanti: 4\n\nRestiamo a disposizione per qualsiasi chiarimento.\n\nCordiali saluti,\nTest Company S.r.l.",
+      "attachments_count": 0,
+      "attachments_ready": false
+    }
+  },
+  {
+    "pack_id": "pack_ededbefbf960",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "QUALIFICA_FORNITORE",
+    "label": "TEST_D5_Send_171133",
+    "status": "incompleto",
+    "recipient": {
+      "to": [],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "DURC",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_63d00b748cda",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_DURC for Verification",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "VISURA_CAMERALE",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_99caaf5d8807",
+        "status": "expired",
+        "blocking": true,
+        "document_title": "TEST_Visura Scaduta",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "POLIZZA_RCT",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_7348ea35c5b9",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_Valid Polizza",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_9001",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": "doc_75f0dde1c80c",
+        "status": "expired",
+        "blocking": false,
+        "document_title": "TEST_Expired ISO 9001",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_3834",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_EN_1090",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "DVR_ESTRATTO",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "interno"
+      },
+      {
+        "document_type_code": "ORGANIGRAMMA",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      }
+    ],
+    "summary": {
+      "total_required": 8,
+      "attached": 2,
+      "missing": 4,
+      "expired": 2
+    },
+    "created_at": "2026-03-22T17:11:33.931267+00:00",
+    "updated_at": "2026-03-22T17:11:34.086816+00:00",
+    "last_verified_at": "2026-03-22T17:11:34.085324+00:00",
+    "email_draft": {
+      "subject": "Invio documentazione: TEST_D5_Send_171133 - Test Company S.r.l.",
+      "body": "Spett.le destinatario,\n\nin allegato trasmettiamo la documentazione richiesta (TEST_D5_Send_171133).\n\nDocumenti allegati: 2\nDocumenti ancora mancanti: 4\n\nRestiamo a disposizione per qualsiasi chiarimento.\n\nCordiali saluti,\nTest Company S.r.l.",
+      "attachments_count": 0,
+      "attachments_ready": false
+    }
+  },
+  {
+    "pack_id": "pack_737d9a98da53",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "QUALIFICA_FORNITORE",
+    "label": "TEST_D5_Send_171134",
+    "status": "inviato",
+    "recipient": {
+      "to": [],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "DURC",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_63d00b748cda",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_DURC for Verification",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "VISURA_CAMERALE",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_99caaf5d8807",
+        "status": "expired",
+        "blocking": true,
+        "document_title": "TEST_Visura Scaduta",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "POLIZZA_RCT",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_7348ea35c5b9",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_Valid Polizza",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_9001",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": "doc_75f0dde1c80c",
+        "status": "expired",
+        "blocking": false,
+        "document_title": "TEST_Expired ISO 9001",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_3834",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_EN_1090",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "DVR_ESTRATTO",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "interno"
+      },
+      {
+        "document_type_code": "ORGANIGRAMMA",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      }
+    ],
+    "summary": {
+      "total_required": 8,
+      "attached": 2,
+      "missing": 4,
+      "expired": 2
+    },
+    "created_at": "2026-03-22T17:11:34.313171+00:00",
+    "updated_at": "2026-03-22T17:11:34.975011+00:00",
+    "last_verified_at": "2026-03-22T17:11:34.443172+00:00",
+    "email_draft": {
+      "subject": "Invio documentazione: TEST_D5_Send_171134 - Test Company S.r.l.",
+      "body": "Spett.le destinatario,\n\nin allegato trasmettiamo la documentazione richiesta (TEST_D5_Send_171134).\n\nDocumenti allegati: 2\nDocumenti ancora mancanti: 4\n\nRestiamo a disposizione per qualsiasi chiarimento.\n\nCordiali saluti,\nTest Company S.r.l.",
+      "attachments_count": 0,
+      "attachments_ready": false
+    }
+  },
+  {
+    "pack_id": "pack_a9c6a7543b26",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "QUALIFICA_FORNITORE",
+    "label": "TEST_Invii_Empty_171135",
+    "status": "draft",
+    "recipient": {
+      "to": [],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "DURC",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "VISURA_CAMERALE",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "POLIZZA_RCT",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "CERT_ISO_9001",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "CERT_ISO_3834",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "CERT_EN_1090",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "DVR_ESTRATTO",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "ORGANIGRAMMA",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      }
+    ],
+    "summary": {
+      "total_required": 8,
+      "attached": 0,
+      "missing": 0,
+      "expired": 0
+    },
+    "created_at": "2026-03-22T17:11:35.472003+00:00",
+    "updated_at": "2026-03-22T17:11:35.472003+00:00"
+  },
+  {
+    "pack_id": "pack_537890635701",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "QUALIFICA_FORNITORE",
+    "label": "TEST_Update_171135",
+    "status": "draft",
+    "recipient": {
+      "to": [
+        "updated@example.com",
+        "another@example.com"
+      ],
+      "cc": [
+        "cc@example.com"
+      ]
+    },
+    "items": [
+      {
+        "document_type_code": "DURC",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "VISURA_CAMERALE",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "POLIZZA_RCT",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "CERT_ISO_9001",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "CERT_ISO_3834",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "CERT_EN_1090",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "DVR_ESTRATTO",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "ORGANIGRAMMA",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      }
+    ],
+    "summary": {
+      "total_required": 8,
+      "attached": 0,
+      "missing": 0,
+      "expired": 0
+    },
+    "created_at": "2026-03-22T17:11:35.687829+00:00",
+    "updated_at": "2026-03-22T17:11:35.802600+00:00"
+  },
+  {
+    "pack_id": "pack_0caa585a5ccc",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "QUALIFICA_FORNITORE",
+    "label": "Updated_Label_171135",
+    "status": "draft",
+    "recipient": {
+      "to": [],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "DURC",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "VISURA_CAMERALE",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "POLIZZA_RCT",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "CERT_ISO_9001",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "CERT_ISO_3834",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "CERT_EN_1090",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "DVR_ESTRATTO",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "ORGANIGRAMMA",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      }
+    ],
+    "summary": {
+      "total_required": 8,
+      "attached": 0,
+      "missing": 0,
+      "expired": 0
+    },
+    "created_at": "2026-03-22T17:11:35.944880+00:00",
+    "updated_at": "2026-03-22T17:11:36.099738+00:00"
+  },
+  {
+    "pack_id": "pack_34effba47a0e",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "QUALIFICA_FORNITORE",
+    "label": "Allowed_Update",
+    "status": "draft",
+    "recipient": {
+      "to": [],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "DURC",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "VISURA_CAMERALE",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "POLIZZA_RCT",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "CERT_ISO_9001",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "CERT_ISO_3834",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "CERT_EN_1090",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "DVR_ESTRATTO",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      },
+      {
+        "document_type_code": "ORGANIGRAMMA",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "pending",
+        "blocking": false
+      }
+    ],
+    "summary": {
+      "total_required": 8,
+      "attached": 0,
+      "missing": 0,
+      "expired": 0
+    },
+    "created_at": "2026-03-22T17:11:36.272087+00:00",
+    "updated_at": "2026-03-22T17:11:36.377617+00:00"
+  },
+  {
+    "pack_id": "pack_fbd05038a00d",
+    "user_id": "user_6988e9b9316c",
+    "commessa_id": "",
+    "cantiere_id": "",
+    "template_code": "QUALIFICA_FORNITORE",
+    "label": "TEST_Integration_Flow_171136",
+    "status": "incompleto",
+    "recipient": {
+      "to": [
+        "integration-test@example.com"
+      ],
+      "cc": []
+    },
+    "items": [
+      {
+        "document_type_code": "DURC",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_63d00b748cda",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_DURC for Verification",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "VISURA_CAMERALE",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_99caaf5d8807",
+        "status": "expired",
+        "blocking": true,
+        "document_title": "TEST_Visura Scaduta",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "POLIZZA_RCT",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": "doc_7348ea35c5b9",
+        "status": "attached",
+        "blocking": false,
+        "document_title": "TEST_Valid Polizza",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_9001",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": "doc_75f0dde1c80c",
+        "status": "expired",
+        "blocking": false,
+        "document_title": "TEST_Expired ISO 9001",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_ISO_3834",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "CERT_EN_1090",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": false,
+        "document_id": null,
+        "status": "missing",
+        "blocking": false,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      },
+      {
+        "document_type_code": "DVR_ESTRATTO",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "interno"
+      },
+      {
+        "document_type_code": "ORGANIGRAMMA",
+        "entity_type": "azienda",
+        "entity_id": "",
+        "entity_label": "",
+        "required": true,
+        "document_id": null,
+        "status": "missing",
+        "blocking": true,
+        "document_title": "",
+        "privacy_level": "cliente_condivisibile"
+      }
+    ],
+    "summary": {
+      "total_required": 8,
+      "attached": 2,
+      "missing": 4,
+      "expired": 2
+    },
+    "created_at": "2026-03-22T17:11:36.945302+00:00",
+    "updated_at": "2026-03-22T17:12:07.816029+00:00",
+    "last_verified_at": "2026-03-22T17:12:07.813994+00:00",
+    "email_draft": {
+      "subject": "Invio documentazione: TEST_Integration_Flow_171136 - Test Company S.r.l.",
+      "body": "Spett.le destinatario,\n\nin allegato trasmettiamo la documentazione richiesta (TEST_Integration_Flow_171136).\n\nDocumenti allegati: 2\nDocumenti ancora mancanti: 4\n\nRestiamo a disposizione per qualsiasi chiarimento.\n\nCordiali saluti,\nTest Company S.r.l.",
+      "attachments_count": 0,
+      "attachments_ready": false
+    }
+  }
+]

@@ -1,0 +1,70 @@
+{
+  "timestamp": "2026-03-23T10:13:38.647832+00:00",
+  "actions": [
+    {
+      "action": "fix",
+      "severity": "critical",
+      "message": "non_conformities: backfilled user_id on 4 records",
+      "details": null
+    },
+    {
+      "action": "info",
+      "severity": "info",
+      "message": "audits: user_id OK (0 missing)",
+      "details": null
+    },
+    {
+      "action": "delete",
+      "severity": "warning",
+      "message": "commesse_normative: eliminati 4 record orfani (backup salvato)",
+      "details": null
+    },
+    {
+      "action": "delete",
+      "severity": "warning",
+      "message": "obblighi_commessa: eliminati 24 record orfani (backup salvato)",
+      "details": null
+    },
+    {
+      "action": "info",
+      "severity": "info",
+      "message": "pacchetti_documentali: nessun orfano",
+      "details": null
+    },
+    {
+      "action": "export",
+      "severity": "info",
+      "message": "Backup orfani salvato: /app/backend/scripts/orphans_backup.json",
+      "details": null
+    },
+    {
+      "action": "info",
+      "severity": "info",
+      "message": "Nessun obbligo incoerente trovato",
+      "details": null
+    },
+    {
+      "action": "delete",
+      "severity": "warning",
+      "message": "instruments: eliminati 1 record senza instrument_id (backup: /app/backend/scripts/instruments_corrupted_backup.json)",
+      "details": null
+    },
+    {
+      "action": "delete",
+      "severity": "warning",
+      "message": "welders: eliminati 1 record senza welder_id (backup: /app/backend/scripts/welders_corrupted_backup.json)",
+      "details": null
+    },
+    {
+      "action": "fix",
+      "severity": "warning",
+      "message": "pacchetti_documentali: 24/24 summary ricalcolati",
+      "details": null
+    }
+  ],
+  "summary": {
+    "fixes": 2,
+    "deletes": 4,
+    "exports": 1
+  }
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Mario Rossi",
+    "stamp_id": "W-001",
+    "is_active": true,
+    "user_id": "user_97c773827822",
+    "qualifications": [
+      {
+        "standard": "EN ISO 9606-1",
+        "process": "135 MAG",
+        "expiry_date": "2026-03-27"
+      },
+      {
+        "standard": "EN ISO 9606-1",
+        "process": "141 TIG",
+        "expiry_date": "2026-03-20"
+      }
+    ]
+  }
+]
