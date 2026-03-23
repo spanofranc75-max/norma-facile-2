@@ -20,6 +20,7 @@ from services.committenza_analysis_service import (
     review_analysis, approve_analysis,
     genera_obblighi_da_analisi,
 )
+from services.audit_trail import log_activity
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -43,6 +44,10 @@ async def api_crea_package(body: dict, user: dict = Depends(get_current_user)):
     )
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])
+    await log_activity(user, "create", "committenza_package", result.get("package_id", ""),
+                       label=body.get("title", ""),
+                       commessa_id=body.get("commessa_id", ""),
+                       details={"n_documents": len(body.get("document_refs", []))})
     return result
 
 
@@ -83,9 +88,17 @@ async def api_remove_doc(package_id: str, doc_id: str, user: dict = Depends(get_
 
 @router.post("/committenza/analizza/{package_id}")
 async def api_analizza(package_id: str, user: dict = Depends(get_current_user)):
+    pkg = await get_package(package_id, user["user_id"])
     result = await analizza_committenza(package_id, user["user_id"])
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])
+    await log_activity(user, "ai_precompile", "committenza_analisi", result.get("analysis_id", ""),
+                       label=f"Analisi AI committenza",
+                       commessa_id=(pkg or {}).get("commessa_id", ""),
+                       details={"package_id": package_id,
+                                "n_obblighi": len(result.get("extracted_obligations", []) or []),
+                                "n_anomalie": len(result.get("anomalies", []) or [])},
+                       actor_type="ai")
     return result
 
 
@@ -117,6 +130,10 @@ async def api_approve(analysis_id: str, user: dict = Depends(get_current_user)):
     result = await approve_analysis(analysis_id, user["user_id"])
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])
+    await log_activity(user, "approve", "committenza_analisi", analysis_id,
+                       label="Analisi approvata",
+                       commessa_id=result.get("commessa_id", ""),
+                       details={"before_status": "in_review", "after_status": "approved"})
     return result
 
 
@@ -127,4 +144,9 @@ async def api_genera_obblighi(analysis_id: str, user: dict = Depends(get_current
     result = await genera_obblighi_da_analisi(analysis_id, user["user_id"])
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])
+    await log_activity(user, "genera_obblighi", "committenza_analisi", analysis_id,
+                       label=f"Generati {result.get('created', 0)} obblighi",
+                       commessa_id=result.get("commessa_id", ""),
+                       details={"created": result.get("created", 0)},
+                       actor_type="system")
     return result

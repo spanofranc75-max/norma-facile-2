@@ -21,6 +21,7 @@ from services.cantieri_sicurezza_service import (
 )
 from services.ai_safety_engine import ai_precompila_cantiere
 from services.pos_docx_generator import genera_pos_docx
+from services.audit_trail import log_activity
 
 router = APIRouter(tags=["cantieri_sicurezza"])
 logger = logging.getLogger(__name__)
@@ -62,7 +63,11 @@ class AggiornaCantiereSicurezzaRequest(BaseModel):
 
 @router.post("/cantieri-sicurezza")
 async def api_crea_cantiere(body: CreaCantiereSicurezzaRequest, user: dict = Depends(get_current_user)):
-    return await crea_cantiere(user["user_id"], body.commessa_id, body.pre_fill)
+    result = await crea_cantiere(user["user_id"], body.commessa_id, body.pre_fill)
+    await log_activity(user, "create", "cantiere_sicurezza", result.get("cantiere_id", ""),
+                       label=result.get("nome_cantiere", "Nuovo cantiere"),
+                       commessa_id=body.commessa_id or "")
+    return result
 
 
 @router.get("/cantieri-sicurezza")
@@ -93,18 +98,27 @@ async def api_aggiorna_cantiere(cantiere_id: str, body: AggiornaCantiereSicurezz
         raise HTTPException(status_code=404, detail="Cantiere sicurezza non trovato")
     # R0: Auto-sync obblighi if substantive fields changed
     substantive = {"soggetti", "dati_cantiere", "rischi_confermati", "rischi_selezionati", "fasi_lavoro"}
-    if substantive & set(updates.keys()):
+    changed_substantive = substantive & set(updates.keys())
+    if changed_substantive:
         commessa_id = result.get("parent_commessa_id") or result.get("commessa_id")
         if commessa_id:
             from services.obblighi_auto_sync import trigger_sync_obblighi
             await trigger_sync_obblighi(commessa_id, user["user_id"], "gate_pos", cantiere_id)
+        await log_activity(user, "update", "cantiere_sicurezza", cantiere_id,
+                           label=result.get("nome_cantiere", ""),
+                           commessa_id=commessa_id or "",
+                           details={"fields_changed": list(changed_substantive)})
     return result
 
 
 @router.delete("/cantieri-sicurezza/{cantiere_id}")
 async def api_elimina_cantiere(cantiere_id: str, user: dict = Depends(get_current_user)):
+    doc = await get_cantiere(cantiere_id, user["user_id"])
     if not await elimina_cantiere(cantiere_id, user["user_id"]):
         raise HTTPException(status_code=404, detail="Cantiere sicurezza non trovato")
+    await log_activity(user, "delete", "cantiere_sicurezza", cantiere_id,
+                       label=doc.get("nome_cantiere", "") if doc else "",
+                       commessa_id=(doc or {}).get("parent_commessa_id", "") or (doc or {}).get("commessa_id", ""))
     return {"deleted": True}
 
 
@@ -122,6 +136,12 @@ async def api_ai_precompila(cantiere_id: str, user: dict = Depends(get_current_u
     result = await ai_precompila_cantiere(cantiere_id, user["user_id"])
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])
+    doc = await get_cantiere(cantiere_id, user["user_id"])
+    await log_activity(user, "ai_precompile", "cantiere_sicurezza", cantiere_id,
+                       label=f"AI precompilazione POS",
+                       commessa_id=(doc or {}).get("parent_commessa_id", "") or (doc or {}).get("commessa_id", ""),
+                       details={"fasi_proposte": result.get("n_fasi", 0), "rischi_attivati": result.get("n_rischi", 0)},
+                       actor_type="ai")
     return result
 
 
@@ -135,6 +155,13 @@ async def api_genera_pos(
     result = await genera_pos_docx(cantiere_id, user["user_id"], mode=mode)
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])
+    doc = await get_cantiere(cantiere_id, user["user_id"])
+    await log_activity(user, "generate_docx", "cantiere_sicurezza", cantiere_id,
+                       label=f"POS v{result['generazione']['versione']}",
+                       commessa_id=(doc or {}).get("parent_commessa_id", "") or (doc or {}).get("commessa_id", ""),
+                       details={"mode": mode, "versione": result["generazione"]["versione"],
+                                "completezza": result["gate_completezza"]},
+                       actor_type="system")
     return Response(
         content=result["file_bytes"],
         media_type=result["content_type"],

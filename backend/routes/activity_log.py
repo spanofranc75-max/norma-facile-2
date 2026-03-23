@@ -19,6 +19,16 @@ ACTION_LABELS = {
     "export": "Esportazione",
     "status_change": "Cambio stato",
     "email_sent": "Email inviata",
+    "ai_precompile": "Pre-compilazione AI",
+    "generate_docx": "Generazione DOCX",
+    "sync_complete": "Sync completato",
+    "verifica": "Verifica",
+    "approve": "Approvazione",
+    "reject": "Rifiuto",
+    "gate_check": "Verifica Gate",
+    "send_email": "Invio email",
+    "issue_document": "Emissione documento",
+    "genera_obblighi": "Generazione obblighi",
 }
 
 ENTITY_LABELS = {
@@ -38,6 +48,20 @@ ENTITY_LABELS = {
     "fpc_progetto": "Progetto FPC",
     "certificazione": "Certificazione",
     "impostazioni": "Impostazioni",
+    "cantiere_sicurezza": "Cantiere Sicurezza",
+    "obbligo": "Obbligo Commessa",
+    "pacchetto_documentale": "Pacchetto Documentale",
+    "documento_archivio": "Documento Archivio",
+    "committenza_package": "Package Committenza",
+    "committenza_analisi": "Analisi Committenza",
+    "emissione": "Emissione Documentale",
+    "ramo_normativo": "Ramo Normativo",
+}
+
+ACTOR_LABELS = {
+    "user": "Utente",
+    "system": "Sistema",
+    "ai": "AI",
 }
 
 
@@ -46,6 +70,8 @@ async def list_activity_log(
     entity_type: Optional[str] = Query(None),
     action: Optional[str] = Query(None),
     user_id: Optional[str] = Query(None),
+    commessa_id: Optional[str] = Query(None),
+    actor_type: Optional[str] = Query(None),
     date_from: Optional[str] = Query(None),
     date_to: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
@@ -66,6 +92,10 @@ async def list_activity_log(
         conditions.append({"action": action})
     if user_id:
         conditions.append({"user_id": user_id})
+    if commessa_id:
+        conditions.append({"commessa_id": commessa_id})
+    if actor_type:
+        conditions.append({"actor_type": actor_type})
     if date_from:
         conditions.append({"timestamp": {"$gte": date_from}})
     if date_to:
@@ -76,6 +106,7 @@ async def list_activity_log(
             {"label": {"$regex": search, "$options": "i"}},
             {"user_name": {"$regex": search, "$options": "i"}},
             {"entity_id": {"$regex": search, "$options": "i"}},
+            {"commessa_id": {"$regex": search, "$options": "i"}},
         ]})
 
     if conditions:
@@ -135,6 +166,7 @@ async def activity_log_stats(user: dict = Depends(get_current_user)):
         ],
         "action_labels": ACTION_LABELS,
         "entity_labels": ENTITY_LABELS,
+        "actor_labels": ACTOR_LABELS,
         "entity_types": ENTITY_TYPES,
         "action_types": ACTION_TYPES,
     }

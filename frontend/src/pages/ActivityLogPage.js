@@ -27,6 +27,22 @@ const ACTION_COLORS = {
   export: 'bg-purple-100 text-purple-700 border-purple-200',
   status_change: 'bg-orange-100 text-orange-700 border-orange-200',
   email_sent: 'bg-cyan-100 text-cyan-700 border-cyan-200',
+  ai_precompile: 'bg-violet-100 text-violet-700 border-violet-200',
+  generate_docx: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  sync_complete: 'bg-teal-100 text-teal-700 border-teal-200',
+  verifica: 'bg-sky-100 text-sky-700 border-sky-200',
+  approve: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  reject: 'bg-red-100 text-red-700 border-red-200',
+  gate_check: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+  send_email: 'bg-cyan-100 text-cyan-700 border-cyan-200',
+  issue_document: 'bg-green-100 text-green-700 border-green-200',
+  genera_obblighi: 'bg-rose-100 text-rose-700 border-rose-200',
+};
+
+const ACTOR_ICONS = {
+  user: null,
+  system: 'S',
+  ai: 'AI',
 };
 
 const PAGE_SIZE = 30;
@@ -42,12 +58,14 @@ export default function ActivityLogPage() {
   const [search, setSearch] = useState('');
   const [entityType, setEntityType] = useState('');
   const [action, setAction] = useState('');
+  const [actorType, setActorType] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
   // Labels from backend
   const [actionLabels, setActionLabels] = useState({});
   const [entityLabels, setEntityLabels] = useState({});
+  const [actorLabels, setActorLabels] = useState({});
   const [entityTypes, setEntityTypes] = useState([]);
   const [actionTypes, setActionTypes] = useState([]);
 
@@ -58,6 +76,7 @@ export default function ActivityLogPage() {
         setStats(data);
         setActionLabels(data.action_labels || {});
         setEntityLabels(data.entity_labels || {});
+        setActorLabels(data.actor_labels || {});
         setEntityTypes(data.entity_types || []);
         setActionTypes(data.action_types || []);
       }
@@ -73,6 +92,7 @@ export default function ActivityLogPage() {
       if (search) params.set('search', search);
       if (entityType) params.set('entity_type', entityType);
       if (action) params.set('action', action);
+      if (actorType) params.set('actor_type', actorType);
       if (dateFrom) params.set('date_from', dateFrom);
       if (dateTo) params.set('date_to', dateTo);
       const data = await apiRequest(`/activity-log?${params.toString()}`);
@@ -80,7 +100,7 @@ export default function ActivityLogPage() {
       setTotal(data?.total || 0);
     } catch { setItems([]); setTotal(0); }
     setLoading(false);
-  }, [page, search, entityType, action, dateFrom, dateTo]);
+  }, [page, search, entityType, action, actorType, dateFrom, dateTo]);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { fetchLog(); }, [fetchLog]);
@@ -88,7 +108,7 @@ export default function ActivityLogPage() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const resetFilters = () => {
-    setSearch(''); setEntityType(''); setAction(''); setDateFrom(''); setDateTo(''); setPage(1);
+    setSearch(''); setEntityType(''); setAction(''); setActorType(''); setDateFrom(''); setDateTo(''); setPage(1);
   };
 
   const formatTimestamp = (ts) => {
@@ -98,6 +118,22 @@ export default function ActivityLogPage() {
       return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
         + ' ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
     } catch { return ts; }
+  };
+
+  const renderDetails = (details) => {
+    if (!details || Object.keys(details).length === 0) return '-';
+    // Render before/after diffs nicely
+    const parts = [];
+    for (const [k, v] of Object.entries(details)) {
+      if (v && typeof v === 'object' && 'before' in v && 'after' in v) {
+        parts.push(`${k}: ${v.before || '-'} → ${v.after || '-'}`);
+      } else if (Array.isArray(v)) {
+        parts.push(`${k}: ${v.join(', ')}`);
+      } else {
+        parts.push(`${k}: ${v}`);
+      }
+    }
+    return parts.join(' | ');
   };
 
   return (
@@ -132,7 +168,7 @@ export default function ActivityLogPage() {
             <Filter className="h-4 w-4 text-slate-500" />
             <span className="text-sm font-medium text-slate-700">Filtri</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
             <Input
               placeholder="Cerca..."
               value={search}
@@ -161,10 +197,21 @@ export default function ActivityLogPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={actorType} onValueChange={(v) => { setActorType(v === '__all__' ? '' : v); setPage(1); }}>
+              <SelectTrigger data-testid="actor-type-filter">
+                <SelectValue placeholder="Attore" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Tutti gli attori</SelectItem>
+                <SelectItem value="user">Utente</SelectItem>
+                <SelectItem value="system">Sistema</SelectItem>
+                <SelectItem value="ai">AI</SelectItem>
+              </SelectContent>
+            </Select>
             <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} data-testid="date-from-filter" />
             <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} data-testid="date-to-filter" />
           </div>
-          {(search || entityType || action || dateFrom || dateTo) && (
+          {(search || entityType || action || actorType || dateFrom || dateTo) && (
             <Button variant="ghost" size="sm" onClick={resetFilters} className="mt-2 text-xs" data-testid="reset-filters-btn">
               Resetta filtri
             </Button>
@@ -176,19 +223,20 @@ export default function ActivityLogPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50">
-                <TableHead className="w-[160px]">Data/Ora</TableHead>
-                <TableHead className="w-[160px]">Utente</TableHead>
-                <TableHead className="w-[110px]">Azione</TableHead>
-                <TableHead className="w-[130px]">Tipo</TableHead>
+                <TableHead className="w-[140px]">Data/Ora</TableHead>
+                <TableHead className="w-[140px]">Utente</TableHead>
+                <TableHead className="w-[100px]">Azione</TableHead>
+                <TableHead className="w-[50px]">Attore</TableHead>
+                <TableHead className="w-[120px]">Tipo</TableHead>
                 <TableHead>Etichetta / ID</TableHead>
                 <TableHead>Dettagli</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-12 text-slate-400">Caricamento...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-12 text-slate-400">Caricamento...</TableCell></TableRow>
               ) : items.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-12 text-slate-400">Nessuna attivita trovata</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-12 text-slate-400">Nessuna attivita trovata</TableCell></TableRow>
               ) : items.map((item, idx) => (
                 <TableRow key={idx} className="hover:bg-slate-50/50" data-testid={`activity-row-${idx}`}>
                   <TableCell className="text-xs text-slate-600 font-mono">{formatTimestamp(item.timestamp)}</TableCell>
@@ -198,14 +246,19 @@ export default function ActivityLogPage() {
                       {actionLabels[item.action] || item.action}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    {item.actor_type && item.actor_type !== 'user' && (
+                      <Badge className={`text-[9px] px-1.5 py-0 ${item.actor_type === 'ai' ? 'bg-violet-600 text-white' : 'bg-slate-500 text-white'}`}>
+                        {ACTOR_ICONS[item.actor_type] || item.actor_type}
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-xs text-slate-600">{entityLabels[item.entity_type] || item.entity_type}</TableCell>
                   <TableCell className="text-sm font-medium text-slate-800 max-w-[200px] truncate">
                     {item.label || item.entity_id || '-'}
                   </TableCell>
                   <TableCell className="text-xs text-slate-500 max-w-[200px] truncate">
-                    {item.details && Object.keys(item.details).length > 0
-                      ? Object.entries(item.details).map(([k,v]) => `${k}: ${v}`).join(', ')
-                      : '-'}
+                    {renderDetails(item.details)}
                   </TableCell>
                 </TableRow>
               ))}

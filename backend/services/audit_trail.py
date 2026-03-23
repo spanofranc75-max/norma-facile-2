@@ -3,6 +3,10 @@
 Usage in any route:
     from services.audit_trail import log_activity
     await log_activity(user, "create", "commessa", commessa_id, label="COM-001", details={...})
+    await log_activity(user, "ai_precompile", "cantiere_sicurezza", cantiere_id,
+                       label="POS AI", commessa_id="com_xxx",
+                       details={"before": {...}, "after": {...}},
+                       actor_type="ai")
 """
 import logging
 from datetime import datetime, timezone
@@ -18,9 +22,19 @@ ENTITY_TYPES = [
     "fattura_ricevuta", "rilievo", "distinta", "perizia",
     "saldatore", "strumento", "audit_qualita", "nc",
     "fpc_progetto", "certificazione", "impostazioni",
+    # New modules
+    "cantiere_sicurezza", "obbligo", "pacchetto_documentale",
+    "documento_archivio", "committenza_package", "committenza_analisi",
+    "emissione", "ramo_normativo",
 ]
 
-ACTION_TYPES = ["create", "update", "delete", "import", "export", "status_change", "email_sent"]
+ACTION_TYPES = [
+    "create", "update", "delete", "import", "export", "status_change", "email_sent",
+    # New actions
+    "ai_precompile", "generate_docx", "sync_complete", "verifica",
+    "approve", "reject", "gate_check", "send_email", "issue_document",
+    "genera_obblighi",
+]
 
 
 async def log_activity(
@@ -30,11 +44,15 @@ async def log_activity(
     entity_id: str,
     label: str = "",
     details: dict | None = None,
+    commessa_id: str = "",
+    actor_type: str = "user",
 ):
     """Write an activity record to the audit log.
 
     This is intentionally fire-and-forget: failures are logged but never
     propagate to the caller.
+
+    actor_type: "user" | "system" | "ai"
     """
     try:
         doc = {
@@ -46,6 +64,8 @@ async def log_activity(
             "entity_id": str(entity_id),
             "label": label,
             "details": details or {},
+            "commessa_id": commessa_id,
+            "actor_type": actor_type,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         await db[COLLECTION].insert_one(doc)

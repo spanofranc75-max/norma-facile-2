@@ -13,6 +13,7 @@ from services.obblighi_commessa_service import (
     get_obbligo, list_obblighi, update_obbligo,
     get_summary, get_bloccanti, sync_obblighi_commessa,
 )
+from services.audit_trail import log_activity
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -44,6 +45,12 @@ async def api_sync_obblighi(commessa_id: str, user: dict = Depends(get_current_u
     result = await sync_obblighi_commessa(commessa_id, user["user_id"])
     if result.get("error"):
         raise HTTPException(status_code=404, detail=result["error"])
+    await log_activity(user, "sync_complete", "obbligo", commessa_id,
+                       label=f"Sync obblighi: +{result.get('created',0)} ~{result.get('updated',0)} -{result.get('closed',0)}",
+                       commessa_id=commessa_id,
+                       details={"created": result.get("created", 0), "updated": result.get("updated", 0),
+                                "closed": result.get("closed", 0), "total_expected": result.get("total_expected", 0)},
+                       actor_type="system")
     return result
 
 
@@ -85,7 +92,16 @@ async def api_get_obbligo(obbligo_id: str, user: dict = Depends(get_current_user
 
 @router.patch("/obblighi/{obbligo_id}")
 async def api_update_obbligo(obbligo_id: str, updates: dict, user: dict = Depends(get_current_user)):
+    before = await get_obbligo(obbligo_id, user["user_id"])
     obl = await update_obbligo(obbligo_id, user["user_id"], updates)
     if not obl:
         raise HTTPException(status_code=404, detail="Obbligo non trovato")
+    # Log meaningful changes
+    tracked = {"status", "owner_user_id", "due_date", "blocking_level"}
+    changed = {k: {"before": (before or {}).get(k), "after": obl.get(k)} for k in tracked if k in updates}
+    if changed:
+        await log_activity(user, "status_change", "obbligo", obbligo_id,
+                           label=obl.get("title", "")[:60],
+                           commessa_id=obl.get("commessa_id", ""),
+                           details=changed)
     return obl

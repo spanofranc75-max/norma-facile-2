@@ -18,6 +18,7 @@ from services.pacchetti_documentali_service import (
     get_templates, crea_pacchetto, get_pacchetto, list_pacchetti, verifica_pacchetto,
     prepara_invio, invia_email_pacchetto, get_invii,
 )
+from services.audit_trail import log_activity
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -73,6 +74,9 @@ async def api_upload_documento(
         content_type = file.content_type
 
     doc = await upload_documento(user["user_id"], data, file_data, filename, content_type)
+    await log_activity(user, "create", "documento_archivio", doc.get("doc_id", ""),
+                       label=doc.get("title", filename or ""),
+                       details={"document_type": document_type_code, "entity_type": entity_type})
     return doc
 
 
@@ -117,7 +121,12 @@ async def api_templates(user: dict = Depends(get_current_user)):
 @router.post("/pacchetti-documentali")
 async def api_crea_pacchetto(data: dict, user: dict = Depends(get_current_user)):
     """Create a new document package (from template or manual)."""
-    return await crea_pacchetto(user["user_id"], data)
+    result = await crea_pacchetto(user["user_id"], data)
+    await log_activity(user, "create", "pacchetto_documentale", result.get("pack_id", ""),
+                       label=result.get("label", data.get("template_code", "")),
+                       commessa_id=data.get("commessa_id", ""),
+                       details={"template_code": data.get("template_code", ""), "n_items": len(result.get("items", []))})
+    return result
 
 
 @router.get("/pacchetti-documentali")
@@ -147,6 +156,13 @@ async def api_verifica_pacchetto(pack_id: str, user: dict = Depends(get_current_
     result = await verifica_pacchetto(pack_id, user["user_id"])
     if result.get("error"):
         raise HTTPException(status_code=404, detail=result["error"])
+    await log_activity(user, "verifica", "pacchetto_documentale", pack_id,
+                       label=result.get("label", ""),
+                       commessa_id=result.get("commessa_id", ""),
+                       details={"attached": result.get("summary", {}).get("attached", 0),
+                                "missing": result.get("summary", {}).get("missing", 0),
+                                "expired": result.get("summary", {}).get("expired", 0)},
+                       actor_type="system")
     return result
 
 
@@ -191,7 +207,14 @@ async def api_invia_pacchetto(pack_id: str, send_data: dict, user: dict = Depend
     """D5: Send package email via Resend and log the send."""
     result = await invia_email_pacchetto(pack_id, user["user_id"], send_data)
     if result.get("error"):
+        await log_activity(user, "send_email", "pacchetto_documentale", pack_id,
+                           label=f"Invio FALLITO: {result['error'][:50]}",
+                           details={"error": result["error"], "to": send_data.get("to", [])})
         raise HTTPException(status_code=400, detail=result["error"])
+    await log_activity(user, "send_email", "pacchetto_documentale", pack_id,
+                       label=f"Email inviata a {', '.join(send_data.get('to', []))}",
+                       details={"to": send_data.get("to", []), "cc": send_data.get("cc", []),
+                                "n_attachments": len(result.get("attachments_sent", []))})
     return result
 
 

@@ -21,6 +21,7 @@ from services.commesse_normative_service import (
     get_gerarchia,
     NORMATIVE_VALIDE,
 )
+from services.audit_trail import log_activity
 
 router = APIRouter(tags=["commesse_normative"])
 logger = logging.getLogger(__name__)
@@ -78,6 +79,10 @@ async def create_ramo_normativo(commessa_id: str, body: CreaRamoRequest, user: d
         # R0: Auto-sync obblighi after branch creation
         from services.obblighi_auto_sync import trigger_sync_obblighi
         await trigger_sync_obblighi(commessa_id, user["user_id"], "rami_normativi", ramo.get("ramo_id", ""))
+        await log_activity(user, "create", "ramo_normativo", ramo.get("ramo_id", ""),
+                           label=f"{ramo.get('codice_ramo', '')} ({body.normativa})",
+                           commessa_id=commessa_id,
+                           details={"normativa": body.normativa, "created_from": "manuale"})
         return ramo
     except ValueError as e:
         raise HTTPException(400, str(e))
@@ -151,6 +156,12 @@ async def genera_rami_da_istruttoria(preventivo_id: str, user: dict = Depends(ge
         # R0: Auto-sync obblighi after branches generated from istruttoria
         from services.obblighi_auto_sync import trigger_sync_obblighi
         await trigger_sync_obblighi(commessa_id, uid, "rami_normativi", preventivo_id)
+        await log_activity(user, "create", "ramo_normativo", commessa_id,
+                           label=f"Generati {len(rami)} rami da istruttoria",
+                           commessa_id=commessa_id,
+                           details={"created_from": "istruttoria", "preventivo_id": preventivo_id,
+                                    "n_rami": len(rami)},
+                           actor_type="system")
         return {"rami": rami, "commessa_id": commessa_id, "total": len(rami)}
     except ValueError as e:
         raise HTTPException(400, str(e))
@@ -185,6 +196,10 @@ async def create_emissione(ramo_id: str, body: CreaEmissioneRequest, user: dict 
             line_ids=body.line_ids,
             document_ids=body.document_ids,
         )
+        await log_activity(user, "create", "emissione", emissione.get("emissione_id", ""),
+                           label=emissione.get("codice_emissione", ""),
+                           commessa_id=emissione.get("commessa_id", ""),
+                           details={"ramo_id": ramo_id})
         return emissione
     except ValueError as e:
         raise HTTPException(400, str(e))
@@ -217,6 +232,10 @@ async def update_emissione(ramo_id: str, emissione_id: str, body: AggiornaEmissi
         if commessa_id:
             from services.obblighi_auto_sync import trigger_sync_obblighi
             await trigger_sync_obblighi(commessa_id, user["user_id"], "evidence_gate", emissione_id)
+        await log_activity(user, "update", "emissione", emissione_id,
+                           label=em.get("codice_emissione", ""),
+                           commessa_id=commessa_id or "",
+                           details={"fields_changed": list(update_fields.keys())})
         return updated
     except ValueError as e:
         raise HTTPException(400, str(e))
@@ -259,6 +278,10 @@ async def emetti(ramo_id: str, emissione_id: str, user: dict = Depends(get_curre
         if commessa_id:
             from services.obblighi_auto_sync import trigger_sync_obblighi
             await trigger_sync_obblighi(commessa_id, user["user_id"], "evidence_gate", emissione_id)
+        await log_activity(user, "issue_document", "emissione", emissione_id,
+                           label=f"Emesso: {em.get('codice_emissione', '')}",
+                           commessa_id=commessa_id or "",
+                           details={"before_status": em.get("stato", ""), "after_status": "emessa"})
         return result
     except ValueError as e:
         raise HTTPException(409, str(e))
