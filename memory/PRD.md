@@ -193,6 +193,32 @@ Evoluzione del registro con responsabilita, scadenze e 3 nuove fonti.
 - Totale: 8 fonti integrate nel sync engine (A-H)
 ### Testing: 16/16 backend, 100% frontend (iteration_241)
 
+## Dashboard Cantiere Multilivello (COMPLETATO 2026-03-23)
+Dashboard manageriale con visibilita multilivello su tutte le commesse attive.
+
+### Step A — Executive Dashboard:
+- Global summary: 6 KPI (commesse attive, verdi, gialli, rossi, bloccanti, aperti)
+- Card per commessa con semaforo (verde/giallo/rosso) basato su obblighi bloccanti/warnings
+- Filtri per stato semaforo (Tutte, Critiche, Attenzione, OK)
+- Quick stats: deadline, importo, obblighi aperti/bloccanti
+
+### Step B — Drill-down 4 Livelli:
+- **L1 Commessa**: 4 readiness mini-cards (Obblighi, Rami, POS, Pacchetti), top blockers, obblighi per fonte
+- **L2 Rami Normativi**: lista rami con stato, emissioni progress bar
+- **L3 Sicurezza**: Gate POS status, campi mancanti, link ad apertura cantiere
+- **L3b Pacchetti Documentali**: checklist con progress bar allegati/mancanti/scaduti
+- **L4 Committenza**: pacchetti analisi, obblighi estratti, anomalie e mismatch
+
+### Backend: `GET /api/dashboard/cantiere-multilivello`
+- Aggregazione dati da 9 collezioni MongoDB (commesse, obblighi_commessa, cantieri_sicurezza, rami_normativi, emissioni_documentali, pacchetti_documentali, analisi_committenza, pacchetti_committenza)
+- Pipeline aggregation per obblighi con grouping per commessa/status/source/severity
+
+### Frontend: `/cruscotto-cantiere` (DashboardCantierePage.js)
+- Collapsible per espansione card commessa e sezioni drill-down
+- Sidebar link "Dashboard Cantiere" in DashboardLayout
+
+### Testing: 17/17 backend, 100% frontend (iteration_242)
+
 ## Backlog Prioritizzato
 
 ### P0 (Prossimi — COMPLETATI)
@@ -207,7 +233,8 @@ Evoluzione del registro con responsabilita, scadenze e 3 nuove fonti.
 - ~~**Registro Obblighi Fase 2**: aggiungere pacchetti documentali, verifica committenza, documenti scaduti, assegnazione responsabili, scadenze~~
   → Committenza ora alimenta il Registro. Prossimi: pacchetti documentali, scadenze, responsabili
 - ~~Modulo Verifica Committenza / Contratti~~ — COMPLETATO (C1)
-- Dashboard Cantiere Multilivello
+- ~~Dashboard Cantiere Multilivello~~ — COMPLETATO (2026-03-23)
+- Audit Log (chi ha fatto cosa quando)
 - Stability Guard deterministico
 
 ### P2-P3
