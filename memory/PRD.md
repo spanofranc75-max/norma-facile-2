@@ -53,6 +53,9 @@ Gestisce il ciclo completo: preventivo → istruttoria → commessa → sicurezz
 - `/app/backend/core/demo_guard.py` — Guard azioni esterne
 - `/app/backend/routes/admin_integrity.py` — Data Integrity Tool
 - `/app/backend/scripts/content_sources_seed.py` — 11 sorgenti marketing
+- `/app/frontend/src/components/SdiPreviewDialog.js` — Anteprima SDI obbligatoria
+- `/app/frontend/src/components/EmailPreviewDialog.js` — Anteprima email con checkbox
+- `/app/backend/services/outbound_audit.py` — Audit log azioni esterne
 - `/app/backend/scripts/demo_seed_data.py` — Seed dati demo
 - `/app/frontend/src/components/DemoBanner.js` — Banner demo
 - `/app/frontend/src/components/OnboardingChecklist.js` — Onboarding

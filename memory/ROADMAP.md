@@ -36,10 +36,13 @@ Ultimo aggiornamento: 2026-03-23
 - [x] Copy to Clipboard (bozze)
 
 ### Deploy readiness
-- [x] CORS pulito (solo domini produzione, regex per emergent)
-- [x] SAFE_MODE attivo (email e FiC bloccate)
+- [x] CORS pulito (solo domini produzione)
+- [x] Outbound Delivery Guard (checkbox + preview + audit log)
 - [x] Cookie sicuri (httponly, secure, samesite)
 - [x] Deployment agent check passed
+- [x] SdiPreviewDialog con validazione pre-invio
+- [x] EmailPreviewDialog con checkbox + warnings
+- [x] Audit log outbound_audit_log collection
 
 ---
 

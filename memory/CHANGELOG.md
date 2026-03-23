@@ -54,9 +54,12 @@
 
 ### Deploy Readiness (2026-03-23)
 - CORS pulito: rimossi wildcard e URL preview, solo domini produzione
-- SAFE_MODE: flag in .env che blocca email (Resend) e SDI (FattureInCloud)
-  - Email: _init_resend() e check_email_service() restituiscono errore chiaro
-  - FiC: _request() blocca tutte le chiamate API con log
-  - Per disattivare: SAFE_MODE=false nel .env
 - Cookie: httponly=True, secure=True, samesite="none" (per OAuth cross-domain)
 - Deployment agent check: PASSED (nessun blocco)
+
+### Outbound Delivery Guard (2026-03-23) — Pre Go-Live
+- **EmailPreviewDialog** aggiornato: checkbox obbligatoria "Ho verificato destinatari, oggetto e allegati", warning no-attachment/no-recipient, bottone "Conferma e Invia" disabilitato fino a checkbox
+- **SdiPreviewDialog** (NUOVO): validazione pre-invio (cliente, numero fattura, totale, P.IVA/CF, codice SDI/PEC), checkbox obbligatoria, warning blockers, bottone "Conferma e Invia a SDI"
+- **Audit log**: ogni azione esterna (email, SDI) loggata in collection `outbound_audit_log` con: user_id, action_type, recipient, details, status, external_id, error, timestamp
+- SAFE_MODE rimosso (sostituito dal guard pattern)
+- Testing: 100% (14/14 frontend) — iteration_253
