@@ -17,7 +17,7 @@ import uuid
 # Base URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = 'https://code-health-check-11.preview.emergentagent.com'
+    BASE_URL = 'https://debt-analysis.preview.emergentagent.com'
 
 MONGO_URL = "mongodb://localhost:27017"
 DB_NAME = "test_database"
