@@ -38,6 +38,16 @@ TD-001/002/004/005/009/010, CR-001/002, Data Integrity — tutto completato
 - **Campi sorgente**: code, title, type, category, target_audience, pain_points, description, value_claim, proof_points, demo_route, suggested_formats, active
 - **Testing**: 100% (16/16 backend + 100% frontend) — iteration_251
 
+### Caso Studio Quantificato (2026-03-23) — Business Sprint
+- **Pagina pubblica** `/caso-studio` — accessibile senza login, asset commerciale
+- **5 sezioni**: Contesto, Problema prima (4 card), Cosa fa NormaFacile (6 step), Risultati (4 metriche PRIMA/DOPO), Cosa cambia (3 punti)
+- **Metriche prudenziali**: POS -50/70%, dossier ridotto, vista unica commessa, riduzione rischio omissioni
+- **Disclaimer**: "Stime operative interne — caso pilota"
+- **CTA**: Prova la Demo + Torna alla Home
+- **Sorgente CE**: SRC_CASO_STUDIO_QUANTIFICATO aggiunta al Content Engine (11 totali)
+- **Copy to Clipboard**: Copia tutto / Titolo / Corpo / CTA / Hashtag con toast feedback
+- **Testing**: 100% (15/15 frontend) — iteration_252
+
 ## Backlog prioritizzato
 
 ### P1 — Business Sprint (prossimi)
@@ -62,5 +72,6 @@ TD-001/002/004/005/009/010, CR-001/002, Data Integrity — tutto completato
 - `/app/backend/routes/admin_integrity.py` — Data Integrity Tool
 - `/app/frontend/src/components/OnboardingChecklist.js` + `SmartEmptyState.js` + `IntegrityWidget.js`
 - `/app/backend/routes/content_engine.py` — Content Engine API (M1+M2)
-- `/app/frontend/src/pages/ContentEnginePage.js` — Content Engine UI
-- `/app/backend/scripts/content_sources_seed.py` — Seed 10 sorgenti marketing
+- `/app/frontend/src/pages/ContentEnginePage.js` — Content Engine UI (con Copy to Clipboard)
+- `/app/frontend/src/pages/CaseStudyPage.js` — Caso Studio pubblico
+- `/app/backend/scripts/content_sources_seed.py` — Seed 11 sorgenti marketing
