@@ -243,6 +243,23 @@ Estensione del sistema audit trail esistente per coprire tutti i moduli nuovi.
 
 ### Testing: 14/14 backend, 100% frontend (iteration_243)
 
+## D6 — Profili Documentali per Committente (COMPLETATO 2026-03-23)
+Sistema per salvare, gestire e riutilizzare profili documentali per committenti ricorrenti.
+
+### Backend: `/api/profili-committente`
+- CRUD profili: client_name, rules[], notes, warnings[], usage_count
+- `POST /da-pacchetto/{pack_id}`: creazione semi-automatica da pacchetto esistente
+- `POST /{profile_id}/applica`: crea pacchetto precompilato per commessa
+- `GET /suggest/{commessa_id}`: suggerisce profilo matching per committente della commessa
+
+### Frontend: Tab "Profili Committente" in PacchettiDocumentaliPage
+- Card profilo con preview regole (badge obbligatorio/opzionale), note, warning
+- Editor regole: aggiungi/rimuovi, toggle obbligatorio, seleziona tipo doc e entita
+- Dialog "Applica a Commessa" con selezione commessa
+- Bottone "Salva come Profilo" nel dettaglio pacchetto
+
+### Testing: 18/18 backend, 100% frontend (iteration_244)
+
 ## Backlog Prioritizzato
 
 ### P0 (Prossimi — COMPLETATI)
@@ -259,7 +276,8 @@ Estensione del sistema audit trail esistente per coprire tutti i moduli nuovi.
 - ~~Modulo Verifica Committenza / Contratti~~ — COMPLETATO (C1)
 - ~~Dashboard Cantiere Multilivello~~ — COMPLETATO (2026-03-23)
 - ~~Audit Log~~ — COMPLETATO (2026-03-23)
-- D6: Profili documentali per committente ricorrente
+- ~~D6: Profili documentali per committente ricorrente~~ — COMPLETATO (2026-03-23)
+- Notifiche intelligenti (in-app, poi email)
 - Stability Guard deterministico
 
 ### P2-P3
