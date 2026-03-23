@@ -60,6 +60,9 @@ class FattureInCloudClient:
 
     async def _request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
         """Make an authenticated request to FIC API."""
+        if settings.safe_mode:
+            logger.info(f"[SAFE MODE] FiC {method} {endpoint} bloccata — SAFE_MODE attivo")
+            return {"error": "safe_mode", "message": "SAFE MODE attivo: chiamate FattureInCloud disabilitate"}
         url = f"{self.base_url}/c/{self.company_id}{endpoint}"
         try:
             async with httpx.AsyncClient(timeout=httpx.Timeout(30.0, connect=10.0)) as client:

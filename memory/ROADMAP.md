@@ -35,6 +35,12 @@ Ultimo aggiornamento: 2026-03-23
 - [x] Caso Studio Quantificato (pagina pubblica + sorgente CE)
 - [x] Copy to Clipboard (bozze)
 
+### Deploy readiness
+- [x] CORS pulito (solo domini produzione, regex per emergent)
+- [x] SAFE_MODE attivo (email e FiC bloccate)
+- [x] Cookie sicuri (httponly, secure, samesite)
+- [x] Deployment agent check passed
+
 ---
 
 ## P0 — PROSSIMI (alto impatto business)

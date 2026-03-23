@@ -52,7 +52,11 @@
 - Sorgente SRC_CASO_STUDIO_QUANTIFICATO nel Content Engine (11 totali)
 - Testing: 100% (15/15 frontend) — iteration_252
 
-### Copy to Clipboard
-- DraftDetail: Copia tutto, Titolo, Corpo, CTA, Hashtag
-- Toast feedback via sonner ("Copiato!")
-- Hover copy su corpo testo e CTA
+### Deploy Readiness (2026-03-23)
+- CORS pulito: rimossi wildcard e URL preview, solo domini produzione
+- SAFE_MODE: flag in .env che blocca email (Resend) e SDI (FattureInCloud)
+  - Email: _init_resend() e check_email_service() restituiscono errore chiaro
+  - FiC: _request() blocca tutte le chiamate API con log
+  - Per disattivare: SAFE_MODE=false nel .env
+- Cookie: httponly=True, secure=True, samesite="none" (per OAuth cross-domain)
+- Deployment agent check: PASSED (nessun blocco)

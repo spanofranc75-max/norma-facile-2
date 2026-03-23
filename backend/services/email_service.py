@@ -18,7 +18,10 @@ except ImportError:
 
 
 def _init_resend():
-    """Initialize Resend with API key."""
+    """Initialize Resend with API key. Returns False if safe mode is active."""
+    if settings.safe_mode:
+        logger.info("[SAFE MODE] Email bloccata — SAFE_MODE attivo")
+        return False
     if not RESEND_AVAILABLE:
         return False
     if not settings.resend_api_key:
@@ -29,8 +32,10 @@ def _init_resend():
 
 
 def check_email_service():
-    """Raise HTTPException 422 if Resend is not configured. Call at start of send-email endpoints."""
+    """Raise HTTPException 422 if Resend is not configured or safe mode is active."""
     from fastapi import HTTPException
+    if settings.safe_mode:
+        raise HTTPException(422, "SAFE MODE attivo: invio email disabilitato. Disattiva SAFE_MODE=false nel .env per abilitare gli invii.")
     if not RESEND_AVAILABLE:
         raise HTTPException(422, "Libreria Resend non installata. Esegui: pip install resend")
     if not settings.resend_api_key:

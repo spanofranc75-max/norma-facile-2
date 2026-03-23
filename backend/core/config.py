@@ -60,6 +60,7 @@ class Settings(BaseModel):
     # App
     debug: bool = os.environ.get('DEBUG', 'false').lower() == 'true'
     log_level: str = os.environ.get('LOG_LEVEL', 'INFO')
+    safe_mode: bool = os.environ.get('SAFE_MODE', 'false').lower() == 'true'
 
     class Config:
         env_file = ".env"
