@@ -208,7 +208,11 @@ export default function DashboardLayout({ children }) {
     const location = useLocation();
     const [companyLogo, setCompanyLogo] = useState(null);
     const [alertCount, setAlertCount] = useState(0);
+    const [smartCount, setSmartCount] = useState(0);
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [notifDrawerOpen, setNotifDrawerOpen] = useState(false);
+    const [notifItems, setNotifItems] = useState([]);
+    const [notifLoading, setNotifLoading] = useState(false);
 
     const activeGroupId = findActiveGroup(location.pathname);
     const userRole = user?.role || 'admin';
@@ -245,6 +249,44 @@ export default function DashboardLayout({ children }) {
                 .catch(() => {});
         }
     }, [userRole]);
+
+    // Fetch smart notification count
+    useEffect(() => {
+        const fetchSmartCount = () => {
+            apiRequest('/notifiche-smart/count')
+                .then(data => { setSmartCount(data?.unread || 0); })
+                .catch(() => {});
+        };
+        fetchSmartCount();
+        const interval = setInterval(fetchSmartCount, 30000); // Poll every 30s
+        return () => clearInterval(interval);
+    }, []);
+
+    const loadSmartNotif = async () => {
+        setNotifLoading(true);
+        try {
+            const data = await apiRequest('/notifiche-smart?status=unread&limit=20');
+            setNotifItems(data?.items || []);
+        } catch { setNotifItems([]); }
+        setNotifLoading(false);
+    };
+
+    const openNotifDrawer = () => {
+        setNotifDrawerOpen(true);
+        loadSmartNotif();
+    };
+
+    const handleMarkRead = async (notifId) => {
+        await apiRequest(`/notifiche-smart/${notifId}/read`, { method: 'POST' });
+        setNotifItems(prev => prev.filter(n => n.notification_id !== notifId));
+        setSmartCount(prev => Math.max(0, prev - 1));
+    };
+
+    const handleMarkAllRead = async () => {
+        await apiRequest('/notifiche-smart/read-all', { method: 'POST' });
+        setNotifItems([]);
+        setSmartCount(0);
+    };
 
     // Keep active group open on navigation
     useEffect(() => {
@@ -376,12 +418,88 @@ export default function DashboardLayout({ children }) {
                     <button className="lg:hidden text-slate-600 hover:text-slate-900 p-1.5 -ml-1" onClick={() => setMobileOpen(true)} data-testid="open-mobile-menu">
                         <Menu className="h-5 w-5" />
                     </button>
-                    <div className="flex-1 flex justify-end">
+                    <div className="flex-1 flex justify-end items-center gap-2">
                         <GlobalSearchBar />
+                        {/* Smart Notification Bell */}
+                        <button
+                            className="relative p-2 rounded-lg hover:bg-slate-200/60 transition-colors"
+                            onClick={openNotifDrawer}
+                            data-testid="smart-notif-bell"
+                        >
+                            <Bell className="h-5 w-5 text-slate-600" />
+                            {(smartCount + alertCount) > 0 && (
+                                <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white"
+                                    data-testid="smart-notif-count">
+                                    {smartCount + alertCount}
+                                </span>
+                            )}
+                        </button>
                     </div>
                 </div>
                 <div className="p-4 lg:p-8 pb-16">{children}</div>
             </main>
+
+            {/* Smart Notification Drawer */}
+            {notifDrawerOpen && (
+                <div className="fixed inset-0 z-50" data-testid="notif-drawer-overlay">
+                    <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setNotifDrawerOpen(false)} />
+                    <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl animate-in slide-in-from-right duration-200 flex flex-col">
+                        {/* Drawer Header */}
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+                            <div className="flex items-center gap-2">
+                                <Bell className="h-5 w-5 text-slate-700" />
+                                <h2 className="text-base font-bold text-slate-900">Notifiche</h2>
+                                {smartCount > 0 && (
+                                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                                        {smartCount}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {smartCount > 0 && (
+                                    <button className="text-[11px] text-blue-600 hover:text-blue-800 font-medium"
+                                        onClick={handleMarkAllRead} data-testid="mark-all-read">
+                                        Segna tutte lette
+                                    </button>
+                                )}
+                                <button className="p-1.5 hover:bg-slate-100 rounded-lg" onClick={() => setNotifDrawerOpen(false)}>
+                                    <X className="h-4 w-4 text-slate-500" />
+                                </button>
+                            </div>
+                        </div>
+                        {/* Drawer Content */}
+                        <div className="flex-1 overflow-y-auto">
+                            {notifLoading ? (
+                                <div className="flex justify-center py-12">
+                                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+                                </div>
+                            ) : notifItems.length === 0 ? (
+                                <div className="py-16 text-center">
+                                    <Bell className="h-8 w-8 text-slate-200 mx-auto mb-3" />
+                                    <p className="text-sm text-slate-400">Nessuna notifica non letta</p>
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-slate-100">
+                                    {notifItems.map(n => (
+                                        <NotifItem key={n.notification_id} notif={n}
+                                            onRead={() => handleMarkRead(n.notification_id)}
+                                            onNavigate={(path) => { setNotifDrawerOpen(false); handleMarkRead(n.notification_id); navigate(path); }}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        {/* Footer link */}
+                        <div className="px-5 py-3 border-t border-slate-200">
+                            <button className="text-xs text-blue-600 hover:text-blue-800 font-medium w-full text-center"
+                                onClick={() => { setNotifDrawerOpen(false); navigate('/notifiche'); }}
+                                data-testid="goto-all-notif">
+                                Vedi tutte le notifiche
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             <div className="lg:ml-64"><LegalFooter /></div>
         </div>
     );
@@ -466,4 +584,69 @@ function NavGroup({ group, isOpen, hasActive, pathname, onToggle, navigate }) {
             </div>
         </div>
     );
+}
+
+
+const NOTIF_SEVERITY = {
+    critica: { bg: 'bg-red-50', border: 'border-l-red-500', icon: '!!', color: 'text-red-700' },
+    alta: { bg: 'bg-amber-50', border: 'border-l-amber-500', icon: '!', color: 'text-amber-700' },
+    media: { bg: 'bg-blue-50', border: 'border-l-blue-400', icon: 'i', color: 'text-blue-700' },
+    bassa: { bg: 'bg-slate-50', border: 'border-l-slate-300', icon: '', color: 'text-slate-600' },
+};
+
+const NOTIF_TYPE_ICONS = {
+    semaforo_peggiorato: { emoji: '', label: 'Semaforo' },
+    nuovo_hard_block: { emoji: '', label: 'Blocco' },
+    documento_scaduto: { emoji: '', label: 'Scadenza' },
+    emissione_bloccata: { emoji: '', label: 'Emissione' },
+    gate_pos_peggiorato: { emoji: '', label: 'POS' },
+    pacchetto_incompleto: { emoji: '', label: 'Pacchetto' },
+};
+
+function NotifItem({ notif, onRead, onNavigate }) {
+    const sev = NOTIF_SEVERITY[notif.severity] || NOTIF_SEVERITY.media;
+    const typeInfo = NOTIF_TYPE_ICONS[notif.notification_type] || { emoji: '', label: '' };
+    const timeAgo = formatTimeAgo(notif.updated_at || notif.created_at);
+
+    return (
+        <div className={`px-5 py-3.5 ${sev.bg} border-l-4 ${sev.border} hover:bg-white/80 transition-colors`}
+            data-testid={`notif-${notif.notification_id}`}>
+            <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                        <span className={`text-[10px] font-bold uppercase tracking-wider ${sev.color}`}>
+                            {typeInfo.label || notif.notification_type}
+                        </span>
+                        <span className="text-[10px] text-slate-400">{timeAgo}</span>
+                    </div>
+                    <p className="text-sm font-medium text-slate-900 leading-tight">{notif.title}</p>
+                    <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{notif.message}</p>
+                </div>
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    {notif.linked_route && (
+                        <button className="text-[10px] text-blue-600 hover:text-blue-800 font-medium"
+                            onClick={() => onNavigate(notif.linked_route)} data-testid={`notif-goto-${notif.notification_id}`}>
+                            Apri
+                        </button>
+                    )}
+                    <button className="text-[10px] text-slate-400 hover:text-slate-600"
+                        onClick={onRead} data-testid={`notif-read-${notif.notification_id}`}>
+                        Letta
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function formatTimeAgo(isoStr) {
+    if (!isoStr) return '';
+    const diff = Date.now() - new Date(isoStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'ora';
+    if (mins < 60) return `${mins}m fa`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h fa`;
+    const days = Math.floor(hours / 24);
+    return `${days}g fa`;
 }

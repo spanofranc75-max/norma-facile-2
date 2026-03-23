@@ -51,6 +51,11 @@ async def api_sync_obblighi(commessa_id: str, user: dict = Depends(get_current_u
                        details={"created": result.get("created", 0), "updated": result.get("updated", 0),
                                 "closed": result.get("closed", 0), "total_expected": result.get("total_expected", 0)},
                        actor_type="system")
+    # N2: Trigger smart notifications for new hard blocks and semaphore changes
+    from services.notifiche_trigger import check_and_notify_post_sync, check_and_notify_semaforo
+    import asyncio
+    asyncio.create_task(check_and_notify_post_sync(user["user_id"], commessa_id, result))
+    asyncio.create_task(check_and_notify_semaforo(user["user_id"], commessa_id))
     return result
 
 

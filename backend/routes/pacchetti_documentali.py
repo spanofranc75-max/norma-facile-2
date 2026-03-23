@@ -163,6 +163,20 @@ async def api_verifica_pacchetto(pack_id: str, user: dict = Depends(get_current_
                                 "missing": result.get("summary", {}).get("missing", 0),
                                 "expired": result.get("summary", {}).get("expired", 0)},
                        actor_type="system")
+    # N2: Notify if package is incomplete
+    summary = result.get("summary", {})
+    if summary.get("missing", 0) > 0 or summary.get("expired", 0) > 0:
+        from services.notifiche_trigger import notify_pacchetto_incompleto
+        from core.database import db as _db
+        cid = result.get("commessa_id", "")
+        if cid:
+            comm = await _db.commesse.find_one({"commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0, "numero": 1})
+            import asyncio
+            asyncio.create_task(notify_pacchetto_incompleto(
+                user["user_id"], cid, (comm or {}).get("numero", cid),
+                result.get("label", ""), pack_id,
+                summary.get("missing", 0), summary.get("expired", 0),
+            ))
     return result
 
 
