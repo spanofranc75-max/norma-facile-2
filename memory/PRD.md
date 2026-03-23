@@ -6,7 +6,7 @@ Sistema operativo verticale per carpenteria metallica / EN 1090 / EN 13241 / sic
 ## Architettura
 - **Frontend**: React + Tailwind + Shadcn/UI (porta 3000)
 - **Backend**: FastAPI + Motor (porta 8001)
-- **Database**: MongoDB (100 collezioni)
+- **Database**: MongoDB (100+ collezioni)
 - **AI**: OpenAI GPT-4o via emergentintegrations
 - **Email**: Resend
 - **Storage**: Object Storage S3
@@ -32,39 +32,51 @@ Sistema operativo verticale per carpenteria metallica / EN 1090 / EN 13241 / sic
 17. Notifiche intelligenti in-app
 18. Repository documentale interno alla commessa
 
-## Stato attuale — Post-Audit e Post-Hardening
+## Hardening completato (2026-03-23)
+- TD-001: Indici MongoDB (24 su 12 collezioni)
+- TD-002: Router duplicato rimosso
+- TD-005: Rate limiting (15 endpoint AI, slowapi)
+- TD-009: Background task error handling
+- TD-010: Filtro user_id multi-tenant (7 route)
+- TD-004: Cleanup dead code
+- CR-001/002: JWT + LLM key hardened
+- Data Integrity: 0 CRITICAL, 0 WARNING
 
-### Hardening completato (2026-03-23)
-- **TD-001**: Indici MongoDB — 24 indici su 12 collezioni critiche
-- **TD-002**: Rimosso router sicurezza duplicato
-- **TD-005**: Rate limiting su 15 endpoint AI (slowapi)
-- **TD-009**: Error handling su background tasks (safe_background_task)
-- **TD-010**: Filtro user_id su 7 route multi-tenant
-- **TD-004**: Cleanup dead code (2 service, 5 file legacy, 158 import)
-- **CR-001/002**: JWT secret hardened, chiave LLM unificata, cleanup sessioni
-- **Data Integrity**: 0 CRITICAL, 0 WARNING — backfill user_id, eliminati orfani
+## UX-001 Completato (2026-03-23)
+- CommessaHubPage refactorizzata: accordion, 2 colonne, lifecycle bar
+- CommessaActionsMenu.js: dropdown per generazione documenti
+- NextStepCard.js: guida contestuale "Cosa devo fare adesso?"
+- CostRow fix: componente mancante ripristinato
 
-### UX-001 Completato (2026-03-23)
-- **Semplificazione CommessaHubPage**: Refactoring da 1063 a ~975 righe
-- **CommessaActionsMenu.js**: Dropdown menu per generazione documenti (Dossier, Pacco, Template 111, DoP, Etichetta CE, Rintracciabilita, CAM, Pacco RINA)
-- **NextStepCard.js**: Guida contestuale "Cosa devo fare adesso?" basata sullo stato della commessa
-- **Layout migliorato**: Accordion collassabili (Dati Economici, Rami Normativi, Qualita), layout 2 colonne, lifecycle bar visuale
-- **Bug fix**: Componente CostRow mancante ripristinato
-- **Testing**: 100% frontend pass (3 commesse diverse, 11 componenti, 3 dialog)
+## UX-003 Completato (2026-03-23)
+- **Backend**: `GET /api/onboarding/status` (auto-detection 4 step), `POST /api/onboarding/dismiss`
+- **OnboardingChecklist**: componente Dashboard con progress bar, step auto-detected, CTA contestuale, dismiss
+- **SmartEmptyState**: componente riutilizzabile (titolo, descrizione, CTA, "cosa succede dopo")
+- **Applicato a**: PlanningPage (kanban vuoto), PreventiviPage (lista vuota)
+- **Testing**: 100% backend (12/12) + 100% frontend
 
 ## Backlog prioritizzato
 
 ### P0 — Prossimi task
-- **UX-003**: Onboarding primo utilizzo (empty states intelligenti, percorsi guidati per nuovi utenti)
+- Nessun task P0 in coda
 
 ### P1 — Task tecnici
-- Finalizzare Data Integrity Check come tool admin riutilizzabile (endpoint protetto o job periodico)
-- **TD-003**: Aggiungere indici MongoDB alle collezioni rimanenti non critiche
+- Finalizzare Data Integrity Check come tool admin riutilizzabile
+- TD-003: Indici MongoDB collezioni rimanenti
 
 ### P2 — Backlog futuro
-- Revisione collezioni "zombie" (download_tokens, sessions)
+- UX Fase 4: Distinzione per ruolo (copy diverso per admin/tecnico)
+- Revisione collezioni "zombie"
 - Refactoring altri file monolitici
 - Email automatiche selettive
 - Integrazione Stripe per monetizzazione
 - Stability Guard AI
 - Architettura Multi-Tenant
+
+## File chiave
+- `/app/backend/routes/onboarding.py` — Endpoint onboarding
+- `/app/frontend/src/components/OnboardingChecklist.js` — Checklist Dashboard
+- `/app/frontend/src/components/SmartEmptyState.js` — Empty state riutilizzabile
+- `/app/frontend/src/components/CommessaActionsMenu.js` — Dropdown documenti
+- `/app/frontend/src/components/NextStepCard.js` — Guida prossimo passo
+- `/app/frontend/src/pages/CommessaHubPage.js` — Hub commessa refactorizzato
