@@ -1,0 +1,74 @@
+{
+  "summary": "Iteration 252 — Testing Case Study page (/caso-studio) and Copy to Clipboard buttons in Content Engine DraftDetail. All tests passed. Case Study is a public page (no login required) with all 5 sections, 4 problem cards, 6 solution steps, 4 metric cards, 3 change cards, and CTA buttons working. Copy to Clipboard buttons (btn-copy-full, btn-copy-hashtags, btn-copy-title, btn-copy-body, btn-copy-cta) all present in DraftDetail view.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_252.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (frontend-only testing)",
+    "frontend": "100% (All 15 test cases passed)"
+  },
+  "seed_data_creation": "11 content sources confirmed (10 features + 1 case study source SRC_CASO_STUDIO_QUANTIFICATO)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Case Study page at /caso-studio is public (no ProtectedRoute). Copy to Clipboard uses navigator.clipboard.writeText() with sonner toast notifications. Clipboard API may show 'Copia fallita' in automated tests due to permission requirements.",
+  "tests_performed": {
+    "case_study_page": {
+      "public_access": "PASS - Page loads at /caso-studio without login",
+      "hero_title": "PASS - 'Da preventivo a cantiere pronto' with lime-green highlight 'meno lavoro manuale, commessa governabile'",
+      "section_01_contesto": "PASS - data-testid='section-contesto'",
+      "section_02_problema": "PASS - data-testid='section-problema' with 4 problem cards (amber left border)",
+      "section_03_soluzione": "PASS - data-testid='section-soluzione' with 6 numbered solution steps",
+      "section_04_risultati": "PASS - data-testid='section-risultati' with 4 metric cards (PRIMA/DOPO format)",
+      "section_05_cambiamento": "PASS - data-testid='section-cambiamento' with 3 change cards (emerald checkmarks)",
+      "cta_section": "PASS - data-testid='section-cta' with 'Prova la Demo' and 'Torna alla Home' buttons",
+      "cta_demo_button": "PASS - data-testid='cta-demo' navigates to /",
+      "cta_home_button": "PASS - data-testid='cta-home' navigates to /",
+      "footer_disclaimer": "PASS - Contains 'stime operative interne derivate da un caso pilota'"
+    },
+    "content_engine_copy_buttons": {
+      "draft_detail_view": "PASS - data-testid='draft-detail' opens on draft card click",
+      "btn_copy_full": "PASS - 'Copia tutto' button present (data-testid='btn-copy-full')",
+      "btn_copy_hashtags": "PASS - 'Hashtag' copy button present (data-testid='btn-copy-hashtags')",
+      "btn_copy_title": "PASS - Title inline copy icon present (data-testid='btn-copy-title')",
+      "btn_copy_body": "PASS - Body hover copy button present (data-testid='btn-copy-body')",
+      "btn_copy_cta": "PASS - CTA hover copy button present (data-testid='btn-copy-cta')"
+    },
+    "content_sources_seed": {
+      "total_sources": "PASS - 11 sources (10 features + 1 case study)",
+      "case_study_source": "PASS - SRC_CASO_STUDIO_QUANTIFICATO present"
+    }
+  },
+  "test_credentials_used": {
+    "demo_session": "session_token=demo_session_token_normafacile",
+    "demo_user": "Marco Rossi (demo@normafacile.it)"
+  },
+  "features_verified": [
+    "Case Study page loads at /caso-studio without login (public page)",
+    "Case Study hero: 'Da preventivo a cantiere pronto' with lime-green highlight",
+    "Case Study has 5 sections: Contesto (01), Il problema prima (02), Cosa fa NormaFacile (03), Risultati ottenuti (04), Cosa cambia (05)",
+    "Section 02 has 4 problem cards with amber left border",
+    "Section 03 has 6 numbered solution steps",
+    "Section 04 has 4 metric cards with PRIMA/DOPO format and estimates",
+    "Section 05 has 3 change cards with emerald checkmarks",
+    "CTA section has 'Prova la Demo' and 'Torna alla Home' buttons navigating to /",
+    "Footer disclaimer: 'stime operative interne derivate da un caso pilota'",
+    "DraftDetail shows 'Copia tutto' button (data-testid=btn-copy-full)",
+    "DraftDetail shows 'Hashtag' copy button (data-testid=btn-copy-hashtags)",
+    "Title has inline copy icon (data-testid=btn-copy-title)",
+    "Body text has hover copy button (data-testid=btn-copy-body)",
+    "CTA has hover copy button (data-testid=btn-copy-cta)",
+    "Content Engine seed has 11 sources (10 features + 1 case study source)"
+  ]
+}

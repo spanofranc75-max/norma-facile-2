@@ -229,4 +229,27 @@ CONTENT_SOURCES_SEED = [
         "demo_route": "/demo/landing",
         "suggested_formats": ["reel_short", "case_study", "linkedin_post"],
     },
+    {
+        "code": "SRC_CASO_STUDIO_QUANTIFICATO",
+        "title": "Caso Studio Quantificato — Da preventivo a cantiere pronto",
+        "type": "case_study",
+        "category": "commerciale",
+        "target_audience": ["titolare", "partner", "investitore", "direttore_tecnico"],
+        "pain_points": [
+            "non ho numeri concreti per raccontare il valore del sistema",
+            "i prospect chiedono risultati, non feature",
+            "serve una storia credibile per vendere, non una brochure",
+        ],
+        "description": "Il caso studio pilota di Steel Project Design: dal preventivo al cantiere pronto, con metriche prudenziali su riduzione tempo POS (50-70%), preparazione dossier, visibilita commessa e riduzione rischio omissioni.",
+        "value_claim": "Una storia concreta con numeri credibili, pronta per pitch, demo e contenuti derivati.",
+        "proof_points": [
+            "riduzione stimata 50-70% tempo preparazione POS",
+            "tempo dossier cliente sensibilmente ridotto",
+            "da controllo frammentato a vista unica commessa",
+            "riduzione rischio omissioni documentali",
+            "pagina pubblica dedicata: /caso-studio",
+        ],
+        "demo_route": "/caso-studio",
+        "suggested_formats": ["linkedin_post", "carosello", "case_study", "reel_short"],
+    },
 ]

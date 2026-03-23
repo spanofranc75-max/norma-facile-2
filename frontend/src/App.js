@@ -79,6 +79,7 @@ import KPIDashboard from './pages/KPIDashboard';
 import ConfrontoPreventivi from './pages/ConfrontoPreventivi';
 import AnalisiAIPage from './pages/AnalisiAIPage';
 import ContentEnginePage from './pages/ContentEnginePage';
+import CaseStudyPage from './pages/CaseStudyPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './App.css';
@@ -104,6 +105,8 @@ function AppRouter() {
         <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
+            {/* Public pages */}
+            <Route path="/caso-studio" element={<CaseStudyPage />} />
             {/* Officina: NO ProtectedRoute — uses PIN auth */}
             <Route path="/officina/:commessaId" element={<OfficinaPage />} />
             <Route path="/officina/:commessaId/:voceId" element={<OfficinaPage />} />
