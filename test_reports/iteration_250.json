@@ -1,0 +1,156 @@
+{
+  "summary": "Demo Mode Business Sprint — Iteration 250. Comprehensive testing of NormaFacile 2.0 demo environment. All 17 backend tests passed. Frontend tests verified demo login, banner display, and data isolation.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration250_demo_mode.py",
+    "/app/test_reports/pytest/iteration250_demo_mode_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration250_demo_mode.py"
+  ],
+  "success_rate": {
+    "backend": "100% (17/17 tests passed)",
+    "frontend": "100% (5/5 UI tests passed)"
+  },
+  "seed_data_creation": "Demo data already seeded via POST /api/demo/reset - 28 docs across 10 collections",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Demo mode fully functional. Demo user: demo@normafacile.it, session_token=demo_session_token_normafacile. Admin user: session_token=test_session_token_for_dev_2026. Email and SDI guards return simulated responses for demo user.",
+  "tests_performed": {
+    "backend_api_tests": {
+      "demo_login": {
+        "endpoint": "POST /api/demo/login",
+        "status": "PASS",
+        "returns_200": true,
+        "sets_cookie": true,
+        "user_data": {
+          "user_id": "demo_user",
+          "email": "demo@normafacile.it",
+          "name": "Marco Rossi",
+          "role": "admin",
+          "is_demo": true
+        }
+      },
+      "demo_status": {
+        "endpoint": "GET /api/demo/status",
+        "status": "PASS",
+        "available": true,
+        "commesse_count": 3
+      },
+      "demo_reset": {
+        "endpoint": "POST /api/demo/reset",
+        "status": "PASS",
+        "requires_auth": true,
+        "docs_created": "28+"
+      },
+      "auth_me_demo_user": {
+        "endpoint": "GET /api/auth/me",
+        "status": "PASS",
+        "is_demo": true,
+        "role": "admin"
+      },
+      "auth_me_non_demo_user": {
+        "endpoint": "GET /api/auth/me",
+        "status": "PASS",
+        "is_demo": "false/undefined"
+      },
+      "data_isolation": {
+        "commesse": "PASS - 3 commesse visible",
+        "preventivi": "PASS - 3 preventivi visible",
+        "clients": "PASS - 2 clients visible"
+      },
+      "commessa_main_data": {
+        "endpoint": "GET /api/commesse/com_demo_main",
+        "status": "PASS",
+        "normativa_tipo": "EN_1090",
+        "classe_exc": "EXC2",
+        "stato": "in_produzione",
+        "value": 48500.0,
+        "client_name": "Logistica Emiliana S.p.A."
+      },
+      "email_guard": {
+        "endpoint": "POST /api/pacchetti-documentali/{pack_id}/invia",
+        "status": "PASS",
+        "simulated": true,
+        "note": "Returns simulated response for demo user"
+      },
+      "sdi_guard": {
+        "endpoint": "POST /api/invoices/{invoice_id}/send-sdi",
+        "status": "PASS",
+        "simulated": true,
+        "note": "Returns simulated response for demo user"
+      },
+      "obblighi": {
+        "endpoint": "GET /api/obblighi",
+        "status": "PASS",
+        "count_for_main_commessa": "7 obblighi"
+      },
+      "cantiere": {
+        "endpoint": "GET /api/cantieri-sicurezza/",
+        "status": "PASS",
+        "count": "1 cantiere"
+      }
+    },
+    "frontend_ui_tests": {
+      "landing_page_demo_button": {
+        "status": "PASS",
+        "button_text": "Prova la Demo",
+        "data_testid": "hero-demo-btn"
+      },
+      "demo_login_flow": {
+        "status": "PASS",
+        "redirects_to": "/dashboard",
+        "user_displayed": "Marco Rossi"
+      },
+      "demo_banner_on_dashboard": {
+        "status": "PASS",
+        "text": "Ambiente Demo — Dati simulati, nessuna azione esterna reale",
+        "background": "bg-amber-500",
+        "data_testid": "demo-banner"
+      },
+      "demo_banner_on_commessa_hub": {
+        "status": "PASS",
+        "visible": true
+      },
+      "non_demo_user_no_banner": {
+        "status": "PASS",
+        "banner_visible": false,
+        "note": "Correct behavior - non-demo user should not see demo banner"
+      },
+      "planning_page": {
+        "status": "PASS",
+        "demo_banner_visible": true,
+        "commesse_displayed": "2 in Lavorazione column"
+      },
+      "onboarding_checklist": {
+        "status": "PASS",
+        "steps_completed": "3/4",
+        "note": "Company not configured (expected for demo)"
+      }
+    }
+  },
+  "mocked_apis": {
+    "has_mocked_apis": true,
+    "mocked_apis_list": [
+      "POST /api/pacchetti-documentali/{pack_id}/invia (simulated for demo user)",
+      "POST /api/invoices/{invoice_id}/send-sdi (simulated for demo user)"
+    ],
+    "note": "Email sending and SDI sending are SIMULATED (return success without calling external APIs) when the demo user is detected"
+  },
+  "test_credentials_used": {
+    "demo_session": "session_token=demo_session_token_normafacile",
+    "admin_session": "session_token=test_session_token_for_dev_2026",
+    "demo_user_id": "demo_user",
+    "demo_email": "demo@normafacile.it"
+  }
+}

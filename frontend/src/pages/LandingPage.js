@@ -11,7 +11,7 @@ import { Checkbox } from '../components/ui/checkbox';
 import { LegalFooter } from '../components/LegalFooter';
 import {
     Shield, CheckCircle2, Lock, ArrowRight,
-    Wrench, FileCheck, BarChart3, Zap,
+    Wrench, FileCheck, BarChart3, Zap, FlaskConical,
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -177,14 +177,25 @@ export default function LandingPage() {
                         <div className="flex-1 h-px bg-slate-200" />
                     </div>
 
-                    {/* Demo request */}
+                    {/* Demo access */}
                     <Button
                         data-testid="hero-demo-btn"
                         variant="outline"
                         size="lg"
-                        className="w-full h-11 border-slate-300 text-slate-600 hover:bg-white hover:border-slate-400 text-sm rounded-xl"
+                        className="w-full h-11 border-amber-300 text-amber-700 hover:bg-amber-50 hover:border-amber-400 text-sm rounded-xl"
+                        onClick={async () => {
+                            try {
+                                const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/demo/login`, { method: 'POST', credentials: 'include' });
+                                if (res.ok) {
+                                    window.location.href = '/dashboard';
+                                } else {
+                                    alert('Demo non disponibile. Contattaci per attivare l\'accesso demo.');
+                                }
+                            } catch { alert('Errore di connessione'); }
+                        }}
                     >
-                        Richiedi una Demo
+                        <FlaskConical className="h-4 w-4 mr-2" />
+                        Prova la Demo
                     </Button>
 
                     {/* Trust signals */}

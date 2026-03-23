@@ -1377,6 +1377,9 @@ async def send_invoice_email(invoice_id: str, payload: dict = None, user: dict =
 @router.post("/{invoice_id}/send-sdi")
 async def send_invoice_to_sdi(invoice_id: str, user: dict = Depends(get_current_user)):
     """Sync invoice to Fatture in Cloud and send to SDI."""
+    from core.demo_guard import is_demo_user
+    if is_demo_user(user):
+        return {"message": "Invio SDI simulato in modalita demo", "simulated": True, "invoice_id": invoice_id}
     return await _send_sdi_impl(invoice_id, user)
 
 

@@ -18,6 +18,7 @@ import {
 } from '../components/ui/dropdown-menu';
 import { LegalFooter } from './LegalFooter';
 import GlobalSearchBar from './GlobalSearchBar';
+import DemoBanner from './DemoBanner';
 import {
     Sparkles, Receipt, Users, Settings, Ruler, Package, Shield,
     HardHat, Warehouse, ClipboardList, Truck, Factory, ShieldAlert,
@@ -413,6 +414,7 @@ export default function DashboardLayout({ children }) {
 
             {/* Main Content */}
             <main className="lg:ml-64 min-h-screen">
+                <DemoBanner />
                 {/* Top bar */}
                 <div className="sticky top-0 z-40 bg-slate-50/80 backdrop-blur-sm border-b border-slate-200/60 px-4 lg:px-8 py-3 flex items-center gap-3">
                     <button className="lg:hidden text-slate-600 hover:text-slate-900 p-1.5 -ml-1" onClick={() => setMobileOpen(true)} data-testid="open-mobile-menu">

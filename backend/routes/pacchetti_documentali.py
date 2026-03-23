@@ -219,6 +219,9 @@ async def api_prepara_invio(pack_id: str, user: dict = Depends(get_current_user)
 @router.post("/pacchetti-documentali/{pack_id}/invia")
 async def api_invia_pacchetto(pack_id: str, send_data: dict, user: dict = Depends(get_current_user)):
     """D5: Send package email via Resend and log the send."""
+    from core.demo_guard import is_demo_user
+    if is_demo_user(user):
+        return {"message": "Email simulata in modalita demo", "simulated": True, "to": send_data.get("to", []), "attachments_sent": []}
     result = await invia_email_pacchetto(pack_id, user["user_id"], send_data)
     if result.get("error"):
         await log_activity(user, "send_email", "pacchetto_documentale", pack_id,

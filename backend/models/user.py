@@ -34,3 +34,4 @@ class UserResponse(BaseModel):
     name: str
     picture: Optional[str] = None
     role: Optional[str] = "admin"  # Default admin for backward compat
+    is_demo: Optional[bool] = False
