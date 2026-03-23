@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Separator } from '../components/ui/separator';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Checkbox } from '../components/ui/checkbox';
 import { toast } from 'sonner';
 import { apiRequest } from '../lib/utils';
 import {
@@ -205,6 +206,7 @@ function PackageDetailView({ packId, tipiMap, onBack }) {
     const [preparing, setPreparing] = useState(false);
     const [sending, setSending] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
+    const [sendConfirmed, setSendConfirmed] = useState(false);
 
     // Editable email fields
     const [emailTo, setEmailTo] = useState('');
@@ -422,7 +424,7 @@ function PackageDetailView({ packId, tipiMap, onBack }) {
                             {/* Send button */}
                             <div className="flex justify-end">
                                 <Button
-                                    onClick={() => setShowConfirm(true)}
+                                    onClick={() => { setSendConfirmed(false); setShowConfirm(true); }}
                                     disabled={sending || !emailTo.trim()}
                                     className="bg-emerald-600 text-white hover:bg-emerald-700"
                                     data-testid="btn-invia-email"
@@ -477,13 +479,21 @@ function PackageDetailView({ packId, tipiMap, onBack }) {
                         <DialogTitle>Conferma invio email</DialogTitle>
                         <DialogDescription>
                             Stai per inviare {preview?.attachments?.length || 0} allegati a {emailTo}.
-                            {hasWarnings && <span className="block mt-1 text-amber-600">Ci sono avvertimenti attivi. Sei sicuro?</span>}
+                            {hasWarnings && <span className="block mt-1 text-amber-600">Ci sono avvertimenti attivi. Verifica prima di procedere.</span>}
+                            {hasSensitive && <span className="block mt-1 text-red-600">Il pacchetto contiene documenti sensibili.</span>}
                         </DialogDescription>
                     </DialogHeader>
+                    <div className="flex items-center gap-2 py-2" data-testid="pack-confirm-section">
+                        <Checkbox id="pack-confirm" checked={sendConfirmed} onCheckedChange={setSendConfirmed} data-testid="pack-confirm-checkbox" />
+                        <label htmlFor="pack-confirm" className="text-xs text-slate-600 cursor-pointer select-none">
+                            Ho verificato destinatari, allegati e documenti sensibili
+                        </label>
+                    </div>
                     <DialogFooter className="gap-2">
                         <Button variant="outline" onClick={() => setShowConfirm(false)} data-testid="btn-cancel-send">Annulla</Button>
-                        <Button onClick={handleSend} className="bg-emerald-600 text-white hover:bg-emerald-700" data-testid="btn-confirm-send">
-                            <Send className="h-4 w-4 mr-2" /> Conferma Invio
+                        <Button onClick={handleSend} disabled={!sendConfirmed || sending} className="bg-emerald-600 text-white hover:bg-emerald-700" data-testid="btn-confirm-send">
+                            {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ShieldAlert className="h-4 w-4 mr-2" />}
+                            {sending ? 'Invio...' : 'Conferma e Invia'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

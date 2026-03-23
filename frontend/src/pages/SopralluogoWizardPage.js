@@ -9,6 +9,7 @@ import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Checkbox } from '../components/ui/checkbox';
 import {
     ArrowLeft, ArrowRight, Camera, Upload, Trash2, Brain, FileText,
     AlertTriangle, CheckCircle2, ShieldAlert, Loader2, X, Eye,
@@ -113,6 +114,7 @@ export default function SopralluogoWizardPage() {
     const [showEmailConfirm, setShowEmailConfirm] = useState(false);
     const [emailSubject, setEmailSubject] = useState('');
     const [emailBody, setEmailBody] = useState('');
+    const [emailConfirmed, setEmailConfirmed] = useState(false);
 
     const [formData, setFormData] = useState({
         client_id: '',
@@ -421,6 +423,7 @@ Cordiali saluti`;
 
         setEmailSubject(subject);
         setEmailBody(body);
+        setEmailConfirmed(false);
         setShowEmailConfirm(true);
     };
 
@@ -1225,32 +1228,40 @@ Cordiali saluti`;
                                     Il PDF della perizia verra allegato automaticamente. Modifica il testo come preferisci prima dell'invio.
                                 </p>
                                 {/* Actions */}
-                                <div className="flex items-center gap-3 pt-2 border-t">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleDownloadPdf}
-                                        disabled={generatingPdf}
-                                        className="border-blue-300 text-blue-700"
-                                        data-testid="email-preview-download-pdf"
-                                    >
-                                        {generatingPdf ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
-                                        Scarica PDF (Anteprima)
-                                    </Button>
-                                    <div className="flex-1" />
-                                    <Button variant="outline" size="sm" onClick={() => setShowEmailConfirm(false)}>
-                                        Annulla
-                                    </Button>
-                                    <Button
-                                        onClick={handleSendEmail}
-                                        disabled={sendingEmail || !emailSubject.trim() || !emailBody.trim()}
-                                        className="bg-orange-600 text-white hover:bg-orange-700"
-                                        size="sm"
-                                        data-testid="btn-confirm-send-email"
-                                    >
-                                        {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
-                                        Invia Email con PDF Allegato
-                                    </Button>
+                                <div className="space-y-3 pt-2 border-t">
+                                    <div className="flex items-center gap-2" data-testid="perizia-confirm-section">
+                                        <Checkbox id="perizia-confirm" checked={emailConfirmed} onCheckedChange={setEmailConfirmed} data-testid="perizia-confirm-checkbox" />
+                                        <label htmlFor="perizia-confirm" className="text-xs text-slate-600 cursor-pointer select-none">
+                                            Ho verificato destinatario, oggetto e contenuto
+                                        </label>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleDownloadPdf}
+                                            disabled={generatingPdf}
+                                            className="border-blue-300 text-blue-700"
+                                            data-testid="email-preview-download-pdf"
+                                        >
+                                            {generatingPdf ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Download className="h-4 w-4 mr-1" />}
+                                            Scarica PDF (Anteprima)
+                                        </Button>
+                                        <div className="flex-1" />
+                                        <Button variant="outline" size="sm" onClick={() => setShowEmailConfirm(false)}>
+                                            Annulla
+                                        </Button>
+                                        <Button
+                                            onClick={handleSendEmail}
+                                            disabled={sendingEmail || !emailSubject.trim() || !emailBody.trim() || !emailConfirmed}
+                                            className="bg-orange-600 text-white hover:bg-orange-700"
+                                            size="sm"
+                                            data-testid="btn-confirm-send-email"
+                                        >
+                                            {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ShieldAlert className="h-4 w-4 mr-2" />}
+                                            Conferma e Invia
+                                        </Button>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>

@@ -63,3 +63,15 @@
 - **Audit log**: ogni azione esterna (email, SDI) loggata in collection `outbound_audit_log` con: user_id, action_type, recipient, details, status, external_id, error, timestamp
 - SAFE_MODE rimosso (sostituito dal guard pattern)
 - Testing: 100% (14/14 frontend) — iteration_253
+
+### Outbound Guard Rollout Completo (2026-03-23)
+Copertura preview obbligatoria 9/9 moduli:
+- Fatture email: EmailPreviewDialog + checkbox
+- DDT email: EmailPreviewDialog + checkbox
+- RdP email: EmailPreviewDialog + checkbox
+- OdA email: EmailPreviewDialog + checkbox
+- Conto lavoro: EmailPreviewDialog + checkbox
+- Preventivi: EmailPreviewDialog + checkbox
+- SDI/FiC: SdiPreviewDialog + validazione + checkbox
+- Pacchetti doc: Dialog con checkbox obbligatoria + warning sensibili
+- Sopralluogo/Perizie: Panel inline con checkbox obbligatoria
