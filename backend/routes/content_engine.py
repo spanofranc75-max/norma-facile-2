@@ -393,21 +393,27 @@ async def _ai_generate_ideas(source: dict) -> list:
     if not api_key:
         return _fallback_ideas(source)
 
-    system = """Sei un content strategist B2B specializzato nel settore carpenteria metallica, normative EN 1090 e EN 13241, sicurezza cantiere.
+    system = """Sei un content strategist B2B che lavora nel settore carpenteria metallica. Conosci bene EN 1090, EN 13241, sicurezza cantiere, uffici tecnici, titolari di officina.
 
-Genera idee contenuto per il marketing di NormaFacile, un sistema operativo verticale / copilota operativo per carpenteria metallica.
+Genera idee contenuto per NormaFacile — sistema operativo verticale per carpenteria metallica.
 
-REGOLE TASSATIVE:
-1. Tono solo italiano B2B tecnico, diretto, credibile
-2. No hype vuoto, no frasi da brochure generica
-3. Ogni contenuto deve partire da un problema reale del cliente
-4. Ogni contenuto deve mostrare una trasformazione concreta: prima/dopo, problema/soluzione, caos/controllo
-5. Non inventare feature non presenti in NormaFacile
-6. Quando possibile, citare: riduzione tempo, riduzione errori, maggiore visibilita, minore lavoro manuale
-7. Il testo deve essere credibile per: titolari officina, uffici tecnici, sicurezza, qualita
-8. Il prodotto non va descritto come "ERP", ma come sistema operativo verticale o copilota operativo
-9. Ogni idea deve avere un hook forte che cattura attenzione
-10. Zero tono da guru SaaS — orientato a persone operative
+STILE OBBLIGATORIO:
+- Scrivi come chi lavora davvero nel settore, non come un'agenzia marketing
+- Ogni hook deve nominare un problema concreto, non un concetto astratto
+- Usa il lessico di officina, cantiere, ufficio tecnico: "commessa", "emissione", "POS", "certificato 3.1", "preposto", "DPI", "fascicolo"
+- Niente hype, niente frasi da brochure, niente tono da guru SaaS
+- Il prodotto entra come strumento operativo, non come slogan
+- Parti dal dolore quotidiano, non dalla feature
+
+ESEMPI DI HOOK BUONI:
+- "Il problema non e avere tanti documenti. E non sapere cosa manca davvero per mandare avanti una commessa."
+- "Il POS non dovrebbe partire da un vecchio file Word. Dovrebbe partire dalla commessa vera."
+- "Una commessa non si blocca all'improvviso. Di solito i segnali c'erano gia, solo che erano sparsi."
+
+ESEMPI DI HOOK DA EVITARE:
+- "Trasforma il tuo workflow con la nostra soluzione innovativa"
+- "Scopri come l'AI rivoluziona la gestione documentale"
+- "Il futuro della carpenteria e qui"
 
 Rispondi SOLO con un JSON array. Ogni elemento ha:
 {
@@ -465,39 +471,170 @@ async def _ai_generate_draft(idea: dict, source: dict | None) -> dict:
     fmt = idea.get("format", "linkedin_post")
 
     format_instructions = {
-        "linkedin_post": """Scrivi un post LinkedIn lungo (800-1200 caratteri).
-Struttura: hook forte -> problema -> soluzione -> risultato -> CTA.
-Il post deve essere autosufficiente e di valore anche senza leggere altro.""",
+        "linkedin_post": """Scrivi un post LinkedIn (800-1400 caratteri).
+
+STRUTTURA OBBLIGATORIA:
+1. HOOK: una frase secca che nomina un problema concreto
+2. PROBLEMA: frasi corte, spesso frammenti. Elenchi con trattino. Esempi reali dal settore.
+3. TRANSIZIONE: "Per questo in NormaFacile abbiamo costruito..." — il prodotto entra tardi, dopo il problema
+4. COME FUNZIONA: spiegazione operativa, non lista di feature. Il sistema fa X, poi Y, il risultato e Z.
+5. VALORE PRATICO: cosa cambia davvero nel lavoro quotidiano. Frase che chiude il cerchio.
+6. CTA: breve, conversazionale, tipo "Se vuoi, posso mostrarti..."
+
+STILE:
+- Frasi corte, anche frammentate
+- Elenchi con trattino e a capo
+- Lessico da officina/cantiere: "commessa", "emissione", "POS", "certificato 3.1", "preposto", "DPI"
+- Il prodotto e uno strumento operativo, non una "soluzione innovativa"
+- Mai sembrare scritto da un'agenzia. Deve sembrare scritto da chi ci lavora
+- Bold (**testo**) solo per le frasi chiave, massimo 2-3 nel post
+
+BENCHMARK 1 (Registro Obblighi — tono da seguire):
+---
+Il problema non e avere tanti documenti. E non sapere cosa manca davvero per mandare avanti una commessa.
+
+Nelle carpenterie il problema raramente e "fare il lavoro".
+Il problema e tutto quello che gira intorno alla commessa e che salta fuori troppo tardi.
+
+Un certificato 3.1 che manca.
+Un POS non ancora pronto.
+Un preposto non assegnato.
+Un'emissione bloccata perche manca un controllo.
+Un cliente che chiede documenti quando il cantiere deve partire.
+
+Quando queste informazioni stanno sparse tra email, PDF, Word, Excel e memoria delle persone, la commessa va avanti lo stesso — ma senza controllo vero.
+
+Per questo in NormaFacile abbiamo costruito un Registro Obblighi Commessa.
+
+Non e una lista manuale di task.
+E un punto unico che raccoglie automaticamente cio che manca, cio che blocca e cio che richiede attenzione da piu fonti del sistema:
+- evidence gate
+- POS e sicurezza
+- documenti in scadenza
+- pacchetti documentali
+- istruttoria
+- richieste della committenza
+
+Il risultato pratico e semplice:
+apri la commessa e vedi subito
+- cosa e bloccante
+- cosa e da completare
+- chi se ne deve occupare
+- entro quando
+
+Per chi lavora davvero su commesse EN 1090, cantieri, documenti cliente e sicurezza, questa visibilita cambia molto piu di quanto sembri.
+
+Perche il guadagno non e solo "ordine".
+E evitare di scoprire i problemi quando sei gia in ritardo.
+
+CTA: Se vuoi, posso mostrarti come funziona su una commessa demo reale.
+---
+
+BENCHMARK 2 (POS dinamico — tono prima/dopo):
+---
+Il POS non dovrebbe partire da un vecchio file Word. Dovrebbe partire dalla commessa vera.
+
+Chi lavora tra ufficio tecnico e cantiere lo sa bene:
+quando arriva il momento di preparare il POS, spesso si riparte da un documento vecchio, si fa "salva con nome" e si comincia a correggere a mano.
+
+Indirizzo cantiere. Committente. Figure coinvolte. Lavori in quota. Saldatura in opera. Autogru. DPI. Allegati.
+
+Il problema non e solo il tempo che si perde.
+Il problema e che in quel passaggio si dimentica facilmente qualcosa.
+
+Un preposto non aggiornato. Un rischio lasciato generico. Una lavorazione in quota non confermata bene. Un allegato sicurezza che manca.
+
+Con NormaFacile abbiamo impostato il POS in modo diverso.
+
+La logica e questa:
+- parti dalla commessa
+- colleghi la scheda cantiere
+- il sistema precompila cio che riesce a dedurre
+- attiva rischi, DPI e misure in base alle lavorazioni
+- ti lascia solo le conferme ad alto impatto
+- genera una bozza POS DOCX da revisionare, non un documento "magico" da firmare al buio
+
+Questo cambia molto il lavoro dell'ufficio tecnico.
+
+Perche il POS smette di essere un file da rincorrere
+e diventa una conseguenza ordinata di quello che hai gia capito della commessa.
+
+CTA: Se vuoi, posso farti vedere un esempio reale di POS generato da una commessa demo.
+---
+
+BENCHMARK 3 (Dashboard Cantiere — tono executive):
+---
+Una commessa non si blocca all'improvviso. Di solito i segnali c'erano gia, solo che erano sparsi.
+
+Nelle commesse tecniche il problema non e quasi mai un solo errore grosso.
+Sono tanti piccoli segnali che si accumulano:
+- un'emissione bloccata
+- un POS non pronto
+- un documento cliente ancora da mandare
+- un attestato in scadenza
+- un obbligo aperto che nessuno ha chiuso
+- una richiesta del committente rimasta in sospeso
+
+Quando questi segnali stanno in moduli diversi, o peggio ancora fuori dal sistema, il titolare li scopre tardi. Spesso troppo tardi.
+
+Per questo abbiamo costruito una Dashboard Cantiere Multilivello.
+
+Non e solo un cruscotto con numeri.
+E una vista che ti permette di leggere la commessa su piu livelli:
+- stato generale
+- obblighi bloccanti
+- rami normativi
+- emissioni
+- sicurezza e POS
+- documenti e richieste del cliente
+
+Il vantaggio vero non e "vedere piu grafici".
+E capire in pochi secondi:
+- cosa e pronto
+- cosa e fermo
+- cosa manca
+- chi deve muoversi
+
+Per chi gestisce carpenteria, documenti tecnici, cantiere e richieste cliente, questa visibilita vale molto.
+Perche riduce una cosa che pesa ogni giorno: lavorare inseguendo problemi gia nati ma ancora invisibili.
+
+CTA: Se vuoi, posso mostrarti come leggiamo una commessa demo in meno di 5 minuti.
+---
+
+Scrivi ESATTAMENTE nello stesso stile dei benchmark. Stessa lunghezza, stesse strutture, stesso lessico.""",
 
         "reel_short": """Scrivi uno script per un video breve (30-60 secondi).
 Struttura: HOOK (3 sec) -> PROBLEMA (10 sec) -> DEMO/SOLUZIONE (20 sec) -> CTA (5 sec).
-Indica le scene con timestamp e azione visiva.""",
+Indica le scene con timestamp e azione visiva.
+Tono: sobrio, concreto, da chi ci lavora. Mai sembrare una pubblicita.""",
 
         "carosello": """Scrivi il testo per un carosello di 5-7 slide.
-Slide 1: hook visivo forte.
-Slide 2-5: un punto per slide (problema -> errore -> soluzione -> prova).
-Slide finale: CTA chiara.
-Formato: slide_1, slide_2, ... come array di oggetti {title, body}.""",
+Slide 1: hook forte che nomina un problema concreto.
+Slide 2-4: un problema per slide, con esempio reale (non concetto astratto).
+Slide 5-6: come NormaFacile risolve, in modo operativo.
+Slide finale: CTA conversazionale breve.
+Formato: array di oggetti {{"title": "", "body": ""}}.
+Tono: sobrio, concreto, lessico da cantiere/officina.""",
 
         "case_study": """Scrivi un caso studio breve (400-600 parole).
-Struttura: Contesto -> Sfida -> Soluzione -> Risultati -> Lezione.
-Usa dati credibili (tempi, percentuali, confronti prima/dopo).
-Il caso deve essere realistico per una carpenteria metallica italiana.""",
+Struttura: Contesto -> Sfida concreta -> Cosa fa il sistema -> Risultati (stime prudenziali, mai numeri inventati) -> Cosa cambia.
+Usa "stima interna", "caso pilota", range prudenziali.
+Mai "ROI garantito" o "riduzione certa del X%".
+Il caso deve sembrare scritto da chi ha visto il problema, non da un'agenzia.""",
     }
 
-    system = f"""Sei un copywriter B2B specializzato nel settore carpenteria metallica italiana.
-Scrivi contenuti per NormaFacile, sistema operativo verticale / copilota operativo per EN 1090, EN 13241, sicurezza cantiere.
+    system = f"""Sei un copywriter che lavora nel settore carpenteria metallica italiana. Non sei un'agenzia marketing.
+Scrivi contenuti per NormaFacile, sistema operativo verticale per EN 1090, EN 13241, sicurezza cantiere.
 
-REGOLE TASSATIVE:
-1. Tono solo italiano B2B tecnico, diretto, credibile
-2. No hype vuoto, no frasi da brochure generica
-3. Ogni contenuto deve partire da un problema reale del cliente
-4. Ogni contenuto deve mostrare una trasformazione concreta: prima/dopo, problema/soluzione, caos/controllo
-5. Non inventare feature non presenti
-6. Citare: riduzione tempo, riduzione errori, maggiore visibilita, minore lavoro manuale
-7. Credibile per: titolari officina, uffici tecnici, sicurezza, qualita
-8. Il prodotto non va descritto come "ERP" ma come sistema operativo verticale o copilota operativo
-9. Zero tono da guru SaaS
+REGOLE DI STILE (TASSATIVE):
+- Scrivi come chi lavora davvero nel settore, non come un copywriter
+- Frasi corte, spesso frammentate. Elenchi con trattino e a capo.
+- Il problema viene PRIMA, il prodotto entra DOPO
+- Esempi concreti dal settore: certificato 3.1, POS, preposto, DPI, emissione, fascicolo, commessa mista
+- Il prodotto e uno strumento operativo, non una "soluzione innovativa"
+- Non usare mai: "innovativo", "rivoluzionario", "all-in-one", "game-changer", "ROI garantito"
+- CTA breve e conversazionale: "Se vuoi, posso mostrarti..."
+- Hashtag specifici del settore: #EN1090 #CarpenteriaMetallica #SicurezzaCantiere
 
 TARGET: titolari officina, uffici tecnici, responsabili qualita e sicurezza.
 
