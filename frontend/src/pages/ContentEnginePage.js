@@ -13,6 +13,19 @@ import {
     Clock, Eye, Pencil, BookOpen, Video, LayoutGrid, Target,
 } from 'lucide-react';
 
+const CATEGORY_LABELS = {
+    compliance_operativa: 'Compliance',
+    ai_workflow: 'AI Workflow',
+    normativa: 'Normativa',
+    qualita_documenti: 'Qualita',
+    sicurezza: 'Sicurezza',
+    contratti_richieste: 'Contratti',
+    documentale: 'Documentale',
+    controllo_manageriale: 'Management',
+    riuso_operativo: 'Riuso',
+    end_to_end: 'End-to-End',
+};
+
 const FORMAT_LABELS = {
     linkedin_post: { label: 'LinkedIn', icon: FileText, color: 'text-blue-600 bg-blue-50' },
     reel_short: { label: 'Reel/Short', icon: Video, color: 'text-pink-600 bg-pink-50' },
@@ -172,13 +185,27 @@ export default function ContentEnginePage() {
                                                 <div className="flex items-center gap-2">
                                                     <h3 className="text-sm font-bold text-slate-800">{src.title}</h3>
                                                     <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded">{src.type}</span>
+                                                    {src.category && (
+                                                        <span className="text-[10px] px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded">{CATEGORY_LABELS[src.category] || src.category}</span>
+                                                    )}
                                                 </div>
                                                 <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{src.description}</p>
-                                                {src.pain_points?.length > 0 && (
-                                                    <div className="flex flex-wrap gap-1 mt-1.5">
-                                                        {src.pain_points.slice(0, 3).map((p, i) => (
-                                                            <span key={i} className="text-[10px] px-1.5 py-0.5 bg-red-50 text-red-600 rounded">{p.length > 40 ? p.slice(0, 40) + '...' : p}</span>
-                                                        ))}
+                                                {src.value_claim && (
+                                                    <p className="text-xs text-emerald-700 font-medium mt-1 line-clamp-1">{src.value_claim}</p>
+                                                )}
+                                                <div className="flex flex-wrap gap-1 mt-1.5">
+                                                    {src.pain_points?.slice(0, 3).map((p, i) => (
+                                                        <span key={i} className="text-[10px] px-1.5 py-0.5 bg-red-50 text-red-600 rounded">{p.length > 40 ? p.slice(0, 40) + '...' : p}</span>
+                                                    ))}
+                                                </div>
+                                                {src.suggested_formats?.length > 0 && (
+                                                    <div className="flex gap-1 mt-1.5">
+                                                        {src.suggested_formats.map((f, i) => {
+                                                            const fl = FORMAT_LABELS[f];
+                                                            return fl ? (
+                                                                <span key={i} className={`text-[9px] px-1.5 py-0.5 rounded ${fl.color}`}>{fl.label}</span>
+                                                            ) : null;
+                                                        })}
                                                     </div>
                                                 )}
                                             </div>

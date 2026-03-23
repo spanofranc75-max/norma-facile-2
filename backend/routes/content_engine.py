@@ -61,6 +61,7 @@ async def create_source(data: dict, user: dict = Depends(get_current_user)):
     doc = {
         "source_id": f"src_{uuid.uuid4().hex[:12]}",
         "user_id": user["user_id"],
+        "code": data.get("code", ""),
         "title": data.get("title", ""),
         "type": data.get("type", "feature"),
         "category": data.get("category", ""),
@@ -70,6 +71,7 @@ async def create_source(data: dict, user: dict = Depends(get_current_user)):
         "value_claim": data.get("value_claim", ""),
         "proof_points": data.get("proof_points", []),
         "demo_route": data.get("demo_route", ""),
+        "suggested_formats": data.get("suggested_formats", []),
         "active": True,
         "created_at": _now(),
         "updated_at": _now(),
@@ -393,14 +395,19 @@ async def _ai_generate_ideas(source: dict) -> list:
 
     system = """Sei un content strategist B2B specializzato nel settore carpenteria metallica, normative EN 1090 e EN 13241, sicurezza cantiere.
 
-Genera idee contenuto per il marketing di NormaFacile, un software gestionale verticale per carpenteria metallica.
+Genera idee contenuto per il marketing di NormaFacile, un sistema operativo verticale / copilota operativo per carpenteria metallica.
 
-REGOLE:
-- Tono italiano B2B tecnico, diretto, credibile
-- Parla di problemi reali, errori evitati, tempo risparmiato
-- Zero hype, zero tono da guru SaaS
-- Orientato a: titolari, uffici tecnici, qualita, sicurezza
-- Ogni idea deve avere un hook forte che cattura attenzione
+REGOLE TASSATIVE:
+1. Tono solo italiano B2B tecnico, diretto, credibile
+2. No hype vuoto, no frasi da brochure generica
+3. Ogni contenuto deve partire da un problema reale del cliente
+4. Ogni contenuto deve mostrare una trasformazione concreta: prima/dopo, problema/soluzione, caos/controllo
+5. Non inventare feature non presenti in NormaFacile
+6. Quando possibile, citare: riduzione tempo, riduzione errori, maggiore visibilita, minore lavoro manuale
+7. Il testo deve essere credibile per: titolari officina, uffici tecnici, sicurezza, qualita
+8. Il prodotto non va descritto come "ERP", ma come sistema operativo verticale o copilota operativo
+9. Ogni idea deve avere un hook forte che cattura attenzione
+10. Zero tono da guru SaaS — orientato a persone operative
 
 Rispondi SOLO con un JSON array. Ogni elemento ha:
 {
@@ -479,9 +486,19 @@ Il caso deve essere realistico per una carpenteria metallica italiana.""",
     }
 
     system = f"""Sei un copywriter B2B specializzato nel settore carpenteria metallica italiana.
-Scrivi contenuti per NormaFacile, software gestionale per EN 1090, EN 13241, sicurezza cantiere.
+Scrivi contenuti per NormaFacile, sistema operativo verticale / copilota operativo per EN 1090, EN 13241, sicurezza cantiere.
 
-TONO: italiano professionale, tecnico ma leggibile, concreto, zero hype.
+REGOLE TASSATIVE:
+1. Tono solo italiano B2B tecnico, diretto, credibile
+2. No hype vuoto, no frasi da brochure generica
+3. Ogni contenuto deve partire da un problema reale del cliente
+4. Ogni contenuto deve mostrare una trasformazione concreta: prima/dopo, problema/soluzione, caos/controllo
+5. Non inventare feature non presenti
+6. Citare: riduzione tempo, riduzione errori, maggiore visibilita, minore lavoro manuale
+7. Credibile per: titolari officina, uffici tecnici, sicurezza, qualita
+8. Il prodotto non va descritto come "ERP" ma come sistema operativo verticale o copilota operativo
+9. Zero tono da guru SaaS
+
 TARGET: titolari officina, uffici tecnici, responsabili qualita e sicurezza.
 
 {format_instructions.get(fmt, format_instructions['linkedin_post'])}
@@ -561,21 +578,27 @@ def _fallback_draft(idea: dict) -> dict:
 
 @router.post("/seed-sources")
 async def seed_content_sources(user: dict = Depends(get_current_user)):
-    """Pre-load 10 content sources. Admin only. Idempotent."""
+    """Pre-load 10 content sources. Admin only. Upsert by title."""
     _require_admin(user)
 
     from scripts.content_sources_seed import CONTENT_SOURCES_SEED
 
-    existing = await db[COLL_SOURCES].count_documents({"user_id": user["user_id"]})
-    if existing >= 10:
-        return {"message": f"Sorgenti gia presenti ({existing})", "seeded": 0}
-
     seeded = 0
+    updated = 0
     for src in CONTENT_SOURCES_SEED:
         exists = await db[COLL_SOURCES].find_one(
             {"user_id": user["user_id"], "title": src["title"]}
         )
-        if not exists:
+        if exists:
+            # Upsert: update existing with new detailed data
+            update_data = {k: v for k, v in src.items() if k != "title"}
+            update_data["updated_at"] = _now()
+            await db[COLL_SOURCES].update_one(
+                {"source_id": exists["source_id"]},
+                {"$set": update_data}
+            )
+            updated += 1
+        else:
             doc = {
                 "source_id": f"src_{uuid.uuid4().hex[:12]}",
                 "user_id": user["user_id"],
@@ -587,4 +610,5 @@ async def seed_content_sources(user: dict = Depends(get_current_user)):
             await db[COLL_SOURCES].insert_one(doc)
             seeded += 1
 
-    return {"message": "Seed completato", "seeded": seeded, "total": existing + seeded}
+    total = await db[COLL_SOURCES].count_documents({"user_id": user["user_id"]})
+    return {"message": "Seed completato", "seeded": seeded, "updated": updated, "total": total}

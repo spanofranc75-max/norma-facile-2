@@ -32,8 +32,10 @@ TD-001/002/004/005/009/010, CR-001/002, Data Integrity — tutto completato
 - **Backend**: CRUD sorgenti, generazione idee AI (GPT-4o), generazione bozze AI, coda editoriale, stats
 - **Frontend**: Pagina `/contenuti` con 4 tab (Sorgenti, Idee, Bozze, Coda Editoriale)
 - **Nav**: Voce "Contenuti" nella sidebar (admin-only, icona PenSquare)
-- **Seed**: 10 sorgenti pre-configurate, canali LinkedIn/Reel/Carosello/Case Study
-- **Tono AI**: Italiano B2B tecnico
+- **Seed**: 10 sorgenti reali con code, category, value_claim, proof_points, suggested_formats
+- **Seed upsert**: POST /api/content/seed-sources aggiorna sorgenti esistenti (upsert by title)
+- **Tono AI**: 10 regole tassative — italiano B2B tecnico, no hype, no ERP, copilota operativo
+- **Campi sorgente**: code, title, type, category, target_audience, pain_points, description, value_claim, proof_points, demo_route, suggested_formats, active
 - **Testing**: 100% (16/16 backend + 100% frontend) — iteration_251
 
 ## Backlog prioritizzato
