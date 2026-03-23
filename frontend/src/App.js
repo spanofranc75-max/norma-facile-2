@@ -78,6 +78,7 @@ import ManualePage from './pages/ManualePage';
 import KPIDashboard from './pages/KPIDashboard';
 import ConfrontoPreventivi from './pages/ConfrontoPreventivi';
 import AnalisiAIPage from './pages/AnalisiAIPage';
+import ContentEnginePage from './pages/ContentEnginePage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './App.css';
@@ -296,6 +297,8 @@ function AppRouter() {
             <Route path="/kpi" element={<ProtectedRoute><KPIDashboard /></ProtectedRoute>} />
             <Route path="/confronto" element={<ProtectedRoute><ConfrontoPreventivi /></ProtectedRoute>} />
             <Route path="/analisi-ai/:prevId" element={<ProtectedRoute><AnalisiAIPage /></ProtectedRoute>} />
+            {/* Content Engine */}
+            <Route path="/contenuti" element={<ProtectedRoute><ContentEnginePage /></ProtectedRoute>} />
             <Route path="/fpc" element={<Navigate to="/tracciabilita" replace />} />
         </Routes>
     );

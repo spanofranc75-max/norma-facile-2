@@ -26,7 +26,7 @@ import {
     Briefcase, Wrench, Award, ShoppingCart, FileText, LayoutGrid,
     CreditCard, TrendingUp, ClipboardCheck, Calendar, CircleDollarSign,
     User, LogOut, Bell, Flame, Calculator, ScrollText, Menu, X, Archive, Brain, Target,
-    BookOpen, FlaskConical,
+    BookOpen, FlaskConical, PenSquare,
 } from 'lucide-react';
 
 // ── Navigation Structure ────────────────────────────────────────
@@ -165,6 +165,14 @@ const NAV_GROUPS = [
             { path: '/perizie', label: 'Perizie Sinistro', icon: ShieldAlert },
             { path: '/archivio-sinistri', label: 'Archivio Sinistri', icon: BarChart3 },
         ],
+    },
+    {
+        id: 'contenuti',
+        label: 'Contenuti',
+        icon: PenSquare,
+        type: 'link',
+        path: '/contenuti',
+        roles: ['admin'],
     },
     {
         id: 'impostazioni',

@@ -1,0 +1,127 @@
+{
+  "summary": "Content Engine Module (M1+M2) — Iteration 251. Comprehensive testing of AI-powered content production system. All 16 backend API tests passed. Frontend tests verified navigation, tabs, sources display, ideas generation, draft detail view, and queue management.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration251_content_engine.py",
+    "/app/test_reports/pytest/iteration251_content_engine_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration251_content_engine.py"
+  ],
+  "success_rate": {
+    "backend": "100% (16/16 tests passed)",
+    "frontend": "100% (All UI tests passed)"
+  },
+  "seed_data_creation": "10 content sources seeded via POST /api/content/seed-sources",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Content Engine fully functional. Demo user has admin role required for content endpoints. AI generation uses GPT-4o via emergentintegrations with fallback to static content if LLM unavailable.",
+  "tests_performed": {
+    "backend_api_tests": {
+      "stats_endpoint": {
+        "endpoint": "GET /api/content/stats",
+        "status": "PASS",
+        "requires_admin": true,
+        "returns": "sources, ideas, drafts, queue_total, queue_approved counts"
+      },
+      "sources_crud": {
+        "list_sources": "PASS - GET /api/content/sources",
+        "seed_sources": "PASS - POST /api/content/seed-sources (10 sources)",
+        "get_single_source": "PASS - GET /api/content/sources/{id}"
+      },
+      "idea_generation": {
+        "generate_ideas": "PASS - POST /api/content/sources/{id}/generate-ideas",
+        "list_ideas": "PASS - GET /api/content/ideas",
+        "delete_idea": "PASS - DELETE /api/content/ideas/{id}"
+      },
+      "draft_generation": {
+        "generate_draft": "PASS - POST /api/content/ideas/{id}/generate-draft",
+        "list_drafts": "PASS - GET /api/content/drafts"
+      },
+      "editorial_queue": {
+        "add_to_queue": "PASS - POST /api/content/queue",
+        "list_queue": "PASS - GET /api/content/queue",
+        "approve_item": "PASS - PUT /api/content/queue/{id} (status: approved)",
+        "publish_item": "PASS - PUT /api/content/queue/{id} (status: published)"
+      },
+      "auth_protection": {
+        "invalid_session_rejected": "PASS - Returns 401/403"
+      }
+    },
+    "frontend_ui_tests": {
+      "navigation": {
+        "contenuti_nav_item": "PASS - Found with data-testid='nav-contenuti'",
+        "navigates_to_contenuti": "PASS - URL changes to /contenuti"
+      },
+      "content_engine_page": {
+        "page_loads": "PASS - data-testid='content-engine' found",
+        "stats_display": "PASS - Shows 10 sorgenti, 6 idee, 1 bozze, 0 approvate"
+      },
+      "tabs": {
+        "tab_sources": "PASS - data-testid='tab-sources'",
+        "tab_ideas": "PASS - data-testid='tab-ideas'",
+        "tab_drafts": "PASS - data-testid='tab-drafts'",
+        "tab_queue": "PASS - data-testid='tab-queue'",
+        "tab_switching": "PASS - All tabs clickable and switch correctly"
+      },
+      "sources_tab": {
+        "source_cards": "PASS - 10 source cards displayed",
+        "source_structure": "PASS - Shows title, description, pain_points, type badge",
+        "genera_idee_button": "PASS - Button present on each source card"
+      },
+      "ideas_tab": {
+        "idea_cards": "PASS - 6 idea cards displayed",
+        "idea_structure": "PASS - Shows format badge, hook, brief, target_audience",
+        "crea_bozza_button": "PASS - Button present on idea cards"
+      },
+      "drafts_tab": {
+        "draft_cards": "PASS - 1 draft card displayed",
+        "draft_structure": "PASS - Shows title, body preview, format badge, hashtags",
+        "draft_detail_view": "PASS - Opens on click with full content"
+      },
+      "draft_detail": {
+        "full_body": "PASS - Shows complete content with sections",
+        "cta_section": "PASS - CTA displayed in blue box",
+        "hashtags": "PASS - Hashtags displayed",
+        "back_button": "PASS - 'Torna alle bozze' works"
+      },
+      "queue_tab": {
+        "queue_items": "PASS - 1 queue item displayed",
+        "status_badges": "PASS - 'Pubblicato' badge shown",
+        "queue_structure": "PASS - Shows draft_title, channel, format"
+      }
+    }
+  },
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "mocked_apis_list": [],
+    "note": "AI generation uses GPT-4o via emergentintegrations. Fallback functions return static content if LLM unavailable."
+  },
+  "test_credentials_used": {
+    "demo_session": "session_token=demo_session_token_normafacile",
+    "demo_user_id": "demo_user",
+    "demo_email": "demo@normafacile.it",
+    "demo_role": "admin"
+  },
+  "features_verified": [
+    "Navigation: 'Contenuti' link appears in sidebar for admin users",
+    "Sources tab: 10 sources displayed with title, description, pain_points",
+    "Sources tab: 'Genera Idee' button on each source card",
+    "Ideas tab: Ideas display with format badge, hook, brief, 'Crea Bozza' button",
+    "Drafts tab: Drafts display with title, body preview, hashtags, format badge",
+    "DraftDetail: Full body, CTA section, hashtags, 'Torna alle bozze' button",
+    "Queue tab: Shows editorial queue with status badges (Pubblicato)",
+    "Stats display: Header shows counts for sources, ideas, drafts, approved items",
+    "Tab navigation: All 4 tabs switch correctly"
+  ]
+}
