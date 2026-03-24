@@ -228,13 +228,13 @@ class InvoiceResponse(BaseModel):
     
     status: InvoiceStatus
     
-    payment_method: PaymentMethod
-    payment_terms: str
+    payment_method: Optional[PaymentMethod] = PaymentMethod.BONIFICO
+    payment_terms: Optional[str] = "30gg"
     payment_type_id: Optional[str] = None
     
     lines: List[InvoiceLine] = []
-    totals: InvoiceTotals
-    tax_settings: TaxSettings
+    totals: InvoiceTotals = Field(default_factory=InvoiceTotals)
+    tax_settings: TaxSettings = Field(default_factory=TaxSettings)
     
     notes: Optional[str] = None
     internal_notes: Optional[str] = None
@@ -250,6 +250,36 @@ class InvoiceResponse(BaseModel):
     totale_pagato: Optional[float] = 0.0
     residuo: Optional[float] = 0.0
     payment_status: Optional[str] = "non_pagata"
+    
+    # NC fields
+    related_invoice_id: Optional[str] = None
+    related_invoice_number: Optional[str] = None
+    
+    # Progressive billing fields
+    progressive_from_preventivo: Optional[str] = None
+    progressive_amount: Optional[float] = None
+    progressive_type: Optional[str] = None
+    
+    @validator('payment_method', pre=True, always=True)
+    def fix_empty_payment_method(cls, v):
+        """Handle empty string or None payment_method from legacy data."""
+        if not v or v == '':
+            return PaymentMethod.BONIFICO
+        if isinstance(v, str) and v not in PaymentMethod.__members__.values():
+            mapping = {
+                'rimessa_diretta': 'bonifico',
+                'rid': 'riba',
+                'carta_credito': 'carta',
+            }
+            return mapping.get(v, 'bonifico')
+        return v
+
+    @validator('due_date', pre=True, always=True)
+    def fix_empty_due_date(cls, v):
+        """Handle empty string due_date from legacy data."""
+        if v == '' or v is None:
+            return None
+        return v
 
 
 class InvoiceListResponse(BaseModel):
