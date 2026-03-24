@@ -20,12 +20,12 @@ async def _detect_steps(user_id: str) -> dict:
     """Auto-detect which onboarding steps are completed."""
     company = await db.company_settings.find_one(
         {"user_id": user_id},
-        {"_id": 0, "business_name": 1, "vat_number": 1}
+        {"_id": 0, "business_name": 1, "partita_iva": 1, "vat_number": 1}
     )
     has_company = bool(
         company
         and company.get("business_name")
-        and company.get("vat_number")
+        and (company.get("partita_iva") or company.get("vat_number"))
     )
 
     has_client = await db.clients.count_documents({"user_id": user_id}) > 0

@@ -21,7 +21,7 @@ def check_company_warnings(company: dict) -> list:
         warnings.append("Ragione sociale mancante nelle Impostazioni aziendali.")
     if not company.get("address"):
         warnings.append("Indirizzo aziendale mancante nelle Impostazioni.")
-    if not company.get("piva") and not company.get("vat_number"):
+    if not company.get("partita_iva") and not company.get("piva") and not company.get("vat_number"):
         warnings.append("P.IVA mancante nelle Impostazioni aziendali.")
     return warnings
 
