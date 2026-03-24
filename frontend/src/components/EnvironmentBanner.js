@@ -15,7 +15,9 @@ const ENV_COLORS = {
 
 function detectEnvironment() {
     const host = window.location.hostname;
-    if (host.includes('vercel.app')) return 'production';
+    if (host.includes('app.1090normafacile.it')) return 'production';
+    if (host.includes('1090normafacile.it')) return 'production';
+    if (host.includes('vercel.app')) return 'staging';
     if (host.includes('preview.emergentagent.com')) return 'preview';
     if (host.includes('emergent.host')) return 'staging';
     if (host === 'localhost' || host === '127.0.0.1') return 'demo';

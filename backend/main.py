@@ -280,14 +280,14 @@ async def lifespan(app: FastAPI):
     # Shutdown
     stop_scheduler()
     await close_database()
-    logger.info("Norma Facile 2.0 shutting down...")
+    logger.info("1090 Norma Facile shutting down...")
 
 
 # Create FastAPI application
 app = FastAPI(
-    title="Norma Facile 2.0 - Core Engine",
-    description="CRM/ERP per Fabbri - Gestione commesse, fatturazione e certificazioni CE",
-    version="2.1.0",
+    title="1090 Norma Facile - Core Engine",
+    description="Sistema operativo per carpenteria metallica — commesse, compliance e documentazione",
+    version="2.2.0",
     lifespan=lifespan
 )
 
@@ -301,7 +301,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=_cors_origins,
-    allow_origin_regex=r"https://.*\.emergentagent\.com|https://.*\.emergent\.host",
+    allow_origin_regex=r"https://.*\.emergentagent\.com|https://.*\.emergent\.host|https://.*\.1090normafacile\.it|https://1090normafacile\.it",
     allow_methods=["*"],
     allow_headers=["*"],
 )
