@@ -718,6 +718,24 @@ async def create_nota_credito(
 
     logger.info(f"Credit note {nc_number} created from invoice {original.get('document_number')} by user {user['user_id']}")
 
+    # ── Audit log NC ──
+    await db.outbound_audit_log.insert_one({
+        "log_id": f"audit_{uuid.uuid4().hex[:12]}",
+        "user_id": user["user_id"],
+        "action_type": "nota_credito_creata",
+        "status": "success",
+        "details": {
+            "nc_id": nc_id,
+            "nc_number": nc_number,
+            "original_invoice_id": invoice_id,
+            "original_invoice_number": original.get("document_number", ""),
+            "client_id": original.get("client_id"),
+            "client_name": original.get("client_name", ""),
+            "totals": nc_doc.get("totals", {}),
+        },
+        "timestamp": now,
+    })
+
     return {
         "message": f"Nota di Credito {nc_number} creata da fattura {original.get('document_number', '')}",
         "invoice_id": nc_id,
