@@ -1494,19 +1494,12 @@ async def _sync_fatture_from_fic_impl(user: dict):
             try:
                 resp = await client.list_received_invoices(page=page, per_page=50, **extra_params)
             except Exception as api_err:
-                status_code = getattr(getattr(api_err, 'response', None), 'status_code', None)
-                if status_code == 401:
-                    raise HTTPException(
-                        401,
-                        "Token FattureInCloud scaduto o non valido. "
-                        "Genera un nuovo token API dal tuo account FattureInCloud "
-                        "(Impostazioni > App > Token API) e aggiornalo nelle impostazioni."
-                    )
-                if status_code == 403:
-                    raise HTTPException(
-                        403,
-                        "Accesso negato a FattureInCloud. Verifica i permessi del token API."
-                    )
+                from services.fattureincloud_api import classify_error
+                category, human_msg, _ = classify_error(api_err)
+                if category == "auth":
+                    raise HTTPException(401, human_msg)
+                if category == "forbidden":
+                    raise HTTPException(403, human_msg)
                 raise
             data_list = resp.get("data", [])
             if not data_list:
