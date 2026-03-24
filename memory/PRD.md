@@ -35,6 +35,8 @@ Francesco Spano' — Steel Project Design Srls
 5. **Rebranding** — "1090 Norma Facile" applicato ovunque (titolo, PDF, email, footer, content engine, onboarding)
 6. **CORS** — dominio 1090normafacile.it aggiunto
 7. **Mini-hardening SDI/FiC** — retry automatico (3 tentativi, backoff esponenziale), classificazione errori (auth/validation/transient/etc.), idempotency key anti doppio invio, logging strutturato
+8. **System Health Widget** — endpoint `/api/dashboard/system-health` + componente `SystemHealthWidget.js` integrato nella Dashboard. Mostra: conteggi DB, stato azienda, attività outbound, warnings integrità dati
+9. **Outbound Audit Log completo** — `log_outbound` aggiunto ai 4 moduli mancanti: sopralluogo (email_perizia), ddt (email_ddt), conto_lavoro (email_conto_lavoro), preventivi (email_preventivo). Tutti i moduli email ora tracciano nel `outbound_audit_log`
 
 ### Feature completate (sessioni precedenti)
 - Content Engine (M1+M2)
@@ -47,8 +49,7 @@ Francesco Spano' — Steel Project Design Srls
 
 ### P1 — Prossimi
 - Collegamento dominio Aruba `app.1090normafacile.it` → Emergent
-- Completare outbound audit log (pacchetti documentali, sopralluogo/perizie)
-- Widget integrity check nel cruscotto
+- Caso studio quantificato
 
 ### P2 — Medio termine
 - Caso studio quantificato
