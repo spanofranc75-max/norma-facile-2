@@ -81,6 +81,7 @@ import AnalisiAIPage from './pages/AnalisiAIPage';
 import ContentEnginePage from './pages/ContentEnginePage';
 import CaseStudyPage from './pages/CaseStudyPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import EnvironmentBanner from './components/EnvironmentBanner';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './App.css';
 
@@ -319,6 +320,7 @@ function App() {
                     </ErrorBoundary>
                 </ConfirmProvider>
                 <Toaster position="top-right" />
+                <EnvironmentBanner />
             </AuthProvider>
         </BrowserRouter>
     );
