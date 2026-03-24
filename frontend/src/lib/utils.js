@@ -87,6 +87,9 @@ export async function apiRequest(endpoint, options = {}) {
     // Handle 204 No Content
     if (response.status === 204) return {};
     
+    // Return raw Response object when requested (for binary data like PDFs)
+    if (options.rawResponse) return response;
+    
     return response.json();
 }
 
