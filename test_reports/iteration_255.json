@@ -1,0 +1,93 @@
+{
+  "summary": "Iteration 255 — NC (Nota di Credito) Line Persistence Bug Fix verification complete. All 8 test cases passed. The bug where NC lines were not persisted after save (deleting 2 of 3 lines would show all 3 on reopen) has been fixed. Root cause: for non-bozza documents, frontend only sent metadata and backend blocked structural changes. Fix: NC documents now bypass these restrictions via isNC check in frontend (line 381-382) and is_nc check in backend (line 486-490).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration255_nc_line_persistence.py",
+    "/app/test_reports/pytest/iteration255_nc_line_persistence_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration255_nc_line_persistence.py"
+  ],
+  "success_rate": {
+    "backend": "100% (8/8 pytest tests passed)",
+    "frontend": "N/A (backend only testing requested)"
+  },
+  "seed_data_creation": "Test invoices created and cleaned up automatically via API",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "NC line persistence bug fix verified. The fix adds isNC check at InvoiceEditorPage.js:381-382 (frontend sends lines for NC regardless of status) and is_nc check at invoices.py:486-490 (backend allows structural changes for NC). FT documents still correctly block line changes when status is not bozza.",
+  "tests_performed": {
+    "test_nc_inviata_sdi_accepts_line_changes": {
+      "status": "PASS",
+      "description": "NC with status 'inviata_sdi' accepts line changes (3 lines -> 1 line) and persists them"
+    },
+    "test_nc_bozza_accepts_line_changes": {
+      "status": "PASS",
+      "description": "NC with status 'bozza' accepts line changes (regression test)"
+    },
+    "test_ft_inviata_sdi_rejects_line_changes": {
+      "status": "PASS",
+      "description": "FT with status 'inviata_sdi' correctly rejects line changes with 400 error"
+    },
+    "test_ft_bozza_accepts_line_changes": {
+      "status": "PASS",
+      "description": "FT with status 'bozza' accepts line changes (regression test)"
+    },
+    "test_nc_emessa_accepts_line_changes": {
+      "status": "PASS",
+      "description": "NC with status 'emessa' accepts line changes"
+    },
+    "test_ft_emessa_rejects_line_changes": {
+      "status": "PASS",
+      "description": "FT with status 'emessa' correctly rejects line changes with 400 error"
+    },
+    "test_ft_inviata_sdi_allows_metadata_updates": {
+      "status": "PASS",
+      "description": "FT with inviata_sdi allows metadata updates (notes, payment_method) even though lines are blocked"
+    },
+    "test_nc_inviata_sdi_allows_both_lines_and_metadata": {
+      "status": "PASS",
+      "description": "NC with inviata_sdi allows both line and metadata updates"
+    }
+  },
+  "code_verification": {
+    "frontend_fix": {
+      "file": "/app/frontend/src/pages/InvoiceEditorPage.js",
+      "lines": "381-382",
+      "change": "Added isNC check: const isNC = formData.document_type === 'NC'; if (isNonDraft && !isNC) { ... }",
+      "verified": true
+    },
+    "backend_fix": {
+      "file": "/app/backend/routes/invoices.py",
+      "lines": "486-490",
+      "change": "Added is_nc check: is_nc = existing.get('document_type') == 'NC'; if not is_draft and not is_nc: { block structural changes }",
+      "verified": true
+    }
+  },
+  "bug_rca": {
+    "issue": "NC (Nota di Credito) lines were not being persisted after save. When user deleted 2 of 3 lines and saved, reopening the NC would show all 3 original lines.",
+    "root_cause": "For non-bozza documents, frontend only sent metadata (not lines) in handleSave, and backend blocked structural changes (lines, tax_settings, etc.) for non-draft documents.",
+    "fix": "NC documents are now always editable for lines regardless of status. Frontend sends lines when editing NC regardless of status. Backend allows structural changes for NC documents.",
+    "reproduction_steps": [
+      "1. Create an NC with 3 lines",
+      "2. Emit the NC (status changes from bozza to emessa)",
+      "3. Send to SDI (status changes to inviata_sdi)",
+      "4. Edit the NC and delete 2 lines, keeping only 1",
+      "5. Save the NC",
+      "6. Reopen the NC - before fix: 3 lines shown; after fix: 1 line shown"
+    ]
+  },
+  "test_credentials_used": {
+    "demo_session": "session_token=demo_session_token_normafacile"
+  }
+}

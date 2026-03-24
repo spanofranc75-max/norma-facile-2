@@ -377,8 +377,10 @@ export default function InvoiceEditorPage() {
 
             if (isEditing) {
                 let payload;
-                if (formData.status && formData.status !== 'bozza') {
-                    // Non-draft: only send metadata fields
+                const isNonDraft = formData.status && formData.status !== 'bozza';
+                const isNC = formData.document_type === 'NC';
+                if (isNonDraft && !isNC) {
+                    // Non-draft FT: only send metadata fields
                     payload = {
                         payment_method: formData.payment_method,
                         payment_terms: formData.payment_terms,
@@ -387,6 +389,7 @@ export default function InvoiceEditorPage() {
                         internal_notes: formData.internal_notes,
                     };
                 } else {
+                    // Draft documents OR NC (always editable)
                     payload = {
                         ...formData,
                         lines: formData.lines.filter(l => l.description.trim()),

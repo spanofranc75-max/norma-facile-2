@@ -483,9 +483,11 @@ async def update_invoice(
         raise HTTPException(status_code=404, detail="Documento non trovato")
     
     is_draft = existing.get("status") in [InvoiceStatus.BOZZA.value, "bozza"]
+    is_nc = existing.get("document_type") == "NC"
     
-    # Non-draft: block structural changes (lines, tax, number, client, issue_date)
-    if not is_draft:
+    # Non-draft FT: block structural changes (lines, tax, number, client, issue_date)
+    # NC (Note di Credito) are always editable for lines and tax_settings
+    if not is_draft and not is_nc:
         has_structural = (
             invoice_data.lines is not None
             or invoice_data.tax_settings is not None
