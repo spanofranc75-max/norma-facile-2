@@ -420,10 +420,24 @@ async def root():
 @app.get("/api/health")
 async def health_check():
     """Detailed health check."""
+    import os
+    mongo_url = os.environ.get("MONGO_URL", "")
+    db_name = os.environ.get("DB_NAME", "unknown")
+    # Mask connection string for security, show only host
+    if "@" in mongo_url:
+        host_part = mongo_url.split("@")[-1].split("/")[0]
+    elif "://" in mongo_url:
+        host_part = mongo_url.split("://")[-1].split("/")[0]
+    else:
+        host_part = "localhost"
     return {
         "status": "healthy",
         "service": "Norma Facile 2.0",
-        "version": "2.1.0"
+        "version": "2.2.0",
+        "environment": {
+            "db_host": host_part,
+            "db_name": db_name,
+        }
     }
 
 
