@@ -504,7 +504,7 @@ table.items tbody td {{ padding:9px 8px; border-bottom:1px solid #e2e8f0; }}
     </div>
 </div>
 
-<div class="footer">{biz} — P.IVA {piva} — Documento generato da Norma Facile 2.0</div>
+<div class="footer">{biz} — P.IVA {piva} — Documento generato da 1090 Norma Facile</div>
 </body></html>"""
 
     from io import BytesIO

@@ -1,5 +1,5 @@
 """Content Engine — Seed data for 10 pre-loaded content sources.
-Sorgenti reali basate sulle feature di NormaFacile 2.0.
+Sorgenti reali basate sulle feature di 1090 Norma Facile 2.0.
 Tono: B2B tecnico, italiano, concreto. Zero marketing generico.
 """
 
@@ -39,7 +39,7 @@ CONTENT_SOURCES_SEED = [
             "la parte normativa viene capita troppo tardi",
             "il preventivo non diventa automaticamente istruttoria",
         ],
-        "description": "NormaFacile legge il preventivo e propone una istruttoria tecnica e normativa strutturata.",
+        "description": "1090 Norma Facile legge il preventivo e propone una istruttoria tecnica e normativa strutturata.",
         "value_claim": "Riduce il data entry e anticipa le domande tecniche e normative gia in fase di avvio commessa.",
         "proof_points": [
             "analisi AI con review umana",
@@ -105,7 +105,7 @@ CONTENT_SOURCES_SEED = [
             "si copiano vecchi file Word e si correggono a mano",
             "si dimenticano rischi, ruoli o allegati importanti",
         ],
-        "description": "NormaFacile precompila la scheda cantiere, attiva rischi e DPI e genera una bozza POS DOCX modificabile partendo dalla commessa.",
+        "description": "1090 Norma Facile precompila la scheda cantiere, attiva rischi e DPI e genera una bozza POS DOCX modificabile partendo dalla commessa.",
         "value_claim": "Trasforma il POS da documento statico a bozza operativa guidata e contestualizzata.",
         "proof_points": [
             "motore AI sicurezza",
@@ -149,7 +149,7 @@ CONTENT_SOURCES_SEED = [
             "si perdono ore a cercare file e attestati",
             "si inviano documenti scaduti o incompleti",
         ],
-        "description": "NormaFacile compone pacchetti documentali da inviare al cliente, verifica scadenze, segnala mancanze e invia via email con log.",
+        "description": "1090 Norma Facile compone pacchetti documentali da inviare al cliente, verifica scadenze, segnala mancanze e invia via email con log.",
         "value_claim": "Riduce drasticamente il tempo per preparare e inviare dossier documentali corretti.",
         "proof_points": [
             "matching automatico documenti",

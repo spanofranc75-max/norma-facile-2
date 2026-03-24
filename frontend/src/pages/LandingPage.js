@@ -216,7 +216,7 @@ export default function LandingPage() {
 
                     {/* Footer */}
                     <p className="text-center text-[10px] text-slate-400 mt-8">
-                        © 2026 Norma Facile — Steel Project Design S.R.L.S.
+                        © 2026 1090 Norma Facile — Steel Project Design S.R.L.S.
                         <br />
                         P.IVA 02042850897
                     </p>

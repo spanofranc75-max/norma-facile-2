@@ -227,7 +227,7 @@ def generate_perizia_pdf(doc: dict, company: dict = None) -> BytesIO:
     # ── Footer ──
     elements.append(Spacer(1, 6 * mm))
     elements.append(Paragraph(
-        "Documento generato da Norma Facile 2.0 - Perizia Tecnica Estimativa",
+        "Documento generato da 1090 Norma Facile - Perizia Tecnica Estimativa",
         ParagraphStyle("Foot", parent=styles["Normal"], fontSize=7, textColor=colors.grey, alignment=TA_CENTER),
     ))
 

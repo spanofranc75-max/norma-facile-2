@@ -65,7 +65,7 @@ export default function CaseStudyPage() {
                             L'azienda gestisce mediamente commesse miste — dove una singola commessa puo contenere lavorazioni con requisiti normativi diversi. Il flusso operativo coinvolge titolare, ufficio tecnico, responsabile sicurezza e qualita.
                         </p>
                         <p>
-                            Prima di NormaFacile, il processo dal preventivo al cantiere pronto era frammentato tra fogli Excel, documenti Word, email e cartelle condivise.
+                            Prima di 1090 Norma Facile, il processo dal preventivo al cantiere pronto era frammentato tra fogli Excel, documenti Word, email e cartelle condivise.
                         </p>
                     </div>
                 </div>
@@ -95,7 +95,7 @@ export default function CaseStudyPage() {
             {/* Cosa fa NormaFacile */}
             <section className="py-12 border-b border-slate-100" data-testid="section-soluzione">
                 <div className="max-w-4xl mx-auto px-6">
-                    <SectionHeader number="03" title="Cosa fa NormaFacile" icon={Wrench} color="text-blue-600" />
+                    <SectionHeader number="03" title="Cosa fa 1090 Norma Facile" icon={Wrench} color="text-blue-600" />
                     <div className="mt-6 space-y-4 max-w-3xl">
                         <SolutionStep step="1" title="Dal preventivo all'istruttoria">
                             L'AI analizza il preventivo e propone un'istruttoria tecnica e normativa strutturata. Classificazione automatica EN 1090 / EN 13241, domande residue ad alto impatto, base per commessa pre-istruita.
@@ -164,7 +164,7 @@ export default function CaseStudyPage() {
             {/* Footer */}
             <footer className="py-6 border-t border-slate-200">
                 <div className="max-w-4xl mx-auto px-6 flex items-center justify-between text-[11px] text-slate-400">
-                    <span>2026 NormaFacile — Steel Project Design S.R.L.S.</span>
+                    <span>2026 1090 Norma Facile — Steel Project Design S.R.L.S.</span>
                     <span>Le metriche presentate sono stime operative interne derivate da un caso pilota.</span>
                 </div>
             </footer>

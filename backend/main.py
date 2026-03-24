@@ -432,7 +432,7 @@ async def health_check():
         host_part = "localhost"
     return {
         "status": "healthy",
-        "service": "Norma Facile 2.0",
+        "service": "1090 Norma Facile",
         "version": "2.2.0",
         "environment": {
             "db_host": host_part,

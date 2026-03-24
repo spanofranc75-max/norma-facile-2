@@ -1065,7 +1065,7 @@ async def report_cam_mensile_pdf(user: dict = Depends(get_current_user)):
     </div>
 
     <div style="margin-top:10mm;padding:4mm;border:1px solid #e2e8f0;border-radius:4px;font-size:8pt;color:#64748B;">
-        <strong>Nota:</strong> Il presente report e generato automaticamente dal sistema NormaFacile 2.0.
+        <strong>Nota:</strong> Il presente report e generato automaticamente dal sistema 1090 Norma Facile.
         I dati sono basati sui certificati di colata (EN 10204 3.1) e le dichiarazioni dei produttori registrate nel sistema.
         Soglia di riferimento: {soglia}% per acciaio non legato da forno elettrico (DM 23/06/2022, Allegato par. 2.5.4).
     </div>

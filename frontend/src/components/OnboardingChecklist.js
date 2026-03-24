@@ -97,7 +97,7 @@ export default function OnboardingChecklist() {
                         </div>
                         <div>
                             <h3 className="text-sm font-bold text-slate-800" data-testid="onboarding-title">
-                                Inizia con NormaFacile
+                                Inizia con 1090 Norma Facile
                             </h3>
                             <p className="text-xs text-slate-500">
                                 {status.completed_count} di {status.total_steps} passi completati

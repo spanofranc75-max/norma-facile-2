@@ -87,7 +87,7 @@ async def _run_backup_job(backup_id: str, uid: str, user_email: str):
         backup = {
             "manifest": {
                 "version": "2.0",
-                "app": "Norma Facile 2.0",
+                "app": "1090 Norma Facile",
                 "created_at": now.isoformat(),
                 "user_id": uid,
                 "user_email": user_email,
@@ -224,7 +224,7 @@ async def export_backup(user: dict = Depends(get_current_user)):
     backup = {
         "manifest": {
             "version": "2.0",
-            "app": "Norma Facile 2.0",
+            "app": "1090 Norma Facile",
             "created_at": now.isoformat(),
             "user_id": uid,
             "user_email": user.get("email", ""),
@@ -233,7 +233,7 @@ async def export_backup(user: dict = Depends(get_current_user)):
         "metadata": {
             "date": now.isoformat(),
             "version": "2.0",
-            "app": "Norma Facile 2.0",
+            "app": "1090 Norma Facile",
             "user_id": uid,
             "user_email": user.get("email", ""),
         },

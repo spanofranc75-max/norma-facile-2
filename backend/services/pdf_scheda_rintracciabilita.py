@@ -222,7 +222,7 @@ def generate_scheda_rintracciabilita_pdf(
 </table>
 
 <div class="footer-bar">
-    {biz} | {email} | Documento generato automaticamente da NormaFacile 2.0
+    {biz} | {email} | Documento generato automaticamente da 1090 Norma Facile
 </div>
 </body></html>"""
 

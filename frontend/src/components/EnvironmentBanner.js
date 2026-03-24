@@ -57,7 +57,7 @@ export default function EnvironmentBanner() {
                     )}
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="opacity-60 hidden sm:inline">NormaFacile 2.0</span>
+                    <span className="opacity-60 hidden sm:inline">1090 Norma Facile</span>
                     {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />}
                 </div>
             </div>

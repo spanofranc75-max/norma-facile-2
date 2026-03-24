@@ -438,7 +438,7 @@ async def generate_pdf(commessa_id: str, user: dict = Depends(get_current_user))
 {sig_html}
 
 <div class="footer">
-    Documento generato da NormaFacile 2.0 — {company_name} — {today_str}
+    Documento generato da 1090 Norma Facile — {company_name} — {today_str}
 </div>
 
 <!-- APPENDICE: LOTTI -->

@@ -395,7 +395,7 @@ async def _ai_generate_ideas(source: dict) -> list:
 
     system = """Sei un content strategist B2B che lavora nel settore carpenteria metallica. Conosci bene EN 1090, EN 13241, sicurezza cantiere, uffici tecnici, titolari di officina.
 
-Genera idee contenuto per NormaFacile — sistema operativo verticale per carpenteria metallica.
+Genera idee contenuto per 1090 Norma Facile — sistema operativo verticale per carpenteria metallica.
 
 STILE OBBLIGATORIO:
 - Scrivi come chi lavora davvero nel settore, non come un'agenzia marketing
@@ -476,7 +476,7 @@ async def _ai_generate_draft(idea: dict, source: dict | None) -> dict:
 STRUTTURA OBBLIGATORIA:
 1. HOOK: una frase secca che nomina un problema concreto
 2. PROBLEMA: frasi corte, spesso frammenti. Elenchi con trattino. Esempi reali dal settore.
-3. TRANSIZIONE: "Per questo in NormaFacile abbiamo costruito..." — il prodotto entra tardi, dopo il problema
+3. TRANSIZIONE: "Per questo in 1090 Norma Facile abbiamo costruito..." — il prodotto entra tardi, dopo il problema
 4. COME FUNZIONA: spiegazione operativa, non lista di feature. Il sistema fa X, poi Y, il risultato e Z.
 5. VALORE PRATICO: cosa cambia davvero nel lavoro quotidiano. Frase che chiude il cerchio.
 6. CTA: breve, conversazionale, tipo "Se vuoi, posso mostrarti..."
@@ -504,7 +504,7 @@ Un cliente che chiede documenti quando il cantiere deve partire.
 
 Quando queste informazioni stanno sparse tra email, PDF, Word, Excel e memoria delle persone, la commessa va avanti lo stesso — ma senza controllo vero.
 
-Per questo in NormaFacile abbiamo costruito un Registro Obblighi Commessa.
+Per questo in 1090 Norma Facile abbiamo costruito un Registro Obblighi Commessa.
 
 Non e una lista manuale di task.
 E un punto unico che raccoglie automaticamente cio che manca, cio che blocca e cio che richiede attenzione da piu fonti del sistema:
@@ -544,7 +544,7 @@ Il problema e che in quel passaggio si dimentica facilmente qualcosa.
 
 Un preposto non aggiornato. Un rischio lasciato generico. Una lavorazione in quota non confermata bene. Un allegato sicurezza che manca.
 
-Con NormaFacile abbiamo impostato il POS in modo diverso.
+Con 1090 Norma Facile abbiamo impostato il POS in modo diverso.
 
 La logica e questa:
 - parti dalla commessa
@@ -611,7 +611,7 @@ Tono: sobrio, concreto, da chi ci lavora. Mai sembrare una pubblicita.""",
         "carosello": """Scrivi il testo per un carosello di 5-7 slide.
 Slide 1: hook forte che nomina un problema concreto.
 Slide 2-4: un problema per slide, con esempio reale (non concetto astratto).
-Slide 5-6: come NormaFacile risolve, in modo operativo.
+Slide 5-6: come 1090 Norma Facile risolve, in modo operativo.
 Slide finale: CTA conversazionale breve.
 Formato: array di oggetti {{"title": "", "body": ""}}.
 Tono: sobrio, concreto, lessico da cantiere/officina.""",
@@ -624,7 +624,7 @@ Il caso deve sembrare scritto da chi ha visto il problema, non da un'agenzia."""
     }
 
     system = f"""Sei un copywriter che lavora nel settore carpenteria metallica italiana. Non sei un'agenzia marketing.
-Scrivi contenuti per NormaFacile, sistema operativo verticale per EN 1090, EN 13241, sicurezza cantiere.
+Scrivi contenuti per 1090 Norma Facile, sistema operativo verticale per EN 1090, EN 13241, sicurezza cantiere.
 
 REGOLE DI STILE (TASSATIVE):
 - Scrivi come chi lavora davvero nel settore, non come un copywriter
@@ -703,7 +703,7 @@ def _fallback_draft(idea: dict) -> dict:
     return {
         "title": idea.get("hook", "Bozza contenuto"),
         "body": f"Bozza generata per: {idea.get('brief', '')}. [Contenuto da completare manualmente]",
-        "cta": "Scopri di piu su NormaFacile",
+        "cta": "Scopri di piu su 1090 Norma Facile",
         "hashtags": ["#en1090", "#carpenteriametallica", "#normafacile"],
         "slides": [],
         "suggested_asset_type": "screenshot",

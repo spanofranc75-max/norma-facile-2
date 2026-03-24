@@ -226,7 +226,7 @@ def _footer_canvas(canvas, doc):
     canvas.setFont(FONT_REGULAR, 6.5)
     canvas.setFillColor(GREY_TEXT)
     canvas.drawString(LEFT_MARGIN, y_base + 6 * mm,
-                      f'Generato da {co_name} - NormaFacile')
+                      f'Generato da {co_name} - 1090 Norma Facile')
     canvas.drawRightString(PAGE_W - RIGHT_MARGIN, y_base + 6 * mm,
                            f'Documento generato il {now_str}')
     canvas.setFont(FONT_BOLD, 6.5)
