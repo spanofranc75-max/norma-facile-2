@@ -248,17 +248,16 @@ async def get_contenuti_manuale(user: dict = Depends(get_current_user)):
 async def genera_manuale_pdf(user: dict = Depends(get_current_user)):
     """Genera il Manuale Utente PDF professionale con logo white-label e QR Code."""
 
-    # Load company settings for white-label
-    company = await db.settings.find_one({"type": "company"}, {"_id": 0})
-    cs = await db.company_settings.find_one({}, {"_id": 0})
+    # Load company settings for white-label — always filter by user_id
+    cs = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
 
-    company_name = (company or {}).get("ragione_sociale", "")
+    company_name = cs.get("business_name") or cs.get("ragione_sociale") or ""
     if not company_name:
-        company_name = (cs or {}).get("ragione_sociale", "La Tua Azienda")
-    company_addr = (company or {}).get("indirizzo", "")
-    company_piva = (company or {}).get("partita_iva", "")
+        company_name = user.get("name", "La Tua Azienda")
+    company_addr = cs.get("address", "")
+    company_piva = cs.get("partita_iva", "")
 
-    logo_url = (company or {}).get("logo_url", "") or (cs or {}).get("logo_url", "")
+    logo_url = cs.get("logo_url", "")
     if logo_url and logo_url.startswith("data:image"):
         logo_html = f'<img src="{logo_url}" class="logo-img" />'
     else:

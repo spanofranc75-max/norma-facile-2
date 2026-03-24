@@ -225,7 +225,7 @@ async def download_report_pdf(commessa_id: str, user: dict = Depends(get_current
     uid = user["user_id"]
     report = await get_report_ispezioni(commessa_id, user)
     company = await db.company_settings.find_one({"user_id": uid}, {"_id": 0}) or {}
-    biz = _e(company.get("business_name", company.get("ragione_sociale", "Steel Project Design S.r.l.s.")))
+    biz = _e(company.get("business_name") or company.get("ragione_sociale", ""))
     today = datetime.now(timezone.utc).strftime("%d/%m/%Y")
 
     logo_html = ""

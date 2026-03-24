@@ -402,7 +402,7 @@ def _build_payment_alert_html(payment_data: dict) -> str:
             </div>
         </div>
         <p style="text-align:center;color:#94a3b8;font-size:11px;margin-top:16px;">
-            Steel Project Design Srls — Notifica automatica
+            NormaFacile 2.0 — Notifica automatica
         </p>
     </div>"""
     return html

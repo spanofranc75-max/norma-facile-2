@@ -8,7 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { toast } from 'sonner';
-import { Save, Building2, CreditCard, FileText, ImageIcon, Upload, Plug, ShieldCheck, HardDrive, Users, Trash2, Bell, Shield } from 'lucide-react';
+import { Save, Building2, CreditCard, FileText, ImageIcon, Upload, Plug, ShieldCheck, HardDrive, Users, Trash2, Bell, Shield, Bug } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 
 import CompanyTab from '../components/settings/CompanyTab';
@@ -25,6 +25,7 @@ import NotificheTab from '../components/settings/NotificheTab';
 import DocumentiAziendaTab from '../components/settings/DocumentiAziendaTab';
 import AllegatiPosTab from '../components/settings/AllegatiPosTab';
 import FigureAziendaliTab from '../components/settings/FigureAziendaliTab';
+import DiagnosticaTab from '../components/settings/DiagnosticaTab';
 
 export default function SettingsPage() {
     const { user } = useAuth();
@@ -218,6 +219,12 @@ export default function SettingsPage() {
                                 Deploy
                             </TabsTrigger>
                         )}
+                        {user?.role === 'admin' && (
+                            <TabsTrigger value="diagnostica" className="gap-2" data-testid="tab-diagnostica">
+                                <Bug className="h-4 w-4" />
+                                Diagnostica
+                            </TabsTrigger>
+                        )}
                     </TabsList>
 
                     <TabsContent value="company">
@@ -266,6 +273,11 @@ export default function SettingsPage() {
                     {user?.role === 'admin' && (
                         <TabsContent value="deploy">
                             <DeployTab />
+                        </TabsContent>
+                    )}
+                    {user?.role === 'admin' && (
+                        <TabsContent value="diagnostica">
+                            <DiagnosticaTab />
                         </TabsContent>
                     )}
                 </Tabs>

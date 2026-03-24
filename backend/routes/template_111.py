@@ -28,10 +28,6 @@ async def _get_company_data(user_id: str) -> dict:
     settings = await db.company_settings.find_one(
         {"user_id": user_id}, {"_id": 0}
     )
-    if not settings:
-        settings = await db.settings.find_one(
-            {"user_id": user_id}, {"_id": 0}
-        )
     return settings or {}
 
 
@@ -67,12 +63,12 @@ async def preview_template_111(commessa_id: str, user: dict = Depends(get_curren
         "titolo_commessa": commessa.get("title", ""),
         "classe_esecuzione": exc,
         "azienda": {
-            "ragione_sociale": company.get("business_name", company.get("ragione_sociale", "Steel Project Design S.r.l.s.")),
-            "indirizzo": company.get("address", company.get("indirizzo", "Via dei Pioppi 11")),
-            "citta": company.get("city", company.get("citta", "")),
-            "piva": company.get("vat_number", company.get("piva", "02042850897")),
+            "ragione_sociale": company.get("business_name") or company.get("ragione_sociale", ""),
+            "indirizzo": company.get("address") or company.get("indirizzo", ""),
+            "citta": company.get("city") or company.get("citta", ""),
+            "piva": company.get("partita_iva") or company.get("vat_number") or company.get("piva", ""),
             "email": company.get("email", ""),
-            "telefono": company.get("phone", company.get("telefono", "")),
+            "telefono": company.get("phone") or company.get("telefono", ""),
             "cert_en1090": company.get("cert_en1090", ""),
         },
         "specifiche_tecniche": {

@@ -881,7 +881,7 @@ async def report_cam_mensile_pdf(user: dict = Depends(get_current_user)):
 
     # Get company info
     company = await db.company_settings.find_one({"user_id": uid}, {"_id": 0}) or {}
-    biz = _e(company.get("business_name", "Steel Project Design"))
+    biz = _e(company.get("business_name", ""))
     logo = company.get("logo_url", "")
 
     # Get all commesse with material batches

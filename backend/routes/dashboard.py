@@ -316,8 +316,11 @@ async def download_fascicolo_aziendale(user: dict = Depends(get_current_user)):
                     zf.writestr(f"{folder}/{label}_{filename}", f.read())
                 files_added += 1
 
+        # Get company name for the ZIP info
+        company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0, "business_name": 1})
+        biz_name = (company or {}).get("business_name", "Azienda")
         now_str = datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M")
-        zf.writestr("INFO.txt", f"Fascicolo Aziendale — Steel Project Design\nGenerato: {now_str}\nDocumenti inclusi: {files_added}\n")
+        zf.writestr("INFO.txt", f"Fascicolo Aziendale — {biz_name}\nGenerato: {now_str}\nDocumenti inclusi: {files_added}\n")
 
     if files_added == 0:
         raise HTTPException(404, "Nessun file trovato su disco")

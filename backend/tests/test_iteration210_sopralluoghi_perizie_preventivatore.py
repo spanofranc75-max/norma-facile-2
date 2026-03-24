@@ -14,7 +14,7 @@ import requests
 import os
 import uuid
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://content-engine-86.preview.emergentagent.com")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://production-debug-12.preview.emergentagent.com")
 SESSION_COOKIE = {"session_token": "test_sopralluogo_session"}
 
 # Test data IDs for cleanup

@@ -1490,7 +1490,7 @@ async def download_pacco_rina(cid: str, user: dict = Depends(get_current_user)):
             normative_attive = _get_active_normative(voci_ries)
             checks_filtered = _filter_checks(normative_attive)
 
-            company_s = await db.settings.find_one({"type": "company"}, {"_id": 0})
+            company_s = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
             manual_checks = (saved_ries or {}).get("checks_manuali", {})
 
             rows_ries = ""

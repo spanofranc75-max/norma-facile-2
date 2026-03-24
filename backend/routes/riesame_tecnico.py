@@ -582,10 +582,9 @@ async def genera_pdf_riesame(commessa_id: str, user: dict = Depends(get_current_
     normative_attive = _get_active_normative(voci)
     checks_filtered = _filter_checks(normative_attive)
 
-    company = await db.settings.find_one({"type": "company"}, {"_id": 0})
-    cs = await db.company_settings.find_one({}, {"_id": 0, "logo_url": 1})
-    company_name = (company or {}).get("ragione_sociale", "Steel Project Design")
-    logo_url = (company or {}).get("logo_url", "") or (cs or {}).get("logo_url", "")
+    cs = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company_name = cs.get("business_name") or cs.get("ragione_sociale") or ""
+    logo_url = cs.get("logo_url", "")
     if logo_url and logo_url.startswith("data:image"):
         logo_html = f'<img src="{logo_url}" style="max-height:42px;max-width:160px;object-fit:contain;" />'
     else:

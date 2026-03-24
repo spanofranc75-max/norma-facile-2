@@ -21,7 +21,7 @@ from datetime import datetime
 import subprocess
 import json
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://content-engine-86.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://production-debug-12.preview.emergentagent.com").rstrip("/")
 
 # ══════════════════════════════════════════════════════════════════
 # Test Fixtures

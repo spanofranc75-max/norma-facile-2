@@ -1,76 +1,70 @@
 <analysis>**original_problem_statement**:
-The user's initial request was to audit and harden the NormaFacile 2.0 application. This was successfully completed, addressing critical database, security, and stability issues. Subsequently, the user prioritized and the agent completed several major UX improvements, including a refactor of the , the implementation of a new user onboarding flow, and a comprehensive validation sprint of all document output and delivery pipelines (PDF, DOCX, email, storage). A full-featured demo mode was also built as a key commercial asset.
+The user's initial request was to audit and harden the NormaFacile 2.0 application. This was followed by major UX improvements, an onboarding flow, document pipeline validation, a demo mode, and a complete Content Engine for AI-assisted marketing.
 
-The current and latest user request is to build a Content Engine (Phases M1+M2), an AI-assisted module to help generate marketing content (posts, scripts, case studies) based on the product's features and the newly created demo environment. The goal is to create a system that produces organized, high-quality drafts for human approval, streamlining the content creation process.
+The most recent user interactions focused on preparing the application for a real-world production deployment. This involved implementing a comprehensive Outbound Delivery Guard (mandatory previews for all external sends like emails and SDI invoices) and calibrating the AI Content Engine's tone.
+
+After the user deployed the latest code to their production environment (Vercel), they discovered a critical P0 bug: **all generated PDFs and email previews still show incorrect, hardcoded company data (Carpenteria Rossi S.r.l.) instead of the user's actual company data (Steel Project Design Srls).** This bug persists despite a previous fix attempt, making the application's core document generation features unusable in production.
 
 **User's preferred language**: Italian. You **MUST** respond in Italian.
 
 **what currently exists?**
-The application is a stable, hardened, and user-experience-focused full-stack platform (React/FastAPI/MongoDB) for the metalworking industry. All major technical debt and critical bugs from the initial audit have been resolved.
+The application is feature-complete and deployed to the user's production environment on Vercel. All major features, including the Content Engine and the Outbound Delivery Guard, are in the codebase.
 
-The agent has just completed the backend implementation for the new Content Engine module. This includes:
-- New MongoDB collections: , , .
-- A new FastAPI router () with endpoints to:
-    - Seed 10 pre-defined content sources.
-    - List content sources.
-    - Generate content  from a source using an LLM.
-    - Generate a content  from an idea using an LLM.
-    - List all generated drafts.
-- A script to seed the  collection ().
-- The agent has created a single, empty main page file for the frontend at .
+However, the production database contains incorrect data. The  collection for the user's account holds old seed/demo data (Carpenteria Rossi S.r.l.). The application code correctly reads from this database collection, but because the data itself is wrong, all generated outputs (PDFs, emails) are incorrect.
+
+A previous fix attempt corrected the data only in the isolated Emergent *preview* database, which did not affect the user's *production* database on Vercel, causing the bug to reappear post-deployment.
 
 **Last working item**:
--   **Last item agent was working**: Implementing the Content Engine module (Phases M1+M2). The agent finished the entire backend logic, including API endpoints and AI integration for generating ideas and drafts. The backend was tested successfully via curl commands.
--   **Status**: IN PROGRESS
--   **Agent Testing Done**: Y (for the backend part via curl)
--   **Which testing method agent to use?**: Frontend testing agent. The next steps involve building the UI, which will require comprehensive testing of the components and their interactions with the newly created backend.
--   **User Testing Done**: N
+-   **Last item agent was working**: Diagnosing a recurring P0 bug where incorrect company data (Carpenteria Rossi) appeared in generated documents. The agent correctly identified the issue was due to incorrect data in the database, but mistakenly applied the fix only to the Emergent *preview* environment's database. The user then deployed to production (Vercel), confirmed the bug was still present, and provided screenshots as proof.
+-   **Status**: BLOCKED
+-   **Agent Testing Done**: Y (for the preview environment, not production)
+-   **Which testing method agent to use?**: Manual user-guided fix. The agent cannot directly access the production database. The fix requires guiding the user.
+-   **User Testing Done**: Y (User has confirmed the bug exists in their live production environment).
 
 **All Pending/In progress Issue list**:
-There are no pending issues.
+-   **Issue 1: (P0 - CRITICAL BLOCKER) Incorrect Company Data in Production PDFs & Emails**
+    -   **Description**: The user's live production application on Vercel generates all documents (PDFs) and email previews with the wrong company name (Carpenteria Rossi S.r.l.). This is because the  document for their user account in the production database contains outdated seed data.
+    -   **Attempted fixes**: An earlier fix updated the database, but it was the wrong one (the Emergent preview database, not the user's Vercel production database).
+    -   **Next debug checklist**:
+        1.  Acknowledge the error and clearly explain to the user *why* the bug is still present (separate databases for preview and production environments).
+        2.  Propose the safest and most direct solution: guiding the user to fix the data themselves through the application's UI.
+        3.  Provide clear, step-by-step instructions for the user to:
+            a. Log into their live application on .
+            b. Navigate to the Impostazioni (Settings) page.
+            c. Verify that their correct company data (Steel Project Design Srls) is entered in the form fields.
+            d. **Click the Save button**, even if the data looks correct on screen. This action will trigger the backend to overwrite the incorrect data in the production database.
+        4.  After the user confirms they have saved the settings, instruct them to test the fix by generating a new PDF or previewing an email.
+    -   **Why fix this issue?**: This is a P0 blocker. The application is unusable for its core purpose of generating and sending professional documents until this is resolved. It damages the product's credibility.
+    -   **Status**: IN PROGRESS
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: User verification is required. The user needs to generate a document in their production environment to confirm the fix.
+    -   **Blocked on other issue**: No. This is the highest priority blocker.
 
 **In progress Task List**:
--   **Task 1: (P0) Content Engine — M1+M2 Frontend Implementation**
-    -   **Description**: Build the frontend UI for the new Content Engine module. The user has specified that the module should be accessible under a new main navigation item called Contenuti.
-    -   **Where to resume**: The backend is complete and working. The next step is to build the UI in . This page should be structured to handle the user flow:
-        1.  **Sorgenti (Sources)**: A view to list the 10 pre-loaded content sources.
-        2.  **Idee (Ideas)**: A view to trigger and display AI-generated content ideas for a selected source.
-        3.  **Bozze (Drafts)**: A view to trigger and display a full AI-generated draft from a selected idea.
-        4.  **Coda Editoriale (Queue)**: A view (as per user spec for M2) to list all drafts with their status (e.g., , , ) for editorial management.
-    -   **What will be achieved with this?**: A fully functional Contenuti module that allows an admin to generate, review, and manage marketing content drafts powered by AI and based on the product's core features.
-    -   **Status**: IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?**: Frontend
-    -   **Blocked on something**: No
+-   None. All focus must be on resolving the P0 bug.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks**:
-    -   **(P1) Mini-hardening SDI/FiC**: Implement a retry strategy, better error handling, and clearer logging for the FattureInCloud integration, as it has been confirmed as a core, active feature.
-    -   **(P2) SmartEmptyState Extension**: Incrementally apply the  component to other secondary pages (e.g., Certificazioni, DDT, Fornitori) for a more consistent UX.
+    -   **(P1) Mini-hardening SDI/FiC**: Implement retry strategy, better error classification, token refresh, and idempotency for the FattureInCloud integration.
+    -   **(P2) Pricing & Packaging**: Define Pilot / Pro / Enterprise tiers.
 
 -   **Future Tasks**:
-    -   **Business Sprint Follow-ups**:
-        -   Create a Caso Studio Quantificato based on the demo flow.
-        -   Define Pricing & Packaging tiers (Pilot, Pro, Enterprise).
-        -   Integrate Stripe for payments after packaging is defined.
-        -   Build a guided Product Tour on top of the demo environment.
-    -   **Architettura Sprint**:
-        -   Refactor remaining monolithic frontend components.
-        -   Evolve towards a full Multi-Tenant Architecture.
-        -   Build the Stability Guard AI feature.
-        -   Migrate from Pydantic v1 to v2.
-    -   Review and potentially drop zombie collections.
-    -   Implement selective automatic emails.
+    -   Stripe integration.
+    -   Product Tour.
+    -   Extend  to more pages.
+    -   Extend audit log to cover all external-facing modules.
+    -   Refactor monolithic frontend components.
+    -   Architect for multi-tenancy.
+    -   Build Stability Guard AI feature.
+    -   Migrate Pydantic from v1 to v2.
 
 **Completed work in this session**
--   **UX-001**: Completed the  simplification and fixed a related bug ( component) found by the testing agent.
--   **UX-003**: Implemented the Onboarding Primo Utilizzo flow with backend logic and new frontend components.
--   **Data Integrity Admin Tool**: Transformed the integrity check script into a reusable, protected set of API endpoints (, , ).
--   **TD-003**: Added 22 new, targeted MongoDB indexes to 15 collections, raising the total to 49.
--   **Integrity Widget**: Added a data integrity status widget to the admin dashboard.
--   **Validation Sprint**: Successfully executed a full E2E validation of all 22 document output/delivery flows (PDF/DOCX/email/storage), confirming their reliability.
--   **SDI/FattureInCloud Verification**: Confirmed that the SDI integration via FattureInCloud is an active, core feature, not legacy code.
--   **Demo Mode**: Implemented a comprehensive demo mode with realistic seed data, a dedicated login, a clear UI banner, and guards to prevent real-world actions.
--   **Content Engine (Backend)**: Created and tested the complete backend for the new Content Engine (M1+M2), including data models, AI generation logic, and API endpoints.
+-   **Content Engine (M1+M2)**: Completed and integrated the full-featured Content Engine, including a calibrated AI prompt engine based on user benchmarks.
+-   **Case Study Page**: Created and deployed a public-facing  page.
+-   **Outbound Delivery Guard**: Implemented a mandatory preview-and-confirm step for all 9 external-sending modules (Fatture, DDT, OdA, RdP, Pacchetti Documentali, SDI, etc.) to prevent accidental sends.
+-   **Central Audit Log**: Created a backend service to log all critical outbound actions.
+-   **Pre-deploy Hardening**: Cleaned up CORS configuration.
+-   **GitHub & Vercel Deployment**: Guided the user to successfully push all new code to their GitHub repository and trigger an automatic deployment on Vercel.
 
 **Earlier issues found/mentioned but not fixed**
 -   None.
@@ -82,73 +76,73 @@ There are no pending issues.
 
 
 **Key Technical Concepts**
--   **AI-Powered Content Generation**: Using the  library () with purpose-built prompts to generate structured marketing content (ideas, drafts) based on pre-defined source documents.
--   **Demo Mode Guard Pattern**: Implementing application-level safety by creating a FastAPI dependency () that inspects the authenticated user's  flag and blocks sensitive API calls (e.g., sending emails, interacting with SDI) if the flag is true.
--   **Database Seeding for Features**: Creating dedicated, executable Python scripts (, ) to populate the database with complex, realistic, and interconnected data required for new features like the Demo Mode and Content Engine.
+-   **Environment Separation**: The critical realization that the Emergent preview environment and the user's Vercel production environment have separate, isolated databases. A fix in one does not affect the other.
+-   **Data-Driven Bugs**: Understanding that a bug's root cause can be incorrect data in the database, not necessarily a flaw in the application code.
+-   **Outbound Delivery Guard**: A design pattern implemented to force a user confirmation step before any data is sent outside the system (e.g., via email or to a third-party API like SDI).
 
 **key DB schema**
--   **content_sources**: 
--   **content_ideas**: 
--   **content_drafts**: 
--   **data_integrity_reports**: 
--   **users**: Field  added to user model.
+-   **company_settings**: . This collection in the **production database** contains the incorrect data that is causing the P0 bug.
+-   **outbound_audit_log**: .
 
 **changes in tech stack**
--   None. Existing technologies were leveraged.
+-   None.
 
 **All files of reference**
--    (The completed backend logic for the new module).
--    (The new, empty frontend page where the UI needs to be built).
--    (The data source for the content generation).
--   User message with the detailed spec for the Content Engine module (specifies the 4-part UI, channels, and AI tone).
--   
+-   : The page the user must use to update their company data in production.
+-   : The backend route that handles saving the data from the settings page.
+-   : The service responsible for generating the PDF content, which reads the incorrect company data.
+-   User's final message with screenshots confirming the bug is present on their live Vercel production site.
 
 **Critical Info for New Agent**
--   Your immediate priority is to build the frontend UI for the Content Engine module in .
--   All backend functionality is already built and tested. You need to call the existing endpoints for listing sources, generating ideas, and generating drafts.
--   The UI must be placed under a new navigation item named **Contenuti**.
--   The UI must provide a workflow covering **Sorgenti, Idee, Bozze,** and a **Coda Editoriale** for managing drafts, as per the user's M1+M2 specification.
--   The AI tone is strictly defined as **italiano B2B tecnico**.
--   All communication with the user must be in **Italian**.
+-   **Your immediate and only priority is to fix the P0 bug of the wrong company name appearing in production.**
+-   The root cause is **incorrect data in the user's production database**, not a code bug. The previous agent's code fixes were correct but applied to the wrong database.
+-   You **cannot** fix this by writing code or directly accessing the database. You must guide the user to fix it themselves.
+-   **Your plan should be**:
+    1.  Explain clearly and concisely in Italian that the production database has old data.
+    2.  Instruct the user to log in to their live Vercel app, go to the Impostazioni page, and re-save their company settings. This is the safest and most effective way to correct the production data.
+    3.  Ask the user to verify the fix by generating a new PDF after saving.
+-   Do not attempt any other tasks or fixes until the user confirms this critical P0 bug is resolved in their production environment.
 
 **documents and test reports created in this job**
--    (UX-001  refactor)
--    (UX-003 Onboarding flow)
--    (Validation Sprint - Output & Delivery)
--    (Demo Mode implementation)
--    (Updated)
+-   
+-   
+-   
+-   
+-   
+-   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: Confirmed to proceed with the Content Engine (M1+M2).
-2.  **User**: Specified the navigation item should be Contenuti.
-3.  **User**: Confirmed the module should be pre-loaded with 8-10 seed sources.
-4.  **User**: Limited the MVP channels to LinkedIn, Reel/Short, Carousel, and Case Study. Explicitly excluded newsletters for now.
-5.  **User**: Defined the AI tone as italiano B2B tecnico and provided detailed rules.
-6.  **User**: Approved the full spec for the Content Engine (M1+M2).
-7.  **User**: Asked for the next step, a choice between a Business Sprint or a practical Demo Mode spec.
-8.  **User**: Chose the Demo Mode option, specifically an isolated environment with realistic seed data and a dedicated login.
-9.  **User**: Confirmed that the Validation Sprint for document output was the highest priority before starting the Business Sprint.
-10. **User**: Confirmed that the SDI/FattureInCloud integration is a core, active feature.
+1.  **User**: Confirms the P0 bug is present in production after deployment, showing a screenshot of the email preview with Carpenteria Rossi S.r.l..
+2.  **User**: Further confirms the bug, showing a screenshot of the generated PDF also containing Carpenteria Rossi S.r.l..
+3.  **User**: Acknowledges the agent's explanation about separate databases and requests guidance to push the latest code to their production environment on Vercel via GitHub (fai save to github).
+4.  **User**: Asks for clarification on which branch to select when saving to GitHub.
+5.  **User**: Shows a conflict error when trying to push to the  branch.
+6.  **User**: Asks for step-by-step instructions on how to handle the merge conflict on GitHub.
+7.  **User**: Shows a screenshot of the ready-to-merge Pull Request on GitHub.
+8.  **User**: Asks if they need to redeploy on Emergent after merging on GitHub.
+9.  **User**: Reports that even after the successful Vercel deployment, the bug with Carpenteria Rossi is still present in both the email preview and the generated PDF in the live production app. Provides screenshots as proof. **This is the final, unresolved user message and the top priority.**
+10. **User**: Shares an image showing the data in the settings is correct, but the output is still wrong.
 
 **Project Health Check:**
--   **Broken**: Nothing is broken.
--   **Mocked**: No mocked components. The demo mode uses realistic seed data in an isolated context, not mocked UI.
--   **Health**: Excellent. The application is stable, robust, and has been validated across its most critical user-facing output flows. The foundation is solid for building new features.
+-   **Broken**: The core document generation and sending functionality is critically broken in the user's **production** environment.
+-   **Mocked**: None.
+-   **Health**: **CRITICAL**. The application is live but a P0 data bug makes its primary features unusable and unprofessional.
 
 **3rd Party Integrations**
--   **OpenAI GPT-4o**: Used for all AI features via the  library with the .
--   **Resend**: Used for sending emails.
--   **FattureInCloud**: Active and core integration for SDI (Italian electronic invoicing), managed via a custom service at .
--   **Emergent Object Storage**: Used for all file uploads and storage.
--   **WeasyPrint**: Used for PDF generation.
--   : Used for DOCX generation.
--   : Used for backend rate limiting.
+-   **OpenAI GPT-4o**: Used for the Content Engine.
+-   **Resend**: For sending emails.
+-   **FattureInCloud**: Core integration for SDI (Italian electronic invoicing).
+-   **Emergent Object Storage**: For file storage.
+-   **Vercel**: User's production deployment platform (via GitHub integration).
 
 **Testing status**
--   **Testing agent used after significant changes**: YES. The testing agent was used successfully to validate the  refactor, the onboarding flow, the full Output & Delivery pipeline, and the new Demo Mode.
--   **Troubleshoot agent used after agent stuck in loop**: NO.
--   **Test files created**: Test files from previous sessions exist, but no new persistent test files were created in this session.
--   **Known regressions**: None.
+-   **Testing agent used after significant changes**: YES
+-   **Troubleshoot agent used after agent stuck in loop**: NO
+-   **Test files created**: None new.
+-   **Known regressions**: A critical P0 bug regarding incorrect company data in generated documents has resurfaced in the production environment post-deployment.
+
+**Credentials to test flow:**
+-   Not applicable. The agent cannot access the production environment. The user must perform the final test.
 
 **What agent forgot to execute**
--   Nothing. The agent has been extremely thorough, following user priorities, proactively identifying testing gaps (the Validation Sprint), and methodically implementing complex features.</analysis>
+The agent correctly diagnosed the issue as database-related but failed to recognize the environment separation between the Emergent preview platform and the user's Vercel production platform. The fix was applied to the wrong database, leading to the bug's recurrence in production.</analysis>

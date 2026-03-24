@@ -60,8 +60,8 @@ async def _load_commessa_context(commessa_id: str, user_id: str = None) -> dict:
             {"client_id": commessa["client_id"]}, {"_id": 0}
         )
 
-    # Load company info from settings
-    company = await db.settings.find_one({"type": "company"}, {"_id": 0})
+    # Load company info from company_settings (filtered by user_id)
+    company = await db.company_settings.find_one({"user_id": user_id}, {"_id": 0}) or {} if user_id else {}
 
     # Load FPC project if exists
     fpc_project = await db.fpc_projects.find_one(
@@ -144,8 +144,8 @@ async def get_verbale_context(commessa_id: str, user: dict = Depends(get_current
         "client_name": cm.get("client_name", client.get("business_name", "")),
         "client_address": client.get("address", ""),
         "client_email": client.get("email", ""),
-        "company_name": company.get("ragione_sociale", "Steel Project Design"),
-        "company_address": company.get("indirizzo", ""),
+        "company_name": company.get("business_name") or company.get("ragione_sociale", ""),
+        "company_address": company.get("address") or company.get("indirizzo", ""),
         "company_piva": company.get("partita_iva", ""),
         "company_cf": company.get("codice_fiscale", ""),
         "execution_class": fpc.get("fpc_data", {}).get("execution_class", ""),
@@ -328,14 +328,14 @@ async def generate_pdf(commessa_id: str, user: dict = Depends(get_current_user))
     checklist = verbale.get("checklist", {})
 
     exec_class = fpc.get("fpc_data", {}).get("execution_class", "N/A") if fpc else "N/A"
-    company_name = company.get("ragione_sociale", "Steel Project Design") if company else "Steel Project Design"
-    company_addr = company.get("indirizzo", "Via dell'Industria - Bologna") if company else ""
+    company_name = company.get("business_name") or company.get("ragione_sociale", "") if company else ""
+    company_addr = company.get("address") or company.get("indirizzo", "") if company else ""
     company_piva = company.get("partita_iva", "") if company else ""
 
-    # Logo aziendale — check both settings collections
+    # Logo aziendale — from company_settings filtered by user_id
     logo_url = company.get("logo_url", "") if company else ""
     if not logo_url:
-        cs = await db.company_settings.find_one({}, {"_id": 0, "logo_url": 1})
+        cs = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0, "logo_url": 1})
         logo_url = cs.get("logo_url", "") if cs else ""
     if logo_url and logo_url.startswith("data:image"):
         logo_html = f'<img src="{logo_url}" style="max-height:50px;max-width:180px;object-fit:contain;" />'
@@ -438,7 +438,7 @@ async def generate_pdf(commessa_id: str, user: dict = Depends(get_current_user))
 {sig_html}
 
 <div class="footer">
-    Documento generato da NormaFacile 2.0 — Steel Project Design — {today_str}
+    Documento generato da NormaFacile 2.0 — {company_name} — {today_str}
 </div>
 
 <!-- APPENDICE: LOTTI -->
