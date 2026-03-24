@@ -37,6 +37,7 @@ Francesco Spano' — Steel Project Design Srls
 7. **Mini-hardening SDI/FiC** — retry automatico (3 tentativi, backoff esponenziale), classificazione errori (auth/validation/transient/etc.), idempotency key anti doppio invio, logging strutturato
 8. **System Health Widget** — endpoint `/api/dashboard/system-health` + componente `SystemHealthWidget.js` integrato nella Dashboard. Mostra: conteggi DB, stato azienda, attività outbound, warnings integrità dati
 9. **Outbound Audit Log completo** — `log_outbound` aggiunto ai 4 moduli mancanti: sopralluogo (email_perizia), ddt (email_ddt), conto_lavoro (email_conto_lavoro), preventivi (email_preventivo). Tutti i moduli email ora tracciano nel `outbound_audit_log`
+10. **Bug Fix: NC lines non persistenti** — Le Note di Credito ora salvano correttamente le modifiche alle righe anche quando lo status non è "bozza" (es. inviata_sdi, emessa). Fix applicato sia al frontend (handleSave invia le righe per NC) che al backend (NC escluse dal blocco modifiche strutturali)
 
 ### Feature completate (sessioni precedenti)
 - Content Engine (M1+M2)
