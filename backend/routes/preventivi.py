@@ -1466,6 +1466,10 @@ async def send_preventivo_email(prev_id: str, payload: dict = None, user: dict =
         }}
     )
 
+    from services.outbound_audit import log_outbound
+    await log_outbound(user["user_id"], "email_preventivo", ", ".join(all_recipients),
+                      {"preventivo_id": prev_id, "document_number": prev_number}, status="sent")
+
     return {"message": f"Preventivo inviato via email a {', '.join(all_recipients)}", "to": to_email, "cc": cc_list}
 
 

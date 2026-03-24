@@ -484,6 +484,10 @@ Cordiali saluti,
     )
     await db[COLL].update_one({"commessa_id": cid}, push_event(cid, "CL_EMAIL_INVIATA", user, f"DDT C/L inviato a {supplier_email}"))
 
+    from services.outbound_audit import log_outbound
+    await log_outbound(user["user_id"], "email_conto_lavoro", supplier_email,
+                      {"commessa_id": cid, "cl_id": cl_id}, status="sent")
+
     return {"message": f"DDT inviato a {supplier_email}"}
 
 

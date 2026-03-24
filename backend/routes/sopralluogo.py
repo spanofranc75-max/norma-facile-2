@@ -647,6 +647,14 @@ async def invia_perizia_email(
                 "email_subject": subject,
             }},
         )
+
+        from services.outbound_audit import log_outbound
+        await log_outbound(user["user_id"], "email_perizia", client_email,
+                          {"sopralluogo_id": sopralluogo_id, "subject": subject}, status="sent")
+
         return {"message": f"Perizia inviata a {client_email}", "email": client_email}
     else:
+        from services.outbound_audit import log_outbound
+        await log_outbound(user["user_id"], "email_perizia", client_email,
+                          {"sopralluogo_id": sopralluogo_id, "subject": subject}, status="failed", error="Invio fallito")
         raise HTTPException(500, "Errore nell'invio email. Verifica la configurazione del servizio email (Resend).")

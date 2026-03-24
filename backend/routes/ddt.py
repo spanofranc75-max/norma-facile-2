@@ -549,8 +549,11 @@ async def send_ddt_email(ddt_id: str, payload: dict = None, user: dict = Depends
         }}
     )
 
-    return {"message": f"DDT inviato via email a {', '.join(all_recipients)}", "to": to_email, "cc": cc_list}
+    from services.outbound_audit import log_outbound
+    await log_outbound(user["user_id"], "email_ddt", ", ".join(all_recipients),
+                      {"ddt_id": ddt_id, "ddt_number": ddt_number}, status="sent")
 
+    return {"message": f"DDT inviato via email a {', '.join(all_recipients)}", "to": to_email, "cc": cc_list}
 
 
 # ── Convert DDT to Invoice ──

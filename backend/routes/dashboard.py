@@ -143,6 +143,92 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
     }
 
 
+@router.get("/system-health")
+async def get_system_health(user: dict = Depends(get_current_user)):
+    """System integrity check — shows DB health, data consistency, recent audit activity."""
+    uid = user["user_id"]
+    now = datetime.now(timezone.utc)
+    last_24h = now - timedelta(hours=24)
+    last_7d = now - timedelta(days=7)
+
+    # DB collections status
+    collections = await db.list_collection_names()
+
+    # Key counts
+    invoices_count = await db.invoices.count_documents({"user_id": uid})
+    preventivi_count = await db.preventivi.count_documents({"user_id": uid})
+    commesse_count = await db.commesse.count_documents({"user_id": uid})
+    clients_count = await db.clients.count_documents({"user_id": uid})
+
+    # Company settings check
+    company = await db.company_settings.find_one({"user_id": uid}, {"_id": 0, "business_name": 1, "partita_iva": 1, "updated_at": 1})
+    company_ok = bool(company and company.get("business_name") and company.get("partita_iva"))
+
+    # Recent outbound activity
+    outbound_24h = await db.outbound_audit_log.count_documents({"user_id": uid, "timestamp": {"$gte": last_24h}})
+    outbound_7d = await db.outbound_audit_log.count_documents({"user_id": uid, "timestamp": {"$gte": last_7d}})
+
+    # Last outbound action
+    last_action = await db.outbound_audit_log.find_one(
+        {"user_id": uid}, {"_id": 0, "action_type": 1, "recipient": 1, "timestamp": 1, "status": 1}
+    )
+
+    # Company settings audit (last change)
+    last_cs_change = await db.company_settings_audit.find_one(
+        {"user_id": uid}, {"_id": 0, "action": 1, "timestamp": 1, "after": 1}
+    )
+
+    # Data integrity checks
+    warnings = []
+    if not company_ok:
+        warnings.append("Impostazioni aziendali incomplete — controlla P.IVA e ragione sociale")
+
+    # Check for invoices without tax_settings
+    bad_invoices = await db.invoices.count_documents({"user_id": uid, "tax_settings": {"$exists": False}})
+    if bad_invoices > 0:
+        warnings.append(f"{bad_invoices} fatture senza impostazioni fiscali")
+
+    # Check for invoices without payment_method
+    bad_pm = await db.invoices.count_documents({"user_id": uid, "$or": [{"payment_method": ""}, {"payment_method": None}]})
+    if bad_pm > 0:
+        warnings.append(f"{bad_pm} fatture senza metodo di pagamento")
+
+    return {
+        "check_timestamp": now.isoformat(),
+        "status": "ok" if not warnings else "warning",
+        "data_counts": {
+            "fatture": invoices_count,
+            "preventivi": preventivi_count,
+            "commesse": commesse_count,
+            "clienti": clients_count,
+            "collezioni_db": len(collections),
+        },
+        "company_settings": {
+            "complete": company_ok,
+            "business_name": company.get("business_name") if company else None,
+            "partita_iva": company.get("partita_iva") if company else None,
+            "last_updated": str(company.get("updated_at")) if company and company.get("updated_at") else None,
+        },
+        "outbound_activity": {
+            "last_24h": outbound_24h,
+            "last_7d": outbound_7d,
+            "last_action": {
+                "type": last_action.get("action_type") if last_action else None,
+                "recipient": last_action.get("recipient") if last_action else None,
+                "timestamp": str(last_action.get("timestamp")) if last_action else None,
+                "status": last_action.get("status") if last_action else None,
+            } if last_action else None,
+        },
+        "last_settings_change": {
+            "action": last_cs_change.get("action") if last_cs_change else None,
+            "timestamp": str(last_cs_change.get("timestamp")) if last_cs_change else None,
+            "business_name": (last_cs_change.get("after", {}) or {}).get("business_name") if last_cs_change else None,
+        } if last_cs_change else None,
+        "warnings": warnings,
+    }
+
+
+
 @router.get("/compliance-docs")
 async def get_compliance_docs_status(user: dict = Depends(get_current_user)):
     """Stato conformita documenti aziendali + allegati POS con previsione 30 giorni."""
