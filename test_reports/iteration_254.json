@@ -1,0 +1,85 @@
+{
+  "summary": "Iteration 254 — SystemHealthWidget integration and Outbound Audit Log verification complete. All 8 test cases passed. Backend: GET /api/dashboard/system-health returns correct data structure with data_counts, company_settings, outbound_activity, warnings fields. Frontend: SystemHealthWidget renders on Dashboard after login with 'Stato Sistema' header, displays fatture/preventivi/commesse/invii 7gg stats, refresh button works. Code inspection confirms log_outbound calls with correct action_types in all 4 route files.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration254_system_health.py",
+    "/app/test_reports/iteration_254.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration254_system_health.py"
+  ],
+  "success_rate": {
+    "backend": "100% (7/7 pytest tests passed)",
+    "frontend": "100% (All UI elements verified)"
+  },
+  "seed_data_creation": "Used existing demo data",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "SystemHealthWidget is integrated into Dashboard.js at line 225, after IntegrityWidget. The widget loads data from GET /api/dashboard/system-health which requires authentication. Outbound audit logging is implemented in sopralluogo.py (email_perizia), ddt.py (email_ddt), conto_lavoro.py (email_conto_lavoro), and preventivi.py (email_preventivo). All log_outbound calls write to 'outbound_audit_log' collection.",
+  "tests_performed": {
+    "backend_api": {
+      "system_health_requires_auth": "PASS - Returns 401 without auth token",
+      "system_health_with_demo_auth": "PASS - Returns 200 with correct data structure",
+      "data_counts_fields": "PASS - Contains fatture, preventivi, commesse, clienti, collezioni_db",
+      "company_settings_fields": "PASS - Contains complete, business_name, partita_iva, last_updated",
+      "outbound_activity_fields": "PASS - Contains last_24h, last_7d, last_action",
+      "warnings_field": "PASS - Array of warning strings"
+    },
+    "outbound_audit_code_inspection": {
+      "sopralluogo_log_outbound": "PASS - Line 651-652: log_outbound with action_type 'email_perizia'",
+      "ddt_log_outbound": "PASS - Line 552-554: log_outbound with action_type 'email_ddt'",
+      "conto_lavoro_log_outbound": "PASS - Line 487-489: log_outbound with action_type 'email_conto_lavoro'",
+      "preventivi_log_outbound": "PASS - Line 1469-1471: log_outbound with action_type 'email_preventivo'"
+    },
+    "outbound_audit_service": {
+      "service_exists": "PASS - /app/backend/services/outbound_audit.py exists",
+      "log_outbound_function": "PASS - async def log_outbound() with user_id, action_type, recipient, status params",
+      "collection_name": "PASS - Uses 'outbound_audit_log' collection"
+    },
+    "frontend_ui": {
+      "dashboard_loads": "PASS - data-testid='workshop-dashboard' visible after demo login",
+      "system_health_widget_rendered": "PASS - data-testid='system-health-widget' visible on Dashboard",
+      "stato_sistema_header": "PASS - 'Stato Sistema' header displayed",
+      "fatture_stat": "PASS - 'Fatture' stat displayed with count (1)",
+      "preventivi_stat": "PASS - 'Preventivi' stat displayed with count (3)",
+      "commesse_stat": "PASS - 'Commesse' stat displayed with count (3)",
+      "invii_7gg_stat": "PASS - 'Invii 7gg' stat displayed with count (0)",
+      "company_info": "PASS - 'Azienda: Carpenteria Metallica Rossi S.r.l.' displayed",
+      "refresh_button": "PASS - data-testid='btn-refresh-health' clickable"
+    }
+  },
+  "features_verified": [
+    "1. GET /api/dashboard/system-health returns 401 without authentication",
+    "2. GET /api/dashboard/system-health returns correct data structure with demo auth",
+    "3. Response contains data_counts with fatture, preventivi, commesse counts",
+    "4. Response contains company_settings with complete status and business_name",
+    "5. Response contains outbound_activity with last_7d and last_24h counts",
+    "6. Response contains warnings array",
+    "7. SystemHealthWidget component renders on Dashboard page after login",
+    "8. Widget displays 'Stato Sistema' header",
+    "9. Widget displays fatture count",
+    "10. Widget displays preventivi count",
+    "11. Widget displays commesse count",
+    "12. Widget displays invii 7gg (outbound activity last 7 days)",
+    "13. Widget displays company info (Azienda name)",
+    "14. Refresh button (data-testid='btn-refresh-health') works",
+    "15. sopralluogo.py has log_outbound call with action_type 'email_perizia'",
+    "16. ddt.py has log_outbound call with action_type 'email_ddt'",
+    "17. conto_lavoro.py has log_outbound call with action_type 'email_conto_lavoro'",
+    "18. preventivi.py has log_outbound call with action_type 'email_preventivo'"
+  ],
+  "test_credentials_used": {
+    "demo_session": "session_token=demo_session_token_normafacile",
+    "demo_user": "Marco Rossi (demo@normafacile.it)"
+  }
+}

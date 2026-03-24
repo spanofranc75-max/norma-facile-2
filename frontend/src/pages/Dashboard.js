@@ -24,6 +24,7 @@ import ComplianceWidget from '../components/ComplianceWidget';
 import ComplianceDocsWidget from '../components/ComplianceDocsWidget';
 import OnboardingChecklist from '../components/OnboardingChecklist';
 import IntegrityWidget from '../components/IntegrityWidget';
+import SystemHealthWidget from '../components/dashboard/SystemHealthWidget';
 
 const formatCurrency = (v) =>
     new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(v || 0);
@@ -221,6 +222,7 @@ export default function Dashboard() {
 
                 {/* Semaforo Commesse */}
                 {currentUser?.role === 'admin' && <IntegrityWidget />}
+                <SystemHealthWidget />
                 {semaforo && semaforo.total > 0 && (
                     <Card className="border-gray-200" data-testid="widget-semaforo">
                         <CardHeader className="bg-slate-50 border-b border-gray-200 py-3 px-5">
