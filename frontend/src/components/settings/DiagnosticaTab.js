@@ -128,6 +128,27 @@ export default function DiagnosticaTab() {
                             </p>
                         </div>
                     )}
+
+                    {/* Audit Log */}
+                    {diagnostics.recent_audit_log?.length > 0 && (
+                        <div className="bg-white border rounded-lg p-4 space-y-3">
+                            <h4 className="font-semibold text-slate-800">Ultime modifiche (audit log)</h4>
+                            {diagnostics.recent_audit_log.map((entry, i) => (
+                                <div key={i} className="border-l-2 border-blue-300 pl-3 text-sm space-y-1">
+                                    <div className="flex justify-between">
+                                        <span className="font-medium text-slate-700">{entry.action === 'create' ? 'Creazione' : 'Modifica'}</span>
+                                        <span className="text-slate-400 text-xs">{entry.timestamp}</span>
+                                    </div>
+                                    {entry.changed_fields?.length > 0 && (
+                                        <p className="text-slate-600">Campi modificati: <code className="bg-slate-100 px-1 rounded text-xs">{entry.changed_fields.join(', ')}</code></p>
+                                    )}
+                                    {entry.before && (
+                                        <p className="text-slate-500 text-xs">Prima: {entry.before.business_name || '(vuoto)'} | Dopo: {entry.after?.business_name || '(vuoto)'}</p>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

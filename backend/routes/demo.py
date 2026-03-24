@@ -20,13 +20,26 @@ async def _is_demo_user(user_id: str) -> bool:
 
 @router.post("/reset")
 async def reset_demo_data(user: dict = Depends(get_current_user)):
-    """Reset all demo data to initial state. Admin only."""
+    """Reset all demo data to initial state. Admin only.
+    SEED GUARD: Only touches documents with user_id == DEMO_USER_ID.
+    Will never write to or delete real user data."""
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Solo admin")
 
     from scripts.demo_seed_data import get_all_demo_collections, DEMO_USER_ID
 
-    # Delete all existing demo data
+    # ── SEED GUARD: verify all seed docs are for demo_user only ──
+    seed = get_all_demo_collections()
+    for coll_name, docs in seed.items():
+        for doc in docs:
+            if doc.get("user_id") and doc["user_id"] != DEMO_USER_ID:
+                logger.error(f"[SEED GUARD] BLOCKED: seed doc in {coll_name} has user_id='{doc['user_id']}' (expected '{DEMO_USER_ID}')")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Seed guard: trovato user_id non-demo in {coll_name}. Reset bloccato."
+                )
+
+    # Delete ONLY demo data (strict filter)
     collections_cleaned = 0
     for coll_name in await db.list_collection_names():
         result = await db[coll_name].delete_many({"user_id": DEMO_USER_ID})
@@ -34,12 +47,10 @@ async def reset_demo_data(user: dict = Depends(get_current_user)):
             collections_cleaned += 1
             logger.info(f"Demo reset: deleted {result.deleted_count} docs from {coll_name}")
 
-    # Also clean demo sessions
     await db.user_sessions.delete_many({"user_id": DEMO_USER_ID})
     await db.onboarding.delete_many({"user_id": DEMO_USER_ID})
 
     # Re-seed demo data
-    seed = get_all_demo_collections()
     docs_created = 0
     for coll_name, docs in seed.items():
         if docs:
@@ -57,7 +68,7 @@ async def reset_demo_data(user: dict = Depends(get_current_user)):
         "expires_at": datetime.now(timezone.utc) + timedelta(days=365),
     })
 
-    logger.info(f"Demo data reset complete: {docs_created} docs in {len(seed)} collections")
+    logger.info(f"[SEED GUARD OK] Demo data reset complete: {docs_created} docs in {len(seed)} collections")
 
     return {
         "message": "Demo data reset completato",
