@@ -176,33 +176,63 @@ async def analyze_drawing_materials(page_image_b64: str) -> dict:
 
 def calcola_peso_materiale(materiale: dict) -> float:
     """Calculate weight of a material entry using profile tables."""
-    if materiale.get("peso_stimato_kg") and materiale["peso_stimato_kg"] > 0:
-        return materiale["peso_stimato_kg"] * materiale.get("quantita", 1)
-
     tipo = materiale.get("tipo", "")
-    profilo = (materiale.get("profilo") or "").upper().strip()
+
+    # Conto lavoro: always 0
+    if tipo == "conto_lavoro" or materiale.get("conto_lavoro"):
+        return 0.0
+
+    # If AI already estimated and type is not calculable, trust it (but DON'T multiply by qty again if AI already included it)
     lunghezza_mm = materiale.get("lunghezza_mm", 0) or 0
     quantita = materiale.get("quantita", 1) or 1
     spessore_mm = materiale.get("spessore_mm", 0) or 0
     larghezza_mm = materiale.get("larghezza_mm", 0) or 0
+    profilo = (materiale.get("profilo") or "").upper().strip()
 
-    if tipo == "profilo" and profilo:
+    # Profili standard (IPE, HEA, HEB, UPN, tubo, etc.)
+    if tipo in ("profilo", "tubo") and profilo:
         kg_m = PESO_PROFILI_KG_M.get(profilo, 0)
         if kg_m > 0 and lunghezza_mm > 0:
             return round(kg_m * (lunghezza_mm / 1000) * quantita, 1)
 
+    # Piastre e lamiere (volume × densità acciaio)
     if tipo in ("piastra", "lamiera") and spessore_mm > 0 and larghezza_mm > 0 and lunghezza_mm > 0:
         volume_cm3 = (lunghezza_mm / 10) * (larghezza_mm / 10) * (spessore_mm / 10)
         peso_kg = volume_cm3 * 7.85 / 1000  # densita acciaio
         return round(peso_kg * quantita, 1)
 
-    if tipo == "tubo" and profilo:
-        kg_m = PESO_PROFILI_KG_M.get(profilo, 0)
-        if kg_m > 0 and lunghezza_mm > 0:
-            return round(kg_m * (lunghezza_mm / 1000) * quantita, 1)
+    # Grigliato, grate, griglie — calcolo per superficie (kg/m²)
+    if tipo in ("grigliato", "grata", "griglia"):
+        l_m = lunghezza_mm / 1000
+        w_m = (larghezza_mm or spessore_mm) / 1000
+        if l_m > 0 and w_m > 0:
+            peso_m2 = _peso_grigliato_per_maglia(profilo or materiale.get("descrizione", ""))
+            return round(l_m * w_m * quantita * peso_m2, 1)
 
     # Fallback from AI estimate
-    return round((materiale.get("peso_stimato_kg", 0) or 0) * quantita, 1)
+    return round((materiale.get("peso_stimato_kg", 0) or 0), 1)
+
+
+# Tabella pesi grigliato elettrosaldato (kg/m²) per tipo maglia
+PESO_GRIGLIATO_KG_M2 = {
+    "30x100/20x2": 12.5,
+    "34x38/25x2": 19.8,
+    "63x132/25x2": 15.3,
+    "34x38/30x3": 29.6,
+    "34x100/25x2": 16.8,
+}
+PESO_GRIGLIATO_DEFAULT = 16.0
+
+
+def _peso_grigliato_per_maglia(testo: str) -> float:
+    """Trova il peso kg/m² corrispondente alla maglia nel testo."""
+    if not testo:
+        return PESO_GRIGLIATO_DEFAULT
+    t = testo.lower().replace(" ", "")
+    for key, val in PESO_GRIGLIATO_KG_M2.items():
+        if key.replace(" ", "") in t:
+            return val
+    return PESO_GRIGLIATO_DEFAULT
 
 
 # ══════════════════════════════════════════════════════════════

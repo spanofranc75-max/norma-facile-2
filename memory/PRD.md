@@ -47,6 +47,7 @@ Francesco Spano' — Steel Project Design Srls
 17. **Fix Analisi AI pesi a zero** — Aggiunto endpoint `POST /api/preventivatore/analizza-righe` che usa GPT-4o per estrarre profili e pesi dalle descrizioni testuali delle righe preventivo. AnalisiAIPage ora chiama l'AI al caricamento invece di usare solo regex locale. Aggiunto pulsante "Ricalcola AI".
 18. **Deploy in produzione** — Codice deployato su `app.1090normafacile.it` con tutti i fix recenti.
 19. **Migrazione Snapshot eseguita** — 27 documenti aggiornati, 52 gia completi. Widget MigrationWidget aggiunto alla Dashboard + endpoint GET `/api/admin/migration/run-snapshot` per esecuzione via browser.
+20. **Fix Analisi AI 4 errori critici** — (a) Grigliato: aggiunta tabella pesi kg/m2 e calcolo per superficie (13.722→882 kg), (b) Conto lavoro: riconosciuto e escluso dai costi, (c) Specchiature: estrazione dimensioni LxxxxHxxxx (0→682 kg), (d) Manodopera: estrazione ore dal prompt AI.
 
 ### Feature completate (sessioni precedenti)
 - Content Engine (M1+M2)

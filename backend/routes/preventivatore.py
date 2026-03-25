@@ -101,23 +101,46 @@ async def analizza_righe_preventivo(
         for i, ln in enumerate(data.lines)
     )
 
-    system = """Sei un ingegnere strutturista esperto in carpenteria metallica.
-Analizzi le righe di un preventivo e per ciascuna estrai:
-- tipo: "profilo", "piastra", "bulloneria", "manodopera", "zincatura", "accessori", "trasporto", "altro"
-- profilo: profilo standard se riconoscibile (es. "IPE 200", "HEA 160", "TUBO 100x100x4"). Null se non applicabile.
-- materiale: tipo acciaio (es. "S275JR", "S355JR"). Default "S275JR" se non specificato.
-- lunghezza_mm: lunghezza stimata in mm. Per strutture senza lunghezza esplicita, stima dal contesto e dal prezzo.
-- quantita: numero pezzi (dalla riga o stimato)
-- peso_stimato_kg: peso TOTALE stimato in kg per questa riga (quantita * peso_unitario_kg)
+    system = """Sei un ingegnere strutturista esperto in carpenteria metallica italiana.
+Analizzi le righe di un preventivo e per ciascuna estrai dati strutturati.
+
+CAMPI DA ESTRARRE per ogni riga:
+- tipo: "profilo"|"piastra"|"grigliato"|"bulloneria"|"manodopera"|"zincatura"|"conto_lavoro"|"accessori"|"trasporto"|"altro"
+- profilo: profilo standard (es. "IPE 200", "HEA 160", "TUBO 100x100x4") o maglia grigliato (es. "63x132/25x2"). Null se non applicabile.
+- materiale: tipo acciaio ("S275JR", "S355JR"). Default "S275JR".
+- lunghezza_mm: lunghezza in millimetri. Per grigliato = dimensione L.
+- larghezza_mm: per piastre/grigliato = dimensione H o W.
+- quantita: numero pezzi dalla riga.
+- peso_stimato_kg: peso TOTALE per questa riga. Per grigliato usa kg/m2, NON densita acciaio pieno.
 - spessore_mm: per piastre/lamiere. Null altrimenti.
-- larghezza_mm: per piastre/lamiere. Null altrimenti.
+- conto_lavoro: true se materiale fornito dal cliente, false altrimenti.
+- ore_stimate: solo per manodopera — ore di lavoro stimate.
 - tipologia_struttura: "leggera"|"media"|"complessa"|"speciale" (valutazione globale)
 
-REGOLE:
-- STIMA il peso in modo realistico basandoti sul prezzo: in Italia, acciaio S275JR grezzo costa ~1.10-1.50 EUR/kg, lavorato ~2.50-4.00 EUR/kg per carpenteria media.
-- Se il prezzo unitario è alto (>20000 EUR), probabilmente include materiale+lavorazione. Stima il peso dal rapporto prezzo/EUR_per_kg tipico.
-- Per manodopera, zincatura, trasporto: peso_stimato_kg = 0
-- Per accessori/minuteria: stima un peso forfettario ragionevole (es. 50-200 kg per una commessa media)
+REGOLE CRITICHE:
+
+1. GRIGLIATO/GRATE/GRIGLIA:
+   - Tipo = "grigliato" per grate, grigliato elettrosaldato, pannelli grigliato, specchiature in grigliato
+   - Dimensioni in formato "LxxxxHxxxx", "L xxxx H xxxx", "Lxxxx×Hxxxx", "xxxxmm × xxxxmm", "xxxx x xxxx": estrarre come lunghezza_mm e larghezza_mm
+   - Se ci sono PIU specchiature/pannelli con dimensioni diverse nella stessa riga (es. "L2230xH2150, L4600xH2150, L5500xH2150"), crea UNA SOLA entry dove lunghezza_mm e larghezza_mm rappresentano la SOMMA delle aree. Calcola area_totale_m2 e peso = area * kg_m2.
+   - Pesi per m2: maglia 63x132/25x2 = 15.3 kg/m2, maglia 34x38/25x2 = 19.8 kg/m2, maglia 30x100/20x2 = 12.5 kg/m2, default = 16 kg/m2
+   - NON usare la densita dell'acciaio pieno (7850 kg/m3) per il grigliato!
+   - Formula: peso = somma(L_mm/1000 * H_mm/1000) * quantita * peso_kg_m2
+
+2. CONTO LAVORO:
+   - Se la descrizione contiene "conto lavoro", "fornito dal cliente", "a cura di", "fornitura cliente", "fornite in conto lavoro":
+   - Tipo = "conto_lavoro", peso_stimato_kg = 0, conto_lavoro = true
+   - Questi materiali NON hanno costo di acquisto (sono forniti dal cliente)
+
+3. MANODOPERA:
+   - Se la riga contiene "manodopera", "lavorazione", "montaggio", "posa in opera":
+   - Tipo = "manodopera", peso_stimato_kg = 0
+   - ore_stimate = quantita se l'unita di misura e ore, altrimenti stima ore = importo_totale / 35 (tariffa media)
+
+4. PESI GENERALI:
+   - Per profili standard (IPE, HEA, HEB, UPN): usa peso_lineare_kg_m * lunghezza_m * quantita
+   - Per acciaio lavorato generico: stima ~2.50-4.00 EUR/kg
+   - Per zincatura/trasporto: peso_stimato_kg = 0
 
 Rispondi SOLO con JSON valido:
 {
@@ -125,18 +148,20 @@ Rispondi SOLO con JSON valido:
   "materiali": [
     {
       "riga_originale": 1,
-      "tipo": "profilo",
-      "profilo": "IPE 200",
+      "tipo": "grigliato",
+      "profilo": "63x132/25x2",
       "materiale": "S275JR",
-      "lunghezza_mm": 6000,
-      "quantita": 4,
+      "lunghezza_mm": 1892,
+      "larghezza_mm": 6100,
+      "quantita": 5,
       "spessore_mm": null,
-      "larghezza_mm": null,
-      "peso_stimato_kg": 537.6,
-      "descrizione": "Trave principale IPE 200"
+      "peso_stimato_kg": 883.5,
+      "conto_lavoro": false,
+      "ore_stimate": null,
+      "descrizione": "Pannelli grigliato 63x132/25x2"
     }
   ],
-  "peso_totale_stimato_kg": 1234.5,
+  "peso_totale_stimato_kg": 883.5,
   "note_analisi": "..."
 }"""
 
@@ -169,11 +194,17 @@ Rispondi SOLO con JSON valido:
     materiali = result.get("materiali", [])
     peso_totale = 0
     for m in materiali:
+        # Conto lavoro: always 0 weight and 0 cost
+        if m.get("conto_lavoro") or m.get("tipo") == "conto_lavoro":
+            m["peso_calcolato_kg"] = 0
+            m["conto_lavoro"] = True
+            continue
+
         peso = calcola_peso_materiale(m)
         if peso > 0:
             m["peso_calcolato_kg"] = peso
         else:
-            m["peso_calcolato_kg"] = m.get("peso_stimato_kg", 0)
+            m["peso_calcolato_kg"] = m.get("peso_stimato_kg", 0) or 0
         peso_totale += m["peso_calcolato_kg"]
 
     result["peso_totale_calcolato_kg"] = round(peso_totale, 1)
