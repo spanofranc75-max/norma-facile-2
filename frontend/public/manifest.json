@@ -1,0 +1,26 @@
+{
+  "short_name": "NormaFacile",
+  "name": "1090 Norma Facile",
+  "description": "CRM/ERP per Carpenteria Metallica - Gestione preventivi, fatture, commesse e certificazioni EN 1090",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "theme_color": "#0A1628",
+  "background_color": "#0A1628",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "it-IT"
+}
