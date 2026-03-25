@@ -34,6 +34,7 @@ COMMON_CSS = """
 @page {
     size: A4;
     margin: 15mm 18mm 18mm 18mm;
+    background: white;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -41,6 +42,7 @@ body {
     font-size: 9pt;
     color: #111;
     line-height: 1.35;
+    background-color: #ffffff;
 }
 .page-break { page-break-before: always; }
 
@@ -327,41 +329,41 @@ body {
 
 /* ── CONDITIONS (PAGE 2) ── */
 .conditions-title {
-    font-size: 11pt;
+    font-size: 10pt;
     font-weight: bold;
     text-align: center;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     text-transform: uppercase;
     color: #111;
 }
 .conditions-text {
-    font-size: 7.5pt;
-    line-height: 1.45;
+    font-size: 7pt;
+    line-height: 1.3;
     text-align: justify;
     color: #222;
 }
-.acceptance-section { margin-top: 30px; }
-.sig-block { margin: 15px 0; }
+.acceptance-section { margin-top: 14px; }
+.sig-block { margin: 8px 0; }
 .sig-line {
     border-bottom: 1px solid #aaa;
     width: 250px;
-    height: 30px;
-    margin: 4px 0;
+    height: 22px;
+    margin: 3px 0;
 }
-.sig-label { font-size: 7.5pt; color: #444; }
+.sig-label { font-size: 7pt; color: #444; }
 .legal-notice {
-    margin-top: 20px;
-    font-size: 7pt;
-    line-height: 1.4;
+    margin-top: 10px;
+    font-size: 6.5pt;
+    line-height: 1.35;
     border: 1px solid #ddd;
-    padding: 6px 8px;
-    background: #f7f7f7;
+    padding: 5px 7px;
+    background: #ffffff;
     color: #333;
 }
 .doc-footer {
-    margin-top: 40px;
+    margin-top: 14px;
     text-align: right;
-    font-size: 8pt;
+    font-size: 7.5pt;
     color: #555;
 }
 """
@@ -525,12 +527,73 @@ def build_totals_html(iva_data: dict, sconto_globale: float = 0, extra_rows: str
 
 # ── Conditions page builder ─────────────────────────────────────
 
-def build_conditions_html(company: dict, doc_number: str) -> str:
-    """Build the conditions page with acceptance section."""
+def build_conditions_html(company: dict, doc_number: str, preventivo: dict = None) -> str:
+    """Build the conditions page with acceptance section.
+    
+    If `preventivo` is provided, dynamic values (payment, validity, delivery, 
+    company address) replace hardcoded text in the conditions.
+    """
+    import re
     co = company or {}
+    prev = preventivo or {}
     condizioni = (co.get("condizioni_vendita", "") or "").strip().strip('"').strip()
     if not condizioni:
         return ""
+
+    # ── Typo fixes ──
+    condizioni = condizioni.replace("se no nespressamente", "se non espressamente")
+    condizioni = condizioni.replace("materiali incantiere", "materiali in cantiere")
+    condizioni = condizioni.replace("fatto salvonell\u2019area di cantiere nonci sia", "fatto salvo nell\u2019area di cantiere non ci sia")
+    condizioni = condizioni.replace("fatto salvonell'area di cantiere nonci sia", "fatto salvo nell'area di cantiere non ci sia")
+    condizioni = condizioni.replace("Oneri pe reventuali", "Oneri per eventuali")
+
+    # ── Dynamic company address ──
+    co_addr = safe(co.get("address") or "")
+    co_cap = safe(co.get("cap") or "")
+    co_city = safe(co.get("city") or "")
+    co_prov = safe(co.get("province") or "")
+    if co_addr or co_city:
+        full_address_parts = [co_addr]
+        if co_cap:
+            full_address_parts.append(co_cap)
+        if co_city:
+            city_str = co_city
+            if co_prov:
+                city_str += f" ({co_prov})"
+            full_address_parts.append(city_str)
+        dynamic_address = " - ".join(p for p in full_address_parts if p)
+        # Replace known hardcoded addresses
+        condizioni = condizioni.replace("via dei Pioppi n. 11 - 40010 Padulle BO", dynamic_address)
+        condizioni = condizioni.replace("via dei Pioppi n. 11 - 40010 Padulle (BO)", dynamic_address)
+        condizioni = condizioni.replace("via dei Pioppi n.11 - 40010 Padulle BO", dynamic_address)
+
+    # ── Dynamic preventivo values ──
+    if prev:
+        # Payment (punto 2f)
+        payment_label = prev.get("payment_type_label") or ""
+        if payment_label:
+            condizioni = re.sub(
+                r"(Pagamento\s*:\s*)Acconto del 40%[^\n]*",
+                r"\g<1>" + payment_label,
+                condizioni
+            )
+
+        # Validity (punto 2g)
+        validity = prev.get("validity_days") or 30
+        condizioni = re.sub(
+            r"(\d+)\s*giorni dalla data di emissione",
+            f"{validity} giorni dalla data di emissione",
+            condizioni
+        )
+
+        # Delivery (punto 2c)
+        consegna = prev.get("consegna") or ""
+        if consegna:
+            condizioni = re.sub(
+                r"(Consegna\s*:\s*)\d+/\d+\s*giorni dalla data di accettazione",
+                r"\g<1>" + consegna,
+                condizioni
+            )
 
     company_name = safe(co.get("business_name"))
     

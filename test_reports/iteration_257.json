@@ -1,0 +1,83 @@
+{
+  "summary": "Iteration 257 — Preventivo PDF Generation Fixes testing complete. All 23 backend tests passed. Verified: 1) PDF endpoints return valid PDFs, 2) CSS has white background, 3) Conditional CODICE/SCONTI columns logic, 4) build_conditions_html accepts preventivo parameter, 5) Typo fixes applied, 6) Dynamic payment/validity/address replacements work, 7) Title appears exactly once.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration257_preventivo_pdf_fixes.py",
+    "/app/test_reports/pytest/iteration257_preventivo_pdf_fixes_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration257_preventivo_pdf_fixes.py"
+  ],
+  "success_rate": {
+    "backend": "100% (23/23 pytest tests passed)",
+    "frontend": "N/A (backend only testing requested)"
+  },
+  "seed_data_creation": "Used existing demo preventivi (prev_demo_complete, prev_demo_simple, prev_demo_main)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Preventivo PDF generation fixes verified. Key implementations: 1) COMMON_CSS has @page background: white and body background-color: #ffffff. 2) has_codici/has_sconti logic at lines 1515-1518 in preventivi.py correctly hides columns when empty. 3) build_conditions_html at line 530 in pdf_template.py accepts optional preventivo parameter for dynamic values. 4) Typo fixes at lines 544-548 in pdf_template.py. 5) Dynamic replacements for payment (line 575), validity (line 583), delivery (line 592), and company address (line 566). 6) Title 'PREVENTIVO N.' appears exactly once at line 1659.",
+  "tests_performed": {
+    "TestPDFEndpointsReturnValidPDF": {
+      "test_pdf_endpoint_prev_demo_complete": "PASS - Returns valid PDF with HTTP 200",
+      "test_pdf_endpoint_prev_demo_simple": "PASS - Returns valid PDF with HTTP 200",
+      "test_pdf_endpoint_prev_demo_main": "PASS - Returns valid PDF with HTTP 200"
+    },
+    "TestCSSWhiteBackground": {
+      "test_common_css_page_background_white": "PASS - @page has background: white",
+      "test_common_css_body_background_white": "PASS - body has background-color: #ffffff",
+      "test_no_gray_ivory_background": "PASS - No gray/ivory colors in @page or body"
+    },
+    "TestConditionalColumns": {
+      "test_has_codici_detection_with_codice": "PASS - Correctly detects lines with codice_articolo",
+      "test_has_codici_detection_without_codice": "PASS - Returns False when no codice_articolo",
+      "test_has_sconti_detection_with_discount": "PASS - Correctly detects lines with discounts",
+      "test_has_sconti_detection_without_discount": "PASS - Returns False when no discounts"
+    },
+    "TestBuildConditionsHtml": {
+      "test_build_conditions_accepts_preventivo_parameter": "PASS - Function accepts optional preventivo parameter",
+      "test_typo_fix_se_non_espressamente": "PASS - Typo 'se no nespressamente' -> 'se non espressamente'",
+      "test_typo_fix_materiali_in_cantiere": "PASS - Typo 'materiali incantiere' -> 'materiali in cantiere'",
+      "test_dynamic_payment_replacement": "PASS - Payment label replaced from preventivo",
+      "test_dynamic_validity_replacement": "PASS - Validity days replaced from preventivo",
+      "test_dynamic_company_address_replacement": "PASS - Company address replaces hardcoded address",
+      "test_empty_conditions_returns_empty": "PASS - Empty conditions returns empty string",
+      "test_conditions_without_preventivo": "PASS - Works without preventivo parameter"
+    },
+    "TestPDFTitleNotDuplicated": {
+      "test_title_appears_once_in_code": "PASS - 'PREVENTIVO N.' appears exactly once"
+    },
+    "TestAdditionalTypoFixes": {
+      "test_typo_fix_fatto_salvo": "PASS - Typo 'fatto salvonell'area...' fixed",
+      "test_typo_fix_oneri_per_eventuali": "PASS - Typo 'Oneri pe reventuali' -> 'Oneri per eventuali'"
+    },
+    "TestPDFGenerationIntegration": {
+      "test_get_preventivo_data": "PASS - Can retrieve preventivo data",
+      "test_pdf_generation_does_not_error": "PASS - All demo preventivi generate PDFs successfully"
+    }
+  },
+  "code_verification": {
+    "pdf_template.py": {
+      "COMMON_CSS_line_33": "Verified: @page has background: white, body has background-color: #ffffff",
+      "build_conditions_html_line_530": "Verified: Accepts optional preventivo parameter with default None",
+      "typo_fixes_lines_544_548": "Verified: 5 typo replacements implemented"
+    },
+    "preventivi.py": {
+      "has_codici_line_1515": "Verified: any((ln.get('codice_articolo') or '').strip() for ln in lines)",
+      "has_sconti_line_1516": "Verified: any(float(ln.get('sconto_1') or 0) > 0 or float(ln.get('sconto_2') or 0) > 0 for ln in lines)",
+      "title_line_1659": "Verified: Single occurrence of 'PREVENTIVO N.' in generate_preventivo_pdf"
+    }
+  },
+  "test_credentials_used": {
+    "demo_session": "Cookie: session_token=demo_session_token_normafacile"
+  }
+}

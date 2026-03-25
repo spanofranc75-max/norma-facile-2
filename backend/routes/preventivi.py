@@ -1511,6 +1511,13 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
     # ── Build line items HTML ──
     lines = prev.get("lines", [])
 
+    # ── Conditional columns: hide CODICE/SCONTI if all empty ──
+    has_codici = any((ln.get("codice_articolo") or "").strip() for ln in lines)
+    has_sconti = any(
+        float(ln.get("sconto_1") or 0) > 0 or float(ln.get("sconto_2") or 0) > 0
+        for ln in lines
+    )
+
     # Note box separato stile Invoicex
     note_box_html = ""
     if notes_text or riferimento:
@@ -1545,14 +1552,16 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
         importo = fmt_it(ln.get("line_total", 0))
         iva = safe(str(ln.get("vat_rate", "22")))
 
-        lines_html += f"""<tr>
-            <td class="tc">{codice}</td>
-            <td class="desc-cell">{desc}</td>
+        lines_html += "<tr>"
+        if has_codici:
+            lines_html += f'<td class="tc">{codice}</td>'
+        lines_html += f"""<td class="desc-cell">{desc}</td>
             <td class="tc">{um}</td>
             <td class="tr">{qty}</td>
-            <td class="tr">{price}</td>
-            <td class="tc">{sc}</td>
-            <td class="tr">{importo}</td>
+            <td class="tr">{price}</td>"""
+        if has_sconti:
+            lines_html += f'<td class="tc">{sc}</td>'
+        lines_html += f"""<td class="tr">{importo}</td>
             <td class="tc">{iva}%</td>
         </tr>"""
 
@@ -1599,7 +1608,7 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
             co["condizioni_vendita"] = _cond_raw
         except Exception:
             pass
-    condizioni_html = build_conditions_html(co, doc_number)
+    condizioni_html = build_conditions_html(co, doc_number, prev)
 
     # CUP / CIG / CUC
     cup = safe(prev.get("cup") or "")
@@ -1616,6 +1625,33 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
     if codes_parts:
         codes_html = f'<p class="ref-note">{"&nbsp;&nbsp;&nbsp;&nbsp;".join(codes_parts)}</p>'
 
+    # ── Colgroup and headers based on conditional columns ──
+    colgroup_parts = []
+    header_parts = []
+    if has_codici:
+        colgroup_parts.append('<col style="width:8%">')
+        header_parts.append("<th>Codice</th>")
+    # Description gets more width when columns are hidden
+    desc_width = 38
+    if not has_codici:
+        desc_width += 8
+    if not has_sconti:
+        desc_width += 8
+    colgroup_parts.append(f'<col style="width:{desc_width}%">')
+    colgroup_parts.append('<col style="width:6%">')   # u.m.
+    colgroup_parts.append('<col style="width:8%">')    # qty
+    colgroup_parts.append('<col style="width:12%">')   # price
+    if has_sconti:
+        colgroup_parts.append('<col style="width:8%">')
+        header_parts_sconti = "<th>Sconti</th>"
+    else:
+        header_parts_sconti = ""
+    colgroup_parts.append('<col style="width:12%">')   # importo
+    colgroup_parts.append('<col style="width:8%">')    # iva
+
+    colgroup_html = "\n            ".join(colgroup_parts)
+    codice_th = "<th>Codice</th>" if has_codici else ""
+
     # ── Assemble ──
     body = f"""
     {header}
@@ -1623,7 +1659,6 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
         <h1>PREVENTIVO N. {safe(display_num)}</h1>
     </div>
     <table class="meta-table">
-        <tr><td class="meta-label" style="font-weight:bold;font-size:11pt;">PREVENTIVO N.</td><td style="font-weight:bold;font-size:11pt;">{safe(display_num)}</td></tr>
         <tr><td class="meta-label">DATA:</td><td>{doc_date}</td></tr>
         <tr><td class="meta-label">Pagamento:</td><td>{payment_label}</td></tr>
         <tr><td class="meta-label">Validit&agrave;:</td><td>{validity} giorni</td></tr>
@@ -1637,13 +1672,11 @@ def generate_preventivo_pdf(prev: dict, company: dict, client: dict, payment_typ
     {note_box_html}
     <table class="items-table">
         <colgroup>
-            <col style="width:8%"><col style="width:38%"><col style="width:6%">
-            <col style="width:8%"><col style="width:12%"><col style="width:8%">
-            <col style="width:12%"><col style="width:8%">
+            {colgroup_html}
         </colgroup>
         <thead><tr>
-            <th>Codice</th><th>Descrizione</th><th>u.m.</th>
-            <th>Quantit&agrave;</th><th>Prezzo</th><th>Sconti</th>
+            {codice_th}<th>Descrizione</th><th>u.m.</th>
+            <th>Quantit&agrave;</th><th>Prezzo</th>{header_parts_sconti}
             <th>Importo</th><th>Iva</th>
         </tr></thead>
         <tbody>{lines_html}</tbody>
