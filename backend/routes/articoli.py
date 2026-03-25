@@ -87,7 +87,7 @@ async def list_articoli(
     user: dict = Depends(get_current_user)
 ):
     """List articoli with optional search and category filter."""
-    query = {"user_id": user["user_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     if categoria:
         query["categoria"] = categoria.value
     if q:
@@ -112,7 +112,7 @@ async def search_articoli(
 ):
     """Fast search for autocomplete in invoice editor."""
     query = {
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "$or": [
             {"codice": {"$regex": q, "$options": "i"}},
             {"descrizione": {"$regex": q, "$options": "i"}},
@@ -135,7 +135,7 @@ async def get_articolo(
 ):
     """Get single articolo."""
     item = await db.articoli.find_one(
-        {"articolo_id": articolo_id, "user_id": user["user_id"]},
+        {"articolo_id": articolo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not item:
@@ -151,7 +151,7 @@ async def create_articolo(
     """Create a new articolo."""
     # Check for duplicate code
     existing = await db.articoli.find_one(
-        {"user_id": user["user_id"], "codice": data.codice},
+        {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "codice": data.codice},
         {"_id": 0}
     )
     if existing:
@@ -160,7 +160,7 @@ async def create_articolo(
     now = datetime.now(timezone.utc)
     doc = {
         "articolo_id": f"art_{uuid.uuid4().hex[:12]}",
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         **data.model_dump(),
         "storico_prezzi": [{"prezzo": data.prezzo_unitario, "data": now.isoformat(), "fonte": "manuale"}],
         "created_at": now,
@@ -179,7 +179,7 @@ async def update_articolo(
 ):
     """Update an articolo."""
     existing = await db.articoli.find_one(
-        {"articolo_id": articolo_id, "user_id": user["user_id"]},
+        {"articolo_id": articolo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not existing:
@@ -198,7 +198,7 @@ async def update_articolo(
     # Check duplicate code
     if "codice" in update_dict and update_dict["codice"] != existing.get("codice"):
         dup = await db.articoli.find_one(
-            {"user_id": user["user_id"], "codice": update_dict["codice"]},
+            {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "codice": update_dict["codice"]},
             {"_id": 0}
         )
         if dup:
@@ -218,7 +218,7 @@ async def delete_articolo(
 ):
     """Delete an articolo."""
     result = await db.articoli.delete_one(
-        {"articolo_id": articolo_id, "user_id": user["user_id"]}
+        {"articolo_id": articolo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     )
     if result.deleted_count == 0:
         raise HTTPException(404, "Articolo non trovato")
@@ -238,7 +238,7 @@ async def bulk_import_articoli(
 
     for item in items:
         existing = await db.articoli.find_one(
-            {"user_id": user["user_id"], "codice": item.codice},
+            {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "codice": item.codice},
             {"_id": 0}
         )
         if existing:
@@ -264,7 +264,7 @@ async def bulk_import_articoli(
         else:
             doc = {
                 "articolo_id": f"art_{uuid.uuid4().hex[:12]}",
-                "user_id": user["user_id"],
+                "user_id": user["user_id"], "tenant_id": user["tenant_id"],
                 **item.model_dump(),
                 "storico_prezzi": [{"prezzo": item.prezzo_unitario, "data": now.isoformat(), "fonte": f"fattura fornitore: {item.fornitore_nome or 'N/A'}"}],
                 "created_at": now,

@@ -17,7 +17,7 @@ async def generate_commessa_qr(commessa_id: str, user: dict = Depends(get_curren
     """Generate a QR code PNG that links to the commessa page."""
     # Verify commessa exists (scoped to user)
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0, "numero": 1, "cliente_nome": 1},
     )
     if not commessa:
@@ -47,7 +47,7 @@ async def generate_commessa_qr(commessa_id: str, user: dict = Depends(get_curren
 async def get_commessa_qr_data(commessa_id: str, user: dict = Depends(get_current_user)):
     """Return the URL and metadata for a commessa QR code (for frontend embedding)."""
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0, "numero": 1, "cliente_nome": 1, "oggetto": 1},
     )
     if not commessa:

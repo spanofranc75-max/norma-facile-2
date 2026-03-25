@@ -54,6 +54,12 @@ async def create_session(user_data: dict, response: Response) -> dict:
                 "updated_at": datetime.now(timezone.utc)
             }}
         )
+        # Backfill tenant_id if missing
+        if not existing_user.get("tenant_id"):
+            await db.users.update_one(
+                {"email": email},
+                {"$set": {"tenant_id": "default"}}
+            )
     else:
         # Check if this email has a pending invite
         invite = await db.team_invites.find_one({"email": email.lower(), "status": "pending"})
@@ -73,6 +79,9 @@ async def create_session(user_data: dict, response: Response) -> dict:
             # Invited user: assign role and link to admin's team
             new_user["role"] = invite["role"]
             new_user["team_owner_id"] = invite["admin_id"]
+            # Inherit tenant_id from inviter
+            inviter = await db.users.find_one({"user_id": invite["admin_id"]}, {"_id": 0})
+            new_user["tenant_id"] = inviter.get("tenant_id", "default") if inviter else "default"
             # Mark invite as accepted
             await db.team_invites.update_one(
                 {"_id": invite["_id"]},
@@ -86,18 +95,24 @@ async def create_session(user_data: dict, response: Response) -> dict:
                 new_user["role"] = "admin"  # First user is always admin
             else:
                 new_user["role"] = "guest"  # Uninvited users are guests
+            new_user["tenant_id"] = "default"
 
         await db.users.insert_one(new_user)
     
+    # Retrieve tenant_id from user (after possible backfill)
+    user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    tenant_id = user_doc.get("tenant_id", "default") if user_doc else "default"
+
     # Create session
     expires_at = datetime.now(timezone.utc) + timedelta(days=settings.session_expire_days)
     
     # Remove old sessions for this user
     await db.user_sessions.delete_many({"user_id": user_id})
     
-    # Create new session
+    # Create new session with tenant_id
     await db.user_sessions.insert_one({
         "user_id": user_id,
+        "tenant_id": tenant_id,
         "session_token": session_token,
         "expires_at": expires_at,
         "created_at": datetime.now(timezone.utc)
@@ -183,7 +198,7 @@ async def create_session_from_google(user_data: dict, response: Response) -> dic
 
 async def verify_session(session_token: str) -> dict:
     """
-    Verify session token and return user data.
+    Verify session token and return user data (includes tenant_id).
     """
     if not session_token:
         raise HTTPException(status_code=401, detail="Token di sessione mancante")
@@ -215,6 +230,10 @@ async def verify_session(session_token: str) -> dict:
     
     if not user:
         raise HTTPException(status_code=401, detail="Utente non trovato")
+    
+    # Ensure tenant_id is always present
+    if "tenant_id" not in user:
+        user["tenant_id"] = session_doc.get("tenant_id", "default")
     
     return user
 
@@ -251,6 +270,8 @@ async def get_current_user(request: Request) -> dict:
                         {"user_id": dl_doc["user_id"]}, {"_id": 0}
                     )
                     if user:
+                        if "tenant_id" not in user:
+                            user["tenant_id"] = "default"
                         return user
             raise HTTPException(status_code=401, detail="Token di download non valido o scaduto")
     

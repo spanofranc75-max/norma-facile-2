@@ -25,6 +25,7 @@ async def ddt_stats(
 ):
     """KPI cards and monthly shipping report for DDT register."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     now = datetime.now(timezone.utc)
     target_year = year or now.year
     target_month = month or now.month
@@ -35,7 +36,7 @@ async def ddt_stats(
     start = datetime(target_year, target_month, 1, tzinfo=timezone.utc)
     end = datetime(target_year, target_month, last_day, 23, 59, 59, tzinfo=timezone.utc)
 
-    base_q = {"user_id": uid}
+    base_q = {"user_id": uid, "tenant_id": tid}
     month_q = {**base_q, "created_at": {"$gte": start, "$lte": end}}
 
     # Total counts
@@ -155,7 +156,7 @@ async def list_ddt(
     per_page: int = Query(50, ge=1, le=200),
     user: dict = Depends(get_current_user),
 ):
-    q = {"user_id": user["user_id"]}
+    q = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     if ddt_type:
         q["ddt_type"] = ddt_type
     if status:
@@ -214,7 +215,7 @@ async def get_causali():
 @router.get("/{ddt_id}")
 async def get_ddt(ddt_id: str, user: dict = Depends(get_current_user)):
     doc = await db[COLLECTION].find_one(
-        {"ddt_id": ddt_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"ddt_id": ddt_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "DDT non trovato")
@@ -258,7 +259,7 @@ async def create_ddt(data: DDTCreate, user: dict = Depends(get_current_user)):
 
     doc = {
         "ddt_id": ddt_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "number": number,
         "ddt_type": data.ddt_type,
         "ddt_type_label": DDT_TYPE_LABELS.get(data.ddt_type, "DDT"),
@@ -301,7 +302,7 @@ async def create_ddt(data: DDTCreate, user: dict = Depends(get_current_user)):
 @router.put("/{ddt_id}")
 async def update_ddt(ddt_id: str, data: DDTUpdate, user: dict = Depends(get_current_user)):
     existing = await db[COLLECTION].find_one(
-        {"ddt_id": ddt_id, "user_id": user["user_id"]}
+        {"ddt_id": ddt_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     )
     if not existing:
         raise HTTPException(404, "DDT non trovato")
@@ -372,13 +373,13 @@ async def update_ddt(ddt_id: str, data: DDTUpdate, user: dict = Depends(get_curr
 async def delete_ddt(ddt_id: str, user: dict = Depends(get_current_user)):
     # Prima leggi il documento per trovare commessa collegata
     ddt_doc = await db[COLLECTION].find_one(
-        {"ddt_id": ddt_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"ddt_id": ddt_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not ddt_doc:
         raise HTTPException(404, "DDT non trovato")
 
     result = await db[COLLECTION].delete_one(
-        {"ddt_id": ddt_id, "user_id": user["user_id"]}
+        {"ddt_id": ddt_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     )
     if result.deleted_count == 0:
         raise HTTPException(404, "DDT non trovato")
@@ -387,7 +388,7 @@ async def delete_ddt(ddt_id: str, user: dict = Depends(get_current_user)):
     commessa_id = ddt_doc.get("commessa_id")
     if commessa_id:
         await db.commesse.update_one(
-            {"commessa_id": commessa_id, "user_id": user["user_id"]},
+            {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
             {"$pull": {"consegne": {"ddt_id": ddt_id}}}
         )
 
@@ -400,14 +401,14 @@ async def delete_ddt(ddt_id: str, user: dict = Depends(get_current_user)):
 @router.get("/{ddt_id}/pdf")
 async def get_ddt_pdf(ddt_id: str, user: dict = Depends(get_current_user)):
     doc = await db[COLLECTION].find_one(
-        {"ddt_id": ddt_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"ddt_id": ddt_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "DDT non trovato")
 
     from services.ddt_pdf_service import generate_ddt_pdf
     # Fetch company settings for logo/condizioni
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
     pdf_buffer = generate_ddt_pdf(doc, company)
     filename = f"ddt_{doc.get('number', ddt_id).replace('/', '_')}.pdf"
     return StreamingResponse(
@@ -423,7 +424,7 @@ async def get_ddt_pdf(ddt_id: str, user: dict = Depends(get_current_user)):
 async def preview_ddt_email(ddt_id: str, user: dict = Depends(get_current_user)):
     """Preview email that would be sent for a DDT."""
     doc = await db[COLLECTION].find_one(
-        {"ddt_id": ddt_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"ddt_id": ddt_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "DDT non trovato")
@@ -443,7 +444,7 @@ async def preview_ddt_email(ddt_id: str, user: dict = Depends(get_current_user))
                         break
 
     from services.email_preview import build_ddt_email, check_company_warnings
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
     company_warnings = check_company_warnings(company)
     ddt_number = doc.get("number", ddt_id)
     preview = build_ddt_email(
@@ -483,7 +484,7 @@ async def send_ddt_email(ddt_id: str, payload: dict = None, user: dict = Depends
     """Generate PDF and send DDT via email to client."""
     payload = payload or {}
     doc = await db[COLLECTION].find_one(
-        {"ddt_id": ddt_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"ddt_id": ddt_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "DDT non trovato")
@@ -504,7 +505,7 @@ async def send_ddt_email(ddt_id: str, payload: dict = None, user: dict = Depends
     if not to_email:
         raise HTTPException(400, "Nessun indirizzo email trovato per il destinatario.")
 
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
 
     from services.ddt_pdf_service import generate_ddt_pdf
     pdf_buffer = generate_ddt_pdf(doc, company)
@@ -561,7 +562,7 @@ async def send_ddt_email(ddt_id: str, payload: dict = None, user: dict = Depends
 async def convert_ddt_to_invoice(ddt_id: str, user: dict = Depends(get_current_user)):
     """Convert a DDT into a Fattura (invoice). Maps lines, client, and totals."""
     doc = await db[COLLECTION].find_one(
-        {"ddt_id": ddt_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"ddt_id": ddt_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "DDT non trovato")
@@ -583,7 +584,7 @@ async def convert_ddt_to_invoice(ddt_id: str, user: dict = Depends(get_current_u
 
     # Next invoice number
     count = await db.invoices.count_documents(
-        {"user_id": user["user_id"], "document_type": "FT"}
+        {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "document_type": "FT"}
     )
     doc_number = f"FT-{year}/{count + 1:04d}"
 
@@ -638,7 +639,7 @@ async def convert_ddt_to_invoice(ddt_id: str, user: dict = Depends(get_current_u
 
     invoice_doc = {
         "invoice_id": invoice_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "document_type": "FT",
         "document_number": doc_number,
         "client_id": client_id,

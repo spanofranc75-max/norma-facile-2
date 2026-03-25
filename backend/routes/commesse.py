@@ -227,7 +227,7 @@ async def list_commesse(
     per_page: int = Query(50, ge=1, le=200),
     user: dict = Depends(get_current_user),
 ):
-    q = {"user_id": user["user_id"]}
+    q = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     if status:
         q["status"] = status
     if stato:
@@ -256,6 +256,7 @@ async def list_commesse(
 async def create_commessa(data: CommessaCreate, user: dict = Depends(get_current_user)):
     from services.client_snapshot import build_snapshot
     uid = user["user_id"]
+    tid = user["tenant_id"]
     now = datetime.now(timezone.utc)
     cid = f"com_{uuid.uuid4().hex[:12]}"
     numero = await generate_commessa_number(uid)
@@ -276,7 +277,7 @@ async def create_commessa(data: CommessaCreate, user: dict = Depends(get_current
     doc = {
         "commessa_id": cid,
         "numero": numero,
-        "user_id": uid,
+        "user_id": uid, "tenant_id": tid,
         "title": data.title,
         "client_id": data.client_id or "",
         "client_name": client_name,
@@ -327,7 +328,8 @@ async def get_board_view(user: dict = Depends(get_current_user)):
     Also includes accepted quotes (preventivi accettati) without a linked commessa.
     """
     uid = user["user_id"]
-    items = await db[COLLECTION].find({"user_id": uid}, {"_id": 0, "eventi": 0}).sort("updated_at", -1).to_list(500)
+    tid = user["tenant_id"]
+    items = await db[COLLECTION].find({"user_id": uid, "tenant_id": tid}, {"_id": 0, "eventi": 0}).sort("updated_at", -1).to_list(500)
 
     columns = {}
     for key, meta in KANBAN_META.items():
@@ -347,7 +349,7 @@ async def get_board_view(user: dict = Depends(get_current_user)):
 
     # Fetch accepted preventivi without a linked commessa
     accepted_prevs = await db.preventivi.find(
-        {"user_id": uid, "status": "accettato", "hidden_from_planning": {"$ne": True}},
+        {"user_id": uid, "tenant_id": tid, "status": "accettato", "hidden_from_planning": {"$ne": True}},
         {"_id": 0, "preventivo_id": 1, "number": 1, "subject": 1,
          "client_id": 1, "client_name": 1, "_migrated_client_name": 1,
          "totals": 1, "created_at": 1, "updated_at": 1}
@@ -388,7 +390,7 @@ async def get_board_view(user: dict = Depends(get_current_user)):
 @router.get("/{commessa_id}")
 async def get_commessa(commessa_id: str, user: dict = Depends(get_current_user)):
     doc = await db[COLLECTION].find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "Commessa non trovata")
@@ -399,7 +401,8 @@ async def get_commessa(commessa_id: str, user: dict = Depends(get_current_user))
 @router.put("/{commessa_id}")
 async def update_commessa(commessa_id: str, data: CommessaUpdate, user: dict = Depends(get_current_user)):
     uid = user["user_id"]
-    existing = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid})
+    tid = user["tenant_id"]
+    existing = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid})
     if not existing:
         raise HTTPException(404, "Commessa non trovata")
 
@@ -421,17 +424,17 @@ async def update_commessa(commessa_id: str, data: CommessaUpdate, user: dict = D
 
 @router.delete("/{commessa_id}")
 async def delete_commessa(commessa_id: str, user: dict = Depends(get_current_user)):
-    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": user["user_id"]}, {"_id": 0, "moduli": 1, "numero": 1})
+    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0, "moduli": 1, "numero": 1})
     if not doc:
         raise HTTPException(404, "Commessa non trovata")
-    result = await db[COLLECTION].delete_one({"commessa_id": commessa_id, "user_id": user["user_id"]})
+    result = await db[COLLECTION].delete_one({"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
     if result.deleted_count == 0:
         raise HTTPException(404, "Commessa non trovata")
     # Nascondi il preventivo collegato dal planning per evitare che riappaia
     prev_id = (doc.get("moduli") or {}).get("preventivo_id")
     if prev_id:
         await db.preventivi.update_one(
-            {"preventivo_id": prev_id, "user_id": user["user_id"]},
+            {"preventivo_id": prev_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
             {"$set": {"hidden_from_planning": True}}
         )
     await log_activity(user, "delete", "commessa", commessa_id, label=doc.get("numero", ""))
@@ -448,10 +451,11 @@ async def update_commessa_status(
 ):
     """Update Kanban status — called on drag & drop. Does NOT change lifecycle stato."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     if new_status not in KANBAN_META:
         raise HTTPException(422, f"Stato Kanban non valido: {new_status}")
 
-    existing = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid})
+    existing = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid})
     if not existing:
         raise HTTPException(404, "Commessa non trovata")
 
@@ -483,8 +487,9 @@ async def toggle_checklist_item(
 ):
     """Toggle a single checklist item. Uses $set puntuale."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     doc = await db[COLLECTION].find_one(
-        {"commessa_id": commessa_id, "user_id": uid},
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0, "commessa_id": 1}
     )
     if not doc:
@@ -510,7 +515,8 @@ async def toggle_checklist_item(
 async def emit_event(commessa_id: str, req: EventoRequest, user: dict = Depends(get_current_user)):
     """Emit a lifecycle event. Validates state transition rules."""
     uid = user["user_id"]
-    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid})
+    tid = user["tenant_id"]
+    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid})
     if not doc:
         raise HTTPException(404, "Commessa non trovata")
 
@@ -612,11 +618,12 @@ MODULE_FIELDS = {
 async def get_available_modules(commessa_id: str, tipo: str = "preventivo", user: dict = Depends(get_current_user)):
     """Get available modules of a given type for linking to a commessa."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     results = []
 
     if tipo == "preventivo":
         docs = await db.preventivi.find(
-            {"user_id": uid},
+            {"user_id": uid, "tenant_id": tid},
             {"_id": 0, "preventivo_id": 1, "number": 1, "client_name": 1, "status": 1}
         ).to_list(100)
         for d in docs:
@@ -627,7 +634,7 @@ async def get_available_modules(commessa_id: str, tipo: str = "preventivo", user
             })
     elif tipo == "fattura":
         docs = await db.invoices.find(
-            {"user_id": uid},
+            {"user_id": uid, "tenant_id": tid},
             {"_id": 0, "invoice_id": 1, "document_number": 1, "document_type": 1, "status": 1}
         ).to_list(200)
         for d in docs:
@@ -638,7 +645,7 @@ async def get_available_modules(commessa_id: str, tipo: str = "preventivo", user
             })
     elif tipo == "ddt":
         docs = await db.ddt.find(
-            {"user_id": uid},
+            {"user_id": uid, "tenant_id": tid},
             {"_id": 0, "ddt_id": 1, "number": 1, "ddt_type": 1, "status": 1}
         ).to_list(200)
         for d in docs:
@@ -649,7 +656,7 @@ async def get_available_modules(commessa_id: str, tipo: str = "preventivo", user
             })
     elif tipo == "rilievo":
         docs = await db.rilievi.find(
-            {"user_id": uid},
+            {"user_id": uid, "tenant_id": tid},
             {"_id": 0, "rilievo_id": 1, "title": 1, "status": 1}
         ).to_list(100)
         for d in docs:
@@ -660,7 +667,7 @@ async def get_available_modules(commessa_id: str, tipo: str = "preventivo", user
             })
     elif tipo == "distinta":
         docs = await db.distinte.find(
-            {"user_id": uid},
+            {"user_id": uid, "tenant_id": tid},
             {"_id": 0, "distinta_id": 1, "title": 1, "product_name": 1}
         ).to_list(100)
         for d in docs:
@@ -676,7 +683,8 @@ async def get_available_modules(commessa_id: str, tipo: str = "preventivo", user
 async def link_module(commessa_id: str, req: LinkModuleRequest, user: dict = Depends(get_current_user)):
     """Link a module (preventivo, fattura, etc.) to this commessa."""
     uid = user["user_id"]
-    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid})
+    tid = user["tenant_id"]
+    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid})
     if not doc:
         raise HTTPException(404, "Commessa non trovata")
 
@@ -727,7 +735,8 @@ async def link_module(commessa_id: str, req: LinkModuleRequest, user: dict = Dep
 async def unlink_module(commessa_id: str, req: LinkModuleRequest, user: dict = Depends(get_current_user)):
     """Unlink a module from this commessa."""
     uid = user["user_id"]
-    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid})
+    tid = user["tenant_id"]
+    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid})
     if not doc:
         raise HTTPException(404, "Commessa non trovata")
 
@@ -759,7 +768,8 @@ async def unlink_module(commessa_id: str, req: LinkModuleRequest, user: dict = D
 async def get_commessa_hub(commessa_id: str, user: dict = Depends(get_current_user)):
     """Full hub view: commessa + all linked modules fetched from their collections."""
     uid = user["user_id"]
-    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid}, {"_id": 0})
+    tid = user["tenant_id"]
+    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Commessa non trovata")
 
@@ -779,39 +789,39 @@ async def get_commessa_hub(commessa_id: str, user: dict = Depends(get_current_us
 
     # Fetch linked modules in parallel-style
     if moduli.get("rilievo_id"):
-        r = await db.rilievi.find_one({"rilievo_id": moduli["rilievo_id"], "user_id": uid}, proj)
+        r = await db.rilievi.find_one({"rilievo_id": moduli["rilievo_id"], "user_id": uid, "tenant_id": tid}, proj)
         if r:
             hub["moduli_dettaglio"]["rilievo"] = r
 
     if moduli.get("distinta_id"):
-        d = await db.distinte.find_one({"distinta_id": moduli["distinta_id"], "user_id": uid}, proj)
+        d = await db.distinte.find_one({"distinta_id": moduli["distinta_id"], "user_id": uid, "tenant_id": tid}, proj)
         if d:
             hub["moduli_dettaglio"]["distinta"] = d
 
     if moduli.get("preventivo_id"):
-        p = await db.preventivi.find_one({"preventivo_id": moduli["preventivo_id"], "user_id": uid}, proj)
+        p = await db.preventivi.find_one({"preventivo_id": moduli["preventivo_id"], "user_id": uid, "tenant_id": tid}, proj)
         if p:
             hub["moduli_dettaglio"]["preventivo"] = p
 
     if moduli.get("fatture_ids"):
         fatture = await db.invoices.find(
-            {"invoice_id": {"$in": moduli["fatture_ids"]}, "user_id": uid}, proj
+            {"invoice_id": {"$in": moduli["fatture_ids"]}, "user_id": uid, "tenant_id": tid}, proj
         ).to_list(50)
         hub["moduli_dettaglio"]["fatture"] = fatture
 
     if moduli.get("ddt_ids"):
         ddts = await db.ddt_documents.find(
-            {"ddt_id": {"$in": moduli["ddt_ids"]}, "user_id": uid}, proj
+            {"ddt_id": {"$in": moduli["ddt_ids"]}, "user_id": uid, "tenant_id": tid}, proj
         ).to_list(50)
         hub["moduli_dettaglio"]["ddt"] = ddts
 
     if moduli.get("fpc_project_id"):
-        fpc = await db.fpc_projects.find_one({"project_id": moduli["fpc_project_id"], "user_id": uid}, proj_light)
+        fpc = await db.fpc_projects.find_one({"project_id": moduli["fpc_project_id"], "user_id": uid, "tenant_id": tid}, proj_light)
         if fpc:
             hub["moduli_dettaglio"]["fpc_project"] = fpc
 
     if moduli.get("certificazione_id"):
-        cert = await db.certificazioni.find_one({"cert_id": moduli["certificazione_id"], "user_id": uid}, proj)
+        cert = await db.certificazioni.find_one({"cert_id": moduli["certificazione_id"], "user_id": uid, "tenant_id": tid}, proj)
         if cert:
             hub["moduli_dettaglio"]["certificazione"] = cert
 
@@ -925,7 +935,8 @@ def analyze_preventivo_content(preventivo: dict):
 async def analyze_preventivo_endpoint(preventivo_id: str, user: dict = Depends(get_current_user)):
     """Analyze a preventivo's lines and detect normativa conflicts (EN 1090 vs EN 13241)."""
     uid = user["user_id"]
-    prev = await db.preventivi.find_one({"preventivo_id": preventivo_id, "user_id": uid}, {"_id": 0})
+    tid = user["tenant_id"]
+    prev = await db.preventivi.find_one({"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid}, {"_id": 0})
     if not prev:
         raise HTTPException(404, "Preventivo non trovato")
     return analyze_preventivo_content(prev)
@@ -938,6 +949,7 @@ async def _create_single_commessa(preventivo, user, normativa_override=None, ite
     Used both for single-commessa creation and split-commessa creation.
     """
     uid = user["user_id"]
+    tid = user["tenant_id"]
     prev = preventivo
     preventivo_id = prev["preventivo_id"]
 
@@ -1005,7 +1017,7 @@ async def _create_single_commessa(preventivo, user, normativa_override=None, ite
     doc = {
         "commessa_id": cid,
         "numero": numero,
-        "user_id": uid,
+        "user_id": uid, "tenant_id": tid,
         "title": title,
         "client_id": prev.get("client_id", ""),
         "client_name": client_name,
@@ -1079,7 +1091,7 @@ async def _create_single_commessa(preventivo, user, normativa_override=None, ite
         gate_doc = {
             "cert_id": f"gate_{uuid.uuid4().hex[:12]}",
             "commessa_id": cid,
-            "user_id": uid,
+            "user_id": uid, "tenant_id": tid,
             "tipo_chiusura": tipo_chiusura,
             "azionamento": azionamento,
             "larghezza_mm": None, "altezza_mm": None, "peso_kg": None,
@@ -1109,7 +1121,8 @@ async def create_commessa_from_preventivo(preventivo_id: str, user: dict = Depen
     Smart Quote Analysis: auto-detects normativa (EN 1090 vs EN 13241) and azionamento from content.
     """
     uid = user["user_id"]
-    prev = await db.preventivi.find_one({"preventivo_id": preventivo_id, "user_id": uid}, {"_id": 0})
+    tid = user["tenant_id"]
+    prev = await db.preventivi.find_one({"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid}, {"_id": 0})
     if not prev:
         raise HTTPException(404, "Preventivo non trovato")
     return await _create_single_commessa(prev, user)
@@ -1121,7 +1134,8 @@ async def create_commessa_generica(preventivo_id: str, user: dict = Depends(get_
     Used for non-structural work that still needs order tracking and planning.
     """
     uid = user["user_id"]
-    prev = await db.preventivi.find_one({"preventivo_id": preventivo_id, "user_id": uid}, {"_id": 0})
+    tid = user["tenant_id"]
+    prev = await db.preventivi.find_one({"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid}, {"_id": 0})
     if not prev:
         raise HTTPException(404, "Preventivo non trovato")
 
@@ -1148,7 +1162,7 @@ async def create_commessa_generica(preventivo_id: str, user: dict = Depends(get_
     doc = {
         "commessa_id": cid,
         "numero": f"GEN-{prev.get('number', '')}",
-        "user_id": uid,
+        "user_id": uid, "tenant_id": tid,
         "title": title,
         "client_id": prev.get("client_id", ""),
         "client_name": client_name,
@@ -1180,7 +1194,7 @@ async def create_commessa_generica(preventivo_id: str, user: dict = Depends(get_
 
     # Update preventivo status
     await db.preventivi.update_one(
-        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
         {"$set": {"status": "accettato", "updated_at": now}}
     )
 
@@ -1204,7 +1218,8 @@ async def create_split_commesse(preventivo_id: str, body: SplitCommessaRequest, 
     Each commessa gets only the items assigned to it.
     """
     uid = user["user_id"]
-    prev = await db.preventivi.find_one({"preventivo_id": preventivo_id, "user_id": uid}, {"_id": 0})
+    tid = user["tenant_id"]
+    prev = await db.preventivi.find_one({"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid}, {"_id": 0})
     if not prev:
         raise HTTPException(404, "Preventivo non trovato")
 
@@ -1230,7 +1245,7 @@ async def create_split_commesse(preventivo_id: str, body: SplitCommessaRequest, 
 
     # Mark preventivo as "Accettato (Split)"
     await db.preventivi.update_one(
-        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
         {"$set": {
             "status": "accettato",
             "split_commesse": [{"commessa_id": r["commessa_id"], "numero": r["numero"], "normativa": r.get("normativa_tipo", "")} for r in results],
@@ -1259,7 +1274,8 @@ async def complete_commessa_simple(
 ):
     """Close a commessa directly without going through certification/production steps."""
     uid = user["user_id"]
-    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid})
+    tid = user["tenant_id"]
+    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid})
     if not doc:
         raise HTTPException(404, "Commessa non trovata")
 
@@ -1314,7 +1330,8 @@ async def generate_commessa_dossier(commessa_id: str, user: dict = Depends(get_c
     from services.pdf_super_fascicolo import generate_super_fascicolo
 
     uid = user["user_id"]
-    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid}, {"_id": 0})
+    tid = user["tenant_id"]
+    doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Commessa non trovata")
 

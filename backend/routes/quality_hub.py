@@ -15,7 +15,7 @@ async def quality_hub_summary(user: dict = Depends(get_current_user)):
     threshold_30 = (today + timedelta(days=30)).isoformat()
 
     # ── Welders ──
-    welders_all = await db.welders.find({"user_id": user["user_id"]}, {"_id": 0, "name": 1, "stamp_id": 1, "qualifications": 1}).to_list(200)
+    welders_all = await db.welders.find({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0, "name": 1, "stamp_id": 1, "qualifications": 1}).to_list(200)
     expiring_patents = []
     expired_patents = []
     for w in welders_all:
@@ -43,7 +43,7 @@ async def quality_hub_summary(user: dict = Depends(get_current_user)):
                 })
 
     # ── Instruments ──
-    instruments_all = await db.instruments.find({"user_id": user["user_id"]}, {"_id": 0, "name": 1, "serial_number": 1, "next_calibration_date": 1, "instrument_type": 1, "status": 1}).to_list(200)
+    instruments_all = await db.instruments.find({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0, "name": 1, "serial_number": 1, "next_calibration_date": 1, "instrument_type": 1, "status": 1}).to_list(200)
     expired_instruments = []
     expiring_instruments = []
     for i in instruments_all:
@@ -71,7 +71,7 @@ async def quality_hub_summary(user: dict = Depends(get_current_user)):
 
     # ── NCs ──
     open_ncs = await db.non_conformities.find(
-        {"status": {"$ne": "chiusa"}, "user_id": user["user_id"]}, {"_id": 0, "nc_id": 1, "nc_number": 1, "description": 1, "priority": 1, "status": 1, "date": 1, "source": 1}
+        {"status": {"$ne": "chiusa"}, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0, "nc_id": 1, "nc_number": 1, "description": 1, "priority": 1, "status": 1, "date": 1, "source": 1}
     ).sort("priority", 1).to_list(100)
     nc_alerts = []
     for nc in open_ncs:
@@ -92,7 +92,7 @@ async def quality_hub_summary(user: dict = Depends(get_current_user)):
         })
 
     # ── Audits ──
-    all_audits = await db.audits.find({"user_id": user["user_id"]}, {"_id": 0, "audit_id": 1, "date": 1, "next_audit_date": 1, "audit_type": 1, "auditor_name": 1, "outcome": 1}).to_list(500)
+    all_audits = await db.audits.find({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0, "audit_id": 1, "date": 1, "next_audit_date": 1, "audit_type": 1, "auditor_name": 1, "outcome": 1}).to_list(500)
     next_audit = None
     future_audits = [a for a in all_audits if a.get("next_audit_date") and a["next_audit_date"] >= today_str]
     if future_audits:
@@ -108,7 +108,7 @@ async def quality_hub_summary(user: dict = Depends(get_current_user)):
     audits_this_year = sum(1 for a in all_audits if a.get("date", "").startswith(str(current_year)))
 
     # ── Documents ──
-    doc_count = await db.company_docs.count_documents({"user_id": user["user_id"]})
+    doc_count = await db.company_docs.count_documents({"user_id": user["user_id"], "tenant_id": user["tenant_id"]})
 
     # ── Summary counts ──
     total_alerts = len(expired_patents) + len(expiring_patents) + len(expired_instruments) + len(expiring_instruments) + len(nc_alerts)

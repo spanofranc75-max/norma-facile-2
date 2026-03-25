@@ -31,7 +31,7 @@ def _is_suspicious(business_name: str) -> bool:
 async def get_company_settings(user: dict = Depends(get_current_user)):
     """Get company settings for current user."""
     settings = await db.company_settings.find_one(
-        {"user_id": user["user_id"]},
+        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
 
@@ -53,9 +53,10 @@ async def update_company_settings(
     """Update company settings — full overwrite to prevent stale data.
     Includes audit trail (before/after snapshot)."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     # ── Snapshot BEFORE ──
-    existing = await db.company_settings.find_one({"user_id": uid}, {"_id": 0})
+    existing = await db.company_settings.find_one({"user_id": uid, "tenant_id": tid}, {"_id": 0})
     before_snapshot = {
         "business_name": (existing or {}).get("business_name"),
         "partita_iva": (existing or {}).get("partita_iva"),
@@ -89,14 +90,14 @@ async def update_company_settings(
 
     if existing:
         await db.company_settings.update_one(
-            {"user_id": uid}, {"$set": update_dict}
+            {"user_id": uid, "tenant_id": tid}, {"$set": update_dict}
         )
     else:
         settings_id = f"settings_{uuid.uuid4().hex[:12]}"
-        settings_doc = {"settings_id": settings_id, "user_id": uid, **update_dict}
+        settings_doc = {"settings_id": settings_id, "user_id": uid, "tenant_id": tid, **update_dict}
         await db.company_settings.insert_one(settings_doc)
 
-    updated = await db.company_settings.find_one({"user_id": uid}, {"_id": 0})
+    updated = await db.company_settings.find_one({"user_id": uid, "tenant_id": tid}, {"_id": 0})
 
     # ── Snapshot AFTER + Audit log ──
     after_snapshot = {
@@ -108,7 +109,7 @@ async def update_company_settings(
 
     await db.company_settings_audit.insert_one({
         "audit_id": f"cs_audit_{uuid.uuid4().hex[:12]}",
-        "user_id": uid,
+        "user_id": uid, "tenant_id": tid,
         "user_email": user.get("email", ""),
         "action": "update" if existing else "create",
         "before": before_snapshot,
@@ -127,11 +128,12 @@ async def update_company_settings(
 async def company_settings_diagnostics(user: dict = Depends(get_current_user)):
     """Diagnostic endpoint — shows exactly what data is stored for the current user."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     total_count = await db.company_settings.count_documents({})
     all_user_ids = await db.company_settings.distinct("user_id")
-    user_count = await db.company_settings.count_documents({"user_id": uid})
-    user_doc = await db.company_settings.find_one({"user_id": uid}, {"_id": 0})
+    user_count = await db.company_settings.count_documents({"user_id": uid, "tenant_id": tid})
+    user_doc = await db.company_settings.find_one({"user_id": uid, "tenant_id": tid}, {"_id": 0})
     legacy_doc = await db.settings.find_one({"type": "company"}, {"_id": 0})
     first_doc = await db.company_settings.find_one({}, {"_id": 0})
     first_doc_user_id = first_doc.get("user_id") if first_doc else None
@@ -140,7 +142,7 @@ async def company_settings_diagnostics(user: dict = Depends(get_current_user)):
     # Fetch last 5 audit entries for this user
     audit_entries = []
     async for a in db.company_settings_audit.find(
-        {"user_id": uid}, {"_id": 0}
+        {"user_id": uid, "tenant_id": tid}, {"_id": 0}
     ).sort("timestamp", -1).limit(5):
         a["timestamp"] = str(a["timestamp"])
         audit_entries.append(a)

@@ -391,7 +391,7 @@ async def upload_global_doc(
     now = datetime.now(timezone.utc).isoformat()
     doc_data = {
         "doc_id": doc_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "title": meta["label"],
         "category": "sicurezza_globale",
         "filename": file.filename,
@@ -524,7 +524,7 @@ async def upload_allegato_pos(
 
     doc_data = {
         "doc_id": doc_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "title": meta["label"],
         "category": "allegati_pos",
         "filename": file.filename,

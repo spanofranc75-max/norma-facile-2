@@ -41,6 +41,7 @@ class RiconciliaRequest(BaseModel):
 async def import_csv(file: UploadFile = File(...), conto: str = Query("Banca MPS"), user: dict = Depends(get_current_user)):
     """Import movimenti da CSV estratto conto. Formato: data;descrizione;dare;avere;saldo (sep ; o ,)."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     raw = (await file.read()).decode("utf-8-sig", errors="replace")
 
     # Auto-detect separator
@@ -114,7 +115,7 @@ async def import_csv(file: UploadFile = File(...), conto: str = Query("Banca MPS
 
         # Dedup: same date + description + amount
         exists = await db[COLL].find_one({
-            "user_id": uid, "data": data_iso, "descrizione": descrizione,
+            "user_id": uid, "tenant_id": tid, "data": data_iso, "descrizione": descrizione,
             "importo": round(importo, 2),
         })
         if exists:
@@ -123,7 +124,7 @@ async def import_csv(file: UploadFile = File(...), conto: str = Query("Banca MPS
 
         doc = {
             "movimento_id": new_id(),
-            "user_id": uid,
+            "user_id": uid, "tenant_id": tid,
             "data": data_iso,
             "descrizione": descrizione,
             "importo": round(importo, 2),
@@ -177,7 +178,8 @@ async def list_movimenti(
     user: dict = Depends(get_current_user),
 ):
     uid = user["user_id"]
-    filt = {"user_id": uid}
+    tid = user["tenant_id"]
+    filt = {"user_id": uid, "tenant_id": tid}
     if data_dal:
         filt.setdefault("data", {})["$gte"] = data_dal
     if data_al:
@@ -193,13 +195,13 @@ async def list_movimenti(
     items = await db[COLL].find(filt, {"_id": 0}).sort("data", -1).skip(skip).limit(limit).to_list(limit)
 
     # KPIs
-    all_items = await db[COLL].find({"user_id": uid}, {"_id": 0, "importo": 1, "segno": 1, "stato_riconciliazione": 1}).to_list(10000)
+    all_items = await db[COLL].find({"user_id": uid, "tenant_id": tid}, {"_id": 0, "importo": 1, "segno": 1, "stato_riconciliazione": 1}).to_list(10000)
     non_ric = [m for m in all_items if m.get("stato_riconciliazione") == "non_riconciliato"]
     dare_nr = sum(abs(m["importo"]) for m in non_ric if m.get("segno") == "dare")
     avere_nr = sum(abs(m["importo"]) for m in non_ric if m.get("segno") == "avere")
 
     # Distinct conti for filter
-    conti = await db[COLL].distinct("conto", {"user_id": uid})
+    conti = await db[COLL].distinct("conto", {"user_id": uid, "tenant_id": tid})
 
     return {
         "items": items,
@@ -219,7 +221,8 @@ async def list_movimenti(
 async def get_scadenze_candidate(movimento_id: str, user: dict = Depends(get_current_user)):
     """Restituisce scadenze aperte con importo simile (±10%) per riconciliazione manuale."""
     uid = user["user_id"]
-    mov = await db[COLL].find_one({"movimento_id": movimento_id, "user_id": uid}, {"_id": 0})
+    tid = user["tenant_id"]
+    mov = await db[COLL].find_one({"movimento_id": movimento_id, "user_id": uid, "tenant_id": tid}, {"_id": 0})
     if not mov:
         raise HTTPException(404, "Movimento non trovato")
 
@@ -233,7 +236,7 @@ async def get_scadenze_candidate(movimento_id: str, user: dict = Depends(get_cur
     if mov["segno"] == "dare":
         # Uscita → cerco fatture passive con scadenze aperte
         fatture = await db.fatture_ricevute.find(
-            {"user_id": uid, "payment_status": {"$nin": ["pagata"]}},
+            {"user_id": uid, "tenant_id": tid, "payment_status": {"$nin": ["pagata"]}},
             {"_id": 0, "fr_id": 1, "numero_documento": 1, "fornitore_nome": 1,
              "totale_documento": 1, "scadenze_pagamento": 1, "data_scadenza_pagamento": 1, "residuo": 1}
         ).to_list(500)
@@ -269,7 +272,7 @@ async def get_scadenze_candidate(movimento_id: str, user: dict = Depends(get_cur
     else:
         # Entrata → cerco fatture attive con scadenze aperte
         invoices = await db.invoices.find(
-            {"user_id": uid, "payment_status": {"$nin": ["pagata", "paid"]}},
+            {"user_id": uid, "tenant_id": tid, "payment_status": {"$nin": ["pagata", "paid"]}},
             {"_id": 0, "invoice_id": 1, "number": 1, "client_name": 1,
              "totals": 1, "scadenze_pagamento": 1, "due_date": 1}
         ).to_list(500)
@@ -314,7 +317,8 @@ async def get_scadenze_candidate(movimento_id: str, user: dict = Depends(get_cur
 async def riconcilia_movimento(movimento_id: str, body: RiconciliaRequest, user: dict = Depends(get_current_user)):
     """Collega un movimento bancario a una scadenza e aggiorna lo stato pagamento."""
     uid = user["user_id"]
-    mov = await db[COLL].find_one({"movimento_id": movimento_id, "user_id": uid}, {"_id": 0})
+    tid = user["tenant_id"]
+    mov = await db[COLL].find_one({"movimento_id": movimento_id, "user_id": uid, "tenant_id": tid}, {"_id": 0})
     if not mov:
         raise HTTPException(404, "Movimento non trovato")
     if mov.get("stato_riconciliazione") == "riconciliato":
@@ -324,7 +328,7 @@ async def riconcilia_movimento(movimento_id: str, body: RiconciliaRequest, user:
 
     if body.scadenza_tipo == "passiva":
         # Update fattura ricevuta
-        fat = await db.fatture_ricevute.find_one({"fr_id": body.fattura_id, "user_id": uid})
+        fat = await db.fatture_ricevute.find_one({"fr_id": body.fattura_id, "user_id": uid, "tenant_id": tid})
         if not fat:
             raise HTTPException(404, "Fattura passiva non trovata")
 
@@ -351,7 +355,7 @@ async def riconcilia_movimento(movimento_id: str, body: RiconciliaRequest, user:
         )
 
     elif body.scadenza_tipo == "attiva":
-        inv = await db.invoices.find_one({"invoice_id": body.fattura_id, "user_id": uid})
+        inv = await db.invoices.find_one({"invoice_id": body.fattura_id, "user_id": uid, "tenant_id": tid})
         if not inv:
             raise HTTPException(404, "Fattura attiva non trovata")
 
@@ -398,8 +402,9 @@ async def riconcilia_movimento(movimento_id: str, body: RiconciliaRequest, user:
 async def auto_riconcilia(user: dict = Depends(get_current_user)):
     """Matching automatico: importo esatto + fornitore/cliente nella descrizione."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     movimenti = await db[COLL].find(
-        {"user_id": uid, "stato_riconciliazione": "non_riconciliato"},
+        {"user_id": uid, "tenant_id": tid, "stato_riconciliazione": "non_riconciliato"},
         {"_id": 0}
     ).to_list(5000)
 
@@ -412,7 +417,7 @@ async def auto_riconcilia(user: dict = Depends(get_current_user)):
         if mov["segno"] == "dare":
             # Match fatture passive per importo esatto
             fatture = await db.fatture_ricevute.find(
-                {"user_id": uid, "payment_status": {"$nin": ["pagata"]}},
+                {"user_id": uid, "tenant_id": tid, "payment_status": {"$nin": ["pagata"]}},
                 {"_id": 0, "fr_id": 1, "fornitore_nome": 1, "totale_documento": 1,
                  "scadenze_pagamento": 1, "residuo": 1}
             ).to_list(500)
@@ -448,7 +453,7 @@ async def auto_riconcilia(user: dict = Depends(get_current_user)):
         else:
             # Match fatture attive per importo esatto
             invoices = await db.invoices.find(
-                {"user_id": uid, "payment_status": {"$nin": ["pagata", "paid"]}},
+                {"user_id": uid, "tenant_id": tid, "payment_status": {"$nin": ["pagata", "paid"]}},
                 {"_id": 0, "invoice_id": 1, "client_name": 1, "totals": 1,
                  "scadenze_pagamento": 1}
             ).to_list(500)

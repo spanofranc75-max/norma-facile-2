@@ -35,8 +35,9 @@ async def _get_company_data(user_id: str) -> dict:
 async def preview_template_111(commessa_id: str, user: dict = Depends(get_current_user)):
     """Preview data for the template."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": uid},
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "classe_esecuzione": 1}
     )
     if not commessa:
@@ -87,6 +88,7 @@ async def preview_template_111(commessa_id: str, user: dict = Depends(get_curren
 async def download_template_111_pdf(commessa_id: str, user: dict = Depends(get_current_user)):
     """Generate and download the PDF template."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     data = await preview_template_111(commessa_id, user)
     company = await _get_company_data(uid)
 

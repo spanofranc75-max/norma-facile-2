@@ -56,7 +56,7 @@ async def get_payment_types(
     tipo: Optional[str] = Query(None),
     user: dict = Depends(get_current_user),
 ):
-    q = {"user_id": user["user_id"]}
+    q = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     if search:
         q["$or"] = [
             {"codice": {"$regex": search, "$options": "i"}},
@@ -75,7 +75,7 @@ async def get_payment_types(
 @router.get("/{pt_id}", response_model=PaymentTypeResponse)
 async def get_payment_type(pt_id: str, user: dict = Depends(get_current_user)):
     doc = await db[COLLECTION].find_one(
-        {"payment_type_id": pt_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"payment_type_id": pt_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "Tipo pagamento non trovato")
@@ -87,7 +87,7 @@ async def create_payment_type(
     data: PaymentTypeCreate, user: dict = Depends(get_current_user)
 ):
     dup = await db[COLLECTION].find_one(
-        {"user_id": user["user_id"], "codice": data.codice}
+        {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "codice": data.codice}
     )
     if dup:
         raise HTTPException(400, f"Codice '{data.codice}' già esistente")
@@ -95,7 +95,7 @@ async def create_payment_type(
     now = datetime.now(timezone.utc)
     doc = {
         "payment_type_id": pt_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         **data.model_dump(),
         "created_at": now,
         "updated_at": now,
@@ -114,7 +114,7 @@ async def update_payment_type(
     pt_id: str, data: PaymentTypeUpdate, user: dict = Depends(get_current_user)
 ):
     existing = await db[COLLECTION].find_one(
-        {"payment_type_id": pt_id, "user_id": user["user_id"]}
+        {"payment_type_id": pt_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     )
     if not existing:
         raise HTTPException(404, "Tipo pagamento non trovato")
@@ -131,7 +131,7 @@ async def update_payment_type(
 @router.delete("/{pt_id}")
 async def delete_payment_type(pt_id: str, user: dict = Depends(get_current_user)):
     result = await db[COLLECTION].delete_one(
-        {"payment_type_id": pt_id, "user_id": user["user_id"]}
+        {"payment_type_id": pt_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     )
     if result.deleted_count == 0:
         raise HTTPException(404, "Tipo pagamento non trovato")
@@ -145,7 +145,7 @@ async def simulate_deadlines(
 ):
     """Simulate payment deadlines given an invoice date and amount."""
     doc = await db[COLLECTION].find_one(
-        {"payment_type_id": pt_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"payment_type_id": pt_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "Tipo pagamento non trovato")
@@ -212,7 +212,7 @@ async def simulate_deadlines(
 @router.post("/seed-defaults")
 async def seed_default_payment_types(user: dict = Depends(get_current_user)):
     """Seed common Italian payment types if none exist."""
-    count = await db[COLLECTION].count_documents({"user_id": user["user_id"]})
+    count = await db[COLLECTION].count_documents({"user_id": user["user_id"], "tenant_id": user["tenant_id"]})
     if count > 0:
         return {"message": f"Già presenti {count} tipi pagamento", "seeded": 0}
 
@@ -242,7 +242,7 @@ async def seed_default_payment_types(user: dict = Depends(get_current_user)):
             base["quote"] = [q if isinstance(q, dict) else q.model_dump() if hasattr(q, 'model_dump') else dict(q) for q in base["quote"]]
         docs.append({
             "payment_type_id": pt_id,
-            "user_id": user["user_id"],
+            "user_id": user["user_id"], "tenant_id": user["tenant_id"],
             **base,
             "created_at": now,
             "updated_at": now,

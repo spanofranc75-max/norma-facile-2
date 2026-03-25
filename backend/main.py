@@ -32,6 +32,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 import logging
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -286,6 +287,28 @@ async def lifespan(app: FastAPI):
         {"role": {"$exists": False}},
         {"$set": {"role": "admin"}},
     )
+
+    # 1b. Multi-tenant foundation: ensure default tenant exists and backfill tenant_id
+    existing_tenant = await db.tenants.find_one({"tenant_id": "default"})
+    if not existing_tenant:
+        await db.tenants.insert_one({
+            "tenant_id": "default",
+            "nome_azienda": "Default Tenant",
+            "email_admin": "",
+            "piano": "pro",
+            "attivo": True,
+            "creato_il": datetime.now(timezone.utc).isoformat(),
+            "impostazioni": {}
+        })
+        logger.info("Default tenant created")
+
+    # 1c. Backfill tenant_id on users missing it
+    result = await db.users.update_many(
+        {"tenant_id": {"$exists": False}},
+        {"$set": {"tenant_id": "default"}}
+    )
+    if result.modified_count > 0:
+        logger.info(f"Backfilled tenant_id on {result.modified_count} users")
 
     # 2. Create/verify all MongoDB indexes
     app.state.indexes_created = await _ensure_indexes()

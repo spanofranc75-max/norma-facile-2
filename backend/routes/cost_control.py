@@ -68,7 +68,8 @@ class OreCommessaInput(BaseModel):
 async def get_company_costs(user: dict = Depends(get_current_user)):
     """Get company cost configuration and calculated hourly rate."""
     uid = user["user_id"]
-    doc = await db.company_costs.find_one({"user_id": uid}, {"_id": 0})
+    tid = user["tenant_id"]
+    doc = await db.company_costs.find_one({"user_id": uid, "tenant_id": tid}, {"_id": 0})
     if not doc:
         # Return defaults
         result = calc_hourly_cost()
@@ -101,6 +102,7 @@ async def get_company_costs(user: dict = Depends(get_current_user)):
 async def update_company_costs(data: CompanyCostsInput, user: dict = Depends(get_current_user)):
     """Save/update company cost configuration."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     now = datetime.now(timezone.utc)
 
     result = calc_hourly_cost(
@@ -113,7 +115,7 @@ async def update_company_costs(data: CompanyCostsInput, user: dict = Depends(get
     )
 
     doc = {
-        "user_id": uid,
+        "user_id": uid, "tenant_id": tid,
         **data.model_dump(),
         "costo_orario_pieno": result["costo_orario_pieno"],
         "costo_totale_annuo": result["costo_totale_annuo"],
@@ -121,7 +123,7 @@ async def update_company_costs(data: CompanyCostsInput, user: dict = Depends(get
     }
 
     await db.company_costs.update_one(
-        {"user_id": uid}, {"$set": doc, "$setOnInsert": {"created_at": now}}, upsert=True
+        {"user_id": uid, "tenant_id": tid}, {"$set": doc, "$setOnInsert": {"created_at": now}}, upsert=True
     )
     logger.info(f"Company costs updated: costo_orario_pieno={result['costo_orario_pieno']}")
 
@@ -135,10 +137,11 @@ async def update_company_costs(data: CompanyCostsInput, user: dict = Depends(get
 async def log_hours_to_commessa(commessa_id: str, data: OreCommessaInput, user: dict = Depends(get_current_user)):
     """Log worked hours to a commessa."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     now = datetime.now(timezone.utc)
 
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": uid},
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0, "commessa_id": 1, "ore_lavorate": 1}
     )
     if not commessa:
@@ -257,10 +260,11 @@ def _generate_mock_invoices(user_id: str):
 async def get_pending_invoices(user: dict = Depends(get_current_user)):
     """Get pending (unprocessed) real invoices from fatture_ricevute."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     # Real unprocessed invoices from fatture_ricevute
     real = await db.fatture_ricevute.find(
-        {"user_id": uid, "imputazione": {"$exists": False}},
+        {"user_id": uid, "tenant_id": tid, "imputazione": {"$exists": False}},
         {"_id": 0, "xml_raw": 0},
     ).sort("created_at", -1).to_list(200)
 
@@ -297,8 +301,9 @@ async def get_pending_invoices(user: dict = Depends(get_current_user)):
 async def get_processed_invoices(user: dict = Depends(get_current_user)):
     """Get already processed (assigned) cost entries."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     entries = await db[COST_ENTRIES].find(
-        {"user_id": uid},
+        {"user_id": uid, "tenant_id": tid},
         {"_id": 0},
     ).sort("created_at", -1).to_list(200)
     return {"entries": entries, "total": len(entries)}
@@ -308,6 +313,7 @@ async def get_processed_invoices(user: dict = Depends(get_current_user)):
 async def assign_invoice_cost(invoice_id: str, data: CostAssignment, user: dict = Depends(get_current_user)):
     """Assign costs from an invoice to a commessa, magazzino, or spese generali."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     now = datetime.now(timezone.utc)
 
     # Find the invoice (real or mock)
@@ -319,7 +325,7 @@ async def assign_invoice_cost(invoice_id: str, data: CostAssignment, user: dict 
         source_invoice = next((inv for inv in mock_list if inv["invoice_id"] == invoice_id), None)
     else:
         fr = await db.fatture_ricevute.find_one(
-            {"fr_id": invoice_id, "user_id": uid}, {"_id": 0, "xml_raw": 0}
+            {"fr_id": invoice_id, "user_id": uid, "tenant_id": tid}, {"_id": 0, "xml_raw": 0}
         )
         if fr:
             source_invoice = {
@@ -349,7 +355,7 @@ async def assign_invoice_cost(invoice_id: str, data: CostAssignment, user: dict 
     # Build cost entry
     cost_entry = {
         "cost_id": f"cost_{uuid.uuid4().hex[:10]}",
-        "user_id": uid,
+        "user_id": uid, "tenant_id": tid,
         "source_invoice_id": invoice_id,
         "source_invoice_numero": source_invoice.get("numero", ""),
         "fornitore": source_invoice.get("fornitore", ""),
@@ -372,7 +378,7 @@ async def assign_invoice_cost(invoice_id: str, data: CostAssignment, user: dict 
     # If assigned to a commessa, update that commessa's costi_reali
     if data.target_type == "commessa" and data.target_id:
         commessa = await db.commesse.find_one(
-            {"commessa_id": data.target_id, "user_id": uid},
+            {"commessa_id": data.target_id, "user_id": uid, "tenant_id": tid},
             {"_id": 0, "commessa_id": 1, "numero": 1},
         )
         if not commessa:
@@ -405,7 +411,7 @@ async def assign_invoice_cost(invoice_id: str, data: CostAssignment, user: dict 
     # If real invoice, mark as processed
     if not is_mock:
         await db.fatture_ricevute.update_one(
-            {"fr_id": invoice_id, "user_id": uid},
+            {"fr_id": invoice_id, "user_id": uid, "tenant_id": tid},
             {"$set": {
                 "imputazione": {
                     "destinazione": data.target_type,
@@ -440,9 +446,10 @@ async def assign_invoice_cost(invoice_id: str, data: CostAssignment, user: dict 
 async def get_commessa_costs(commessa_id: str, user: dict = Depends(get_current_user)):
     """Get all costs assigned to a specific commessa, with financial analysis."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": uid},
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0, "commessa_id": 1, "numero": 1, "value": 1, "costi_reali": 1, "title": 1},
     )
     if not commessa:
@@ -483,7 +490,8 @@ async def get_commessa_costs(commessa_id: str, user: dict = Depends(get_current_
 async def search_commesse_for_costs(q: str = "", user: dict = Depends(get_current_user)):
     """Search commesse for the cost assignment dropdown."""
     uid = user["user_id"]
-    filt = {"user_id": uid}
+    tid = user["tenant_id"]
+    filt = {"user_id": uid, "tenant_id": tid}
     if q:
         filt["$or"] = [
             {"numero": {"$regex": q, "$options": "i"}},
@@ -500,8 +508,9 @@ async def search_commesse_for_costs(q: str = "", user: dict = Depends(get_curren
 async def match_invoice_articles(invoice_id: str, user: dict = Depends(get_current_user)):
     """Smart match invoice lines to existing articles in catalog."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     fr = await db.fatture_ricevute.find_one(
-        {"fr_id": invoice_id, "user_id": uid},
+        {"fr_id": invoice_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0, "linee": 1, "fornitore_nome": 1}
     )
     if not fr:
@@ -536,10 +545,11 @@ async def match_invoice_articles(invoice_id: str, user: dict = Depends(get_curre
 async def assign_invoice_rows(invoice_id: str, data: RowAllocationRequest, user: dict = Depends(get_current_user)):
     """Assign individual invoice rows to different destinations (magazzino, commessa, generale)."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     now = datetime.now(timezone.utc)
 
     fr = await db.fatture_ricevute.find_one(
-        {"fr_id": invoice_id, "user_id": uid},
+        {"fr_id": invoice_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0, "fr_id": 1, "fornitore_nome": 1, "fornitore_id": 1, "numero_documento": 1,
          "linee": 1, "totale_documento": 1}
     )
@@ -581,7 +591,7 @@ async def assign_invoice_rows(invoice_id: str, data: RowAllocationRequest, user:
 
         elif row_alloc.target_type == "commessa" and row_alloc.target_id:
             commessa = await db.commesse.find_one(
-                {"commessa_id": row_alloc.target_id, "user_id": uid},
+                {"commessa_id": row_alloc.target_id, "user_id": uid, "tenant_id": tid},
                 {"_id": 0, "commessa_id": 1, "numero": 1}
             )
             if commessa:
@@ -608,7 +618,7 @@ async def assign_invoice_rows(invoice_id: str, data: RowAllocationRequest, user:
         # Save cost entry
         cost_entry = {
             "cost_id": f"cost_{uuid.uuid4().hex[:10]}",
-            "user_id": uid,
+            "user_id": uid, "tenant_id": tid,
             "source_invoice_id": invoice_id,
             "source_invoice_numero": fr.get("numero_documento", ""),
             "fornitore": fornitore,
@@ -626,7 +636,7 @@ async def assign_invoice_rows(invoice_id: str, data: RowAllocationRequest, user:
 
     # Mark invoice as processed
     await db.fatture_ricevute.update_one(
-        {"fr_id": invoice_id, "user_id": uid},
+        {"fr_id": invoice_id, "user_id": uid, "tenant_id": tid},
         {"$set": {
             "imputazione": {
                 "destinazione": "multi",
@@ -647,14 +657,15 @@ async def assign_invoice_rows(invoice_id: str, data: RowAllocationRequest, user:
 async def margin_analysis(user: dict = Depends(get_current_user)):
     """Get margin analysis for all commesse — includes labor cost at full hourly rate."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     # Get company hourly cost
-    cc = await db.company_costs.find_one({"user_id": uid}, {"_id": 0, "costo_orario_pieno": 1})
+    cc = await db.company_costs.find_one({"user_id": uid, "tenant_id": tid}, {"_id": 0, "costo_orario_pieno": 1})
     costo_orario = float(cc.get("costo_orario_pieno", 0)) if cc else 0
 
     # Get all commesse (including ones without costs but with hours)
     commesse = await db.commesse.find(
-        {"user_id": uid, "$or": [
+        {"user_id": uid, "tenant_id": tid, "$or": [
             {"costi_reali": {"$exists": True, "$ne": []}},
             {"ore_lavorate": {"$gt": 0}},
         ]},

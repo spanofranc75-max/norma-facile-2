@@ -40,6 +40,7 @@ async def run_snapshot_via_link(key: str = Query(...)):
     grand_report = {}
 
     for uid in all_users:
+        tid = "default"  # migration backfill — all existing data is in default tenant
         client_cache = {}
         user_report = {"total_updated": 0, "total_skipped": 0, "total_no_client": 0, "collections": {}}
 
@@ -52,7 +53,7 @@ async def run_snapshot_via_link(key: str = Query(...)):
             coll_report = {"updated": 0, "skipped": 0, "no_client": 0, "errors": []}
 
             cursor = coll.find(
-                {"user_id": uid, "client_snapshot": {"$exists": False}},
+                {"user_id": uid, "tenant_id": tid, "client_snapshot": {"$exists": False}},
                 {"_id": 0, id_field: 1, label_field: 1, "client_id": 1}
             )
             docs = await cursor.to_list(length=5000)
@@ -80,7 +81,7 @@ async def run_snapshot_via_link(key: str = Query(...)):
                 coll_report["updated"] += 1
 
             already = await coll.count_documents(
-                {"user_id": uid, "client_snapshot": {"$exists": True}}
+                {"user_id": uid, "tenant_id": tid, "client_snapshot": {"$exists": True}}
             )
             coll_report["skipped"] = already - coll_report["updated"]
 
@@ -126,6 +127,7 @@ async def backfill_client_snapshots(user: dict = Depends(get_current_user)):
     IMPORTANT: Run this only after verifying client data is correct.
     """
     uid = user["user_id"]
+    tid = user["tenant_id"]
     report = {"total_updated": 0, "total_skipped": 0, "total_no_client": 0, "collections": {}}
     
     # Cache client data to avoid repeated lookups
@@ -141,7 +143,7 @@ async def backfill_client_snapshots(user: dict = Depends(get_current_user)):
         
         # Find documents without client_snapshot
         cursor = coll.find(
-            {"user_id": uid, "client_snapshot": {"$exists": False}},
+            {"user_id": uid, "tenant_id": tid, "client_snapshot": {"$exists": False}},
             {"_id": 0, id_field: 1, label_field: 1, "client_id": 1}
         )
         docs = await cursor.to_list(length=5000)
@@ -172,7 +174,7 @@ async def backfill_client_snapshots(user: dict = Depends(get_current_user)):
         
         # Count already-migrated docs
         already = await coll.count_documents(
-            {"user_id": uid, "client_snapshot": {"$exists": True}}
+            {"user_id": uid, "tenant_id": tid, "client_snapshot": {"$exists": True}}
         )
         coll_report["skipped"] = already - coll_report["updated"]
         
@@ -189,13 +191,14 @@ async def backfill_client_snapshots(user: dict = Depends(get_current_user)):
 async def snapshot_status(user: dict = Depends(get_current_user)):
     """Check how many documents have/lack client_snapshot."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     result = {}
     
     for coll_info in DOCUMENT_COLLECTIONS:
         coll_name = coll_info["name"]
         coll = db[coll_name]
-        total = await coll.count_documents({"user_id": uid})
-        with_snapshot = await coll.count_documents({"user_id": uid, "client_snapshot": {"$exists": True}})
+        total = await coll.count_documents({"user_id": uid, "tenant_id": tid})
+        with_snapshot = await coll.count_documents({"user_id": uid, "tenant_id": tid, "client_snapshot": {"$exists": True}})
         without = total - with_snapshot
         result[coll_name] = {
             "total": total,
@@ -214,8 +217,9 @@ async def set_default_client_status(user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Solo admin possono eseguire migrazioni")
     
     uid = user["user_id"]
+    tid = user["tenant_id"]
     result = await db.clients.update_many(
-        {"user_id": uid, "status": {"$exists": False}},
+        {"user_id": uid, "tenant_id": tid, "status": {"$exists": False}},
         {"$set": {"status": "active"}}
     )
     

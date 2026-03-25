@@ -54,7 +54,7 @@ async def create_attrezzatura(data: AttrezzaturaCreate, user: dict = Depends(get
 
     doc = {
         "attr_id": attr_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "tipo": data.tipo,
         "modello": data.modello,
         "numero_serie": data.numero_serie or "",
@@ -76,7 +76,7 @@ async def create_attrezzatura(data: AttrezzaturaCreate, user: dict = Depends(get
 @router.get("")
 async def list_attrezzature(user: dict = Depends(get_current_user), tipo: str = ""):
     """Lista tutte le attrezzature dell'utente (filtro opzionale per tipo)."""
-    query = {"user_id": user["user_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     if tipo:
         query["tipo"] = tipo
 
@@ -109,7 +109,7 @@ async def update_attrezzatura(attr_id: str, data: AttrezzaturaUpdate, user: dict
             updates[field] = val
 
     result = await db[ATTR_COLL].update_one(
-        {"attr_id": attr_id, "user_id": user["user_id"]},
+        {"attr_id": attr_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"$set": updates}
     )
     if result.matched_count == 0:
@@ -120,7 +120,7 @@ async def update_attrezzatura(attr_id: str, data: AttrezzaturaUpdate, user: dict
 @router.delete("/{attr_id}")
 async def delete_attrezzatura(attr_id: str, user: dict = Depends(get_current_user)):
     """Elimina un'attrezzatura."""
-    result = await db[ATTR_COLL].delete_one({"attr_id": attr_id, "user_id": user["user_id"]})
+    result = await db[ATTR_COLL].delete_one({"attr_id": attr_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
     if result.deleted_count == 0:
         raise HTTPException(404, "Attrezzatura non trovata")
     return {"message": "Attrezzatura eliminata"}
@@ -136,7 +136,7 @@ async def check_taratura_chiavi(user: dict = Depends(get_current_user)):
     """
     today = datetime.now(timezone.utc).date()
     chiavi = await db[ATTR_COLL].find(
-        {"user_id": user["user_id"], "tipo": "chiave_dinamometrica"},
+        {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "tipo": "chiave_dinamometrica"},
         {"_id": 0}
     ).to_list(50)
 

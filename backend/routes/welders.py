@@ -133,10 +133,11 @@ async def list_welders(
             {"stamp_id": {"$regex": search, "$options": "i"}},
         ]
 
-    all_docs = await db.welders.find({"user_id": user["user_id"]}, {"_id": 0}).sort("name", 1).to_list(200)
+    all_docs = await db.welders.find({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}).sort("name", 1).to_list(200)
     stats = _compute_stats(all_docs)
 
     query["user_id"] = user["user_id"]
+    query["tenant_id"] = user["tenant_id"]
     filtered = await db.welders.find(query, {"_id": 0}).sort("name", 1).to_list(200)
     items = [_welder_to_response(d) for d in filtered]
 
@@ -183,7 +184,7 @@ async def matrice_scadenze(user: dict = Depends(get_current_user)):
     Returns a matrix: rows = workers, columns = cert types.
     Each cell has status: 'valido', 'in_scadenza', 'scaduto', 'mancante'.
     """
-    all_docs = await db.welders.find({"user_id": user["user_id"]}, {"_id": 0}).sort("name", 1).to_list(200)
+    all_docs = await db.welders.find({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}).sort("name", 1).to_list(200)
     today = date.today()
 
     cert_codes = [c["code"] for c in SAFETY_CERT_TYPES]
@@ -254,7 +255,7 @@ async def workers_for_pos(user: dict = Depends(get_current_user)):
     """
     Return worker list enriched with safety compliance status for POS selection.
     """
-    all_docs = await db.welders.find({"user_id": user["user_id"]}, {"_id": 0}).sort("name", 1).to_list(200)
+    all_docs = await db.welders.find({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}).sort("name", 1).to_list(200)
     today = date.today()
     cert_codes = [c["code"] for c in SAFETY_CERT_TYPES]
 
@@ -315,7 +316,7 @@ async def workers_for_pos(user: dict = Depends(get_current_user)):
 
 @router.get("/{welder_id}", response_model=WelderResponse)
 async def get_welder(welder_id: str, user: dict = Depends(get_current_user)):
-    doc = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"]}, {"_id": 0})
+    doc = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Saldatore non trovato")
     return WelderResponse(**_welder_to_response(doc))
@@ -328,7 +329,7 @@ async def create_welder(payload: WelderCreate, user: dict = Depends(get_current_
 
     doc = {
         "welder_id": welder_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "name": payload.name.strip(),
         "stamp_id": payload.stamp_id.strip(),
         "role": payload.role or "saldatore",
@@ -348,7 +349,7 @@ async def create_welder(payload: WelderCreate, user: dict = Depends(get_current_
 
 @router.put("/{welder_id}", response_model=WelderResponse)
 async def update_welder(welder_id: str, payload: WelderCreate, user: dict = Depends(get_current_user)):
-    existing = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"]}, {"_id": 0})
+    existing = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
     if not existing:
         raise HTTPException(404, "Saldatore non trovato")
 
@@ -364,14 +365,14 @@ async def update_welder(welder_id: str, payload: WelderCreate, user: dict = Depe
         "updated_at": now_iso,
     }
 
-    await db.welders.update_one({"welder_id": welder_id, "user_id": user["user_id"]}, {"$set": update})
-    updated = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"]}, {"_id": 0})
+    await db.welders.update_one({"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"$set": update})
+    updated = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
     return WelderResponse(**_welder_to_response(updated))
 
 
 @router.delete("/{welder_id}")
 async def delete_welder(welder_id: str, user: dict = Depends(get_current_user)):
-    doc = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"]}, {"_id": 0})
+    doc = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Saldatore non trovato")
 
@@ -383,7 +384,7 @@ async def delete_welder(welder_id: str, user: dict = Depends(get_current_user)):
             if os.path.exists(fpath):
                 os.remove(fpath)
 
-    await db.welders.delete_one({"welder_id": welder_id, "user_id": user["user_id"]})
+    await db.welders.delete_one({"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
     return {"message": "Saldatore eliminato", "welder_id": welder_id}
 
 
@@ -404,7 +405,7 @@ async def add_qualification(
     file: Optional[UploadFile] = File(None),
     user: dict = Depends(get_current_user),
 ):
-    doc = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"]}, {"_id": 0})
+    doc = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Saldatore non trovato")
 
@@ -447,13 +448,13 @@ async def add_qualification(
         },
     )
 
-    updated = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"]}, {"_id": 0})
+    updated = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
     return WelderResponse(**_welder_to_response(updated))
 
 
 @router.delete("/{welder_id}/qualifications/{qual_id}")
 async def delete_qualification(welder_id: str, qual_id: str, user: dict = Depends(get_current_user)):
-    doc = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"]}, {"_id": 0})
+    doc = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Saldatore non trovato")
 
@@ -479,7 +480,7 @@ async def delete_qualification(welder_id: str, qual_id: str, user: dict = Depend
 
 @router.get("/{welder_id}/qualifications/{qual_id}/download")
 async def download_qualification(welder_id: str, qual_id: str, user: dict = Depends(get_current_user)):
-    doc = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"]}, {"_id": 0})
+    doc = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Saldatore non trovato")
 

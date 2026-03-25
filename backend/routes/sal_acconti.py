@@ -29,8 +29,8 @@ class AccontoCreate(BaseModel):
     descrizione: Optional[str] = ""
 
 
-async def _get_commessa(cid: str, uid: str):
-    c = await db.commesse.find_one({"commessa_id": cid, "user_id": uid}, {"_id": 0})
+async def _get_commessa(cid: str, uid: str, tid: str = "default"):
+    c = await db.commesse.find_one({"commessa_id": cid, "user_id": uid, "tenant_id": tid}, {"_id": 0})
     if not c:
         raise HTTPException(404, "Commessa non trovata")
     return c
@@ -45,7 +45,7 @@ async def calcola_sal(cid: str, user: dict = Depends(get_current_user)):
     - Conto lavoro rientrati
     - Acconti gia emessi
     """
-    commessa = await _get_commessa(cid, user["user_id"])
+    commessa = await _get_commessa(cid, user["user_id"], user["tenant_id"])
     admin_id = user.get("team_owner_id", user["user_id"]) if user.get("role") != "admin" else user["user_id"]
 
     # 1. Ore lavorate dal diario produzione
@@ -105,7 +105,7 @@ async def calcola_sal(cid: str, user: dict = Depends(get_current_user)):
 
     # 6. Acconti gia emessi
     acconti = await db.sal_acconti.find(
-        {"commessa_id": cid, "user_id": user["user_id"]},
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     ).sort("created_at", 1).to_list(50)
 
@@ -142,7 +142,7 @@ async def calcola_sal(cid: str, user: dict = Depends(get_current_user)):
 @router.post("/{cid}/sal/acconto")
 async def crea_acconto(cid: str, data: AccontoCreate, user: dict = Depends(get_current_user)):
     """Crea un acconto (fattura SAL) basato sulla percentuale di avanzamento."""
-    commessa = await _get_commessa(cid, user["user_id"])
+    commessa = await _get_commessa(cid, user["user_id"], user["tenant_id"])
 
     if data.percentuale <= 0 or data.percentuale > 100:
         raise HTTPException(400, "Percentuale deve essere tra 0 e 100")
@@ -160,7 +160,7 @@ async def crea_acconto(cid: str, data: AccontoCreate, user: dict = Depends(get_c
 
     # Check we're not exceeding total
     existing = await db.sal_acconti.find(
-        {"commessa_id": cid, "user_id": user["user_id"]},
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0, "importo": 1}
     ).to_list(50)
     totale_precedente = sum(a.get("importo", 0) for a in existing)
@@ -179,7 +179,7 @@ async def crea_acconto(cid: str, data: AccontoCreate, user: dict = Depends(get_c
     acconto = {
         "acconto_id": acconto_id,
         "commessa_id": cid,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "numero_progressivo": numero_progressivo,
         "percentuale": data.percentuale,
         "importo": importo,
@@ -203,7 +203,7 @@ async def crea_acconto(cid: str, data: AccontoCreate, user: dict = Depends(get_c
 @router.post("/{cid}/sal/acconto/{acconto_id}/fattura")
 async def genera_fattura_da_acconto(cid: str, acconto_id: str, user: dict = Depends(get_current_user)):
     """Genera una fattura proforma/acconto dal SAL."""
-    commessa = await _get_commessa(cid, user["user_id"])
+    commessa = await _get_commessa(cid, user["user_id"], user["tenant_id"])
     acconto = await db.sal_acconti.find_one(
         {"acconto_id": acconto_id, "commessa_id": cid}, {"_id": 0}
     )
@@ -214,7 +214,7 @@ async def genera_fattura_da_acconto(cid: str, acconto_id: str, user: dict = Depe
 
     now = datetime.now(timezone.utc)
     year = now.strftime("%Y")
-    count = await db.invoices.count_documents({"user_id": user["user_id"]})
+    count = await db.invoices.count_documents({"user_id": user["user_id"], "tenant_id": user["tenant_id"]})
     invoice_id = f"inv_{uuid.uuid4().hex[:12]}"
     invoice_number = f"FT-{year}-{count + 1:04d}"
 
@@ -223,7 +223,7 @@ async def genera_fattura_da_acconto(cid: str, acconto_id: str, user: dict = Depe
 
     invoice = {
         "invoice_id": invoice_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "number": invoice_number,
         "type": "fattura",
         "document_type": "fattura",
@@ -272,9 +272,9 @@ async def genera_fattura_da_acconto(cid: str, acconto_id: str, user: dict = Depe
 @router.get("/{cid}/sal/storico")
 async def storico_sal(cid: str, user: dict = Depends(get_current_user)):
     """Storico completo SAL e acconti per la commessa."""
-    await _get_commessa(cid, user["user_id"])
+    await _get_commessa(cid, user["user_id"], user["tenant_id"])
     acconti = await db.sal_acconti.find(
-        {"commessa_id": cid, "user_id": user["user_id"]},
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     ).sort("created_at", 1).to_list(50)
 

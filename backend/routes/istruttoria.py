@@ -31,10 +31,11 @@ async def analizza_preventivo(request: Request, preventivo_id: str, user: dict =
     Salva il risultato in DB e lo restituisce.
     """
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     # Load preventivo
     preventivo = await db.preventivi.find_one(
-        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0}
     )
     if not preventivo:
@@ -42,7 +43,7 @@ async def analizza_preventivo(request: Request, preventivo_id: str, user: dict =
 
     # Check if analysis already exists (allow re-analysis)
     existing = await db.istruttorie.find_one(
-        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0, "istruttoria_id": 1, "created_at": 1}
     )
 
@@ -62,7 +63,7 @@ async def analizza_preventivo(request: Request, preventivo_id: str, user: dict =
         **result,
         "istruttoria_id": istr_id,
         "preventivo_id": preventivo_id,
-        "user_id": uid,
+        "user_id": uid, "tenant_id": tid,
         "versione": (existing.get("versione", 0) + 1) if existing else 1,
         "updated_at": now,
     }
@@ -87,7 +88,7 @@ async def analizza_preventivo(request: Request, preventivo_id: str, user: dict =
 async def get_istruttoria_by_preventivo(preventivo_id: str, user: dict = Depends(get_current_user)):
     """Recupera l'istruttoria salvata per un preventivo (se esiste)."""
     doc = await db.istruttorie.find_one(
-        {"preventivo_id": preventivo_id, "user_id": user["user_id"]},
+        {"preventivo_id": preventivo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not doc:
@@ -99,7 +100,7 @@ async def get_istruttoria_by_preventivo(preventivo_id: str, user: dict = Depends
 async def get_istruttoria(istruttoria_id: str, user: dict = Depends(get_current_user)):
     """Recupera un'istruttoria per ID."""
     doc = await db.istruttorie.find_one(
-        {"istruttoria_id": istruttoria_id, "user_id": user["user_id"]},
+        {"istruttoria_id": istruttoria_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not doc:
@@ -119,8 +120,9 @@ async def revisione_umana(istruttoria_id: str, body: dict, user: dict = Depends(
     }
     """
     uid = user["user_id"]
+    tid = user["tenant_id"]
     doc = await db.istruttorie.find_one(
-        {"istruttoria_id": istruttoria_id, "user_id": uid},
+        {"istruttoria_id": istruttoria_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0}
     )
     if not doc:
@@ -184,8 +186,9 @@ async def conferma_istruttoria(istruttoria_id: str, user: dict = Depends(get_cur
     Questo checkpoint e obbligatorio prima di generare la commessa pre-istruita.
     Blocca conferma se ci sono blocchi strutturali (es. commessa mista non segmentata)."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     doc = await db.istruttorie.find_one(
-        {"istruttoria_id": istruttoria_id, "user_id": uid},
+        {"istruttoria_id": istruttoria_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0}
     )
     if not doc:
@@ -231,8 +234,9 @@ async def rispondi_domande(istruttoria_id: str, body: dict, user: dict = Depends
     }
     """
     uid = user["user_id"]
+    tid = user["tenant_id"]
     doc = await db.istruttorie.find_one(
-        {"istruttoria_id": istruttoria_id, "user_id": uid},
+        {"istruttoria_id": istruttoria_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0}
     )
     if not doc:
@@ -315,8 +319,9 @@ async def rispondi_domande_contestuali(
     Body: { "risposte": [{"id": "ctx_zinc_01", "risposta": "Testo"}, ...] }
     """
     uid = user["user_id"]
+    tid = user["tenant_id"]
     doc = await db.istruttorie.find_one(
-        {"istruttoria_id": istruttoria_id, "user_id": uid},
+        {"istruttoria_id": istruttoria_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0}
     )
     if not doc:
@@ -369,7 +374,7 @@ async def rispondi_domande_contestuali(
 async def list_istruttorie(user: dict = Depends(get_current_user)):
     """Lista tutte le istruttorie dell'utente."""
     docs = await db.istruttorie.find(
-        {"user_id": user["user_id"]},
+        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0, "istruttoria_id": 1, "preventivo_id": 1, "preventivo_number": 1,
          "classificazione": 1, "exc_proposta": 1, "stato_conoscenza": 1,
          "stato": 1, "created_at": 1, "updated_at": 1, "versione": 1}
@@ -387,6 +392,7 @@ async def run_segmentazione(request: Request, preventivo_id: str, user: dict = D
     """Esegue la segmentazione per riga del preventivo.
     Analizza ogni riga e propone la normativa applicabile."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     preventivo = await db.preventivi.find_one(
         {"preventivo_id": preventivo_id},
@@ -404,7 +410,7 @@ async def run_segmentazione(request: Request, preventivo_id: str, user: dict = D
 
     # Save to istruttoria if exists, otherwise create a minimal record
     istr = await db.istruttorie.find_one(
-        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0, "istruttoria_id": 1}
     )
 
@@ -422,7 +428,7 @@ async def run_segmentazione(request: Request, preventivo_id: str, user: dict = D
             "istruttoria_id": istr_id,
             "preventivo_id": preventivo_id,
             "preventivo_number": preventivo.get("number", ""),
-            "user_id": uid,
+            "user_id": uid, "tenant_id": tid,
             "stato": "segmentazione",
             "segmentazione_proposta": segmentazione,
             "created_at": datetime.now(timezone.utc),
@@ -444,9 +450,10 @@ async def review_segmentazione(preventivo_id: str, body: dict, user: dict = Depe
     }
     """
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     istr = await db.istruttorie.find_one(
-        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0, "istruttoria_id": 1, "segmentazione_proposta": 1}
     )
     if not istr:
@@ -536,9 +543,10 @@ async def check_phase2_eligibility(preventivo_id: str, user: dict = Depends(get_
     """Verifica se l'istruttoria e' eleggibile per la Phase 2.
     Restituisce allowed=true/false con lista motivi di blocco."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     istr = await db.istruttorie.find_one(
-        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0}
     )
     if not istr:
@@ -554,9 +562,10 @@ async def genera_commessa_preistruita(request: Request, preventivo_id: str, user
     """Genera la commessa pre-istruita revisionata.
     Bloccata se non tutti i criteri di eleggibilita' sono soddisfatti."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     istr = await db.istruttorie.find_one(
-        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0}
     )
     if not istr:
@@ -579,14 +588,14 @@ async def genera_commessa_preistruita(request: Request, preventivo_id: str, user
         {"preventivo_id": preventivo_id, "created_by": uid},
         {"$set": {
             **commessa,
-            "user_id": uid,
+            "user_id": uid, "tenant_id": tid,
         }},
         upsert=True
     )
 
     # Update istruttoria
     await db.istruttorie.update_one(
-        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
         {"$set": {
             "phase2_generata": True,
             "phase2_commessa_id": commessa["commessa_id"],
@@ -614,9 +623,10 @@ async def genera_commessa_preistruita(request: Request, preventivo_id: str, user
 async def get_commessa_preistruita(preventivo_id: str, user: dict = Depends(get_current_user)):
     """Recupera la commessa pre-istruita per un preventivo."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     doc = await db.commesse_preistruite.find_one(
-        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0}
     )
     if not doc:

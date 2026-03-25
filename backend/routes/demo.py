@@ -110,7 +110,7 @@ async def demo_login(response: Response):
     return {
         "message": "Login demo effettuato",
         "user": {
-            "user_id": user["user_id"],
+            "user_id": user["user_id"], "tenant_id": user["tenant_id"],
             "email": user.get("email"),
             "name": user.get("name"),
             "role": user.get("role"),

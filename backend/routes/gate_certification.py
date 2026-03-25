@@ -36,7 +36,7 @@ async def create_gate_certification(
     """Create a gate certification record for a commessa."""
     # Verify commessa exists
     commessa = await db.commesse.find_one(
-        {"commessa_id": data.commessa_id, "user_id": user["user_id"]},
+        {"commessa_id": data.commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0, "commessa_id": 1, "numero": 1}
     )
     if not commessa:
@@ -60,7 +60,7 @@ async def create_gate_certification(
     doc = {
         "cert_id": cert_id,
         "commessa_id": data.commessa_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "tipo_chiusura": data.tipo_chiusura.value,
         "azionamento": data.azionamento.value,
         "larghezza_mm": data.larghezza_mm,
@@ -103,7 +103,7 @@ async def create_gate_certification(
 async def get_gate_certification(commessa_id: str, user: dict = Depends(get_current_user)):
     """Get gate certification for a commessa."""
     doc = await db.gate_certifications.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         return {"certification": None}
@@ -118,7 +118,7 @@ async def update_gate_certification(
 ):
     """Update gate certification data."""
     existing = await db.gate_certifications.find_one(
-        {"cert_id": cert_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"cert_id": cert_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not existing:
         raise HTTPException(404, "Certificazione non trovata")
@@ -160,7 +160,7 @@ def _gate_pdf_css():
 async def generate_dop_pdf(commessa_id: str, user: dict = Depends(get_current_user)):
     """Generate Declaration of Performance (DoP) PDF per EN 13241."""
     cert = await db.gate_certifications.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not cert:
         raise HTTPException(404, "Certificazione non trovata")
@@ -173,7 +173,7 @@ async def generate_dop_pdf(commessa_id: str, user: dict = Depends(get_current_us
         cl = await db.clients.find_one({"client_id": commessa["client_id"]}, {"_id": 0, "business_name": 1})
         client_name = cl.get("business_name", "") if cl else ""
 
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
 
     tipo_label = cert.get("tipo_chiusura", "").replace("_", " ").title()
     vento = cert.get("resistenza_vento", "NPD")
@@ -238,13 +238,13 @@ async def generate_dop_pdf(commessa_id: str, user: dict = Depends(get_current_us
 async def generate_ce_label_pdf(commessa_id: str, user: dict = Depends(get_current_user)):
     """Generate CE Label PDF for the gate."""
     cert = await db.gate_certifications.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not cert:
         raise HTTPException(404, "Certificazione non trovata")
 
     commessa = await db.commesse.find_one({"commessa_id": commessa_id}, {"_id": 0, "numero": 1})
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
 
     tipo_label = cert.get("tipo_chiusura", "").replace("_", " ").title()
     num = commessa.get("numero", "") if commessa else ""
@@ -281,13 +281,13 @@ async def generate_ce_label_pdf(commessa_id: str, user: dict = Depends(get_curre
 async def generate_maintenance_register_pdf(commessa_id: str, user: dict = Depends(get_current_user)):
     """Generate empty Maintenance Register (Registro Manutenzione) for motorized gates."""
     cert = await db.gate_certifications.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not cert:
         raise HTTPException(404, "Certificazione non trovata")
 
     commessa = await db.commesse.find_one({"commessa_id": commessa_id}, {"_id": 0, "numero": 1, "title": 1})
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
     client_name = ""
     if commessa and commessa.get("client_id"):
         cl = await db.clients.find_one({"client_id": commessa.get("client_id")}, {"_id": 0, "business_name": 1})
@@ -342,13 +342,13 @@ async def generate_maintenance_register_pdf(commessa_id: str, user: dict = Depen
 async def generate_ce_declaration_pdf(commessa_id: str, user: dict = Depends(get_current_user)):
     """Generate CE Declaration (Dichiarazione CE di Conformita) for motorized gate assembly."""
     cert = await db.gate_certifications.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not cert:
         raise HTTPException(404, "Certificazione non trovata")
 
     commessa = await db.commesse.find_one({"commessa_id": commessa_id}, {"_id": 0, "numero": 1, "title": 1, "client_id": 1})
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
     client_name = ""
     if commessa and commessa.get("client_id"):
         cl = await db.clients.find_one({"client_id": commessa.get("client_id")}, {"_id": 0, "business_name": 1})

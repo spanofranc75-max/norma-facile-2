@@ -79,7 +79,7 @@ def _strip_large_base64(doc: dict) -> dict:
 
 # ── Async Backup Job ──
 
-async def _run_backup_job(backup_id: str, uid: str, user_email: str):
+async def _run_backup_job(backup_id: str, uid: str, user_email: str, tid: str = "default"):
     """Background task: export all collections to a JSON file."""
     job = _backup_jobs[backup_id]
     try:
@@ -89,7 +89,7 @@ async def _run_backup_job(backup_id: str, uid: str, user_email: str):
                 "version": "2.0",
                 "app": "1090 Norma Facile",
                 "created_at": now.isoformat(),
-                "user_id": uid,
+                "user_id": uid, "tenant_id": tid,
                 "user_email": user_email,
                 "collections": {},
             },
@@ -103,7 +103,7 @@ async def _run_backup_job(backup_id: str, uid: str, user_email: str):
             job["progress"] = f"{idx + 1}/{total_colls} — {coll_name}"
             try:
                 docs = await db[coll_name].find(
-                    {"user_id": uid}, {"_id": 0}
+                    {"user_id": uid, "tenant_id": tid}, {"_id": 0}
                 ).to_list(None)
                 # Strip large base64 to keep backup portable
                 docs_clean = [_strip_large_base64(d) for d in docs]
@@ -128,7 +128,7 @@ async def _run_backup_job(backup_id: str, uid: str, user_email: str):
 
         # Log to DB
         await db.backup_log.insert_one({
-            "user_id": uid,
+            "user_id": uid, "tenant_id": tid,
             "date": now,
             "filename": filename,
             "total_records": total_records,
@@ -157,6 +157,7 @@ async def _run_backup_job(backup_id: str, uid: str, user_email: str):
 async def start_backup(user: dict = Depends(get_current_user)):
     """Start an async backup job. Returns backup_id for polling."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     # Check no other job is running for this user
     for bid, job in _backup_jobs.items():
@@ -166,13 +167,13 @@ async def start_backup(user: dict = Depends(get_current_user)):
     backup_id = f"bk_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uid[:8]}"
     _backup_jobs[backup_id] = {
         "status": "in_corso",
-        "user_id": uid,
+        "user_id": uid, "tenant_id": tid,
         "progress": "Avvio...",
         "started_at": datetime.now(timezone.utc).isoformat(),
     }
 
     from core.background import safe_background_task
-    safe_background_task(_run_backup_job(backup_id, uid, user.get("email", "")), "backup")
+    safe_background_task(_run_backup_job(backup_id, uid, user.get("email", ""), tid), "backup")
     return {"backup_id": backup_id, "status": "in_corso"}
 
 
@@ -219,6 +220,7 @@ async def download_backup(backup_id: str, user: dict = Depends(get_current_user)
 async def export_backup(user: dict = Depends(get_current_user)):
     """Export a full JSON backup of all user data (synchronous, legacy)."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     now = datetime.now(timezone.utc)
 
     backup = {
@@ -226,7 +228,7 @@ async def export_backup(user: dict = Depends(get_current_user)):
             "version": "2.0",
             "app": "1090 Norma Facile",
             "created_at": now.isoformat(),
-            "user_id": uid,
+            "user_id": uid, "tenant_id": tid,
             "user_email": user.get("email", ""),
             "collections": {},
         },
@@ -234,7 +236,7 @@ async def export_backup(user: dict = Depends(get_current_user)):
             "date": now.isoformat(),
             "version": "2.0",
             "app": "1090 Norma Facile",
-            "user_id": uid,
+            "user_id": uid, "tenant_id": tid,
             "user_email": user.get("email", ""),
         },
         "data": {},
@@ -245,7 +247,7 @@ async def export_backup(user: dict = Depends(get_current_user)):
     for coll_name in BACKUP_COLLECTIONS:
         try:
             docs = await db[coll_name].find(
-                {"user_id": uid}, {"_id": 0}
+                {"user_id": uid, "tenant_id": tid}, {"_id": 0}
             ).to_list(None)
             docs_clean = [_strip_large_base64(d) for d in docs]
             backup["data"][coll_name] = docs_clean
@@ -265,7 +267,7 @@ async def export_backup(user: dict = Depends(get_current_user)):
     filename = f"backup_normafacile_{date_str}.json"
 
     await db.backup_log.insert_one({
-        "user_id": uid,
+        "user_id": uid, "tenant_id": tid,
         "date": now,
         "filename": filename,
         "total_records": total_records,
@@ -284,8 +286,9 @@ async def export_backup(user: dict = Depends(get_current_user)):
 async def get_last_backup(user: dict = Depends(get_current_user)):
     """Get info about the last backup performed."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     last = await db.backup_log.find_one(
-        {"user_id": uid},
+        {"user_id": uid, "tenant_id": tid},
         {"_id": 0},
         sort=[("date", -1)],
     )
@@ -306,11 +309,12 @@ async def get_last_backup(user: dict = Depends(get_current_user)):
 async def get_backup_stats(user: dict = Depends(get_current_user)):
     """Get current data stats (how many records per collection)."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     stats = {}
     total = 0
     for coll_name in BACKUP_COLLECTIONS:
         try:
-            count = await db[coll_name].count_documents({"user_id": uid})
+            count = await db[coll_name].count_documents({"user_id": uid, "tenant_id": tid})
             stats[coll_name] = count
             total += count
         except Exception:
@@ -322,8 +326,9 @@ async def get_backup_stats(user: dict = Depends(get_current_user)):
 async def get_backup_history(user: dict = Depends(get_current_user)):
     """Get list of all backup logs for the current user."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     logs = await db.backup_log.find(
-        {"user_id": uid},
+        {"user_id": uid, "tenant_id": tid},
         {"_id": 0},
     ).sort("date", -1).to_list(20)
 
@@ -352,6 +357,7 @@ async def restore_backup(
     mode = "wipe"   → SOSTITUZIONE TOTALE: all user data wiped first, then imported.
     """
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     if mode not in ("merge", "wipe"):
         raise HTTPException(400, "Modalità non valida. Usa 'merge' o 'wipe'.")
@@ -372,7 +378,7 @@ async def restore_backup(
         for coll_name in BACKUP_COLLECTIONS:
             try:
                 coll = db[coll_name]
-                del_result = await coll.delete_many({"user_id": uid})
+                del_result = await coll.delete_many({"user_id": uid, "tenant_id": tid})
                 total_deleted += del_result.deleted_count
             except Exception as e:
                 logger.warning(f"Wipe error in {coll_name}: {e}")
@@ -431,7 +437,7 @@ async def restore_backup(
 
                     existing = await coll.find_one(
                         {"_content_hash": doc_hash,
-                         "user_id": uid}
+                         "user_id": uid, "tenant_id": tid}
                     )
                     if not existing:
                         doc["_content_hash"] = doc_hash

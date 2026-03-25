@@ -740,7 +740,7 @@ async def generate_fascicolo(
         raise HTTPException(404, f"Norma '{req.norma_id}' non trovata")
 
     # Get company settings
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
 
     # Run calculation if not pre-provided
     if req.calc_results:

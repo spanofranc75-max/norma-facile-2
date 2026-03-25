@@ -105,7 +105,7 @@ async def get_invoices(
     user: dict = Depends(get_current_user)
 ):
     """Get all invoices with filters."""
-    query = {"user_id": user["user_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     
     if document_type:
         query["document_type"] = document_type
@@ -149,11 +149,12 @@ async def get_quick_fill_sources(
 ):
     """List preventivi and DDT available for quick fill into an invoice."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     sources = []
 
     # Fetch Preventivi (exclude already converted or cancelled)
     if not doc_type or doc_type == "preventivo":
-        prev_q = {"user_id": uid, "status": {"$nin": ["annullato"]}}
+        prev_q = {"user_id": uid, "tenant_id": tid, "status": {"$nin": ["annullato"]}}
         if q:
             prev_q["$or"] = [
                 {"number": {"$regex": q, "$options": "i"}},
@@ -189,7 +190,7 @@ async def get_quick_fill_sources(
 
     # Fetch DDT (non fatturato)
     if not doc_type or doc_type == "ddt":
-        ddt_q = {"user_id": uid}
+        ddt_q = {"user_id": uid, "tenant_id": tid}
         if q:
             ddt_q["$or"] = [
                 {"number": {"$regex": q, "$options": "i"}},
@@ -227,7 +228,8 @@ async def create_invoice_from_preventivo(
     """Create an Invoice (bozza) from an existing Preventivo. Copies lines, client, notes."""
     from services.client_snapshot import build_snapshot
     uid = user["user_id"]
-    prev = await db.preventivi.find_one({"preventivo_id": preventivo_id, "user_id": uid}, {"_id": 0})
+    tid = user["tenant_id"]
+    prev = await db.preventivi.find_one({"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid}, {"_id": 0})
     if not prev:
         raise HTTPException(404, "Preventivo non trovato")
 
@@ -248,7 +250,7 @@ async def create_invoice_from_preventivo(
     if not ft_existing:
         max_ft = 0
         async for inv_doc in db.invoices.find(
-            {"user_id": uid},
+            {"user_id": uid, "tenant_id": tid},
             {"document_number": 1, "_id": 0}
         ):
             dn = inv_doc.get("document_number", "")
@@ -319,7 +321,7 @@ async def create_invoice_from_preventivo(
 
     invoice_doc = {
         "invoice_id": invoice_id,
-        "user_id": uid,
+        "user_id": uid, "tenant_id": tid,
         "document_type": "FT",
         "document_number": doc_number,
         "client_id": client_id,
@@ -376,7 +378,7 @@ async def get_invoice(
 ):
     """Get a specific invoice by ID."""
     invoice = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     
@@ -407,7 +409,7 @@ async def create_invoice(
     
     # Verify client exists
     client = await db.clients.find_one(
-        {"client_id": invoice_data.client_id, "user_id": user["user_id"]},
+        {"client_id": invoice_data.client_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not client:
@@ -452,7 +454,7 @@ async def create_invoice(
     
     invoice_doc = {
         "invoice_id": invoice_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "document_type": invoice_data.document_type.value,
         "document_number": document_number,
         "client_id": invoice_data.client_id,
@@ -492,7 +494,7 @@ async def update_invoice(
 ):
     """Update an existing invoice."""
     existing = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not existing:
@@ -526,7 +528,7 @@ async def update_invoice(
     # Update client if changed (draft only — checked above)
     if invoice_data.client_id:
         client = await db.clients.find_one(
-            {"client_id": invoice_data.client_id, "user_id": user["user_id"]}
+            {"client_id": invoice_data.client_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
         )
         if not client:
             raise HTTPException(status_code=400, detail="Cliente non trovato")
@@ -606,7 +608,7 @@ async def renumber_invoice(
         raise HTTPException(400, "Numero documento obbligatorio")
 
     existing = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not existing:
@@ -635,7 +637,7 @@ async def create_nota_credito(
     from services.client_snapshot import build_snapshot
     
     original = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not original:
@@ -690,7 +692,7 @@ async def create_nota_credito(
 
     nc_doc = {
         "invoice_id": nc_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "document_type": "NC",
         "document_number": nc_number,
         "issue_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
@@ -742,7 +744,7 @@ async def create_nota_credito(
     # ── Audit log NC ──
     await db.outbound_audit_log.insert_one({
         "log_id": f"audit_{uuid.uuid4().hex[:12]}",
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "action_type": "nota_credito_creata",
         "status": "success",
         "details": {
@@ -777,7 +779,7 @@ async def update_invoice_status(
         raise HTTPException(422, "Campo 'status' mancante nel body")
 
     existing = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not existing:
@@ -850,7 +852,7 @@ async def update_invoice_status(
 async def get_invoice_scadenze(invoice_id: str, user: dict = Depends(get_current_user)):
     """Get payment deadlines for an invoice."""
     doc = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0, "scadenze_pagamento": 1, "invoice_id": 1}
     )
     if not doc:
@@ -862,7 +864,7 @@ async def get_invoice_scadenze(invoice_id: str, user: dict = Depends(get_current
 async def add_scadenza_pagamento(invoice_id: str, body: dict, user: dict = Depends(get_current_user)):
     """Register a payment against an invoice."""
     inv = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not inv:
         raise HTTPException(404, "Fattura non trovata")
@@ -899,7 +901,7 @@ async def add_scadenza_pagamento(invoice_id: str, body: dict, user: dict = Depen
 async def delete_scadenza_pagamento(invoice_id: str, payment_id: str, user: dict = Depends(get_current_user)):
     """Remove a payment from an invoice."""
     inv = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not inv:
         raise HTTPException(404, "Fattura non trovata")
@@ -928,7 +930,7 @@ async def delete_scadenza_pagamento(invoice_id: str, payment_id: str, user: dict
 async def regenerate_invoice_scadenze(invoice_id: str, user: dict = Depends(get_current_user)):
     """(Re)generate payment deadlines for an invoice based on client's payment type."""
     doc = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "Fattura non trovata")
@@ -942,8 +944,9 @@ async def sync_all_scadenze(user: dict = Depends(get_current_user)):
     """Generate scadenze_pagamento for all invoices that don't have them.
     Uses client payment type if available, otherwise creates single scadenza from due_date."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     invoices = await db.invoices.find(
-        {"user_id": uid,
+        {"user_id": uid, "tenant_id": tid,
          "status": {"$in": ["emessa", "inviata_sdi", "accettata"]},
          "payment_status": {"$ne": "pagata"},
          "$or": [
@@ -994,7 +997,7 @@ async def sync_all_scadenze(user: dict = Depends(get_current_user)):
 async def mark_scadenza_pagata(invoice_id: str, rata: int, user: dict = Depends(get_current_user)):
     """Mark a specific installment as paid."""
     doc = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "Fattura non trovata")
@@ -1031,7 +1034,7 @@ async def convert_document(
     sources = []
     for source_id in convert_request.source_ids:
         doc = await db.invoices.find_one(
-            {"invoice_id": source_id, "user_id": user["user_id"]},
+            {"invoice_id": source_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
             {"_id": 0}
         )
         if not doc:
@@ -1081,7 +1084,7 @@ async def convert_document(
     
     invoice_doc = {
         "invoice_id": invoice_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "document_type": convert_request.target_type.value,
         "document_number": document_number,
         "client_id": client_id,
@@ -1134,7 +1137,7 @@ async def preview_invoice_pdf(
         client = await db.clients.find_one({"client_id": client_id}, {"_id": 0}) or {}
 
     company = await db.company_settings.find_one(
-        {"user_id": user["user_id"]}, {"_id": 0}
+        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     ) or {"business_name": user.get("name", ""), "email": user.get("email", "")}
 
     # Build a temporary invoice dict from form data
@@ -1179,7 +1182,7 @@ async def get_invoice_pdf(
 ):
     """Generate and download invoice PDF."""
     invoice = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not invoice:
@@ -1194,7 +1197,7 @@ async def get_invoice_pdf(
     
     # Get company settings
     company = await db.company_settings.find_one(
-        {"user_id": user["user_id"]},
+        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not company:
@@ -1225,7 +1228,7 @@ async def get_invoice_xml(
 ):
     """Generate and download FatturaPA XML for SDI."""
     invoice = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not invoice:
@@ -1246,7 +1249,7 @@ async def get_invoice_xml(
         raise HTTPException(status_code=400, detail="Cliente non trovato")
     
     company = await db.company_settings.find_one(
-        {"user_id": user["user_id"]},
+        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not company or not company.get("partita_iva"):
@@ -1279,7 +1282,7 @@ async def get_invoice_xml(
 async def preview_invoice_email(invoice_id: str, user: dict = Depends(get_current_user)):
     """Preview email that would be sent for an invoice."""
     invoice = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not invoice:
         raise HTTPException(404, "Documento non trovato")
@@ -1301,7 +1304,7 @@ async def preview_invoice_email(invoice_id: str, user: dict = Depends(get_curren
     doc_type = invoice.get("document_type", "FT")
     total = invoice.get("totals", {}).get("total_document", 0)
 
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
     company_name = company.get("business_name") or company.get("name") or ""
     company_warnings = check_company_warnings(company)
 
@@ -1344,7 +1347,7 @@ async def send_invoice_email(invoice_id: str, payload: dict = None, user: dict =
     """Generate PDF and send invoice via email to client."""
     payload = payload or {}
     invoice = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not invoice:
         raise HTTPException(404, "Documento non trovato")
@@ -1364,7 +1367,7 @@ async def send_invoice_email(invoice_id: str, payload: dict = None, user: dict =
     if not to_email:
         raise HTTPException(400, "Nessun indirizzo email trovato per il cliente. Aggiungi un'email o PEC nella scheda cliente.")
 
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
 
     # Generate PDF
     pdf_bytes = pdf_service.generate_invoice_pdf(invoice, client, company)
@@ -1457,7 +1460,7 @@ async def _send_sdi_impl(invoice_id: str, user: dict):
 
     # ── Fetch data ──
     invoice = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not invoice:
         raise HTTPException(404, "Documento non trovato")
@@ -1469,7 +1472,7 @@ async def _send_sdi_impl(invoice_id: str, user: dict):
         raise HTTPException(400, "Non puoi inviare una bozza al SDI. Prima emetti il documento.")
 
     client_doc = await db.clients.find_one({"client_id": invoice.get("client_id")}, {"_id": 0}) or {}
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
 
     # ── STEP 1: Validazione pre-invio ──
     validation_errors = validate_invoice_for_sdi(invoice, client_doc, company)
@@ -1660,7 +1663,7 @@ async def _handle_fic_409(fic, invoice: dict, fic_data: dict) -> int:
 async def check_invoice_sdi_status(invoice_id: str, user: dict = Depends(get_current_user)):
     """Check SDI status for a sent invoice via Fatture in Cloud."""
     invoice = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not invoice:
         raise HTTPException(404, "Documento non trovato")
@@ -1669,7 +1672,7 @@ async def check_invoice_sdi_status(invoice_id: str, user: dict = Depends(get_cur
     if not fic_doc_id:
         raise HTTPException(400, "Documento non ancora sincronizzato con Fatture in Cloud")
 
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
     fic_token = company.get("fic_access_token") if company else None
     fic_company_id = company.get("fic_company_id") if company else None
     if not fic_token or not fic_company_id:
@@ -1698,8 +1701,9 @@ async def delete_invoice(
     numerazione progressiva (obbligo fiscale IT).
     """
     uid = user["user_id"]
+    tid = user["tenant_id"]
     inv = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": uid},
+        {"invoice_id": invoice_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0, "status": 1, "document_number": 1, "document_type": 1, "sdi_id": 1, "protocollo_sdi": 1}
     )
     if not inv:
@@ -1726,7 +1730,7 @@ async def delete_invoice(
                 "Fattura annullata ma già inviata a SDI. Non eliminabile."
             )
         await db.invoices.delete_one(
-            {"invoice_id": invoice_id, "user_id": uid}
+            {"invoice_id": invoice_id, "user_id": uid, "tenant_id": tid}
         )
         logger.info(f"Deleted annullata invoice {inv.get('document_number')} (no SDI)")
         await log_activity(user, "delete", "fattura", invoice_id, label=inv.get("document_number", ""))
@@ -1734,7 +1738,7 @@ async def delete_invoice(
 
     # Solo bozze si possono eliminare
     await db.invoices.delete_one(
-        {"invoice_id": invoice_id, "user_id": uid}
+        {"invoice_id": invoice_id, "user_id": uid, "tenant_id": tid}
     )
     logger.info(
         f"Fattura bozza {invoice_id} eliminata da {uid}"
@@ -1754,8 +1758,9 @@ async def annulla_invoice(
     Il numero progressivo rimane visibile nella lista.
     """
     uid = user["user_id"]
+    tid = user["tenant_id"]
     inv = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": uid},
+        {"invoice_id": invoice_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0, "status": 1, "document_number": 1}
     )
     if not inv:
@@ -1767,7 +1772,7 @@ async def annulla_invoice(
         raise HTTPException(409, "Fattura già annullata")
 
     await db.invoices.update_one(
-        {"invoice_id": invoice_id, "user_id": uid},
+        {"invoice_id": invoice_id, "user_id": uid, "tenant_id": tid},
         {"$set": {
             "status": "annullata",
             "annullata_at": datetime.now(timezone.utc).isoformat(),
@@ -1803,7 +1808,7 @@ async def get_scadenze(
 ):
     """Get payment schedule and history for an invoice."""
     invoice = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not invoice:
@@ -1843,7 +1848,7 @@ async def record_payment(
 ):
     """Record a payment for an invoice."""
     invoice = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not invoice:
@@ -1907,7 +1912,7 @@ async def delete_payment(
 ):
     """Delete a recorded payment."""
     invoice = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not invoice:
@@ -1954,7 +1959,7 @@ async def duplicate_invoice(
 ):
     """Duplicate an existing invoice as a new draft."""
     original = await db.invoices.find_one(
-        {"invoice_id": invoice_id, "user_id": user["user_id"]},
+        {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not original:
@@ -2012,13 +2017,13 @@ async def cleanup_bogus_invoice(user: dict = Depends(get_current_user)):
     """
     # Step 1: Find the invoice
     inv = await db.invoices.find_one(
-        {"document_number": "9908/2026", "user_id": user["user_id"]},
+        {"document_number": "9908/2026", "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0, "invoice_id": 1, "status": 1, "document_number": 1, "client_id": 1}
     )
     if not inv:
         # Try alternative field names
         inv = await db.invoices.find_one(
-            {"invoice_number": "9908/2026", "user_id": user["user_id"]},
+            {"invoice_number": "9908/2026", "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
             {"_id": 0, "invoice_id": 1, "status": 1, "invoice_number": 1, "client_id": 1}
         )
     if not inv:
@@ -2029,11 +2034,11 @@ async def cleanup_bogus_invoice(user: dict = Depends(get_current_user)):
 
     # Step 2: Delete physically
     result = await db.invoices.delete_one(
-        {"document_number": "9908/2026", "user_id": user["user_id"], "status": "annullata"}
+        {"document_number": "9908/2026", "user_id": user["user_id"], "tenant_id": user["tenant_id"], "status": "annullata"}
     )
     if result.deleted_count == 0:
         result = await db.invoices.delete_one(
-            {"invoice_number": "9908/2026", "user_id": user["user_id"], "status": "annullata"}
+            {"invoice_number": "9908/2026", "user_id": user["user_id"], "tenant_id": user["tenant_id"], "status": "annullata"}
         )
 
     # Step 3: Verify counter is NOT touched
@@ -2045,5 +2050,5 @@ async def cleanup_bogus_invoice(user: dict = Depends(get_current_user)):
         "message": f"Fattura 9908/2026 eliminata fisicamente. Contatore FT 2026 invariato: {counter.get('counter', '?') if counter else 'N/A'}",
         "deleted": True,
         "counter_current": counter.get("counter") if counter else None,
-        "remaining_invoices": await db.invoices.count_documents({"user_id": user["user_id"]}),
+        "remaining_invoices": await db.invoices.count_documents({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}),
     }

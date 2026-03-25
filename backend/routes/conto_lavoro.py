@@ -56,7 +56,7 @@ class RientroData(BaseModel):
 
 @router.post("/{cid}/conto-lavoro")
 async def create_conto_lavoro(cid: str, data: ContoLavoroCreate, user: dict = Depends(get_current_user)):
-    await get_commessa_or_404(cid, user["user_id"])
+    await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     cl = {
         "cl_id": new_id("cl_"),
@@ -88,7 +88,7 @@ async def create_conto_lavoro(cid: str, data: ContoLavoroCreate, user: dict = De
 
 @router.put("/{cid}/conto-lavoro/{cl_id}")
 async def update_conto_lavoro(cid: str, cl_id: str, data: ContoLavoroUpdate, user: dict = Depends(get_current_user)):
-    comm = await get_commessa_or_404(cid, user["user_id"])
+    comm = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     upd = {"conto_lavoro.$[elem].stato": data.stato}
     if data.stato == "inviato":
@@ -112,7 +112,7 @@ async def update_conto_lavoro(cid: str, cl_id: str, data: ContoLavoroUpdate, use
         if cl_item and not cl_item.get("ddt_invio_id"):
             comm_num = comm.get("numero", cid)
             year = ts().strftime("%Y")
-            ddt_count = await db.ddt_documents.count_documents({"user_id": user["user_id"]})
+            ddt_count = await db.ddt_documents.count_documents({"user_id": user["user_id"], "tenant_id": user["tenant_id"]})
             ddt_invio_id = f"ddt_{uuid.uuid4().hex[:12]}"
             ddt_number = f"DDT-{year}-{ddt_count + 1:04d}"
             tipo_lav = cl_item.get("tipo", "lavorazione")
@@ -130,7 +130,7 @@ async def update_conto_lavoro(cid: str, cl_id: str, data: ContoLavoroUpdate, use
             now = ts()
             ddt_doc = {
                 "ddt_id": ddt_invio_id,
-                "user_id": user["user_id"],
+                "user_id": user["user_id"], "tenant_id": user["tenant_id"],
                 "number": ddt_number,
                 "ddt_type": "conto_lavoro",
                 "ddt_type_label": f"DDT C/Lavoro — {tipo_lav.capitalize()}",
@@ -186,7 +186,7 @@ async def registra_rientro_cl(
     user: dict = Depends(get_current_user),
 ):
     """Register material return from subcontractor with document upload."""
-    comm = await get_commessa_or_404(cid, user["user_id"])
+    comm = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     cl_list = comm.get("conto_lavoro", [])
     cl = next((c for c in cl_list if c["cl_id"] == cl_id), None)
     if not cl:
@@ -239,7 +239,7 @@ async def registra_rientro_cl(
 @router.patch("/{cid}/conto-lavoro/{cl_id}/verifica")
 async def verifica_cl(cid: str, cl_id: str, user: dict = Depends(get_current_user)):
     """Verify returned material — closes C/L, updates production phase, links cert to fascicolo."""
-    comm = await get_commessa_or_404(cid, user["user_id"])
+    comm = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     cl_list = comm.get("conto_lavoro", [])
     cl = next((c for c in cl_list if c["cl_id"] == cl_id), None)
     if not cl:
@@ -326,8 +326,8 @@ async def verifica_cl(cid: str, cl_id: str, user: dict = Depends(get_current_use
 @router.get("/{cid}/conto-lavoro/{cl_id}/ncr-pdf")
 async def generate_ncr_pdf(cid: str, cl_id: str, user: dict = Depends(get_current_user)):
     """Generate Non-Conformity Report when QC fails."""
-    comm = await get_commessa_or_404(cid, user["user_id"])
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    comm = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
     cl_list = comm.get("conto_lavoro", [])
     cl = next((c for c in cl_list if c["cl_id"] == cl_id), None)
     if not cl:
@@ -346,13 +346,13 @@ async def generate_ncr_pdf(cid: str, cl_id: str, user: dict = Depends(get_curren
 @router.get("/{cid}/conto-lavoro/{cl_id}/preview-pdf")
 async def preview_cl_pdf(cid: str, cl_id: str, user: dict = Depends(get_current_user)):
     """Generate DDT PDF for Conto Lavoro."""
-    comm = await get_commessa_or_404(cid, user["user_id"])
+    comm = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     cl_list = comm.get("conto_lavoro", [])
     cl = next((c for c in cl_list if c["cl_id"] == cl_id), None)
     if not cl:
         raise HTTPException(404, "Conto lavoro non trovato")
 
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
 
     from services.pdf_procurement import generate_cl_pdf
 
@@ -368,7 +368,7 @@ async def preview_cl_pdf(cid: str, cl_id: str, user: dict = Depends(get_current_
 @router.get("/{cid}/conto-lavoro/{cl_id}/preview-email")
 async def preview_cl_email(cid: str, cl_id: str, user: dict = Depends(get_current_user)):
     """Preview email for Conto Lavoro DDT."""
-    comm = await get_commessa_or_404(cid, user["user_id"])
+    comm = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     cl_list = comm.get("conto_lavoro", [])
     cl = next((c for c in cl_list if c["cl_id"] == cl_id), None)
     if not cl:
@@ -377,7 +377,7 @@ async def preview_cl_email(cid: str, cl_id: str, user: dict = Depends(get_curren
     fornitore_id = cl.get("fornitore_id")
     to_email = ""
     if fornitore_id:
-        forn = await db.clients.find_one({"client_id": fornitore_id, "user_id": user["user_id"]}, {"_id": 0})
+        forn = await db.clients.find_one({"client_id": fornitore_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
         if forn:
             to_email = forn.get("pec") or forn.get("email") or ""
             if not to_email:
@@ -386,7 +386,7 @@ async def preview_cl_email(cid: str, cl_id: str, user: dict = Depends(get_curren
                         to_email = c["email"]
                         break
 
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
 
     from services.email_preview import build_cl_email
     preview = build_cl_email(
@@ -412,7 +412,7 @@ async def preview_cl_email(cid: str, cl_id: str, user: dict = Depends(get_curren
 async def send_cl_email(cid: str, cl_id: str, payload: dict = None, user: dict = Depends(get_current_user)):
     """Send DDT Conto Lavoro via email to the supplier."""
     payload = payload or {}
-    comm = await get_commessa_or_404(cid, user["user_id"])
+    comm = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     cl_list = comm.get("conto_lavoro", [])
     cl = next((c for c in cl_list if c["cl_id"] == cl_id), None)
     if not cl:
@@ -423,7 +423,7 @@ async def send_cl_email(cid: str, cl_id: str, payload: dict = None, user: dict =
     supplier = None
     if fornitore_id:
         supplier = await db.clients.find_one(
-            {"client_id": fornitore_id, "user_id": user["user_id"]}, {"_id": 0}
+            {"client_id": fornitore_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
         )
     supplier_email = ""
     if supplier:
@@ -436,7 +436,7 @@ async def send_cl_email(cid: str, cl_id: str, payload: dict = None, user: dict =
     if not supplier_email:
         raise HTTPException(400, "Email fornitore non disponibile. Aggiungila nell'anagrafica fornitori.")
 
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
 
     # Generate PDF
     from services.pdf_procurement import generate_cl_pdf

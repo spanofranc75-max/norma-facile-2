@@ -222,7 +222,7 @@ async def save_dnsh_data(data: dict, user: dict = Depends(get_current_user)):
         "dnsh_id": dnsh_id,
         "commessa_id": data.get("commessa_id", ""),
         "voce_id": data.get("voce_id", ""),
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "ha_riferimenti_dnsh": data.get("ha_riferimenti_dnsh", False),
         "percentuale_riciclato": data.get("percentuale_riciclato"),
         "certificazioni_ambientali": data.get("certificazioni_ambientali", []),
@@ -384,7 +384,7 @@ async def export_cse(commessa_id: str, user: dict = Depends(get_current_user)):
 
         # Certificati macchine
         attrezzature = await db.attrezzature.find(
-            {"user_id": user["user_id"]}, {"_id": 0}
+            {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
         ).to_list(50)
         a_lines = ["TIPO;MODELLO;SERIE;MARCA;TARATURA;PROSSIMA"]
         for a in attrezzature:

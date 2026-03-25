@@ -24,7 +24,7 @@ router = APIRouter(prefix="/fpc", tags=["FPC - EN 1090"])
 @router.get("/welders")
 async def list_welders(user: dict = Depends(get_current_user)):
     cursor = db.welders.find(
-        {"user_id": user["user_id"]}, {"_id": 0}
+        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     ).sort("name", 1)
     docs = await cursor.to_list(200)
     now = datetime.now(timezone.utc).isoformat()
@@ -38,7 +38,7 @@ async def list_welders(user: dict = Depends(get_current_user)):
 async def create_welder(body: WelderCreate, user: dict = Depends(get_current_user)):
     doc = {
         "welder_id": f"wld_{uuid.uuid4().hex[:12]}",
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "name": body.name,
         "qualification_level": body.qualification_level,
         "license_expiry": body.license_expiry,
@@ -53,7 +53,7 @@ async def create_welder(body: WelderCreate, user: dict = Depends(get_current_use
 @router.put("/welders/{welder_id}")
 async def update_welder(welder_id: str, body: WelderCreate, user: dict = Depends(get_current_user)):
     result = await db.welders.update_one(
-        {"welder_id": welder_id, "user_id": user["user_id"]},
+        {"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"$set": {
             "name": body.name,
             "qualification_level": body.qualification_level,
@@ -68,7 +68,7 @@ async def update_welder(welder_id: str, body: WelderCreate, user: dict = Depends
 
 @router.delete("/welders/{welder_id}")
 async def delete_welder(welder_id: str, user: dict = Depends(get_current_user)):
-    result = await db.welders.delete_one({"welder_id": welder_id, "user_id": user["user_id"]})
+    result = await db.welders.delete_one({"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
     if result.deleted_count == 0:
         raise HTTPException(404, "Saldatore non trovato")
     return {"status": "deleted"}
@@ -84,7 +84,7 @@ async def list_batches(
     user: dict = Depends(get_current_user)
 ):
     """List material batches, optionally filtered by commessa."""
-    query = {"user_id": user["user_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     if commessa_id:
         query["commessa_id"] = commessa_id
     
@@ -101,7 +101,7 @@ async def list_batches(
 @router.get("/batches/{batch_id}")
 async def get_batch(batch_id: str, user: dict = Depends(get_current_user)):
     doc = await db.material_batches.find_one(
-        {"batch_id": batch_id, "user_id": user["user_id"]},
+        {"batch_id": batch_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0, "certificate_base64": 0}
     )
     if not doc:
@@ -113,7 +113,7 @@ async def get_batch(batch_id: str, user: dict = Depends(get_current_user)):
 async def get_batch_certificate(batch_id: str, user: dict = Depends(get_current_user)):
     """Download the 3.1 certificate for a batch."""
     doc = await db.material_batches.find_one(
-        {"batch_id": batch_id, "user_id": user["user_id"]},
+        {"batch_id": batch_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0, "certificate_base64": 1, "certificate_filename": 1}
     )
     if not doc or not doc.get("certificate_base64"):
@@ -128,7 +128,7 @@ async def get_batch_certificate(batch_id: str, user: dict = Depends(get_current_
 async def create_batch(body: MaterialBatchCreate, user: dict = Depends(get_current_user)):
     doc = {
         "batch_id": f"bat_{uuid.uuid4().hex[:12]}",
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "commessa_id": body.commessa_id or "",  # Link to commessa for traceability
         "supplier_name": body.supplier_name,
         "material_type": body.material_type,
@@ -189,7 +189,7 @@ async def update_batch(batch_id: str, body: MaterialBatchCreate, user: dict = De
         update["has_certificate"] = bool(body.certificate_base64)
 
     result = await db.material_batches.update_one(
-        {"batch_id": batch_id, "user_id": user["user_id"]},
+        {"batch_id": batch_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"$set": update},
     )
     if result.matched_count == 0:
@@ -201,10 +201,10 @@ async def update_batch(batch_id: str, body: MaterialBatchCreate, user: dict = De
 async def delete_batch(batch_id: str, user: dict = Depends(get_current_user)):
     # Find the batch first to get colata/commessa for cascade delete
     batch = await db.material_batches.find_one(
-        {"batch_id": batch_id, "user_id": user["user_id"]},
+        {"batch_id": batch_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0, "heat_number": 1, "commessa_id": 1}
     )
-    result = await db.material_batches.delete_one({"batch_id": batch_id, "user_id": user["user_id"]})
+    result = await db.material_batches.delete_one({"batch_id": batch_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
     if result.deleted_count == 0:
         raise HTTPException(404, "Lotto non trovato")
     
@@ -213,7 +213,7 @@ async def delete_batch(batch_id: str, user: dict = Depends(get_current_user)):
         cam_del = await db.lotti_cam.delete_many({
             "numero_colata": batch["heat_number"],
             "commessa_id": batch["commessa_id"],
-            "user_id": user["user_id"],
+            "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         })
         if cam_del.deleted_count > 0:
             logger.info(f"Cascade: deleted {cam_del.deleted_count} CAM lotti for batch {batch_id}")
@@ -232,7 +232,7 @@ async def create_project(body: ProjectCreate, user: dict = Depends(get_current_u
         raise HTTPException(400, "Classe di esecuzione non valida (EXC1-EXC4)")
 
     prev = await db.preventivi.find_one(
-        {"preventivo_id": body.preventivo_id, "user_id": user["user_id"]},
+        {"preventivo_id": body.preventivo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not prev:
@@ -240,7 +240,7 @@ async def create_project(body: ProjectCreate, user: dict = Depends(get_current_u
 
     # Check no duplicate project
     existing = await db.fpc_projects.find_one(
-        {"preventivo_id": body.preventivo_id, "user_id": user["user_id"]},
+        {"preventivo_id": body.preventivo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0, "project_id": 1}
     )
     if existing:
@@ -254,7 +254,7 @@ async def create_project(body: ProjectCreate, user: dict = Depends(get_current_u
 
     project = {
         "project_id": f"prj_{uuid.uuid4().hex[:12]}",
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "preventivo_id": body.preventivo_id,
         "preventivo_number": prev.get("number", ""),
         "client_id": prev.get("client_id", ""),
@@ -283,7 +283,7 @@ async def create_project(body: ProjectCreate, user: dict = Depends(get_current_u
 @router.get("/projects")
 async def list_projects(user: dict = Depends(get_current_user)):
     cursor = db.fpc_projects.find(
-        {"user_id": user["user_id"]}, {"_id": 0}
+        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     ).sort("created_at", -1)
     return await cursor.to_list(200)
 
@@ -291,7 +291,7 @@ async def list_projects(user: dict = Depends(get_current_user)):
 @router.get("/projects/{project_id}")
 async def get_project(project_id: str, user: dict = Depends(get_current_user)):
     doc = await db.fpc_projects.find_one(
-        {"project_id": project_id, "user_id": user["user_id"]},
+        {"project_id": project_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not doc:
@@ -314,7 +314,7 @@ async def get_project(project_id: str, user: dict = Depends(get_current_user)):
 async def update_project_fpc(project_id: str, body: dict, user: dict = Depends(get_current_user)):
     """Update FPC data fields (welder, WPS, controls, batches)."""
     project = await db.fpc_projects.find_one(
-        {"project_id": project_id, "user_id": user["user_id"]},
+        {"project_id": project_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not project:
@@ -340,7 +340,7 @@ async def update_project_fpc(project_id: str, body: dict, user: dict = Depends(g
                 warning = f"ATTENZIONE: Qualifica saldatore {welder['name']} scaduta il {exp}"
 
     await db.fpc_projects.update_one(
-        {"project_id": project_id, "user_id": user["user_id"]},
+        {"project_id": project_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"$set": {
             "fpc_data": fpc,
             "updated_at": datetime.now(timezone.utc).isoformat(),
@@ -356,7 +356,7 @@ async def update_project_fpc(project_id: str, body: dict, user: dict = Depends(g
 async def assign_batch_to_line(project_id: str, body: dict, user: dict = Depends(get_current_user)):
     """Assign a material batch to a project line item: {line_index, batch_id}."""
     project = await db.fpc_projects.find_one(
-        {"project_id": project_id, "user_id": user["user_id"]},
+        {"project_id": project_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not project:
@@ -373,7 +373,7 @@ async def assign_batch_to_line(project_id: str, body: dict, user: dict = Depends
 
     # Verify batch exists
     batch = await db.material_batches.find_one(
-        {"batch_id": batch_id, "user_id": user["user_id"]},
+        {"batch_id": batch_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0, "batch_id": 1, "heat_number": 1, "material_type": 1}
     )
     if not batch:
@@ -391,7 +391,7 @@ async def assign_batch_to_line(project_id: str, body: dict, user: dict = Depends
         fpc["material_batches"] = batches
 
     await db.fpc_projects.update_one(
-        {"project_id": project_id, "user_id": user["user_id"]},
+        {"project_id": project_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"$set": {
             "lines": lines,
             "fpc_data": fpc,
@@ -409,7 +409,7 @@ async def assign_batch_to_line(project_id: str, body: dict, user: dict = Depends
 async def check_ce_readiness(project_id: str, user: dict = Depends(get_current_user)):
     """Check if all FPC requirements are met for CE label generation."""
     project = await db.fpc_projects.find_one(
-        {"project_id": project_id, "user_id": user["user_id"]},
+        {"project_id": project_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not project:
@@ -462,7 +462,7 @@ async def generate_ce_label(project_id: str, user: dict = Depends(get_current_us
     """Generate the CE label if all checks pass."""
     # Run check first
     project = await db.fpc_projects.find_one(
-        {"project_id": project_id, "user_id": user["user_id"]},
+        {"project_id": project_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not project:
@@ -486,7 +486,7 @@ async def generate_ce_label(project_id: str, user: dict = Depends(get_current_us
     fpc["ce_label_generated_at"] = now
 
     await db.fpc_projects.update_one(
-        {"project_id": project_id, "user_id": user["user_id"]},
+        {"project_id": project_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"$set": {
             "fpc_data": fpc,
             "status": "completed",
@@ -518,7 +518,7 @@ async def download_dossier(project_id: str, user: dict = Depends(get_current_use
 
     # Build filename
     project = await db.fpc_projects.find_one(
-        {"project_id": project_id, "user_id": user["user_id"]},
+        {"project_id": project_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0, "preventivo_number": 1}
     )
     name_part = (project or {}).get("preventivo_number", project_id).replace("/", "-")
@@ -544,24 +544,25 @@ async def link_ddt_to_batches(commessa_id: str, user: dict = Depends(get_current
     Aggiorna i batch con il riferimento DDT di origine.
     """
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     # Load commessa
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": uid}, {"_id": 0, "commessa_id": 1}
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid}, {"_id": 0, "commessa_id": 1}
     )
     if not commessa:
         raise HTTPException(404, "Commessa non trovata")
 
     # Load material batches for this commessa (unified collection)
     batches = await db.material_batches.find(
-        {"commessa_id": commessa_id, "user_id": uid}, {"_id": 0, "certificate_base64": 0}
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid}, {"_id": 0, "certificate_base64": 0}
     ).to_list(200)
     if not batches:
         return {"message": "Nessun lotto FPC per questa commessa", "links": [], "totale": 0}
 
     # Load all DDT (carico = with lines that could be incoming materials)
     ddt_docs = await db.ddt_documents.find(
-        {"user_id": uid}, {"_id": 0, "ddt_id": 1, "number": 1, "client_name": 1, "lines": 1, "subject": 1}
+        {"user_id": uid, "tenant_id": tid}, {"_id": 0, "ddt_id": 1, "number": 1, "client_name": 1, "lines": 1, "subject": 1}
     ).to_list(500)
 
     links = []
@@ -629,16 +630,17 @@ async def scheda_rintracciabilita(commessa_id: str, user: dict = Depends(get_cur
     Per ogni lotto FPC mostra: materiale, colata, cert 3.1, DDT di origine, posizione disegno.
     """
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": uid},
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1}
     )
     if not commessa:
         raise HTTPException(404, "Commessa non trovata")
 
     batches = await db.material_batches.find(
-        {"commessa_id": commessa_id, "user_id": uid},
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0, "certificate_base64": 0, "certificato_31_base64": 0}
     ).sort("created_at", 1).to_list(200)
 
@@ -683,8 +685,9 @@ async def verifica_coerenza_rintracciabilita(commessa_id: str, user: dict = Depe
     - Certificati 3.1 mancanti
     """
     uid = user["user_id"]
+    tid = user["tenant_id"]
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": uid},
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0, "commessa_id": 1, "numero": 1}
     )
     if not commessa:
@@ -692,13 +695,13 @@ async def verifica_coerenza_rintracciabilita(commessa_id: str, user: dict = Depe
 
     # Load material batches
     batches = await db.material_batches.find(
-        {"commessa_id": commessa_id, "user_id": uid},
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0, "certificate_base64": 0, "certificato_31_base64": 0}
     ).to_list(200)
 
     # Load DDTs related to this commessa
     ddts = await db.ddt_documents.find(
-        {"user_id": uid, "commessa_id": commessa_id},
+        {"user_id": uid, "tenant_id": tid, "commessa_id": commessa_id},
         {"_id": 0}
     ).to_list(100)
     # Also check DDTs not explicitly linked but referenced in batches
@@ -709,7 +712,7 @@ async def verifica_coerenza_rintracciabilita(commessa_id: str, user: dict = Depe
             ddt_ids_from_batches.add(did)
     if ddt_ids_from_batches:
         extra_ddts = await db.ddt_documents.find(
-            {"ddt_id": {"$in": list(ddt_ids_from_batches)}, "user_id": uid},
+            {"ddt_id": {"$in": list(ddt_ids_from_batches)}, "user_id": uid, "tenant_id": tid},
             {"_id": 0}
         ).to_list(100)
         existing_ids = {d.get("ddt_id") for d in ddts}

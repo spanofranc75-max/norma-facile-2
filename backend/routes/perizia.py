@@ -289,7 +289,7 @@ def calc_voci_costo(data: dict) -> list:
 @router.get("/archivio/stats")
 async def archivio_stats(user: dict = Depends(get_current_user)):
     """Return aggregated stats for the Archivio Sinistri dashboard."""
-    q = {"user_id": user["user_id"]}
+    q = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     total_count = await db[COLLECTION].count_documents(q)
 
     if total_count == 0:
@@ -366,7 +366,7 @@ async def list_perizie(
     search: Optional[str] = Query(None),
     user: dict = Depends(get_current_user),
 ):
-    q = {"user_id": user["user_id"]}
+    q = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     if status:
         q["status"] = status
     if search:
@@ -385,7 +385,7 @@ async def list_perizie(
 @router.get("/{perizia_id}")
 async def get_perizia(perizia_id: str, user: dict = Depends(get_current_user)):
     doc = await db[COLLECTION].find_one(
-        {"perizia_id": perizia_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"perizia_id": perizia_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "Perizia non trovata")
@@ -423,7 +423,7 @@ async def create_perizia(data: PeriziaCreate, user: dict = Depends(get_current_u
 
     doc = {
         "perizia_id": perizia_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "number": number,
         "client_id": data.client_id,
         "client_name": client_name,
@@ -463,7 +463,7 @@ async def create_perizia(data: PeriziaCreate, user: dict = Depends(get_current_u
 @router.put("/{perizia_id}")
 async def update_perizia(perizia_id: str, data: PeriziaUpdate, user: dict = Depends(get_current_user)):
     existing = await db[COLLECTION].find_one(
-        {"perizia_id": perizia_id, "user_id": user["user_id"]}
+        {"perizia_id": perizia_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     )
     if not existing:
         raise HTTPException(404, "Perizia non trovata")
@@ -526,7 +526,7 @@ async def update_perizia(perizia_id: str, data: PeriziaUpdate, user: dict = Depe
 @router.delete("/{perizia_id}")
 async def delete_perizia(perizia_id: str, user: dict = Depends(get_current_user)):
     result = await db[COLLECTION].delete_one(
-        {"perizia_id": perizia_id, "user_id": user["user_id"]}
+        {"perizia_id": perizia_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     )
     if result.deleted_count == 0:
         raise HTTPException(404, "Perizia non trovata")
@@ -558,7 +558,7 @@ async def upload_foto_perizia(
 ):
     """Upload a single photo to object storage and add to perizia."""
     doc = await db[COLLECTION].find_one(
-        {"perizia_id": perizia_id, "user_id": user["user_id"]}
+        {"perizia_id": perizia_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     )
     if not doc:
         raise HTTPException(404, "Perizia non trovata")
@@ -597,7 +597,7 @@ async def upload_foto_perizia(
 async def delete_foto_perizia(perizia_id: str, foto_id: str, user: dict = Depends(get_current_user)):
     """Remove a photo from the perizia (object storage reference)."""
     result = await db[COLLECTION].update_one(
-        {"perizia_id": perizia_id, "user_id": user["user_id"]},
+        {"perizia_id": perizia_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"$pull": {"foto": {"foto_id": foto_id}}},
     )
     if result.modified_count == 0:
@@ -623,14 +623,15 @@ async def collega_perizia_a_commessa(
 ):
     """Link a perizia to an existing commessa (bidirectional)."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     commessa_id = payload.get("commessa_id")
     if not commessa_id:
         raise HTTPException(400, "commessa_id richiesto")
 
-    perizia = await db[COLLECTION].find_one({"perizia_id": perizia_id, "user_id": uid})
+    perizia = await db[COLLECTION].find_one({"perizia_id": perizia_id, "user_id": uid, "tenant_id": tid})
     if not perizia:
         raise HTTPException(404, "Perizia non trovata")
-    commessa = await db.commesse.find_one({"commessa_id": commessa_id, "user_id": uid})
+    commessa = await db.commesse.find_one({"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid})
     if not commessa:
         raise HTTPException(404, "Commessa non trovata")
 
@@ -654,7 +655,7 @@ async def collega_perizia_a_commessa(
 async def analyze_photos(perizia_id: str, user: dict = Depends(get_current_user)):
     """Analyze uploaded photos using GPT-4o vision to detect damage."""
     doc = await db[COLLECTION].find_one(
-        {"perizia_id": perizia_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"perizia_id": perizia_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "Perizia non trovata")
@@ -809,7 +810,7 @@ Scrivi in italiano formale, tono professionale e tecnico. Non usare markdown."""
 async def genera_lettera(request: Request, perizia_id: str, user: dict = Depends(get_current_user)):
     """Generate the formal technical cover letter for the insurance assessor using AI."""
     doc = await db[COLLECTION].find_one(
-        {"perizia_id": perizia_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"perizia_id": perizia_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "Perizia non trovata")
@@ -839,7 +840,7 @@ async def genera_lettera(request: Request, perizia_id: str, user: dict = Depends
     ) if moduli else "moduli danneggiati"
 
     # Get company info
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
     co_name = (company or {}).get("company_name", "[Nome Ditta]")
     co_address = (company or {}).get("address", "")
     co_vat = (company or {}).get("vat_number", "")
@@ -949,7 +950,7 @@ Responsabile Tecnico delle Commesse
 async def recalculate_costs(perizia_id: str, user: dict = Depends(get_current_user)):
     """Recalculate cost items based on current perizia data."""
     doc = await db[COLLECTION].find_one(
-        {"perizia_id": perizia_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"perizia_id": perizia_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "Perizia non trovata")
@@ -979,12 +980,12 @@ async def recalculate_costs(perizia_id: str, user: dict = Depends(get_current_us
 @router.get("/{perizia_id}/pdf")
 async def get_perizia_pdf(perizia_id: str, user: dict = Depends(get_current_user)):
     doc = await db[COLLECTION].find_one(
-        {"perizia_id": perizia_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"perizia_id": perizia_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "Perizia non trovata")
 
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
 
     from services.perizia_pdf_service import generate_perizia_pdf
     pdf_buffer = generate_perizia_pdf(doc, company)
@@ -1003,14 +1004,14 @@ async def get_perizia_pdf(perizia_id: str, user: dict = Depends(get_current_user
 async def genera_preventivo_da_perizia(perizia_id: str, user: dict = Depends(get_current_user)):
     """Ponte Perizia → Preventivatore: trasferisce i dati della perizia in un nuovo preventivo."""
     perizia = await db[COLLECTION].find_one(
-        {"perizia_id": perizia_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"perizia_id": perizia_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not perizia:
         raise HTTPException(404, "Perizia non trovata")
 
     now = datetime.now(timezone.utc)
     year = now.strftime("%Y")
-    count = await db.preventivi.count_documents({"user_id": user["user_id"]})
+    count = await db.preventivi.count_documents({"user_id": user["user_id"], "tenant_id": user["tenant_id"]})
     prev_id = f"prev_{uuid.uuid4().hex[:12]}"
     prev_number = f"PV-{year}-{count + 1:04d}"
 
@@ -1050,7 +1051,7 @@ async def genera_preventivo_da_perizia(perizia_id: str, user: dict = Depends(get
 
     preventivo = {
         "preventivo_id": prev_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "number": prev_number,
         "client_id": client_id,
         "client_name": client_name,

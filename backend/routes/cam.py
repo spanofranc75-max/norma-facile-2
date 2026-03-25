@@ -108,7 +108,7 @@ async def create_lotto_cam(data: LottoMaterialeCAM, user: dict = Depends(get_cur
     
     doc = {
         "lotto_id": lotto_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "descrizione": data.descrizione,
         "fornitore": data.fornitore,
         "numero_colata": data.numero_colata,
@@ -148,7 +148,7 @@ async def list_lotti_cam(
     user: dict = Depends(get_current_user)
 ):
     """Lista lotti materiali CAM."""
-    query = {"user_id": user["user_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     if commessa_id:
         query["commessa_id"] = commessa_id
     if fornitore:
@@ -166,7 +166,7 @@ async def list_lotti_cam(
 async def get_lotto_cam(lotto_id: str, user: dict = Depends(get_current_user)):
     """Dettaglio singolo lotto CAM."""
     lotto = await db.lotti_cam.find_one(
-        {"lotto_id": lotto_id, "user_id": user["user_id"]},
+        {"lotto_id": lotto_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not lotto:
@@ -177,7 +177,7 @@ async def get_lotto_cam(lotto_id: str, user: dict = Depends(get_current_user)):
 @router.put("/lotti/{lotto_id}")
 async def update_lotto_cam(lotto_id: str, data: LottoMaterialeCAM, user: dict = Depends(get_current_user)):
     """Aggiorna un lotto CAM."""
-    existing = await db.lotti_cam.find_one({"lotto_id": lotto_id, "user_id": user["user_id"]})
+    existing = await db.lotti_cam.find_one({"lotto_id": lotto_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
     if not existing:
         raise HTTPException(404, "Lotto non trovato")
     
@@ -224,7 +224,7 @@ async def update_lotto_cam(lotto_id: str, data: LottoMaterialeCAM, user: dict = 
 @router.delete("/lotti/{lotto_id}")
 async def delete_lotto_cam(lotto_id: str, user: dict = Depends(get_current_user)):
     """Elimina un singolo lotto CAM."""
-    result = await db.lotti_cam.delete_one({"lotto_id": lotto_id, "user_id": user["user_id"]})
+    result = await db.lotti_cam.delete_one({"lotto_id": lotto_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
     if result.deleted_count == 0:
         raise HTTPException(404, "Lotto non trovato")
     logger.info(f"CAM lotto {lotto_id} deleted")
@@ -234,7 +234,7 @@ async def delete_lotto_cam(lotto_id: str, user: dict = Depends(get_current_user)
 @router.delete("/lotti/commessa/{commessa_id}")
 async def delete_all_lotti_cam(commessa_id: str, user: dict = Depends(get_current_user)):
     """Elimina tutti i lotti CAM di una commessa."""
-    result = await db.lotti_cam.delete_many({"commessa_id": commessa_id, "user_id": user["user_id"]})
+    result = await db.lotti_cam.delete_many({"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
     logger.info(f"Deleted {result.deleted_count} CAM lotti for commessa {commessa_id}")
     return {"message": f"{result.deleted_count} lotti CAM eliminati", "deleted_count": result.deleted_count}
 
@@ -251,7 +251,7 @@ async def calcola_cam_per_commessa(commessa_id: str, user: dict = Depends(get_cu
     """
     # Verifica esistenza commessa
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0, "numero": 1, "cliente": 1}
     )
     if not commessa:
@@ -259,7 +259,7 @@ async def calcola_cam_per_commessa(commessa_id: str, user: dict = Depends(get_cu
     
     # Recupera lotti associati
     cursor = db.lotti_cam.find(
-        {"commessa_id": commessa_id, "user_id": user["user_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     lotti = await cursor.to_list(100)
@@ -267,7 +267,7 @@ async def calcola_cam_per_commessa(commessa_id: str, user: dict = Depends(get_cu
     if not lotti:
         # Prova anche i material_batches
         cursor_batches = db.material_batches.find(
-            {"commessa_id": commessa_id, "user_id": user["user_id"]},
+            {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
             {"_id": 0}
         )
         batches = await cursor_batches.to_list(100)
@@ -314,8 +314,8 @@ async def calcola_cam_per_commessa(commessa_id: str, user: dict = Depends(get_cu
     
     # Salva il calcolo
     await db.calcoli_cam.update_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"]},
-        {"$set": {**risultato, "user_id": user["user_id"]}},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"$set": {**risultato, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}},
         upsert=True
     )
     
@@ -326,7 +326,7 @@ async def calcola_cam_per_commessa(commessa_id: str, user: dict = Depends(get_cu
 async def get_calcolo_cam(commessa_id: str, user: dict = Depends(get_current_user)):
     """Recupera l'ultimo calcolo CAM per una commessa."""
     calcolo = await db.calcoli_cam.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not calcolo:
@@ -352,7 +352,7 @@ async def import_cam_da_certificato(
     """
     # Trova il documento
     doc = await db.commessa_documents.find_one(
-        {"doc_id": doc_id, "user_id": user["user_id"]},
+        {"doc_id": doc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not doc:
@@ -410,7 +410,7 @@ async def genera_dichiarazione_cam_pdf(commessa_id: str, user: dict = Depends(ge
     """
     # 1. Get commessa
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0}
     )
     if not commessa:
@@ -424,7 +424,7 @@ async def genera_dichiarazione_cam_pdf(commessa_id: str, user: dict = Depends(ge
     
     # 3. Get company settings
     company = await db.company_settings.find_one(
-        {"user_id": user["user_id"]}, {"_id": 0}
+        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     ) or {}
     
     # 4. Get client if linked
@@ -432,7 +432,7 @@ async def genera_dichiarazione_cam_pdf(commessa_id: str, user: dict = Depends(ge
     client_name = commessa.get("client_name", "")
     if client_name:
         cliente = await db.clients.find_one(
-            {"business_name": client_name, "user_id": user["user_id"]}, {"_id": 0}
+            {"business_name": client_name, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
         )
     
     # 5. Generate PDF
@@ -467,7 +467,7 @@ async def report_aziendale_cam(
     Report riepilogativo CAM multi-commessa con calcolo CO2.
     Aggrega tutti i lotti CAM dell'utente per anno.
     """
-    query = {"user_id": user["user_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     if anno:
         query["$or"] = [
             {"created_at": {"$gte": datetime(anno, 1, 1), "$lte": datetime(anno, 12, 31, 23, 59, 59)}},
@@ -542,7 +542,7 @@ async def report_aziendale_cam(
     commesse_ids = [c for c in commesse_map.keys() if c != "senza_commessa"]
     if commesse_ids:
         comm_cursor = db.commesse.find(
-            {"commessa_id": {"$in": commesse_ids}, "user_id": user["user_id"]},
+            {"commessa_id": {"$in": commesse_ids}, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
             {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "client_name": 1}
         )
         comm_docs = await comm_cursor.to_list(500)
@@ -646,7 +646,7 @@ async def report_aziendale_cam_pdf(
     
     # Get company settings
     company = await db.company_settings.find_one(
-        {"user_id": user["user_id"]}, {"_id": 0}
+        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     ) or {}
     
     from services.pdf_cam_report import generate_cam_report_pdf
@@ -673,17 +673,18 @@ async def green_certificate_pdf(
 ):
     """Generate a branded Green Certificate PDF for a specific commessa."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     # Get commessa
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": uid}, {"_id": 0}
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid}, {"_id": 0}
     )
     if not commessa:
         raise HTTPException(404, "Commessa non trovata")
 
     # Get CAM lotti for this commessa
     cursor = db.lotti_cam.find(
-        {"commessa_id": commessa_id, "user_id": uid}, {"_id": 0}
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid}, {"_id": 0}
     )
     lotti = await cursor.to_list(500)
     if not lotti:
@@ -695,7 +696,7 @@ async def green_certificate_pdf(
     co2_data = calcola_co2_risparmiata(peso_totale, peso_riciclato)
 
     # Get company settings
-    company = await db.company_settings.find_one({"user_id": uid}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": uid, "tenant_id": tid}, {"_id": 0}) or {}
 
     from services.pdf_green_certificate import generate_green_certificate
     try:
@@ -717,7 +718,7 @@ async def green_certificate_pdf(
 async def get_archivio_certificati(user: dict = Depends(get_current_user)):
     """Get all unassigned certificate profiles from the archive."""
     cursor = db.archivio_certificati.find(
-        {"user_id": user["user_id"]}, {"_id": 0}
+        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     ).sort("updated_at", -1)
     items = await cursor.to_list(200)
     return {"archivio": items, "totale": len(items)}
@@ -729,7 +730,7 @@ async def assegna_archivio_a_commessa(
 ):
     """Assign an archived certificate profile to a commessa."""
     item = await db.archivio_certificati.find_one(
-        {"numero_colata": numero_colata, "user_id": user["user_id"]}, {"_id": 0}
+        {"numero_colata": numero_colata, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not item:
         raise HTTPException(404, "Profilo non trovato in archivio")
@@ -741,7 +742,7 @@ async def assegna_archivio_a_commessa(
 
     cam_id = f"cam_{uuid.uuid4().hex[:10]}"
     await db.lotti_cam.insert_one({
-        "lotto_id": cam_id, "user_id": user["user_id"],
+        "lotto_id": cam_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "commessa_id": commessa_id,
         "descrizione": item.get("dimensioni") or item.get("qualita_acciaio", "Materiale"),
         "fornitore": item.get("fornitore", ""),
@@ -761,7 +762,7 @@ async def assegna_archivio_a_commessa(
     })
 
     await db.archivio_certificati.delete_one(
-        {"numero_colata": numero_colata, "user_id": user["user_id"]}
+        {"numero_colata": numero_colata, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     )
 
     return {"message": f"Profilo {numero_colata} assegnato a commessa {commessa_id}", "cam_lotto_id": cam_id}
@@ -776,10 +777,11 @@ async def cam_alert(commessa_id: str, user: dict = Depends(get_current_user)):
     """Check CAM compliance status for a commessa BEFORE PDF generation.
     Returns alert level and actionable suggestions."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     # Collect material from batches + lotti_cam
     batches = await db.material_batches.find(
-        {"commessa_id": commessa_id, "user_id": uid},
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0, "certificate_base64": 0}
     ).to_list(200)
 
@@ -800,7 +802,7 @@ async def cam_alert(commessa_id: str, user: dict = Depends(get_current_user)):
 
     # Also include lotti_cam
     lotti = await db.lotti_cam.find(
-        {"commessa_id": commessa_id, "user_id": uid}, {"_id": 0}
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid}, {"_id": 0}
     ).to_list(100)
     for lc in lotti:
         already = any(cm.get("numero_colata") == lc.get("numero_colata") and cm.get("numero_colata") for cm in cam_materiali)
@@ -877,21 +879,22 @@ async def report_cam_mensile_pdf(user: dict = Depends(get_current_user)):
 
     _e = html_mod.escape
     uid = user["user_id"]
+    tid = user["tenant_id"]
     now = datetime.now(timezone.utc)
 
     # Get company info
-    company = await db.company_settings.find_one({"user_id": uid}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": uid, "tenant_id": tid}, {"_id": 0}) or {}
     biz = _e(company.get("business_name", ""))
     logo = company.get("logo_url", "")
 
     # Get all commesse with material batches
     commesse = await db.commesse.find(
-        {"user_id": uid},
+        {"user_id": uid, "tenant_id": tid},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "stato": 1, "created_at": 1}
     ).to_list(500)
 
     batches = await db.material_batches.find(
-        {"user_id": uid, "percentuale_riciclato": {"$ne": None}},
+        {"user_id": uid, "tenant_id": tid, "percentuale_riciclato": {"$ne": None}},
         {"_id": 0, "commessa_id": 1, "peso_kg": 1, "percentuale_riciclato": 1,
          "metodo_produttivo": 1, "created_at": 1}
     ).to_list(2000)

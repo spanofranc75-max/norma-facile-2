@@ -86,7 +86,7 @@ async def execute_cleanup(data: CleanupRequest, user: dict = Depends(get_current
     # Log the cleanup
     await db.client[db.name]["audit_log"].insert_one({
         "action": "database_cleanup",
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "user_email": user.get("email"),
         "results": results,
         "keep_clients": data.keep_clients,

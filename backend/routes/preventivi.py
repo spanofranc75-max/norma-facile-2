@@ -236,7 +236,8 @@ async def create_preventivo_from_distinta(
 ):
     """Create a Preventivo from a Distinta (BOM). Applies markup to material cost."""
     uid = user["user_id"]
-    distinta = await db.distinte.find_one({"distinta_id": distinta_id, "user_id": uid}, {"_id": 0})
+    tid = user["tenant_id"]
+    distinta = await db.distinte.find_one({"distinta_id": distinta_id, "user_id": uid, "tenant_id": tid}, {"_id": 0})
     if not distinta:
         raise HTTPException(404, "Distinta non trovata")
 
@@ -247,7 +248,7 @@ async def create_preventivo_from_distinta(
     # Atomic counter — sync with max existing to avoid gaps/duplicates
     counter_id = f"PRV-{uid}-{year}"
     pipeline = [
-        {"$match": {"user_id": uid, "number": {"$regex": f"^PRV-{year}-"}}},
+        {"$match": {"user_id": uid, "tenant_id": tid, "number": {"$regex": f"^PRV-{year}-"}}},
         {"$project": {"num": {"$toInt": {"$arrayElemAt": [{"$split": ["$number", "-"]}, 2]}}}},
         {"$sort": {"num": -1}},
         {"$limit": 1},
@@ -323,7 +324,7 @@ async def create_preventivo_from_distinta(
 
     prev_doc = {
         "preventivo_id": prev_id,
-        "user_id": uid,
+        "user_id": uid, "tenant_id": tid,
         "number": number,
         "client_id": distinta.get("client_id", ""),
         "subject": f"Preventivo da Distinta: {distinta.get('name', '')}",
@@ -370,7 +371,7 @@ async def list_preventivi(
     per_page: int = Query(50, ge=1, le=200),
     user: dict = Depends(get_current_user),
 ):
-    query = {"user_id": user["user_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     if client_id:
         query["client_id"] = client_id
     if status:
@@ -409,7 +410,7 @@ async def list_preventivi(
         ) if tot > 0 else 0
         # Lookup linked commessa stato for row coloring
         linked_comm = await db.commesse.find_one(
-            {"user_id": user["user_id"], "$or": [
+            {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "$or": [
                 {"moduli.preventivo_id": d["preventivo_id"]},
                 {"linked_preventivo_id": d["preventivo_id"]},
             ]},
@@ -430,7 +431,7 @@ async def list_preventivi(
 
 @router.get("/{prev_id}")
 async def get_preventivo(prev_id: str, user: dict = Depends(get_current_user)):
-    doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": user["user_id"]}, {"_id": 0})
+    doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Preventivo non trovato")
     if doc.get("client_id"):
@@ -473,12 +474,13 @@ async def create_preventivo(data: PreventivoCreate, user: dict = Depends(get_cur
     now = datetime.now(timezone.utc)
     year = now.year
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     # Atomic counter — always sync with max existing number to avoid gaps
     counter_id = f"PRV-{uid}-{year}"
     # Find current max number in database
     pipeline = [
-        {"$match": {"user_id": uid, "number": {"$regex": f"^PRV-{year}-"}}},
+        {"$match": {"user_id": uid, "tenant_id": tid, "number": {"$regex": f"^PRV-{year}-"}}},
         {"$project": {"num": {"$toInt": {"$arrayElemAt": [{"$split": ["$number", "-"]}, 2]}}}},
         {"$sort": {"num": -1}},
         {"$limit": 1},
@@ -519,7 +521,7 @@ async def create_preventivo(data: PreventivoCreate, user: dict = Depends(get_cur
 
     doc = {
         "preventivo_id": prev_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "number": number,
         "client_id": data.client_id,
         "client_snapshot": await build_snapshot(data.client_id),
@@ -557,7 +559,7 @@ async def create_preventivo(data: PreventivoCreate, user: dict = Depends(get_cur
 
 @router.put("/{prev_id}")
 async def update_preventivo(prev_id: str, data: PreventivoUpdate, user: dict = Depends(get_current_user)):
-    existing = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": user["user_id"]}, {"_id": 0})
+    existing = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
     if not existing:
         raise HTTPException(404, "Preventivo non trovato")
 
@@ -625,8 +627,9 @@ async def delete_preventivo(prev_id: str, user: dict = Depends(get_current_user)
     Il numero progressivo rimane visibile nella lista (come fatture annullate).
     """
     uid = user["user_id"]
+    tid = user["tenant_id"]
     doc = await db.preventivi.find_one(
-        {"preventivo_id": prev_id, "user_id": uid},
+        {"preventivo_id": prev_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0, "status": 1}
     )
     if not doc:
@@ -636,7 +639,7 @@ async def delete_preventivo(prev_id: str, user: dict = Depends(get_current_user)
         raise HTTPException(409, "Preventivo già eliminato")
 
     await db.preventivi.update_one(
-        {"preventivo_id": prev_id, "user_id": uid},
+        {"preventivo_id": prev_id, "user_id": uid, "tenant_id": tid},
         {"$set": {
             "status": "eliminato",
             "eliminato_at": datetime.now(timezone.utc).isoformat(),
@@ -651,11 +654,12 @@ async def delete_preventivo(prev_id: str, user: dict = Depends(get_current_user)
 async def hide_preventivo_from_planning(prev_id: str, user: dict = Depends(get_current_user)):
     """Nasconde il preventivo dal Planning Cantieri per questo utente."""
     uid = user["user_id"]
-    doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": uid}, {"_id": 0, "status": 1})
+    tid = user["tenant_id"]
+    doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": uid, "tenant_id": tid}, {"_id": 0, "status": 1})
     if not doc:
         raise HTTPException(404, "Preventivo non trovato")
     await db.preventivi.update_one(
-        {"preventivo_id": prev_id, "user_id": uid},
+        {"preventivo_id": prev_id, "user_id": uid, "tenant_id": tid},
         {"$set": {"hidden_from_planning": True}}
     )
     return {"message": "Preventivo nascosto dal planning"}
@@ -670,8 +674,9 @@ async def clone_preventivo(prev_id: str, user: dict = Depends(get_current_user))
     New preventivo gets fresh numbering, today's date, and status 'bozza'.
     """
     uid = user["user_id"]
+    tid = user["tenant_id"]
     source = await db.preventivi.find_one(
-        {"preventivo_id": prev_id, "user_id": uid}, {"_id": 0}
+        {"preventivo_id": prev_id, "user_id": uid, "tenant_id": tid}, {"_id": 0}
     )
     if not source:
         raise HTTPException(404, "Preventivo non trovato")
@@ -683,7 +688,7 @@ async def clone_preventivo(prev_id: str, user: dict = Depends(get_current_user))
     # Generate new number — sync counter with max existing to avoid gaps
     counter_id = f"PRV-{uid}-{year}"
     pipeline = [
-        {"$match": {"user_id": uid, "number": {"$regex": f"^PRV-{year}-"}}},
+        {"$match": {"user_id": uid, "tenant_id": tid, "number": {"$regex": f"^PRV-{year}-"}}},
         {"$project": {"num": {"$toInt": {"$arrayElemAt": [{"$split": ["$number", "-"]}, 2]}}}},
         {"$sort": {"num": -1}},
         {"$limit": 1},
@@ -724,7 +729,7 @@ async def clone_preventivo(prev_id: str, user: dict = Depends(get_current_user))
     # Build new document — copy everything except system/workflow fields
     new_doc = {
         "preventivo_id": new_id,
-        "user_id": uid,
+        "user_id": uid, "tenant_id": tid,
         "number": number,
         "client_id": source.get("client_id"),
         "client_name": source.get("client_name", ""),
@@ -768,7 +773,7 @@ async def clone_preventivo(prev_id: str, user: dict = Depends(get_current_user))
 @router.post("/{prev_id}/check-compliance")
 async def check_compliance(prev_id: str, user: dict = Depends(get_current_user)):
     """Run NormaCore thermal compliance on all lines with thermal data."""
-    doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": user["user_id"]}, {"_id": 0})
+    doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Preventivo non trovato")
 
@@ -796,7 +801,7 @@ async def convert_to_invoice(prev_id: str, user: dict = Depends(get_current_user
     Imports all lines, client, and notes automatically.
     """
     doc = await db.preventivi.find_one(
-        {"preventivo_id": prev_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"preventivo_id": prev_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "Preventivo non trovato")
@@ -823,7 +828,7 @@ async def convert_to_invoice(prev_id: str, user: dict = Depends(get_current_user
     if not ft_existing:
         max_ft = 0
         async for inv_doc in db.invoices.find(
-            {"user_id": user["user_id"]},
+            {"user_id": user["user_id"], "tenant_id": user["tenant_id"]},
             {"document_number": 1, "_id": 0}
         ):
             dn = inv_doc.get("document_number", "")
@@ -911,7 +916,7 @@ async def convert_to_invoice(prev_id: str, user: dict = Depends(get_current_user
 
     invoice_doc = {
         "invoice_id": invoice_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "document_type": "FT",
         "document_number": doc_number,
         "client_id": client_id,
@@ -969,7 +974,8 @@ async def get_invoicing_status(prev_id: str, user: dict = Depends(get_current_us
     REGOLA: si lavora SEMPRE sull'imponibile (base senza IVA). L'IVA si aggiunge solo in fattura.
     """
     uid = user["user_id"]
-    doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": uid}, {"_id": 0})
+    tid = user["tenant_id"]
+    doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": uid, "tenant_id": tid}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Preventivo non trovato")
 
@@ -987,7 +993,7 @@ async def get_invoicing_status(prev_id: str, user: dict = Depends(get_current_us
 
     # Fetch all invoices linked to this preventivo
     linked = await db.invoices.find(
-        {"progressive_from_preventivo": prev_id, "user_id": uid, "status": {"$ne": "annullata"}},
+        {"progressive_from_preventivo": prev_id, "user_id": uid, "tenant_id": tid, "status": {"$ne": "annullata"}},
         {"_id": 0, "invoice_id": 1, "document_number": 1, "progressive_type": 1,
          "progressive_amount": 1, "document_type": 1, "issue_date": 1, "status": 1, "totals": 1}
     ).sort("created_at", 1).to_list(100)
@@ -1025,7 +1031,8 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
     L'IVA viene aggiunta solo come riga di calcolo finale sulla fattura.
     """
     uid = user["user_id"]
-    doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": uid}, {"_id": 0})
+    tid = user["tenant_id"]
+    doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": uid, "tenant_id": tid}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Preventivo non trovato")
 
@@ -1052,7 +1059,7 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
 
     # Fetch existing progressive invoices for this preventivo
     existing_invoices = await db.invoices.find(
-        {"progressive_from_preventivo": prev_id, "user_id": uid, "status": {"$ne": "annullata"}},
+        {"progressive_from_preventivo": prev_id, "user_id": uid, "tenant_id": tid, "status": {"$ne": "annullata"}},
         {"_id": 0, "invoice_id": 1, "document_number": 1, "progressive_amount": 1,
          "progressive_type": 1, "document_type": 1, "issue_date": 1}
     ).sort("created_at", 1).to_list(100)
@@ -1205,7 +1212,7 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
 
     invoice_doc = {
         "invoice_id": invoice_id,
-        "user_id": uid,
+        "user_id": uid, "tenant_id": tid,
         "document_type": "FT",
         "document_number": doc_number,
         "client_id": client_id,
@@ -1268,7 +1275,7 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
 
     # Auto-link invoice to commessa if preventivo is linked to one
     commessa = await db.commesse.find_one(
-        {"linked_preventivo_id": prev_id, "user_id": user["user_id"]},
+        {"linked_preventivo_id": prev_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0, "commessa_id": 1}
     )
     if commessa:
@@ -1299,11 +1306,11 @@ def fmtEur_py(v):
 @router.get("/{prev_id}/pdf")
 async def get_preventivo_pdf(prev_id: str, user: dict = Depends(get_current_user)):
     """Generate PDF quote with commercial offer + technical annex."""
-    doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": user["user_id"]}, {"_id": 0})
+    doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Preventivo non trovato")
 
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0})
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
     client = None
     if doc.get("client_id"):
         client = await db.clients.find_one({"client_id": doc["client_id"]}, {"_id": 0})
@@ -1312,7 +1319,7 @@ async def get_preventivo_pdf(prev_id: str, user: dict = Depends(get_current_user
     payment_type = None
     if doc.get("payment_type_id"):
         payment_type = await db.payment_types.find_one(
-            {"payment_type_id": doc["payment_type_id"], "user_id": user["user_id"]}, {"_id": 0}
+            {"payment_type_id": doc["payment_type_id"], "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
         )
 
     pdf_buffer = generate_preventivo_pdf(doc, company, client, payment_type)
@@ -1330,7 +1337,7 @@ async def get_preventivo_pdf(prev_id: str, user: dict = Depends(get_current_user
 async def preview_preventivo_email(prev_id: str, user: dict = Depends(get_current_user)):
     """Preview email that would be sent for a preventivo."""
     doc = await db.preventivi.find_one(
-        {"preventivo_id": prev_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"preventivo_id": prev_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "Preventivo non trovato")
@@ -1355,7 +1362,7 @@ async def preview_preventivo_email(prev_id: str, user: dict = Depends(get_curren
     total = totals.get("total_document") or totals.get("total", 0)
 
     company = await db.company_settings.find_one(
-        {"user_id": user["user_id"]}, {"_id": 0}
+        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     ) or {}
     company_name = company.get("business_name") or company.get("name") or ""
     company_warnings = check_company_warnings(company)
@@ -1398,12 +1405,12 @@ async def send_preventivo_email(prev_id: str, payload: dict = None, user: dict =
     """Generate PDF and send preventivo via email to client."""
     payload = payload or {}
     doc = await db.preventivi.find_one(
-        {"preventivo_id": prev_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"preventivo_id": prev_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "Preventivo non trovato")
 
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
 
     client = None
     to_email = None
@@ -1424,7 +1431,7 @@ async def send_preventivo_email(prev_id: str, payload: dict = None, user: dict =
     payment_type = None
     if doc.get("payment_type_id"):
         payment_type = await db.payment_types.find_one(
-            {"payment_type_id": doc["payment_type_id"], "user_id": user["user_id"]}, {"_id": 0}
+            {"payment_type_id": doc["payment_type_id"], "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
         )
 
     try:

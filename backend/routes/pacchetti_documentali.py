@@ -170,7 +170,7 @@ async def api_verifica_pacchetto(pack_id: str, user: dict = Depends(get_current_
         from core.database import db as _db
         cid = result.get("commessa_id", "")
         if cid:
-            comm = await _db.commesse.find_one({"commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0, "numero": 1})
+            comm = await _db.commesse.find_one({"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0, "numero": 1})
             from core.background import safe_background_task
             safe_background_task(notify_pacchetto_incompleto(
                 user["user_id"], cid, (comm or {}).get("numero", cid),
@@ -194,7 +194,7 @@ async def api_update_pacchetto(pack_id: str, updates: dict, user: dict = Depends
         return pack
     filtered["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.pacchetti_documentali.update_one(
-        {"pack_id": pack_id, "user_id": user["user_id"]}, {"$set": filtered}
+        {"pack_id": pack_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"$set": filtered}
     )
     return await get_pacchetto(pack_id, user["user_id"])
 

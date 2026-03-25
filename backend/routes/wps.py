@@ -212,7 +212,7 @@ async def suggest_wps(
     # Find qualified welders
     qualified_welders = []
     async for w in db.welders.find(
-        {"user_id": user["user_id"], "is_active": True}, {"_id": 0}
+        {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "is_active": True}, {"_id": 0}
     ):
         for q in w.get("qualifications", []):
             q_process = q.get("process", "")
@@ -260,16 +260,17 @@ async def suggest_wps(
 async def create_wps(data: WPSCreate, user: dict = Depends(get_current_user)):
     """Create a new WPS document."""
     uid = user["user_id"]
+    tid = user["tenant_id"]
     now = datetime.now(timezone.utc).isoformat()
 
     # Auto-number
-    count = await db.wps_documents.count_documents({"user_id": uid})
+    count = await db.wps_documents.count_documents({"user_id": uid, "tenant_id": tid})
     wps_number = f"WPS-{count + 1:03d}"
 
     doc = {
         "wps_id": f"wps_{uuid.uuid4().hex[:12]}",
         "wps_number": wps_number,
-        "user_id": uid,
+        "user_id": uid, "tenant_id": tid,
         "status": "bozza",
         **data.model_dump(),
         "created_at": now,
@@ -288,7 +289,8 @@ async def list_wps(
 ):
     """List all WPS documents."""
     uid = user["user_id"]
-    query = {"user_id": uid}
+    tid = user["tenant_id"]
+    query = {"user_id": uid, "tenant_id": tid}
     if status:
         query["status"] = status
     if commessa_id:
@@ -304,7 +306,7 @@ async def list_wps(
 async def get_wps(wps_id: str, user: dict = Depends(get_current_user)):
     """Get a single WPS document."""
     doc = await db.wps_documents.find_one(
-        {"wps_id": wps_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"wps_id": wps_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "WPS non trovato")
@@ -318,14 +320,14 @@ async def update_wps(wps_id: str, data: WPSUpdate, user: dict = Depends(get_curr
     update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     result = await db.wps_documents.update_one(
-        {"wps_id": wps_id, "user_id": user["user_id"]},
+        {"wps_id": wps_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"$set": update_dict}
     )
     if result.matched_count == 0:
         raise HTTPException(404, "WPS non trovato")
 
     doc = await db.wps_documents.find_one(
-        {"wps_id": wps_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"wps_id": wps_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     return doc
 
@@ -334,7 +336,7 @@ async def update_wps(wps_id: str, data: WPSUpdate, user: dict = Depends(get_curr
 async def delete_wps(wps_id: str, user: dict = Depends(get_current_user)):
     """Delete a WPS document."""
     result = await db.wps_documents.delete_one(
-        {"wps_id": wps_id, "user_id": user["user_id"]}
+        {"wps_id": wps_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     )
     if result.deleted_count == 0:
         raise HTTPException(404, "WPS non trovato")

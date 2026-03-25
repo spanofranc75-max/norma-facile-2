@@ -15,7 +15,7 @@ from datetime import datetime
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = 'https://norma-snapshot.preview.emergentagent.com'
+    BASE_URL = 'https://tenant-isolation-19.preview.emergentagent.com'
 
 
 # ── Fixtures ───────────────────────────────────────────────────────

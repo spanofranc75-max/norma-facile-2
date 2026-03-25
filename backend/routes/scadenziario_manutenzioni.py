@@ -50,6 +50,7 @@ URGENZA_ORD = {"scaduto": 0, "in_scadenza": 1, "prossimo": 2, "ok": 3, "sconosci
 @router.get("")
 async def get_scadenziario(user: dict = Depends(get_current_user)):
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     items: list[dict] = []
 
@@ -82,7 +83,7 @@ async def get_scadenziario(user: dict = Depends(get_current_user)):
 
     # --- Attrezzature ---
     attrezzature = await db.attrezzature.find(
-        {"user_id": uid}, {"_id": 0}
+        {"user_id": uid, "tenant_id": tid}, {"_id": 0}
     ).to_list(500)
     for attr in attrezzature:
         next_tar = attr.get("prossima_taratura", "")
@@ -106,7 +107,7 @@ async def get_scadenziario(user: dict = Depends(get_current_user)):
 
     # --- Verbali ITT (qualifica processi) ---
     itt_docs = await db.verbali_itt.find(
-        {"user_id": uid}, {"_id": 0}
+        {"user_id": uid, "tenant_id": tid}, {"_id": 0}
     ).to_list(200)
     for itt in itt_docs:
         next_scad = itt.get("data_scadenza", "")

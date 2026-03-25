@@ -68,7 +68,7 @@ async def create_verbale_itt(data: VerbaleITTCreate, user: dict = Depends(get_cu
 
     doc = {
         "itt_id": itt_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "processo": data.processo,
         "descrizione": data.descrizione or "",
         "macchina": data.macchina,
@@ -98,7 +98,7 @@ async def list_verbali_itt(
     user: dict = Depends(get_current_user),
     processo: str = "",
 ):
-    query = {"user_id": user["user_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     if processo:
         query["processo"] = processo
 
@@ -125,7 +125,7 @@ async def check_validita_itt(user: dict = Depends(get_current_user)):
     """Verifica quali processi hanno ITT validi — usato dal Riesame Tecnico."""
     today_ = date.today()
     items = await db.verbali_itt.find(
-        {"user_id": user["user_id"], "esito_globale": True},
+        {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "esito_globale": True},
         {"_id": 0, "processo": 1, "data_scadenza": 1, "macchina": 1, "materiale": 1}
     ).to_list(200)
 
@@ -153,7 +153,7 @@ async def check_validita_itt(user: dict = Depends(get_current_user)):
 
 @router.delete("/{itt_id}")
 async def delete_verbale_itt(itt_id: str, user: dict = Depends(get_current_user)):
-    result = await db.verbali_itt.delete_one({"itt_id": itt_id, "user_id": user["user_id"]})
+    result = await db.verbali_itt.delete_one({"itt_id": itt_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
     if result.deleted_count == 0:
         raise HTTPException(404, "Verbale ITT non trovato")
     return {"message": "Verbale ITT eliminato"}
@@ -168,7 +168,7 @@ async def firma_verbale_itt(itt_id: str, body: dict, user: dict = Depends(get_cu
 
     now = datetime.now(timezone.utc)
     result = await db.verbali_itt.update_one(
-        {"itt_id": itt_id, "user_id": user["user_id"]},
+        {"itt_id": itt_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"$set": {
             "firma": {"nome": nome, "ruolo": ruolo, "data": now.isoformat()},
             "updated_at": now.isoformat(),
@@ -182,12 +182,12 @@ async def firma_verbale_itt(itt_id: str, body: dict, user: dict = Depends(get_cu
 @router.get("/{itt_id}/pdf")
 async def generate_itt_pdf(itt_id: str, user: dict = Depends(get_current_user)):
     doc = await db.verbali_itt.find_one(
-        {"itt_id": itt_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"itt_id": itt_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "Verbale ITT non trovato")
 
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
 
     import html as html_mod
     _e = html_mod.escape

@@ -124,7 +124,7 @@ async def get_distinte(
     limit: int = Query(50, ge=1, le=100),
     user: dict = Depends(get_current_user),
 ):
-    query = {"user_id": user["user_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
     if rilievo_id:
         query["rilievo_id"] = rilievo_id
     if client_id:
@@ -144,7 +144,7 @@ async def get_distinte(
 
 @router.get("/{distinta_id}", response_model=DistintaResponse)
 async def get_distinta(distinta_id: str, user: dict = Depends(get_current_user)):
-    doc = await db.distinte.find_one({"distinta_id": distinta_id, "user_id": user["user_id"]}, {"_id": 0})
+    doc = await db.distinte.find_one({"distinta_id": distinta_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Distinta non trovata")
     await _populate_names(doc)
@@ -167,7 +167,7 @@ async def create_distinta(data: DistintaCreate, user: dict = Depends(get_current
 
     doc = {
         "distinta_id": distinta_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "name": data.name,
         "rilievo_id": data.rilievo_id,
         "client_id": data.client_id,
@@ -188,7 +188,7 @@ async def create_distinta(data: DistintaCreate, user: dict = Depends(get_current
 
 @router.put("/{distinta_id}", response_model=DistintaResponse)
 async def update_distinta(distinta_id: str, data: DistintaUpdate, user: dict = Depends(get_current_user)):
-    existing = await db.distinte.find_one({"distinta_id": distinta_id, "user_id": user["user_id"]}, {"_id": 0})
+    existing = await db.distinte.find_one({"distinta_id": distinta_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
     if not existing:
         raise HTTPException(404, "Distinta non trovata")
 
@@ -225,7 +225,7 @@ async def update_distinta(distinta_id: str, data: DistintaUpdate, user: dict = D
 
 @router.delete("/{distinta_id}")
 async def delete_distinta(distinta_id: str, user: dict = Depends(get_current_user)):
-    result = await db.distinte.delete_one({"distinta_id": distinta_id, "user_id": user["user_id"]})
+    result = await db.distinte.delete_one({"distinta_id": distinta_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
     if result.deleted_count == 0:
         raise HTTPException(404, "Distinta non trovata")
     logger.info(f"Distinta deleted: {distinta_id}")
@@ -237,7 +237,7 @@ async def delete_distinta(distinta_id: str, user: dict = Depends(get_current_use
 @router.post("/{distinta_id}/calcola-barre", response_model=BarCalculationResponse)
 async def calcola_barre(distinta_id: str, user: dict = Depends(get_current_user)):
     """Calculate how many 6m bars are needed for each profile."""
-    doc = await db.distinte.find_one({"distinta_id": distinta_id, "user_id": user["user_id"]}, {"_id": 0})
+    doc = await db.distinte.find_one({"distinta_id": distinta_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Distinta non trovata")
 
@@ -256,7 +256,7 @@ async def calcola_barre(distinta_id: str, user: dict = Depends(get_current_user)
 @router.get("/{distinta_id}/lista-taglio-pdf")
 async def get_lista_taglio_pdf(distinta_id: str, user: dict = Depends(get_current_user)):
     """Generate and download the cutting list PDF for the workshop."""
-    doc = await db.distinte.find_one({"distinta_id": distinta_id, "user_id": user["user_id"]}, {"_id": 0})
+    doc = await db.distinte.find_one({"distinta_id": distinta_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Distinta non trovata")
 
@@ -281,7 +281,7 @@ async def ottimizza_taglio(
 ):
     """Run the advanced cutting optimizer (FFD bin-packing) on the BOM."""
     doc = await db.distinte.find_one(
-        {"distinta_id": distinta_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"distinta_id": distinta_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "Distinta non trovata")
@@ -303,7 +303,7 @@ async def get_ottimizza_taglio_pdf(
 ):
     """Generate the optimized cutting plan PDF."""
     doc = await db.distinte.find_one(
-        {"distinta_id": distinta_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"distinta_id": distinta_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "Distinta non trovata")
@@ -332,7 +332,7 @@ async def get_rilievo_import_data(rilievo_id: str, user: dict = Depends(get_curr
     import re
 
     rilievo = await db.rilievi.find_one(
-        {"rilievo_id": rilievo_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not rilievo:
         raise HTTPException(404, "Rilievo non trovato")
@@ -429,13 +429,13 @@ async def get_rilievo_import_data(rilievo_id: str, user: dict = Depends(get_curr
 async def import_from_rilievo(distinta_id: str, rilievo_id: str, user: dict = Depends(get_current_user)):
     """Import data from a rilievo into the distinta. Links rilievo and sets client."""
     distinta = await db.distinte.find_one(
-        {"distinta_id": distinta_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"distinta_id": distinta_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not distinta:
         raise HTTPException(404, "Distinta non trovata")
 
     rilievo = await db.rilievi.find_one(
-        {"rilievo_id": rilievo_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not rilievo:
         raise HTTPException(404, "Rilievo non trovato")

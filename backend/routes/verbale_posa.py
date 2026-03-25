@@ -335,7 +335,7 @@ async def generate_pdf(commessa_id: str, user: dict = Depends(get_current_user))
     # Logo aziendale — from company_settings filtered by user_id
     logo_url = company.get("logo_url", "") if company else ""
     if not logo_url:
-        cs = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0, "logo_url": 1})
+        cs = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0, "logo_url": 1})
         logo_url = cs.get("logo_url", "") if cs else ""
     if logo_url and logo_url.startswith("data:image"):
         logo_html = f'<img src="{logo_url}" style="max-height:50px;max-width:180px;object-fit:contain;" />'

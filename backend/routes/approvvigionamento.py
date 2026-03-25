@@ -79,7 +79,7 @@ class ArrivoMateriale(BaseModel):
 
 @router.post("/{cid}/approvvigionamento/richieste")
 async def create_richiesta_preventivo(cid: str, data: RichiestaPreventivo, user: dict = Depends(get_current_user)):
-    await get_commessa_or_404(cid, user["user_id"])
+    await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     righe_dict = [r.model_dump() if hasattr(r, 'model_dump') else r.dict() for r in (data.righe or [])]
     rdp = {
@@ -111,7 +111,7 @@ async def create_richiesta_preventivo(cid: str, data: RichiestaPreventivo, user:
 
 @router.put("/{cid}/approvvigionamento/richieste/{rdp_id}")
 async def update_richiesta(cid: str, rdp_id: str, stato: str = Form(...), importo: Optional[float] = Form(None), user: dict = Depends(get_current_user)):
-    await get_commessa_or_404(cid, user["user_id"])
+    await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     upd = {"approvvigionamento.richieste.$[elem].stato": stato, "approvvigionamento.richieste.$[elem].data_risposta": ts().isoformat()}
     if importo is not None:
@@ -123,7 +123,7 @@ async def update_richiesta(cid: str, rdp_id: str, stato: str = Form(...), import
 
 @router.post("/{cid}/approvvigionamento/ordini")
 async def create_ordine_fornitore(cid: str, data: OrdineFornitore, user: dict = Depends(get_current_user)):
-    await get_commessa_or_404(cid, user["user_id"])
+    await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     righe_dict = [r.model_dump() if hasattr(r, 'model_dump') else (r.dict() if hasattr(r, 'dict') else r) for r in (data.righe or [])]
     importo_totale = data.importo_totale or 0
@@ -162,7 +162,7 @@ async def create_ordine_fornitore(cid: str, data: OrdineFornitore, user: dict = 
 
 @router.put("/{cid}/approvvigionamento/ordini/{ordine_id}")
 async def update_ordine(cid: str, ordine_id: str, stato: str = Form(...), user: dict = Depends(get_current_user)):
-    await get_commessa_or_404(cid, user["user_id"])
+    await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     upd = {"approvvigionamento.ordini.$[elem].stato": stato}
     if stato == "confermato":
@@ -174,7 +174,7 @@ async def update_ordine(cid: str, ordine_id: str, stato: str = Form(...), user: 
 
 @router.post("/{cid}/approvvigionamento/arrivi")
 async def register_arrivo_materiale(cid: str, data: ArrivoMateriale, user: dict = Depends(get_current_user)):
-    doc = await get_commessa_or_404(cid, user["user_id"])
+    doc = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     materiali_dict = []
     for m in (data.materiali or []):
@@ -228,7 +228,7 @@ async def register_arrivo_materiale(cid: str, data: ArrivoMateriale, user: dict 
                 codice_words = re.sub(r'[^a-zA-Z0-9\s]', '', desc).upper().split()[:3]
                 auto_codice = "-".join(codice_words) if codice_words else f"ART-{uuid.uuid4().hex[:4].upper()}"
                 existing_art = await db.articoli.find_one(
-                    {"user_id": user["user_id"], "descrizione": {"$regex": f"^{re.escape(desc[:30])}", "$options": "i"}}, {"_id": 0}
+                    {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "descrizione": {"$regex": f"^{re.escape(desc[:30])}", "$options": "i"}}, {"_id": 0}
                 )
                 now_stock = ts()
                 if existing_art:
@@ -239,7 +239,7 @@ async def register_arrivo_materiale(cid: str, data: ArrivoMateriale, user: dict 
                 else:
                     art_doc = {
                         "articolo_id": f"art_{uuid.uuid4().hex[:12]}",
-                        "user_id": user["user_id"],
+                        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
                         "codice": auto_codice, "descrizione": desc, "categoria": "materiale",
                         "unita_misura": um, "prezzo_unitario": prezzo, "giacenza": qty_remainder,
                         "aliquota_iva": "22", "fornitore_nome": data.fornitore_nome or "",
@@ -267,7 +267,7 @@ async def link_certificato_to_materiale(
     qualita_materiale: str = Form(None), fornitore_materiale: str = Form(None),
     user: dict = Depends(get_current_user)
 ):
-    doc = await get_commessa_or_404(cid, user["user_id"])
+    doc = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     approv = doc.get("approvvigionamento", {})
     arrivo = next((a for a in approv.get("arrivi", []) if a.get("arrivo_id") == arrivo_id), None)
@@ -291,7 +291,7 @@ async def link_certificato_to_materiale(
     if normativa_tipo == "EN_1090" and numero_colata:
         materiale = materiali[mat_idx]
         batch_data = {
-            "user_id": user["user_id"], "commessa_id": cid,
+            "user_id": user["user_id"], "tenant_id": user["tenant_id"], "commessa_id": cid,
             "fornitore": fornitore_materiale or arrivo.get("fornitore_nome", ""),
             "supplier_name": fornitore_materiale or arrivo.get("fornitore_nome", ""),
             "tipo_materiale": materiale.get("descrizione", ""),
@@ -317,7 +317,7 @@ async def link_certificato_to_materiale(
         if cert_meta:
             cert_meta["updated_at"] = ts()
             await db.articoli.update_one(
-                {"user_id": user["user_id"], "descrizione": {"$regex": f"^{re.escape(materiale.get('descrizione', '')[:30])}", "$options": "i"}},
+                {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "descrizione": {"$regex": f"^{re.escape(materiale.get('descrizione', '')[:30])}", "$options": "i"}},
                 {"$set": cert_meta},
             )
         await db[COLL].update_one(
@@ -331,7 +331,7 @@ async def link_certificato_to_materiale(
 
 @router.put("/{cid}/approvvigionamento/arrivi/{arrivo_id}/verifica")
 async def verifica_arrivo(cid: str, arrivo_id: str, user: dict = Depends(get_current_user)):
-    await get_commessa_or_404(cid, user["user_id"])
+    await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     await db[COLL].update_one(
         {"commessa_id": cid},
@@ -346,12 +346,12 @@ async def verifica_arrivo(cid: str, arrivo_id: str, user: dict = Depends(get_cur
 
 @router.get("/{cid}/approvvigionamento/richieste/{rdp_id}/pdf")
 async def get_rdp_pdf(cid: str, rdp_id: str, user: dict = Depends(get_current_user)):
-    doc = await get_commessa_or_404(cid, user["user_id"])
+    doc = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     approv = doc.get("approvvigionamento", {})
     rdp = next((r for r in approv.get("richieste", []) if r.get("rdp_id") == rdp_id), None)
     if not rdp: raise HTTPException(404, "RdP non trovata")
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
     fornitore = None
     if rdp.get("fornitore_id"):
         fornitore = await db.clients.find_one({"client_id": rdp["fornitore_id"]}, {"_id": 0})
@@ -362,7 +362,7 @@ async def get_rdp_pdf(cid: str, rdp_id: str, user: dict = Depends(get_current_us
 
 @router.get("/{cid}/approvvigionamento/richieste/{rdp_id}/preview-email")
 async def preview_rdp_email(cid: str, rdp_id: str, user: dict = Depends(get_current_user)):
-    doc = await get_commessa_or_404(cid, user["user_id"])
+    doc = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     approv = doc.get("approvvigionamento", {})
     rdp = next((r for r in approv.get("richieste", []) if r.get("rdp_id") == rdp_id), None)
@@ -376,7 +376,7 @@ async def preview_rdp_email(cid: str, rdp_id: str, user: dict = Depends(get_curr
             if not to_email:
                 for c in forn.get("contacts", []):
                     if c.get("email"): to_email = c["email"]; break
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
     from services.email_preview import build_rdp_email
     preview = build_rdp_email(fornitore_name=rdp.get("fornitore_nome", ""), rdp_id=rdp_id, commessa_numero=doc.get("numero", "N/D"), company_name=company.get("business_name", ""), num_righe=len(rdp.get("righe", [])))
     return {"to_email": to_email, "to_name": rdp.get("fornitore_nome", ""), "subject": preview["subject"], "html_body": preview["html_body"], "has_attachment": True, "attachment_name": f"RdP_{rdp_id}.pdf"}
@@ -384,7 +384,7 @@ async def preview_rdp_email(cid: str, rdp_id: str, user: dict = Depends(get_curr
 
 @router.post("/{cid}/approvvigionamento/richieste/{rdp_id}/send-email")
 async def send_rdp_email_endpoint(cid: str, rdp_id: str, payload: dict = None, user: dict = Depends(get_current_user)):
-    doc = await get_commessa_or_404(cid, user["user_id"])
+    doc = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     approv = doc.get("approvvigionamento", {})
     rdp = next((r for r in approv.get("richieste", []) if r.get("rdp_id") == rdp_id), None)
@@ -401,7 +401,7 @@ async def send_rdp_email_endpoint(cid: str, rdp_id: str, payload: dict = None, u
                     if contact.get("email"): to_email = contact["email"]; break
     if not to_email:
         raise HTTPException(400, f"Nessun indirizzo email trovato per {fornitore_nome}. Aggiungi un'email nella scheda fornitore.")
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
     fornitore_doc = None
     if fornitore_id:
         fornitore_doc = await db.clients.find_one({"client_id": fornitore_id}, {"_id": 0})
@@ -430,12 +430,12 @@ async def send_rdp_email_endpoint(cid: str, rdp_id: str, payload: dict = None, u
 
 @router.get("/{cid}/approvvigionamento/ordini/{ordine_id}/pdf")
 async def get_oda_pdf(cid: str, ordine_id: str, user: dict = Depends(get_current_user)):
-    doc = await get_commessa_or_404(cid, user["user_id"])
+    doc = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     approv = doc.get("approvvigionamento", {})
     oda = next((o for o in approv.get("ordini", []) if o.get("ordine_id") == ordine_id), None)
     if not oda: raise HTTPException(404, "Ordine non trovato")
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
     fornitore = None
     if oda.get("fornitore_id"):
         fornitore = await db.clients.find_one({"client_id": oda["fornitore_id"]}, {"_id": 0})
@@ -446,7 +446,7 @@ async def get_oda_pdf(cid: str, ordine_id: str, user: dict = Depends(get_current
 
 @router.get("/{cid}/approvvigionamento/ordini/{ordine_id}/preview-email")
 async def preview_oda_email(cid: str, ordine_id: str, user: dict = Depends(get_current_user)):
-    doc = await get_commessa_or_404(cid, user["user_id"])
+    doc = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     approv = doc.get("approvvigionamento", {})
     oda = next((o for o in approv.get("ordini", []) if o.get("ordine_id") == ordine_id), None)
@@ -460,7 +460,7 @@ async def preview_oda_email(cid: str, ordine_id: str, user: dict = Depends(get_c
             if not to_email:
                 for c in forn.get("contacts", []):
                     if c.get("email"): to_email = c["email"]; break
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
     from services.email_preview import build_oda_email
     preview = build_oda_email(fornitore_name=oda.get("fornitore_nome", ""), ordine_id=ordine_id, commessa_numero=doc.get("numero", "N/D"), company_name=company.get("business_name", ""), importo_totale=oda.get("importo_totale", 0))
     return {"to_email": to_email, "to_name": oda.get("fornitore_nome", ""), "subject": preview["subject"], "html_body": preview["html_body"], "has_attachment": True, "attachment_name": f"OdA_{ordine_id}.pdf"}
@@ -468,7 +468,7 @@ async def preview_oda_email(cid: str, ordine_id: str, user: dict = Depends(get_c
 
 @router.post("/{cid}/approvvigionamento/ordini/{ordine_id}/send-email")
 async def send_oda_email_endpoint(cid: str, ordine_id: str, payload: dict = None, user: dict = Depends(get_current_user)):
-    doc = await get_commessa_or_404(cid, user["user_id"])
+    doc = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     approv = doc.get("approvvigionamento", {})
     oda = next((o for o in approv.get("ordini", []) if o.get("ordine_id") == ordine_id), None)
@@ -485,7 +485,7 @@ async def send_oda_email_endpoint(cid: str, ordine_id: str, payload: dict = None
                     if contact.get("email"): to_email = contact["email"]; break
     if not to_email:
         raise HTTPException(400, f"Nessun indirizzo email trovato per {fornitore_nome}. Aggiungi un'email nella scheda fornitore.")
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
     fornitore_doc = None
     if fornitore_id:
         fornitore_doc = await db.clients.find_one({"client_id": fornitore_id}, {"_id": 0})

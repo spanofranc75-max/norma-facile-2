@@ -46,7 +46,7 @@ async def update_notification_preferences(
     """Update current user's notification preferences."""
     prefs = data.model_dump()
     await db.users.update_one(
-        {"user_id": user["user_id"]},
+        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"$set": {"notification_preferences": prefs}},
     )
     return {"message": "Preferenze salvate", "preferences": prefs}
@@ -109,6 +109,7 @@ async def preview_payment_alerts(user: dict = Depends(get_current_user)):
     data = await check_payment_expirations()
     # Filter to current user only
     uid = user["user_id"]
+    tid = user["tenant_id"]
     for key in ["in_scadenza", "scadute_fornitori", "clienti_ritardo"]:
         data[key] = [d for d in data[key] if d.get("user_id") == uid]
     return {

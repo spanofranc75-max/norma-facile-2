@@ -15,12 +15,13 @@ async def global_search(
     user: dict = Depends(get_current_user),
 ):
     uid = user["user_id"]
+    tid = user["tenant_id"]
     regex = {"$regex": q, "$options": "i"}
     results = []
 
     # Commesse
     commesse = await db.commesse.find(
-        {"user_id": uid, "$or": [
+        {"user_id": uid, "tenant_id": tid, "$or": [
             {"numero": regex}, {"title": regex}, {"client_name": regex},
         ]},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "client_name": 1, "stato": 1},
@@ -38,7 +39,7 @@ async def global_search(
 
     # Preventivi
     preventivi = await db.preventivi.find(
-        {"user_id": uid, "$or": [
+        {"user_id": uid, "tenant_id": tid, "$or": [
             {"number": regex}, {"subject": regex}, {"client_name": regex},
         ]},
         {"_id": 0, "preventivo_id": 1, "number": 1, "subject": 1, "client_name": 1, "status": 1},
@@ -56,7 +57,7 @@ async def global_search(
 
     # Clienti
     clienti = await db.clients.find(
-        {"user_id": uid, "$or": [
+        {"user_id": uid, "tenant_id": tid, "$or": [
             {"business_name": regex}, {"email": regex}, {"fiscal_code": regex},
         ]},
         {"_id": 0, "client_id": 1, "business_name": 1, "email": 1},
@@ -74,7 +75,7 @@ async def global_search(
 
     # DDT
     ddt_docs = await db.ddt_documents.find(
-        {"user_id": uid, "$or": [
+        {"user_id": uid, "tenant_id": tid, "$or": [
             {"number": regex}, {"client_name": regex}, {"subject": regex},
         ]},
         {"_id": 0, "ddt_id": 1, "number": 1, "client_name": 1, "subject": 1},

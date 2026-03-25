@@ -364,7 +364,7 @@ class RiesameApprova(BaseModel):
 async def get_riesame(commessa_id: str, user: dict = Depends(get_current_user)):
     """Stato del riesame tecnico con check selettivi per normativa."""
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "stato": 1, "exc_class": 1}
     )
     if not commessa:
@@ -461,7 +461,7 @@ async def get_riesame(commessa_id: str, user: dict = Depends(get_current_user)):
 async def save_riesame(commessa_id: str, data: RiesameNote, user: dict = Depends(get_current_user)):
     """Salva i check manuali e le note del riesame (non ancora approvato)."""
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"]}, {"_id": 0, "commessa_id": 1}
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0, "commessa_id": 1}
     )
     if not commessa:
         raise HTTPException(404, "Commessa non trovata")
@@ -477,7 +477,7 @@ async def save_riesame(commessa_id: str, data: RiesameNote, user: dict = Depends
     doc = {
         "riesame_id": riesame_id,
         "commessa_id": commessa_id,
-        "user_id": user["user_id"],
+        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
         "checks_manuali": data.checks_manuali,
         "note_generali": data.note_generali,
         "approvato": False,
@@ -496,7 +496,7 @@ async def save_riesame(commessa_id: str, data: RiesameNote, user: dict = Depends
 async def approva_riesame(commessa_id: str, data: RiesameApprova, user: dict = Depends(get_current_user)):
     """Firma e approva il riesame tecnico. Immutabile dopo approvazione."""
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"_id": 0, "commessa_id": 1, "stato": 1}
     )
     if not commessa:
@@ -542,7 +542,7 @@ async def approva_riesame(commessa_id: str, data: RiesameApprova, user: dict = D
         {"$set": {
             "riesame_id": riesame_id,
             "commessa_id": commessa_id,
-            "user_id": user["user_id"],
+            "user_id": user["user_id"], "tenant_id": user["tenant_id"],
             "approvato": True,
             "data_approvazione": now,
             "firma": {
@@ -567,7 +567,7 @@ async def approva_riesame(commessa_id: str, data: RiesameApprova, user: dict = D
 async def genera_pdf_riesame(commessa_id: str, user: dict = Depends(get_current_user)):
     """Genera il PDF Verbale di Riesame Tecnico."""
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"]}, {"_id": 0}
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     )
     if not commessa:
         raise HTTPException(404, "Commessa non trovata")
@@ -582,7 +582,7 @@ async def genera_pdf_riesame(commessa_id: str, user: dict = Depends(get_current_
     normative_attive = _get_active_normative(voci)
     checks_filtered = _filter_checks(normative_attive)
 
-    cs = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    cs = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
     company_name = cs.get("business_name") or cs.get("ragione_sociale") or ""
     logo_url = cs.get("logo_url", "")
     if logo_url and logo_url.startswith("data:image"):

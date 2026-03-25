@@ -117,8 +117,8 @@ class FascicoloData(BaseModel):
     redatto_da: Optional[str] = ""
 
 
-async def _get_commessa(cid: str, uid: str):
-    c = await db.commesse.find_one({"commessa_id": cid, "user_id": uid}, {"_id": 0})
+async def _get_commessa(cid: str, uid: str, tid: str = "default"):
+    c = await db.commesse.find_one({"commessa_id": cid, "user_id": uid, "tenant_id": tid}, {"_id": 0})
     if not c:
         raise HTTPException(404, "Commessa non trovata")
     return c
@@ -126,8 +126,8 @@ async def _get_commessa(cid: str, uid: str):
 
 async def _get_context(cid: str, user: dict):
     """Get all context data needed for PDF generation — auto-populates ~90% of fields."""
-    commessa = await _get_commessa(cid, user["user_id"])
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    commessa = await _get_commessa(cid, user["user_id"], user["tenant_id"])
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
     client_name = ""
     if commessa.get("client_id"):
         cl = await db.clients.find_one({"client_id": commessa["client_id"]}, {"_id": 0, "name": 1, "business_name": 1})
@@ -199,7 +199,7 @@ async def _get_context(cid: str, user: dict):
 
     # ── From material batches ──
     batches = await db.material_batches.find(
-        {"commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0}
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     ).to_list(50)
     mat_types = []
     if batches:
@@ -224,7 +224,7 @@ async def _get_context(cid: str, user: dict):
     # ── DDT auto — suffisso commessa/01, /02 etc. ──
     comm_num = commessa.get("numero", "")
     if not ft.get("ddt_riferimento") and comm_num:
-        ddt_count = await db.ddt_counter.find_one({"commessa_id": cid, "user_id": user["user_id"]}, {"_id": 0})
+        ddt_count = await db.ddt_counter.find_one({"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
         suffix = (ddt_count.get("count", 0) if ddt_count else 0) + 1
         ft["ddt_riferimento"] = f"{comm_num}/{str(suffix).zfill(2)}"
     if not ft.get("ddt_data"):
@@ -245,8 +245,8 @@ async def _get_context(cid: str, user: dict):
 # ── GET/PUT fascicolo data ──
 @router.get("/{cid}")
 async def get_fascicolo_data(cid: str, user: dict = Depends(get_current_user)):
-    commessa = await _get_commessa(cid, user["user_id"])
-    company = await db.company_settings.find_one({"user_id": user["user_id"]}, {"_id": 0}) or {}
+    commessa = await _get_commessa(cid, user["user_id"], user["tenant_id"])
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
     ft = commessa.get("fascicolo_tecnico", {})
 
     # ── Auto-populate from preventivo ──
@@ -314,7 +314,7 @@ async def get_fascicolo_data(cid: str, user: dict = Depends(get_current_user)):
     # DDT auto — suffisso commessa/01, /02
     comm_num = commessa.get("numero", "")
     if comm_num:
-        ddt_count = await db.ddt_counter.find_one({"commessa_id": commessa["commessa_id"], "user_id": user["user_id"]}, {"_id": 0})
+        ddt_count = await db.ddt_counter.find_one({"commessa_id": commessa["commessa_id"], "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
         suffix = (ddt_count.get("count", 0) if ddt_count else 0) + 1
         auto["ddt_riferimento"] = f"{comm_num}/{str(suffix).zfill(2)}"
 
@@ -334,7 +334,7 @@ async def get_fascicolo_data(cid: str, user: dict = Depends(get_current_user)):
 
     # ── From material batches ──
     batches = await db.material_batches.find(
-        {"commessa_id": commessa["commessa_id"], "user_id": user["user_id"]}, {"_id": 0}
+        {"commessa_id": commessa["commessa_id"], "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
     ).to_list(50)
     mat_types = []
     if batches:
@@ -407,11 +407,11 @@ async def get_fascicolo_data(cid: str, user: dict = Depends(get_current_user)):
 
 @router.put("/{cid}")
 async def update_fascicolo_data(cid: str, data: FascicoloData, user: dict = Depends(get_current_user)):
-    await _get_commessa(cid, user["user_id"])
+    await _get_commessa(cid, user["user_id"], user["tenant_id"])
     update = {k: v for k, v in data.dict().items() if v is not None}
     update["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.commesse.update_one(
-        {"commessa_id": cid, "user_id": user["user_id"]},
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
         {"$set": {f"fascicolo_tecnico.{k}": v for k, v in update.items()}}
     )
     return {"message": "Dati fascicolo tecnico aggiornati"}

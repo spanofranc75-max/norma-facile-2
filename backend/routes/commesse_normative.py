@@ -113,9 +113,10 @@ async def genera_rami_da_istruttoria(preventivo_id: str, user: dict = Depends(ge
     - Commessa madre collegata (da commesse_preistruite o commessa gia esistente)
     """
     uid = user["user_id"]
+    tid = user["tenant_id"]
 
     istr = await db.istruttorie.find_one(
-        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0}
     )
     if not istr:
@@ -127,7 +128,7 @@ async def genera_rami_da_istruttoria(preventivo_id: str, user: dict = Depends(ge
     # Trova la commessa collegata
     # 1) Da commesse_preistruite
     preistruita = await db.commesse_preistruite.find_one(
-        {"preventivo_id": preventivo_id, "user_id": uid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
         {"_id": 0, "commessa_id": 1}
     )
 
@@ -139,7 +140,7 @@ async def genera_rami_da_istruttoria(preventivo_id: str, user: dict = Depends(ge
     if not commessa_id:
         # Cerca nelle commesse per preventivo linkato
         commessa = await db.commesse.find_one(
-            {"user_id": uid, "$or": [
+            {"user_id": uid, "tenant_id": tid, "$or": [
                 {"moduli.preventivo_id": preventivo_id},
                 {"linked_preventivo_id": preventivo_id},
             ]},
