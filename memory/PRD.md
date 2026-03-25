@@ -48,6 +48,7 @@ Francesco Spano' — Steel Project Design Srls
 18. **Deploy in produzione** — Codice deployato su `app.1090normafacile.it` con tutti i fix recenti.
 19. **Migrazione Snapshot eseguita** — 27 documenti aggiornati, 52 gia completi. Widget MigrationWidget aggiunto alla Dashboard + endpoint GET `/api/admin/migration/run-snapshot` per esecuzione via browser.
 20. **Fix Analisi AI 4 errori critici** — (a) Grigliato: aggiunta tabella pesi kg/m2 e calcolo per superficie (13.722→882 kg), (b) Conto lavoro: riconosciuto e escluso dai costi, (c) Specchiature: estrazione dimensioni LxxxxHxxxx (0→682 kg), (d) Manodopera: estrazione ore dal prompt AI.
+21. **Navigazione Multi-Tab** — Sistema di tab persistenti nella barra superiore. Ogni sezione aperta resta come tab. Supporta max 8 tab. Tab mostra icona+label+X per chiudere. Editor di documenti creano tab dedicate con numero record. Salva posizione scroll. File: `TabContext.js`, `TabBar.js`, modifiche a `DashboardLayout.js` e `App.js`.
 
 ### Feature completate (sessioni precedenti)
 - Content Engine (M1+M2)

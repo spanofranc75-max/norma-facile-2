@@ -309,16 +309,19 @@ function AppRouter() {
 }
 
 import { ConfirmProvider } from './components/ConfirmProvider';
+import { TabProvider } from './contexts/TabContext';
 
 function App() {
     return (
         <BrowserRouter>
             <AuthProvider>
-                <ConfirmProvider>
-                    <ErrorBoundary>
-                        <AppRouter />
-                    </ErrorBoundary>
-                </ConfirmProvider>
+                <TabProvider>
+                    <ConfirmProvider>
+                        <ErrorBoundary>
+                            <AppRouter />
+                        </ErrorBoundary>
+                    </ConfirmProvider>
+                </TabProvider>
                 <Toaster position="top-right" />
                 <EnvironmentBanner />
             </AuthProvider>

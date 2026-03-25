@@ -19,6 +19,8 @@ import {
 import { LegalFooter } from './LegalFooter';
 import GlobalSearchBar from './GlobalSearchBar';
 import DemoBanner from './DemoBanner';
+import TabBar from './TabBar';
+import { useTabContext } from '../contexts/TabContext';
 import {
     Sparkles, Receipt, Users, Settings, Ruler, Package, Shield,
     HardHat, Warehouse, ClipboardList, Truck, Factory, ShieldAlert,
@@ -215,6 +217,8 @@ export default function DashboardLayout({ children }) {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const tabCtx = useTabContext();
+    const openTab = tabCtx?.openTab;
     const [companyLogo, setCompanyLogo] = useState(null);
     const [alertCount, setAlertCount] = useState(0);
     const [smartCount, setSmartCount] = useState(0);
@@ -340,7 +344,7 @@ export default function DashboardLayout({ children }) {
                 <div className="space-y-0.5">
                     {filteredNav.map((group) => {
                         if (group.type === 'link') {
-                            return <SingleLink key={group.id} item={group} active={activeGroupId === group.id} navigate={navigate} badge={group.id === 'notifiche' ? alertCount : 0} />;
+                            return <SingleLink key={group.id} item={group} active={activeGroupId === group.id} navigate={navigate} openTab={openTab} badge={group.id === 'notifiche' ? alertCount : 0} />;
                         }
                         const isOpen = openGroups.has(group.id);
                         const hasActive = activeGroupId === group.id;
@@ -353,6 +357,7 @@ export default function DashboardLayout({ children }) {
                                 pathname={location.pathname}
                                 onToggle={() => toggleGroup(group.id)}
                                 navigate={navigate}
+                                openTab={openTab}
                             />
                         );
                     })}
@@ -446,6 +451,7 @@ export default function DashboardLayout({ children }) {
                         </button>
                     </div>
                 </div>
+                <TabBar />
                 <div className="p-4 lg:p-8 pb-16">{children}</div>
             </main>
 
@@ -517,13 +523,13 @@ export default function DashboardLayout({ children }) {
 
 // ── Sub-components ──────────────────────────────────────────────
 
-function SingleLink({ item, active, navigate, badge = 0 }) {
+function SingleLink({ item, active, navigate, badge = 0, openTab }) {
     const Icon = item.icon;
     return (
         <a
             href={item.path}
             data-testid={`nav-${item.path.slice(1).replace(/\//g, '-')}`}
-            onClick={(e) => { e.preventDefault(); navigate(item.path); }}
+            onClick={(e) => { e.preventDefault(); if (openTab) openTab(item.path); else navigate(item.path); }}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-all duration-150 ${
                 active
                     ? 'bg-[#0055FF] text-white font-medium'
@@ -541,7 +547,7 @@ function SingleLink({ item, active, navigate, badge = 0 }) {
     );
 }
 
-function NavGroup({ group, isOpen, hasActive, pathname, onToggle, navigate }) {
+function NavGroup({ group, isOpen, hasActive, pathname, onToggle, navigate, openTab }) {
     const Icon = group.icon;
     return (
         <div data-testid={`nav-group-${group.id}`}>
@@ -578,7 +584,7 @@ function NavGroup({ group, isOpen, hasActive, pathname, onToggle, navigate }) {
                                 key={child.path}
                                 href={child.path}
                                 data-testid={`nav-${child.path.slice(1).replace(/\//g, '-')}`}
-                                onClick={(e) => { e.preventDefault(); navigate(child.path); }}
+                                onClick={(e) => { e.preventDefault(); if (openTab) openTab(child.path); else navigate(child.path); }}
                                 className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-xs transition-all duration-150 ${
                                     active
                                         ? 'bg-[#0055FF]/90 text-white font-medium'
