@@ -310,6 +310,48 @@ async def lifespan(app: FastAPI):
     if result.modified_count > 0:
         logger.info(f"Backfilled tenant_id on {result.modified_count} users")
 
+    # 1d. Backfill tenant_id on ALL data collections (idempotent, fast — only touches docs missing field)
+    _data_collections = [
+        "user_sessions", "clients", "commesse", "preventivi", "invoices",
+        "fatture_ricevute", "ddt", "perizie", "rilievi", "articoli",
+        "payment_types", "company_settings", "company_docs", "distinte",
+        "certificazioni", "sicurezza_docs", "catalogo", "verbali_posa",
+        "vendor_keys", "fpc_projects", "lotti_cam", "cam_results",
+        "cam_documents", "fascicolo_tecnico", "instruments", "welders",
+        "audits", "non_conformities", "quality_scores", "smart_assignments",
+        "gate_certifications", "consumables", "cost_entries", "backup_log",
+        "team_invites", "notifications", "diario_produzione", "wps_records",
+        "rdp_records", "sopralluoghi", "movimenti", "activity_log",
+        "voci_lavoro", "officina_stati", "pacco_documenti", "sfridi",
+        "qualita_records", "montaggio_records", "attrezzature",
+        "documenti_archivio", "archivio_certificati", "dop_frazionate",
+        "sal_acconti", "preventivatore_analisi", "kpi_snapshots",
+        "calibrazioni", "manuale_capitoli", "riesami_tecnici",
+        "registro_saldatura", "controllo_finale", "template_111_records",
+        "report_ispezioni", "scadenziario_manutenzioni", "verbali_itt",
+        "istruttorie", "validazioni_p1", "commesse_normative",
+        "emissioni_documentali", "cantieri_sicurezza", "lib_fasi_lavoro",
+        "lib_rischi_sicurezza", "lib_dpi_misure", "pacchetti_documentali",
+        "obblighi_commessa", "pacchetti_committenza", "analisi_committenza",
+        "profili_committente", "notifiche_smart", "onboarding",
+        "data_integrity_reports", "demo_sessions", "content_sources",
+        "content_articles", "pos_documents", "componenti", "ddt_counter",
+        "download_tokens", "counters",
+    ]
+    _total_backfilled = 0
+    for _coll_name in _data_collections:
+        try:
+            _r = await db[_coll_name].update_many(
+                {"tenant_id": {"$exists": False}},
+                {"$set": {"tenant_id": "default"}}
+            )
+            if _r.modified_count > 0:
+                _total_backfilled += _r.modified_count
+        except Exception:
+            pass
+    if _total_backfilled > 0:
+        logger.info(f"Backfilled tenant_id on {_total_backfilled} data documents across collections")
+
     # 2. Create/verify all MongoDB indexes
     app.state.indexes_created = await _ensure_indexes()
 

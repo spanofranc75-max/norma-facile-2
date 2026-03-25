@@ -62,6 +62,7 @@ async def reset_demo_data(user: dict = Depends(get_current_user)):
     await db.user_sessions.insert_one({
         "session_token": DEMO_SESSION_TOKEN,
         "user_id": DEMO_USER_ID,
+        "tenant_id": "default",
         "email": "demo@normafacile.it",
         "name": "Marco Rossi",
         "created_at": datetime.now(timezone.utc),
@@ -91,6 +92,7 @@ async def demo_login(response: Response):
         await db.user_sessions.insert_one({
             "session_token": DEMO_SESSION_TOKEN,
             "user_id": DEMO_USER_ID,
+            "tenant_id": user.get("tenant_id", "default"),
             "email": user.get("email", ""),
             "name": user.get("name", ""),
             "created_at": datetime.now(timezone.utc),
