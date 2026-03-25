@@ -21,7 +21,7 @@ import time
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = 'https://audit-stabilize-3.preview.emergentagent.com'
+    BASE_URL = 'https://norma-snapshot.preview.emergentagent.com'
 
 
 # ── Fixtures ───────────────────────────────────────────────────────

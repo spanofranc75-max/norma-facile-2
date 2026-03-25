@@ -292,7 +292,7 @@ class TestGeneraPreventivoWithVariant:
     
     @pytest.fixture
     def base_url(self):
-        return os.environ.get("REACT_APP_BACKEND_URL", "https://audit-stabilize-3.preview.emergentagent.com")
+        return os.environ.get("REACT_APP_BACKEND_URL", "https://norma-snapshot.preview.emergentagent.com")
     
     def test_genera_preventivo_logic_with_variant_A(self):
         """Test preventivo generation logic for variant A."""
