@@ -815,6 +815,18 @@ Pacco Documenti: CAP. 1-5 (EN 1090, EN 13241, Relazione Tecnica, Montaggio, Sost
 - File modificati: `services/pdf_template.py` (CSS + `build_conditions_html`), `routes/preventivi.py` (`generate_preventivo_pdf`)
 - Test: 100% backend (23/23 — iteration_257)
 
+#### Template Condizioni con Segnaposti Dinamici (COMPLETATO)
+- **Backend `services/pdf_template.py`:** `build_conditions_html()` ora supporta 12 segnaposti template:
+  - Azienda: `{ragione_sociale}`, `{indirizzo}`, `{partita_iva}`, `{codice_fiscale}`, `{pec}`, `{telefono}`, `{email_azienda}`
+  - Documento: `{pagamento}`, `{validita}`, `{consegna}`, `{numero_documento}`, `{data_documento}`
+  - I segnaposti vengono sostituiti con i dati reali al momento della generazione PDF
+  - Coesiste con i fix regex legacy per testi vecchi senza segnaposti
+- **Frontend `components/settings/CondizioniTab.js`:** Rifatto completamente:
+  - Legenda segnaposti cliccabili (click → inserisce nel textarea alla posizione del cursore)
+  - Segnaposti colorati per gruppo: blu (azienda), ambra (documento)
+  - Toggle Editor/Anteprima: l'anteprima mostra il testo con valori di esempio sostituiti
+  - Istruzioni chiare per l'utente
+
 ---
 
 ### FASE 6 — Smistatore Intelligente Avanzato (PROSSIMO)

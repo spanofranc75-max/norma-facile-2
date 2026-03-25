@@ -552,6 +552,7 @@ def build_conditions_html(company: dict, doc_number: str, preventivo: dict = Non
     co_cap = safe(co.get("cap") or "")
     co_city = safe(co.get("city") or "")
     co_prov = safe(co.get("province") or "")
+    dynamic_address = ""
     if co_addr or co_city:
         full_address_parts = [co_addr]
         if co_cap:
@@ -567,7 +568,7 @@ def build_conditions_html(company: dict, doc_number: str, preventivo: dict = Non
         condizioni = condizioni.replace("via dei Pioppi n. 11 - 40010 Padulle (BO)", dynamic_address)
         condizioni = condizioni.replace("via dei Pioppi n.11 - 40010 Padulle BO", dynamic_address)
 
-    # ── Dynamic preventivo values ──
+    # ── Dynamic preventivo values (legacy regex fallback) ──
     if prev:
         # Payment (punto 2f)
         payment_label = prev.get("payment_type_label") or ""
@@ -594,6 +595,43 @@ def build_conditions_html(company: dict, doc_number: str, preventivo: dict = Non
                 r"\g<1>" + consegna,
                 condizioni
             )
+
+    # ── Template placeholders ──
+    # Users can write {pagamento}, {validita}, etc. in their conditions text.
+    # These get replaced with actual values at render time.
+    from datetime import datetime as _dt
+    _payment = (prev.get("payment_type_label") or "") if prev else ""
+    _validity = str(prev.get("validity_days") or 30) if prev else "30"
+    _consegna = (prev.get("consegna") or "Da concordare") if prev else "Da concordare"
+    _doc_date = ""
+    if prev:
+        _raw_date = prev.get("created_at", "")
+        if isinstance(_raw_date, _dt):
+            _doc_date = _raw_date.strftime("%d/%m/%Y")
+        elif isinstance(_raw_date, str) and _raw_date:
+            try:
+                _doc_date = _dt.fromisoformat(_raw_date.replace("Z", "+00:00")).strftime("%d/%m/%Y")
+            except Exception:
+                _doc_date = _raw_date
+
+    _full_addr = dynamic_address if (co_addr or co_city) else safe(co.get("address") or "")
+
+    placeholders = {
+        "ragione_sociale": safe(co.get("business_name") or ""),
+        "indirizzo": _full_addr,
+        "partita_iva": safe(co.get("partita_iva") or ""),
+        "codice_fiscale": safe(co.get("codice_fiscale") or ""),
+        "pec": safe(co.get("pec") or ""),
+        "telefono": safe(co.get("phone") or co.get("tel") or ""),
+        "email_azienda": safe(co.get("email") or co.get("contact_email") or ""),
+        "pagamento": _payment,
+        "validita": _validity,
+        "consegna": _consegna,
+        "numero_documento": safe(doc_number),
+        "data_documento": _doc_date,
+    }
+    for key, val in placeholders.items():
+        condizioni = condizioni.replace("{" + key + "}", val)
 
     company_name = safe(co.get("business_name"))
     
