@@ -38,6 +38,10 @@ Francesco Spano' — Steel Project Design Srls
 8. **System Health Widget** — endpoint `/api/dashboard/system-health` + componente `SystemHealthWidget.js` integrato nella Dashboard. Mostra: conteggi DB, stato azienda, attività outbound, warnings integrità dati
 9. **Outbound Audit Log completo** — `log_outbound` aggiunto ai 4 moduli mancanti: sopralluogo (email_perizia), ddt (email_ddt), conto_lavoro (email_conto_lavoro), preventivi (email_preventivo). Tutti i moduli email ora tracciano nel `outbound_audit_log`
 10. **Bug Fix: NC lines non persistenti** — Le Note di Credito ora salvano correttamente le modifiche alle righe anche quando lo status non è "bozza" (es. inviata_sdi, emessa). Fix applicato sia al frontend (handleSave invia le righe per NC) che al backend (NC escluse dal blocco modifiche strutturali)
+11. **Client Snapshot sui documenti** — Ogni fattura/DDT/preventivo/commessa ora salva una copia immutabile dei dati cliente (`client_snapshot`) al momento della creazione. I documenti storici non cambiano più se si modifica l'anagrafica cliente. Include: servizio `build_snapshot()`, modifica a invoices.py, preventivi.py, ddt.py, commesse.py. GET documenti legge da snapshot quando disponibile.
+12. **Stato Cliente (active/archived/blocked)** — Nuovo campo `status` su tutti i clienti. Endpoint: archive, block, reactivate. I clienti archiviati/bloccati non appaiono nella selezione per nuovi documenti. Frontend: colonna Stato con badge colorati, checkbox "Mostra archiviati", pulsanti Archivia/Riattiva.
+13. **Migrazione Snapshot** — Endpoint `/api/admin/migration/backfill-client-snapshots` per aggiungere snapshot a tutti i documenti esistenti. Endpoint `/api/admin/migration/snapshot-status` per verificare la copertura. Endpoint `/api/admin/migration/set-default-client-status` per impostare status=active su clienti senza status.
+14. **Deploy fix** — Rimosso `litellm==1.80.0` da requirements.txt (pacchetto non usato che bloccava il build)
 
 ### Feature completate (sessioni precedenti)
 - Content Engine (M1+M2)
