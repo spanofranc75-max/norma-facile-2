@@ -24,6 +24,7 @@ import ComplianceWidget from '../components/ComplianceWidget';
 import ComplianceDocsWidget from '../components/ComplianceDocsWidget';
 import OnboardingChecklist from '../components/OnboardingChecklist';
 import IntegrityWidget from '../components/IntegrityWidget';
+import MigrationWidget from '../components/MigrationWidget';
 import SystemHealthWidget from '../components/dashboard/SystemHealthWidget';
 
 const formatCurrency = (v) =>
@@ -222,6 +223,7 @@ export default function Dashboard() {
 
                 {/* Semaforo Commesse */}
                 {currentUser?.role === 'admin' && <IntegrityWidget />}
+                {currentUser?.role === 'admin' && <MigrationWidget />}
                 <SystemHealthWidget />
                 {semaforo && semaforo.total > 0 && (
                     <Card className="border-gray-200" data-testid="widget-semaforo">

@@ -32,9 +32,6 @@ async def backfill_client_snapshots(user: dict = Depends(get_current_user)):
     This reads the current client data and stores it as a snapshot.
     IMPORTANT: Run this only after verifying client data is correct.
     """
-    if user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Solo admin possono eseguire migrazioni")
-    
     uid = user["user_id"]
     report = {"total_updated": 0, "total_skipped": 0, "total_no_client": 0, "collections": {}}
     
