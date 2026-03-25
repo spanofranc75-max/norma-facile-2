@@ -1,10 +1,20 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# IDE and editors
+# ── Environment files (CRITICAL: never commit secrets) ──
+*.env
+*.env.*
+.env
+.env.local
+.env.production
+.env.staging
+backend/.env
+frontend/.env
+
+# ── IDE and editors ──
 .idea/
 .vscode/
 
-# Dependencies
+# ── Dependencies ──
 node_modules/
 /node_modules
 /.pnp
@@ -16,55 +26,50 @@ node_modules/
 !.yarn/releases
 !.yarn/versions
 
-# Testing
+# ── Testing ──
 /coverage
 
-# Next.js
+# ── Next.js ──
 /.next/
 /out/
 next-env.d.ts
 *.tsbuildinfo
 
-# Production builds
+# ── Production builds ──
 /build
 dist/
-dist
 
-# Environment files (comprehensive coverage)
-
+# ── Credentials & tokens ──
 *token.json*
 *credentials.json*
+*.pem
 
-# Logs and debug files
+# ── Logs and debug ──
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 dump.rdb
 
-# System files
+# ── System files ──
 .DS_Store
-*.pem
+Thumbs.db
 
-# Python
+# ── Python ──
 __pycache__/
-*pyc*
+*.pyc
 venv/
 .venv/
 
-# Development tools
+# ── Development tools ──
 chainlit.md
 .chainlit
 .ipynb_checkpoints/
-.ac
 
-# Deployment
+# ── Deployment ──
 .vercel
 
-# Data and databases
-agenthub/agents/youtube/db
-
-# Archive files and large assets
+# ── Archive files ──
 **/*.zip
 **/*.tar.gz
 **/*.tar
@@ -73,196 +78,13 @@ agenthub/agents/youtube/db
 *.deb
 *.dylib
 
-# Build caches
+# ── Build caches ──
 .cache/
-
-# Mobile development
-android-sdk/ frontend/node_modules/.cache/default-development/0.pack
-frontend/node_modules/.cache/default-development/0.pack
-frontend/node_modules/.cache/default-development/3.pack
-frontend/node_modules/.cache/default-development/5.pack
-frontend/node_modules/.cache/default-development/7.pack
-frontend/node_modules/.cache/default-development/9.pack
-frontend/node_modules/.cache/default-development/10.pack
-frontend/node_modules/.cache/default-development/11.pack
-frontend/node_modules/.cache/default-development/12.pack
-frontend/node_modules/.cache/default-development/13.pack
-frontend/node_modules/.cache/default-development/14.pack
-frontend/node_modules/.cache/default-development/1.pack
-frontend/node_modules/.cache/default-development/2.pack
-frontend/node_modules/.cache/default-development/4.pack
-frontend/node_modules/.cache/default-development/8.pack
-frontend/node_modules/.cache/default-development/8.pack
-frontend/node_modules/.cache/default-development/7.pack_
-frontend/node_modules/.cache/default-development/6.pack
-frontend/node_modules/.cache/default-development/15.pack
+frontend/node_modules/.cache/
 frontend/node_modules/.cache/default-development/16.pack
-frontend/node_modules/.cache/default-development/3.pack_
-frontend/node_modules/.cache/default-development/17.pack
-frontend/node_modules/.cache/default-development/18.pack
+frontend/node_modules/.cache/default-development/0.pack
+frontend/node_modules/.cache/default-development/9.pack
 frontend/node_modules/.cache/default-development/19.pack
-frontend/node_modules/.cache/default-development/2.pack_
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
+frontend/node_modules/.cache/default-development/5.pack
+frontend/node_modules/.cache/default-development/6.pack
+frontend/node_modules/.cache/default-development/12.pack
