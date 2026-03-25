@@ -41,6 +41,7 @@ const emptyLine = () => ({
     line_id: `ln_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
     description: '', codice_articolo: '', dimensions: '', quantity: '', unit: 'pz',
     unit_price: '', sconto_1: '', sconto_2: '', vat_rate: '22', thermal_data: null, notes: '',
+    ore_stimate: '',
 });
 
 const SIDEBAR_TABS = [
@@ -324,6 +325,7 @@ export default function PreventivoEditorPage() {
                     vat_rate: l.vat_rate || '22',
                     thermal_data: l.thermal_data || null,
                     notes: l.notes || null,
+                    ore_stimate: parseFloat(l.ore_stimate) || 0,
                 })),
             };
             console.log('[SAVE] Payload:', JSON.stringify(payload).substring(0, 500));
@@ -878,6 +880,7 @@ export default function PreventivoEditorPage() {
                                             <TableHead className="w-[85px] text-right text-[10px]">Netto</TableHead>
                                             <TableHead className="w-[56px] text-[10px]">IVA</TableHead>
                                             <TableHead className="w-[90px] text-right text-[10px]">Totale</TableHead>
+                                            <TableHead className="w-[50px] text-right text-[10px]" title="Ore stimate">h</TableHead>
                                             <TableHead className="w-[40px] text-[10px]">Th.</TableHead>
                                             <TableHead className="w-8"></TableHead>
                                         </TableRow>
@@ -921,6 +924,7 @@ export default function PreventivoEditorPage() {
                                                         </Select>
                                                     </TableCell>
                                                     <TableCell className="text-right font-mono text-xs font-semibold text-[#0055FF] px-1 truncate">{fmtEur(lt)}</TableCell>
+                                                    <TableCell className="px-1"><Input type="number" step="0.5" value={l.ore_stimate || ''} onChange={e => updateLine(i, 'ore_stimate', e.target.value)} placeholder="0" title="Ore stimate" className="h-7 text-[10px] text-right font-mono w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" data-testid={`ore-stimate-${i}`} /></TableCell>
                                                     <TableCell>
                                                         <div className="flex items-center gap-0.5">
                                                             <button data-testid={`thermal-btn-${i}`} onClick={() => openThermalDrawer(i)} className={`p-1 rounded ${hasTherm ? 'text-[#0055FF] bg-blue-50' : 'text-slate-300 hover:text-slate-500'}`}>

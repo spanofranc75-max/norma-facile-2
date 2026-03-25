@@ -95,9 +95,9 @@ async def analizza_righe_preventivo(
     from emergentintegrations.llm.chat import LlmChat, UserMessage
     import json as _json
 
-    # Build prompt with line data
+    # Build prompt with line data (include ore_stimate if user provided them)
     lines_text = "\n".join(
-        f"- Riga {i+1}: \"{ln.get('description', '')}\", qty={ln.get('quantity', 1)}, prezzo_unitario={ln.get('unit_price', 0)} EUR"
+        f"- Riga {i+1}: \"{ln.get('description', '')}\", qty={ln.get('quantity', 1)}, prezzo_unitario={ln.get('unit_price', 0)} EUR, ore_stimate_utente={ln.get('ore_stimate', 0)}"
         for i, ln in enumerate(data.lines)
     )
 
@@ -193,7 +193,18 @@ Rispondi SOLO con JSON valido:
     # Refine weights using the profile table
     materiali = result.get("materiali", [])
     peso_totale = 0
+    _CL_KEYWORDS = ("conto lavoro", "fornito dal cliente", "a cura di", "fornitura cliente",
+                     "fornite in conto lavoro")
+
     for m in materiali:
+        desc_lower = (m.get("descrizione") or m.get("description") or "").lower()
+
+        # Server-side conto lavoro detection (non dipendere solo dall'AI)
+        if not m.get("conto_lavoro") and m.get("tipo") != "conto_lavoro":
+            if any(kw in desc_lower for kw in _CL_KEYWORDS):
+                m["conto_lavoro"] = True
+                m["tipo"] = "conto_lavoro"
+
         # Conto lavoro: always 0 weight and 0 cost
         if m.get("conto_lavoro") or m.get("tipo") == "conto_lavoro":
             m["peso_calcolato_kg"] = 0
@@ -209,6 +220,14 @@ Rispondi SOLO con JSON valido:
 
     result["peso_totale_calcolato_kg"] = round(peso_totale, 1)
     result["materiali"] = materiali
+
+    # Sum user-provided ore_stimate from original lines
+    ore_utente = sum(float(ln.get("ore_stimate", 0) or 0) for ln in data.lines)
+    # Sum AI-extracted ore_stimate from materials
+    ore_ai = sum(float(m.get("ore_stimate", 0) or 0) for m in materiali)
+    result["ore_stimate_utente"] = round(ore_utente, 1)
+    result["ore_stimate_ai"] = round(ore_ai, 1)
+    result["ore_stimate_totali"] = round(max(ore_utente, ore_ai), 1)
 
     return result
 

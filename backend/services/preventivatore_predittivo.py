@@ -8,6 +8,7 @@ Funzionalita:
 4. Calcolo Preventivo con margini differenziati
 """
 import os
+import re
 import uuid
 import json
 import logging
@@ -177,37 +178,53 @@ async def analyze_drawing_materials(page_image_b64: str) -> dict:
 def calcola_peso_materiale(materiale: dict) -> float:
     """Calculate weight of a material entry using profile tables."""
     tipo = materiale.get("tipo", "")
+    desc_lower = (materiale.get("descrizione") or materiale.get("description") or "").lower()
 
     # Conto lavoro: always 0
     if tipo == "conto_lavoro" or materiale.get("conto_lavoro"):
         return 0.0
+    # Server-side conto lavoro detection
+    if any(kw in desc_lower for kw in ("conto lavoro", "fornito dal cliente", "a cura di", "fornitura cliente")):
+        return 0.0
 
-    # If AI already estimated and type is not calculable, trust it (but DON'T multiply by qty again if AI already included it)
     lunghezza_mm = materiale.get("lunghezza_mm", 0) or 0
     quantita = materiale.get("quantita", 1) or 1
     spessore_mm = materiale.get("spessore_mm", 0) or 0
     larghezza_mm = materiale.get("larghezza_mm", 0) or 0
     profilo = (materiale.get("profilo") or "").upper().strip()
 
-    # Profili standard (IPE, HEA, HEB, UPN, tubo, etc.)
+    # ── Grigliato detection: by tipo OR by keywords in description ──
+    _GRIGLIATO_KW = ("grigliato", "grata", "griglia", "specchiatura", "specchiature")
+    is_grigliato = tipo in ("grigliato", "grata", "griglia") or any(kw in desc_lower for kw in _GRIGLIATO_KW)
+
+    if is_grigliato:
+        l_m = lunghezza_mm / 1000
+        w_m = (larghezza_mm or spessore_mm) / 1000
+        lookup_text = profilo or desc_lower
+
+        # Structured dimensions available
+        if l_m > 0 and w_m > 0:
+            peso_m2 = _peso_grigliato_per_maglia(lookup_text)
+            return round(l_m * w_m * quantita * peso_m2, 1)
+
+        # Fallback: extract dimensions from description text (e.g. L2230xH2150, L4600xH2150)
+        area_m2 = _estrai_area_da_testo(desc_lower)
+        if area_m2 > 0:
+            peso_m2 = _peso_grigliato_per_maglia(lookup_text)
+            return round(area_m2 * quantita * peso_m2, 1)
+
+    # ── Profili standard (IPE, HEA, HEB, UPN, tubo, etc.) ──
     if tipo in ("profilo", "tubo") and profilo:
         kg_m = PESO_PROFILI_KG_M.get(profilo, 0)
         if kg_m > 0 and lunghezza_mm > 0:
             return round(kg_m * (lunghezza_mm / 1000) * quantita, 1)
 
-    # Piastre e lamiere (volume × densità acciaio)
+    # ── Piastre e lamiere (volume × densità acciaio) ──
+    # SKIP if description says grigliato (avoid steel-density calc on grates)
     if tipo in ("piastra", "lamiera") and spessore_mm > 0 and larghezza_mm > 0 and lunghezza_mm > 0:
         volume_cm3 = (lunghezza_mm / 10) * (larghezza_mm / 10) * (spessore_mm / 10)
         peso_kg = volume_cm3 * 7.85 / 1000  # densita acciaio
         return round(peso_kg * quantita, 1)
-
-    # Grigliato, grate, griglie — calcolo per superficie (kg/m²)
-    if tipo in ("grigliato", "grata", "griglia"):
-        l_m = lunghezza_mm / 1000
-        w_m = (larghezza_mm or spessore_mm) / 1000
-        if l_m > 0 and w_m > 0:
-            peso_m2 = _peso_grigliato_per_maglia(profilo or materiale.get("descrizione", ""))
-            return round(l_m * w_m * quantita * peso_m2, 1)
 
     # Fallback from AI estimate
     return round((materiale.get("peso_stimato_kg", 0) or 0), 1)
@@ -233,6 +250,28 @@ def _peso_grigliato_per_maglia(testo: str) -> float:
         if key.replace(" ", "") in t:
             return val
     return PESO_GRIGLIATO_DEFAULT
+
+
+def _estrai_area_da_testo(testo: str) -> float:
+    """Estrae area totale (m²) da dimensioni nel testo.
+    
+    Supporta formati:
+      L2230xH2150, L4600×H2150, 2230x2150mm, 1892 x 6100
+    Quando ci sono più specchiature nella stessa riga, somma le aree.
+    """
+    # Pattern 1: L<num>xH<num> or L<num>×H<num>
+    patterns = re.findall(r'[lL]\s*(\d{3,5})\s*[x×\*]\s*[hH]?\s*(\d{3,5})', testo)
+    if not patterns:
+        # Pattern 2: <num>x<num> or <num>×<num> (generic dimensions)
+        patterns = re.findall(r'(\d{3,5})\s*[x×\*]\s*(\d{3,5})', testo)
+    area = 0.0
+    for l_str, h_str in patterns:
+        l_m = int(l_str) / 1000
+        h_m = int(h_str) / 1000
+        # Sanity check: realistic panel dimensions (0.1m to 15m)
+        if 0.1 < l_m < 15 and 0.1 < h_m < 15:
+            area += l_m * h_m
+    return round(area, 3)
 
 
 # ══════════════════════════════════════════════════════════════

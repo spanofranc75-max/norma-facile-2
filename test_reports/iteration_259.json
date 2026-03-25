@@ -1,0 +1,86 @@
+{
+  "summary": "Iteration 259 — Preventivatore AI Analysis Bug Fixes Testing Complete. All 23 backend tests passed. Verified: 1) Grigliato weight calculation correct (~883 kg for 5 panels 1892x6100 maglia 63x132/25x2, NOT 13000+), 2) Conto lavoro materials detected with peso_calcolato_kg=0, 3) Specchiature grigliato dimensions extracted from text (L2230xH2150, etc.) with weight > 300 kg, 4) ore_stimate field present in preventivo lines and API response. Frontend verified: 'h' column header visible, ore_stimate input functional.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration259_preventivatore_fixes.py",
+    "/app/test_reports/pytest/iteration259_preventivatore_fixes_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration259_preventivatore_fixes.py"
+  ],
+  "success_rate": {
+    "backend": "100% (23/23 pytest tests passed)",
+    "frontend": "100% (Preventivo editor loads, 'h' column visible, ore_stimate input functional)"
+  },
+  "seed_data_creation": "Used demo session for API testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Preventivatore AI analysis fixes verified. Key findings: 1) calcola_peso_materiale function correctly calculates grigliato weight using kg/m² (not steel density). 2) _estrai_area_da_testo extracts multiple LxH dimensions from text. 3) Conto lavoro detection works both via tipo flag and description keywords. 4) ore_stimate_utente field captured in analizza-righe response. 5) All regression tests for IPE/HEA profiles pass. WeasyPrint is MOCKED.",
+  "tests_performed": {
+    "TestHealthAndBasics": {
+      "test_health_check": "PASS - Returns 200 with healthy status"
+    },
+    "TestCalcolaPesoMaterialeFunction": {
+      "test_grigliato_weight_correct": "PASS - 5 panels 1892x6100 maglia 63x132/25x2 = ~883 kg (NOT 13000+)",
+      "test_conto_lavoro_zero_weight": "PASS - Conto lavoro description returns peso=0",
+      "test_conto_lavoro_tipo_flag": "PASS - tipo='conto_lavoro' returns peso=0",
+      "test_specchiature_dimensions_in_text": "PASS - L2230xH2150, L4600xH2150, L5500xH2150 extracts area and returns weight > 300 kg",
+      "test_ipe_profile_weight_regression": "PASS - IPE 200 @ 6m x 4 = 537.6 kg",
+      "test_steel_plate_weight_regression": "PASS - Steel plate 500x300x20 x 2 = ~47.1 kg"
+    },
+    "TestEstraiAreaDaTesto": {
+      "test_extract_multiple_dimensions": "PASS - Extracts ~26.5 m² from multiple LxH patterns",
+      "test_extract_single_dimension": "PASS - Extracts ~11.54 m² from single dimension",
+      "test_extract_generic_dimensions": "PASS - Extracts ~6.0 m² from generic NxM pattern"
+    },
+    "TestPesoGrigliatoPerMaglia": {
+      "test_maglia_63x132": "PASS - Returns 15.3 kg/m²",
+      "test_maglia_34x38": "PASS - Returns 19.8 kg/m²",
+      "test_default_maglia": "PASS - Returns 16.0 kg/m² (default)"
+    },
+    "TestPreventivatoreAPIEndpoints": {
+      "test_tabella_ore_endpoint": "PASS - Returns parametric table with 4 categories",
+      "test_prezzi_storici_endpoint": "PASS - Returns historical prices (S275JR, S355JR, etc.)",
+      "test_calcola_endpoint": "PASS - Returns peso_totale_kg, calcolo, stima_ore"
+    },
+    "TestAnalizzaRigheEndpoint": {
+      "test_analizza_righe_with_grigliato": "PASS - AI endpoint works, weight < 5000 kg (not 14x error)",
+      "test_analizza_righe_with_conto_lavoro": "PASS - Conto lavoro detected with peso=0",
+      "test_analizza_righe_with_specchiature": "PASS - Specchiature weight > 300 kg (not 0)",
+      "test_analizza_righe_includes_ore_stimate": "PASS - ore_stimate_utente = 40.5 (sum of user inputs)"
+    },
+    "TestRegressionIPEProfiles": {
+      "test_ipe_100": "PASS - IPE 100 @ 3m x 2 = 48.6 kg",
+      "test_ipe_300": "PASS - IPE 300 @ 8m x 1 = 337.6 kg",
+      "test_hea_200": "PASS - HEA 200 @ 4m x 3 = 507.6 kg"
+    },
+    "FrontendTests": {
+      "preventivo_editor_loads": "PASS - Page loads correctly",
+      "h_column_header_visible": "PASS - 'h' column header with title='Ore stimate' visible",
+      "ore_stimate_input_functional": "PASS - Input field accepts values (data-testid='ore-stimate-0')"
+    }
+  },
+  "bug_fixes_verified": {
+    "grigliato_weight_14x_error": "FIXED - Now uses kg/m² table instead of steel density",
+    "conto_lavoro_not_detected": "FIXED - Server-side detection via keywords in description",
+    "specchiature_0kg": "FIXED - _estrai_area_da_testo extracts dimensions from text",
+    "ore_stimate_field": "IMPLEMENTED - Field present in emptyLine(), table header, and API response"
+  },
+  "test_credentials_used": {
+    "demo_session": "Cookie: session_token=demo_session_token_normafacile"
+  },
+  "mocked_apis": {
+    "weasyprint": "MOCKED if system GTK libraries not available",
+    "ai_endpoint": "Uses real GPT-4o via EMERGENT_LLM_KEY"
+  }
+}
