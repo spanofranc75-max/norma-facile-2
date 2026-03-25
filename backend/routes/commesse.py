@@ -254,15 +254,14 @@ async def list_commesse(
 
 @router.post("/", status_code=201)
 async def create_commessa(data: CommessaCreate, user: dict = Depends(get_current_user)):
+    from services.client_snapshot import build_snapshot
     uid = user["user_id"]
     now = datetime.now(timezone.utc)
     cid = f"com_{uuid.uuid4().hex[:12]}"
     numero = await generate_commessa_number(uid)
 
-    client_name = data.client_name or ""
-    if data.client_id and not client_name:
-        client = await db.clients.find_one({"client_id": data.client_id}, {"_id": 0, "business_name": 1})
-        client_name = client.get("business_name", "") if client else ""
+    client_snapshot = await build_snapshot(data.client_id) if data.client_id else {}
+    client_name = client_snapshot.get("business_name", "") or data.client_name or ""
 
     initial_stato = "richiesta" if data.is_richiesta else "bozza"
     initial_event_type = "RICHIESTA_PREVENTIVO" if data.is_richiesta else "COMMESSA_CREATA"
@@ -281,6 +280,7 @@ async def create_commessa(data: CommessaCreate, user: dict = Depends(get_current
         "title": data.title,
         "client_id": data.client_id or "",
         "client_name": client_name,
+        "client_snapshot": client_snapshot,
         "description": data.description or "",
         "riferimento": data.riferimento or "",
         "cantiere": (data.cantiere.model_dump() if data.cantiere else {}),

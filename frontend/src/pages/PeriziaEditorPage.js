@@ -129,7 +129,7 @@ export default function PeriziaEditorPage() {
     const [geoLoading, setGeoLoading] = useState(false);
 
     useEffect(() => {
-        apiRequest('/clients/?limit=200').then(d => setClients(d.clients || [])).catch(() => {});
+        apiRequest('/clients/?limit=200&status=active').then(d => setClients(d.clients || [])).catch(() => {});
         apiRequest('/perizie/codici-danno').then(d => setCodiciDannoDb(d.codici_danno || [])).catch(() => {});
     }, []);
 

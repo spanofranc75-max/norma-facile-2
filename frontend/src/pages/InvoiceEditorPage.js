@@ -183,7 +183,7 @@ export default function InvoiceEditorPage() {
         const fetchData = async () => {
             try {
                 const [cl, pt] = await Promise.all([
-                    apiRequest('/clients/?limit=100'),
+                    apiRequest('/clients/?limit=100&status=active'),
                     apiRequest('/payment-types/').catch(() => ({ items: [] })),
                 ]);
                 setClients(cl.clients);

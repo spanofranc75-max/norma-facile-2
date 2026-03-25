@@ -58,6 +58,7 @@ from routes.gate_certification import router as gate_cert_router
 from routes.consumables import router as consumables_router
 from routes.cost_control import router as cost_control_router
 from routes.backup import router as backup_router
+from routes.migration import router as migration_router
 from routes.team import router as team_router
 from routes.notifications import router as notifications_router
 from routes.diario_produzione import router as diario_produzione_router
@@ -355,6 +356,7 @@ app.include_router(gate_cert_router, prefix="/api")
 app.include_router(consumables_router, prefix="/api")
 app.include_router(cost_control_router, prefix="/api")
 app.include_router(backup_router, prefix="/api")
+app.include_router(migration_router, prefix="/api")
 app.include_router(team_router, prefix="/api")
 app.include_router(notifications_router, prefix="/api")
 app.include_router(diario_produzione_router, prefix="/api")

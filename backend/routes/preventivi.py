@@ -384,8 +384,12 @@ async def list_preventivi(
     docs = await cursor.to_list(per_page)
     for d in docs:
         if d.get("client_id"):
-            c = await db.clients.find_one({"client_id": d["client_id"]}, {"_id": 0, "business_name": 1})
-            d["client_name"] = c.get("business_name") if c else d.get("_migrated_client_name")
+            snapshot = d.get("client_snapshot")
+            if snapshot and snapshot.get("business_name"):
+                d["client_name"] = snapshot["business_name"]
+            else:
+                c = await db.clients.find_one({"client_id": d["client_id"]}, {"_id": 0, "business_name": 1})
+                d["client_name"] = c.get("business_name") if c else d.get("_migrated_client_name")
         elif d.get("_migrated_client_name"):
             d["client_name"] = d["_migrated_client_name"]
         # Compute invoicing progress
@@ -430,8 +434,12 @@ async def get_preventivo(prev_id: str, user: dict = Depends(get_current_user)):
     if not doc:
         raise HTTPException(404, "Preventivo non trovato")
     if doc.get("client_id"):
-        c = await db.clients.find_one({"client_id": doc["client_id"]}, {"_id": 0, "business_name": 1})
-        doc["client_name"] = c.get("business_name") if c else None
+        snapshot = doc.get("client_snapshot")
+        if snapshot and snapshot.get("business_name"):
+            doc["client_name"] = snapshot["business_name"]
+        else:
+            c = await db.clients.find_one({"client_id": doc["client_id"]}, {"_id": 0, "business_name": 1})
+            doc["client_name"] = c.get("business_name") if c else None
     # Enrich with linked invoice data for workflow timeline
     if doc.get("converted_to"):
         inv = await db.invoices.find_one(
@@ -460,6 +468,7 @@ async def get_preventivo(prev_id: str, user: dict = Depends(get_current_user)):
 
 @router.post("/", status_code=201)
 async def create_preventivo(data: PreventivoCreate, user: dict = Depends(get_current_user)):
+    from services.client_snapshot import build_snapshot
     prev_id = f"prev_{uuid.uuid4().hex[:10]}"
     now = datetime.now(timezone.utc)
     year = now.year
@@ -513,6 +522,7 @@ async def create_preventivo(data: PreventivoCreate, user: dict = Depends(get_cur
         "user_id": user["user_id"],
         "number": number,
         "client_id": data.client_id,
+        "client_snapshot": await build_snapshot(data.client_id),
         "subject": data.subject,
         "validity_days": data.validity_days,
         "payment_type_id": data.payment_type_id,

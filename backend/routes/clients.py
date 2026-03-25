@@ -36,12 +36,20 @@ def _build_client_response(doc: dict) -> dict:
 async def get_clients(
     search: Optional[str] = Query(None, description="Search by name or P.IVA"),
     client_type: Optional[str] = Query(None, description="Filter by client_type: cliente, fornitore, cliente_fornitore"),
+    status: Optional[str] = Query(None, description="Filter by status: active, archived, blocked. Default: active only"),
+    include_archived: bool = Query(False, description="Include archived/blocked clients"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
     user: dict = Depends(get_current_user)
 ):
     """Get all clients for current user with optional search and type filter."""
     query = {"user_id": user["user_id"]}
+    
+    # Status filter
+    if status:
+        query["status"] = status
+    elif not include_archived:
+        query["status"] = {"$in": ["active", None]}
     
     if client_type:
         if client_type == "fornitore":
@@ -259,6 +267,80 @@ async def promote_to_cliente_fornitore(
     )
     logger.info(f"Client {client_id} promoted to cliente_fornitore")
     return {"message": "Convertito in Cliente/Fornitore", "client_id": client_id}
+
+
+@router.post("/{client_id}/archive")
+async def archive_client(client_id: str, user: dict = Depends(get_current_user)):
+    """Archive a client — not usable for new documents, but visible in history."""
+    existing = await db.clients.find_one(
+        {"client_id": client_id, "user_id": user["user_id"]}, {"_id": 0, "business_name": 1, "status": 1}
+    )
+    if not existing:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+    
+    await db.clients.update_one(
+        {"client_id": client_id},
+        {"$set": {"status": "archived", "updated_at": datetime.now(timezone.utc)}}
+    )
+    logger.info(f"Client {client_id} archived")
+    await log_activity(user, "archive", "cliente", client_id, label=existing.get("business_name", ""))
+    return {"message": "Cliente archiviato", "client_id": client_id}
+
+
+@router.post("/{client_id}/block")
+async def block_client(client_id: str, user: dict = Depends(get_current_user)):
+    """Block a client — fully locked."""
+    existing = await db.clients.find_one(
+        {"client_id": client_id, "user_id": user["user_id"]}, {"_id": 0, "business_name": 1}
+    )
+    if not existing:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+    
+    await db.clients.update_one(
+        {"client_id": client_id},
+        {"$set": {"status": "blocked", "updated_at": datetime.now(timezone.utc)}}
+    )
+    logger.info(f"Client {client_id} blocked")
+    await log_activity(user, "block", "cliente", client_id, label=existing.get("business_name", ""))
+    return {"message": "Cliente bloccato", "client_id": client_id}
+
+
+@router.post("/{client_id}/reactivate")
+async def reactivate_client(client_id: str, user: dict = Depends(get_current_user)):
+    """Reactivate a previously archived or blocked client."""
+    existing = await db.clients.find_one(
+        {"client_id": client_id, "user_id": user["user_id"]}, {"_id": 0, "business_name": 1}
+    )
+    if not existing:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+    
+    await db.clients.update_one(
+        {"client_id": client_id},
+        {"$set": {"status": "active", "updated_at": datetime.now(timezone.utc)}}
+    )
+    logger.info(f"Client {client_id} reactivated")
+    await log_activity(user, "reactivate", "cliente", client_id, label=existing.get("business_name", ""))
+    return {"message": "Cliente riattivato", "client_id": client_id}
+
+
+@router.post("/{client_id}/set-successor")
+async def set_successor(client_id: str, successor_id: str = Query(...), user: dict = Depends(get_current_user)):
+    """Link a successor client to this one (for client succession tracking)."""
+    uid = user["user_id"]
+    existing = await db.clients.find_one({"client_id": client_id, "user_id": uid}, {"_id": 0, "business_name": 1})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Cliente non trovato")
+    
+    successor = await db.clients.find_one({"client_id": successor_id, "user_id": uid}, {"_id": 0, "business_name": 1})
+    if not successor:
+        raise HTTPException(status_code=404, detail="Cliente successore non trovato")
+    
+    await db.clients.update_one(
+        {"client_id": client_id},
+        {"$set": {"successor_client_id": successor_id, "updated_at": datetime.now(timezone.utc)}}
+    )
+    logger.info(f"Client {client_id} successor set to {successor_id}")
+    return {"message": f"Successore impostato: {successor.get('business_name', '')}", "client_id": client_id}
 
 
 

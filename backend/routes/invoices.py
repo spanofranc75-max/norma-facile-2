@@ -126,13 +126,17 @@ async def get_invoices(
     invoices_cursor = db.invoices.find(query, {"_id": 0}).skip(skip).limit(limit).sort("issue_date", -1)
     invoices = await invoices_cursor.to_list(length=limit)
     
-    # Populate client names
+    # Populate client names — prefer snapshot, fallback to live lookup
     for inv in invoices:
-        client = await db.clients.find_one(
-            {"client_id": inv.get("client_id")},
-            {"_id": 0, "business_name": 1}
-        )
-        inv["client_name"] = client.get("business_name") if client else inv.get("client_business_name", "N/A")
+        snapshot = inv.get("client_snapshot")
+        if snapshot and snapshot.get("business_name"):
+            inv["client_name"] = snapshot["business_name"]
+        else:
+            client = await db.clients.find_one(
+                {"client_id": inv.get("client_id")},
+                {"_id": 0, "business_name": 1}
+            )
+            inv["client_name"] = client.get("business_name") if client else inv.get("client_business_name", "N/A")
     
     return {"invoices": invoices, "total": total}
 
@@ -221,6 +225,7 @@ async def create_invoice_from_preventivo(
     user: dict = Depends(get_current_user),
 ):
     """Create an Invoice (bozza) from an existing Preventivo. Copies lines, client, notes."""
+    from services.client_snapshot import build_snapshot
     uid = user["user_id"]
     prev = await db.preventivi.find_one({"preventivo_id": preventivo_id, "user_id": uid}, {"_id": 0})
     if not prev:
@@ -318,6 +323,7 @@ async def create_invoice_from_preventivo(
         "document_type": "FT",
         "document_number": doc_number,
         "client_id": client_id,
+        "client_snapshot": await build_snapshot(client_id),
         "issue_date": now.strftime("%Y-%m-%d"),
         "due_date": None,
         "status": "bozza",
@@ -377,12 +383,16 @@ async def get_invoice(
     if not invoice:
         raise HTTPException(status_code=404, detail="Documento non trovato")
     
-    # Populate client name
-    client = await db.clients.find_one(
-        {"client_id": invoice.get("client_id")},
-        {"_id": 0, "business_name": 1}
-    )
-    invoice["client_name"] = client.get("business_name") if client else invoice.get("client_business_name", "N/A")
+    # Populate client name — prefer snapshot, fallback to live lookup
+    snapshot = invoice.get("client_snapshot")
+    if snapshot and snapshot.get("business_name"):
+        invoice["client_name"] = snapshot["business_name"]
+    else:
+        client = await db.clients.find_one(
+            {"client_id": invoice.get("client_id")},
+            {"_id": 0, "business_name": 1}
+        )
+        invoice["client_name"] = client.get("business_name") if client else invoice.get("client_business_name", "N/A")
     
     return invoice
 
@@ -393,6 +403,8 @@ async def create_invoice(
     user: dict = Depends(get_current_user)
 ):
     """Create a new invoice/document."""
+    from services.client_snapshot import build_snapshot
+    
     # Verify client exists
     client = await db.clients.find_one(
         {"client_id": invoice_data.client_id, "user_id": user["user_id"]},
@@ -400,6 +412,9 @@ async def create_invoice(
     )
     if not client:
         raise HTTPException(status_code=400, detail="Cliente non trovato")
+    
+    # Build immutable client snapshot
+    client_snapshot = await build_snapshot(invoice_data.client_id)
     
     invoice_id = f"inv_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
@@ -441,6 +456,7 @@ async def create_invoice(
         "document_type": invoice_data.document_type.value,
         "document_number": document_number,
         "client_id": invoice_data.client_id,
+        "client_snapshot": client_snapshot,
         "issue_date": invoice_data.issue_date.isoformat(),
         "due_date": due_date.isoformat() if due_date else None,
         "status": InvoiceStatus.BOZZA.value,
@@ -616,6 +632,8 @@ async def create_nota_credito(
     user: dict = Depends(get_current_user)
 ):
     """Create a Credit Note (Nota di Credito) from an existing invoice."""
+    from services.client_snapshot import build_snapshot
+    
     original = await db.invoices.find_one(
         {"invoice_id": invoice_id, "user_id": user["user_id"]},
         {"_id": 0}
@@ -679,6 +697,7 @@ async def create_nota_credito(
         "due_date": None,
         "status": "bozza",
         "client_id": original.get("client_id"),
+        "client_snapshot": original.get("client_snapshot") or await build_snapshot(original.get("client_id")),
         "client_name": original.get("client_name"),
         "payment_method": original.get("payment_method") or "bonifico",
         "payment_terms": original.get("payment_terms") or "30gg",

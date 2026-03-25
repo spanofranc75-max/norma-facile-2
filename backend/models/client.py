@@ -5,6 +5,12 @@ from datetime import datetime
 from enum import Enum
 
 
+class ClientStatus(str, Enum):
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+    BLOCKED = "blocked"
+
+
 class ClientType(str, Enum):
     """Tipo soggetto."""
     CLIENTE = "cliente"
@@ -76,6 +82,8 @@ class ClientBase(BaseModel):
     supplier_banca: Optional[str] = None
 
     notes: Optional[str] = None
+    status: str = Field(default="active", description="active, archived, blocked")
+    successor_client_id: Optional[str] = Field(default=None, description="ID del cliente successore")
 
     @model_validator(mode="before")
     @classmethod
@@ -125,6 +133,8 @@ class ClientUpdate(BaseModel):
     supplier_iban: Optional[str] = None
     supplier_banca: Optional[str] = None
     notes: Optional[str] = None
+    status: Optional[str] = None
+    successor_client_id: Optional[str] = None
 
 
 class Client(ClientBase):
@@ -172,6 +182,8 @@ class ClientResponse(BaseModel):
     supplier_iban: Optional[str] = None
     supplier_banca: Optional[str] = None
     notes: Optional[str] = None
+    status: str = "active"
+    successor_client_id: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 

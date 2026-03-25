@@ -693,7 +693,7 @@ export default function RilievoEditorPage() {
     useEffect(() => {
         const fetchClients = async () => {
             try {
-                const data = await apiRequest('/clients/?limit=100');
+                const data = await apiRequest('/clients/?limit=100&status=active');
                 setClients(data.clients);
             } catch (error) {
                 toast.error('Errore caricamento clienti');

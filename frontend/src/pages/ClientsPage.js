@@ -30,6 +30,12 @@ const CLIENT_TYPES = {
     cliente_fornitore: { label: 'Cli/For', color: 'bg-emerald-100 text-emerald-800' },
 };
 
+const CLIENT_STATUS = {
+    active: { label: 'Attivo', color: 'bg-green-100 text-green-800' },
+    archived: { label: 'Archiviato', color: 'bg-gray-200 text-gray-600' },
+    blocked: { label: 'Bloccato', color: 'bg-red-100 text-red-700' },
+};
+
 const TABS = [
     { key: 'anagrafica', label: 'Anagrafica' },
     { key: 'indirizzo', label: 'Indirizzo' },
@@ -76,14 +82,17 @@ export default function ClientsPage() {
     const [contactDialogOpen, setContactDialogOpen] = useState(false);
     const [editingContactIdx, setEditingContactIdx] = useState(null);
     const [contactForm, setContactForm] = useState(emptyContact);
+    const [showArchived, setShowArchived] = useState(false);
 
     const fetchClients = useCallback(async () => {
         try {
-            const data = await apiRequest(`/clients/?search=${searchQuery}&client_type=cliente&limit=100`);
+            const qs = new URLSearchParams({ search: searchQuery, client_type: 'cliente', limit: '100' });
+            if (showArchived) qs.set('include_archived', 'true');
+            const data = await apiRequest(`/clients/?${qs.toString()}`);
             setClients(data.clients || []);
         } catch (e) { toast.error('Errore caricamento clienti'); }
         finally { setLoading(false); }
-    }, [searchQuery]);
+    }, [searchQuery, showArchived]);
 
     const fetchPaymentTypes = useCallback(async () => {
         try {
@@ -164,6 +173,25 @@ export default function ClientsPage() {
         }
     };
 
+    const handleArchive = async (client, e) => {
+        e?.stopPropagation();
+        if (!window.confirm(`Archiviare "${client.business_name}"? Non sarà più selezionabile per nuovi documenti.`)) return;
+        try {
+            await apiRequest(`/clients/${client.client_id}/archive`, { method: 'POST' });
+            toast.success('Cliente archiviato');
+            fetchClients();
+        } catch (e) { toast.error(e.message || 'Errore archiviazione'); }
+    };
+
+    const handleReactivate = async (client, e) => {
+        e?.stopPropagation();
+        try {
+            await apiRequest(`/clients/${client.client_id}/reactivate`, { method: 'POST' });
+            toast.success('Cliente riattivato');
+            fetchClients();
+        } catch (e) { toast.error(e.message || 'Errore riattivazione'); }
+    };
+
     // Contact management
     const openContactDialog = (idx) => {
         if (idx !== null && idx !== undefined) {
@@ -222,9 +250,20 @@ export default function ClientsPage() {
                 {/* Search */}
                 <Card className="border-gray-200">
                     <CardContent className="p-3">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input data-testid="search-clients" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cerca per ragione sociale, P.IVA o C.F." className="pl-10" />
+                        <div className="flex items-center gap-3">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <Input data-testid="search-clients" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Cerca per ragione sociale, P.IVA o C.F." className="pl-10" />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Checkbox
+                                    id="show-archived"
+                                    data-testid="toggle-show-archived"
+                                    checked={showArchived}
+                                    onCheckedChange={setShowArchived}
+                                />
+                                <Label htmlFor="show-archived" className="text-xs text-slate-500 whitespace-nowrap cursor-pointer">Mostra archiviati</Label>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
@@ -238,45 +277,58 @@ export default function ClientsPage() {
                                 <TableRow className="bg-[#1E293B]">
                                     <TableHead className="text-white font-medium">Ragione Sociale</TableHead>
                                     <TableHead className="text-white font-medium hidden sm:table-cell">Tipo</TableHead>
+                                    <TableHead className="text-white font-medium hidden sm:table-cell">Stato</TableHead>
                                     <TableHead className="text-white font-medium hidden md:table-cell">P. IVA</TableHead>
                                     <TableHead className="text-white font-medium hidden md:table-cell">Città</TableHead>
                                     <TableHead className="text-white font-medium hidden lg:table-cell">Telefono</TableHead>
-                                    <TableHead className="text-white font-medium hidden lg:table-cell">Pagamento</TableHead>
-                                    <TableHead className="w-[120px]"></TableHead>
+                                    <TableHead className="w-[140px]"></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {loading ? (
-                                    <TableRow><TableCell colSpan={7} className="text-center py-8"><div className="w-6 h-6 loading-spinner mx-auto" /></TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={8} className="text-center py-8"><div className="w-6 h-6 loading-spinner mx-auto" /></TableCell></TableRow>
                                 ) : clients.length === 0 ? (
-                                    <TableRow><TableCell colSpan={7} className="p-0">
+                                    <TableRow><TableCell colSpan={8} className="p-0">
                                         <EmptyState type="clients" title="Nessun cliente registrato" description="Aggiungi il tuo primo cliente per iniziare a creare rilievi, preventivi e fatture." actionLabel="Crea il primo Cliente" onAction={() => handleOpenDialog(null)} />
                                     </TableCell></TableRow>
                                 ) : (
                                     clients.map((client) => {
                                         const ct = CLIENT_TYPES[client.client_type] || CLIENT_TYPES.cliente;
+                                        const cs = CLIENT_STATUS[client.status] || CLIENT_STATUS.active;
+                                        const isArchived = client.status === 'archived' || client.status === 'blocked';
                                         return (
-                                            <TableRow key={client.client_id} data-testid={`client-row-${client.client_id}`} className="hover:bg-slate-50 cursor-pointer" onClick={() => handleOpenDialog(client)}>
-                                                <TableCell className="font-medium">{client.business_name}</TableCell>
+                                            <TableRow key={client.client_id} data-testid={`client-row-${client.client_id}`} className={`hover:bg-slate-50 cursor-pointer ${isArchived ? 'opacity-60' : ''}`} onClick={() => handleOpenDialog(client)}>
+                                                <TableCell className="font-medium">
+                                                    {client.business_name}
+                                                    {client.successor_client_id && <span className="text-xs text-amber-600 ml-1">(sostituito)</span>}
+                                                </TableCell>
                                                 <TableCell className="hidden sm:table-cell"><Badge className={`${ct.color} text-[10px]`}>{ct.label}</Badge></TableCell>
+                                                <TableCell className="hidden sm:table-cell"><Badge className={`${cs.color} text-[10px]`}>{cs.label}</Badge></TableCell>
                                                 <TableCell className="font-mono text-sm hidden md:table-cell">{client.partita_iva || '-'}</TableCell>
                                                 <TableCell className="text-sm hidden md:table-cell">{client.city ? `${client.city} (${client.province})` : '-'}</TableCell>
                                                 <TableCell className="text-sm hidden lg:table-cell">{client.phone || client.cellulare || '-'}</TableCell>
-                                                <TableCell className="text-xs text-slate-500 max-w-[150px] truncate hidden lg:table-cell">{client.payment_type_label || '-'}</TableCell>
                                                 <TableCell>
                                                     <div className="flex gap-1" onClick={e => e.stopPropagation()}>
                                                         <Button variant="ghost" size="sm" data-testid={`fascicolo-client-${client.client_id}`} onClick={() => navigate(`/fascicolo/${client.client_id}`)} title="Fascicolo" className="text-[#0055FF] hover:bg-blue-50">
                                                             <FolderOpen className="h-4 w-4" />
                                                         </Button>
-                                                        <Button variant="ghost" size="sm" data-testid={`rilievo-client-${client.client_id}`} onClick={() => navigate(`/rilievi/new?client_id=${client.client_id}`)} title="Nuovo Rilievo">
-                                                            <Ruler className="h-4 w-4" />
-                                                        </Button>
+                                                        {!isArchived && (
+                                                            <Button variant="ghost" size="sm" data-testid={`rilievo-client-${client.client_id}`} onClick={() => navigate(`/rilievi/new?client_id=${client.client_id}`)} title="Nuovo Rilievo">
+                                                                <Ruler className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
                                                         <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(client)} data-testid={`edit-client-${client.client_id}`}>
                                                             <Pencil className="h-4 w-4" />
                                                         </Button>
-                                                        <Button variant="ghost" size="sm" onClick={() => { setClientToDelete(client); setDeleteDialogOpen(true); }} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
+                                                        {!isArchived ? (
+                                                            <Button variant="ghost" size="sm" onClick={(e) => handleArchive(client, e)} className="text-amber-600 hover:text-amber-700 hover:bg-amber-50" title="Archivia">
+                                                                <Clock className="h-4 w-4" />
+                                                            </Button>
+                                                        ) : (
+                                                            <Button variant="ghost" size="sm" onClick={(e) => handleReactivate(client, e)} className="text-green-600 hover:text-green-700 hover:bg-green-50" title="Riattiva">
+                                                                <UserPlus className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                 </TableCell>
                                             </TableRow>

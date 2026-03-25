@@ -1,0 +1,114 @@
+{
+  "summary": "Iteration 256 — Client Snapshot + Client Status System testing complete. All 16 backend tests passed. Frontend UI verified: Clients page shows Stato column, Mostra archiviati checkbox, and archive/reactivate buttons. Invoice editor correctly filters to show only active clients.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration256_client_snapshot_status.py",
+    "/app/test_reports/pytest/iteration256_client_snapshot_status_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_iteration256_client_snapshot_status.py"
+  ],
+  "success_rate": {
+    "backend": "100% (16/16 pytest tests passed)",
+    "frontend": "100% (all UI elements verified)"
+  },
+  "seed_data_creation": "Test clients and invoices created and cleaned up automatically via API",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Client Snapshot + Status system fully implemented and tested. Key features: 1) GET /api/clients/ defaults to active-only, use include_archived=true for all. 2) POST /api/clients/{id}/archive|block|reactivate endpoints work. 3) client_snapshot stored on invoices at creation time. 4) Migration endpoints at /api/admin/migration/ for backfilling. 5) Frontend ClientsPage.js has Stato column, Mostra archiviati checkbox, archive/reactivate buttons. 6) InvoiceEditorPage.js fetches only active clients for selector.",
+  "tests_performed": {
+    "backend_tests": {
+      "TestClientStatusFiltering": {
+        "test_get_clients_default_returns_active_only": "PASS",
+        "test_get_clients_with_status_active": "PASS",
+        "test_get_clients_include_archived": "PASS",
+        "test_get_clients_status_archived": "PASS"
+      },
+      "TestClientArchiveBlockReactivate": {
+        "test_archive_client": "PASS",
+        "test_block_client": "PASS",
+        "test_reactivate_archived_client": "PASS",
+        "test_reactivate_blocked_client": "PASS",
+        "test_archive_nonexistent_client": "PASS"
+      },
+      "TestClientSnapshotOnInvoice": {
+        "test_create_invoice_stores_client_snapshot": "PASS",
+        "test_get_invoice_returns_client_name_from_snapshot": "PASS"
+      },
+      "TestMigrationEndpoints": {
+        "test_snapshot_status_endpoint": "PASS",
+        "test_set_default_client_status_endpoint": "PASS",
+        "test_backfill_client_snapshots_endpoint": "PASS"
+      },
+      "TestClientStatusInClientResponse": {
+        "test_new_client_has_active_status": "PASS",
+        "test_client_list_includes_status": "PASS"
+      }
+    },
+    "frontend_tests": {
+      "clients_page": {
+        "stato_column_visible": "PASS - Stato column present in table header",
+        "mostra_archiviati_checkbox": "PASS - Checkbox with data-testid='toggle-show-archived' present",
+        "new_client_dialog": "PASS - Dialog opens with all tabs (Anagrafica, Indirizzo, Contatti, Pagamento, Note, Email Inviate)"
+      },
+      "invoice_editor": {
+        "client_selector": "PASS - Client dropdown present",
+        "active_clients_only": "PASS - Code verified: apiRequest('/clients/?limit=100&status=active')"
+      }
+    }
+  },
+  "code_verification": {
+    "backend": {
+      "client_snapshot_service": {
+        "file": "/app/backend/services/client_snapshot.py",
+        "verified": true,
+        "description": "build_snapshot() function fetches client data and returns snapshot dict with SNAPSHOT_FIELDS"
+      },
+      "client_status_model": {
+        "file": "/app/backend/models/client.py",
+        "verified": true,
+        "description": "ClientStatus enum (active/archived/blocked), status field in ClientBase/ClientResponse/ClientUpdate"
+      },
+      "client_routes": {
+        "file": "/app/backend/routes/clients.py",
+        "verified": true,
+        "description": "archive/block/reactivate endpoints at lines 272-323, status filter in GET at lines 48-52"
+      },
+      "invoice_routes": {
+        "file": "/app/backend/routes/invoices.py",
+        "verified": true,
+        "description": "client_snapshot added to create_invoice at line 459, from_preventivo at line 326"
+      },
+      "migration_routes": {
+        "file": "/app/backend/routes/migration.py",
+        "verified": true,
+        "description": "backfill-client-snapshots, snapshot-status, set-default-client-status endpoints"
+      }
+    },
+    "frontend": {
+      "clients_page": {
+        "file": "/app/frontend/src/pages/ClientsPage.js",
+        "verified": true,
+        "description": "CLIENT_STATUS object at line 33-37, Stato column at line 280, Mostra archiviati checkbox at lines 259-266, archive/reactivate handlers at lines 176-193"
+      },
+      "invoice_editor": {
+        "file": "/app/frontend/src/pages/InvoiceEditorPage.js",
+        "verified": true,
+        "description": "Fetches only active clients at line 186: apiRequest('/clients/?limit=100&status=active')"
+      }
+    }
+  },
+  "test_credentials_used": {
+    "demo_session": "POST /api/demo/login"
+  }
+}

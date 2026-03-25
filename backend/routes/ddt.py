@@ -232,16 +232,14 @@ async def get_ddt(ddt_id: str, user: dict = Depends(get_current_user)):
 
 @router.post("/", status_code=201)
 async def create_ddt(data: DDTCreate, user: dict = Depends(get_current_user)):
+    from services.client_snapshot import build_snapshot
     ddt_id = f"ddt_{uuid.uuid4().hex[:12]}"
     number = await next_ddt_number(user["user_id"], data.ddt_type)
     now = datetime.now(timezone.utc)
 
-    # Resolve client name
-    client_name = ""
-    if data.client_id:
-        client = await db.clients.find_one({"client_id": data.client_id}, {"_id": 0, "business_name": 1})
-        if client:
-            client_name = client["business_name"]
+    # Build client snapshot + resolve name
+    client_snapshot = await build_snapshot(data.client_id) if data.client_id else {}
+    client_name = client_snapshot.get("business_name", "")
 
     lines = []
     for line in data.lines:
@@ -266,6 +264,7 @@ async def create_ddt(data: DDTCreate, user: dict = Depends(get_current_user)):
         "ddt_type_label": DDT_TYPE_LABELS.get(data.ddt_type, "DDT"),
         "client_id": data.client_id,
         "client_name": client_name,
+        "client_snapshot": client_snapshot,
         "subject": data.subject,
         "destinazione": data.destinazione.model_dump() if data.destinazione else {},
         "causale_trasporto": causale,

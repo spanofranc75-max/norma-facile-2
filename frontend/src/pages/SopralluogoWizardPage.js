@@ -128,7 +128,7 @@ export default function SopralluogoWizardPage() {
 
     // Load clients
     useEffect(() => {
-        apiRequest('/clients/?limit=100').then(d => setClients(d.clients || [])).catch(() => {});
+        apiRequest('/clients/?limit=100&status=active').then(d => setClients(d.clients || [])).catch(() => {});
     }, []);
 
     // Load existing sopralluogo
