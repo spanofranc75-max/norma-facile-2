@@ -45,6 +45,8 @@ Francesco Spano' — Steel Project Design Srls
 15. **PDF Preventivo — 7 fix** — (a) Rimosso numero preventivo duplicato, (b) sfondo bianco puro, (c) condizioni di vendita dinamiche (pagamento/validità/consegna da dati preventivo), (d) colonne CODICE/SCONTI visibili solo se valorizzate, (e) indirizzo aziendale dinamico nelle condizioni, (f) 5 errori di battitura corretti, (g) ottimizzazione impaginazione da 3 a 2 pagine
 16. **Template Condizioni con Segnaposti** — L'utente puo usare segnaposti come `{pagamento}`, `{validita}`, `{ragione_sociale}`, etc. nel testo delle Condizioni Generali di Vendita (Impostazioni → Condizioni). I segnaposti vengono sostituiti automaticamente con i dati reali nel PDF. Frontend: legenda cliccabile + anteprima live.
 17. **Fix Analisi AI pesi a zero** — Aggiunto endpoint `POST /api/preventivatore/analizza-righe` che usa GPT-4o per estrarre profili e pesi dalle descrizioni testuali delle righe preventivo. AnalisiAIPage ora chiama l'AI al caricamento invece di usare solo regex locale. Aggiunto pulsante "Ricalcola AI".
+18. **Deploy in produzione** — Codice deployato su `app.1090normafacile.it` con tutti i fix recenti.
+19. **Migrazione Snapshot eseguita** — 27 documenti aggiornati, 52 gia completi. Widget MigrationWidget aggiunto alla Dashboard + endpoint GET `/api/admin/migration/run-snapshot` per esecuzione via browser.
 
 ### Feature completate (sessioni precedenti)
 - Content Engine (M1+M2)
