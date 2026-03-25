@@ -8,6 +8,7 @@ POST /api/preventivatore/accetta/{preventivo_id}    — Accetta e genera commess
 GET  /api/preventivatore/prezzi-storici             — Prezzi medi storici
 GET  /api/preventivatore/tabella-ore                — Tabella parametrica ore/kg
 """
+import os
 import uuid
 import base64
 import logging
@@ -62,7 +63,124 @@ class GeneraPreventivoRequest(BaseModel):
     doc_id: Optional[str] = None
 
 
+class AnalizzaRigheRequest(BaseModel):
+    lines: list = []
+
+
 # ── Endpoints ──
+
+@router.post("/analizza-righe")
+@limiter.limit("10/minute")
+async def analizza_righe_preventivo(
+    request: Request,
+    data: AnalizzaRigheRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Analizza le righe di un preventivo usando AI per estrarre profili, pesi e struttura.
+    
+    Prende le descrizioni testuali e usa GPT-4o per estrarre materiali strutturati
+    con pesi calcolati usando la tabella profili standard.
+    """
+    if not data.lines:
+        raise HTTPException(400, "Nessuna riga da analizzare")
+
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not api_key:
+        raise HTTPException(500, "EMERGENT_LLM_KEY non configurata")
+
+    from services.preventivatore_predittivo import AI_AVAILABLE, PESO_PROFILI_KG_M
+    if not AI_AVAILABLE:
+        raise HTTPException(500, "AI non disponibile")
+
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    import json as _json
+
+    # Build prompt with line data
+    lines_text = "\n".join(
+        f"- Riga {i+1}: \"{ln.get('description', '')}\", qty={ln.get('quantity', 1)}, prezzo_unitario={ln.get('unit_price', 0)} EUR"
+        for i, ln in enumerate(data.lines)
+    )
+
+    system = """Sei un ingegnere strutturista esperto in carpenteria metallica.
+Analizzi le righe di un preventivo e per ciascuna estrai:
+- tipo: "profilo", "piastra", "bulloneria", "manodopera", "zincatura", "accessori", "trasporto", "altro"
+- profilo: profilo standard se riconoscibile (es. "IPE 200", "HEA 160", "TUBO 100x100x4"). Null se non applicabile.
+- materiale: tipo acciaio (es. "S275JR", "S355JR"). Default "S275JR" se non specificato.
+- lunghezza_mm: lunghezza stimata in mm. Per strutture senza lunghezza esplicita, stima dal contesto e dal prezzo.
+- quantita: numero pezzi (dalla riga o stimato)
+- peso_stimato_kg: peso TOTALE stimato in kg per questa riga (quantita * peso_unitario_kg)
+- spessore_mm: per piastre/lamiere. Null altrimenti.
+- larghezza_mm: per piastre/lamiere. Null altrimenti.
+- tipologia_struttura: "leggera"|"media"|"complessa"|"speciale" (valutazione globale)
+
+REGOLE:
+- STIMA il peso in modo realistico basandoti sul prezzo: in Italia, acciaio S275JR grezzo costa ~1.10-1.50 EUR/kg, lavorato ~2.50-4.00 EUR/kg per carpenteria media.
+- Se il prezzo unitario è alto (>20000 EUR), probabilmente include materiale+lavorazione. Stima il peso dal rapporto prezzo/EUR_per_kg tipico.
+- Per manodopera, zincatura, trasporto: peso_stimato_kg = 0
+- Per accessori/minuteria: stima un peso forfettario ragionevole (es. 50-200 kg per una commessa media)
+
+Rispondi SOLO con JSON valido:
+{
+  "tipologia_struttura": "media",
+  "materiali": [
+    {
+      "riga_originale": 1,
+      "tipo": "profilo",
+      "profilo": "IPE 200",
+      "materiale": "S275JR",
+      "lunghezza_mm": 6000,
+      "quantita": 4,
+      "spessore_mm": null,
+      "larghezza_mm": null,
+      "peso_stimato_kg": 537.6,
+      "descrizione": "Trave principale IPE 200"
+    }
+  ],
+  "peso_totale_stimato_kg": 1234.5,
+  "note_analisi": "..."
+}"""
+
+    chat = LlmChat(
+        api_key=api_key,
+        session_id=f"analisi-righe-{uuid.uuid4().hex[:8]}",
+        system_message=system,
+    ).with_model("openai", "gpt-4o")
+
+    user_msg = UserMessage(
+        text=f"Analizza queste righe di preventivo ed estrai materiali con pesi stimati:\n\n{lines_text}\n\nRestituisci JSON.",
+    )
+
+    try:
+        response_text = await chat.send_message(user_msg)
+        cleaned = response_text.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            cleaned = cleaned.strip()
+        if cleaned.startswith("json"):
+            cleaned = cleaned[4:].strip()
+        result = _json.loads(cleaned)
+    except Exception as e:
+        logger.error(f"AI righe analysis failed: {e}")
+        raise HTTPException(500, f"Errore analisi AI: {str(e)}")
+
+    # Refine weights using the profile table
+    materiali = result.get("materiali", [])
+    peso_totale = 0
+    for m in materiali:
+        peso = calcola_peso_materiale(m)
+        if peso > 0:
+            m["peso_calcolato_kg"] = peso
+        else:
+            m["peso_calcolato_kg"] = m.get("peso_stimato_kg", 0)
+        peso_totale += m["peso_calcolato_kg"]
+
+    result["peso_totale_calcolato_kg"] = round(peso_totale, 1)
+    result["materiali"] = materiali
+
+    return result
+
 
 @router.get("/tabella-ore")
 async def get_tabella_ore(user: dict = Depends(get_current_user)):

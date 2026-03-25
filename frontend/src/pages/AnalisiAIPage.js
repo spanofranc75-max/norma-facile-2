@@ -95,6 +95,34 @@ export default function AnalisiAIPage() {
     const [prevList, setPrevList] = useState([]);
     const [manPrevId, setManPrevId] = useState(searchParams.get('man') || '');
 
+    const [analyzing, setAnalyzing] = useState(false);
+
+    // AI analysis of preventivo lines
+    const runAIAnalysis = useCallback(async (lines) => {
+        setAnalyzing(true);
+        try {
+            const result = await apiRequest('/preventivatore/analizza-righe', {
+                method: 'POST',
+                body: { lines },
+            });
+            const aiMats = (result?.materiali || []).map((m, i) => ({
+                id: i,
+                descrizione: m.descrizione || m.description || lines[i]?.description || '',
+                profilo: m.profilo || '-',
+                quantita: m.quantita || m.quantity || 1,
+                peso_kg: m.peso_calcolato_kg || m.peso_stimato_kg || 0,
+                prezzo_base: lines[i]?.unit_price || 0,
+                tipo: m.tipo || 'altro',
+            }));
+            setMateriali(aiMats);
+            toast.success(`Analisi AI completata: ${result?.peso_totale_calcolato_kg || 0} kg stimati`);
+            return aiMats;
+        } catch (e) {
+            toast.error('Analisi AI fallita: ' + e.message);
+            return null;
+        } finally { setAnalyzing(false); }
+    }, []);
+
     // Load preventivo + prezzi
     useEffect(() => {
         async function load() {
@@ -109,14 +137,19 @@ export default function AnalisiAIPage() {
                 const items = list?.preventivi || list || [];
                 setPrevList(items);
 
-                // Extract materiali from lines (exclude manodopera and zincatura - handled separately)
+                // Extract lines excluding manodopera/zincatura for material analysis
                 const lines = prev?.lines || [];
-                const mats = lines
-                    .filter(l => {
-                        const d = (l.description || '').toLowerCase();
-                        return !d.includes('manodopera') && !d.includes('zincatura');
-                    })
-                    .map((l, i) => ({
+                const matLines = lines.filter(l => {
+                    const d = (l.description || '').toLowerCase();
+                    return !d.includes('manodopera') && !d.includes('zincatura');
+                });
+
+                // Use AI to extract weights (the regex fallback is unreliable)
+                const aiResult = await runAIAnalysis(matLines);
+
+                if (!aiResult) {
+                    // Fallback: regex extraction (will likely give 0s)
+                    const mats = matLines.map((l, i) => ({
                         id: i,
                         descrizione: l.description,
                         profilo: extractProfilo(l.description),
@@ -124,7 +157,8 @@ export default function AnalisiAIPage() {
                         peso_kg: extractPeso(l.description) || 0,
                         prezzo_base: l.unit_price,
                     }));
-                setMateriali(mats);
+                    setMateriali(mats);
+                }
 
                 // Extract ore
                 const oreLine = lines.find(l => (l.description || '').toLowerCase().includes('manodopera'));
@@ -135,7 +169,7 @@ export default function AnalisiAIPage() {
             } finally { setLoading(false); }
         }
         load();
-    }, [prevId]);
+    }, [prevId, runAIAnalysis]);
 
     function extractProfilo(desc) {
         if (!desc) return '-';
@@ -311,6 +345,17 @@ export default function AnalisiAIPage() {
                         </div>
                     </div>
                     <div className="flex gap-2">
+                        <Button onClick={() => {
+                            const lines = (preventivo?.lines || []).filter(l => {
+                                const d = (l.description || '').toLowerCase();
+                                return !d.includes('manodopera') && !d.includes('zincatura');
+                            });
+                            runAIAnalysis(lines);
+                        }} disabled={analyzing}
+                            variant="outline" className="border-indigo-600 text-indigo-400 hover:bg-indigo-950" data-testid="reanalyze-btn">
+                            {analyzing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                            Ricalcola AI
+                        </Button>
                         <Button onClick={handleSave} disabled={saving}
                             className="bg-indigo-600 hover:bg-indigo-700" data-testid="save-analysis-btn">
                             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
@@ -318,6 +363,16 @@ export default function AnalisiAIPage() {
                         </Button>
                     </div>
                 </div>
+
+                {/* AI Analysis Status */}
+                {analyzing && (
+                    <Card className="bg-indigo-950 border-indigo-700">
+                        <CardContent className="py-3 flex items-center gap-3">
+                            <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />
+                            <span className="text-sm text-indigo-300">Analisi AI in corso — estrazione profili e pesi dai materiali...</span>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Live KPI Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
