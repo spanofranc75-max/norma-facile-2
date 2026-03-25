@@ -346,6 +346,10 @@ si DEVE proporre di spezzarlo.
 | `controlli_finali` | Checklist pre-spedizione EN 1090-2 (11 check, 3 aree + firma) |
 | `instruments` | Strumenti di misura con soglia accettabilita configurabile |
 
+**Campi aggiunti su collezioni esistenti:**
+- `clients` → `status: str` (default "active"), `successor_client_id: str` (opzionale)
+- `invoices`, `preventivi`, `ddt`, `commesse` → `client_snapshot: dict` (copia immutabile dati cliente)
+
 ---
 
 ## 9. Log delle Modifiche
@@ -759,6 +763,48 @@ Pacco Documenti: CAP. 1-5 (EN 1090, EN 13241, Relazione Tecnica, Montaggio, Sost
 - `normative_presenti` aggiornato sulla collezione corretta
 - Frontend: toast rami generati + badge nella card Phase 2
 - Test: 100% backend (12/12) (iteration_229)
+
+### Sessione Hardening — Integrita Dati & Deploy Fix
+
+#### Bug Fix: Persistenza Righe Note di Credito (COMPLETATO)
+- **Backend `invoices.py`:** Le Note di Credito ora salvano correttamente le modifiche alle righe indipendentemente dallo status (bozza, emessa, inviata_sdi)
+- **Frontend `InvoiceEditorPage.js`:** `handleSave` ora invia sempre le righe per le NC
+- **Causa root:** Il backend bloccava le modifiche strutturali su fatture non-bozza, ma le NC devono poter modificare le righe in qualsiasi stato
+- Test: 100% (iteration_255)
+
+#### Client Snapshot sui Documenti — Integrita Dati Storica (COMPLETATO)
+- **Problema:** Modificare i dati di un cliente (es. successione aziendale padre→figlio) alterava retroattivamente TUTTI i documenti storici associati — fiscalmente e operativamente scorretto
+- **Soluzione: Data Denormalization (Snapshotting)**
+  - Ogni fattura/DDT/preventivo/commessa ora salva un campo `client_snapshot` (dizionario) al momento della creazione
+  - Il snapshot e' una copia immutabile dei dati chiave del cliente (ragione_sociale, partita_iva, codice_fiscale, indirizzo, etc.)
+  - I documenti storici NON cambiano piu' se si modifica l'anagrafica cliente
+- **Backend `services/client_snapshot.py`:** Nuovo servizio con funzione `build_snapshot(client_data)` che crea la copia
+- **Backend modificati:** `invoices.py`, `preventivi.py`, `ddt.py`, `commesse.py` — tutti ora chiamano `build_snapshot()` alla creazione documento
+- **Backend GET endpoints:** Leggono da `client_snapshot` quando disponibile, fallback a lookup live per documenti pre-migrazione
+- Test: 100% backend (16/16) + frontend (iteration_256)
+
+#### Stato Cliente — Ciclo di Vita Anagrafica (COMPLETATO)
+- **Backend `models/client.py`:** Nuovo Enum `ClientStatus` con valori: `active`, `archived`, `blocked`
+- **Backend `routes/clients.py`:** 3 nuovi endpoint:
+  - `PUT /api/clients/{client_id}/archive` — archivia il cliente
+  - `PUT /api/clients/{client_id}/block` — blocca il cliente
+  - `PUT /api/clients/{client_id}/reactivate` — riattiva il cliente
+- **Backend `GET /api/clients`:** Supporta filtro `?status=active` per escludere archiviati/bloccati
+- **Frontend `ClientsPage.js`:** Colonna Stato con badge colorati, checkbox "Mostra archiviati", pulsanti gestione stato
+- **Frontend selettori client:** `InvoiceEditorPage.js`, `PreventivoEditorPage.js`, `SopralluogoWizardPage.js` ora filtrano clienti archiviati/bloccati nei dropdown
+- Test: incluso in iteration_256
+
+#### Migrazione Snapshot per Documenti Esistenti (COMPLETATO)
+- **Backend `routes/migration.py`:** Nuovo router con endpoint:
+  - `POST /api/migration/run-client-snapshot-backfill` — backfill snapshot su tutti i documenti storici esistenti
+- **Logica:** Per ogni documento (fatture, preventivi, DDT, commesse) senza `client_snapshot`, cerca il cliente associato e crea lo snapshot
+- **Sicurezza:** Endpoint admin-only, esecuzione one-time controllata dall'utente
+- Registrato in `main.py`
+
+#### Deploy Fix (COMPLETATO)
+- Rimosso `litellm==1.80.0` da `requirements.txt` — pacchetto non usato che bloccava il build in produzione (dependency resolution failure)
+
+---
 
 ### FASE 6 — Smistatore Intelligente Avanzato (PROSSIMO)
 - Certificati cumulativi: AI analizza ogni pagina, matching per numero colata
