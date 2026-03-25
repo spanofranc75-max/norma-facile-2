@@ -143,7 +143,7 @@ body {
     margin: 8px 0;
     padding: 5px 8px;
     background: #f7f7f7;
-    border-left: 3px solid #aaa;
+    border-left: 3px solid #4A90D9;
     font-size: 8.5pt;
     color: #222;
 }
@@ -156,7 +156,7 @@ body {
     font-size: 8pt;
 }
 .items-table th {
-    background: #e8e8e8;
+    background: #F2F4F7;
     border: 1px solid #ccc;
     padding: 5px 4px;
     font-weight: bold;
@@ -208,7 +208,7 @@ body {
     margin-bottom: 6px;
 }
 .iva-table th {
-    background: #e8e8e8;
+    background: #F2F4F7;
     border: 1px solid #ccc;
     padding: 4px 5px;
     font-size: 7.5pt;
@@ -240,7 +240,7 @@ body {
     border-top: 1px solid #ccc;
     padding-top: 6px;
     color: #111;
-    background: #e8e8e8;
+    background: #F2F4F7;
 }
 
 /* ── BANK / PAYMENT INFO ── */
@@ -258,7 +258,7 @@ body {
     margin-top: 12px;
     padding: 8px;
     border: 1px solid #ccc;
-    background: #f9f9f9;
+    background: #FAFBFC;
 }
 .schedule-title {
     font-size: 9pt;
@@ -273,7 +273,7 @@ body {
     font-size: 8pt;
 }
 .schedule-table th {
-    background: #e8e8e8;
+    background: #F2F4F7;
     border: 1px solid #ccc;
     padding: 3px 6px;
     font-weight: bold;
@@ -300,7 +300,7 @@ body {
 }
 .transport-table .t-label {
     font-weight: bold;
-    background: #f0f0f0;
+    background: #FFFFFF;
     width: 22%;
     color: #333;
 }
@@ -320,7 +320,7 @@ body {
     padding: 0 10px;
 }
 .sig-line-center {
-    border-top: 1px solid #aaa;
+    border-top: 1px solid #4A90D9;
     margin-top: 40px;
     padding-top: 4px;
     font-size: 7.5pt;
@@ -345,7 +345,7 @@ body {
 .acceptance-section { margin-top: 14px; }
 .sig-block { margin: 8px 0; }
 .sig-line {
-    border-bottom: 1px solid #aaa;
+    border-bottom: 1px solid #4A90D9;
     width: 250px;
     height: 22px;
     margin: 3px 0;
