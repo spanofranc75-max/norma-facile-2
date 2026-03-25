@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional
 import uuid
 from datetime import datetime, timezone
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.database import db
 from models.client import (
     ClientCreate, ClientUpdate
@@ -43,7 +43,7 @@ async def get_clients(
     user: dict = Depends(get_current_user)
 ):
     """Get all clients for current user with optional search and type filter."""
-    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     
     # Status filter
     if status:
@@ -81,7 +81,7 @@ async def get_client(
 ):
     """Get a specific client by ID."""
     client = await db.clients.find_one(
-        {"client_id": client_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"client_id": client_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     
@@ -109,7 +109,7 @@ async def create_client(
     piva = (raw.get("partita_iva") or "").strip()
     if piva:
         existing = await db.clients.find_one({
-            "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+            "user_id": user["user_id"], "tenant_id": tenant_match(user),
             "partita_iva": piva
         }, {"_id": 0, "client_id": 1, "business_name": 1, "client_type": 1})
         if existing:
@@ -163,7 +163,7 @@ async def update_client(
     """Update an existing client."""
     # Check client exists
     existing = await db.clients.find_one(
-        {"client_id": client_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+        {"client_id": client_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
     if not existing:
         raise HTTPException(status_code=404, detail="Cliente non trovato")
@@ -174,7 +174,7 @@ async def update_client(
     new_piva = (raw.get("partita_iva") or "").strip()
     if new_piva and new_piva != (existing.get("partita_iva") or "").strip():
         duplicate = await db.clients.find_one({
-            "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+            "user_id": user["user_id"], "tenant_id": tenant_match(user),
             "partita_iva": new_piva,
             "client_id": {"$ne": client_id}
         }, {"_id": 0, "business_name": 1})
@@ -216,15 +216,15 @@ async def delete_client(
     
     # Check associated data
     blockers = []
-    invoice_count = await db.invoices.count_documents({"client_id": client_id, "user_id": uid, "tenant_id": tid})
+    invoice_count = await db.invoices.count_documents({"client_id": client_id, "user_id": uid, "tenant_id": tenant_match(user)})
     if invoice_count > 0:
         blockers.append(f"{invoice_count} fatture")
     
-    commessa_count = await db.commesse.count_documents({"client_id": client_id, "user_id": uid, "tenant_id": tid})
+    commessa_count = await db.commesse.count_documents({"client_id": client_id, "user_id": uid, "tenant_id": tenant_match(user)})
     if commessa_count > 0:
         blockers.append(f"{commessa_count} commesse")
     
-    preventivo_count = await db.preventivi.count_documents({"client_id": client_id, "user_id": uid, "tenant_id": tid})
+    preventivo_count = await db.preventivi.count_documents({"client_id": client_id, "user_id": uid, "tenant_id": tenant_match(user)})
     if preventivo_count > 0:
         blockers.append(f"{preventivo_count} preventivi")
     
@@ -236,7 +236,7 @@ async def delete_client(
     
     result = await db.clients.delete_one({
         "client_id": client_id,
-        "user_id": uid, "tenant_id": tid
+        "user_id": uid, "tenant_id": tenant_match(user)
     })
     
     if result.deleted_count == 0:
@@ -255,7 +255,7 @@ async def promote_to_cliente_fornitore(
 ):
     """Promote a cliente or fornitore to cliente_fornitore."""
     existing = await db.clients.find_one(
-        {"client_id": client_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+        {"client_id": client_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
     if not existing:
         raise HTTPException(status_code=404, detail="Record non trovato")
@@ -275,7 +275,7 @@ async def promote_to_cliente_fornitore(
 async def archive_client(client_id: str, user: dict = Depends(get_current_user)):
     """Archive a client — not usable for new documents, but visible in history."""
     existing = await db.clients.find_one(
-        {"client_id": client_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0, "business_name": 1, "status": 1}
+        {"client_id": client_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0, "business_name": 1, "status": 1}
     )
     if not existing:
         raise HTTPException(status_code=404, detail="Cliente non trovato")
@@ -293,7 +293,7 @@ async def archive_client(client_id: str, user: dict = Depends(get_current_user))
 async def block_client(client_id: str, user: dict = Depends(get_current_user)):
     """Block a client — fully locked."""
     existing = await db.clients.find_one(
-        {"client_id": client_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0, "business_name": 1}
+        {"client_id": client_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0, "business_name": 1}
     )
     if not existing:
         raise HTTPException(status_code=404, detail="Cliente non trovato")
@@ -311,7 +311,7 @@ async def block_client(client_id: str, user: dict = Depends(get_current_user)):
 async def reactivate_client(client_id: str, user: dict = Depends(get_current_user)):
     """Reactivate a previously archived or blocked client."""
     existing = await db.clients.find_one(
-        {"client_id": client_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0, "business_name": 1}
+        {"client_id": client_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0, "business_name": 1}
     )
     if not existing:
         raise HTTPException(status_code=404, detail="Cliente non trovato")
@@ -330,11 +330,11 @@ async def set_successor(client_id: str, successor_id: str = Query(...), user: di
     """Link a successor client to this one (for client succession tracking)."""
     uid = user["user_id"]
     tid = user["tenant_id"]
-    existing = await db.clients.find_one({"client_id": client_id, "user_id": uid, "tenant_id": tid}, {"_id": 0, "business_name": 1})
+    existing = await db.clients.find_one({"client_id": client_id, "user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0, "business_name": 1})
     if not existing:
         raise HTTPException(status_code=404, detail="Cliente non trovato")
     
-    successor = await db.clients.find_one({"client_id": successor_id, "user_id": uid, "tenant_id": tid}, {"_id": 0, "business_name": 1})
+    successor = await db.clients.find_one({"client_id": successor_id, "user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0, "business_name": 1})
     if not successor:
         raise HTTPException(status_code=404, detail="Cliente successore non trovato")
     
@@ -359,7 +359,7 @@ async def get_client_email_log(client_id: str, user: dict = Depends(get_current_
 
     # Invoices with email_sent=true for this client
     async for inv in db.invoices.find(
-        {"user_id": uid, "tenant_id": tid, "client_id": client_id, "email_sent": True},
+        {"user_id": uid, "tenant_id": tenant_match(user), "client_id": client_id, "email_sent": True},
         {"_id": 0, "document_number": 1, "document_type": 1, "email_sent_to": 1, "email_sent_at": 1}
     ):
         type_labels = {"FT": "Fattura", "NC": "Nota di Credito"}
@@ -372,7 +372,7 @@ async def get_client_email_log(client_id: str, user: dict = Depends(get_current_
 
     # DDTs with email_sent=true
     async for ddt in db.ddt.find(
-        {"user_id": uid, "tenant_id": tid, "client_id": client_id, "email_sent": True},
+        {"user_id": uid, "tenant_id": tenant_match(user), "client_id": client_id, "email_sent": True},
         {"_id": 0, "number": 1, "ddt_type": 1, "email_sent_to": 1, "email_sent_at": 1}
     ):
         emails.append({
@@ -384,7 +384,7 @@ async def get_client_email_log(client_id: str, user: dict = Depends(get_current_
 
     # Preventivi with email_sent=true
     async for prev in db.preventivi.find(
-        {"user_id": uid, "tenant_id": tid, "client_id": client_id, "email_sent": True},
+        {"user_id": uid, "tenant_id": tenant_match(user), "client_id": client_id, "email_sent": True},
         {"_id": 0, "number": 1, "email_sent_to": 1, "email_sent_at": 1}
     ):
         emails.append({

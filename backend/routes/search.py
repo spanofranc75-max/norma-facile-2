@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, Query
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 
 router = APIRouter(prefix="/search", tags=["search"])
 
@@ -21,7 +21,7 @@ async def global_search(
 
     # Commesse
     commesse = await db.commesse.find(
-        {"user_id": uid, "tenant_id": tid, "$or": [
+        {"user_id": uid, "tenant_id": tenant_match(user), "$or": [
             {"numero": regex}, {"title": regex}, {"client_name": regex},
         ]},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "client_name": 1, "stato": 1},
@@ -39,7 +39,7 @@ async def global_search(
 
     # Preventivi
     preventivi = await db.preventivi.find(
-        {"user_id": uid, "tenant_id": tid, "$or": [
+        {"user_id": uid, "tenant_id": tenant_match(user), "$or": [
             {"number": regex}, {"subject": regex}, {"client_name": regex},
         ]},
         {"_id": 0, "preventivo_id": 1, "number": 1, "subject": 1, "client_name": 1, "status": 1},
@@ -57,7 +57,7 @@ async def global_search(
 
     # Clienti
     clienti = await db.clients.find(
-        {"user_id": uid, "tenant_id": tid, "$or": [
+        {"user_id": uid, "tenant_id": tenant_match(user), "$or": [
             {"business_name": regex}, {"email": regex}, {"fiscal_code": regex},
         ]},
         {"_id": 0, "client_id": 1, "business_name": 1, "email": 1},
@@ -75,7 +75,7 @@ async def global_search(
 
     # DDT
     ddt_docs = await db.ddt_documents.find(
-        {"user_id": uid, "tenant_id": tid, "$or": [
+        {"user_id": uid, "tenant_id": tenant_match(user), "$or": [
             {"number": regex}, {"client_name": regex}, {"subject": regex},
         ]},
         {"_id": 0, "ddt_id": 1, "number": 1, "client_name": 1, "subject": 1},

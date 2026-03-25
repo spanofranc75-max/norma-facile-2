@@ -6,7 +6,7 @@ from enum import Enum
 import uuid
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, date, timedelta
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.database import db
 from core.config import settings
 from services.payment_calculator import calc_scadenze_from_supplier
@@ -391,7 +391,7 @@ async def list_fatture_ricevute(
     user: dict = Depends(get_current_user)
 ):
     """List received invoices."""
-    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if status:
         query["status"] = status.value
     if year:
@@ -407,7 +407,7 @@ async def list_fatture_ricevute(
     items = await cursor.to_list(length=limit)
 
     # Calculate KPIs
-    all_query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+    all_query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if year:
         all_query["data_documento"] = {"$regex": f"^{year}"}
     pipeline = [
@@ -441,7 +441,7 @@ async def get_fattura_ricevuta(
 ):
     """Get a single received invoice."""
     item = await db.fatture_ricevute.find_one(
-        {"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "xml_raw": 0}
     )
     if not item:
@@ -462,7 +462,7 @@ async def create_fattura_ricevuta(
     fornitore_id = data.fornitore_id
     if not fornitore_id and data.fornitore_piva:
         supplier = await db.clients.find_one(
-            {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "partita_iva": data.fornitore_piva},
+            {"user_id": user["user_id"], "tenant_id": tenant_match(user), "partita_iva": data.fornitore_piva},
             {"_id": 0, "client_id": 1}
         )
         if supplier:
@@ -470,7 +470,7 @@ async def create_fattura_ricevuta(
 
     doc = {
         "fr_id": fr_id,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "fornitore_id": fornitore_id,
         "fornitore_nome": data.fornitore_nome,
         "fornitore_piva": data.fornitore_piva,
@@ -531,7 +531,7 @@ async def update_fattura_ricevuta(
 ):
     """Update a received invoice."""
     existing = await db.fatture_ricevute.find_one(
-        {"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
     if not existing:
         raise HTTPException(404, "Fattura ricevuta non trovata")
@@ -556,7 +556,7 @@ async def delete_fattura_ricevuta(
 ):
     """Delete a received invoice."""
     result = await db.fatture_ricevute.delete_one(
-        {"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+        {"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
     if result.deleted_count == 0:
         raise HTTPException(404, "Fattura ricevuta non trovata")
@@ -606,7 +606,7 @@ async def import_xml_fattura(
     existing = None
     if dedup_or:
         existing = await db.fatture_ricevute.find_one(
-            {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "$or": dedup_or},
+            {"user_id": user["user_id"], "tenant_id": tenant_match(user), "$or": dedup_or},
             {"_id": 0, "fr_id": 1, "numero_documento": 1}
         )
     if existing:
@@ -619,14 +619,14 @@ async def import_xml_fattura(
     fornitore_id = None
     if parsed.get("fornitore_piva"):
         supplier = await db.clients.find_one(
-            {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "partita_iva": parsed["fornitore_piva"]},
+            {"user_id": user["user_id"], "tenant_id": tenant_match(user), "partita_iva": parsed["fornitore_piva"]},
             {"_id": 0, "client_id": 1}
         )
         if supplier:
             fornitore_id = supplier["client_id"]
     if not fornitore_id and parsed.get("fornitore_cf"):
         supplier = await db.clients.find_one(
-            {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "fiscal_code": parsed["fornitore_cf"]},
+            {"user_id": user["user_id"], "tenant_id": tenant_match(user), "fiscal_code": parsed["fornitore_cf"]},
             {"_id": 0, "client_id": 1}
         )
         if supplier:
@@ -634,7 +634,7 @@ async def import_xml_fattura(
 
     doc = {
         "fr_id": fr_id,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "fornitore_id": fornitore_id,
         "fornitore_nome": parsed.get("fornitore_nome", ""),
         "fornitore_piva": parsed.get("fornitore_piva"),
@@ -778,7 +778,7 @@ async def import_xml_batch(
         existing = None
         if dedup_or:
             existing = await db.fatture_ricevute.find_one(
-                {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "$or": dedup_or}, {"_id": 0}
+                {"user_id": user["user_id"], "tenant_id": tenant_match(user), "$or": dedup_or}, {"_id": 0}
             )
         if existing:
             results["skipped"] += 1
@@ -797,14 +797,14 @@ async def import_xml_batch(
         fornitore_id = None
         if parsed.get("fornitore_piva"):
             supplier = await db.clients.find_one(
-                {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "partita_iva": parsed["fornitore_piva"]},
+                {"user_id": user["user_id"], "tenant_id": tenant_match(user), "partita_iva": parsed["fornitore_piva"]},
                 {"_id": 0, "client_id": 1}
             )
             if supplier:
                 fornitore_id = supplier["client_id"]
         if not fornitore_id and parsed.get("fornitore_cf"):
             supplier = await db.clients.find_one(
-                {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "fiscal_code": parsed["fornitore_cf"]},
+                {"user_id": user["user_id"], "tenant_id": tenant_match(user), "fiscal_code": parsed["fornitore_cf"]},
                 {"_id": 0, "client_id": 1}
             )
             if supplier:
@@ -812,7 +812,7 @@ async def import_xml_batch(
 
         doc = {
             "fr_id": fr_id,
-            "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+            "user_id": user["user_id"], "tenant_id": tenant_match(user),
             "fornitore_id": fornitore_id,
             "fornitore_nome": parsed.get("fornitore_nome", ""),
             "fornitore_piva": parsed.get("fornitore_piva"),
@@ -925,14 +925,14 @@ async def preview_xml_fattura(
         fornitore_id = None
         if parsed.get("fornitore_piva"):
             supplier = await db.clients.find_one(
-                {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "partita_iva": parsed["fornitore_piva"]},
+                {"user_id": user["user_id"], "tenant_id": tenant_match(user), "partita_iva": parsed["fornitore_piva"]},
                 {"_id": 0, "client_id": 1, "business_name": 1}
             )
             if supplier:
                 fornitore_id = supplier["client_id"]
         if not fornitore_id and parsed.get("fornitore_cf"):
             supplier = await db.clients.find_one(
-                {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "fiscal_code": parsed["fornitore_cf"]},
+                {"user_id": user["user_id"], "tenant_id": tenant_match(user), "fiscal_code": parsed["fornitore_cf"]},
                 {"_id": 0, "client_id": 1, "business_name": 1}
             )
             if supplier:
@@ -980,7 +980,7 @@ async def preview_xml_fattura(
         dedup_or.append({"fornitore_piva": p_piva, "data_documento": p_data, "totale_documento": round(p_totale, 2)})
     if dedup_or:
         existing = await db.fatture_ricevute.find_one(
-            {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "$or": dedup_or},
+            {"user_id": user["user_id"], "tenant_id": tenant_match(user), "$or": dedup_or},
             {"_id": 0, "fr_id": 1}
         )
 
@@ -1002,7 +1002,7 @@ async def extract_articoli(
 ):
     """Extract line items from a received invoice into the Catalogo Articoli."""
     fr = await db.fatture_ricevute.find_one(
-        {"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not fr:
@@ -1037,7 +1037,7 @@ async def extract_articoli(
 
         # Check existing
         existing = await db.articoli.find_one(
-            {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "codice": codice},
+            {"user_id": user["user_id"], "tenant_id": tenant_match(user), "codice": codice},
             {"_id": 0}
         )
 
@@ -1061,7 +1061,7 @@ async def extract_articoli(
         else:
             doc = {
                 "articolo_id": f"art_{uuid.uuid4().hex[:12]}",
-                "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                "user_id": user["user_id"], "tenant_id": tenant_match(user),
                 "codice": codice,
                 "descrizione": desc,
                 "categoria": "materiale",
@@ -1102,7 +1102,7 @@ async def get_fr_pagamenti(
 ):
     """Get payment info for a received invoice."""
     fr = await db.fatture_ricevute.find_one(
-        {"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "xml_raw": 0}
     )
     if not fr:
@@ -1131,7 +1131,7 @@ async def record_fr_payment(
 ):
     """Record payment for a received invoice."""
     fr = await db.fatture_ricevute.find_one(
-        {"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not fr:
@@ -1196,7 +1196,7 @@ async def imputa_costi(
 ):
     """Assign invoice costs to a commessa or magazzino."""
     fr = await db.fatture_ricevute.find_one(
-        {"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0, "xml_raw": 0}
+        {"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0, "xml_raw": 0}
     )
     if not fr:
         raise HTTPException(404, "Fattura ricevuta non trovata")
@@ -1218,7 +1218,7 @@ async def imputa_costi(
             raise HTTPException(400, "commessa_id obbligatorio per destinazione commessa")
 
         commessa = await db.commesse.find_one(
-            {"commessa_id": data.commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+            {"commessa_id": data.commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
             {"_id": 0, "commessa_id": 1, "numero": 1}
         )
         if not commessa:
@@ -1284,7 +1284,7 @@ async def imputa_costi(
 
             if codice:
                 existing = await db.articoli.find_one(
-                    {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "codice": codice}, {"_id": 0}
+                    {"user_id": user["user_id"], "tenant_id": tenant_match(user), "codice": codice}, {"_id": 0}
                 )
             else:
                 existing = None
@@ -1326,7 +1326,7 @@ async def imputa_costi(
 
                 doc = {
                     "articolo_id": f"art_{uuid.uuid4().hex[:12]}",
-                    "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                    "user_id": user["user_id"], "tenant_id": tenant_match(user),
                     "codice": codice or auto_codice,
                     "descrizione": desc,
                     "categoria": "materiale",
@@ -1381,7 +1381,7 @@ async def annulla_imputazione(
     """Undo the cost assignment of a received invoice from a commessa.
     Removes the cost entry from the commessa and clears the imputazione on the invoice."""
     fr = await db.fatture_ricevute.find_one(
-        {"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "xml_raw": 0}
     )
     if not fr:
@@ -1400,14 +1400,14 @@ async def annulla_imputazione(
     if destinazione == "commessa" and commessa_id:
         # Remove cost entries from commessa that reference this fr_id
         result = await db.commesse.update_one(
-            {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+            {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
             {
                 "$pull": {"costi_reali": {"fr_id": fr_id}},
                 "$set": {"updated_at": now},
             }
         )
         commessa = await db.commesse.find_one(
-            {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+            {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
             {"_id": 0, "numero": 1}
         )
         commessa_numero = commessa.get("numero", commessa_id) if commessa else commessa_id
@@ -1463,7 +1463,7 @@ async def _sync_fatture_from_fic_impl(user: dict):
     from services.fattureincloud_api import get_fic_client
 
     # Get user's FIC credentials from settings or user profile
-    user_doc = await db.users.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    user_doc = await db.users.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     fic_token = (user_doc or {}).get("fic_access_token") or getattr(settings, 'fic_access_token', None)
     fic_company_id = (user_doc or {}).get("fic_company_id") or getattr(settings, 'fic_company_id', None)
 
@@ -1481,7 +1481,7 @@ async def _sync_fatture_from_fic_impl(user: dict):
 
     # PUNTO 1 — Leggi watermark ultima sync
     sync_state = await db.sync_state.find_one(
-        {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "type": "fatture_ricevute"},
+        {"user_id": user["user_id"], "tenant_id": tenant_match(user), "type": "fatture_ricevute"},
         {"_id": 0, "last_sync_at": 1}
     )
     last_sync_date = None
@@ -1510,7 +1510,7 @@ async def _sync_fatture_from_fic_impl(user: dict):
                 fic_id = str(doc_fic.get("id", ""))
                 # Skip if already imported (by fic_id OR by fingerprint)
                 existing = await db.fatture_ricevute.find_one(
-                    {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "fic_id": fic_id}, {"_id": 0, "fr_id": 1}
+                    {"user_id": user["user_id"], "tenant_id": tenant_match(user), "fic_id": fic_id}, {"_id": 0, "fr_id": 1}
                 )
                 if not existing:
                     # Also check by fingerprint: piva + date + total
@@ -1519,7 +1519,7 @@ async def _sync_fatture_from_fic_impl(user: dict):
                     entity_piva = (doc_fic.get("entity") or {}).get("vat_number", "")
                     if entity_piva and doc_date:
                         existing = await db.fatture_ricevute.find_one({
-                            "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                            "user_id": user["user_id"], "tenant_id": tenant_match(user),
                             "fornitore_piva": entity_piva,
                             "data_documento": doc_date,
                             "totale_documento": doc_total,
@@ -1593,7 +1593,7 @@ async def _sync_fatture_from_fic_impl(user: dict):
                 piva = entity.get("vat_number", "")
                 if piva:
                     supplier = await db.clients.find_one(
-                        {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "partita_iva": piva},
+                        {"user_id": user["user_id"], "tenant_id": tenant_match(user), "partita_iva": piva},
                         {"_id": 0, "client_id": 1}
                     )
                     if supplier:
@@ -1602,7 +1602,7 @@ async def _sync_fatture_from_fic_impl(user: dict):
                 fr_doc = {
                     "fr_id": fr_id,
                     "fic_id": fic_id,
-                    "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                    "user_id": user["user_id"], "tenant_id": tenant_match(user),
                     "fornitore_id": fornitore_id,
                     "fornitore_nome": entity.get("name", ""),
                     "fornitore_piva": piva,
@@ -1690,7 +1690,7 @@ async def _sync_fatture_from_fic_impl(user: dict):
 
     # PUNTO 3 — Salva watermark (solo se completato senza eccezioni fatali)
     await db.sync_state.update_one(
-        {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "type": "fatture_ricevute"},
+        {"user_id": user["user_id"], "tenant_id": tenant_match(user), "type": "fatture_ricevute"},
         {"$set": {
             "last_sync_at": datetime.now(timezone.utc).isoformat(),
             "last_sync_imported": imported,
@@ -1719,7 +1719,7 @@ async def recalc_scadenze(user: dict = Depends(get_current_user)):
     
     # Load all suppliers once for matching
     all_suppliers = await db.clients.find(
-        {"user_id": uid, "tenant_id": tid},
+        {"user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0, "client_id": 1, "business_name": 1, "partita_iva": 1, "codice_fiscale": 1,
          "supplier_payment_type_id": 1, "payment_type_id": 1}
     ).to_list(500)
@@ -1823,7 +1823,7 @@ async def recalc_scadenze(user: dict = Depends(get_current_user)):
     # Phase 0: Verify and fix existing links where names don't match
     relinked_count = 0
     linked_frs = db.fatture_ricevute.find(
-        {"user_id": uid, "tenant_id": tid, "fornitore_id": {"$nin": [None, ""]},
+        {"user_id": uid, "tenant_id": tenant_match(user), "fornitore_id": {"$nin": [None, ""]},
          "$or": [
              {"scadenze_pagamento": {"$in": [[], None]}},
              {"scadenze_pagamento": {"$exists": False}},
@@ -1858,7 +1858,7 @@ async def recalc_scadenze(user: dict = Depends(get_current_user)):
     
     # Phase 1: Link unlinked FRs
     unlinked = db.fatture_ricevute.find(
-        {"user_id": uid, "tenant_id": tid, "$or": [{"fornitore_id": None}, {"fornitore_id": ""}]},
+        {"user_id": uid, "tenant_id": tenant_match(user), "$or": [{"fornitore_id": None}, {"fornitore_id": ""}]},
         {"_id": 0, "fr_id": 1, "fornitore_nome": 1, "fornitore_piva": 1, "fornitore_cf": 1}
     )
     linked_count = 0
@@ -1877,7 +1877,7 @@ async def recalc_scadenze(user: dict = Depends(get_current_user)):
 
     # Phase 2: Recalculate scadenze for all FR with fornitore_id but no scadenze_pagamento
     cursor = db.fatture_ricevute.find(
-        {"user_id": uid, "tenant_id": tid, "fornitore_id": {"$nin": [None, ""]},
+        {"user_id": uid, "tenant_id": tenant_match(user), "fornitore_id": {"$nin": [None, ""]},
          "$or": [
              {"scadenze_pagamento": {"$in": [[], None]}},
              {"scadenze_pagamento": {"$exists": False}},
@@ -1915,7 +1915,7 @@ async def recalc_scadenze(user: dict = Depends(get_current_user)):
 async def recalc_single_scadenze(fr_id: str, user: dict = Depends(get_current_user)):
     """Recalculate payment schedule for a single invoice from supplier payment terms."""
     fr = await db.fatture_ricevute.find_one(
-        {"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "fornitore_id": 1, "data_documento": 1, "totale_documento": 1}
     )
     if not fr:
@@ -1952,7 +1952,7 @@ class ScadenzaUpdate(BaseModel):
 @router.put("/{fr_id}/scadenze-pagamento")
 async def update_scadenze_pagamento(fr_id: str, scadenze: List[ScadenzaUpdate], user: dict = Depends(get_current_user)):
     """Manually update the payment schedule for a received invoice."""
-    fr = await db.fatture_ricevute.find_one({"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0, "fr_id": 1})
+    fr = await db.fatture_ricevute.find_one({"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0, "fr_id": 1})
     if not fr:
         raise HTTPException(404, "Fattura non trovata")
 
@@ -1986,7 +1986,7 @@ async def get_scadenziario_dashboard(
 
     # 1. Payment deadlines from fatture ricevute
     fr_cursor = db.fatture_ricevute.find(
-        {"user_id": uid, "tenant_id": tid, "payment_status": {"$ne": "pagata"}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "payment_status": {"$ne": "pagata"}},
         {"_id": 0, "xml_raw": 0}
     ).sort("data_scadenza_pagamento", 1)
     async for fr in fr_cursor:
@@ -2060,7 +2060,7 @@ async def get_scadenziario_dashboard(
 
     # 4. Commesse delivery deadlines
     async for c in db.commesse.find(
-        {"user_id": uid, "tenant_id": tid, "stato": {"$nin": ["bozza", "chiuso", "fatturato"]}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "stato": {"$nin": ["bozza", "chiuso", "fatturato"]}},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "data_consegna": 1}
     ):
         dc = c.get("data_consegna", "")
@@ -2083,7 +2083,7 @@ async def get_scadenziario_dashboard(
 
     # 5a. Invoices WITH scadenze_pagamento (structured installments)
     async for inv in db.invoices.find(
-        {"user_id": uid, "tenant_id": tid, "status": {"$in": ["emessa", "inviata_sdi", "accettata"]}, "scadenze_pagamento": {"$exists": True, "$ne": []}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "status": {"$in": ["emessa", "inviata_sdi", "accettata"]}, "scadenze_pagamento": {"$exists": True, "$ne": []}},
         {"_id": 0, "invoice_id": 1, "document_number": 1, "client_id": 1, "scadenze_pagamento": 1, "issue_date": 1, "payment_terms": 1}
     ):
         seen_invoice_ids.add(inv.get("invoice_id"))
@@ -2115,7 +2115,7 @@ async def get_scadenziario_dashboard(
 
     # 5b. Invoices WITHOUT scadenze_pagamento — use due_date as single payment
     async for inv in db.invoices.find(
-        {"user_id": uid, "tenant_id": tid,
+        {"user_id": uid, "tenant_id": tenant_match(user),
          "status": {"$in": ["emessa", "inviata_sdi", "accettata"]},
          "payment_status": {"$ne": "pagata"},
          "$or": [
@@ -2180,13 +2180,13 @@ async def get_scadenziario_dashboard(
 
     # Fatture da processare (inbox)
     inbox_count = await db.fatture_ricevute.count_documents(
-        {"user_id": uid, "tenant_id": tid, "imputazione": {"$exists": False}, "status": {"$ne": "pagata"}}
+        {"user_id": uid, "tenant_id": tenant_match(user), "imputazione": {"$exists": False}, "status": {"$ne": "pagata"}}
     )
 
     # Totale acquisti anno
     year = date.today().year
     pipeline = [
-        {"$match": {"user_id": uid, "tenant_id": tid, "data_documento": {"$regex": f"^{year}"}}},
+        {"$match": {"user_id": uid, "tenant_id": tenant_match(user), "data_documento": {"$regex": f"^{year}"}}},
         {"$group": {"_id": None, "totale": {"$sum": "$totale_documento"}}}
     ]
     agg = await db.fatture_ricevute.aggregate(pipeline).to_list(1)
@@ -2389,7 +2389,7 @@ async def export_scadenziario_pdf(
         </tr>"""
 
     # Fetch company info
-    company = await db.company_profiles.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    company = await db.company_profiles.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
 
     html = f"""<!DOCTYPE html>
     <html><head><meta charset="UTF-8">

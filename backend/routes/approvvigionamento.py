@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from io import BytesIO
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from routes.commessa_ops_common import (
     COLL, get_commessa_or_404, ensure_ops_fields,
     ts, new_id, push_event, build_update_with_event, logger,
@@ -228,7 +228,7 @@ async def register_arrivo_materiale(cid: str, data: ArrivoMateriale, user: dict 
                 codice_words = re.sub(r'[^a-zA-Z0-9\s]', '', desc).upper().split()[:3]
                 auto_codice = "-".join(codice_words) if codice_words else f"ART-{uuid.uuid4().hex[:4].upper()}"
                 existing_art = await db.articoli.find_one(
-                    {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "descrizione": {"$regex": f"^{re.escape(desc[:30])}", "$options": "i"}}, {"_id": 0}
+                    {"user_id": user["user_id"], "tenant_id": tenant_match(user), "descrizione": {"$regex": f"^{re.escape(desc[:30])}", "$options": "i"}}, {"_id": 0}
                 )
                 now_stock = ts()
                 if existing_art:
@@ -239,7 +239,7 @@ async def register_arrivo_materiale(cid: str, data: ArrivoMateriale, user: dict 
                 else:
                     art_doc = {
                         "articolo_id": f"art_{uuid.uuid4().hex[:12]}",
-                        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                        "user_id": user["user_id"], "tenant_id": tenant_match(user),
                         "codice": auto_codice, "descrizione": desc, "categoria": "materiale",
                         "unita_misura": um, "prezzo_unitario": prezzo, "giacenza": qty_remainder,
                         "aliquota_iva": "22", "fornitore_nome": data.fornitore_nome or "",
@@ -291,7 +291,7 @@ async def link_certificato_to_materiale(
     if normativa_tipo == "EN_1090" and numero_colata:
         materiale = materiali[mat_idx]
         batch_data = {
-            "user_id": user["user_id"], "tenant_id": user["tenant_id"], "commessa_id": cid,
+            "user_id": user["user_id"], "tenant_id": tenant_match(user), "commessa_id": cid,
             "fornitore": fornitore_materiale or arrivo.get("fornitore_nome", ""),
             "supplier_name": fornitore_materiale or arrivo.get("fornitore_nome", ""),
             "tipo_materiale": materiale.get("descrizione", ""),
@@ -317,7 +317,7 @@ async def link_certificato_to_materiale(
         if cert_meta:
             cert_meta["updated_at"] = ts()
             await db.articoli.update_one(
-                {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "descrizione": {"$regex": f"^{re.escape(materiale.get('descrizione', '')[:30])}", "$options": "i"}},
+                {"user_id": user["user_id"], "tenant_id": tenant_match(user), "descrizione": {"$regex": f"^{re.escape(materiale.get('descrizione', '')[:30])}", "$options": "i"}},
                 {"$set": cert_meta},
             )
         await db[COLL].update_one(
@@ -351,7 +351,7 @@ async def get_rdp_pdf(cid: str, rdp_id: str, user: dict = Depends(get_current_us
     approv = doc.get("approvvigionamento", {})
     rdp = next((r for r in approv.get("richieste", []) if r.get("rdp_id") == rdp_id), None)
     if not rdp: raise HTTPException(404, "RdP non trovata")
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
     fornitore = None
     if rdp.get("fornitore_id"):
         fornitore = await db.clients.find_one({"client_id": rdp["fornitore_id"]}, {"_id": 0})
@@ -376,7 +376,7 @@ async def preview_rdp_email(cid: str, rdp_id: str, user: dict = Depends(get_curr
             if not to_email:
                 for c in forn.get("contacts", []):
                     if c.get("email"): to_email = c["email"]; break
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
     from services.email_preview import build_rdp_email
     preview = build_rdp_email(fornitore_name=rdp.get("fornitore_nome", ""), rdp_id=rdp_id, commessa_numero=doc.get("numero", "N/D"), company_name=company.get("business_name", ""), num_righe=len(rdp.get("righe", [])))
     return {"to_email": to_email, "to_name": rdp.get("fornitore_nome", ""), "subject": preview["subject"], "html_body": preview["html_body"], "has_attachment": True, "attachment_name": f"RdP_{rdp_id}.pdf"}
@@ -401,7 +401,7 @@ async def send_rdp_email_endpoint(cid: str, rdp_id: str, payload: dict = None, u
                     if contact.get("email"): to_email = contact["email"]; break
     if not to_email:
         raise HTTPException(400, f"Nessun indirizzo email trovato per {fornitore_nome}. Aggiungi un'email nella scheda fornitore.")
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
     fornitore_doc = None
     if fornitore_id:
         fornitore_doc = await db.clients.find_one({"client_id": fornitore_id}, {"_id": 0})
@@ -435,7 +435,7 @@ async def get_oda_pdf(cid: str, ordine_id: str, user: dict = Depends(get_current
     approv = doc.get("approvvigionamento", {})
     oda = next((o for o in approv.get("ordini", []) if o.get("ordine_id") == ordine_id), None)
     if not oda: raise HTTPException(404, "Ordine non trovato")
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
     fornitore = None
     if oda.get("fornitore_id"):
         fornitore = await db.clients.find_one({"client_id": oda["fornitore_id"]}, {"_id": 0})
@@ -460,7 +460,7 @@ async def preview_oda_email(cid: str, ordine_id: str, user: dict = Depends(get_c
             if not to_email:
                 for c in forn.get("contacts", []):
                     if c.get("email"): to_email = c["email"]; break
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
     from services.email_preview import build_oda_email
     preview = build_oda_email(fornitore_name=oda.get("fornitore_nome", ""), ordine_id=ordine_id, commessa_numero=doc.get("numero", "N/D"), company_name=company.get("business_name", ""), importo_totale=oda.get("importo_totale", 0))
     return {"to_email": to_email, "to_name": oda.get("fornitore_nome", ""), "subject": preview["subject"], "html_body": preview["html_body"], "has_attachment": True, "attachment_name": f"OdA_{ordine_id}.pdf"}
@@ -485,7 +485,7 @@ async def send_oda_email_endpoint(cid: str, ordine_id: str, payload: dict = None
                     if contact.get("email"): to_email = contact["email"]; break
     if not to_email:
         raise HTTPException(400, f"Nessun indirizzo email trovato per {fornitore_nome}. Aggiungi un'email nella scheda fornitore.")
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
     fornitore_doc = None
     if fornitore_id:
         fornitore_doc = await db.clients.find_one({"client_id": fornitore_id}, {"_id": 0})

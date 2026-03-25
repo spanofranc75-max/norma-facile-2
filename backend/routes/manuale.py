@@ -15,7 +15,7 @@ from fastapi.responses import StreamingResponse
 from weasyprint import HTML
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 
 router = APIRouter(prefix="/manuale", tags=["manuale"])
 logger = logging.getLogger(__name__)
@@ -249,7 +249,7 @@ async def genera_manuale_pdf(user: dict = Depends(get_current_user)):
     """Genera il Manuale Utente PDF professionale con logo white-label e QR Code."""
 
     # Load company settings for white-label — always filter by user_id
-    cs = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    cs = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
 
     company_name = cs.get("business_name") or cs.get("ragione_sociale") or ""
     if not company_name:

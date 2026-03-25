@@ -14,7 +14,7 @@ from typing import Optional, List
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException
 
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.database import db
 
 logger = logging.getLogger(__name__)
@@ -57,13 +57,13 @@ async def list_rdp(prev_id: str, user: dict = Depends(get_current_user)):
     """List all RdP for a preventivo."""
     uid = user["user_id"]
     tid = user["tenant_id"]
-    prev = await db[PREV_COLL].find_one({"preventivo_id": prev_id, "user_id": uid, "tenant_id": tid})
+    prev = await db[PREV_COLL].find_one({"preventivo_id": prev_id, "user_id": uid, "tenant_id": tenant_match(user)})
     if not prev:
         raise HTTPException(404, "Preventivo non trovato")
 
     rdps = []
     async for r in db[COLL].find(
-        {"preventivo_id": prev_id, "user_id": uid, "tenant_id": tid},
+        {"preventivo_id": prev_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0}
     ).sort("created_at", -1):
         rdps.append(r)
@@ -75,7 +75,7 @@ async def create_rdp(prev_id: str, data: CreateRdpRequest, user: dict = Depends(
     """Create a new RdP (supplier quote request) from preventivo lines."""
     uid = user["user_id"]
     tid = user["tenant_id"]
-    prev = await db[PREV_COLL].find_one({"preventivo_id": prev_id, "user_id": uid, "tenant_id": tid}, {"_id": 0})
+    prev = await db[PREV_COLL].find_one({"preventivo_id": prev_id, "user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0})
     if not prev:
         raise HTTPException(404, "Preventivo non trovato")
 
@@ -103,7 +103,7 @@ async def create_rdp(prev_id: str, data: CreateRdpRequest, user: dict = Depends(
         "rdp_id": rdp_id,
         "preventivo_id": prev_id,
         "preventivo_number": prev.get("number", ""),
-        "user_id": uid, "tenant_id": tid,
+        "user_id": uid, "tenant_id": tenant_match(user),
         "supplier_id": data.supplier_id or "",
         "supplier_name": data.supplier_name,
         "items": items,
@@ -128,7 +128,7 @@ async def record_rdp_response(prev_id: str, rdp_id: str, data: RdpResponseInput,
     """Record supplier's price response."""
     uid = user["user_id"]
     tid = user["tenant_id"]
-    rdp = await db[COLL].find_one({"rdp_id": rdp_id, "preventivo_id": prev_id, "user_id": uid, "tenant_id": tid})
+    rdp = await db[COLL].find_one({"rdp_id": rdp_id, "preventivo_id": prev_id, "user_id": uid, "tenant_id": tenant_match(user)})
     if not rdp:
         raise HTTPException(404, "RdP non trovata")
 
@@ -172,11 +172,11 @@ async def apply_rdp_prices_to_preventivo(prev_id: str, rdp_id: str, data: Update
     """Apply supplier prices + markup to the preventivo lines."""
     uid = user["user_id"]
     tid = user["tenant_id"]
-    prev = await db[PREV_COLL].find_one({"preventivo_id": prev_id, "user_id": uid, "tenant_id": tid}, {"_id": 0})
+    prev = await db[PREV_COLL].find_one({"preventivo_id": prev_id, "user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0})
     if not prev:
         raise HTTPException(404, "Preventivo non trovato")
 
-    rdp = await db[COLL].find_one({"rdp_id": rdp_id, "preventivo_id": prev_id, "user_id": uid, "tenant_id": tid})
+    rdp = await db[COLL].find_one({"rdp_id": rdp_id, "preventivo_id": prev_id, "user_id": uid, "tenant_id": tenant_match(user)})
     if not rdp:
         raise HTTPException(404, "RdP non trovata")
 
@@ -219,7 +219,7 @@ async def apply_rdp_prices_to_preventivo(prev_id: str, rdp_id: str, data: Update
 
     now = datetime.now(timezone.utc)
     await db[PREV_COLL].update_one(
-        {"preventivo_id": prev_id, "user_id": uid, "tenant_id": tid},
+        {"preventivo_id": prev_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"$set": {
             "lines": lines,
             "totals.imponibile": round(imponibile, 2),
@@ -251,7 +251,7 @@ async def convert_rdp_to_oda(prev_id: str, rdp_id: str, user: dict = Depends(get
     """Convert an RdP to an OdA (Ordine di Acquisto) in the linked commessa."""
     uid = user["user_id"]
     tid = user["tenant_id"]
-    rdp = await db[COLL].find_one({"rdp_id": rdp_id, "preventivo_id": prev_id, "user_id": uid, "tenant_id": tid})
+    rdp = await db[COLL].find_one({"rdp_id": rdp_id, "preventivo_id": prev_id, "user_id": uid, "tenant_id": tenant_match(user)})
     if not rdp:
         raise HTTPException(404, "RdP non trovata")
 
@@ -260,7 +260,7 @@ async def convert_rdp_to_oda(prev_id: str, rdp_id: str, user: dict = Depends(get
 
     # Find the linked commessa
     commessa = await db.commesse.find_one(
-        {"user_id": uid, "tenant_id": tid, "$or": [
+        {"user_id": uid, "tenant_id": tenant_match(user), "$or": [
             {"moduli.preventivo_id": prev_id},
             {"linked_preventivo_id": prev_id},
         ]},
@@ -335,7 +335,7 @@ async def delete_rdp(prev_id: str, rdp_id: str, user: dict = Depends(get_current
     """Delete an RdP."""
     uid = user["user_id"]
     tid = user["tenant_id"]
-    result = await db[COLL].delete_one({"rdp_id": rdp_id, "preventivo_id": prev_id, "user_id": uid, "tenant_id": tid})
+    result = await db[COLL].delete_one({"rdp_id": rdp_id, "preventivo_id": prev_id, "user_id": uid, "tenant_id": tenant_match(user)})
     if result.deleted_count == 0:
         raise HTTPException(404, "RdP non trovata")
     return {"message": "RdP eliminata"}
@@ -351,12 +351,12 @@ async def download_rdp_pdf(prev_id: str, rdp_id: str, user: dict = Depends(get_c
 
     uid = user["user_id"]
     tid = user["tenant_id"]
-    rdp = await db[COLL].find_one({"rdp_id": rdp_id, "preventivo_id": prev_id, "user_id": uid, "tenant_id": tid})
+    rdp = await db[COLL].find_one({"rdp_id": rdp_id, "preventivo_id": prev_id, "user_id": uid, "tenant_id": tenant_match(user)})
     if not rdp:
         raise HTTPException(404, "RdP non trovata")
 
-    company = await db.company_settings.find_one({"user_id": uid, "tenant_id": tid}, {"_id": 0}) or {}
-    prev = await db[PREV_COLL].find_one({"preventivo_id": prev_id, "user_id": uid, "tenant_id": tid}, {"_id": 0})
+    company = await db.company_settings.find_one({"user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
+    prev = await db[PREV_COLL].find_one({"preventivo_id": prev_id, "user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0})
 
     pdf_bytes = _generate_rdp_pdf(rdp, company, prev)
 

@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional
 
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.database import db
 
 router = APIRouter(prefix="/sfridi", tags=["sfridi"])
@@ -58,7 +58,7 @@ async def create_sfrido(data: SfridoCreate, user: dict = Depends(get_current_use
 
     doc = {
         "sfrido_id": sfrido_id,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "commessa_origine": data.commessa_id,
         "voce_origine": data.voce_id or "",
         "tipo_materiale": data.tipo_materiale,
@@ -83,7 +83,7 @@ async def create_sfrido(data: SfridoCreate, user: dict = Depends(get_current_use
 @router.get("")
 async def list_sfridi(user: dict = Depends(get_current_user), stato: str = "disponibile"):
     """Lista sfridi disponibili a magazzino."""
-    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if stato:
         query["stato"] = stato
     sfridi = await db[SFRIDI_COLL].find(query, {"_id": 0}).sort("created_at", -1).to_list(200)
@@ -94,7 +94,7 @@ async def list_sfridi(user: dict = Depends(get_current_user), stato: str = "disp
 async def list_sfridi_commessa(commessa_id: str, user: dict = Depends(get_current_user)):
     """Lista sfridi originati da una commessa specifica."""
     sfridi = await db[SFRIDI_COLL].find(
-        {"commessa_origine": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_origine": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     ).sort("created_at", -1).to_list(100)
     return {"sfridi": sfridi}
@@ -106,7 +106,7 @@ async def preleva_sfrido(sfrido_id: str, data: SfridoPrelievo, user: dict = Depe
     now = datetime.now(timezone.utc)
 
     sfrido = await db[SFRIDI_COLL].find_one(
-        {"sfrido_id": sfrido_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"sfrido_id": sfrido_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not sfrido:
@@ -139,7 +139,7 @@ async def preleva_sfrido(sfrido_id: str, data: SfridoPrelievo, user: dict = Depe
 async def mark_esaurito(sfrido_id: str, user: dict = Depends(get_current_user)):
     """Segna uno sfrido come esaurito."""
     result = await db[SFRIDI_COLL].update_one(
-        {"sfrido_id": sfrido_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"sfrido_id": sfrido_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"$set": {"stato": "esaurito", "updated_at": datetime.now(timezone.utc).isoformat()}}
     )
     if result.matched_count == 0:

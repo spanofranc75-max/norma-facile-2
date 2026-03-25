@@ -8,7 +8,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional
 
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from services.obblighi_commessa_service import (
     get_obbligo, list_obblighi, update_obbligo,
     get_summary, get_bloccanti, sync_obblighi_commessa,

@@ -5,7 +5,7 @@ from typing import Optional
 from enum import Enum
 import uuid
 from datetime import datetime, timezone
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.database import db
 import logging
 
@@ -76,7 +76,7 @@ async def list_profiles(
     user: dict = Depends(get_current_user),
 ):
     """List user's custom profiles with optional filters."""
-    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if category:
         query["category"] = category.value
     if search:
@@ -104,7 +104,7 @@ async def create_profile(data: UserProfileCreate, user: dict = Depends(get_curre
     """Create a new custom profile."""
     # Check duplicate code
     existing = await db.user_profiles.find_one(
-        {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "code": data.code}, {"_id": 0}
+        {"user_id": user["user_id"], "tenant_id": tenant_match(user), "code": data.code}, {"_id": 0}
     )
     if existing:
         raise HTTPException(409, f"Profilo con codice '{data.code}' gia esistente")
@@ -112,7 +112,7 @@ async def create_profile(data: UserProfileCreate, user: dict = Depends(get_curre
     now = datetime.now(timezone.utc)
     doc = {
         "profile_id": f"up_{uuid.uuid4().hex[:10]}",
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "code": data.code,
         "description": data.description,
         "category": data.category.value,
@@ -138,7 +138,7 @@ async def create_profile(data: UserProfileCreate, user: dict = Depends(get_curre
 async def get_profile(profile_id: str, user: dict = Depends(get_current_user)):
     """Get a single custom profile."""
     doc = await db.user_profiles.find_one(
-        {"profile_id": profile_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"profile_id": profile_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(404, "Profilo non trovato")
@@ -153,7 +153,7 @@ async def get_profile(profile_id: str, user: dict = Depends(get_current_user)):
 async def update_profile(profile_id: str, data: UserProfileUpdate, user: dict = Depends(get_current_user)):
     """Update a custom profile."""
     existing = await db.user_profiles.find_one(
-        {"profile_id": profile_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"profile_id": profile_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
     if not existing:
         raise HTTPException(404, "Profilo non trovato")
@@ -167,7 +167,7 @@ async def update_profile(profile_id: str, data: UserProfileUpdate, user: dict = 
     # Check duplicate code if changing
     if data.code and data.code != existing["code"]:
         dup = await db.user_profiles.find_one(
-            {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "code": data.code, "profile_id": {"$ne": profile_id}}, {"_id": 0}
+            {"user_id": user["user_id"], "tenant_id": tenant_match(user), "code": data.code, "profile_id": {"$ne": profile_id}}, {"_id": 0}
         )
         if dup:
             raise HTTPException(409, f"Profilo con codice '{data.code}' gia esistente")
@@ -186,7 +186,7 @@ async def update_profile(profile_id: str, data: UserProfileUpdate, user: dict = 
 async def delete_profile(profile_id: str, user: dict = Depends(get_current_user)):
     """Delete a custom profile."""
     result = await db.user_profiles.delete_one(
-        {"profile_id": profile_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+        {"profile_id": profile_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
     if result.deleted_count == 0:
         raise HTTPException(404, "Profilo non trovato")
@@ -199,7 +199,7 @@ async def delete_profile(profile_id: str, user: dict = Depends(get_current_user)
 @router.post("/bulk-price-update")
 async def bulk_price_update(data: BulkPriceUpdate, user: dict = Depends(get_current_user)):
     """Increase/decrease all prices by a percentage. Useful when steel prices spike."""
-    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "price_m": {"$ne": None, "$gt": 0}}
+    query = {"user_id": user["user_id"], "tenant_id": tenant_match(user), "price_m": {"$ne": None, "$gt": 0}}
     if data.category:
         query["category"] = data.category.value
 
@@ -255,7 +255,7 @@ async def get_merged_catalog(
         })
 
     # User custom profiles
-    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if category:
         query["category"] = category
     custom = await db.user_profiles.find(query, {"_id": 0}).sort("code", 1).to_list(500)

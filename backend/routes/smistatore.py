@@ -13,7 +13,7 @@ from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.database import db
 from core.rate_limiter import limiter
 from services.smistatore_intelligente import analyze_and_index_document, analyze_drawing_document
@@ -78,7 +78,7 @@ async def analyze_document(request: Request, doc_id: str, user: dict = Depends(g
 async def get_page_index(commessa_id: str, user: dict = Depends(get_current_user)):
     """Get all indexed certificate pages for a commessa."""
     pages = await db.doc_page_index.find(
-        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "page_pdf_b64": 0}
     ).sort("doc_id", 1).to_list(500)
 
@@ -96,7 +96,7 @@ async def get_page_index(commessa_id: str, user: dict = Depends(get_current_user
 async def get_scorte(user: dict = Depends(get_current_user)):
     """Get all 'scorta' (unmatched) certificate pages across all commesse."""
     scorte = await db.doc_page_index.find(
-        {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "matching_status": "scorta"},
+        {"user_id": user["user_id"], "tenant_id": tenant_match(user), "matching_status": "scorta"},
         {"_id": 0, "page_pdf_b64": 0}
     ).sort("analyzed_at", -1).to_list(200)
 

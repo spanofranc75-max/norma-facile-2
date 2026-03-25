@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import Optional
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from services.notification_scheduler import run_expiration_check, check_welder_expirations, check_instrument_expirations, send_payment_alert, check_payment_expirations
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
@@ -46,7 +46,7 @@ async def update_notification_preferences(
     """Update current user's notification preferences."""
     prefs = data.model_dump()
     await db.users.update_one(
-        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"$set": {"notification_preferences": prefs}},
     )
     return {"message": "Preferenze salvate", "preferences": prefs}

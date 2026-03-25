@@ -11,7 +11,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.database import db
 
 router = APIRouter(tags=["qualita"])
@@ -70,7 +70,7 @@ async def create_controllo_visivo(data: ControlloVisivoCreate, user: dict = Depe
         "foto_doc_id": data.foto_doc_id or "",
         "operatore_id": data.operatore_id or "",
         "operatore_nome": data.operatore_nome or "",
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "created_at": now.isoformat(),
     }
     await db[CONTROLLI_COLL].insert_one(doc)
@@ -118,7 +118,7 @@ async def check_controlli_completi(commessa_id: str, user: dict = Depends(get_cu
     """
     # Get all voci for this commessa
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "normativa_tipo": 1}
     )
     if not commessa:

@@ -24,7 +24,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 
 router = APIRouter(prefix="/report-ispezioni", tags=["report-ispezioni"])
 logger = logging.getLogger(__name__)
@@ -83,14 +83,14 @@ class ReportApprova(BaseModel):
 async def get_report_ispezioni(commessa_id: str, user: dict = Depends(get_current_user)):
     """Stato del report ispezioni con dati salvati."""
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1}
     )
     if not commessa:
         raise HTTPException(404, "Commessa non trovata")
 
     saved = await db.report_ispezioni.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
     saved_vt = {r["check_id"]: r for r in (saved or {}).get("ispezioni_vt", [])}
     saved_dim = {r["check_id"]: r for r in (saved or {}).get("ispezioni_dim", [])}
@@ -151,12 +151,12 @@ async def get_report_ispezioni(commessa_id: str, user: dict = Depends(get_curren
 async def save_report_ispezioni(commessa_id: str, data: ReportSaveData, user: dict = Depends(get_current_user)):
     """Salva i risultati delle ispezioni."""
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0, "commessa_id": 1}
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0, "commessa_id": 1}
     )
     if not commessa:
         raise HTTPException(404, "Commessa non trovata")
 
-    saved = await db.report_ispezioni.find_one({"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    saved = await db.report_ispezioni.find_one({"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if saved and saved.get("approvato"):
         raise HTTPException(409, "Report gia approvato — non modificabile")
 
@@ -166,7 +166,7 @@ async def save_report_ispezioni(commessa_id: str, data: ReportSaveData, user: di
     doc = {
         "report_id": report_id,
         "commessa_id": commessa_id,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "ispezioni_vt": [r.dict() for r in data.ispezioni_vt],
         "ispezioni_dim": [r.dict() for r in data.ispezioni_dim],
         "strumenti_utilizzati": data.strumenti_utilizzati or "",
@@ -178,7 +178,7 @@ async def save_report_ispezioni(commessa_id: str, data: ReportSaveData, user: di
     }
 
     await db.report_ispezioni.update_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"$set": doc, "$setOnInsert": {"created_at": now}},
         upsert=True,
     )
@@ -189,7 +189,7 @@ async def save_report_ispezioni(commessa_id: str, data: ReportSaveData, user: di
 async def approva_report(commessa_id: str, data: ReportApprova, user: dict = Depends(get_current_user)):
     """Firma e approva il report. Immutabile dopo approvazione."""
     saved = await db.report_ispezioni.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
     if not saved:
         raise HTTPException(404, "Nessun report salvato per questa commessa")
@@ -208,7 +208,7 @@ async def approva_report(commessa_id: str, data: ReportApprova, user: dict = Dep
 
     now = datetime.now(timezone.utc).isoformat()
     await db.report_ispezioni.update_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"$set": {
             "approvato": True,
             "data_approvazione": now,
@@ -225,7 +225,7 @@ async def download_report_pdf(commessa_id: str, user: dict = Depends(get_current
     uid = user["user_id"]
     tid = user["tenant_id"]
     report = await get_report_ispezioni(commessa_id, user)
-    company = await db.company_settings.find_one({"user_id": uid, "tenant_id": tid}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
     biz = _e(company.get("business_name") or company.get("ragione_sociale", ""))
     today = datetime.now(timezone.utc).strftime("%d/%m/%Y")
 

@@ -4,7 +4,7 @@ from fastapi.responses import StreamingResponse
 from typing import Optional
 import uuid
 from datetime import datetime, timezone
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.database import db
 from models.certificazione import (
     CertificazioneCreate, CertificazioneUpdate, CertificazioneResponse,
@@ -43,7 +43,7 @@ async def get_certificazioni(
     limit: int = Query(50, ge=1, le=100),
     user: dict = Depends(get_current_user),
 ):
-    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if status:
         query["status"] = status.value
 
@@ -62,7 +62,7 @@ async def get_certificazioni(
 
 @router.get("/{cert_id}", response_model=CertificazioneResponse)
 async def get_certificazione(cert_id: str, user: dict = Depends(get_current_user)):
-    doc = await db.certificazioni.find_one({"cert_id": cert_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    doc = await db.certificazioni.find_one({"cert_id": cert_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Certificazione non trovata")
     await _populate_names(doc)
@@ -76,7 +76,7 @@ async def create_certificazione(data: CertificazioneCreate, user: dict = Depends
 
     doc = {
         "cert_id": cert_id,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "project_name": data.project_name,
         "distinta_id": data.distinta_id,
         "client_id": data.client_id,
@@ -100,7 +100,7 @@ async def create_certificazione(data: CertificazioneCreate, user: dict = Depends
 
 @router.put("/{cert_id}", response_model=CertificazioneResponse)
 async def update_certificazione(cert_id: str, data: CertificazioneUpdate, user: dict = Depends(get_current_user)):
-    existing = await db.certificazioni.find_one({"cert_id": cert_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    existing = await db.certificazioni.find_one({"cert_id": cert_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not existing:
         raise HTTPException(404, "Certificazione non trovata")
 
@@ -127,7 +127,7 @@ async def update_certificazione(cert_id: str, data: CertificazioneUpdate, user: 
 
 @router.delete("/{cert_id}")
 async def delete_certificazione(cert_id: str, user: dict = Depends(get_current_user)):
-    result = await db.certificazioni.delete_one({"cert_id": cert_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+    result = await db.certificazioni.delete_one({"cert_id": cert_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     if result.deleted_count == 0:
         raise HTTPException(404, "Certificazione non trovata")
     logger.info(f"Certificazione deleted: {cert_id}")
@@ -137,7 +137,7 @@ async def delete_certificazione(cert_id: str, user: dict = Depends(get_current_u
 @router.get("/{cert_id}/fascicolo-pdf")
 async def get_fascicolo_pdf(cert_id: str, user: dict = Depends(get_current_user)):
     """Generate DOP + CE Label PDF. Validates before generating."""
-    doc = await db.certificazioni.find_one({"cert_id": cert_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    doc = await db.certificazioni.find_one({"cert_id": cert_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Certificazione non trovata")
 
@@ -151,7 +151,7 @@ async def get_fascicolo_pdf(cert_id: str, user: dict = Depends(get_current_user)
     if not validation.valid:
         raise HTTPException(422, detail=f"Certificazione incompleta: {'; '.join(validation.errors)}")
 
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
 
     pdf_buffer = generate_dop_ce_pdf(doc, company)
     filename = f"fascicolo_CE_{doc.get('project_name', cert_id).replace(' ', '_')}.pdf"
@@ -182,7 +182,7 @@ async def calculate_thermal(inp: ThermalInput):
 @router.post("/{cert_id}/validate")
 async def validate_certificazione(cert_id: str, user: dict = Depends(get_current_user)):
     """Validate a certification before PDF generation."""
-    doc = await db.certificazioni.find_one({"cert_id": cert_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    doc = await db.certificazioni.find_one({"cert_id": cert_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Certificazione non trovata")
 

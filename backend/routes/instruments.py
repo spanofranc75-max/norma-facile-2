@@ -4,7 +4,7 @@ from datetime import datetime, timezone, date
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from models.instrument import InstrumentCreate, InstrumentResponse, InstrumentList
 
 router = APIRouter(prefix="/instruments", tags=["instruments"])
@@ -112,7 +112,7 @@ async def list_instruments(
             {"manufacturer": {"$regex": search, "$options": "i"}},
         ]
 
-    all_docs = await db.instruments.find({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}).sort("name", 1).to_list(500)
+    all_docs = await db.instruments.find({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}).sort("name", 1).to_list(500)
     stats = _compute_stats(all_docs)
 
     query["user_id"] = user["user_id"]
@@ -139,7 +139,7 @@ async def create_instrument(
 
     doc = {
         "instrument_id": instrument_id,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "name": payload.name.strip(),
         "serial_number": payload.serial_number.strip(),
         "type": payload.type,
@@ -166,7 +166,7 @@ async def update_instrument(
     payload: InstrumentCreate,
     user: dict = Depends(get_current_user),
 ):
-    existing = await db.instruments.find_one({"instrument_id": instrument_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    existing = await db.instruments.find_one({"instrument_id": instrument_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not existing:
         raise HTTPException(404, "Strumento non trovato")
 
@@ -188,16 +188,16 @@ async def update_instrument(
         "updated_at": now_iso,
     }
 
-    await db.instruments.update_one({"instrument_id": instrument_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"$set": update})
-    updated = await db.instruments.find_one({"instrument_id": instrument_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    await db.instruments.update_one({"instrument_id": instrument_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"$set": update})
+    updated = await db.instruments.find_one({"instrument_id": instrument_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     return InstrumentResponse(**_doc_to_response(updated))
 
 
 @router.delete("/{instrument_id}")
 async def delete_instrument(instrument_id: str, user: dict = Depends(get_current_user)):
-    existing = await db.instruments.find_one({"instrument_id": instrument_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    existing = await db.instruments.find_one({"instrument_id": instrument_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not existing:
         raise HTTPException(404, "Strumento non trovato")
 
-    await db.instruments.delete_one({"instrument_id": instrument_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+    await db.instruments.delete_one({"instrument_id": instrument_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     return {"message": "Strumento eliminato", "instrument_id": instrument_id}

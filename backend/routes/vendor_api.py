@@ -9,7 +9,7 @@ from typing import Optional, List
 import uuid
 import secrets
 from datetime import datetime, timezone
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.database import db
 import logging
 
@@ -252,7 +252,7 @@ async def get_merged_thermal_profiles(user: dict = Depends(get_current_user)):
 
     # 3. User custom profiles with Uf (from user_profiles with thermal data)
     user_profiles = await db.user_profiles.find(
-        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     ).to_list(200)
     for p in user_profiles:
         if p.get("weight_m", 0) > 0:

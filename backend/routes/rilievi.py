@@ -5,7 +5,7 @@ from typing import Optional
 from io import BytesIO
 import uuid
 from datetime import datetime, timezone
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.database import db
 from models.rilievo import (
     RilievoCreate, RilievoUpdate, RilievoResponse, RilievoListResponse,
@@ -31,7 +31,7 @@ async def get_rilievi(
     user: dict = Depends(get_current_user)
 ):
     """Get all rilievi for current user with optional filters."""
-    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     
     if client_id:
         query["client_id"] = client_id
@@ -64,7 +64,7 @@ async def get_rilievo(
 ):
     """Get a specific rilievo by ID."""
     rilievo = await db.rilievi.find_one(
-        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     
@@ -89,7 +89,7 @@ async def create_rilievo(
     """Create a new rilievo."""
     # Verify client exists
     client = await db.clients.find_one(
-        {"client_id": rilievo_data.client_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"client_id": rilievo_data.client_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not client:
@@ -116,7 +116,7 @@ async def create_rilievo(
     
     rilievo_doc = {
         "rilievo_id": rilievo_id,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "client_id": rilievo_data.client_id,
         "project_name": rilievo_data.project_name,
         "survey_date": rilievo_data.survey_date.isoformat(),
@@ -152,7 +152,7 @@ async def update_rilievo(
 ):
     """Update an existing rilievo."""
     existing = await db.rilievi.find_one(
-        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not existing:
@@ -164,7 +164,7 @@ async def update_rilievo(
     # Update client if changed
     if rilievo_data.client_id:
         client = await db.clients.find_one(
-            {"client_id": rilievo_data.client_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+            {"client_id": rilievo_data.client_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
         )
         if not client:
             raise HTTPException(status_code=400, detail="Cliente non trovato")
@@ -242,7 +242,7 @@ async def delete_rilievo(
     """Delete a rilievo."""
     result = await db.rilievi.delete_one({
         "rilievo_id": rilievo_id,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"]
+        "user_id": user["user_id"], "tenant_id": tenant_match(user)
     })
     
     if result.deleted_count == 0:
@@ -277,7 +277,7 @@ async def upload_foto_rilievo(
 ):
     """Upload a photo to object storage and add to rilievo."""
     doc = await db.rilievi.find_one(
-        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
     if not doc:
         raise HTTPException(404, "Rilievo non trovato")
@@ -313,7 +313,7 @@ async def upload_foto_rilievo(
 async def delete_foto_rilievo(rilievo_id: str, photo_id: str, user: dict = Depends(get_current_user)):
     """Remove a photo from the rilievo."""
     result = await db.rilievi.update_one(
-        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"$pull": {"photos": {"photo_id": photo_id}}},
     )
     if result.modified_count == 0:
@@ -332,7 +332,7 @@ async def upload_sketch_rilievo(
 ):
     """Upload a sketch with optional background image to object storage."""
     doc = await db.rilievi.find_one(
-        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
     if not doc:
         raise HTTPException(404, "Rilievo non trovato")
@@ -373,7 +373,7 @@ async def upload_sketch_rilievo(
 async def delete_sketch_rilievo(rilievo_id: str, sketch_id: str, user: dict = Depends(get_current_user)):
     """Remove a sketch from the rilievo."""
     result = await db.rilievi.update_one(
-        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"$pull": {"sketches": {"sketch_id": sketch_id}}},
     )
     if result.modified_count == 0:
@@ -562,7 +562,7 @@ CALCOLA_FN = {
 async def calcola_materiali(rilievo_id: str, user: dict = Depends(get_current_user)):
     """Dalla tipologia e misure, calcola lista materiali, peso e superficie."""
     doc = await db.rilievi.find_one(
-        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not doc:
@@ -595,10 +595,10 @@ async def collega_rilievo_a_commessa(
     if not commessa_id:
         raise HTTPException(400, "commessa_id richiesto")
 
-    rilievo = await db.rilievi.find_one({"rilievo_id": rilievo_id, "user_id": uid, "tenant_id": tid})
+    rilievo = await db.rilievi.find_one({"rilievo_id": rilievo_id, "user_id": uid, "tenant_id": tenant_match(user)})
     if not rilievo:
         raise HTTPException(404, "Rilievo non trovato")
-    commessa = await db.commesse.find_one({"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid})
+    commessa = await db.commesse.find_one({"commessa_id": commessa_id, "user_id": uid, "tenant_id": tenant_match(user)})
     if not commessa:
         raise HTTPException(404, "Commessa non trovata")
 
@@ -623,7 +623,7 @@ async def add_sketch(
 ):
     """Add a sketch to an existing rilievo."""
     existing = await db.rilievi.find_one(
-        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not existing:
@@ -660,7 +660,7 @@ async def add_photo(
 ):
     """Add a photo to an existing rilievo."""
     existing = await db.rilievi.find_one(
-        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not existing:
@@ -696,7 +696,7 @@ async def get_rilievo_pdf(
 ):
     """Generate and download rilievo PDF summary."""
     rilievo = await db.rilievi.find_one(
-        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not rilievo:
@@ -711,7 +711,7 @@ async def get_rilievo_pdf(
     
     # Get company settings for header
     company = await db.company_settings.find_one(
-        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not company:

@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException
 
 from core.database import db
+from core.security import tenant_match
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,6 @@
 """Migration endpoint — imports data from the old Norma Facile app."""
 from fastapi import APIRouter, Depends, HTTPException
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.database import db
 import httpx
 import uuid
@@ -43,7 +43,7 @@ async def importa_da_vecchia_app(user: dict = Depends(get_current_user)):
             continue
 
         # Check duplicate by P.IVA or name
-        dup_filter = {"user_id": uid, "tenant_id": tid}
+        dup_filter = {"user_id": uid, "tenant_id": tenant_match(user)}
         if piva:
             dup_filter["partita_iva"] = piva
         else:
@@ -62,7 +62,7 @@ async def importa_da_vecchia_app(user: dict = Depends(get_current_user)):
         tipo_raw = (a.get("tipo") or "cliente").lower()
         doc = {
             "client_id": cid,
-            "user_id": uid, "tenant_id": tid,
+            "user_id": uid, "tenant_id": tenant_match(user),
             "business_name": name,
             "client_type": a.get("client_type", "azienda"),
             "codice_fiscale": cf,
@@ -89,7 +89,7 @@ async def importa_da_vecchia_app(user: dict = Depends(get_current_user)):
             results["errors"].append(f"Anagrafica {name}: {e}")
 
     # Rebuild lookup including pre-existing clients
-    async for c in db.clients.find({"user_id": uid, "tenant_id": tid, "partita_iva": {"$exists": True, "$ne": ""}}, {"_id": 0, "client_id": 1, "partita_iva": 1}):
+    async for c in db.clients.find({"user_id": uid, "tenant_id": tenant_match(user), "partita_iva": {"$exists": True, "$ne": ""}}, {"_id": 0, "client_id": 1, "partita_iva": 1}):
         piva_to_client_id[c["partita_iva"]] = c["client_id"]
 
     # ── 3. PREVENTIVI ──
@@ -98,7 +98,7 @@ async def importa_da_vecchia_app(user: dict = Depends(get_current_user)):
         if not num:
             continue
 
-        existing = await db.preventivi.find_one({"user_id": uid, "tenant_id": tid, "number": num}, {"_id": 0, "preventivo_id": 1})
+        existing = await db.preventivi.find_one({"user_id": uid, "tenant_id": tenant_match(user), "number": num}, {"_id": 0, "preventivo_id": 1})
         if existing:
             results["skipped"] += 1
             continue
@@ -127,7 +127,7 @@ async def importa_da_vecchia_app(user: dict = Depends(get_current_user)):
         totals = p.get("totals", {})
         doc = {
             "preventivo_id": f"prev_{uuid.uuid4().hex[:12]}",
-            "user_id": uid, "tenant_id": tid,
+            "user_id": uid, "tenant_id": tenant_match(user),
             "number": num,
             "client_id": client_id,
             "subject": p.get("subject", ""),
@@ -168,7 +168,7 @@ async def importa_da_vecchia_app(user: dict = Depends(get_current_user)):
         issue_date = (f.get("issue_date") or "").strip()
         # Dedup by number + date (same number can exist in different months)
         existing = await db.invoices.find_one(
-            {"user_id": uid, "tenant_id": tid, "document_number": doc_num, "issue_date": issue_date},
+            {"user_id": uid, "tenant_id": tenant_match(user), "document_number": doc_num, "issue_date": issue_date},
             {"_id": 0, "invoice_id": 1},
         )
         if existing:
@@ -197,7 +197,7 @@ async def importa_da_vecchia_app(user: dict = Depends(get_current_user)):
         tax_s = f.get("tax_settings", {})
         doc = {
             "invoice_id": f"inv_{uuid.uuid4().hex[:12]}",
-            "user_id": uid, "tenant_id": tid,
+            "user_id": uid, "tenant_id": tenant_match(user),
             "document_type": f.get("document_type", "FT"),
             "document_number": doc_num,
             "client_id": client_id,
@@ -255,12 +255,12 @@ async def importa_da_vecchia_app(user: dict = Depends(get_current_user)):
         # Dedup: by fornitore + numero + data
         if num_doc and data_doc:
             dup = await db.fatture_ricevute.find_one(
-                {"user_id": uid, "tenant_id": tid, "numero_documento": num_doc, "data_documento": data_doc, "fornitore_nome": forn_nome},
+                {"user_id": uid, "tenant_id": tenant_match(user), "numero_documento": num_doc, "data_documento": data_doc, "fornitore_nome": forn_nome},
                 {"_id": 0, "fr_id": 1}
             )
         elif forn_nome and fa.get("totale_documento"):
             dup = await db.fatture_ricevute.find_one(
-                {"user_id": uid, "tenant_id": tid, "fornitore_nome": forn_nome, "totale_documento": fa.get("totale_documento"), "data_ricezione": fa.get("data_ricezione", "")},
+                {"user_id": uid, "tenant_id": tenant_match(user), "fornitore_nome": forn_nome, "totale_documento": fa.get("totale_documento"), "data_ricezione": fa.get("data_ricezione", "")},
                 {"_id": 0, "fr_id": 1}
             )
         else:
@@ -310,7 +310,7 @@ async def importa_da_vecchia_app(user: dict = Depends(get_current_user)):
 
         doc = {
             "fr_id": f"fr_{uuid.uuid4().hex[:12]}",
-            "user_id": uid, "tenant_id": tid,
+            "user_id": uid, "tenant_id": tenant_match(user),
             "fornitore_id": fornitore_id,
             "fornitore_nome": forn_nome,
             "fornitore_piva": forn_piva,
@@ -356,8 +356,8 @@ async def stato_migrazione(user: dict = Depends(get_current_user)):
     uid = user["user_id"]
     tid = user["tenant_id"]
     return {
-        "anagrafica": await db.clients.count_documents({"user_id": uid, "tenant_id": tid, "_migrated": True}),
-        "preventivi": await db.preventivi.count_documents({"user_id": uid, "tenant_id": tid, "_migrated": True}),
-        "fatture_vendita": await db.invoices.count_documents({"user_id": uid, "tenant_id": tid, "_migrated": True}),
-        "fatture_acquisto": await db.fatture_ricevute.count_documents({"user_id": uid, "tenant_id": tid, "_migrated": True}),
+        "anagrafica": await db.clients.count_documents({"user_id": uid, "tenant_id": tenant_match(user), "_migrated": True}),
+        "preventivi": await db.preventivi.count_documents({"user_id": uid, "tenant_id": tenant_match(user), "_migrated": True}),
+        "fatture_vendita": await db.invoices.count_documents({"user_id": uid, "tenant_id": tenant_match(user), "_migrated": True}),
+        "fatture_acquisto": await db.fatture_ricevute.count_documents({"user_id": uid, "tenant_id": tenant_match(user), "_migrated": True}),
     }

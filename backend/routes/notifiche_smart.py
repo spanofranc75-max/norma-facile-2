@@ -1,7 +1,7 @@
 """Routes — Notifiche Smart In-App (N1/N2)."""
 
 from fastapi import APIRouter, Depends, Query
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from services.notifiche_smart_service import (
     list_notifiche, count_unread, mark_read, mark_all_read, archive_notification,
 )

@@ -7,7 +7,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from services.pacco_documenti import generate_pacco_documenti
 
 router = APIRouter(tags=["pacco-documenti"])

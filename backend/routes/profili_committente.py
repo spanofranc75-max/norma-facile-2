@@ -1,7 +1,7 @@
 """Routes — Profili Documentali per Committente (D6)."""
 
 from fastapi import APIRouter, Depends, HTTPException
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from services.profili_committente_service import (
     crea_profilo, crea_profilo_da_pacchetto, get_profilo,
     list_profili, update_profilo, delete_profilo,

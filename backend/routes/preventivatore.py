@@ -19,7 +19,7 @@ from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Request
 from pydantic import BaseModel
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.rate_limiter import limiter
 from services.preventivatore_predittivo import (
     analyze_drawing_materials,
@@ -320,7 +320,7 @@ async def analyze_drawing(
     doc_id = f"pred_{uuid.uuid4().hex[:10]}"
     await db.preventivatore_analyses.insert_one({
         "doc_id": doc_id,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "filename": filename,
         "analysis": analysis,
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -359,7 +359,7 @@ async def calcola(data: CalcolaRequest, user: dict = Depends(get_current_user)):
     ore_da_usare = data.ore_override if data.ore_override else stima_ore["ore_suggerite"]
 
     # Get company hourly cost
-    cost_doc = await db.company_costs.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    cost_doc = await db.company_costs.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     costo_orario = (cost_doc or {}).get("costo_orario_pieno", 35)
 
     # Calculate full quote
@@ -414,7 +414,7 @@ async def genera_preventivo(data: GeneraPreventivoRequest, user: dict = Depends(
 
     now = datetime.now(timezone.utc)
     year = now.strftime("%Y")
-    count = await db.preventivi.count_documents({"user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+    count = await db.preventivi.count_documents({"user_id": user["user_id"], "tenant_id": tenant_match(user)})
     prev_id = f"prev_{uuid.uuid4().hex[:12]}"
     prev_number = f"PV-{year}-{count + 1:04d}"
 
@@ -484,7 +484,7 @@ async def genera_preventivo(data: GeneraPreventivoRequest, user: dict = Depends(
 
     preventivo = {
         "preventivo_id": prev_id,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "number": prev_number,
         "client_id": data.client_id or "",
         "client_name": client_name,
@@ -539,7 +539,7 @@ async def accetta_e_genera_commessa(preventivo_id: str, user: dict = Depends(get
     con materiali, ore stimate e budget pre-compilati.
     """
     prev = await db.preventivi.find_one(
-        {"preventivo_id": preventivo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"preventivo_id": preventivo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not prev:
@@ -550,7 +550,7 @@ async def accetta_e_genera_commessa(preventivo_id: str, user: dict = Depends(get
 
     now = datetime.now(timezone.utc)
     year = now.strftime("%Y")
-    count = await db.commesse.count_documents({"user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+    count = await db.commesse.count_documents({"user_id": user["user_id"], "tenant_id": tenant_match(user)})
     commessa_id = f"comm_{uuid.uuid4().hex[:12]}"
     commessa_number = f"C-{year}-{count + 1:04d}"
 
@@ -591,7 +591,7 @@ async def accetta_e_genera_commessa(preventivo_id: str, user: dict = Depends(get
 
     commessa = {
         "commessa_id": commessa_id,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "numero": commessa_number,
         "title": prev.get("subject", "Commessa da Preventivo AI"),
         "client_id": prev.get("client_id", ""),
@@ -693,14 +693,14 @@ async def confronta_preventivi(data: ConfrontaRequest, user: dict = Depends(get_
     Calcola delta per voce, scostamento percentuale, e confidence score.
     """
     prev_ai = await db.preventivi.find_one(
-        {"preventivo_id": data.preventivo_ai_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"preventivo_id": data.preventivo_ai_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not prev_ai:
         raise HTTPException(404, "Preventivo AI non trovato")
 
     prev_man = await db.preventivi.find_one(
-        {"preventivo_id": data.preventivo_manuale_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"preventivo_id": data.preventivo_manuale_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not prev_man:

@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 
 router = APIRouter(prefix="/template-111", tags=["template-111"])
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ async def preview_template_111(commessa_id: str, user: dict = Depends(get_curren
     uid = user["user_id"]
     tid = user["tenant_id"]
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid},
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "classe_esecuzione": 1}
     )
     if not commessa:

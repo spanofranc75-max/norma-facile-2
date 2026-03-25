@@ -11,7 +11,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import Optional
 
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.rate_limiter import limiter
 from services.committenza_analysis_service import (
     DOC_CATEGORIES,

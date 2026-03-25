@@ -17,7 +17,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 
 router = APIRouter(prefix="/fascicolo-tecnico", tags=["dop_frazionata"])
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ async def list_dop_frazionate(cid: str, user: dict = Depends(get_current_user)):
     """Lista tutte le DoP frazionate per una commessa."""
     await _get_commessa(cid, user["user_id"], user["tenant_id"])
     dops = await db.dop_frazionate.find(
-        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     ).sort("created_at", 1).to_list(50)
 
@@ -67,7 +67,7 @@ async def create_dop_frazionata(cid: str, data: DopFrazionataCreate, user: dict 
 
     # Count existing DoP for this commessa to determine suffix
     count = await db.dop_frazionate.count_documents(
-        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
     if count >= len(SUFFISSI):
         raise HTTPException(400, f"Numero massimo DoP frazionate raggiunto ({len(SUFFISSI)})")
@@ -81,7 +81,7 @@ async def create_dop_frazionata(cid: str, data: DopFrazionataCreate, user: dict 
     materiali_tracciati = []
     for ddt_id in (data.ddt_ids or []):
         ddt = await db.ddt_documents.find_one(
-            {"ddt_id": ddt_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+            {"ddt_id": ddt_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
             {"_id": 0, "number": 1, "lines": 1, "client_name": 1, "created_at": 1}
         )
         if ddt:
@@ -97,7 +97,7 @@ async def create_dop_frazionata(cid: str, data: DopFrazionataCreate, user: dict 
 
     # Also check for indexed certificate pages (from Smistatore)
     page_index_entries = await db.doc_page_index.find(
-        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "page_pdf_b64": 0}
     ).to_list(500)
 
@@ -133,7 +133,7 @@ async def create_dop_frazionata(cid: str, data: DopFrazionataCreate, user: dict 
     # === AUTO-POPULATION: Material batches for traceability ===
     batches_rintracciabilita = []
     batch_docs = await db.material_batches.find(
-        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "certificate_base64": 0, "certificato_31_base64": 0}
     ).to_list(200)
     for b in batch_docs:
@@ -150,7 +150,7 @@ async def create_dop_frazionata(cid: str, data: DopFrazionataCreate, user: dict 
     dop = {
         "dop_id": dop_id,
         "commessa_id": cid,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "dop_numero": dop_numero,
         "suffisso": suffisso,
         "ddt_ids": data.ddt_ids or [],
@@ -201,7 +201,7 @@ async def delete_dop_frazionata(cid: str, dop_id: str, user: dict = Depends(get_
     """Elimina una DoP frazionata."""
     await _get_commessa(cid, user["user_id"], user["tenant_id"])
     result = await db.dop_frazionate.delete_one(
-        {"dop_id": dop_id, "commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+        {"dop_id": dop_id, "commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
     if result.deleted_count == 0:
         raise HTTPException(404, "DoP non trovata")
@@ -215,7 +215,7 @@ async def generate_dop_frazionata_pdf(cid: str, dop_id: str, user: dict = Depend
     from io import BytesIO
 
     commessa = await _get_commessa(cid, user["user_id"], user["tenant_id"])
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
     dop = await db.dop_frazionate.find_one(
         {"dop_id": dop_id, "commessa_id": cid}, {"_id": 0}
     )
@@ -267,7 +267,7 @@ async def create_dop_automatica(cid: str, user: dict = Depends(get_current_user)
 
     # Count existing DoP to determine suffix
     count = await db.dop_frazionate.count_documents(
-        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
     if count >= len(SUFFISSI):
         raise HTTPException(400, f"Numero massimo DoP raggiunto ({len(SUFFISSI)})")
@@ -303,7 +303,7 @@ async def create_dop_automatica(cid: str, user: dict = Depends(get_current_user)
     batches_rintracciabilita = []
     cam_materiali = []
     batch_docs = await db.material_batches.find(
-        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "certificate_base64": 0, "certificato_31_base64": 0}
     ).to_list(200)
     for b in batch_docs:
@@ -332,7 +332,7 @@ async def create_dop_automatica(cid: str, user: dict = Depends(get_current_user)
 
     # === 2b. Also check lotti_cam for this commessa ===
     lotti_cam_docs = await db.lotti_cam.find(
-        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     ).to_list(100)
     for lc in lotti_cam_docs:
         already_tracked = any(
@@ -378,7 +378,7 @@ async def create_dop_automatica(cid: str, user: dict = Depends(get_current_user)
 
     # === 3. Report Ispezioni status ===
     report_isp = await db.report_ispezioni.find_one(
-        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
     ispezioni_status = {
         "approvato": bool(report_isp and report_isp.get("approvato")),
@@ -402,7 +402,7 @@ async def create_dop_automatica(cid: str, user: dict = Depends(get_current_user)
 
     # === 5. Enrichment: Riesame checks detail, welding data, WPS ===
     riesame_doc = await db.riesami_tecnici.find_one(
-        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
     riesame_checks = {}
     if riesame_doc:
@@ -415,7 +415,7 @@ async def create_dop_automatica(cid: str, user: dict = Depends(get_current_user)
 
     # Welding: fetch registro saldatura and WPS for this commessa
     welding_entries = await db.registro_saldatura.find(
-        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     ).to_list(50)
 
@@ -423,7 +423,7 @@ async def create_dop_automatica(cid: str, user: dict = Depends(get_current_user)
     wps_docs = []
     if wps_ids:
         wps_docs = await db.wps_procedures.find(
-            {"wps_id": {"$in": wps_ids}, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+            {"wps_id": {"$in": wps_ids}, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
             {"_id": 0, "wps_id": 1, "wps_number": 1, "process": 1, "material_group": 1}
         ).to_list(20)
 
@@ -438,7 +438,7 @@ async def create_dop_automatica(cid: str, user: dict = Depends(get_current_user)
     dop = {
         "dop_id": dop_id,
         "commessa_id": cid,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "dop_numero": dop_numero,
         "suffisso": suffisso,
         "ddt_ids": [],
@@ -483,7 +483,7 @@ async def generate_ce_label_1090(cid: str, user: dict = Depends(get_current_user
     _e = html_mod.escape
 
     commessa = await _get_commessa(cid, user["user_id"], user["tenant_id"])
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
 
     # EXC class
     exc_class = commessa.get("exc_class") or commessa.get("classe_esecuzione", "")
@@ -510,7 +510,7 @@ async def generate_ce_label_1090(cid: str, user: dict = Depends(get_current_user
 
     # DOP numero (use the latest if exists)
     latest_dop = await db.dop_frazionate.find(
-        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "dop_numero": 1}
     ).sort("created_at", -1).to_list(1)
     dop_ref = latest_dop[0]["dop_numero"] if latest_dop else f"{num}/A"
@@ -1140,11 +1140,11 @@ async def generate_rintracciabilita_totale_pdf(cid: str, user: dict = Depends(ge
     _e = html_mod.escape
 
     commessa = await _get_commessa(cid, user["user_id"], user["tenant_id"])
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
 
     # Get all material batches
     batch_docs = await db.material_batches.find(
-        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "certificate_base64": 0, "certificato_31_base64": 0}
     ).to_list(500)
 
@@ -1304,11 +1304,11 @@ async def download_pacco_rina(cid: str, user: dict = Depends(get_current_user)):
         # ── 1. DOP PDF ──
         try:
             latest_dop = await db.dop_frazionate.find(
-                {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+                {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
                 {"_id": 0}
             ).sort("created_at", -1).to_list(1)
             if latest_dop:
-                company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+                company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
                 client_name = ""
                 if commessa.get("client_id"):
                     cl = await db.clients.find_one({"client_id": commessa["client_id"]}, {"_id": 0, "business_name": 1, "name": 1})
@@ -1327,7 +1327,7 @@ async def download_pacco_rina(cid: str, user: dict = Depends(get_current_user)):
             import html as html_mod
             _e = html_mod.escape
 
-            company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+            company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
             exc_class = commessa.get("exc_class") or commessa.get("classe_esecuzione", "EXC2")
             biz = _e(company.get("business_name", ""))
             addr = _e(f"{company.get('address', '')} {company.get('cap', '')} {company.get('city', '')}")
@@ -1383,7 +1383,7 @@ async def download_pacco_rina(cid: str, user: dict = Depends(get_current_user)):
         try:
             from models.cam import calcola_cam_commessa
             batches = await db.material_batches.find(
-                {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"], "percentuale_riciclato": {"$ne": None}},
+                {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user), "percentuale_riciclato": {"$ne": None}},
                 {"_id": 0, "certificate_base64": 0}
             ).to_list(200)
             if batches:
@@ -1400,7 +1400,7 @@ async def download_pacco_rina(cid: str, user: dict = Depends(get_current_user)):
                 calcolo = calcola_cam_commessa(lotti_input)
                 calcolo["commessa_id"] = cid
 
-                company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+                company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
                 from services.pdf_cam_declaration import generate_cam_declaration_pdf
                 cam_pdf = generate_cam_declaration_pdf(calcolo, commessa, company)
                 zf.writestr(f"{idx:02d}_Dichiarazione_CAM_{num}.pdf", cam_pdf)
@@ -1412,13 +1412,13 @@ async def download_pacco_rina(cid: str, user: dict = Depends(get_current_user)):
         # ── 4. Rintracciabilità Totale ──
         try:
             batch_docs = await db.material_batches.find(
-                {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+                {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
                 {"_id": 0, "certificate_base64": 0, "certificato_31_base64": 0}
             ).to_list(500)
             if batch_docs:
                 import html as html_mod
                 _e = html_mod.escape
-                company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+                company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
                 biz_r = _e(company.get("business_name", ""))
                 cert_r = _e(company.get("certificato_en1090_numero", ""))
                 logo_r = company.get("logo_url", "")
@@ -1490,7 +1490,7 @@ async def download_pacco_rina(cid: str, user: dict = Depends(get_current_user)):
             normative_attive = _get_active_normative(voci_ries)
             checks_filtered = _filter_checks(normative_attive)
 
-            company_s = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+            company_s = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
             manual_checks = (saved_ries or {}).get("checks_manuali", {})
 
             rows_ries = ""

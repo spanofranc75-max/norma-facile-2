@@ -6,7 +6,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from datetime import datetime, timezone, timedelta, date
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.database import db
 from services.profiles_data import calculate_bars_needed
 
@@ -24,7 +24,7 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
     # 1. Ferro in Lavorazione: sum weight from active distinte (bozza, confermata, ordinata)
     active_statuses = ["bozza", "confermata", "ordinata"]
     pipeline_weight = [
-        {"$match": {"user_id": uid, "tenant_id": tid, "status": {"$in": active_statuses}}},
+        {"$match": {"user_id": uid, "tenant_id": tenant_match(user), "status": {"$in": active_statuses}}},
         {"$group": {"_id": None, "total_weight": {"$sum": "$total_weight_kg"}, "count": {"$sum": 1}}},
     ]
     weight_result = await db.distinte.aggregate(pipeline_weight).to_list(1)
@@ -33,17 +33,17 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
 
     # 2. Cantieri Attivi: POS with status bozza or completo
     cantieri_attivi = await db.pos_documents.count_documents(
-        {"user_id": uid, "tenant_id": tid, "status": {"$in": ["bozza", "completo"]}}
+        {"user_id": uid, "tenant_id": tenant_match(user), "status": {"$in": ["bozza", "completo"]}}
     )
 
     # 3. POS Generati questo mese
     pos_mese = await db.pos_documents.count_documents(
-        {"user_id": uid, "tenant_id": tid, "created_at": {"$gte": month_start}}
+        {"user_id": uid, "tenant_id": tenant_match(user), "created_at": {"$gte": month_start}}
     )
 
     # 4. Fatturato Mese: sum of emessa/pagata invoices this month
     pipeline_fatturato = [
-        {"$match": {"user_id": uid, "tenant_id": tid, "status": {"$in": ["emessa", "pagata", "inviata_sdi", "accettata"]}, "created_at": {"$gte": month_start}}},
+        {"$match": {"user_id": uid, "tenant_id": tenant_match(user), "status": {"$in": ["emessa", "pagata", "inviata_sdi", "accettata"]}, "created_at": {"$gte": month_start}}},
         {"$group": {"_id": None, "total": {"$sum": "$totals.total_document"}}},
     ]
     fatt_result = await db.invoices.aggregate(pipeline_fatturato).to_list(1)
@@ -51,7 +51,7 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
 
     # 5. Prossime Scadenze: POS with start_date in the future
     scadenze_cursor = db.pos_documents.find(
-        {"user_id": uid, "tenant_id": tid, "status": {"$in": ["bozza", "completo"]}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "status": {"$in": ["bozza", "completo"]}},
         {"_id": 0, "pos_id": 1, "project_name": 1, "cantiere": 1, "status": 1}
     ).sort("cantiere.start_date", 1).limit(5)
     scadenze_raw = await scadenze_cursor.to_list(5)
@@ -75,7 +75,7 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
 
     # 6. Materiale da Ordinare: aggregate items from active distinte
     active_distinte = await db.distinte.find(
-        {"user_id": uid, "tenant_id": tid, "status": {"$in": active_statuses}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "status": {"$in": active_statuses}},
         {"_id": 0, "items": 1}
     ).to_list(100)
 
@@ -93,7 +93,7 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
 
     # 7. Documenti recenti (last 5 invoices)
     recent_inv_cursor = db.invoices.find(
-        {"user_id": uid, "tenant_id": tid}, {"_id": 0, "invoice_id": 1, "document_number": 1, "client_name": 1, "status": 1, "issue_date": 1, "totals": 1}
+        {"user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0, "invoice_id": 1, "document_number": 1, "client_name": 1, "status": 1, "issue_date": 1, "totals": 1}
     ).sort("created_at", -1).limit(5)
     recent_invoices = await recent_inv_cursor.to_list(5)
     for inv in recent_invoices:
@@ -117,7 +117,7 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
             m_end = datetime(target_year, target_month + 1, 1, tzinfo=timezone.utc)
         pipeline_m = [
             {"$match": {
-                "user_id": uid, "tenant_id": tid,
+                "user_id": uid, "tenant_id": tenant_match(user),
                 "status": {"$in": ["emessa", "pagata", "inviata_sdi", "accettata"]},
                 "created_at": {"$gte": m_start, "$lt": m_end},
             }},
@@ -157,27 +157,27 @@ async def get_system_health(user: dict = Depends(get_current_user)):
     collections = await db.list_collection_names()
 
     # Key counts
-    invoices_count = await db.invoices.count_documents({"user_id": uid, "tenant_id": tid})
-    preventivi_count = await db.preventivi.count_documents({"user_id": uid, "tenant_id": tid})
-    commesse_count = await db.commesse.count_documents({"user_id": uid, "tenant_id": tid})
-    clients_count = await db.clients.count_documents({"user_id": uid, "tenant_id": tid})
+    invoices_count = await db.invoices.count_documents({"user_id": uid, "tenant_id": tenant_match(user)})
+    preventivi_count = await db.preventivi.count_documents({"user_id": uid, "tenant_id": tenant_match(user)})
+    commesse_count = await db.commesse.count_documents({"user_id": uid, "tenant_id": tenant_match(user)})
+    clients_count = await db.clients.count_documents({"user_id": uid, "tenant_id": tenant_match(user)})
 
     # Company settings check
-    company = await db.company_settings.find_one({"user_id": uid, "tenant_id": tid}, {"_id": 0, "business_name": 1, "partita_iva": 1, "updated_at": 1})
+    company = await db.company_settings.find_one({"user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0, "business_name": 1, "partita_iva": 1, "updated_at": 1})
     company_ok = bool(company and company.get("business_name") and company.get("partita_iva"))
 
     # Recent outbound activity
-    outbound_24h = await db.outbound_audit_log.count_documents({"user_id": uid, "tenant_id": tid, "timestamp": {"$gte": last_24h}})
-    outbound_7d = await db.outbound_audit_log.count_documents({"user_id": uid, "tenant_id": tid, "timestamp": {"$gte": last_7d}})
+    outbound_24h = await db.outbound_audit_log.count_documents({"user_id": uid, "tenant_id": tenant_match(user), "timestamp": {"$gte": last_24h}})
+    outbound_7d = await db.outbound_audit_log.count_documents({"user_id": uid, "tenant_id": tenant_match(user), "timestamp": {"$gte": last_7d}})
 
     # Last outbound action
     last_action = await db.outbound_audit_log.find_one(
-        {"user_id": uid, "tenant_id": tid}, {"_id": 0, "action_type": 1, "recipient": 1, "timestamp": 1, "status": 1}
+        {"user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0, "action_type": 1, "recipient": 1, "timestamp": 1, "status": 1}
     )
 
     # Company settings audit (last change)
     last_cs_change = await db.company_settings_audit.find_one(
-        {"user_id": uid, "tenant_id": tid}, {"_id": 0, "action": 1, "timestamp": 1, "after": 1}
+        {"user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0, "action": 1, "timestamp": 1, "after": 1}
     )
 
     # Data integrity checks
@@ -186,12 +186,12 @@ async def get_system_health(user: dict = Depends(get_current_user)):
         warnings.append("Impostazioni aziendali incomplete — controlla P.IVA e ragione sociale")
 
     # Check for invoices without tax_settings
-    bad_invoices = await db.invoices.count_documents({"user_id": uid, "tenant_id": tid, "tax_settings": {"$exists": False}})
+    bad_invoices = await db.invoices.count_documents({"user_id": uid, "tenant_id": tenant_match(user), "tax_settings": {"$exists": False}})
     if bad_invoices > 0:
         warnings.append(f"{bad_invoices} fatture senza impostazioni fiscali")
 
     # Check for invoices without payment_method
-    bad_pm = await db.invoices.count_documents({"user_id": uid, "tenant_id": tid, "$or": [{"payment_method": ""}, {"payment_method": None}]})
+    bad_pm = await db.invoices.count_documents({"user_id": uid, "tenant_id": tenant_match(user), "$or": [{"payment_method": ""}, {"payment_method": None}]})
     if bad_pm > 0:
         warnings.append(f"{bad_pm} fatture senza metodo di pagamento")
 
@@ -312,7 +312,7 @@ async def get_compliance_docs_status(user: dict = Depends(get_current_user)):
 
     # Conformita % for commesse
     commesse_attive = await db.commesse.find(
-        {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "stato": {"$nin": ["chiuso", "sospesa"]}},
+        {"user_id": user["user_id"], "tenant_id": tenant_match(user), "stato": {"$nin": ["chiuso", "sospesa"]}},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "client_name": 1,
          "deadline": 1, "cantiere": 1}
     ).sort("created_at", -1).to_list(50)
@@ -405,7 +405,7 @@ async def download_fascicolo_aziendale(user: dict = Depends(get_current_user)):
                 files_added += 1
 
         # Get company name for the ZIP info
-        company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0, "business_name": 1})
+        company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0, "business_name": 1})
         biz_name = (company or {}).get("business_name", "Azienda")
         now_str = datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M")
         zf.writestr("INFO.txt", f"Fascicolo Aziendale — {biz_name}\nGenerato: {now_str}\nDocumenti inclusi: {files_added}\n")
@@ -427,7 +427,7 @@ async def check_commessa_compliance(commessa_id: str, user: dict = Depends(get_c
     from models.company_doc import GLOBAL_DOC_TYPES
 
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "deadline": 1, "cantiere": 1}
     )
     if not commessa:
@@ -499,7 +499,7 @@ async def get_compliance_overview(user: dict = Depends(get_current_user)):
     tid = user["tenant_id"]
     # Include all states except draft — any commessa that has been worked on
     commesse = await db.commesse.find(
-        {"user_id": uid, "tenant_id": tid, "stato": {"$nin": ["bozza"]}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "stato": {"$nin": ["bozza"]}},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "stato": 1,
          "client_id": 1, "fascicolo_tecnico": 1, "fasi_produzione": 1,
          "classe_esecuzione": 1}
@@ -582,25 +582,25 @@ async def get_quality_score(user: dict = Depends(get_current_user)):
     insights = []
 
     # ── Count base entities ──
-    total_rilievi = await db.rilievi.count_documents({"user_id": uid, "tenant_id": tid})
-    total_pos = await db.pos_documents.count_documents({"user_id": uid, "tenant_id": tid})
-    total_invoices = await db.invoices.count_documents({"user_id": uid, "tenant_id": tid})
-    total_certs = await db.certificazioni.count_documents({"user_id": uid, "tenant_id": tid})
-    total_prev = await db.preventivi.count_documents({"user_id": uid, "tenant_id": tid})
-    total_distinte = await db.distinte.count_documents({"user_id": uid, "tenant_id": tid})
-    total_commesse = await db.commesse.count_documents({"user_id": uid, "tenant_id": tid, "stato": {"$nin": ["bozza"]}})
-    total_ddt = await db.ddt_documents.count_documents({"user_id": uid, "tenant_id": tid})
+    total_rilievi = await db.rilievi.count_documents({"user_id": uid, "tenant_id": tenant_match(user)})
+    total_pos = await db.pos_documents.count_documents({"user_id": uid, "tenant_id": tenant_match(user)})
+    total_invoices = await db.invoices.count_documents({"user_id": uid, "tenant_id": tenant_match(user)})
+    total_certs = await db.certificazioni.count_documents({"user_id": uid, "tenant_id": tenant_match(user)})
+    total_prev = await db.preventivi.count_documents({"user_id": uid, "tenant_id": tenant_match(user)})
+    total_distinte = await db.distinte.count_documents({"user_id": uid, "tenant_id": tenant_match(user)})
+    total_commesse = await db.commesse.count_documents({"user_id": uid, "tenant_id": tenant_match(user), "stato": {"$nin": ["bozza"]}})
+    total_ddt = await db.ddt_documents.count_documents({"user_id": uid, "tenant_id": tenant_match(user)})
 
     # Quality Hub data
     total_welders = await db.welders.count_documents({"is_active": True})
     total_instruments = await db.instruments.count_documents({"status": {"$nin": ["fuori_uso"]}})
-    total_audits = await db.audits.count_documents({"user_id": uid, "tenant_id": tid})
-    open_ncs = await db.non_conformities.count_documents({"user_id": uid, "tenant_id": tid, "status": {"$ne": "chiusa"}})
+    total_audits = await db.audits.count_documents({"user_id": uid, "tenant_id": tenant_match(user)})
+    open_ncs = await db.non_conformities.count_documents({"user_id": uid, "tenant_id": tenant_match(user), "status": {"$ne": "chiusa"}})
 
     # Check if user has EN 1090 commesse (with fascicolo tecnico data)
     en1090_count = 0
     ft_ce_count = 0  # Commesse with CE/DoP data in fascicolo tecnico
-    async for c in db.commesse.find({"user_id": uid, "tenant_id": tid, "stato": {"$nin": ["bozza"]}}, {"_id": 0, "fascicolo_tecnico": 1, "classe_esecuzione": 1}).limit(50):
+    async for c in db.commesse.find({"user_id": uid, "tenant_id": tenant_match(user), "stato": {"$nin": ["bozza"]}}, {"_id": 0, "fascicolo_tecnico": 1, "classe_esecuzione": 1}).limit(50):
         ft = c.get("fascicolo_tecnico", {})
         has_ft = any(v for k, v in ft.items() if k != "_id" and v) if ft else False
         if has_ft or c.get("classe_esecuzione"):
@@ -689,10 +689,10 @@ async def get_quality_score(user: dict = Depends(get_current_user)):
 
     # 6. Attività Recente — always relevant
     week_ago = now - timedelta(days=7)
-    recent_sessions = await db.user_sessions.count_documents({"user_id": uid, "tenant_id": tid, "created_at": {"$gte": week_ago}})
+    recent_sessions = await db.user_sessions.count_documents({"user_id": uid, "tenant_id": tenant_match(user), "created_at": {"$gte": week_ago}})
     recent_docs = 0
     for coll_name in ["invoices", "preventivi", "rilievi", "distinte", "ddt_documents"]:
-        recent_docs += await db[coll_name].count_documents({"user_id": uid, "tenant_id": tid, "created_at": {"$gte": week_ago}})
+        recent_docs += await db[coll_name].count_documents({"user_id": uid, "tenant_id": tenant_match(user), "created_at": {"$gte": week_ago}})
     activity_raw = min(recent_sessions, 7) + min(recent_docs, 8)
     activity_score = round(min(activity_raw / 15, 1.0) * 10)
     categories.append(("activity", "Attività Recente", min(activity_score, 10), 10))
@@ -768,7 +768,7 @@ async def get_commesse_semaforo(user: dict = Depends(get_current_user)):
 
     # Fetch active commesse (not chiuso)
     commesse = await db.commesse.find(
-        {"user_id": uid, "tenant_id": tid, "stato": {"$nin": ["chiuso"]}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "stato": {"$nin": ["chiuso"]}},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "stato": 1,
          "client_name": 1, "deadline": 1, "priority": 1, "value": 1,
          "fasi_produzione": 1, "created_at": 1}
@@ -854,32 +854,32 @@ async def get_fascicolo_cantiere(client_id: str, user: dict = Depends(get_curren
 
     # Client info
     client = await db.clients.find_one(
-        {"client_id": client_id, "user_id": uid, "tenant_id": tid}, {"_id": 0}
+        {"client_id": client_id, "user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0}
     )
     if not client:
         raise HTTPException(404, "Cliente non trovato")
 
     # Rilievi
     rilievi = await db.rilievi.find(
-        {"user_id": uid, "tenant_id": tid, "client_id": client_id},
+        {"user_id": uid, "tenant_id": tenant_match(user), "client_id": client_id},
         {"_id": 0, "rilievo_id": 1, "project_name": 1, "status": 1, "location": 1, "created_at": 1}
     ).sort("created_at", -1).to_list(50)
 
     # Distinte
     distinte = await db.distinte.find(
-        {"user_id": uid, "tenant_id": tid, "client_id": client_id},
+        {"user_id": uid, "tenant_id": tenant_match(user), "client_id": client_id},
         {"_id": 0, "distinta_id": 1, "name": 1, "status": 1, "totals": 1, "created_at": 1}
     ).sort("created_at", -1).to_list(50)
 
     # Preventivi
     preventivi = await db.preventivi.find(
-        {"user_id": uid, "tenant_id": tid, "client_id": client_id},
+        {"user_id": uid, "tenant_id": tenant_match(user), "client_id": client_id},
         {"_id": 0, "preventivo_id": 1, "number": 1, "subject": 1, "status": 1, "totals": 1, "compliance_status": 1, "converted_to_invoice_id": 1, "created_at": 1}
     ).sort("created_at", -1).to_list(50)
 
     # Fatture
     invoices = await db.invoices.find(
-        {"user_id": uid, "tenant_id": tid, "client_id": client_id},
+        {"user_id": uid, "tenant_id": tenant_match(user), "client_id": client_id},
         {"_id": 0, "invoice_id": 1, "document_number": 1, "document_type": 1, "status": 1, "totals": 1, "issue_date": 1, "created_at": 1}
     ).sort("created_at", -1).to_list(50)
     for inv in invoices:
@@ -888,14 +888,14 @@ async def get_fascicolo_cantiere(client_id: str, user: dict = Depends(get_curren
 
     # Certificazioni
     certs = await db.certificazioni.find(
-        {"user_id": uid, "tenant_id": tid, "client_id": client_id},
+        {"user_id": uid, "tenant_id": tenant_match(user), "client_id": client_id},
         {"_id": 0, "cert_id": 1, "project_name": 1, "standard": 1, "status": 1, "created_at": 1}
     ).sort("created_at", -1).to_list(50)
 
     # POS — fetched for context but currently not client-filtered
     # (POS are project-based, not always linked to a client_id)
     _ = await db.pos_documents.find(
-        {"user_id": uid, "tenant_id": tid},
+        {"user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0, "pos_id": 1, "project_name": 1, "status": 1, "cantiere": 1, "created_at": 1}
     ).sort("created_at", -1).to_list(50)
 
@@ -999,7 +999,7 @@ async def get_ebitda(
         # Revenue: emitted invoices (fatture emesse)
         rev_pipeline = [
             {"$match": {
-                "user_id": uid, "tenant_id": tid,
+                "user_id": uid, "tenant_id": tenant_match(user),
                 "status": {"$in": ["emessa", "pagata", "inviata_sdi", "accettata"]},
                 "created_at": {"$gte": m_start, "$lt": m_end},
             }},
@@ -1016,7 +1016,7 @@ async def get_ebitda(
         # Costs: received invoices (fatture ricevute)
         cost_pipeline = [
             {"$match": {
-                "user_id": uid, "tenant_id": tid,
+                "user_id": uid, "tenant_id": tenant_match(user),
                 "created_at": {"$gte": m_start, "$lt": m_end},
             }},
             {"$group": {
@@ -1056,7 +1056,7 @@ async def get_ebitda(
 
     # Top expense categories from fatture ricevute
     cat_pipeline = [
-        {"$match": {"user_id": uid, "tenant_id": tid, "created_at": {
+        {"$match": {"user_id": uid, "tenant_id": tenant_match(user), "created_at": {
             "$gte": datetime(year, 1, 1, tzinfo=timezone.utc),
             "$lt": datetime(year + 1, 1, 1, tzinfo=timezone.utc),
         }}},
@@ -1077,7 +1077,7 @@ async def get_ebitda(
     # Payment status breakdown
     paid_pipeline = [
         {"$match": {
-            "user_id": uid, "tenant_id": tid,
+            "user_id": uid, "tenant_id": tenant_match(user),
             "status": {"$in": ["emessa", "pagata", "inviata_sdi", "accettata"]},
             "created_at": {
                 "$gte": datetime(year, 1, 1, tzinfo=timezone.utc),
@@ -1240,7 +1240,7 @@ async def get_cruscotto_finanziario(
 
     commesse_margin = []
     commesse_list = await db.commesse.find(
-        {"user_id": uid, "tenant_id": tid},
+        {"user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0, "commessa_id": 1, "title": 1, "value": 1,
          "moduli.preventivo_id": 1, "client_name": 1}
     ).to_list(100)
@@ -1251,7 +1251,7 @@ async def get_cruscotto_finanziario(
         costi = 0
         if prev_id:
             rdp = await db.rdp.find_one(
-                {"preventivo_id": prev_id, "user_id": uid, "tenant_id": tid},
+                {"preventivo_id": prev_id, "user_id": uid, "tenant_id": tenant_match(user)},
                 {"_id": 0, "risposte": 1}
             )
             if rdp and rdp.get("risposte"):
@@ -1291,7 +1291,7 @@ async def get_cruscotto_finanziario(
 
     # ─── 9. FATTURATO PER CLIENTE (top 10) ────────────────────────
     pipeline_client = [
-        {"$match": {"user_id": uid, "tenant_id": tid, "issue_date": {"$gte": year_start, "$lt": year_end},
+        {"$match": {"user_id": uid, "tenant_id": tenant_match(user), "issue_date": {"$gte": year_start, "$lt": year_end},
                      "status": {"$nin": ["bozza", "annullata"]}}},
         {"$group": {"_id": "$client_id", "totale": {"$sum": "$totals.total_document"}, "n": {"$sum": 1}}},
         {"$sort": {"totale": -1}},
@@ -1310,7 +1310,7 @@ async def get_cruscotto_finanziario(
 
     # ─── 10. FATTURATO PER TIPOLOGIA COMMESSA ─────────────────────
     pipeline_tipo = [
-        {"$match": {"user_id": uid, "tenant_id": tid}},
+        {"$match": {"user_id": uid, "tenant_id": tenant_match(user)}},
         {"$group": {"_id": "$normativa_tipo", "totale": {"$sum": "$value"}, "n": {"$sum": 1}}},
         {"$sort": {"totale": -1}},
     ]
@@ -1363,7 +1363,7 @@ async def morning_briefing(user: dict = Depends(get_current_user)):
 
     # Fatture passive (ricevute) con scadenze pagamento
     fatture_passive = await db.fatture_ricevute.find(
-        {"user_id": uid, "tenant_id": tid, "payment_status": {"$nin": ["pagata"]}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "payment_status": {"$nin": ["pagata"]}},
         {"_id": 0, "fr_id": 1, "fornitore_nome": 1, "numero_documento": 1,
          "scadenze_pagamento": 1, "data_scadenza_pagamento": 1, "totale_documento": 1}
     ).to_list(500)
@@ -1398,7 +1398,7 @@ async def morning_briefing(user: dict = Depends(get_current_user)):
 
     # Fatture attive con scadenze
     fatture_attive = await db.invoices.find(
-        {"user_id": uid, "tenant_id": tid, "payment_status": {"$nin": ["pagata", "paid"]}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "payment_status": {"$nin": ["pagata", "paid"]}},
         {"_id": 0, "invoice_id": 1, "client_name": 1, "document_number": 1,
          "scadenze_pagamento": 1, "totals": 1}
     ).to_list(500)
@@ -1448,7 +1448,7 @@ async def morning_briefing(user: dict = Depends(get_current_user)):
     commesse_allarme = []
     seven_days_ago = now - timedelta(days=7)
     commesse_attive = await db.commesse.find(
-        {"user_id": uid, "tenant_id": tid, "stato": {"$in": ["in_lavorazione", "lavorazione"]}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "stato": {"$in": ["in_lavorazione", "lavorazione"]}},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "client_name": 1,
          "updated_at": 1, "deadline": 1}
     ).to_list(200)
@@ -1478,14 +1478,14 @@ async def morning_briefing(user: dict = Depends(get_current_user)):
     # ── Card 4: Da fare oggi ──
     # Preventivi accettati senza commessa
     prev_accettati = await db.preventivi.find(
-        {"user_id": uid, "tenant_id": tid, "status": "accettato", "hidden_from_planning": {"$ne": True}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "status": "accettato", "hidden_from_planning": {"$ne": True}},
         {"_id": 0, "preventivo_id": 1}
     ).to_list(200)
     prev_ids = [p["preventivo_id"] for p in prev_accettati]
     linked_count = 0
     if prev_ids:
         linked_count = await db.commesse.count_documents({
-            "user_id": uid, "tenant_id": tid,
+            "user_id": uid, "tenant_id": tenant_match(user),
             "$or": [
                 {"moduli.preventivo_id": {"$in": prev_ids}},
                 {"linked_preventivo_id": {"$in": prev_ids}},
@@ -1496,7 +1496,7 @@ async def morning_briefing(user: dict = Depends(get_current_user)):
     # DDT non fatturati da >30gg
     thirty_days_ago = now - timedelta(days=30)
     ddt_non_fatturati = await db.ddt_documents.count_documents({
-        "user_id": uid, "tenant_id": tid,
+        "user_id": uid, "tenant_id": tenant_match(user),
         "status": {"$ne": "fatturato"},
         "created_at": {"$lt": thirty_days_ago},
     })
@@ -1541,7 +1541,7 @@ async def get_executive_dashboard(user: dict = Depends(get_current_user)):
 
     # ── 1. Fetch all active commesse ──
     commesse = await db.commesse.find(
-        {"user_id": uid, "tenant_id": tid, "stato": {"$nin": ["chiuso"]}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "stato": {"$nin": ["chiuso"]}},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "stato": 1,
          "normativa_tipo": 1, "client_name": 1, "value": 1, "deadline": 1,
          "classe_esecuzione": 1, "fasi_produzione": 1}
@@ -1551,7 +1551,7 @@ async def get_executive_dashboard(user: dict = Depends(get_current_user)):
 
     # ── 2. Fetch voci_lavoro to detect per-line normativa ──
     voci = await db.voci_lavoro.find(
-        {"user_id": uid, "tenant_id": tid, "commessa_id": {"$in": cid_list}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "commessa_id": {"$in": cid_list}},
         {"_id": 0, "commessa_id": 1, "normativa_tipo": 1}
     ).to_list(2000)
 
@@ -1581,12 +1581,12 @@ async def get_executive_dashboard(user: dict = Depends(get_current_user)):
         {"_id": 0, "commessa_id": 1, "approvato": 1}
     )}
     report_isp = {r["commessa_id"]: r async for r in db.report_ispezioni.find(
-        {"user_id": uid, "tenant_id": tid, "commessa_id": {"$in": cid_list}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "commessa_id": {"$in": cid_list}},
         {"_id": 0, "commessa_id": 1, "approvato": 1}
     )}
     dop_counts: dict[str, int] = {}
     async for d in db.dop_frazionate.find(
-        {"commessa_id": {"$in": cid_list}, "user_id": uid, "tenant_id": tid},
+        {"commessa_id": {"$in": cid_list}, "user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0, "commessa_id": 1}
     ):
         dop_counts[d["commessa_id"]] = dop_counts.get(d["commessa_id"], 0) + 1
@@ -1705,7 +1705,7 @@ async def get_executive_dashboard(user: dict = Depends(get_current_user)):
                 pass
 
     # Welders
-    async for w in db.welders.find({"user_id": uid, "tenant_id": tid}, {"_id": 0, "name": 1, "qualifications": 1}):
+    async for w in db.welders.find({"user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0, "name": 1, "qualifications": 1}):
         for q in w.get("qualifications", []):
             exp = q.get("expiry_date", "")
             if exp:
@@ -1719,7 +1719,7 @@ async def get_executive_dashboard(user: dict = Depends(get_current_user)):
                     pass
 
     # ITT
-    async for itt in db.verbali_itt.find({"user_id": uid, "tenant_id": tid}, {"_id": 0, "processo": 1, "data_scadenza": 1}):
+    async for itt in db.verbali_itt.find({"user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0, "processo": 1, "data_scadenza": 1}):
         ds = itt.get("data_scadenza", "")
         if ds:
             try:
@@ -1738,7 +1738,7 @@ async def get_executive_dashboard(user: dict = Depends(get_current_user)):
     cam_safety = {"level": "info", "message": "Nessun dato CAM", "commesse": []}
     try:
         all_batches = await db.material_batches.find(
-            {"commessa_id": {"$in": cid_list}, "user_id": uid, "tenant_id": tid, "percentuale_riciclato": {"$ne": None}},
+            {"commessa_id": {"$in": cid_list}, "user_id": uid, "tenant_id": tenant_match(user), "percentuale_riciclato": {"$ne": None}},
             {"_id": 0, "commessa_id": 1, "peso_kg": 1, "percentuale_riciclato": 1, "metodo_produttivo": 1}
         ).to_list(1000)
 
@@ -1804,7 +1804,7 @@ async def get_cantiere_multilivello(user: dict = Depends(get_current_user)):
 
     # 1. Fetch all active commesse
     commesse = await db.commesse.find(
-        {"user_id": uid, "tenant_id": tid, "stato": {"$nin": ["chiuso"]}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "stato": {"$nin": ["chiuso"]}},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "stato": 1,
          "normativa_tipo": 1, "client_name": 1, "value": 1, "deadline": 1,
          "classe_esecuzione": 1, "moduli": 1, "created_at": 1}
@@ -1820,7 +1820,7 @@ async def get_cantiere_multilivello(user: dict = Depends(get_current_user)):
 
     # 2. Fetch obblighi in bulk per commessa via aggregation
     obblighi_pipeline = [
-        {"$match": {"user_id": uid, "tenant_id": tid, "commessa_id": {"$in": cid_list}}},
+        {"$match": {"user_id": uid, "tenant_id": tenant_match(user), "commessa_id": {"$in": cid_list}}},
         {"$group": {
             "_id": {
                 "commessa_id": "$commessa_id",
@@ -1872,7 +1872,7 @@ async def get_cantiere_multilivello(user: dict = Depends(get_current_user)):
 
     # 3. Fetch top blockers per commessa (limit 5 per commessa for the card)
     top_blockers_raw = await db.obblighi_commessa.find(
-        {"user_id": uid, "tenant_id": tid, "commessa_id": {"$in": cid_list},
+        {"user_id": uid, "tenant_id": tenant_match(user), "commessa_id": {"$in": cid_list},
          "blocking_level": "hard_block",
          "status": {"$in": ["nuovo", "da_verificare", "in_corso", "bloccante"]}},
         {"_id": 0, "commessa_id": 1, "title": 1, "source_module": 1,
@@ -1889,7 +1889,7 @@ async def get_cantiere_multilivello(user: dict = Depends(get_current_user)):
 
     # 4. Fetch cantieri sicurezza per commessa (for POS gate status)
     cantieri = await db.cantieri_sicurezza.find(
-        {"user_id": uid, "tenant_id": tid, "$or": [
+        {"user_id": uid, "tenant_id": tenant_match(user), "$or": [
             {"commessa_id": {"$in": cid_list}},
             {"parent_commessa_id": {"$in": cid_list}},
         ]},
@@ -1912,7 +1912,7 @@ async def get_cantiere_multilivello(user: dict = Depends(get_current_user)):
 
     # 5. Fetch rami normativi per commessa
     rami = await db.rami_normativi.find(
-        {"user_id": uid, "tenant_id": tid, "commessa_id": {"$in": cid_list}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "commessa_id": {"$in": cid_list}},
         {"_id": 0, "ramo_id": 1, "commessa_id": 1, "codice_ramo": 1,
          "normativa": 1, "stato": 1}
     ).to_list(500)
@@ -1931,7 +1931,7 @@ async def get_cantiere_multilivello(user: dict = Depends(get_current_user)):
     # 6. Fetch emissioni per ramo
     all_ramo_ids = [r.get("ramo_id") for ramo_list in rami_map.values() for r in ramo_list]
     emissioni = await db.emissioni_documentali.find(
-        {"user_id": uid, "tenant_id": tid, "ramo_id": {"$in": all_ramo_ids}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "ramo_id": {"$in": all_ramo_ids}},
         {"_id": 0, "emissione_id": 1, "ramo_id": 1, "codice_emissione": 1,
          "stato": 1, "gate_result": 1}
     ).to_list(1000)
@@ -1962,7 +1962,7 @@ async def get_cantiere_multilivello(user: dict = Depends(get_current_user)):
 
     # 7. Fetch pacchetti documentali per commessa
     pacchetti = await db.pacchetti_documentali.find(
-        {"user_id": uid, "tenant_id": tid, "commessa_id": {"$in": cid_list}, "status": {"$ne": "annullato"}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "commessa_id": {"$in": cid_list}, "status": {"$ne": "annullato"}},
         {"_id": 0, "pack_id": 1, "commessa_id": 1, "label": 1,
          "template_code": 1, "items": 1}
     ).to_list(200)
@@ -1988,7 +1988,7 @@ async def get_cantiere_multilivello(user: dict = Depends(get_current_user)):
 
     # 8. Fetch committenza analyses per commessa
     analisi_raw = await db.analisi_committenza.find(
-        {"user_id": uid, "tenant_id": tid, "commessa_id": {"$in": cid_list}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "commessa_id": {"$in": cid_list}},
         {"_id": 0, "analysis_id": 1, "commessa_id": 1, "status": 1,
          "extracted_obligations": 1, "anomalies": 1, "mismatches": 1}
     ).to_list(200)
@@ -2007,7 +2007,7 @@ async def get_cantiere_multilivello(user: dict = Depends(get_current_user)):
 
     # 9. Fetch pacchetti committenza
     pkg_committenza = await db.pacchetti_committenza.find(
-        {"user_id": uid, "tenant_id": tid, "commessa_id": {"$in": cid_list}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "commessa_id": {"$in": cid_list}},
         {"_id": 0, "package_id": 1, "commessa_id": 1, "title": 1,
          "status": 1, "document_ids": 1}
     ).to_list(200)

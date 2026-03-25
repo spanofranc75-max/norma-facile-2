@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse, FileResponse
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 
 router = APIRouter(prefix="/admin/backup", tags=["backup"])
 logger = logging.getLogger(__name__)
@@ -167,7 +167,7 @@ async def start_backup(user: dict = Depends(get_current_user)):
     backup_id = f"bk_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uid[:8]}"
     _backup_jobs[backup_id] = {
         "status": "in_corso",
-        "user_id": uid, "tenant_id": tid,
+        "user_id": uid, "tenant_id": tenant_match(user),
         "progress": "Avvio...",
         "started_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -228,7 +228,7 @@ async def export_backup(user: dict = Depends(get_current_user)):
             "version": "2.0",
             "app": "1090 Norma Facile",
             "created_at": now.isoformat(),
-            "user_id": uid, "tenant_id": tid,
+            "user_id": uid, "tenant_id": tenant_match(user),
             "user_email": user.get("email", ""),
             "collections": {},
         },
@@ -236,7 +236,7 @@ async def export_backup(user: dict = Depends(get_current_user)):
             "date": now.isoformat(),
             "version": "2.0",
             "app": "1090 Norma Facile",
-            "user_id": uid, "tenant_id": tid,
+            "user_id": uid, "tenant_id": tenant_match(user),
             "user_email": user.get("email", ""),
         },
         "data": {},
@@ -247,7 +247,7 @@ async def export_backup(user: dict = Depends(get_current_user)):
     for coll_name in BACKUP_COLLECTIONS:
         try:
             docs = await db[coll_name].find(
-                {"user_id": uid, "tenant_id": tid}, {"_id": 0}
+                {"user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0}
             ).to_list(None)
             docs_clean = [_strip_large_base64(d) for d in docs]
             backup["data"][coll_name] = docs_clean
@@ -267,7 +267,7 @@ async def export_backup(user: dict = Depends(get_current_user)):
     filename = f"backup_normafacile_{date_str}.json"
 
     await db.backup_log.insert_one({
-        "user_id": uid, "tenant_id": tid,
+        "user_id": uid, "tenant_id": tenant_match(user),
         "date": now,
         "filename": filename,
         "total_records": total_records,
@@ -288,7 +288,7 @@ async def get_last_backup(user: dict = Depends(get_current_user)):
     uid = user["user_id"]
     tid = user["tenant_id"]
     last = await db.backup_log.find_one(
-        {"user_id": uid, "tenant_id": tid},
+        {"user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0},
         sort=[("date", -1)],
     )
@@ -314,7 +314,7 @@ async def get_backup_stats(user: dict = Depends(get_current_user)):
     total = 0
     for coll_name in BACKUP_COLLECTIONS:
         try:
-            count = await db[coll_name].count_documents({"user_id": uid, "tenant_id": tid})
+            count = await db[coll_name].count_documents({"user_id": uid, "tenant_id": tenant_match(user)})
             stats[coll_name] = count
             total += count
         except Exception:
@@ -328,7 +328,7 @@ async def get_backup_history(user: dict = Depends(get_current_user)):
     uid = user["user_id"]
     tid = user["tenant_id"]
     logs = await db.backup_log.find(
-        {"user_id": uid, "tenant_id": tid},
+        {"user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0},
     ).sort("date", -1).to_list(20)
 
@@ -378,7 +378,7 @@ async def restore_backup(
         for coll_name in BACKUP_COLLECTIONS:
             try:
                 coll = db[coll_name]
-                del_result = await coll.delete_many({"user_id": uid, "tenant_id": tid})
+                del_result = await coll.delete_many({"user_id": uid, "tenant_id": tenant_match(user)})
                 total_deleted += del_result.deleted_count
             except Exception as e:
                 logger.warning(f"Wipe error in {coll_name}: {e}")
@@ -437,7 +437,7 @@ async def restore_backup(
 
                     existing = await coll.find_one(
                         {"_content_hash": doc_hash,
-                         "user_id": uid, "tenant_id": tid}
+                         "user_id": uid, "tenant_id": tenant_match(user)}
                     )
                     if not existing:
                         doc["_content_hash"] = doc_hash

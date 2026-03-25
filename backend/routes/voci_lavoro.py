@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 import uuid
 
 from core.database import get_database
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 
 router = APIRouter(prefix="/commesse/{commessa_id}/voci", tags=["voci_lavoro"])
 db = get_database()
@@ -33,7 +33,7 @@ class VoceUpdate(BaseModel):
 async def list_voci(commessa_id: str, user=Depends(get_current_user)):
     """Lista voci di lavoro di una commessa."""
     voci = await db.voci_lavoro.find(
-        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     ).sort("ordine", 1).to_list(100)
     return {"voci": voci}
@@ -44,7 +44,7 @@ async def create_voce(commessa_id: str, body: VoceCreate, user=Depends(get_curre
     """Crea una nuova voce di lavoro."""
     # Verifica che la commessa esista
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "commessa_id": 1}
     )
     if not commessa:
@@ -54,12 +54,12 @@ async def create_voce(commessa_id: str, body: VoceCreate, user=Depends(get_curre
         raise HTTPException(status_code=400, detail="normativa_tipo deve essere EN_1090, EN_13241 o GENERICA")
 
     # Calcola ordine (prossimo disponibile)
-    count = await db.voci_lavoro.count_documents({"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+    count = await db.voci_lavoro.count_documents({"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
 
     voce = {
         "voce_id": f"voce_{uuid.uuid4().hex[:12]}",
         "commessa_id": commessa_id,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "descrizione": body.descrizione.strip(),
         "normativa_tipo": body.normativa_tipo,
         "classe_exc": body.classe_exc if body.normativa_tipo == "EN_1090" else "",
@@ -94,7 +94,7 @@ async def update_voce(commessa_id: str, voce_id: str, body: VoceUpdate, user=Dep
     update_fields["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     result = await db.voci_lavoro.update_one(
-        {"voce_id": voce_id, "commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"voce_id": voce_id, "commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"$set": update_fields}
     )
     if result.matched_count == 0:
@@ -108,7 +108,7 @@ async def update_voce(commessa_id: str, voce_id: str, body: VoceUpdate, user=Dep
 async def delete_voce(commessa_id: str, voce_id: str, user=Depends(get_current_user)):
     """Elimina una voce di lavoro."""
     result = await db.voci_lavoro.delete_one(
-        {"voce_id": voce_id, "commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+        {"voce_id": voce_id, "commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Voce non trovata")

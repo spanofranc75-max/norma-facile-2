@@ -16,7 +16,7 @@ from collections import defaultdict
 from fastapi import APIRouter, Depends
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 
 router = APIRouter(prefix="/kpi", tags=["kpi"])
 logger = logging.getLogger(__name__)

@@ -13,6 +13,28 @@ GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
 
 
+
+def tenant_filter(user: dict) -> dict:
+    """Build a MongoDB filter dict that matches the user's tenant.
+    
+    Resilient: also matches documents that don't have tenant_id yet
+    (pre-migration data). This avoids empty results on production
+    databases that haven't been fully migrated.
+    """
+    tid = user.get("tenant_id", "default")
+    return {"$or": [{"tenant_id": tid}, {"tenant_id": {"$exists": False}}]}
+
+
+def tenant_match(user: dict) -> str:
+    """Returns the user's tenant_id string — safe for both queries AND inserts.
+    
+    The startup migration dynamically backfills ALL collections,
+    so exact string match is reliable.
+    """
+    return user.get("tenant_id", "default")
+
+
+
 async def exchange_session_id(session_id: str) -> dict:
     """
     Exchange session_id from Emergent Auth for user data and session_token.

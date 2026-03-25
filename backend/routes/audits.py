@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
 from fastapi.responses import FileResponse
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from models.audit import (
     AuditCreate, AuditResponse, AuditList,
     NCCreate, NCUpdate, NCResponse, NCList,
@@ -122,8 +122,8 @@ async def list_audits(
     year: Optional[int] = Query(None),
     user: dict = Depends(get_current_user),
 ):
-    all_audits = await db.audits.find({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}).sort("date", -1).to_list(500)
-    all_ncs = await db.non_conformities.find({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}).to_list(1000)
+    all_audits = await db.audits.find({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}).sort("date", -1).to_list(500)
+    all_ncs = await db.non_conformities.find({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}).to_list(1000)
     stats = _compute_audit_stats(all_audits, all_ncs)
 
     query = {}
@@ -153,10 +153,10 @@ async def list_audits(
 
 @router.get("/audits/{audit_id}", response_model=AuditResponse)
 async def get_audit(audit_id: str, user: dict = Depends(get_current_user)):
-    doc = await db.audits.find_one({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    doc = await db.audits.find_one({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Audit non trovato")
-    all_ncs = await db.non_conformities.find({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}).to_list(100)
+    all_ncs = await db.non_conformities.find({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}).to_list(100)
     return AuditResponse(**_audit_to_response(doc, all_ncs))
 
 
@@ -194,7 +194,7 @@ async def create_audit(
 
     doc = {
         "audit_id": audit_id,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "date": date.strip(),
         "audit_type": audit_type.strip(),
         "auditor_name": auditor_name.strip(),
@@ -213,7 +213,7 @@ async def create_audit(
 
 @router.put("/audits/{audit_id}", response_model=AuditResponse)
 async def update_audit(audit_id: str, payload: AuditCreate, user: dict = Depends(get_current_user)):
-    existing = await db.audits.find_one({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    existing = await db.audits.find_one({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not existing:
         raise HTTPException(404, "Audit non trovato")
 
@@ -228,15 +228,15 @@ async def update_audit(audit_id: str, payload: AuditCreate, user: dict = Depends
         "next_audit_date": payload.next_audit_date,
         "updated_at": now_iso,
     }
-    await db.audits.update_one({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"$set": update})
-    updated = await db.audits.find_one({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
-    all_ncs = await db.non_conformities.find({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}).to_list(100)
+    await db.audits.update_one({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"$set": update})
+    updated = await db.audits.find_one({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
+    all_ncs = await db.non_conformities.find({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}).to_list(100)
     return AuditResponse(**_audit_to_response(updated, all_ncs))
 
 
 @router.delete("/audits/{audit_id}")
 async def delete_audit(audit_id: str, user: dict = Depends(get_current_user)):
-    doc = await db.audits.find_one({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    doc = await db.audits.find_one({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Audit non trovato")
 
@@ -246,7 +246,7 @@ async def delete_audit(audit_id: str, user: dict = Depends(get_current_user)):
         if os.path.exists(fpath):
             os.remove(fpath)
 
-    await db.audits.delete_one({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+    await db.audits.delete_one({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     # Unlink NCs from this audit (don't delete them)
     await db.non_conformities.update_many({"audit_id": audit_id}, {"$set": {"audit_id": None}})
     return {"message": "Audit eliminato", "audit_id": audit_id}
@@ -254,7 +254,7 @@ async def delete_audit(audit_id: str, user: dict = Depends(get_current_user)):
 
 @router.get("/audits/{audit_id}/report/download")
 async def download_audit_report(audit_id: str, user: dict = Depends(get_current_user)):
-    doc = await db.audits.find_one({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    doc = await db.audits.find_one({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Audit non trovato")
     sf = doc.get("safe_filename")
@@ -276,8 +276,8 @@ async def list_ncs(
     audit_id: Optional[str] = Query(None),
     user: dict = Depends(get_current_user),
 ):
-    all_ncs = await db.non_conformities.find({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}).sort("date", -1).to_list(1000)
-    all_audits = await db.audits.find({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}).to_list(500)
+    all_ncs = await db.non_conformities.find({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}).sort("date", -1).to_list(1000)
+    all_audits = await db.audits.find({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}).to_list(500)
     audit_map = {a["audit_id"]: a for a in all_audits}
 
     nc_stats = {
@@ -323,14 +323,14 @@ async def create_nc(payload: NCCreate, user: dict = Depends(get_current_user)):
     now_iso = datetime.now(timezone.utc).isoformat()
 
     if payload.audit_id:
-        audit = await db.audits.find_one({"audit_id": payload.audit_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+        audit = await db.audits.find_one({"audit_id": payload.audit_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
         if not audit:
             raise HTTPException(404, "Audit di riferimento non trovato")
 
     doc = {
         "nc_id": nc_id,
         "nc_number": nc_number,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "date": payload.date,
         "description": payload.description.strip(),
         "source": payload.source,
@@ -353,7 +353,7 @@ async def create_nc(payload: NCCreate, user: dict = Depends(get_current_user)):
 
 @router.post("/audits/{audit_id}/ncs", response_model=NCResponse)
 async def create_nc_for_audit(audit_id: str, payload: NCCreate, user: dict = Depends(get_current_user)):
-    audit = await db.audits.find_one({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    audit = await db.audits.find_one({"audit_id": audit_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not audit:
         raise HTTPException(404, "Audit non trovato")
 
@@ -365,7 +365,7 @@ async def create_nc_for_audit(audit_id: str, payload: NCCreate, user: dict = Dep
     doc = {
         "nc_id": nc_id,
         "nc_number": nc_number,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "date": payload.date,
         "description": payload.description.strip(),
         "source": payload.source or f"Audit {audit.get('date','')}",
@@ -388,17 +388,17 @@ async def create_nc_for_audit(audit_id: str, payload: NCCreate, user: dict = Dep
 
 @router.get("/ncs/{nc_id}", response_model=NCResponse)
 async def get_nc(nc_id: str, user: dict = Depends(get_current_user)):
-    doc = await db.non_conformities.find_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    doc = await db.non_conformities.find_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Non conformità non trovata")
-    all_audits = await db.audits.find({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}).to_list(500)
+    all_audits = await db.audits.find({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}).to_list(500)
     audit_map = {a["audit_id"]: a for a in all_audits}
     return NCResponse(**_nc_to_response(doc, audit_map))
 
 
 @router.put("/ncs/{nc_id}", response_model=NCResponse)
 async def update_nc(nc_id: str, payload: NCUpdate, user: dict = Depends(get_current_user)):
-    doc = await db.non_conformities.find_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    doc = await db.non_conformities.find_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Non conformità non trovata")
 
@@ -419,16 +419,16 @@ async def update_nc(nc_id: str, payload: NCUpdate, user: dict = Depends(get_curr
     if payload.notes is not None:
         update["notes"] = payload.notes.strip() or None
 
-    await db.non_conformities.update_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"$set": update})
-    updated = await db.non_conformities.find_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
-    all_audits = await db.audits.find({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}).to_list(500)
+    await db.non_conformities.update_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"$set": update})
+    updated = await db.non_conformities.find_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
+    all_audits = await db.audits.find({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}).to_list(500)
     audit_map = {a["audit_id"]: a for a in all_audits}
     return NCResponse(**_nc_to_response(updated, audit_map))
 
 
 @router.put("/ncs/{nc_id}/close", response_model=NCResponse)
 async def close_nc(nc_id: str, user: dict = Depends(get_current_user)):
-    doc = await db.non_conformities.find_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    doc = await db.non_conformities.find_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Non conformità non trovata")
     if doc.get("status") == "chiusa":
@@ -447,15 +447,15 @@ async def close_nc(nc_id: str, user: dict = Depends(get_current_user)):
             "updated_at": now_iso,
         }},
     )
-    updated = await db.non_conformities.find_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
-    all_audits = await db.audits.find({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}).to_list(500)
+    updated = await db.non_conformities.find_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
+    all_audits = await db.audits.find({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}).to_list(500)
     audit_map = {a["audit_id"]: a for a in all_audits}
     return NCResponse(**_nc_to_response(updated, audit_map))
 
 
 @router.put("/ncs/{nc_id}/reopen", response_model=NCResponse)
 async def reopen_nc(nc_id: str, user: dict = Depends(get_current_user)):
-    doc = await db.non_conformities.find_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    doc = await db.non_conformities.find_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Non conformità non trovata")
     if doc.get("status") != "chiusa":
@@ -466,16 +466,16 @@ async def reopen_nc(nc_id: str, user: dict = Depends(get_current_user)):
         {"nc_id": nc_id},
         {"$set": {"status": "aperta", "closure_date": None, "closed_by": None, "updated_at": now_iso}},
     )
-    updated = await db.non_conformities.find_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
-    all_audits = await db.audits.find({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}).to_list(500)
+    updated = await db.non_conformities.find_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
+    all_audits = await db.audits.find({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}).to_list(500)
     audit_map = {a["audit_id"]: a for a in all_audits}
     return NCResponse(**_nc_to_response(updated, audit_map))
 
 
 @router.delete("/ncs/{nc_id}")
 async def delete_nc(nc_id: str, user: dict = Depends(get_current_user)):
-    doc = await db.non_conformities.find_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    doc = await db.non_conformities.find_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Non conformità non trovata")
-    await db.non_conformities.delete_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+    await db.non_conformities.delete_one({"nc_id": nc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     return {"message": "Non conformità eliminata", "nc_id": nc_id}

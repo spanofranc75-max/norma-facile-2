@@ -1,7 +1,7 @@
 """Demo Mode routes — reset, status, and demo login."""
 from fastapi import APIRouter, Depends, HTTPException, Response
 from core.database import db
-from core.security import get_current_user, create_download_token
+from core.security import get_current_user, create_download_token, tenant_match
 from datetime import datetime, timezone, timedelta
 import logging
 import uuid
@@ -112,7 +112,7 @@ async def demo_login(response: Response):
     return {
         "message": "Login demo effettuato",
         "user": {
-            "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+            "user_id": user["user_id"], "tenant_id": tenant_match(user),
             "email": user.get("email"),
             "name": user.get("name"),
             "role": user.get("role"),

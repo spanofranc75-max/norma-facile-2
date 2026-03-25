@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from services.client_snapshot import build_snapshot
 
 router = APIRouter(prefix="/admin/migration", tags=["migration"])

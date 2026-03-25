@@ -5,7 +5,7 @@ import base64
 import logging
 from datetime import datetime, timezone
 
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.database import db
 from models.sopralluogo import (
     SopralluogoCreate, SopralluogoUpdate,
@@ -71,11 +71,11 @@ async def _seed_default_articoli(user_id: str):
 @router.get("/articoli-catalogo")
 async def list_articoli(user: dict = Depends(get_current_user)):
     """List all articles in the perizia catalog. Seeds defaults if empty."""
-    count = await db[ARTICOLI_COLLECTION].count_documents({"user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+    count = await db[ARTICOLI_COLLECTION].count_documents({"user_id": user["user_id"], "tenant_id": tenant_match(user)})
     if count == 0:
         await _seed_default_articoli(user["user_id"])
     items = await db[ARTICOLI_COLLECTION].find(
-        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     ).sort("categoria", 1).to_list(500)
     return {"items": items}
 
@@ -85,7 +85,7 @@ async def create_articolo(data: ArticoloPeriziaCreate, user: dict = Depends(get_
     now = datetime.now(timezone.utc).isoformat()
     doc = {
         "articolo_id": f"art_{uuid.uuid4().hex[:8]}",
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         **data.model_dump(),
         "created_at": now,
         "updated_at": now,
@@ -100,7 +100,7 @@ async def update_articolo(articolo_id: str, data: ArticoloPeriziaUpdate, user: d
     raw = {k: v for k, v in data.model_dump(exclude_unset=True).items()}
     raw["updated_at"] = datetime.now(timezone.utc).isoformat()
     result = await db[ARTICOLI_COLLECTION].find_one_and_update(
-        {"articolo_id": articolo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"articolo_id": articolo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"$set": raw},
         return_document=True,
         projection={"_id": 0},
@@ -113,7 +113,7 @@ async def update_articolo(articolo_id: str, data: ArticoloPeriziaUpdate, user: d
 @router.delete("/articoli-catalogo/{articolo_id}")
 async def delete_articolo(articolo_id: str, user: dict = Depends(get_current_user)):
     result = await db[ARTICOLI_COLLECTION].delete_one(
-        {"articolo_id": articolo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+        {"articolo_id": articolo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
     if result.deleted_count == 0:
         raise HTTPException(404, "Articolo non trovato")
@@ -128,7 +128,7 @@ async def create_sopralluogo(data: SopralluogoCreate, user: dict = Depends(get_c
     now = datetime.now(timezone.utc).isoformat()
     doc = {
         "sopralluogo_id": f"sop_{uuid.uuid4().hex[:12]}",
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "document_number": doc_number,
         **data.model_dump(),
         "foto": [],
@@ -153,7 +153,7 @@ async def list_sopralluoghi(
     skip: int = 0,
     user: dict = Depends(get_current_user),
 ):
-    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if search:
         query["$or"] = [
             {"document_number": {"$regex": search, "$options": "i"}},
@@ -185,7 +185,7 @@ async def list_sopralluoghi(
 @router.get("/{sopralluogo_id}")
 async def get_sopralluogo(sopralluogo_id: str, user: dict = Depends(get_current_user)):
     doc = await db[COLLECTION].find_one(
-        {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0},
     )
     if not doc:
@@ -202,7 +202,7 @@ async def update_sopralluogo(sopralluogo_id: str, data: SopralluogoUpdate, user:
     raw = {k: v for k, v in data.model_dump(exclude_unset=True).items()}
     raw["updated_at"] = datetime.now(timezone.utc).isoformat()
     result = await db[COLLECTION].find_one_and_update(
-        {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"$set": raw},
         return_document=True,
         projection={"_id": 0},
@@ -214,7 +214,7 @@ async def update_sopralluogo(sopralluogo_id: str, data: SopralluogoUpdate, user:
 
 @router.delete("/{sopralluogo_id}")
 async def delete_sopralluogo(sopralluogo_id: str, user: dict = Depends(get_current_user)):
-    result = await db[COLLECTION].delete_one({"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+    result = await db[COLLECTION].delete_one({"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     if result.deleted_count == 0:
         raise HTTPException(404, "Sopralluogo non trovato")
     await log_activity(user, "delete", "sopralluogo", sopralluogo_id)
@@ -230,7 +230,7 @@ async def upload_foto(
     label: str = Form("foto"),
     user: dict = Depends(get_current_user),
 ):
-    doc = await db[COLLECTION].find_one({"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+    doc = await db[COLLECTION].find_one({"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     if not doc:
         raise HTTPException(404, "Sopralluogo non trovato")
 
@@ -262,7 +262,7 @@ async def upload_foto(
 @router.delete("/{sopralluogo_id}/foto/{foto_id}")
 async def delete_foto(sopralluogo_id: str, foto_id: str, user: dict = Depends(get_current_user)):
     result = await db[COLLECTION].update_one(
-        {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"$pull": {"foto": {"foto_id": foto_id}}},
     )
     if result.modified_count == 0:
@@ -286,7 +286,7 @@ async def download_foto(path: str, user: dict = Depends(get_current_user)):
 async def analizza_sopralluogo(sopralluogo_id: str, user: dict = Depends(get_current_user)):
     """Run AI Vision analysis on uploaded photos."""
     doc = await db[COLLECTION].find_one(
-        {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0},
     )
     if not doc:
@@ -318,7 +318,7 @@ async def analizza_sopralluogo(sopralluogo_id: str, user: dict = Depends(get_cur
     result = await analyze_photos(photo_data, doc.get("descrizione_utente", ""), tipo_perizia=tipo_perizia)
 
     # Match materials to catalog articles
-    articoli = await db[ARTICOLI_COLLECTION].find({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}).to_list(200)
+    articoli = await db[ARTICOLI_COLLECTION].find({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}).to_list(200)
     materiali = result.get("materiali_suggeriti", [])
     for mat in materiali:
         keyword = mat.get("keyword", "").lower()
@@ -359,7 +359,7 @@ async def genera_preventivo(
     single-line quote with synthetic text + reference to the perizia.
     """
     doc = await db[COLLECTION].find_one(
-        {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0},
     )
     if not doc:
@@ -479,7 +479,7 @@ async def genera_preventivo(
 
     preventivo = {
         "preventivo_id": prev_id,
-        "user_id": uid, "tenant_id": tid,
+        "user_id": uid, "tenant_id": tenant_match(user),
         "number": prev_number,
         "client_id": doc.get("client_id", ""),
         "subject": f"Messa a Norma — {titolo_variante} — Perizia {doc_number}",
@@ -528,7 +528,7 @@ async def genera_preventivo(
 async def genera_pdf_perizia(sopralluogo_id: str, user: dict = Depends(get_current_user)):
     """Generate a PDF perizia report with photos and analysis."""
     doc = await db[COLLECTION].find_one(
-        {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0},
     )
     if not doc:
@@ -538,7 +538,7 @@ async def genera_pdf_perizia(sopralluogo_id: str, user: dict = Depends(get_curre
         raise HTTPException(400, "Esegui prima l'analisi AI per generare il PDF")
 
     # Get company settings
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
 
     # Enrich client name
     if doc.get("client_id"):
@@ -580,7 +580,7 @@ async def invia_perizia_email(
     """Send the perizia PDF to the client via email with custom subject/body."""
     payload = payload or {}
     doc = await db[COLLECTION].find_one(
-        {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0},
     )
     if not doc:
@@ -600,7 +600,7 @@ async def invia_perizia_email(
         raise HTTPException(400, "Il cliente non ha un indirizzo email configurato. Aggiungi l'email nella scheda cliente.")
 
     # Generate PDF
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
 
     photos_b64 = []
     for foto in doc.get("foto", []):

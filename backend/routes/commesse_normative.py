@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.database import db
 from services.commesse_normative_service import (
     get_ramo, crea_ramo,
@@ -116,7 +116,7 @@ async def genera_rami_da_istruttoria(preventivo_id: str, user: dict = Depends(ge
     tid = user["tenant_id"]
 
     istr = await db.istruttorie.find_one(
-        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not istr:
@@ -128,7 +128,7 @@ async def genera_rami_da_istruttoria(preventivo_id: str, user: dict = Depends(ge
     # Trova la commessa collegata
     # 1) Da commesse_preistruite
     preistruita = await db.commesse_preistruite.find_one(
-        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0, "commessa_id": 1}
     )
 
@@ -140,7 +140,7 @@ async def genera_rami_da_istruttoria(preventivo_id: str, user: dict = Depends(ge
     if not commessa_id:
         # Cerca nelle commesse per preventivo linkato
         commessa = await db.commesse.find_one(
-            {"user_id": uid, "tenant_id": tid, "$or": [
+            {"user_id": uid, "tenant_id": tenant_match(user), "$or": [
                 {"moduli.preventivo_id": preventivo_id},
                 {"linked_preventivo_id": preventivo_id},
             ]},

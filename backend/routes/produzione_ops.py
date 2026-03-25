@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from routes.commessa_ops_common import (
     COLL, get_commessa_or_404, ensure_ops_fields,
     ts, push_event, build_update_with_event,

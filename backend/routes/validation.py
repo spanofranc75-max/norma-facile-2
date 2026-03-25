@@ -8,7 +8,7 @@ import logging
 import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.database import db
 from core.rate_limiter import limiter
 from services.ai_compliance_engine import analizza_preventivo_completo
@@ -68,7 +68,7 @@ async def run_single_validation(request: Request, preventivo_id: str, user: dict
     doc = {
         "validation_id": val_id,
         "preventivo_id": preventivo_id,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "scorecard": scorecard,
         "ai_result_raw": {
             "classificazione": ai_result.get("classificazione"),
@@ -141,7 +141,7 @@ async def run_batch_validation(request: Request, body: dict = None, user: dict =
                 {"$set": {
                     "validation_id": val_id,
                     "preventivo_id": pid,
-                    "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                    "user_id": user["user_id"], "tenant_id": tenant_match(user),
                     "scorecard": scorecard,
                     "ai_result_raw": {
                         "classificazione": ai_result.get("classificazione"),
@@ -164,7 +164,7 @@ async def run_batch_validation(request: Request, body: dict = None, user: dict =
             {"tipo": "aggregato"},
             {"$set": {
                 "tipo": "aggregato",
-                "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                "user_id": user["user_id"], "tenant_id": tenant_match(user),
                 "aggregato": aggregato,
                 "n_risultati": len(results),
                 "n_errori": len(errors),
@@ -184,7 +184,7 @@ async def run_batch_validation(request: Request, body: dict = None, user: dict =
 async def get_validation_results(user: dict = Depends(get_current_user)):
     """Recupera tutti i risultati di validazione salvati."""
     docs = await db.validazioni_p1.find(
-        {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "scorecard": {"$exists": True}},
+        {"user_id": user["user_id"], "tenant_id": tenant_match(user), "scorecard": {"$exists": True}},
         {"_id": 0}
     ).sort("created_at", -1).to_list(50)
 

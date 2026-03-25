@@ -16,7 +16,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 
 router = APIRouter(prefix="/commesse", tags=["sal"])
 logger = logging.getLogger(__name__)
@@ -105,7 +105,7 @@ async def calcola_sal(cid: str, user: dict = Depends(get_current_user)):
 
     # 6. Acconti gia emessi
     acconti = await db.sal_acconti.find(
-        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     ).sort("created_at", 1).to_list(50)
 
@@ -160,7 +160,7 @@ async def crea_acconto(cid: str, data: AccontoCreate, user: dict = Depends(get_c
 
     # Check we're not exceeding total
     existing = await db.sal_acconti.find(
-        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "importo": 1}
     ).to_list(50)
     totale_precedente = sum(a.get("importo", 0) for a in existing)
@@ -179,7 +179,7 @@ async def crea_acconto(cid: str, data: AccontoCreate, user: dict = Depends(get_c
     acconto = {
         "acconto_id": acconto_id,
         "commessa_id": cid,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "numero_progressivo": numero_progressivo,
         "percentuale": data.percentuale,
         "importo": importo,
@@ -214,7 +214,7 @@ async def genera_fattura_da_acconto(cid: str, acconto_id: str, user: dict = Depe
 
     now = datetime.now(timezone.utc)
     year = now.strftime("%Y")
-    count = await db.invoices.count_documents({"user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+    count = await db.invoices.count_documents({"user_id": user["user_id"], "tenant_id": tenant_match(user)})
     invoice_id = f"inv_{uuid.uuid4().hex[:12]}"
     invoice_number = f"FT-{year}-{count + 1:04d}"
 
@@ -223,7 +223,7 @@ async def genera_fattura_da_acconto(cid: str, acconto_id: str, user: dict = Depe
 
     invoice = {
         "invoice_id": invoice_id,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "number": invoice_number,
         "type": "fattura",
         "document_type": "fattura",
@@ -274,7 +274,7 @@ async def storico_sal(cid: str, user: dict = Depends(get_current_user)):
     """Storico completo SAL e acconti per la commessa."""
     await _get_commessa(cid, user["user_id"], user["tenant_id"])
     acconti = await db.sal_acconti.find(
-        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     ).sort("created_at", 1).to_list(50)
 

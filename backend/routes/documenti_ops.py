@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from io import BytesIO
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from routes.commessa_ops_common import (
     COLL, DOC_COLL, get_commessa_or_404, ensure_ops_fields,
     ts, new_id, push_event, build_update_with_event,
@@ -45,7 +45,7 @@ async def upload_document(
     doc = {
         "doc_id": doc_id,
         "commessa_id": cid,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "nome_file": file.filename or "documento",
         "tipo": tipo if tipo in ALLOWED_DOC_TYPES else "altro",
         "content_type": file.content_type or "application/octet-stream",
@@ -74,7 +74,7 @@ async def list_documents(cid: str, user: dict = Depends(get_current_user)):
     """List all documents for a commessa (without file content)."""
     await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     docs = await db[DOC_COLL].find(
-        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "file_base64": 0}  # Exclude heavy content
     ).sort("uploaded_at", -1).to_list(200)
     return {"documents": docs, "total": len(docs)}
@@ -84,7 +84,7 @@ async def list_documents(cid: str, user: dict = Depends(get_current_user)):
 async def download_document(cid: str, doc_id: str, user: dict = Depends(get_current_user)):
     """Download a document."""
     doc = await db[DOC_COLL].find_one(
-        {"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+        {"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
     if not doc:
         raise HTTPException(404, "Documento non trovato")
@@ -108,17 +108,17 @@ async def delete_document(cid: str, doc_id: str, user: dict = Depends(get_curren
     # Usa 3 strategie di ricerca per garantire pulizia totale.
     # ══════════════════════════════════════════════════════════════════════
 
-    doc = await db[DOC_COLL].find_one({"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    doc = await db[DOC_COLL].find_one({"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Documento non trovato")
 
-    await db[DOC_COLL].delete_one({"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+    await db[DOC_COLL].delete_one({"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
 
     # ── STRATEGY 1: Delete by source_doc_id ──
-    cam_1 = await db.lotti_cam.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
-    batch_1 = await db.material_batches.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
-    copies_del = await db[DOC_COLL].delete_many({"source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
-    archive_del = await db.archivio_certificati.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+    cam_1 = await db.lotti_cam.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
+    batch_1 = await db.material_batches.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
+    copies_del = await db[DOC_COLL].delete_many({"source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
+    archive_del = await db.archivio_certificati.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
 
     # ── STRATEGY 2: Delete by colata numbers (from ALL possible field locations) ──
     colate = set()
@@ -145,11 +145,11 @@ async def delete_document(cid: str, doc_id: str, user: dict = Depends(get_curren
     batch_2 = 0
     if colate:
         r1 = await db.lotti_cam.delete_many({
-            "commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+            "commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user),
             "numero_colata": {"$in": list(colate)},
         })
         r2 = await db.material_batches.delete_many({
-            "commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+            "commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user),
             "heat_number": {"$in": list(colate)},
         })
         cam_2 = r1.deleted_count
@@ -157,14 +157,14 @@ async def delete_document(cid: str, doc_id: str, user: dict = Depends(get_curren
 
     # ── STRATEGY 3: If NO certificates remain for this commessa, nuke all orphans ──
     remaining_certs = await db[DOC_COLL].count_documents({
-        "commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "tipo": {"$in": ["certificato_31", "certificato_32", "certificato_ispezione"]},
     })
     cam_3 = 0
     batch_3 = 0
     if remaining_certs == 0:
-        r1 = await db.lotti_cam.delete_many({"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
-        r2 = await db.material_batches.delete_many({"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+        r1 = await db.lotti_cam.delete_many({"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
+        r2 = await db.material_batches.delete_many({"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
         cam_3 = r1.deleted_count
         batch_3 = r2.deleted_count
         if cam_3 or batch_3:
@@ -196,7 +196,7 @@ async def parse_certificato_31(cid: str, doc_id: str, user: dict = Depends(get_c
     if not LLM_KEY:
         raise HTTPException(500, "Chiave AI non configurata")
 
-    doc = await db[DOC_COLL].find_one({"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+    doc = await db[DOC_COLL].find_one({"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     if not doc:
         raise HTTPException(404, "Documento non trovato")
     if not doc.get("file_base64"):
@@ -364,13 +364,13 @@ Se un campo non è leggibile, usa null. Rispondi SOLO con il JSON."""
         # rimangono nella tracciabilità.
         # ══════════════════════════════════════════════════════════════════════
         old_batches = await db.material_batches.delete_many({
-            "source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]
+            "source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)
         })
         old_cam = await db.lotti_cam.delete_many({
-            "source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]
+            "source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)
         })
         old_archive = await db.archivio_certificati.delete_many({
-            "source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]
+            "source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)
         })
         if old_batches.deleted_count or old_cam.deleted_count:
             logger.info(
@@ -502,7 +502,7 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
 
     # Get stored match results from the document
     doc = await db[DOC_COLL].find_one(
-        {"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not doc:
@@ -513,9 +513,9 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
         raise HTTPException(400, "Nessun risultato di matching da confermare. Rianalizza il certificato.")
 
     # Clean up any existing batches from previous imports for this document
-    await db.material_batches.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
-    await db.lotti_cam.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
-    await db.archivio_certificati.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+    await db.material_batches.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
+    await db.lotti_cam.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
+    await db.archivio_certificati.delete_many({"source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
 
     # Process only selected profiles
     metadata = doc.get("metadata_estratti") or doc.get("metadata") or {}
@@ -544,7 +544,7 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
             # USER SELECTED + DDT OK: create material_batch + CAM lotto
             batch_id = f"bat_{uuid.uuid4().hex[:10]}"
             batch_data = {
-                "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                "user_id": user["user_id"], "tenant_id": tenant_match(user),
                 "heat_number": colata, "numero_colata": colata,
                 "material_type": qualita, "tipo_materiale": qualita,
                 "supplier_name": r.get("fornitore_ddt", "") or fornitore, "fornitore": r.get("fornitore_ddt", "") or fornitore,
@@ -573,7 +573,7 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
 
             cam_id = f"cam_{uuid.uuid4().hex[:10]}"
             cam_data = {
-                "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                "user_id": user["user_id"], "tenant_id": tenant_match(user),
                 "commessa_id": target_cid,
                 "descrizione": dim or qualita or "Materiale da certificato",
                 "fornitore": fornitore, "numero_colata": colata,
@@ -597,7 +597,7 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
             # USER SELECTED + BOLLA MANCANTE: create material_batch (tracciabilità) + archive
             batch_id = f"bat_{uuid.uuid4().hex[:10]}"
             batch_data_bm = {
-                "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                "user_id": user["user_id"], "tenant_id": tenant_match(user),
                 "heat_number": colata, "numero_colata": colata,
                 "material_type": qualita, "tipo_materiale": qualita,
                 "supplier_name": fornitore, "fornitore": fornitore,
@@ -616,9 +616,9 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
                 upsert=True,
             )
             await db.archivio_certificati.update_one(
-                {"heat_number": colata, "source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+                {"heat_number": colata, "source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
                 {"$set": {
-                    "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                    "user_id": user["user_id"], "tenant_id": tenant_match(user),
                     "heat_number": colata, "material_type": qualita,
                     "supplier_name": fornitore, "dimensions": dim,
                     "source_doc_id": doc_id, "numero_certificato": n_cert,
@@ -651,7 +651,7 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
                 cert_type = "remade_in_italy"
             cam_id_bm = f"cam_{uuid.uuid4().hex[:10]}"
             cam_data_bm = {
-                "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                "user_id": user["user_id"], "tenant_id": tenant_match(user),
                 "commessa_id": target_cid or cid,
                 "descrizione": dim or qualita or "Materiale da certificato",
                 "fornitore": fornitore, "numero_colata": colata,
@@ -677,9 +677,9 @@ async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, us
                 else ("Non selezionato dall'utente" if target_cid else "Nessun match OdA")
             )
             await db.archivio_certificati.update_one(
-                {"heat_number": colata, "source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+                {"heat_number": colata, "source_doc_id": doc_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
                 {"$set": {
-                    "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                    "user_id": user["user_id"], "tenant_id": tenant_match(user),
                     "heat_number": colata, "material_type": qualita,
                     "supplier_name": fornitore, "dimensions": dim,
                     "source_doc_id": doc_id, "numero_certificato": n_cert,
@@ -861,7 +861,7 @@ async def _match_profili_to_commesse(
 
     # 1. Get ALL user's commesse with their procurement data
     cursor = db[COLL].find(
-        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "approvvigionamento": 1}
     )
     all_commesse = await cursor.to_list(500)
@@ -990,12 +990,12 @@ async def _match_profili_to_commesse(
         if not dry_run and colata and matched_commessa_id:
             target_cid = matched_commessa_id
             existing_batch = await db.material_batches.find_one(
-                {"heat_number": colata, "commessa_id": target_cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+                {"heat_number": colata, "commessa_id": target_cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
             )
             if not existing_batch:
                 batch_id = f"bat_{uuid.uuid4().hex[:10]}"
                 await db.material_batches.insert_one({
-                    "batch_id": batch_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                    "batch_id": batch_id, "user_id": user["user_id"], "tenant_id": tenant_match(user),
                     "heat_number": colata, "material_type": qualita,
                     "supplier_name": fornitore, "dimensions": dim,
                     "normativa": metadata_cert.get("normativa_riferimento", ""),
@@ -1008,7 +1008,7 @@ async def _match_profili_to_commesse(
 
             # CAM lotto
             existing_cam = await db.lotti_cam.find_one(
-                {"numero_colata": colata, "commessa_id": target_cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+                {"numero_colata": colata, "commessa_id": target_cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
             )
             if not existing_cam:
                 perc = perc_ric if perc_ric is not None else {"forno_elettrico_non_legato": 80, "forno_elettrico_legato": 65, "ciclo_integrale": 10}.get(metodo, 75)
@@ -1023,7 +1023,7 @@ async def _match_profili_to_commesse(
 
                 cam_id = f"cam_{uuid.uuid4().hex[:10]}"
                 await db.lotti_cam.insert_one({
-                    "lotto_id": cam_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                    "lotto_id": cam_id, "user_id": user["user_id"], "tenant_id": tenant_match(user),
                     "commessa_id": target_cid,
                     "descrizione": dim or qualita or "Materiale da certificato",
                     "fornitore": fornitore, "numero_colata": colata,
@@ -1045,12 +1045,12 @@ async def _match_profili_to_commesse(
             existing_copy = await db[DOC_COLL].find_one({
                 "commessa_id": matched_commessa_id,
                 "source_doc_id": doc_id,
-                "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                "user_id": user["user_id"], "tenant_id": tenant_match(user),
             })
             if not existing_copy:
                 copy_doc = {
                     "doc_id": f"doc_{uuid.uuid4().hex[:10]}",
-                    "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                    "user_id": user["user_id"], "tenant_id": tenant_match(user),
                     "commessa_id": matched_commessa_id,
                     "nome_file": doc.get("nome_file", "certificato.pdf"),
                     "tipo": "certificato_31",
@@ -1068,9 +1068,9 @@ async def _match_profili_to_commesse(
         # ── Archive unmatched profiles ──
         if tipo == "archivio" and colata:
             await db.archivio_certificati.update_one(
-                {"numero_colata": colata, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+                {"numero_colata": colata, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
                 {"$set": {
-                    "numero_colata": colata, "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                    "numero_colata": colata, "user_id": user["user_id"], "tenant_id": tenant_match(user),
                     "dimensioni": dim, "qualita_acciaio": qualita,
                     "fornitore": fornitore, "peso_kg": peso,
                     "n_certificato": n_cert,
@@ -1106,7 +1106,7 @@ async def parse_ddt_fornitore(cid: str, doc_id: str, user: dict = Depends(get_cu
     if not LLM_KEY:
         raise HTTPException(500, "Chiave AI non configurata")
 
-    doc = await db[DOC_COLL].find_one({"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+    doc = await db[DOC_COLL].find_one({"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     if not doc:
         raise HTTPException(404, "Documento non trovato")
     if not doc.get("file_base64"):
@@ -1294,7 +1294,7 @@ async def confirm_ddt(cid: str, doc_id: str, data: ConfirmDDTRequest, user: dict
     await ensure_ops_fields(cid)
 
     doc = await db[DOC_COLL].find_one(
-        {"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not doc:

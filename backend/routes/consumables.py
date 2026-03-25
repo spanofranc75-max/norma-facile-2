@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 
 router = APIRouter(prefix="/consumables", tags=["consumables"])
 logger = logging.getLogger(__name__)
@@ -225,7 +225,7 @@ async def list_consumable_batches(
     user: dict = Depends(get_current_user),
 ):
     """List all consumable batches (optionally filtered by stato or tipo)."""
-    filt = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+    filt = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if stato:
         filt["stato"] = stato
     if tipo:
@@ -242,7 +242,7 @@ async def get_consumables_for_commessa(commessa_id: str, user: dict = Depends(ge
     uid = user["user_id"]
     tid = user["tenant_id"]
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid},
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0, "commessa_id": 1, "normativa_tipo": 1, "numero": 1},
     )
     if not commessa:
@@ -252,7 +252,7 @@ async def get_consumables_for_commessa(commessa_id: str, user: dict = Depends(ge
 
     # Get all active batches
     all_batches = await db[COLL].find(
-        {"user_id": uid, "tenant_id": tid, "stato": "attivo"},
+        {"user_id": uid, "tenant_id": tenant_match(user), "stato": "attivo"},
         {"_id": 0},
     ).sort("created_at", -1).to_list(200)
 
@@ -284,7 +284,7 @@ async def create_consumable_batch(data: ConsumableBatchCreate, user: dict = Depe
     """Manually create a consumable batch."""
     batch = {
         "batch_id": f"cb_{uuid.uuid4().hex[:12]}",
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "tipo": data.tipo,
         "descrizione": data.descrizione,
         "lotto": data.lotto,
@@ -324,7 +324,7 @@ async def update_consumable_batch(batch_id: str, data: ConsumableBatchUpdate, us
     if not update_fields:
         raise HTTPException(400, "Nessun campo da aggiornare")
     result = await db[COLL].update_one(
-        {"batch_id": batch_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"batch_id": batch_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"$set": update_fields},
     )
     if result.matched_count == 0:
@@ -337,11 +337,11 @@ async def assign_batch_to_commessa(batch_id: str, commessa_id: str, user: dict =
     """Manually assign a consumable batch to a commessa."""
     uid = user["user_id"]
     tid = user["tenant_id"]
-    batch = await db[COLL].find_one({"batch_id": batch_id, "user_id": uid, "tenant_id": tid})
+    batch = await db[COLL].find_one({"batch_id": batch_id, "user_id": uid, "tenant_id": tenant_match(user)})
     if not batch:
         raise HTTPException(404, "Lotto non trovato")
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tid},
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0, "commessa_id": 1, "numero": 1},
     )
     if not commessa:
@@ -370,7 +370,7 @@ async def unassign_batch_from_commessa(batch_id: str, commessa_id: str, user: di
     uid = user["user_id"]
     tid = user["tenant_id"]
     result = await db[COLL].update_one(
-        {"batch_id": batch_id, "user_id": uid, "tenant_id": tid},
+        {"batch_id": batch_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"$pull": {"assegnazioni": {"commessa_id": commessa_id}}},
     )
     if result.matched_count == 0:
@@ -381,7 +381,7 @@ async def unassign_batch_from_commessa(batch_id: str, commessa_id: str, user: di
 @router.delete("/{batch_id}")
 async def delete_consumable_batch(batch_id: str, user: dict = Depends(get_current_user)):
     """Delete a consumable batch."""
-    result = await db[COLL].delete_one({"batch_id": batch_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+    result = await db[COLL].delete_one({"batch_id": batch_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     if result.deleted_count == 0:
         raise HTTPException(404, "Lotto non trovato")
     return {"message": "Lotto eliminato"}
@@ -397,13 +397,13 @@ async def analyze_invoice_for_consumables(fattura_id: str, user: dict = Depends(
     tid = user["tenant_id"]
     # Try fr_id first (primary key), then fattura_id field
     fattura = await db.fatture_ricevute.find_one(
-        {"fr_id": fattura_id, "user_id": uid, "tenant_id": tid},
+        {"fr_id": fattura_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0},
     )
     if not fattura:
         # Fallback: try fattura_id field
         fattura = await db.fatture_ricevute.find_one(
-            {"fattura_id": fattura_id, "user_id": uid, "tenant_id": tid},
+            {"fattura_id": fattura_id, "user_id": uid, "tenant_id": tenant_match(user)},
             {"_id": 0},
         )
     if not fattura:

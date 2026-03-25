@@ -5,7 +5,7 @@ M2: Drafts + Editorial Queue
 """
 from fastapi import APIRouter, Depends, HTTPException
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from datetime import datetime, timezone
 import logging
 import uuid
@@ -39,7 +39,7 @@ def _now():
 async def list_sources(user: dict = Depends(get_current_user)):
     _require_admin(user)
     cursor = db[COLL_SOURCES].find(
-        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     ).sort("created_at", -1)
     return await cursor.to_list(100)
 
@@ -48,7 +48,7 @@ async def list_sources(user: dict = Depends(get_current_user)):
 async def get_source(source_id: str, user: dict = Depends(get_current_user)):
     _require_admin(user)
     doc = await db[COLL_SOURCES].find_one(
-        {"source_id": source_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"source_id": source_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(status_code=404, detail="Sorgente non trovata")
@@ -60,7 +60,7 @@ async def create_source(data: dict, user: dict = Depends(get_current_user)):
     _require_admin(user)
     doc = {
         "source_id": f"src_{uuid.uuid4().hex[:12]}",
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "code": data.get("code", ""),
         "title": data.get("title", ""),
         "type": data.get("type", "feature"),
@@ -87,7 +87,7 @@ async def update_source(source_id: str, data: dict, user: dict = Depends(get_cur
     update = {k: v for k, v in data.items() if k not in ("source_id", "user_id", "_id")}
     update["updated_at"] = _now()
     result = await db[COLL_SOURCES].update_one(
-        {"source_id": source_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"source_id": source_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"$set": update}
     )
     if result.matched_count == 0:
@@ -99,7 +99,7 @@ async def update_source(source_id: str, data: dict, user: dict = Depends(get_cur
 async def delete_source(source_id: str, user: dict = Depends(get_current_user)):
     _require_admin(user)
     result = await db[COLL_SOURCES].delete_one(
-        {"source_id": source_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+        {"source_id": source_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Sorgente non trovata")
@@ -114,7 +114,7 @@ async def generate_ideas(source_id: str, user: dict = Depends(get_current_user))
     _require_admin(user)
 
     source = await db[COLL_SOURCES].find_one(
-        {"source_id": source_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"source_id": source_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
     if not source:
         raise HTTPException(status_code=404, detail="Sorgente non trovata")
@@ -126,7 +126,7 @@ async def generate_ideas(source_id: str, user: dict = Depends(get_current_user))
         doc = {
             "idea_id": f"idea_{uuid.uuid4().hex[:12]}",
             "source_id": source_id,
-            "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+            "user_id": user["user_id"], "tenant_id": tenant_match(user),
             "format": idea.get("format", "linkedin_post"),
             "hook": idea.get("hook", ""),
             "angle": idea.get("angle", ""),
@@ -145,7 +145,7 @@ async def generate_ideas(source_id: str, user: dict = Depends(get_current_user))
 @router.get("/ideas")
 async def list_ideas(user: dict = Depends(get_current_user), source_id: str = None):
     _require_admin(user)
-    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if source_id:
         query["source_id"] = source_id
     cursor = db[COLL_IDEAS].find(query, {"_id": 0}).sort("created_at", -1)
@@ -156,7 +156,7 @@ async def list_ideas(user: dict = Depends(get_current_user), source_id: str = No
 async def delete_idea(idea_id: str, user: dict = Depends(get_current_user)):
     _require_admin(user)
     result = await db[COLL_IDEAS].delete_one(
-        {"idea_id": idea_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+        {"idea_id": idea_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Idea non trovata")
@@ -171,13 +171,13 @@ async def generate_draft(idea_id: str, user: dict = Depends(get_current_user)):
     _require_admin(user)
 
     idea = await db[COLL_IDEAS].find_one(
-        {"idea_id": idea_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"idea_id": idea_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
     if not idea:
         raise HTTPException(status_code=404, detail="Idea non trovata")
 
     source = await db[COLL_SOURCES].find_one(
-        {"source_id": idea["source_id"], "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"source_id": idea["source_id"], "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
 
     draft_content = await _ai_generate_draft(idea, source)
@@ -186,7 +186,7 @@ async def generate_draft(idea_id: str, user: dict = Depends(get_current_user)):
         "draft_id": f"draft_{uuid.uuid4().hex[:12]}",
         "idea_id": idea_id,
         "source_id": idea.get("source_id"),
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "channel": _format_to_channel(idea.get("format", "")),
         "format": idea.get("format", ""),
         "title": draft_content.get("title", ""),
@@ -214,7 +214,7 @@ async def generate_draft(idea_id: str, user: dict = Depends(get_current_user)):
 @router.get("/drafts")
 async def list_drafts(user: dict = Depends(get_current_user), status: str = None):
     _require_admin(user)
-    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if status:
         query["status"] = status
     cursor = db[COLL_DRAFTS].find(query, {"_id": 0}).sort("created_at", -1)
@@ -225,7 +225,7 @@ async def list_drafts(user: dict = Depends(get_current_user), status: str = None
 async def get_draft(draft_id: str, user: dict = Depends(get_current_user)):
     _require_admin(user)
     doc = await db[COLL_DRAFTS].find_one(
-        {"draft_id": draft_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"draft_id": draft_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
     if not doc:
         raise HTTPException(status_code=404, detail="Bozza non trovata")
@@ -238,7 +238,7 @@ async def update_draft(draft_id: str, data: dict, user: dict = Depends(get_curre
     update = {k: v for k, v in data.items() if k not in ("draft_id", "user_id", "_id")}
     update["updated_at"] = _now()
     result = await db[COLL_DRAFTS].update_one(
-        {"draft_id": draft_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"draft_id": draft_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"$set": update}
     )
     if result.matched_count == 0:
@@ -250,13 +250,13 @@ async def update_draft(draft_id: str, data: dict, user: dict = Depends(get_curre
 async def delete_draft(draft_id: str, user: dict = Depends(get_current_user)):
     _require_admin(user)
     result = await db[COLL_DRAFTS].delete_one(
-        {"draft_id": draft_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+        {"draft_id": draft_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Bozza non trovata")
     # Also remove from queue
     await db[COLL_QUEUE].delete_many(
-        {"draft_id": draft_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+        {"draft_id": draft_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
     return {"message": "Bozza eliminata"}
 
@@ -270,7 +270,7 @@ async def add_to_queue(data: dict, user: dict = Depends(get_current_user)):
     if not draft_id:
         raise HTTPException(status_code=400, detail="draft_id richiesto")
     draft = await db[COLL_DRAFTS].find_one(
-        {"draft_id": draft_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"draft_id": draft_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
     if not draft:
         raise HTTPException(status_code=404, detail="Bozza non trovata")
@@ -278,7 +278,7 @@ async def add_to_queue(data: dict, user: dict = Depends(get_current_user)):
     doc = {
         "queue_id": f"q_{uuid.uuid4().hex[:12]}",
         "draft_id": draft_id,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "channel": data.get("channel", draft.get("channel", "linkedin")),
         "scheduled_for": data.get("scheduled_for"),
         "status": "in_review",
@@ -301,7 +301,7 @@ async def add_to_queue(data: dict, user: dict = Depends(get_current_user)):
 @router.get("/queue")
 async def list_queue(user: dict = Depends(get_current_user), status: str = None, channel: str = None):
     _require_admin(user)
-    query = {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+    query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if status:
         query["status"] = status
     if channel:
@@ -331,7 +331,7 @@ async def update_queue_item(queue_id: str, data: dict, user: dict = Depends(get_
         update["approved_by"] = user["user_id"]
 
     result = await db[COLL_QUEUE].update_one(
-        {"queue_id": queue_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"queue_id": queue_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"$set": update}
     )
     if result.matched_count == 0:
@@ -345,7 +345,7 @@ async def update_queue_item(queue_id: str, data: dict, user: dict = Depends(get_
 async def remove_from_queue(queue_id: str, user: dict = Depends(get_current_user)):
     _require_admin(user)
     result = await db[COLL_QUEUE].delete_one(
-        {"queue_id": queue_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+        {"queue_id": queue_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Elemento non trovato")
@@ -360,13 +360,13 @@ async def content_stats(user: dict = Depends(get_current_user)):
     uid = user["user_id"]
     tid = user["tenant_id"]
     return {
-        "sources": await db[COLL_SOURCES].count_documents({"user_id": uid, "tenant_id": tid}),
-        "ideas": await db[COLL_IDEAS].count_documents({"user_id": uid, "tenant_id": tid}),
-        "drafts": await db[COLL_DRAFTS].count_documents({"user_id": uid, "tenant_id": tid}),
-        "queue_total": await db[COLL_QUEUE].count_documents({"user_id": uid, "tenant_id": tid}),
-        "queue_in_review": await db[COLL_QUEUE].count_documents({"user_id": uid, "tenant_id": tid, "status": "in_review"}),
-        "queue_approved": await db[COLL_QUEUE].count_documents({"user_id": uid, "tenant_id": tid, "status": "approved"}),
-        "queue_published": await db[COLL_QUEUE].count_documents({"user_id": uid, "tenant_id": tid, "status": "published"}),
+        "sources": await db[COLL_SOURCES].count_documents({"user_id": uid, "tenant_id": tenant_match(user)}),
+        "ideas": await db[COLL_IDEAS].count_documents({"user_id": uid, "tenant_id": tenant_match(user)}),
+        "drafts": await db[COLL_DRAFTS].count_documents({"user_id": uid, "tenant_id": tenant_match(user)}),
+        "queue_total": await db[COLL_QUEUE].count_documents({"user_id": uid, "tenant_id": tenant_match(user)}),
+        "queue_in_review": await db[COLL_QUEUE].count_documents({"user_id": uid, "tenant_id": tenant_match(user), "status": "in_review"}),
+        "queue_approved": await db[COLL_QUEUE].count_documents({"user_id": uid, "tenant_id": tenant_match(user), "status": "approved"}),
+        "queue_published": await db[COLL_QUEUE].count_documents({"user_id": uid, "tenant_id": tenant_match(user), "status": "published"}),
     }
 
 
@@ -725,7 +725,7 @@ async def seed_content_sources(user: dict = Depends(get_current_user)):
     updated = 0
     for src in CONTENT_SOURCES_SEED:
         exists = await db[COLL_SOURCES].find_one(
-            {"user_id": user["user_id"], "tenant_id": user["tenant_id"], "title": src["title"]}
+            {"user_id": user["user_id"], "tenant_id": tenant_match(user), "title": src["title"]}
         )
         if exists:
             # Upsert: update existing with new detailed data
@@ -739,7 +739,7 @@ async def seed_content_sources(user: dict = Depends(get_current_user)):
         else:
             doc = {
                 "source_id": f"src_{uuid.uuid4().hex[:12]}",
-                "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                "user_id": user["user_id"], "tenant_id": tenant_match(user),
                 **src,
                 "active": True,
                 "created_at": _now(),
@@ -748,5 +748,5 @@ async def seed_content_sources(user: dict = Depends(get_current_user)):
             await db[COLL_SOURCES].insert_one(doc)
             seeded += 1
 
-    total = await db[COLL_SOURCES].count_documents({"user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+    total = await db[COLL_SOURCES].count_documents({"user_id": user["user_id"], "tenant_id": tenant_match(user)})
     return {"message": "Seed completato", "seeded": seeded, "updated": updated, "total": total}

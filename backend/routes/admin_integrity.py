@@ -5,7 +5,7 @@ a proper admin API with report storage and history.
 """
 from fastapi import APIRouter, Depends, HTTPException
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from datetime import datetime, timezone
 import logging
 import uuid

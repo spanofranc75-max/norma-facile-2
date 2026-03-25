@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 
 router = APIRouter(prefix="/registro-saldatura", tags=["registro-saldatura"])
 logger = logging.getLogger(__name__)
@@ -38,14 +38,14 @@ class RigaSaldatura(BaseModel):
 async def list_registro(commessa_id: str, user: dict = Depends(get_current_user)):
     """Lista completa del registro saldatura per la commessa."""
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "commessa_id": 1, "numero": 1}
     )
     if not commessa:
         raise HTTPException(404, "Commessa non trovata")
 
     righe = await db.registro_saldatura.find(
-        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     ).sort("data_esecuzione", -1).to_list(500)
 
@@ -93,7 +93,7 @@ async def list_registro(commessa_id: str, user: dict = Depends(get_current_user)
 async def add_riga(commessa_id: str, data: RigaSaldatura, user: dict = Depends(get_current_user)):
     """Aggiungi una riga al registro saldatura."""
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0, "commessa_id": 1}
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0, "commessa_id": 1}
     )
     if not commessa:
         raise HTTPException(404, "Commessa non trovata")
@@ -132,7 +132,7 @@ async def add_riga(commessa_id: str, data: RigaSaldatura, user: dict = Depends(g
     doc = {
         "riga_id": riga_id,
         "commessa_id": commessa_id,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "giunto": data.giunto,
         "posizione_dwg": data.posizione_dwg,
         "saldatore_id": data.saldatore_id,
@@ -157,7 +157,7 @@ async def add_riga(commessa_id: str, data: RigaSaldatura, user: dict = Depends(g
 async def update_riga(commessa_id: str, riga_id: str, data: RigaSaldatura, user: dict = Depends(get_current_user)):
     """Aggiorna una riga del registro (es. esito VT dopo controllo)."""
     existing = await db.registro_saldatura.find_one(
-        {"riga_id": riga_id, "commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"riga_id": riga_id, "commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
     if not existing:
         raise HTTPException(404, "Riga non trovata")
@@ -183,7 +183,7 @@ async def update_riga(commessa_id: str, riga_id: str, data: RigaSaldatura, user:
 async def delete_riga(commessa_id: str, riga_id: str, user: dict = Depends(get_current_user)):
     """Elimina una riga dal registro."""
     result = await db.registro_saldatura.delete_one(
-        {"riga_id": riga_id, "commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}
+        {"riga_id": riga_id, "commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
     if result.deleted_count == 0:
         raise HTTPException(404, "Riga non trovata")
@@ -195,7 +195,7 @@ async def saldatori_idonei(commessa_id: str, processo: str = "135", user: dict =
     """Filtra saldatori con patentino valido per il processo richiesto."""
     today = date.today()
     welders = await db.welders.find(
-        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     ).to_list(200)
 
     idonei = []

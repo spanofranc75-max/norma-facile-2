@@ -18,7 +18,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
 
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.database import db
 
 router = APIRouter(prefix="/archivio", tags=["archivio"])
@@ -43,7 +43,7 @@ async def export_archivio(data: ExportRequest, user: dict = Depends(get_current_
     now = datetime.now(timezone.utc)
 
     # Build query filter
-    query = {"user_id": user_id, "tenant_id": tenant_id}
+    query = {"user_id": user_id, "tenant_id": tenant_match(user)}
     if data.anno:
         # Filter commesse created in that year
         start = f"{data.anno}-01-01T00:00:00"
@@ -159,7 +159,7 @@ async def export_archivio(data: ExportRequest, user: dict = Depends(get_current_
     export_id = f"exp_{uuid.uuid4().hex[:10]}"
     await db[EXPORT_COLL].insert_one({
         "export_id": export_id,
-        "user_id": user_id, "tenant_id": tenant_id,
+        "user_id": user_id, "tenant_id": tenant_match(user),
         "anno": data.anno,
         "client_id": data.client_id or "",
         "num_commesse": len(commesse),
@@ -183,7 +183,7 @@ async def export_archivio(data: ExportRequest, user: dict = Depends(get_current_
 async def list_exports(user: dict = Depends(get_current_user)):
     """List previous exports."""
     exports = await db[EXPORT_COLL].find(
-        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     ).sort("created_at", -1).to_list(50)
     return {"exports": exports}
 
@@ -192,7 +192,7 @@ async def list_exports(user: dict = Depends(get_current_user)):
 async def get_archivio_stats(user: dict = Depends(get_current_user)):
     """Get archivio stats for the export UI: available years and clients."""
     commesse = await db.commesse.find(
-        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "created_at": 1, "client_id": 1}
     ).to_list(1000)
 

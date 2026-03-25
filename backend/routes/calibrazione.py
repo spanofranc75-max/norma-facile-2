@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import Optional
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from services.ml_calibrazione import (
     calcola_calibrazione,
     applica_calibrazione,

@@ -4,7 +4,7 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, Query
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from services.audit_trail import COLLECTION, ENTITY_TYPES, ACTION_TYPES
 
 router = APIRouter(prefix="/activity-log", tags=["activity-log"])

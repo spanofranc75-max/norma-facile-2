@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from io import BytesIO
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from routes.commessa_ops_common import (
     COLL, get_commessa_or_404, ensure_ops_fields,
     ts, new_id, push_event, build_update_with_event,
@@ -112,7 +112,7 @@ async def update_conto_lavoro(cid: str, cl_id: str, data: ContoLavoroUpdate, use
         if cl_item and not cl_item.get("ddt_invio_id"):
             comm_num = comm.get("numero", cid)
             year = ts().strftime("%Y")
-            ddt_count = await db.ddt_documents.count_documents({"user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+            ddt_count = await db.ddt_documents.count_documents({"user_id": user["user_id"], "tenant_id": tenant_match(user)})
             ddt_invio_id = f"ddt_{uuid.uuid4().hex[:12]}"
             ddt_number = f"DDT-{year}-{ddt_count + 1:04d}"
             tipo_lav = cl_item.get("tipo", "lavorazione")
@@ -130,7 +130,7 @@ async def update_conto_lavoro(cid: str, cl_id: str, data: ContoLavoroUpdate, use
             now = ts()
             ddt_doc = {
                 "ddt_id": ddt_invio_id,
-                "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+                "user_id": user["user_id"], "tenant_id": tenant_match(user),
                 "number": ddt_number,
                 "ddt_type": "conto_lavoro",
                 "ddt_type_label": f"DDT C/Lavoro — {tipo_lav.capitalize()}",
@@ -327,7 +327,7 @@ async def verifica_cl(cid: str, cl_id: str, user: dict = Depends(get_current_use
 async def generate_ncr_pdf(cid: str, cl_id: str, user: dict = Depends(get_current_user)):
     """Generate Non-Conformity Report when QC fails."""
     comm = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
     cl_list = comm.get("conto_lavoro", [])
     cl = next((c for c in cl_list if c["cl_id"] == cl_id), None)
     if not cl:
@@ -352,7 +352,7 @@ async def preview_cl_pdf(cid: str, cl_id: str, user: dict = Depends(get_current_
     if not cl:
         raise HTTPException(404, "Conto lavoro non trovato")
 
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
 
     from services.pdf_procurement import generate_cl_pdf
 
@@ -377,7 +377,7 @@ async def preview_cl_email(cid: str, cl_id: str, user: dict = Depends(get_curren
     fornitore_id = cl.get("fornitore_id")
     to_email = ""
     if fornitore_id:
-        forn = await db.clients.find_one({"client_id": fornitore_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+        forn = await db.clients.find_one({"client_id": fornitore_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
         if forn:
             to_email = forn.get("pec") or forn.get("email") or ""
             if not to_email:
@@ -386,7 +386,7 @@ async def preview_cl_email(cid: str, cl_id: str, user: dict = Depends(get_curren
                         to_email = c["email"]
                         break
 
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
 
     from services.email_preview import build_cl_email
     preview = build_cl_email(
@@ -423,7 +423,7 @@ async def send_cl_email(cid: str, cl_id: str, payload: dict = None, user: dict =
     supplier = None
     if fornitore_id:
         supplier = await db.clients.find_one(
-            {"client_id": fornitore_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+            {"client_id": fornitore_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
         )
     supplier_email = ""
     if supplier:
@@ -436,7 +436,7 @@ async def send_cl_email(cid: str, cl_id: str, payload: dict = None, user: dict =
     if not supplier_email:
         raise HTTPException(400, "Email fornitore non disponibile. Aggiungila nell'anagrafica fornitori.")
 
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
 
     # Generate PDF
     from services.pdf_procurement import generate_cl_pdf

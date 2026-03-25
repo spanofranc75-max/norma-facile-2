@@ -9,7 +9,7 @@ Fili conduttori:
 """
 from datetime import date
 from fastapi import APIRouter, Depends
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.database import db
 
 router = APIRouter(prefix="/scadenziario-manutenzioni", tags=["manutenzioni"])
@@ -83,7 +83,7 @@ async def get_scadenziario(user: dict = Depends(get_current_user)):
 
     # --- Attrezzature ---
     attrezzature = await db.attrezzature.find(
-        {"user_id": uid, "tenant_id": tid}, {"_id": 0}
+        {"user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0}
     ).to_list(500)
     for attr in attrezzature:
         next_tar = attr.get("prossima_taratura", "")
@@ -107,7 +107,7 @@ async def get_scadenziario(user: dict = Depends(get_current_user)):
 
     # --- Verbali ITT (qualifica processi) ---
     itt_docs = await db.verbali_itt.find(
-        {"user_id": uid, "tenant_id": tid}, {"_id": 0}
+        {"user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0}
     ).to_list(200)
     for itt in itt_docs:
         next_scad = itt.get("data_scadenza", "")

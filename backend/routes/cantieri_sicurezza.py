@@ -10,7 +10,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import Optional, List
 
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.rate_limiter import limiter
 from services.cantieri_sicurezza_service import (
     crea_cantiere, get_cantiere, get_cantieri_by_commessa, list_cantieri,

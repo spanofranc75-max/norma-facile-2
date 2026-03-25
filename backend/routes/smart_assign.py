@@ -3,7 +3,7 @@ Does NOT alter any commessa data schema. Only provides data for the UI to auto-p
 from datetime import date
 from fastapi import APIRouter, Depends
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 
 router = APIRouter(prefix="/smart-assign", tags=["smart-assign"])
 

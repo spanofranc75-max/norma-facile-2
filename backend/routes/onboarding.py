@@ -1,7 +1,7 @@
 """Onboarding routes — tracks first-time user progress."""
 from fastapi import APIRouter, Depends
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from datetime import datetime, timezone
 import logging
 
@@ -48,7 +48,7 @@ async def get_onboarding_status(user: dict = Depends(get_current_user)):
 
     # Check if user has dismissed onboarding
     record = await db.onboarding.find_one(
-        {"user_id": user_id, "tenant_id": tenant_id}, {"_id": 0}
+        {"user_id": user_id, "tenant_id": tenant_match(user)}, {"_id": 0}
     )
 
     dismissed = bool(record and record.get("dismissed"))
@@ -62,9 +62,9 @@ async def get_onboarding_status(user: dict = Depends(get_current_user)):
     # Auto-complete onboarding if all steps done
     if all_done and not completed_at:
         await db.onboarding.update_one(
-            {"user_id": user_id, "tenant_id": tenant_id},
+            {"user_id": user_id, "tenant_id": tenant_match(user)},
             {"$set": {
-                "user_id": user_id, "tenant_id": tenant_id,
+                "user_id": user_id, "tenant_id": tenant_match(user),
                 "completed_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             }},
@@ -87,9 +87,9 @@ async def get_onboarding_status(user: dict = Depends(get_current_user)):
 async def dismiss_onboarding(user: dict = Depends(get_current_user)):
     """Dismiss onboarding checklist (user chose to skip)."""
     await db.onboarding.update_one(
-        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"$set": {
-            "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+            "user_id": user["user_id"], "tenant_id": tenant_match(user),
             "dismissed": True,
             "dismissed_at": datetime.now(timezone.utc).isoformat(),
             "updated_at": datetime.now(timezone.utc).isoformat(),

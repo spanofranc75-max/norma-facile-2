@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 
 router = APIRouter(prefix="/admin/cleanup", tags=["admin"])
 logger = logging.getLogger(__name__)
@@ -86,7 +86,7 @@ async def execute_cleanup(data: CleanupRequest, user: dict = Depends(get_current
     # Log the cleanup
     await db.client[db.name]["audit_log"].insert_one({
         "action": "database_cleanup",
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "user_email": user.get("email"),
         "results": results,
         "keep_clients": data.keep_clients,

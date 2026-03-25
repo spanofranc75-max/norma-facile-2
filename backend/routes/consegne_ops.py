@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from io import BytesIO
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from routes.commessa_ops_common import (
     COLL, DOC_COLL, get_commessa_or_404, ensure_ops_fields,
     ts, new_id, push_event, build_update_with_event,
@@ -26,7 +26,7 @@ async def get_commessa_ops(cid: str, user: dict = Depends(get_current_user)):
     await ensure_ops_fields(cid)
     
     # Refresh doc after ensure_ops_fields
-    doc = await db[COLL].find_one({"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    doc = await db[COLL].find_one({"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     
     approv = doc.get("approvvigionamento", {"richieste": [], "ordini": [], "arrivi": []})
     fasi = doc.get("fasi_produzione", [])
@@ -34,7 +34,7 @@ async def get_commessa_ops(cid: str, user: dict = Depends(get_current_user)):
     consegne = doc.get("consegne", [])
 
     # Count documents
-    doc_count = await db[DOC_COLL].count_documents({"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]})
+    doc_count = await db[DOC_COLL].count_documents({"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
 
     # Compute production progress
     fasi_total = len(fasi)
@@ -69,7 +69,7 @@ async def update_material_batch(cid: str, batch_id: str, data: BatchUpdate, user
     if not update_fields:
         raise HTTPException(400, "Nessun campo da aggiornare")
     result = await db.material_batches.update_one(
-        {"batch_id": batch_id, "commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"batch_id": batch_id, "commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"$set": update_fields}
     )
     if result.matched_count == 0:
@@ -87,7 +87,7 @@ async def scheda_rintracciabilita_pdf(cid: str, user: dict = Depends(get_current
     commessa = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
 
     # Get company settings
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
 
     # Get client name
     client_name = ""
@@ -104,7 +104,7 @@ async def scheda_rintracciabilita_pdf(cid: str, user: dict = Depends(get_current
 
     # Get material batches for this commessa
     cursor = db.material_batches.find(
-        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "certificate_base64": 0}
     )
     batches = await cursor.to_list(200)
@@ -170,7 +170,7 @@ async def crea_consegna(cid: str, data: ConsegnaCreate, user: dict = Depends(get
     """Create a new delivery (consegna) for this commessa.
     Auto-creates a DDT linked to the commessa and marks DoP + CE as generated."""
     comm = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
 
     # Resolve client (full data for DDT)
     client_name = ""
@@ -197,10 +197,10 @@ async def crea_consegna(cid: str, data: ConsegnaCreate, user: dict = Depends(get
         ddt_number = data.ddt_number.strip()
     else:
         if is_conto_lavoro:
-            ddt_count = await db.ddt_documents.count_documents({"user_id": user["user_id"], "tenant_id": user["tenant_id"], "ddt_type": "conto_lavoro"})
+            ddt_count = await db.ddt_documents.count_documents({"user_id": user["user_id"], "tenant_id": tenant_match(user), "ddt_type": "conto_lavoro"})
             ddt_number = f"CL-{year}-{ddt_count + 1:04d}"
         else:
-            ddt_count = await db.ddt_documents.count_documents({"user_id": user["user_id"], "tenant_id": user["tenant_id"], "ddt_type": "vendita"})
+            ddt_count = await db.ddt_documents.count_documents({"user_id": user["user_id"], "tenant_id": tenant_match(user), "ddt_type": "vendita"})
             ddt_number = f"DDT-{year}-{ddt_count + 1:04d}"
 
     # Build DDT lines from PREVENTIVO descriptions (not material batches)
@@ -252,7 +252,7 @@ async def crea_consegna(cid: str, data: ConsegnaCreate, user: dict = Depends(get
     now = ts()
     ddt_doc = {
         "ddt_id": ddt_id,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "number": ddt_number,
         "ddt_type": ddt_type,
         "ddt_type_label": "DDT Conto Lavoro" if is_conto_lavoro else "DDT di Vendita",
@@ -325,7 +325,7 @@ async def download_pacchetto_consegna(cid: str, consegna_id: str, user: dict = D
     from services.pdf_fascicolo_tecnico import generate_dop_pdf, generate_ce_pdf
 
     comm = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}) or {}
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
 
     consegne = comm.get("consegne", [])
     cons = next((c for c in consegne if c["consegna_id"] == consegna_id), None)
@@ -393,7 +393,7 @@ async def download_pacchetto_consegna(cid: str, consegna_id: str, user: dict = D
     # ── DYNAMIC MATERIAL PROPERTIES from real lotti_cam ──
     from services.pdf_fascicolo_tecnico import _get_material_properties, _get_durabilita
     lotti = await db.lotti_cam.find(
-        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0}
+        {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     ).to_list(200)
 
     mat_props = _get_material_properties(lotti)
@@ -402,10 +402,10 @@ async def download_pacchetto_consegna(cid: str, consegna_id: str, user: dict = D
     ft["durabilita"] = _get_durabilita(comm)
 
     # ── PESO DDT: sum from material_batches ──
-    ddt_doc_for_weight = await db.ddt_documents.find_one({"ddt_id": cons["ddt_id"], "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    ddt_doc_for_weight = await db.ddt_documents.find_one({"ddt_id": cons["ddt_id"], "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if ddt_doc_for_weight and (ddt_doc_for_weight.get("peso_lordo_kg") or 0) == 0:
         batches_for_weight = await db.material_batches.find(
-            {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0, "peso_kg": 1}
+            {"commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0, "peso_kg": 1}
         ).to_list(200)
         total_weight = sum(float(b.get("peso_kg", 0) or 0) for b in batches_for_weight)
         if total_weight > 0:
@@ -417,7 +417,7 @@ async def download_pacchetto_consegna(cid: str, consegna_id: str, user: dict = D
     merger = PdfWriter()
 
     # 1. DDT PDF
-    ddt_doc = await db.ddt_documents.find_one({"ddt_id": cons["ddt_id"], "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0})
+    ddt_doc = await db.ddt_documents.find_one({"ddt_id": cons["ddt_id"], "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if ddt_doc:
         from services.ddt_pdf_service import generate_ddt_pdf
         ddt_buf = generate_ddt_pdf(ddt_doc, company)
@@ -479,7 +479,7 @@ async def preleva_da_magazzino(cid: str, data: PrelievoMagazzinoRequest, user: d
     
     # Get the article from catalog
     articolo = await db.articoli.find_one(
-        {"articolo_id": data.articolo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"articolo_id": data.articolo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not articolo:
@@ -534,7 +534,7 @@ async def preleva_da_magazzino(cid: str, data: PrelievoMagazzinoRequest, user: d
     numero_colata = articolo.get("numero_colata") or articolo.get("heat_number")
     if normativa_tipo == "EN_1090" and numero_colata:
         batch_data = {
-            "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+            "user_id": user["user_id"], "tenant_id": tenant_match(user),
             "commessa_id": cid,
             "fornitore": articolo.get("fornitore_nome", ""),
             "supplier_name": articolo.get("fornitore_nome", ""),
@@ -560,7 +560,7 @@ async def preleva_da_magazzino(cid: str, data: PrelievoMagazzinoRequest, user: d
         )
         # lotto_cam
         lotto_cam = {
-            "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+            "user_id": user["user_id"], "tenant_id": tenant_match(user),
             "commessa_id": cid,
             "numero_colata": numero_colata,
             "descrizione": articolo.get("descrizione", ""),

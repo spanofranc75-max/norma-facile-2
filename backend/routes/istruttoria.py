@@ -9,7 +9,7 @@ import logging
 import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.database import db
 from core.rate_limiter import limiter
 from services.ai_compliance_engine import analizza_preventivo_completo
@@ -35,7 +35,7 @@ async def analizza_preventivo(request: Request, preventivo_id: str, user: dict =
 
     # Load preventivo
     preventivo = await db.preventivi.find_one(
-        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not preventivo:
@@ -43,7 +43,7 @@ async def analizza_preventivo(request: Request, preventivo_id: str, user: dict =
 
     # Check if analysis already exists (allow re-analysis)
     existing = await db.istruttorie.find_one(
-        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0, "istruttoria_id": 1, "created_at": 1}
     )
 
@@ -63,7 +63,7 @@ async def analizza_preventivo(request: Request, preventivo_id: str, user: dict =
         **result,
         "istruttoria_id": istr_id,
         "preventivo_id": preventivo_id,
-        "user_id": uid, "tenant_id": tid,
+        "user_id": uid, "tenant_id": tenant_match(user),
         "versione": (existing.get("versione", 0) + 1) if existing else 1,
         "updated_at": now,
     }
@@ -88,7 +88,7 @@ async def analizza_preventivo(request: Request, preventivo_id: str, user: dict =
 async def get_istruttoria_by_preventivo(preventivo_id: str, user: dict = Depends(get_current_user)):
     """Recupera l'istruttoria salvata per un preventivo (se esiste)."""
     doc = await db.istruttorie.find_one(
-        {"preventivo_id": preventivo_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"preventivo_id": preventivo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not doc:
@@ -100,7 +100,7 @@ async def get_istruttoria_by_preventivo(preventivo_id: str, user: dict = Depends
 async def get_istruttoria(istruttoria_id: str, user: dict = Depends(get_current_user)):
     """Recupera un'istruttoria per ID."""
     doc = await db.istruttorie.find_one(
-        {"istruttoria_id": istruttoria_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"istruttoria_id": istruttoria_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not doc:
@@ -122,7 +122,7 @@ async def revisione_umana(istruttoria_id: str, body: dict, user: dict = Depends(
     uid = user["user_id"]
     tid = user["tenant_id"]
     doc = await db.istruttorie.find_one(
-        {"istruttoria_id": istruttoria_id, "user_id": uid, "tenant_id": tid},
+        {"istruttoria_id": istruttoria_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not doc:
@@ -188,7 +188,7 @@ async def conferma_istruttoria(istruttoria_id: str, user: dict = Depends(get_cur
     uid = user["user_id"]
     tid = user["tenant_id"]
     doc = await db.istruttorie.find_one(
-        {"istruttoria_id": istruttoria_id, "user_id": uid, "tenant_id": tid},
+        {"istruttoria_id": istruttoria_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not doc:
@@ -236,7 +236,7 @@ async def rispondi_domande(istruttoria_id: str, body: dict, user: dict = Depends
     uid = user["user_id"]
     tid = user["tenant_id"]
     doc = await db.istruttorie.find_one(
-        {"istruttoria_id": istruttoria_id, "user_id": uid, "tenant_id": tid},
+        {"istruttoria_id": istruttoria_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not doc:
@@ -321,7 +321,7 @@ async def rispondi_domande_contestuali(
     uid = user["user_id"]
     tid = user["tenant_id"]
     doc = await db.istruttorie.find_one(
-        {"istruttoria_id": istruttoria_id, "user_id": uid, "tenant_id": tid},
+        {"istruttoria_id": istruttoria_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not doc:
@@ -374,7 +374,7 @@ async def rispondi_domande_contestuali(
 async def list_istruttorie(user: dict = Depends(get_current_user)):
     """Lista tutte le istruttorie dell'utente."""
     docs = await db.istruttorie.find(
-        {"user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "istruttoria_id": 1, "preventivo_id": 1, "preventivo_number": 1,
          "classificazione": 1, "exc_proposta": 1, "stato_conoscenza": 1,
          "stato": 1, "created_at": 1, "updated_at": 1, "versione": 1}
@@ -410,7 +410,7 @@ async def run_segmentazione(request: Request, preventivo_id: str, user: dict = D
 
     # Save to istruttoria if exists, otherwise create a minimal record
     istr = await db.istruttorie.find_one(
-        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0, "istruttoria_id": 1}
     )
 
@@ -428,7 +428,7 @@ async def run_segmentazione(request: Request, preventivo_id: str, user: dict = D
             "istruttoria_id": istr_id,
             "preventivo_id": preventivo_id,
             "preventivo_number": preventivo.get("number", ""),
-            "user_id": uid, "tenant_id": tid,
+            "user_id": uid, "tenant_id": tenant_match(user),
             "stato": "segmentazione",
             "segmentazione_proposta": segmentazione,
             "created_at": datetime.now(timezone.utc),
@@ -453,7 +453,7 @@ async def review_segmentazione(preventivo_id: str, body: dict, user: dict = Depe
     tid = user["tenant_id"]
 
     istr = await db.istruttorie.find_one(
-        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0, "istruttoria_id": 1, "segmentazione_proposta": 1}
     )
     if not istr:
@@ -546,7 +546,7 @@ async def check_phase2_eligibility(preventivo_id: str, user: dict = Depends(get_
     tid = user["tenant_id"]
 
     istr = await db.istruttorie.find_one(
-        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not istr:
@@ -565,7 +565,7 @@ async def genera_commessa_preistruita(request: Request, preventivo_id: str, user
     tid = user["tenant_id"]
 
     istr = await db.istruttorie.find_one(
-        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not istr:
@@ -588,14 +588,14 @@ async def genera_commessa_preistruita(request: Request, preventivo_id: str, user
         {"preventivo_id": preventivo_id, "created_by": uid},
         {"$set": {
             **commessa,
-            "user_id": uid, "tenant_id": tid,
+            "user_id": uid, "tenant_id": tenant_match(user),
         }},
         upsert=True
     )
 
     # Update istruttoria
     await db.istruttorie.update_one(
-        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"$set": {
             "phase2_generata": True,
             "phase2_commessa_id": commessa["commessa_id"],
@@ -626,7 +626,7 @@ async def get_commessa_preistruita(preventivo_id: str, user: dict = Depends(get_
     tid = user["tenant_id"]
 
     doc = await db.commesse_preistruite.find_one(
-        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tid},
+        {"preventivo_id": preventivo_id, "user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0}
     )
     if not doc:

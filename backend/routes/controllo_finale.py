@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from routes.report_ispezioni import VT_CHECKS
 
 router = APIRouter(prefix="/controllo-finale", tags=["controllo-finale"])
@@ -220,7 +220,7 @@ class ControlloFinaleApprova(BaseModel):
 async def get_controllo_finale(commessa_id: str, user: dict = Depends(get_current_user)):
     """Stato della checklist controllo finale con verifiche automatiche."""
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "stato": 1}
     )
     if not commessa:
@@ -293,7 +293,7 @@ async def get_controllo_finale(commessa_id: str, user: dict = Depends(get_curren
 async def save_controllo_finale(commessa_id: str, data: ControlloFinaleNote, user: dict = Depends(get_current_user)):
     """Salva i check manuali e le note."""
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]}, {"_id": 0, "commessa_id": 1}
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0, "commessa_id": 1}
     )
     if not commessa:
         raise HTTPException(404, "Commessa non trovata")
@@ -308,7 +308,7 @@ async def save_controllo_finale(commessa_id: str, data: ControlloFinaleNote, use
     doc = {
         "controllo_id": controllo_id,
         "commessa_id": commessa_id,
-        "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+        "user_id": user["user_id"], "tenant_id": tenant_match(user),
         "checks_manuali": data.checks_manuali,
         "note_generali": data.note_generali,
         "note_vt": data.note_vt,
@@ -329,7 +329,7 @@ async def save_controllo_finale(commessa_id: str, data: ControlloFinaleNote, use
 async def approva_controllo_finale(commessa_id: str, data: ControlloFinaleApprova, user: dict = Depends(get_current_user)):
     """Firma e approva il controllo finale. Immutabile dopo approvazione."""
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": user["tenant_id"]},
+        {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "commessa_id": 1}
     )
     if not commessa:
@@ -360,7 +360,7 @@ async def approva_controllo_finale(commessa_id: str, data: ControlloFinaleApprov
         {"$set": {
             "controllo_id": controllo_id,
             "commessa_id": commessa_id,
-            "user_id": user["user_id"], "tenant_id": user["tenant_id"],
+            "user_id": user["user_id"], "tenant_id": tenant_match(user),
             "approvato": True,
             "data_approvazione": now,
             "firma": {
