@@ -42,6 +42,7 @@ Francesco Spano' — Steel Project Design Srls
 12. **Stato Cliente (active/archived/blocked)** — Nuovo campo `status` su tutti i clienti. Endpoint: archive, block, reactivate. I clienti archiviati/bloccati non appaiono nella selezione per nuovi documenti. Frontend: colonna Stato con badge colorati, checkbox "Mostra archiviati", pulsanti Archivia/Riattiva.
 13. **Migrazione Snapshot** — Endpoint `/api/admin/migration/backfill-client-snapshots` per aggiungere snapshot a tutti i documenti esistenti. Endpoint `/api/admin/migration/snapshot-status` per verificare la copertura. Endpoint `/api/admin/migration/set-default-client-status` per impostare status=active su clienti senza status.
 14. **Deploy fix** — Rimosso `litellm==1.80.0` da requirements.txt (pacchetto non usato che bloccava il build)
+15. **PDF Preventivo — 7 fix** — (a) Rimosso numero preventivo duplicato, (b) sfondo bianco puro, (c) condizioni di vendita dinamiche (pagamento/validità/consegna da dati preventivo), (d) colonne CODICE/SCONTI visibili solo se valorizzate, (e) indirizzo aziendale dinamico nelle condizioni, (f) 5 errori di battitura corretti, (g) ottimizzazione impaginazione da 3 a 2 pagine
 
 ### Feature completate (sessioni precedenti)
 - Content Engine (M1+M2)

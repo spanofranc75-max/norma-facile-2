@@ -804,6 +804,17 @@ Pacco Documenti: CAP. 1-5 (EN 1090, EN 13241, Relazione Tecnica, Montaggio, Sost
 #### Deploy Fix (COMPLETATO)
 - Rimosso `litellm==1.80.0` da `requirements.txt` — pacchetto non usato che bloccava il build in produzione (dependency resolution failure)
 
+#### PDF Preventivo — 7 Fix Qualita (COMPLETATO)
+- **Fix 1 — Numero duplicato:** Rimossa riga `PREVENTIVO N.` ridondante nella meta-table; resta solo il titolo centrato `<h1>`
+- **Fix 2 — Sfondo bianco:** Aggiunto `background: white` a `@page` e `background-color: #ffffff` a `body` nel CSS condiviso
+- **Fix 3 — Condizioni dinamiche:** `build_conditions_html()` accetta ora `preventivo: dict` opzionale; sostituisce dinamicamente Pagamento (2f), Validità (2g), Consegna (2c) con i valori reali del preventivo via regex
+- **Fix 4 — Colonne condizionali:** `has_codici` e `has_sconti` calcolati prima del rendering; colonne CODICE e SCONTI nascoste se tutti i valori sono vuoti/zero; la colonna DESCRIZIONE si espande per riempire lo spazio
+- **Fix 5 — Indirizzo dinamico:** Indirizzo aziendale hardcoded ("via dei Pioppi n. 11 - 40010 Padulle BO") sostituito con dati da `company_settings` (address, cap, city, province)
+- **Fix 6 — Errori battitura:** 5 sostituzioni: "se no nespressamente"→"se non espressamente", "materiali incantiere"→"materiali in cantiere", "fatto salvonell'area...nonci sia"→"fatto salvo nell'area...non ci sia", "Oneri pe reventuali"→"Oneri per eventuali"
+- **Fix 7 — Impaginazione:** CSS conditions compattato (font 7pt, line-height 1.3, margini ridotti) — il PDF scende da 3 a 2 pagine
+- File modificati: `services/pdf_template.py` (CSS + `build_conditions_html`), `routes/preventivi.py` (`generate_preventivo_pdf`)
+- Test: 100% backend (23/23 — iteration_257)
+
 ---
 
 ### FASE 6 — Smistatore Intelligente Avanzato (PROSSIMO)
