@@ -25,9 +25,21 @@ Francesco Spano' — Steel Project Design Srls
 - `demo.1090normafacile.it` = demo (futuro)
 - Vercel = backup tecnico, non pubblico
 
-## Stato attuale (24 Marzo 2026)
+## Stato attuale (25 Marzo 2026)
 
 ### Completato in questa sessione ✅
+22. **Multi-Tenant Step 1 — Fondamenta** — Implementazione completa del layer di isolamento dati multi-tenant:
+    - Aggiunto `tenant_id` a `create_session`, `verify_session`, `get_current_user` in `security.py`
+    - Creata collezione `tenants` con tenant "default" all'avvio (`main.py` lifespan)
+    - Script di migrazione `migrations/add_tenant_id.py`: backfill 1203 documenti in 45+ collezioni
+    - Aggiornati 90+ route files: tutti i filtri query e insert includono `tenant_id`
+    - Aggiornati helper `_get_commessa`, `get_commessa_or_404`, `_detect_steps`, `_run_backup_job`
+    - `UserResponse` model include `tenant_id`
+    - Indici MongoDB creati su `(tenant_id, user_id)` per le collezioni ad alto traffico
+    - Utenti invitati ereditano `tenant_id` dall'invitante
+    - 16/16 test passati (iteration_258)
+
+### Completato nelle sessioni precedenti
 1. **P0 dati aziendali** — root cause: dati demo scritti da test automatici. Fix: dati corretti nel DB + 11 bug codice fixati
 2. **3 protezioni** — audit trail before/after, seed guard, sanity check nomi sospetti
 3. **Diagnostica** — endpoint + tab frontend per debug produzione
@@ -59,9 +71,17 @@ Francesco Spano' — Steel Project Design Srls
 
 ## Backlog prioritizzato
 
+### P0 — Multi-Tenant Step 2 (prossimo)
+- Aggiornare i 27 service files per passare `tenant_id` nelle query DB
+- Implementare registrazione tenant (ogni nuovo admin crea un nuovo tenant)
+- Contatori separati per tenant (numeri commessa, fattura, preventivo)
+- UI admin per gestione tenant
+
 ### P1 — Prossimi
+- Protezione `.env` su GitHub (git rm --cached, rotazione chiavi)
+- Strategia backup dati Staging → Production
 - Collegamento dominio Aruba `app.1090normafacile.it` → Emergent
-- Caso studio quantificato
+- Campo "Ore stimate" nel Preventivo
 
 ### P2 — Medio termine
 - Caso studio quantificato
@@ -73,10 +93,18 @@ Francesco Spano' — Steel Project Design Srls
 - Product Tour
 - SmartEmptyState su più pagine
 - Refactoring componenti frontend monolitici
-- Architettura multi-tenancy
 - Stability Guard AI
 - Migrazione Pydantic v1 → v2
 - Portale clienti
+- "Registro Comunicazioni" (audit trail)
+- `successor_client_id` con avvisi UI
+
+## Schema DB chiave
+- `tenants`: {tenant_id, nome_azienda, email_admin, piano, attivo, creato_il, impostazioni}
+- `users`: {user_id, email, name, role, tenant_id, team_owner_id, ...}
+- `user_sessions`: {session_token, user_id, tenant_id, expires_at, ...}
+- `company_settings`: {user_id, tenant_id, business_name, partita_iva, ...}
+- ALL data collections: include `tenant_id` field for isolation
 
 ## File critici
 - `/app/backend/routes/company.py` — settings + diagnostica + audit
