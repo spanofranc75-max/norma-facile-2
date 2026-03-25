@@ -1,5 +1,5 @@
 [phases.setup]
-aptPkgs = ["poppler-utils", "libpango-1.0-0", "libpangoft2-1.0-0", "libharfbuzz0b", "libfontconfig1", "libgdk-pixbuf2.0-0", "libcairo2", "libpangocairo-1.0-0"]
+aptPkgs = ["poppler-utils", "libpango-1.0-0", "libpangoft2-1.0-0", "libharfbuzz0b", "libfontconfig1", "libgdk-pixbuf2.0-0", "libcairo2", "libpangocairo-1.0-0", "libgobject-2.0-0", "libglib2.0-0", "libffi8", "libfreetype6"]
 
 [phases.install]
 cmds = ["pip install -r requirements.txt --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/"]
