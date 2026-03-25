@@ -38,7 +38,11 @@ Francesco Spano' — Steel Project Design Srls
     - Indici MongoDB creati su `(tenant_id, user_id)` per le collezioni ad alto traffico
     - Utenti invitati ereditano `tenant_id` dall'invitante
     - 16/16 test passati (iteration_258)
-23. **Bug Fix: Dropdown clienti vuoto** — Root cause: il backfill `tenant_id` avveniva solo sugli utenti all'avvio, ma NON sulle collezioni dati (clienti, commesse, ecc.). Query con `tenant_id: "default"` non trovavano documenti senza il campo. Fix: aggiunto backfill automatico di 70+ collezioni dati nel lifespan di `main.py`. Ora all'avvio qualsiasi documento senza `tenant_id` viene corretto automaticamente.
+23. **Bug Fix: Dropdown clienti vuoto** — Root cause: 
+    - Phase 1: backfill `tenant_id` solo su utenti, non dati → aggiunto backfill dinamico all'avvio (enumera TUTTE le collezioni)
+    - Phase 2: `tenant_match(user)` restituiva operatore MongoDB `{"$in": [...]}` → rotto per INSERT. Fix: restituisce stringa semplice `"default"`, sicura per READ e WRITE
+    - Import mancante in `demo.py` fixato
+    - 12/12 test passati (iteration_260), dropdown verificato con 3 clienti visibili
 24. **Fix Analisi AI Preventivo — 4 correzioni critiche**:
     - Fix 1+3: Peso grigliato/specchiature — detection by keywords + _estrai_area_da_testo() per dimensioni nel testo (LxxxxHxxxx). Da 13.722 kg → 883 kg, da 0 kg → 424 kg.
     - Fix 2: Conto lavoro server-side detection (keywords: "conto lavoro", "fornito dal cliente", ecc.) → peso=0, flag=true
