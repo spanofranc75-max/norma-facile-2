@@ -2,6 +2,31 @@
 Norma Facile 2.0 - Main Application Entry Point
 CRM/ERP per Fabbri (Metalworkers).
 """
+# ── WeasyPrint graceful fallback ──
+# WeasyPrint requires system GTK libraries (libgobject, libpango, etc.)
+# that may not be available on all hosting platforms (e.g. Railway).
+# This mock allows the app to start and only fail when PDF generation is requested.
+import sys
+import types
+
+try:
+    import weasyprint as _wp_test  # noqa: F401
+except (OSError, ImportError) as _wp_err:
+    _wp_err_msg = str(_wp_err)
+    _mock = types.ModuleType("weasyprint")
+
+    class _MockHTML:
+        def __init__(self, *a, **kw):
+            raise RuntimeError(
+                f"WeasyPrint non disponibile su questo server: {_wp_err_msg}. "
+                "Installa le librerie GTK di sistema (libgobject-2.0-0, libpango, libcairo)."
+            )
+        def write_pdf(self, *a, **kw):
+            self.__init__()
+
+    _mock.HTML = _MockHTML
+    sys.modules["weasyprint"] = _mock
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
