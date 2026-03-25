@@ -39,6 +39,11 @@ Francesco Spano' — Steel Project Design Srls
     - Utenti invitati ereditano `tenant_id` dall'invitante
     - 16/16 test passati (iteration_258)
 23. **Bug Fix: Dropdown clienti vuoto** — Root cause: il backfill `tenant_id` avveniva solo sugli utenti all'avvio, ma NON sulle collezioni dati (clienti, commesse, ecc.). Query con `tenant_id: "default"` non trovavano documenti senza il campo. Fix: aggiunto backfill automatico di 70+ collezioni dati nel lifespan di `main.py`. Ora all'avvio qualsiasi documento senza `tenant_id` viene corretto automaticamente.
+24. **Fix Analisi AI Preventivo — 4 correzioni critiche**:
+    - Fix 1+3: Peso grigliato/specchiature — detection by keywords + _estrai_area_da_testo() per dimensioni nel testo (LxxxxHxxxx). Da 13.722 kg → 883 kg, da 0 kg → 424 kg.
+    - Fix 2: Conto lavoro server-side detection (keywords: "conto lavoro", "fornito dal cliente", ecc.) → peso=0, flag=true
+    - Fix 4: Campo "ore_stimate" aggiunto a righe preventivo (frontend colonna "h" + backend campo + analisi AI)
+    - 23/23 test passati (iteration_259)
 
 ### Completato nelle sessioni precedenti
 1. **P0 dati aziendali** — root cause: dati demo scritti da test automatici. Fix: dati corretti nel DB + 11 bug codice fixati
