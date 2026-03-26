@@ -1,0 +1,104 @@
+{
+  "summary": "Iteration 267: Preventivi-Fatture Linking Feature Testing Complete. All 20 backend tests passed (100%). All frontend UI tests passed via Playwright. Verified: 1) GET /api/preventivi/{id}/linked-documents returns correct structure with documents, imponibile, total_fatturato, total_nc, net_invoiced, remaining, percentage, is_complete, 2) POST /api/preventivi/{id}/link-invoice correctly links invoice with custom amount, 3) DELETE /api/preventivi/{id}/unlink-invoice/{invoice_id} correctly removes link, 4) FT documents add (+) to total_invoiced, NC documents subtract (-), 5) Preventivi list shows stato_fatturazione: completo (green), parziale (orange), non_fatturato, 6) LinkedDocumentsPanel renders in preventivo editor sidebar with FT/NC indicators (+/- signs and colors), 7) Progress bar changes color: green when complete, orange when partial, 8) Invoice list shows 'P' badge when linked to preventivi, 9) Invoice editor shows linked preventivi reference, 10) Link dialog shows available invoices filtered by client, 11) Duplicate link returns 409 error, 12) Link with custom amount works.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "InvoiceEditorPage", "issues": ["Minor React hydration warning for span inside select element - does not affect functionality"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration267_preventivi_fatture_link.py",
+    "/app/test_reports/pytest/iteration267_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Backend linked-documents endpoint correctly calculates net_invoiced = total_fatturato - total_nc",
+    "Backend recalc_preventivo_invoiced correctly handles both progressive and manual links",
+    "Frontend LinkedDocumentsPanel correctly shows FT with green +amount and NC with red -amount",
+    "Frontend InvoicingProgressBar correctly uses green for complete (>=100%), orange for partial (0-100%)",
+    "Frontend link dialog correctly filters invoices by client_id",
+    "Backend returns 409 for duplicate links (both progressive and manual)",
+    "All data-testid attributes present for testing: linked-documents-panel, btn-link-invoice, link-invoice-dialog, linked-doc-*, invoicing-progress, prev-link-badge-*, invoice-linked-prevs"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration267_preventivi_fatture_link.py"
+  ],
+  "success_rate": {
+    "backend": "100% (20/20 pytest tests passed)",
+    "frontend": "100% (All Playwright UI tests passed)"
+  },
+  "seed_data_creation": "Used existing data: prev_50c2da16f2 (100% fatturato), prev_6534e128c9 (FT+NC net=0), prev_4db2a68b44 (20% parziale), inv_4941cb2617c0 (standalone invoice)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Preventivi-Fatture linking feature fully implemented and tested. Backend endpoints: GET /api/preventivi/{id}/linked-documents, POST /api/preventivi/{id}/link-invoice, DELETE /api/preventivi/{id}/unlink-invoice/{invoice_id}. Frontend components: LinkedDocumentsPanel in preventivo editor sidebar, InvoicingProgressBar in preventivi list, P badge on invoices list. FT adds to total, NC subtracts. Progress bar: green=complete, orange=partial.",
+  "tests_performed": {
+    "TestLinkedDocumentsEndpoint": {
+      "test_linked_documents_returns_correct_structure": "PASS - Returns all required fields",
+      "test_linked_documents_100_percent_complete": "PASS - is_complete=true, percentage=100%",
+      "test_linked_documents_parziale": "PASS - is_complete=false, 0<percentage<100",
+      "test_linked_documents_document_structure": "PASS - Each doc has invoice_id, document_number, document_type, amount, sign, issue_date, status, link_type",
+      "test_linked_documents_requires_auth": "PASS - Returns 401 without auth"
+    },
+    "TestFTAndNCCalculation": {
+      "test_ft_adds_to_total": "PASS - FT documents add to total_fatturato",
+      "test_nc_subtracts_from_total": "PASS - NC documents subtract, net_invoiced = total_fatturato - total_nc"
+    },
+    "TestPreventiviListStatoFatturazione": {
+      "test_list_shows_stato_fatturazione": "PASS - All preventivi have stato_fatturazione field",
+      "test_completo_status": "PASS - 100% fatturato shows stato_fatturazione=completo",
+      "test_parziale_status": "PASS - Partial shows stato_fatturazione=parziale"
+    },
+    "TestLinkInvoiceEndpoint": {
+      "test_link_invoice_requires_auth": "PASS - Returns 401 without auth",
+      "test_link_invoice_requires_invoice_id": "PASS - Returns 400 when missing",
+      "test_duplicate_link_returns_409": "PASS - Returns 409 for duplicate link"
+    },
+    "TestUnlinkInvoiceEndpoint": {
+      "test_unlink_invoice_requires_auth": "PASS - Returns 401 without auth",
+      "test_unlink_nonexistent_returns_404": "PASS - Returns 404 for non-existent link"
+    },
+    "TestInvoiceListPBadge": {
+      "test_invoice_list_includes_linked_preventivi": "PASS - Found 10 invoices with P badges"
+    },
+    "TestInvoiceEditorLinkedPrevs": {
+      "test_invoice_detail_includes_linked_preventivi": "PASS - Invoice shows preventivo link"
+    },
+    "TestProgressBarColors": {
+      "test_complete_preventivo_progress": "PASS - 100% shows green bar",
+      "test_partial_preventivo_progress": "PASS - 20% shows orange bar"
+    },
+    "TestLinkDialogClientFilter": {
+      "test_invoices_can_be_filtered_by_client": "PASS - Invoices filtered by client_id"
+    },
+    "PlaywrightUITests": {
+      "test_preventivi_list_progress_bars": "PASS - Found 8 invoicing progress bars",
+      "test_linked_documents_panel": "PASS - Panel found in preventivo editor",
+      "test_link_invoice_dialog": "PASS - Dialog opens with filtered invoices",
+      "test_p_badges_on_invoices": "PASS - Found 10 P badges on invoices list",
+      "test_linked_prevs_in_invoice_editor": "PASS - Linked preventivi section found",
+      "test_ft_nc_indicators": "PASS - FT shows +green, NC shows -red",
+      "test_progress_bar_colors": "PASS - Green for complete, orange for partial"
+    }
+  },
+  "verified_features": {
+    "linked_documents_endpoint": "VERIFIED - Returns correct structure with all fields",
+    "link_invoice_endpoint": "VERIFIED - Links invoice with custom amount, returns 409 for duplicates",
+    "unlink_invoice_endpoint": "VERIFIED - Removes link and recalculates totals",
+    "ft_nc_calculation": "VERIFIED - FT adds (+), NC subtracts (-) from net_invoiced",
+    "stato_fatturazione": "VERIFIED - completo/parziale/non_fatturato based on percentage",
+    "linked_documents_panel": "VERIFIED - Shows FT/NC with +/- indicators and colors",
+    "progress_bar_colors": "VERIFIED - Green for complete (>=100%), orange for partial",
+    "p_badge_on_invoices": "VERIFIED - Shows P badge with count when linked to preventivi",
+    "linked_prevs_in_invoice": "VERIFIED - Invoice editor shows linked preventivi reference",
+    "link_dialog_client_filter": "VERIFIED - Dialog filters invoices by client"
+  },
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "mocked_apis_list": []
+  }
+}

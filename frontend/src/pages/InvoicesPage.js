@@ -504,6 +504,12 @@ export default function InvoicesPage() {
                                             >
                                                 <TableCell className="font-mono font-medium">
                                                     {inv.document_number}
+                                                    {(inv.linked_preventivi?.length > 0 || inv.progressive_from_preventivo) && (
+                                                        <Badge className="ml-1.5 bg-violet-100 text-violet-700 border-violet-200 text-[9px] px-1 py-0"
+                                                            data-testid={`prev-link-badge-${inv.invoice_id}`}>
+                                                            P{inv.linked_preventivi?.length || 1}
+                                                        </Badge>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell>
                                                     <Badge className={`hidden sm:inline-flex ${DOC_TYPES[inv.document_type]?.color}`}>

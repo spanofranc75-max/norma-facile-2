@@ -21,6 +21,7 @@ const STATUS_MAP = {
     inviato: { label: 'Inviato', color: 'bg-blue-100 text-blue-800', rowBg: '' },
     accettato: { label: 'Accettato', color: 'bg-amber-200 text-amber-900 border-amber-300', rowBg: 'bg-amber-100/80 border-l-4 border-l-amber-400' },
     in_lavorazione: { label: 'In Lavorazione', color: 'bg-sky-200 text-sky-900 border-sky-300', rowBg: 'bg-sky-100/80 border-l-4 border-l-sky-500' },
+    fatturato: { label: 'Fatturato', color: 'bg-emerald-200 text-emerald-900 border-emerald-300', rowBg: 'bg-emerald-100/80 border-l-4 border-l-emerald-500' },
     chiuso: { label: 'Chiuso', color: 'bg-emerald-200 text-emerald-900 border-emerald-300', rowBg: 'bg-emerald-100/80 border-l-4 border-l-emerald-500' },
     rifiutato: { label: 'Rifiutato', color: 'bg-red-100 text-red-800', rowBg: '' },
     eliminato: { label: 'Eliminato', color: 'bg-gray-200 text-gray-500 border-gray-300 line-through', rowBg: 'bg-gray-50 opacity-60' },
@@ -31,15 +32,18 @@ const fmtEur = (v) => new Intl.NumberFormat('it-IT', { style: 'currency', curren
 function InvoicingProgressBar({ progress }) {
     if (!progress || progress <= 0) return <span className="text-xs text-slate-400">-</span>;
     const isComplete = progress >= 100;
+    const isPartial = progress > 0 && progress < 100;
+    const barColor = isComplete ? 'bg-emerald-500' : isPartial ? 'bg-amber-500' : 'bg-[#0055FF]';
+    const textColor = isComplete ? 'text-emerald-600' : isPartial ? 'text-amber-600' : 'text-[#0055FF]';
     return (
         <div className="flex items-center gap-2 min-w-[100px]" data-testid="invoicing-progress">
             <div className="flex-1 bg-slate-200 rounded-full h-1.5">
                 <div
-                    className={`h-1.5 rounded-full transition-all ${isComplete ? 'bg-emerald-500' : 'bg-[#0055FF]'}`}
+                    className={`h-1.5 rounded-full transition-all ${barColor}`}
                     style={{ width: `${Math.min(progress, 100)}%` }}
                 />
             </div>
-            <span className={`text-[10px] font-mono font-semibold ${isComplete ? 'text-emerald-600' : 'text-[#0055FF]'}`}>{Math.round(progress)}%</span>
+            <span className={`text-[10px] font-mono font-semibold ${textColor}`}>{Math.round(progress)}%</span>
         </div>
     );
 }
@@ -156,9 +160,11 @@ export default function PreventiviPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {preventivi.map(p => {
-                                        // Determine effective status: use commessa_stato if available
+                                        // Determine effective status: invoicing state + commessa state
                                         let effectiveStatus = p.status;
-                                        if (p.status === 'accettato' && p.commessa_stato) {
+                                        if (p.stato_fatturazione === 'completo') {
+                                            effectiveStatus = 'fatturato';
+                                        } else if (p.status === 'accettato' && p.commessa_stato) {
                                             if (p.commessa_stato === 'chiuso' || p.commessa_stato === 'fatturato') {
                                                 effectiveStatus = 'chiuso';
                                             } else if (p.commessa_stato !== 'bozza') {

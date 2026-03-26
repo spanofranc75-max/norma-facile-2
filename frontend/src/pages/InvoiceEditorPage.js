@@ -157,6 +157,7 @@ export default function InvoiceEditorPage() {
     const [sdiPreviewOpen, setSdiPreviewOpen] = useState(false);
     const [paymentTypes, setPaymentTypes] = useState([]);
     const [showLivePreview, setShowLivePreview] = useState(false);
+    const [linkedPrevs, setLinkedPrevs] = useState([]);
 
     // Calculate due date from issue_date and payment type
     const calcDueDate = (issueDate, pt) => {
@@ -218,6 +219,12 @@ export default function InvoiceEditorPage() {
                 status: data.status || 'bozza',
             });
             setTotals(data.totals);
+            // Load linked preventivi
+            const lp = data.linked_preventivi || [];
+            if (data.progressive_from_preventivo && !lp.some(p => p.preventivo_id === data.progressive_from_preventivo)) {
+                lp.unshift({ preventivo_id: data.progressive_from_preventivo, number: data.progressive_from_preventivo_number || '—', amount: data.progressive_amount || 0, link_type: 'progressive' });
+            }
+            setLinkedPrevs(lp);
         } catch (error) {
             toast.error('Documento non trovato');
             navigate('/invoices');
@@ -911,6 +918,25 @@ export default function InvoiceEditorPage() {
                                     rows={3}
                                 />
                             </div>
+                            {/* Linked Preventivi */}
+                            {linkedPrevs.length > 0 && (
+                                <div className="pt-2 border-t border-slate-200" data-testid="invoice-linked-prevs">
+                                    <Label className="text-xs text-violet-600 flex items-center gap-1">
+                                        <FileText className="h-3 w-3" />Preventivi Collegati
+                                    </Label>
+                                    <div className="flex flex-wrap gap-1.5 mt-1">
+                                        {linkedPrevs.map((lp, i) => (
+                                            <span key={lp.preventivo_id || i}
+                                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-violet-200 bg-violet-50 text-xs text-violet-700 cursor-pointer hover:bg-violet-100"
+                                                onClick={() => navigate(`/preventivi/${lp.preventivo_id}`)}
+                                                data-testid={`linked-prev-${lp.preventivo_id}`}>
+                                                P. {lp.number}
+                                                {lp.amount > 0 && <span className="text-[9px] text-violet-500">({new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(lp.amount)})</span>}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 

@@ -409,6 +409,13 @@ async def list_preventivi(
         d["invoicing_progress"] = round(
             (invoiced / tot * 100), 1
         ) if tot > 0 else 0
+        # Stato fatturazione for row coloring
+        if d["invoicing_progress"] >= 99.9:
+            d["stato_fatturazione"] = "completo"
+        elif d["invoicing_progress"] > 0:
+            d["stato_fatturazione"] = "parziale"
+        else:
+            d["stato_fatturazione"] = d.get("stato_fatturazione", "non_fatturato")
         # Lookup linked commessa stato for row coloring
         linked_comm = await db.commesse.find_one(
             {"user_id": user["user_id"], "tenant_id": tenant_match(user), "$or": [
@@ -465,6 +472,13 @@ async def get_preventivo(prev_id: str, user: dict = Depends(require_role("admin"
     doc["invoicing_progress"] = round(
         (invoiced / tot * 100), 1
     ) if tot > 0 else 0
+    # Stato fatturazione
+    if doc["invoicing_progress"] >= 99.9:
+        doc["stato_fatturazione"] = "completo"
+    elif doc["invoicing_progress"] > 0:
+        doc["stato_fatturazione"] = "parziale"
+    else:
+        doc["stato_fatturazione"] = doc.get("stato_fatturazione", "non_fatturato")
     return doc
 
 
@@ -1300,6 +1314,273 @@ async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceReque
 def fmtEur_py(v):
     """Format EUR value in Italian style."""
     return f"{v:,.2f} EUR".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+# ── Collegamento Manuale Preventivi ↔ Fatture ────────────────────
+
+async def recalc_preventivo_invoiced(prev_id: str, uid: str, user: dict):
+    """Recalculate total_invoiced for a preventivo from ALL linked invoices.
+    Sources: 1) progressive invoices (progressive_from_preventivo)
+             2) manually linked invoices (linked_preventivi on invoices)
+    FT adds, NC subtracts.
+    """
+    tid = tenant_match(user)
+    doc = await db.preventivi.find_one(
+        {"preventivo_id": prev_id, "user_id": uid, "tenant_id": tid},
+        {"_id": 0, "totals": 1}
+    )
+    if not doc:
+        return 0.0
+
+    totals = doc.get("totals", {})
+    subtotal_prev = float(totals.get("subtotal", 0))
+    sconto_val = float(totals.get("sconto_val", 0))
+    imponibile = float(totals.get("imponibile", subtotal_prev - sconto_val))
+    if imponibile <= 0:
+        imponibile = subtotal_prev
+
+    # 1) Progressive invoices
+    prog_invs = await db.invoices.find(
+        {"progressive_from_preventivo": prev_id, "user_id": uid, "tenant_id": tid, "status": {"$ne": "annullata"}},
+        {"_id": 0, "invoice_id": 1, "progressive_amount": 1, "document_type": 1}
+    ).to_list(200)
+    prog_ids = {inv["invoice_id"] for inv in prog_invs}
+
+    total = 0.0
+    for inv in prog_invs:
+        amt = float(inv.get("progressive_amount", 0))
+        if inv.get("document_type") == "NC":
+            total -= amt
+        else:
+            total += amt
+
+    # 2) Manually linked invoices (on the invoice side)
+    manual_invs = await db.invoices.find(
+        {"linked_preventivi.preventivo_id": prev_id, "user_id": uid, "tenant_id": tid, "status": {"$ne": "annullata"}},
+        {"_id": 0, "invoice_id": 1, "document_type": 1, "linked_preventivi": 1}
+    ).to_list(200)
+
+    for inv in manual_invs:
+        if inv["invoice_id"] in prog_ids:
+            continue  # Already counted via progressive
+        for lp in inv.get("linked_preventivi", []):
+            if lp.get("preventivo_id") == prev_id:
+                amt = float(lp.get("amount", 0))
+                if inv.get("document_type") == "NC":
+                    total -= amt
+                else:
+                    total += amt
+
+    total = round(max(total, 0), 2)
+
+    # Determine fatturazione status
+    pct = round((total / imponibile * 100), 1) if imponibile > 0 else 0
+    if pct >= 99.9:
+        stato_fatt = "completo"
+    elif total > 0:
+        stato_fatt = "parziale"
+    else:
+        stato_fatt = "non_fatturato"
+
+    await db.preventivi.update_one(
+        {"preventivo_id": prev_id},
+        {"$set": {
+            "total_invoiced": total,
+            "stato_fatturazione": stato_fatt,
+            "updated_at": datetime.now(timezone.utc),
+        }}
+    )
+    return total
+
+
+@router.get("/{prev_id}/linked-documents")
+async def get_linked_documents(prev_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
+    """Get ALL documents linked to a preventivo (progressive + manual)."""
+    uid = user["user_id"]
+    tid = tenant_match(user)
+
+    doc = await db.preventivi.find_one(
+        {"preventivo_id": prev_id, "user_id": uid, "tenant_id": tid},
+        {"_id": 0, "totals": 1, "number": 1}
+    )
+    if not doc:
+        raise HTTPException(404, "Preventivo non trovato")
+
+    totals = doc.get("totals", {})
+    subtotal_prev = float(totals.get("subtotal", 0))
+    sconto_val = float(totals.get("sconto_val", 0))
+    imponibile = float(totals.get("imponibile", subtotal_prev - sconto_val))
+    if imponibile <= 0:
+        imponibile = subtotal_prev
+
+    # 1) Progressive invoices
+    prog_invs = await db.invoices.find(
+        {"progressive_from_preventivo": prev_id, "user_id": uid, "tenant_id": tid, "status": {"$ne": "annullata"}},
+        {"_id": 0, "invoice_id": 1, "document_number": 1, "document_type": 1,
+         "progressive_amount": 1, "progressive_type": 1, "issue_date": 1, "status": 1,
+         "totals": 1, "client_id": 1}
+    ).sort("created_at", 1).to_list(200)
+    prog_ids = {inv["invoice_id"] for inv in prog_invs}
+
+    documents = []
+    total_ft = 0.0
+    total_nc = 0.0
+
+    for inv in prog_invs:
+        amt = float(inv.get("progressive_amount", 0))
+        doc_type = inv.get("document_type", "FT")
+        if doc_type == "NC":
+            total_nc += amt
+        else:
+            total_ft += amt
+        documents.append({
+            "invoice_id": inv["invoice_id"],
+            "document_number": inv.get("document_number", ""),
+            "document_type": doc_type,
+            "amount": amt,
+            "sign": -1 if doc_type == "NC" else 1,
+            "issue_date": inv.get("issue_date", ""),
+            "status": inv.get("status", ""),
+            "link_type": inv.get("progressive_type", "progressive"),
+            "total_document": inv.get("totals", {}).get("total_document", 0),
+        })
+
+    # 2) Manually linked invoices
+    manual_invs = await db.invoices.find(
+        {"linked_preventivi.preventivo_id": prev_id, "user_id": uid, "tenant_id": tid, "status": {"$ne": "annullata"}},
+        {"_id": 0, "invoice_id": 1, "document_number": 1, "document_type": 1,
+         "linked_preventivi": 1, "issue_date": 1, "status": 1, "totals": 1}
+    ).sort("created_at", 1).to_list(200)
+
+    for inv in manual_invs:
+        if inv["invoice_id"] in prog_ids:
+            continue
+        for lp in inv.get("linked_preventivi", []):
+            if lp.get("preventivo_id") == prev_id:
+                amt = float(lp.get("amount", 0))
+                doc_type = inv.get("document_type", "FT")
+                if doc_type == "NC":
+                    total_nc += amt
+                else:
+                    total_ft += amt
+                documents.append({
+                    "invoice_id": inv["invoice_id"],
+                    "document_number": inv.get("document_number", ""),
+                    "document_type": doc_type,
+                    "amount": amt,
+                    "sign": -1 if doc_type == "NC" else 1,
+                    "issue_date": inv.get("issue_date", ""),
+                    "status": inv.get("status", ""),
+                    "link_type": "manual",
+                    "total_document": inv.get("totals", {}).get("total_document", 0),
+                })
+
+    net = round(total_ft - total_nc, 2)
+    remaining = round(imponibile - net, 2)
+    pct = round((net / imponibile * 100), 1) if imponibile > 0 else 0
+
+    return {
+        "preventivo_id": prev_id,
+        "imponibile": round(imponibile, 2),
+        "total_fatturato": round(total_ft, 2),
+        "total_nc": round(total_nc, 2),
+        "net_invoiced": net,
+        "remaining": max(remaining, 0),
+        "percentage": min(pct, 100),
+        "is_complete": remaining <= 0.01,
+        "documents": documents,
+    }
+
+
+@router.post("/{prev_id}/link-invoice")
+async def link_invoice_to_preventivo(prev_id: str, body: dict, user: dict = Depends(require_role("admin", "amministrazione"))):
+    """Manually link an existing invoice or NC to a preventivo.
+    Body: {invoice_id, amount (optional - defaults to full invoice total)}
+    Works for: single invoice → one preventivo, or one invoice → many preventivi (call once per preventivo).
+    """
+    uid = user["user_id"]
+    tid = tenant_match(user)
+
+    invoice_id = body.get("invoice_id")
+    if not invoice_id:
+        raise HTTPException(400, "invoice_id obbligatorio")
+
+    prev = await db.preventivi.find_one(
+        {"preventivo_id": prev_id, "user_id": uid, "tenant_id": tid},
+        {"_id": 0, "preventivo_id": 1, "number": 1, "totals": 1}
+    )
+    if not prev:
+        raise HTTPException(404, "Preventivo non trovato")
+
+    inv = await db.invoices.find_one(
+        {"invoice_id": invoice_id, "user_id": uid, "tenant_id": tid},
+        {"_id": 0, "invoice_id": 1, "document_number": 1, "document_type": 1,
+         "totals": 1, "linked_preventivi": 1, "progressive_from_preventivo": 1}
+    )
+    if not inv:
+        raise HTTPException(404, "Fattura non trovata")
+
+    # Check not already linked via progressive
+    if inv.get("progressive_from_preventivo") == prev_id:
+        raise HTTPException(409, "Questa fattura è già collegata tramite fatturazione progressiva")
+
+    # Check not already manually linked
+    existing_links = inv.get("linked_preventivi", [])
+    if any(lp.get("preventivo_id") == prev_id for lp in existing_links):
+        raise HTTPException(409, "Questa fattura è già collegata a questo preventivo")
+
+    # Determine amount
+    amount = body.get("amount")
+    if amount is None:
+        # Default to invoice subtotal (imponibile)
+        inv_totals = inv.get("totals", {})
+        amount = float(inv_totals.get("subtotal", 0) or inv_totals.get("total_document", 0) or 0)
+    amount = round(float(amount), 2)
+    if amount <= 0:
+        raise HTTPException(400, "Importo deve essere > 0")
+
+    now = datetime.now(timezone.utc)
+
+    # Add to invoice's linked_preventivi
+    await db.invoices.update_one(
+        {"invoice_id": invoice_id},
+        {"$push": {"linked_preventivi": {
+            "preventivo_id": prev_id,
+            "number": prev.get("number", ""),
+            "amount": amount,
+            "linked_at": now.isoformat(),
+        }}}
+    )
+
+    # Recalculate preventivo totals
+    total_invoiced = await recalc_preventivo_invoiced(prev_id, uid, user)
+
+    logger.info(f"Linked invoice {inv.get('document_number')} to preventivo {prev.get('number')}: {amount:.2f} EUR")
+    return {
+        "message": f"Fattura {inv.get('document_number')} collegata al preventivo {prev.get('number')}",
+        "total_invoiced": total_invoiced,
+    }
+
+
+@router.delete("/{prev_id}/unlink-invoice/{invoice_id}")
+async def unlink_invoice_from_preventivo(prev_id: str, invoice_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
+    """Unlink a manually linked invoice from a preventivo."""
+    uid = user["user_id"]
+    tid = tenant_match(user)
+
+    # Remove from invoice's linked_preventivi
+    result = await db.invoices.update_one(
+        {"invoice_id": invoice_id, "user_id": uid, "tenant_id": tid},
+        {"$pull": {"linked_preventivi": {"preventivo_id": prev_id}}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(404, "Collegamento non trovato")
+
+    # Recalculate
+    total_invoiced = await recalc_preventivo_invoiced(prev_id, uid, user)
+
+    logger.info(f"Unlinked invoice {invoice_id} from preventivo {prev_id}")
+    return {"message": "Collegamento rimosso", "total_invoiced": total_invoiced}
 
 
 # ── PDF Generation ───────────────────────────────────────────────

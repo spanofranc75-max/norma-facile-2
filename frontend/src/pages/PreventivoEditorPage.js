@@ -28,6 +28,7 @@ import { PDFPreviewButton } from '../components/PDFPreviewModal';
 import { AutoExpandTextarea } from '../components/AutoExpandTextarea';
 import InvoiceGenerationModal from '../components/InvoiceGenerationModal';
 import EmailPreviewDialog from '../components/EmailPreviewDialog';
+import LinkedDocumentsPanel from '../components/LinkedDocumentsPanel';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { Brain } from 'lucide-react';
 
@@ -857,6 +858,24 @@ export default function PreventivoEditorPage() {
                                 )}
                             </CardContent>
                         </Card>
+
+                        {/* Linked Documents Panel */}
+                        {!isNew && isAccepted && (
+                            <LinkedDocumentsPanel
+                                prevId={prevId}
+                                clientId={form.client_id}
+                                onUpdate={() => {
+                                    // Refresh workflow data
+                                    apiRequest(`/preventivi/${prevId}`).then(data => {
+                                        setWorkflow(w => ({
+                                            ...w,
+                                            invoicing_progress: data.invoicing_progress || 0,
+                                            linked_invoices: data.linked_invoices || [],
+                                        }));
+                                    }).catch(() => {});
+                                }}
+                            />
+                        )}
                     </div>
 
                     {/* ── Right Content ── */}
