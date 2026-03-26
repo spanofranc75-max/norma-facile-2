@@ -287,12 +287,40 @@ class OperatoreInput(BaseModel):
 
 @router.get("/{cid}/operatori", tags=["operatori"])
 async def list_operatori(cid: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
-    """List all operators for the account (shared across commesse)."""
+    """List all operators for the account.
+    
+    Merges data from:
+    - operatori collection (legacy, simple name-only)
+    - dipendenti collection (Risorse Umane, full HR data)
+    """
     admin_id = await _get_team_admin_id(user)
-    ops = await db[OPERATORI_COLL].find(
+    
+    # 1. Load from operatori collection (legacy)
+    ops_raw = await db[OPERATORI_COLL].find(
         {"admin_id": admin_id}, {"_id": 0}
     ).sort("nome", 1).to_list(200)
-    return {"operatori": ops}
+    
+    # 2. Load from dipendenti collection (Risorse Umane)
+    dipendenti = await db["dipendenti"].find(
+        {"user_id": admin_id, "attivo": True}, {"_id": 0}
+    ).sort("nome", 1).to_list(200)
+    
+    # 3. Merge: convert dipendenti to operatore format, avoid duplicates
+    seen_names = {o.get("nome", "").strip().lower() for o in ops_raw}
+    
+    for dip in dipendenti:
+        full_name = f"{dip.get('nome', '')} {dip.get('cognome', '')}".strip()
+        if full_name.lower() not in seen_names:
+            ops_raw.append({
+                "op_id": dip.get("dipendente_id", ""),
+                "admin_id": admin_id,
+                "nome": full_name,
+                "mansione": dip.get("ruolo", dip.get("tipo_contratto", "")),
+                "source": "dipendenti",
+            })
+            seen_names.add(full_name.lower())
+    
+    return {"operatori": ops_raw}
 
 
 @router.post("/{cid}/operatori", tags=["operatori"])
