@@ -17,28 +17,33 @@
 
 ### 2.1 Ambienti
 
-| Ambiente | URL | Tipo | Database |
-|----------|-----|------|----------|
-| **Preview sviluppo** | `*.preview.emergentagent.com` | Preview Emergent (cambia ad ogni sessione) | **MongoDB Atlas** — `normafacile` su Cluster0 (DATI REALI) |
-| **Frontend Vercel** | `norma-facile-2.vercel.app` | Auto-deploy da GitHub branch `main` | N/A (solo frontend) |
-| **Dominio futuro** | `app.1090normafacile.it` | Da configurare | Da collegare |
+| Ambiente | URL | Tipo |
+|----------|-----|------|
+| **PRODUZIONE** | `https://app.1090normafacile.it` | Deploy Emergent — UNICO AMBIENTE DI FRANCESCO |
 
-### 2.2 Flusso di deploy
+**NON ESISTONO ALTRI AMBIENTI.** Qualsiasi altro URL (preview, content-engine-86, vercel) è OBSOLETO. Francesco lavora SOLO su `app.1090normafacile.it`.
 
-```
-Sviluppo nel Preview → "Salva su GitHub" → branch main → Vercel auto-deploya frontend
-                                                        → Per il backend: serve "Deploy" su Emergent
-```
-
-### 2.3 DATABASE — MongoDB Atlas (RISOLTO)
+### 2.2 DATABASE — MongoDB Atlas
 
 - **Cluster**: Cluster0 su MongoDB Atlas (`cluster0.aypz9f1.mongodb.net`)
-- **Database**: `normafacile` (63 collezioni, 100 preventivi, 54 fatture, 43 clienti, 14 commesse)
+- **Database**: `normafacile` (63 collezioni)
 - **Utente DB**: `spanofranc75_db_user`
 - **Network**: 0.0.0.0/0 (accesso da ovunque)
-- **OGNI DEPLOY** deve usare questa connection string Atlas — MAI MongoDB locale
-- **Connection String**: `mongodb+srv://spanofranc75_db_user:<PASSWORD>@cluster0.aypz9f1.mongodb.net/?appName=Cluster0&retryWrites=true&w=majority`
-- La password è nelle env variables del deploy, NON scritta in questo file
+- **Tenant di Francesco**: `ten_1cf1a865bf20`
+- **OGNI DEPLOY** deve usare questa connection string Atlas nel Secret `MONGO_URL` e `DB_NAME=normafacile`
+
+### 2.3 Flusso di deploy
+
+```
+Sviluppo nel Preview → "Salva su GitHub" → Re-deploy su Emergent → app.1090normafacile.it aggiornato
+```
+
+### 2.4 Secrets obbligatori nel deploy Emergent
+
+Questi Secrets DEVONO essere presenti su ogni deploy:
+- `MONGO_URL`: connection string Atlas (mongodb+srv://...)
+- `DB_NAME`: normafacile
+- `REACT_APP_BACKEND_URL`: https://app.1090normafacile.it
 
 ### 2.4 Autenticazione
 
@@ -67,6 +72,16 @@ Sviluppo nel Preview → "Salva su GitHub" → branch main → Vercel auto-deplo
 - JWT_SECRET rimosso
 - 2 utenti test rimossi
 - 28/28 test passati
+
+### Migrazione dati tenant_id (26 Marzo 2026) — COMPLETATO
+- Tutti i documenti migrati da `tenant_id: "default"` a `tenant_id: "ten_1cf1a865bf20"` (Francesco)
+- 39+ collezioni aggiornate (100 preventivi, 54 fatture, 43 clienti, 14 commesse, 28 DDT, 78 fatture ricevute, ecc.)
+- Tenant placeholder "default" rimosso
+
+### Collegamento MongoDB Atlas (26 Marzo 2026) — COMPLETATO
+- Backend collegato a MongoDB Atlas (Cluster0)
+- Produzione attiva su `app.1090normafacile.it`
+- Secrets configurati nel deploy Emergent (MONGO_URL, DB_NAME, REACT_APP_BACKEND_URL)
 
 ### Sprint 2 Fase A — Multi-Tenant Fondamenta (26 Marzo 2026) — COMPLETATO
 - `services/tenant_service.py`: CRUD tenant + auto-onboarding
