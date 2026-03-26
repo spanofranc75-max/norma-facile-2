@@ -1538,14 +1538,22 @@ async def _send_sdi_impl(invoice_id: str, user: dict):
                 fic_doc_id = await _handle_fic_409(fic, invoice, fic_data)
             else:
                 detail = extract_fic_error_message(e)
-                status_code = e.response.status_code
+                fic_status = e.response.status_code
                 body_text = ""
                 try:
                     body_text = e.response.text[:500]
                 except Exception:
                     pass
-                logger.error(f"FIC create failed ({status_code}): {detail} | Body: {body_text}")
-                raise HTTPException(status_code, f"Errore Fatture in Cloud ({status_code}): {detail}")
+                logger.error(f"FIC create failed ({fic_status}): {detail} | Body: {body_text}")
+                # Map FIC errors to appropriate HTTP status (never return 401/403 for FIC errors)
+                if fic_status == 401:
+                    raise HTTPException(502, f"Token FattureInCloud scaduto o non valido. Genera un nuovo token dal tuo account FattureInCloud (Impostazioni > Connessioni API). Dettaglio: {detail}")
+                elif fic_status == 403:
+                    raise HTTPException(502, f"Permessi insufficienti sul token FattureInCloud. Verifica che il token abbia i permessi necessari. Dettaglio: {detail}")
+                elif fic_status in (500, 502, 503, 504):
+                    raise HTTPException(502, f"FattureInCloud temporaneamente non disponibile (HTTP {fic_status}). Riprova tra qualche minuto. Dettaglio: {detail}")
+                else:
+                    raise HTTPException(422, f"Errore Fatture in Cloud ({fic_status}): {detail}")
         except (httpx.TimeoutException, httpx.ConnectError) as e:
             raise HTTPException(503, str(e))
 
@@ -1589,7 +1597,13 @@ async def _send_sdi_impl(invoice_id: str, user: dict):
             {"invoice_id": invoice_id},
             {"$set": {"fic_document_id": fic_doc_id, "updated_at": datetime.now(timezone.utc).isoformat()}}
         )
-        raise HTTPException(e.response.status_code, f"Documento creato su FIC (id={fic_doc_id}), ma invio SDI fallito: {detail}")
+        fic_status = e.response.status_code
+        if fic_status in (401, 403):
+            raise HTTPException(502, f"Token FattureInCloud scaduto o non valido. Genera un nuovo token dal tuo account FIC. Dettaglio: {detail}")
+        elif fic_status in (500, 502, 503, 504):
+            raise HTTPException(502, f"FattureInCloud/SDI temporaneamente non disponibile (HTTP {fic_status}). Documento creato su FIC (id={fic_doc_id}), riprova tra qualche minuto.")
+        else:
+            raise HTTPException(422, f"Invio SDI fallito ({fic_status}): {detail}. Documento creato su FIC (id={fic_doc_id}).")
     except (httpx.TimeoutException, httpx.ConnectError) as e:
         await db.invoices.update_one(
             {"invoice_id": invoice_id},
