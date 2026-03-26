@@ -9,7 +9,7 @@ import {
     DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel,
 } from '../components/ui/dropdown-menu';
 import {
-    Download, FileText, Award, Loader2, ChevronDown, ClipboardList,
+    Download, FileText, Award, Loader2, ChevronDown, ClipboardList, PenLine,
 } from 'lucide-react';
 
 export default function CommessaActionsMenu({
@@ -17,6 +17,7 @@ export default function CommessaActionsMenu({
     onDownloadDossier, onDownloadPacco, onDownloadTemplate111,
     onDopAutomatica, onEtichettaCE, onRintracciabilita,
     onCamDichiarazione, onPaccoRina, onDownloadFoglioLavoro,
+    onDownloadBlockNotes,
     generatingDopAuto,
 }) {
     const isEN1090 = normativaTipo === 'EN_1090';
@@ -45,6 +46,9 @@ export default function CommessaActionsMenu({
                 <DropdownMenuLabel className="text-[10px] text-slate-400 uppercase">Officina</DropdownMenuLabel>
                 <DropdownMenuItem onClick={onDownloadFoglioLavoro} data-testid="menu-foglio-lavoro" className="text-xs cursor-pointer">
                     <ClipboardList className="h-3.5 w-3.5 mr-2 text-orange-600" /> Foglio Lavoro (Stampa)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onDownloadBlockNotes} data-testid="menu-block-notes" className="text-xs cursor-pointer">
+                    <PenLine className="h-3.5 w-3.5 mr-2 text-teal-600" /> Block Notes Rilievo
                 </DropdownMenuItem>
                 {isEN1090 && (
                     <>

@@ -388,6 +388,30 @@ async def get_board_view(user: dict = Depends(require_role("admin", "amministraz
     return {"columns": sorted_cols, "total": total}
 
 
+@router.get("/block-notes/generico")
+async def download_block_notes_generico(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
+    """Generate a generic Block Notes (no commessa) for general use."""
+    from services.pdf_block_notes import generate_block_notes
+    from fastapi.responses import Response
+
+    uid = user["user_id"]
+    company = await db.company_settings.find_one(
+        {"user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0}
+    ) or {}
+    app_url = "https://app.1090normafacile.it"
+    try:
+        pdf_bytes = generate_block_notes(None, None, company, app_url)
+    except Exception as e:
+        logger.error(f"Block Notes generico error: {e}")
+        raise HTTPException(500, f"Errore generazione Block Notes: {str(e)}")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="Block_Notes_Generico.pdf"'},
+    )
+
+
+
 @router.get("/{commessa_id}")
 async def get_commessa(commessa_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     doc = await db[COLLECTION].find_one(
@@ -1475,5 +1499,49 @@ async def download_foglio_lavoro(commessa_id: str, user: dict = Depends(require_
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# ── Block Notes (foglio schizzi rilievo) ─────────────────────────
+
+@router.get("/{commessa_id}/block-notes")
+async def download_block_notes(commessa_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
+    """Generate the branded Block Notes sketch pad for hand drawings during surveys."""
+    from services.pdf_block_notes import generate_block_notes
+    from fastapi.responses import Response
+
+    uid = user["user_id"]
+    doc = await db[COLLECTION].find_one(
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "Commessa non trovata")
+
+    company = await db.company_settings.find_one(
+        {"user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0}
+    ) or {}
+
+    client = None
+    client_id = doc.get("client_id")
+    if client_id:
+        client = await db.clients.find_one({"client_id": client_id, "tenant_id": tenant_match(user)}, {"_id": 0})
+
+    app_url = "https://app.1090normafacile.it"
+
+    try:
+        pdf_bytes = generate_block_notes(doc, client, company, app_url)
+    except Exception as e:
+        logger.error(f"Block Notes generation error: {e}")
+        raise HTTPException(500, f"Errore generazione Block Notes: {str(e)}")
+
+    numero = doc.get("numero", commessa_id).replace("/", "-")
+    filename = f"Block_Notes_{numero}.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+
+
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

@@ -245,6 +245,14 @@ export default function CommessaHubPage() {
         }
     };
 
+    const handleDownloadBlockNotes = async () => {
+        try {
+            toast.info('Generazione Block Notes...');
+            await downloadPdfBlob(`/commesse/${commessaId}/block-notes`, `Block_Notes_${hub?.commessa?.numero || commessaId}.pdf`);
+            toast.success('Block Notes generato');
+        } catch (e) { toast.error(e.message); }
+    };
+
     const handleDownloadFoglioLavoro = async () => {
         try {
             toast.info('Generazione Foglio Lavoro...');
@@ -453,6 +461,7 @@ export default function CommessaHubPage() {
                             onEtichettaCE={handleEtichettaCE1090} onRintracciabilita={handleRintracciabilitaPdf}
                             onCamDichiarazione={handleCamDichiarazionePdf} onPaccoRina={handlePaccoRina}
                             onDownloadFoglioLavoro={handleDownloadFoglioLavoro}
+                            onDownloadBlockNotes={handleDownloadBlockNotes}
                             generatingDopAuto={generatingDopAuto}
                         />
                     </div>
