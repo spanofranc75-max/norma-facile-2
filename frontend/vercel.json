@@ -1,4 +1,7 @@
 {
   "installCommand": "yarn install",
-  "buildCommand": "CI=false yarn build"
+  "buildCommand": "CI=false yarn build",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
