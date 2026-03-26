@@ -19,8 +19,7 @@
 
 | Ambiente | URL | Tipo | Database |
 |----------|-----|------|----------|
-| **Staging reale** | `content-engine-86.emergent.host` | Deploy Emergent | MongoDB locale (dentro il container) — CONTIENE TUTTI I DATI REALI (53+ preventivi, 20+ fatture, clienti, commesse) |
-| **Preview sviluppo** | `*.preview.emergentagent.com` | Preview Emergent (cambia ad ogni sessione) | MongoDB locale vuoto (`test_database`) — SOLO PER SVILUPPO |
+| **Preview sviluppo** | `*.preview.emergentagent.com` | Preview Emergent (cambia ad ogni sessione) | **MongoDB Atlas** — `normafacile` su Cluster0 (DATI REALI) |
 | **Frontend Vercel** | `norma-facile-2.vercel.app` | Auto-deploy da GitHub branch `main` | N/A (solo frontend) |
 | **Dominio futuro** | `app.1090normafacile.it` | Da configurare | Da collegare |
 
@@ -31,12 +30,15 @@ Sviluppo nel Preview → "Salva su GitHub" → branch main → Vercel auto-deplo
                                                         → Per il backend: serve "Deploy" su Emergent
 ```
 
-### 2.3 DATABASE — PROBLEMA CRITICO
+### 2.3 DATABASE — MongoDB Atlas (RISOLTO)
 
-- Ogni deployment Emergent ha il suo MongoDB LOCALE — i dati NON si trasferiscono tra deploy
-- Il DB dello staging reale (`content-engine-86`) ha TUTTI i dati di produzione di Francesco
-- Il DB del preview di sviluppo è vuoto — NON testare con questi dati
-- **SOLUZIONE NECESSARIA**: Migrare a MongoDB Atlas (DB esterno) per persistere i dati tra deploy
+- **Cluster**: Cluster0 su MongoDB Atlas (`cluster0.aypz9f1.mongodb.net`)
+- **Database**: `normafacile` (63 collezioni, 100 preventivi, 54 fatture, 43 clienti, 14 commesse)
+- **Utente DB**: `spanofranc75_db_user`
+- **Network**: 0.0.0.0/0 (accesso da ovunque)
+- **OGNI DEPLOY** deve usare questa connection string Atlas — MAI MongoDB locale
+- **Connection String**: `mongodb+srv://spanofranc75_db_user:<PASSWORD>@cluster0.aypz9f1.mongodb.net/?appName=Cluster0&retryWrites=true&w=majority`
+- La password è nelle env variables del deploy, NON scritta in questo file
 
 ### 2.4 Autenticazione
 
