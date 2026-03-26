@@ -25,9 +25,19 @@ Francesco Spano' — Steel Project Design Srls
 - `demo.1090normafacile.it` = demo (futuro)
 - Vercel = backup tecnico, non pubblico
 
-## Stato attuale (25 Marzo 2026)
+## Stato attuale (26 Marzo 2026)
 
-### Completato in questa sessione ✅
+### Completato in questa sessione
+
+26. **Sprint 1 — Hardening Sicurezza** — Implementazione completa:
+    - RBAC: `core/rbac.py` con decoratore `@require_role()` applicato a 76/89 route files (636 endpoint protetti)
+    - Mapping ruoli: admin (wildcard), amministrazione (fatture/costi/clienti), ufficio_tecnico (tecnico/commesse), officina (produzione), guest (bloccato)
+    - Audit Trail: `tenant_id` aggiunto a ogni record in `services/audit_trail.py`
+    - Cleanup: 2 utenti test rimossi con `migrations/cleanup_test_users.py`
+    - JWT_SECRET: rimosso da `core/config.py`, `main.py` lifespan, e `.env` (app usa solo cookie sessions)
+    - 28/28 test passati (iteration_261)
+
+### Completato nelle sessioni precedenti
 22. **Multi-Tenant Step 1 — Fondamenta** — Implementazione completa del layer di isolamento dati multi-tenant:
     - Aggiunto `tenant_id` a `create_session`, `verify_session`, `get_current_user` in `security.py`
     - Creata collezione `tenants` con tenant "default" all'avvio (`main.py` lifespan)
@@ -81,17 +91,36 @@ Francesco Spano' — Steel Project Design Srls
 
 ## Backlog prioritizzato
 
-### P0 — Multi-Tenant Step 2 (prossimo)
-- Aggiornare i 27 service files per passare `tenant_id` nelle query DB
-- Implementare registrazione tenant (ogni nuovo admin crea un nuovo tenant)
-- Contatori separati per tenant (numeri commessa, fattura, preventivo)
-- UI admin per gestione tenant
+### P0 — Sprint 2: Multi-Tenant Reale (prossimo)
+- Creare `services/tenant_service.py` (CRUD tenant)
+- Creare `routes/admin_tenants.py` (API admin)
+- Workflow onboarding: primo login crea tenant
+- Aggiornare 27 service files con `tenant_id`
+- Contatori per-tenant (commesse, fatture, preventivi)
+- Piano & limiti (max commesse, utenti per piano)
+- `team.py` migrazione da `team_owner_id` a `tenant_id`
+- Backup per-tenant (scope isolato)
 
-### P1 — Prossimi
-- Protezione `.env` su GitHub (git rm --cached, rotazione chiavi)
-- Strategia backup dati Staging → Production
+### P1 — Sprint 3: Operazioni & Monitoring
+- Backup automatico nello scheduler
+- Retention policy backup (30 giorni)
+- JSON structured logging
+- Admin dashboard tenant (frontend)
+- Session management (lista/revoca sessioni)
+- Health check avanzato con metriche
+
+### P1 — Altre priorita
+- Rotazione chiavi sensibili: Aruba SDI, FattureInCloud, Resend (USER ACTION)
+- Protezione `.env` su GitHub (git rm --cached)
 - Collegamento dominio Aruba `app.1090normafacile.it` → Emergent
-- Campo "Ore stimate" nel Preventivo
+
+### P2 — Sprint 4: Governance
+- CSRF protection (double-submit cookie)
+- Input sanitization (bleach/escape)
+- Documentazione API completa
+- Runbook operativo
+- Rate limiting per-tenant
+- Piano GDPR (data export/delete per tenant)
 
 ### P2 — Medio termine
 - Caso studio quantificato
@@ -101,12 +130,12 @@ Francesco Spano' — Steel Project Design Srls
 ### P3 — Futuro (non toccare ora)
 - Stripe integration
 - Product Tour
-- SmartEmptyState su più pagine
+- SmartEmptyState su piu pagine
 - Refactoring componenti frontend monolitici
 - Stability Guard AI
 - Migrazione Pydantic v1 → v2
 - Portale clienti
-- "Registro Comunicazioni" (audit trail)
+- "Registro Comunicazioni"
 - `successor_client_id` con avvisi UI
 
 ## Schema DB chiave
@@ -117,13 +146,18 @@ Francesco Spano' — Steel Project Design Srls
 - ALL data collections: include `tenant_id` field for isolation
 
 ## File critici
+- `/app/backend/core/rbac.py` — RBAC centralizzato con `@require_role()`
+- `/app/backend/services/audit_trail.py` — Audit log con tenant_id
+- `/app/backend/core/config.py` — Settings (JWT rimosso)
 - `/app/backend/routes/company.py` — settings + diagnostica + audit
 - `/app/backend/routes/demo.py` — seed guard
 - `/app/backend/services/fattureincloud_api.py` — FiC client hardened
 - `/app/backend/services/email_preview.py` — P.IVA fix
+- `/app/backend/migrations/apply_rbac.py` — Script applicazione RBAC
+- `/app/backend/migrations/cleanup_test_users.py` — Script pulizia utenti test
+- `/app/memory/SPRINT1_CHECKLIST.md` — Checklist completa Sprint 1
 - `/app/frontend/src/lib/utils.js` — rawResponse fix
 - `/app/frontend/src/components/EnvironmentBanner.js` — banner ambiente
-- `/app/frontend/src/components/settings/DiagnosticaTab.js` — diagnostica UI
 
 ## Schema DB chiave
 - `company_settings`: {user_id, business_name, partita_iva, ...}
