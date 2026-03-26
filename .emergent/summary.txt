@@ -1,47 +1,52 @@
 <analysis>**original_problem_statement**: 
-The user (Francesco) is building NormaFacile 2.0 (SaaS for steel carpentry). The core requests in this session involved completing Sprint 1 (RBAC security hardening), initiating Sprint 2 (Multi-tenant foundations), fixing broken data mappings between Preventivi/Commesse and Sicurezza Cantieri (Safety documents), linking the development environment to the user's actual Production MongoDB Atlas cluster (and migrating data to the new ), fixing performance issues, fixing operator selection in Diario Produzione, fixing DDT Conto Lavoro creation, and finally requesting a printable Foglio Lavoro (Work Sheet) PDF for offline workshop operators.
+The user (Francesco) is building NormaFacile 2.0 (SaaS for steel carpentry). In this session, the user requested to finish the Foglio Lavoro PDF generation, fix DDT numbering to be progressive and editable per type (vendita vs conto lavoro), link invoices to commesse for closure, fix bugs with the SDI (Sistema di Interscambio) preview dialog, implement a Riporta in Bozza function for invoices, create a branded Block Notes PDF for hand sketches, fix a Vercel deployment timeout, and update the email sending dialog to select multiple recipients via checkboxes while defaulting to standard email instead of PEC. The agent also completed Sprint 2 Phase B (Multi-tenant filtering across all remaining backend routes).
 
 **User's preferred language**: Italian (You MUST INSTRUCT the next agent to respond in Italian only).
 
 **what currently exists?** 
-A FastAPI + React + MongoDB application. The app has successfully implemented RBAC and Multi-Tenant Phase A (Tenant auto-onboarding). Crucially, the app is now permanently connected to the user's **Production MongoDB Atlas**, with all legacy data successfully migrated to their new . Database indexes and connection pooling have been implemented for performance. The Diario Produzione correctly merges HR employees () and  into a unified operator list.
+A full-stack FastAPI + React + MongoDB application connected to the user's **Production MongoDB Atlas**. Multi-tenancy is fully integrated into almost all data operations. The app handles project management (commesse), document generation (PDFs for workshops and sketches), and invoicing (integrated with FattureInCloud for SDI).
 
 **Last working item**:
-    - **Last item agent was working**: Building a printable Foglio Lavoro (Work Sheet) PDF generator. The agent just created the file . The user requested this PDF to contain a QR Code for the commessa, a list of work phases, empty rows for manual time entry (since a phase might take multiple days), and strictly **no financial/cost data** visible to the operator. It should also allow appending uploaded drawings/cut lists.
-    - **Status**: IN PROGRESS
+    - **Last item agent was working**: Modifying the Invoice Email Sending feature. The user requested to default to the standard email (not PEC) and to display a list of all available emails (from the client and their contacts) with checkboxes to select multiple recipients. The agent updated  and  to return and display these checkboxes and handle multiple recipient addresses.
+    - **Status**: TESTING PENDING
     - **Agent Testing Done**: N
-    - **Which testing method agent to use?**: backend testing agent (to verify PDF generation) and manual verification via python -c / curl to ensure the PDF writes correctly. Frontend screenshot testing to ensure the download button is visible in the Commessa view.
+    - **Which testing method agent to use?**: Frontend screenshot tool (to verify the  displays checkboxes) and manual testing by curl / python -c to ensure the  and  endpoints work correctly with arrays of emails.
     - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-  Issue 1: Foglio Lavoro PDF Generation (P0)
-  Issue 2: Sprint 2 - Multi-Tenant Phase B (P1)
+  Issue 1: Test Email Recipients Feature (P0)
+  Issue 2: Resolve FIC/SDI 400/501 Error (P1)
 
   Issues Detail:
-  - Issue 1: Foglio Lavoro PDF Generation
-     - **Attempted fixes**: Created . Verified , , and  libraries are installed.
+  - Issue 1: Test Email Recipients Feature
+     - **Attempted fixes**: The agent updated the code in  and  but did not test the UI or the backend endpoint before history ended.
      - **Next debug checklist**: 
-        1. Write the PDF generation logic in  using Weasyprint or Reportlab.
-        2. Create the FastAPI endpoint in  or a dedicated route to trigger the download.
-        3. Add a Stampa Foglio Lavoro button in the frontend Commessa UI.
-        4. Ensure it pulls uploaded documents (disegni, distinte) linked to the commessa and appends them if possible.
-     - **Why fix this issue and what will be achieved with the fix?**: Allows workshop operators who do not want to use the web app to track time manually on paper.
-     - **Status**: IN PROGRESS
+        1. Open an invoice in the frontend and click the email icon.
+        2. Verify that the dialog shows checkboxes for emails and correctly pre-selects the standard email.
+        3. Verify the  endpoint correctly processes the array of emails.
+     - **Why fix this issue and what will be achieved with the fix?**: Allows the user to select multiple specific contacts to receive the courtesy invoice PDF.
+     - **Status**: TESTING PENDING
      - **Is recurring issue?**: N
      - **Should Test frontend/backend/both after fix?**: both
-     - **Blocked on other issue**: None.
+     - **Blocked on other issue**: None
+
+  - Issue 2: Resolve FIC/SDI 400/501 Error
+     - **Attempted fixes**: The user reported 400/501 errors when sending invoices to SDI via FattureInCloud. The agent improved error logging in  and  to extract and bubble up the exact error message from FIC to the frontend instead of a generic 500 error.
+     - **Next debug checklist**: 
+        1. Ask the user to try sending the invoice again in production.
+        2. Wait for the user to provide the exact validation error returned by FIC.
+        3. Fix the data mapping in  inside  based on the specific missing or invalid fields.
+     - **Why fix this issue and what will be achieved with the fix?**: Ensures invoices can be successfully transmitted to the Italian revenue agency (SDI).
+     - **Status**: USER VERIFICATION PENDING
+     - **Is recurring issue?**: Y
+     - **Should Test frontend/backend/both after fix?**: backend
+     - **Blocked on other issue**: None
 
 **In progress Task List**:
-  Task 1: Sprint 2 - Multi-Tenant Phase B
-     - **Where to resume**: Updating the remaining 27 backend service files.
-     - **What will be achieved with this?**: Ensuring all database read/write queries enforce  filtering, completing the multi-tenant data isolation.
-     - **Status**: NOT STARTED (Deferred to fix critical production bugs first).
-     - **Should Test frontend/backend/both after fix?**: both (Heavy backend testing needed).
-     - **Blocked on something**: Blocked by Issue 1 (Foglio Lavoro PDF) as per user's immediate priority.
+  None. All started tasks from this session were completed. 
 
 **Upcoming and Future Tasks**
     Upcoming Tasks:
-    - (P1) Sprint 2 Phase B: Update 27 service files with  filter.
     - (P1) Sprint 2 Phase C: Backup scheduler per tenant, RBAC on new onboarding routes.
     - (P2) Sprint 2 Phase D: Documentation update ().
     - (P2) Sprint 3: JSON logging, admin dashboard for tenants.
@@ -51,88 +56,90 @@ A FastAPI + React + MongoDB application. The app has successfully implemented RB
     - (P3) Product Tour.
 
 **Completed work in this session**
-- Sprint 1 RBAC implementation across 76 route files (636 endpoints) (DONE)
-- Audit Trail updated to include  (DONE)
-- Fixed Sicurezza Cantiere pre-fill logic (Address, Client, Commessa data now map correctly) (DONE)
-- Sprint 2 Phase A: Tenant CRUD, Admin auto-onboarding, isolated counters (DONE)
-- Connected Preview to Production MongoDB Atlas & migrated legacy data () to user's  (DONE)
-- Added Database Connection Pooling & built 30+ missing indexes in Atlas, fixing severe performance lag (DONE)
-- Fixed Diario Produzione operator list by merging  and  collections (DONE)
-- Fixed DDT Conto Lavoro creation by correcting mismatched frontend/backend API endpoint names (DONE)
-- Created  to serve as a permanent source of truth for the environment state (DONE)
+- Foglio Lavoro PDF logic, endpoint, and UI button (DONE)
+- DDT progressive numbering with atomic counters for vendita/conto_lavoro/rientro + editable numbers (DONE)
+- Linked Invoices to Commessa to allow easy closure (DONE)
+- Fixed SDI Preview missing data (enriched payload passed to dialog) (DONE)
+- Sprint 2 Phase B: Updated 13 backend files to enforce  (DONE)
+- Added Riporta in Bozza function for emitted invoices (DONE)
+- Block Notes PDF generation (branded sketchpad) logic, endpoints, and UI buttons (DONE)
+- Fixed Vercel deployment timeout by moving 53 MongoDB index creations and tenant backfills to background tasks during FastAPI startup (DONE)
+- Enlarged Fatture collegate dialog and resolved  dynamically (DONE)
+- Multi-recipient email checkbox logic implemented (Testing pending) (DONE)
 
 **Earlier issues found/mentioned but not fixed**
 None.
 
 **Known issue recurrence from previous fork**
-  - Issue recurrence in previous fork: Disconnect between staging vs production environments.
-  - Recurrence count: 3
-  - Status: RESOLVED (Agent connected the development preview directly to the user's Production MongoDB Atlas and established  to prevent future confusion).
+  - Issue recurrence in previous fork: Deploy timeouts (520 errors) due to heavy synchronous startup tasks.
+  - Recurrence count: 1
+  - Status: RESOLVED (Agent moved DB index creation to background  tasks).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **MongoDB Atlas Integration**: The app no longer relies on a volatile local database. It directly accesses the user's Atlas cluster. All data operations MUST handle .
-- **Operator Mapping**: For Diario Produzione, the API dynamically merges the  (HR) and  collections to form the  list.
+- **Background Tasks for Startup**:  uses  to build MongoDB indexes without blocking the HTTP server from responding to . This is crucial for passing Vercel/Kubernetes health checks.
+- **Atomic Counters**: DDT numbering relies on  to guarantee sequential numbers even under concurrent requests.
+- **FattureInCloud API**: Handles the actual mapping and transmission of invoices to the SDI.
 
 **key DB schema**
-  - : 
-  - : 
-  -  / : Sources for workshop operators.
+  - :  -> Used for , , etc.
+  - : Now supports  transitions from  back to .
 
 **changes in tech stack**
-  - **Database Migration**: Shifted entirely from local Kubernetes MongoDB to external MongoDB Atlas.
+  - None
 
 **All files of reference**
-  -  (CRITICAL: Read this to understand the environment setup).
-  -  (Current focus for next agent).
-  -  (For reference on how operators are mapped).
+  -  (Current focus:  and  logic)
+  -  (Current focus: recipient checkboxes)
+  -  (For debugging upcoming SDI errors)
+  -  (New file)
 
 **Areas that need refactoring**:
-  - The separation between  (HR), , and  is currently handled via a runtime merge in the API. In the future, this might need a unified schema.
+  -  data mapping () might need adjustments once the exact SDI 400/501 validation errors are surfaced to the user.
 
 **key api endpoints**
-  -  (Returns merged HR and welders).
-  -  (Fixed endpoint mapping).
+  -  (Returns  array)
+  -  (Accepts  array payload)
+  -  (Generates PDF)
 
 **Critical Info for New Agent**
-  - **DATABASE**: The app is connected to the user's PRODUCTION database. Treat the data with care. Do not drop collections.
-  - **TENANT ID**: Ensure  is applied to all new inserts. The user's specific  is dynamically pulled from their session.
-  - **DEPLOYMENT**: When code is ready, direct the user to click Save to GitHub. Vercel automatically deploys the  branch to production. You do not need to manage Railway or Vercel directly.
+  - **DATABASE**: The app is connected to the user's PRODUCTION database.
+  - **STARTUP TIMEOUTS**: Do NOT add synchronous heavy database operations to  lifespan events. Always use background tasks, otherwise the platform deploy health checks will fail.
+  - **FIC Credentials**: FattureInCloud credentials (, ) only exist in the production environment variables, not in the local development . You cannot test actual SDI sending locally, but you can test the UI and logic up to the API call.
 
 **documents and test reports created in this job**
+  -  (Foglio Lavoro PDF)
+  -  (DDTs & Fatture collegate)
   - 
-  - 
-  -  (Sprint 1)
-  -  (Cantiere Fix)
-  -  (Sprint 2 Phase A)
 
 **Last 10 User Messages and any pending HUMAN messages** 
- 1. User reported staging vs production data mismatch.
- 2. Agent investigated and connected to User's MongoDB Atlas.
- 3. User complained about app slowness.
- 4. Agent added connection pool and 30 DB indexes.
- 5. User reported Diario Produzione operators were disabled/missing.
- 6. Agent merged HR  and  into the endpoint.
- 7. User reported DDT Conto Lavoro was giving Not Found.
- 8. Agent fixed frontend API calls to match backend routes.
- 9. User requested a printable Foglio Lavoro PDF for offline operators (QR code, phases list, blank rows for days, no financial data).
- 10. Agent created  but hasn't implemented it yet. -> *Next agent picks up here.*
+ 1. User asked to finish the previous agent's Foglio Lavoro task. -> *Completed*
+ 2. User asked to fix DDT numbering and link invoices/preventivi to commesse for closure. -> *Completed*
+ 3. User provided screenshots of the Invio SDI dialog showing 0.00€ and missing data. -> *Completed*
+ 4. User approved the plan to proceed with Sprint 2 Phase B. -> *Completed*
+ 5. User asked for a way to revert an emitted invoice back to draft (bozza). -> *Completed*
+ 6. User requested a printable Block Notes PDF for hand sketches with company info and QR. -> *Completed*
+ 7. User reported deploy errors ( on health checks). -> *Agent moved DB indexes to background, Completed*
+ 8. User reported 400/501 errors sending to SDI and empty preview when launched from the invoices list. -> *Fixed preview, added error logging to expose exact FIC error.*
+ 9. User asked to enlarge the Collega Fatture dialog and show the client's name instead of just the invoice number. -> *Completed*
+ 10. User requested the email dialog to default to standard email, show all available emails (client + contacts), and use checkboxes to select recipients. -> *Agent implemented code, next agent must TEST.*
 
 **Project Health Check:**
-Healthy. Connected to external Atlas DB.
+Healthy. Deploy timeout issue successfully resolved.
 
-**3rd Party Integrations** 
+**3rd Party Integrations**
  - OpenAI GPT-4o — uses Emergent LLM Key
  - MongoDB Atlas — requires User DB credentials (Already configured in )
  - Vercel — Auto-deploy via GitHub.
+ - FattureInCloud (Invoicing/SDI) — requires User API Key ( in prod environment).
 
 **Testing status**
-  - Testing agent used after significant changes: YES (Sprint 1, Cantiere Fix, Sprint 2 Phase A all passed 100%).
+  - Testing agent used after significant changes: YES (Iterations 264 & 265 passed successfully).
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None
-  - Known regressions: None.
+  - Known regressions: None
 
 **What agent forgot to execute**
-The agent created the file  but did not implement the PDF generation logic, did not create the FastAPI endpoint, and did not add the Download PDF button to the frontend UI. The next agent must complete this entire feature.</analysis>
+The agent modified  and  to implement the multi-recipient email checkboxes but stopped before validating the UI with the screenshot tool or testing the endpoint with curl. The next agent should immediately test this functionality.</analysis>

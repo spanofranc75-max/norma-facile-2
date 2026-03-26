@@ -1,0 +1,84 @@
+{
+  "summary": "Iteration 266: Email Preview Dialog Feature Testing Complete. All 17 backend tests passed (100%). Frontend UI tests passed via Playwright. Verified: 1) GET /api/invoices/{id}/preview-email returns all_recipients array with correct default flags (email=default:true, pec=default:false), 2) POST /api/invoices/{id}/send-email correctly handles to_emails array (first=to, rest=cc), 3) EmailPreviewDialog renders checkboxes for each recipient, 4) Standard email is pre-selected by default, PEC is not, 5) Send button shows correct count when multiple recipients selected ('Conferma invio a 2'), 6) Send button is disabled when no emails selected or confirmation not checked, 7) Manual email addition via '+ Aggiungi email' button works correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration266_email_dialog.py",
+    "/app/test_reports/pytest/iteration266_email_dialog_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Backend preview-email endpoint correctly collects all emails: client.email, client.pec, and contacts",
+    "Backend sets email as default=true, PEC as default=false (line 1301-1303 in invoices.py)",
+    "Backend send-email correctly processes to_emails array: first email as TO, rest as CC (line 1379-1381)",
+    "Frontend EmailPreviewDialog correctly pre-selects recipients with default=true flag",
+    "Frontend uses selectedEmails state to track multiple recipient selection",
+    "Frontend send button correctly shows count: 'Conferma invio a {count}' when multiple selected",
+    "Frontend disables send button when selectedEmails.length === 0 or !confirmed",
+    "All required data-testid attributes present for testing"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration266_email_dialog.py"
+  ],
+  "success_rate": {
+    "backend": "100% (17/17 pytest tests passed)",
+    "frontend": "100% (All Playwright UI tests passed)"
+  },
+  "seed_data_creation": "Used existing invoices: inv_698ab9f8a8c2 (Galotti Srl - has email+PEC), inv_d2f0007bcdf0 (Electric Style Snc - email only)",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Email preview dialog feature fully implemented and tested. Backend endpoint at GET /api/invoices/{id}/preview-email returns all_recipients array with email/pec/contact types and default flags. Frontend EmailPreviewDialog shows checkboxes for all recipients, pre-selects defaults, allows manual email addition, and shows recipient count on send button.",
+  "tests_performed": {
+    "TestPreviewEmailEndpoint": {
+      "test_preview_email_returns_all_recipients_array": "PASS - Returns all_recipients array",
+      "test_preview_email_standard_email_is_default": "PASS - Email has default=true, PEC has default=false",
+      "test_preview_email_recipient_structure": "PASS - Each recipient has email, label, type, default fields",
+      "test_preview_email_to_email_matches_default_recipient": "PASS - to_email matches default recipient",
+      "test_preview_email_only_client": "PASS - Client with only email works correctly",
+      "test_preview_email_requires_auth": "PASS - Returns 401 without auth"
+    },
+    "TestSendEmailEndpoint": {
+      "test_send_email_accepts_to_emails_array": "PASS - Endpoint handles to_emails array",
+      "test_send_email_requires_auth": "PASS - Returns 401 without auth"
+    },
+    "TestFrontendEmailPreviewDialog": {
+      "test_dialog_has_checkbox_for_recipients": "PASS - Uses Checkbox component with selectedEmails state",
+      "test_dialog_preselects_default_recipients": "PASS - Filters by r.default flag",
+      "test_dialog_has_manual_email_input": "PASS - Has 'Aggiungi email' button and ccInput state",
+      "test_dialog_send_button_shows_count": "PASS - Shows 'Conferma invio a X'",
+      "test_dialog_send_button_disabled_when_no_selection": "PASS - Disabled when selectedEmails.length === 0",
+      "test_dialog_has_data_testids": "PASS - All required data-testid attributes present"
+    },
+    "TestBackendCodeReview": {
+      "test_preview_email_collects_all_emails": "PASS - Collects email, PEC, and contacts",
+      "test_preview_email_sets_correct_defaults": "PASS - Email default=true, PEC default=false",
+      "test_send_email_handles_to_emails_array": "PASS - First email as TO, rest as CC"
+    },
+    "PlaywrightUITests": {
+      "test_galotti_invoice_email_dialog": "PASS - Email checkbox checked, PEC checkbox unchecked",
+      "test_maya_invoice_email_dialog": "PASS - Email checkbox checked, manual email addition works",
+      "test_send_button_count": "PASS - Shows 'Conferma invio a 2' with 2 recipients",
+      "test_confirmation_checkbox": "PASS - Send button enabled after confirmation checked"
+    }
+  },
+  "verified_features": {
+    "backend_preview_email": "VERIFIED - Returns all_recipients with correct default flags",
+    "backend_send_email": "VERIFIED - Handles to_emails array (first=TO, rest=CC)",
+    "frontend_checkboxes": "VERIFIED - Renders checkboxes for each recipient",
+    "frontend_default_selection": "VERIFIED - Email pre-selected, PEC not pre-selected",
+    "frontend_manual_email": "VERIFIED - '+ Aggiungi email' button works",
+    "frontend_send_button_count": "VERIFIED - Shows recipient count when multiple selected",
+    "frontend_send_button_disabled": "VERIFIED - Disabled when no selection or no confirmation"
+  },
+  "mocked_apis": {
+    "has_mocked_apis": false,
+    "mocked_apis_list": []
+  }
+}

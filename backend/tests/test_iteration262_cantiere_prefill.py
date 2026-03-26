@@ -294,7 +294,7 @@ class TestRBACProtection:
     def test_cantieri_sicurezza_list_401(self):
         """Test GET /api/cantieri-sicurezza returns 401 without auth."""
         import requests
-        BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://cantiere-pdf.preview.emergentagent.com')
+        BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://fattura-send.preview.emergentagent.com')
         
         response = requests.get(f"{BASE_URL}/api/cantieri-sicurezza")
         assert response.status_code == 401, f"Expected 401, got {response.status_code}"
@@ -302,7 +302,7 @@ class TestRBACProtection:
     def test_cantieri_sicurezza_create_401(self):
         """Test POST /api/cantieri-sicurezza returns 401 without auth."""
         import requests
-        BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://cantiere-pdf.preview.emergentagent.com')
+        BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://fattura-send.preview.emergentagent.com')
         
         response = requests.post(f"{BASE_URL}/api/cantieri-sicurezza", json={})
         assert response.status_code == 401, f"Expected 401, got {response.status_code}"
@@ -310,7 +310,7 @@ class TestRBACProtection:
     def test_cantieri_sicurezza_get_401(self):
         """Test GET /api/cantieri-sicurezza/{id} returns 401 without auth."""
         import requests
-        BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://cantiere-pdf.preview.emergentagent.com')
+        BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://fattura-send.preview.emergentagent.com')
         
         response = requests.get(f"{BASE_URL}/api/cantieri-sicurezza/test_id")
         assert response.status_code == 401, f"Expected 401, got {response.status_code}"
@@ -326,7 +326,7 @@ class TestHealthCheck:
     def test_health_returns_200(self):
         """Test /api/health returns 200."""
         import requests
-        BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://cantiere-pdf.preview.emergentagent.com')
+        BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://fattura-send.preview.emergentagent.com')
         
         response = requests.get(f"{BASE_URL}/api/health")
         assert response.status_code == 200, f"Expected 200, got {response.status_code}"

@@ -1291,14 +1291,30 @@ async def preview_invoice_email(invoice_id: str, user: dict = Depends(require_ro
     client = await db.clients.find_one({"client_id": invoice.get("client_id")}, {"_id": 0})
     to_email = ""
     client_name = ""
+    all_recipients = []
     if client:
         client_name = client.get("business_name", "")
-        to_email = client.get("pec") or client.get("email") or ""
+        # Default: email normale (NOT PEC)
+        to_email = client.get("email") or ""
+        # Collect ALL available emails
+        if client.get("email"):
+            all_recipients.append({"email": client["email"], "label": f"{client_name} (Email)", "type": "email", "default": True})
+        if client.get("pec"):
+            all_recipients.append({"email": client["pec"], "label": f"{client_name} (PEC)", "type": "pec", "default": False})
+        for contact in client.get("contacts", []):
+            c_email = contact.get("email")
+            if c_email and not any(r["email"] == c_email for r in all_recipients):
+                c_name = contact.get("name") or contact.get("role") or c_email
+                all_recipients.append({"email": c_email, "label": c_name, "type": "contact", "default": False})
+        # If no regular email, fallback to PEC
         if not to_email:
-            for contact in client.get("contacts", []):
-                if contact.get("email"):
-                    to_email = contact["email"]
-                    break
+            to_email = client.get("pec") or ""
+            for r in all_recipients:
+                if r["email"] == to_email:
+                    r["default"] = True
+        if not to_email and all_recipients:
+            to_email = all_recipients[0]["email"]
+            all_recipients[0]["default"] = True
 
     from services.email_preview import build_invoice_email, check_company_warnings
     doc_num = invoice.get("document_number", "")
@@ -1337,6 +1353,7 @@ async def preview_invoice_email(invoice_id: str, user: dict = Depends(require_ro
         "html_body": preview["html_body"],
         "has_attachment": True,
         "attachment_name": f"{doc_num}.pdf",
+        "all_recipients": all_recipients,
         "suggested_contacts": suggested_contacts,
         "company_warnings": company_warnings,
     }
@@ -1357,14 +1374,20 @@ async def send_invoice_email(invoice_id: str, payload: dict = None, user: dict =
     if not client:
         raise HTTPException(400, "Cliente non trovato")
 
-    # Find email recipient
-    to_email = client.get("pec") or client.get("email")
-    if not to_email:
-        # Check contacts for email preferences
-        for contact in client.get("contacts", []):
-            if contact.get("email") and contact.get("doc_preferences", {}).get("fatture"):
-                to_email = contact["email"]
-                break
+    # Find email recipients — use payload override or default to regular email
+    to_emails = payload.get("to_emails", [])
+    if to_emails:
+        to_email = to_emails[0]
+        cc_list = to_emails[1:] + payload.get("cc", [])
+    else:
+        # Default: regular email first, then PEC
+        to_email = payload.get("to_email") or client.get("email") or client.get("pec") or ""
+        if not to_email:
+            for contact in client.get("contacts", []):
+                if contact.get("email"):
+                    to_email = contact["email"]
+                    break
+        cc_list = payload.get("cc", [])
     if not to_email:
         raise HTTPException(400, "Nessun indirizzo email trovato per il cliente. Aggiungi un'email o PEC nella scheda cliente.")
 
@@ -1380,7 +1403,6 @@ async def send_invoice_email(invoice_id: str, payload: dict = None, user: dict =
     check_email_service()
     doc_type = invoice.get("document_type", "FT")
     total = invoice.get("totals", {}).get("total_document", 0)
-    cc_list = payload.get("cc", [])
 
     if payload.get("custom_subject") or payload.get("custom_body"):
         custom_subject = payload.get("custom_subject") or f"Documento {doc_num}"
