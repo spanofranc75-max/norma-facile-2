@@ -136,23 +136,28 @@ async def create_session(user_data: dict, response: Response) -> dict:
     # Create session
     expires_at = datetime.now(timezone.utc) + timedelta(days=settings.session_expire_days)
     
-    # Keep the 3 most recent sessions, delete only the oldest ones
+    # Policy: max 5 sessioni per utente — elimina solo le più vecchie
+    MAX_SESSIONS = 5
     existing = await db.user_sessions.find(
         {"user_id": user_id},
         {"_id": 1, "created_at": 1}
     ).sort("created_at", -1).to_list(100)
-    if len(existing) >= 3:
-        old_ids = [s["_id"] for s in existing[2:]]
-        await db.user_sessions.delete_many({"_id": {"$in": old_ids}})
+    if len(existing) >= MAX_SESSIONS:
+        old_ids = [s["_id"] for s in existing[MAX_SESSIONS - 1:]]
+        deleted = await db.user_sessions.delete_many({"_id": {"$in": old_ids}})
+        logger.info(f"Session cleanup: user={user_id}, deleted={deleted.deleted_count} old sessions, kept={min(len(existing), MAX_SESSIONS - 1)}")
     
-    # Create new session with tenant_id
+    # Create new session with device/metadata
+    now = datetime.now(timezone.utc)
     await db.user_sessions.insert_one({
         "user_id": user_id,
         "tenant_id": tenant_id,
         "session_token": session_token,
         "expires_at": expires_at,
-        "created_at": datetime.now(timezone.utc)
+        "created_at": now,
+        "last_seen_at": now,
     })
+    logger.info(f"Session created: user={user_id}, tenant={tenant_id}, expires={expires_at.isoformat()}")
     
     # Set httpOnly cookie
     response.set_cookie(
@@ -235,6 +240,7 @@ async def create_session_from_google(user_data: dict, response: Response) -> dic
 async def verify_session(session_token: str) -> dict:
     """
     Verify session token and return user data (includes tenant_id).
+    Also updates last_seen_at and silently extends sessions approaching expiry.
     """
     if not session_token:
         raise HTTPException(status_code=401, detail="Token di sessione mancante")
@@ -255,8 +261,24 @@ async def verify_session(session_token: str) -> dict:
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
     
-    if expires_at < datetime.now(timezone.utc):
+    now = datetime.now(timezone.utc)
+    if expires_at < now:
+        logger.info(f"Session expired: user={session_doc['user_id']}, expired_at={expires_at.isoformat()}")
         raise HTTPException(status_code=401, detail="Sessione scaduta")
+    
+    # Silent session refresh: if session expires within 2 days, extend it
+    remaining = (expires_at - now).total_seconds()
+    update_fields = {"last_seen_at": now}
+    if remaining < 2 * 86400:  # Less than 2 days left
+        new_expiry = now + timedelta(days=settings.session_expire_days)
+        update_fields["expires_at"] = new_expiry
+        logger.info(f"Session auto-renewed: user={session_doc['user_id']}, new_expiry={new_expiry.isoformat()}")
+    
+    # Update last_seen_at (fire-and-forget, don't block response)
+    await db.user_sessions.update_one(
+        {"session_token": session_token},
+        {"$set": update_fields}
+    )
     
     # Get user
     user = await db.users.find_one(

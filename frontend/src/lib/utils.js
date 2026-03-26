@@ -32,6 +32,14 @@ export async function downloadPdfBlob(endpoint, filename) {
 /**
  * Make authenticated API request
  */
+// ─── Gestione centralizzata errori auth ───────────────────────
+// Un singolo punto di intercettazione per TUTTI i 401/403.
+// MAI svuotare lo state dei componenti su errori auth.
+let _authExpiredCallback = null;
+export function onAuthExpired(callback) {
+    _authExpiredCallback = callback;
+}
+
 export async function apiRequest(endpoint, options = {}) {
     const url = `${API_BASE}${endpoint}`;
     
@@ -61,27 +69,32 @@ export async function apiRequest(endpoint, options = {}) {
     if (!response.ok) {
         let detail = `Errore ${response.status}`;
         try {
-            // Leggi il body UNA SOLA VOLTA
-            // senza clone() per evitare "body already used"
             const rawBody = await response.text();
             if (rawBody) {
                 try {
                     const json = JSON.parse(rawBody);
-                    detail = json.detail
-                        || json.message
-                        || json.error
-                        || detail;
+                    detail = json.detail || json.message || json.error || detail;
                 } catch {
-                    // Body non è JSON — usa testo grezzo
-                    if (rawBody.length < 200) {
-                        detail = rawBody;
-                    }
+                    if (rawBody.length < 200) detail = rawBody;
                 }
             }
-        } catch {
-            // Impossibile leggere body — usa messaggio generico
+        } catch {}
+
+        // ── Gestione centralizzata 401/403 ──
+        // Se l'endpoint è /auth/* NON intercettare (è il flusso di login)
+        if (response.status === 401 && !endpoint.includes('/auth/')) {
+            // Notifica AuthContext che la sessione è morta
+            // MA non svuotare nessun dato nei componenti
+            if (_authExpiredCallback) _authExpiredCallback(detail);
+            const error = new Error(detail);
+            error.status = 401;
+            error.isAuthError = true;
+            throw error;
         }
-        throw new Error(detail);
+
+        const error = new Error(detail);
+        error.status = response.status;
+        throw error;
     }
     
     // Handle 204 No Content

@@ -1,12 +1,19 @@
 /**
  * Auth Context Provider for Norma Facile 2.0
- * Handles user authentication state and session management.
+ * 
+ * Policy sessioni documentata:
+ * - Max 5 sessioni contemporanee per utente (backend)
+ * - Sessione rinnovata automaticamente dal backend quando si avvicina alla scadenza (< 2 giorni)
+ * - Health check ogni 3 minuti quando l'utente è attivo
+ * - Se 401 arriva da qualsiasi endpoint → mostra "Sessione scaduta", MAI svuotare dati componenti
+ * - onAuthExpired callback collegato al layer API centralizzato (utils.js)
+ * 
  * Supports both:
  *   - Direct Google OAuth (production, when REACT_APP_GOOGLE_CLIENT_ID is set)
  *   - Emergent Auth (preview environment)
  */
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { apiRequest } from '../lib/utils';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { apiRequest, onAuthExpired } from '../lib/utils';
 
 const AuthContext = createContext(null);
 
@@ -18,12 +25,15 @@ export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [sessionExpired, setSessionExpired] = useState(false);
+    const [sessionExpiredDetail, setSessionExpiredDetail] = useState('');
+    const healthCheckRef = useRef(null);
 
     const checkAuth = useCallback(async () => {
         try {
             const userData = await apiRequest('/auth/me');
             setUser(userData);
             setSessionExpired(false);
+            setSessionExpiredDetail('');
             return true;
         } catch (error) {
             setUser(null);
@@ -31,6 +41,17 @@ export function AuthProvider({ children }) {
         } finally {
             setLoading(false);
         }
+    }, []);
+
+    // Register global 401 interceptor — called from apiRequest on ANY 401
+    useEffect(() => {
+        onAuthExpired((detail) => {
+            setSessionExpired(true);
+            setSessionExpiredDetail(detail || 'Sessione scaduta');
+            setUser(null);
+            sessionStorage.removeItem('nf_was_authenticated');
+        });
+        return () => onAuthExpired(null);
     }, []);
 
     useEffect(() => {
@@ -43,23 +64,29 @@ export function AuthProvider({ children }) {
         checkAuth();
     }, [checkAuth]);
 
-    // Periodic session health check — every 3 minutes
+    // Periodic session health check — every 3 minutes when user is active
     useEffect(() => {
-        if (!user) return;
-        const interval = setInterval(async () => {
+        if (!user) {
+            if (healthCheckRef.current) clearInterval(healthCheckRef.current);
+            return;
+        }
+        healthCheckRef.current = setInterval(async () => {
             try {
                 await apiRequest('/auth/me');
+                // Session still valid — backend auto-renews if near expiry
             } catch {
-                // Session expired while user was active
-                setSessionExpired(true);
-                setUser(null);
-                sessionStorage.removeItem('nf_was_authenticated');
+                // onAuthExpired callback already handles the 401 → sessionExpired=true
             }
         }, 3 * 60 * 1000);
-        return () => clearInterval(interval);
+        return () => {
+            if (healthCheckRef.current) clearInterval(healthCheckRef.current);
+        };
     }, [user]);
 
     const login = () => {
+        // Reset expired state before login
+        setSessionExpired(false);
+        setSessionExpiredDetail('');
         if (GOOGLE_CLIENT_ID) {
             // Direct Google OAuth (production)
             const redirectUri = window.location.origin + '/auth/callback';
@@ -86,12 +113,15 @@ export function AuthProvider({ children }) {
             console.error('Logout error:', error);
         } finally {
             setUser(null);
+            setSessionExpired(false);
+            sessionStorage.removeItem('nf_was_authenticated');
         }
     };
 
     const setAuthUser = (userData) => {
         setUser(userData);
         setLoading(false);
+        setSessionExpired(false);
     };
 
     const value = {
@@ -103,6 +133,7 @@ export function AuthProvider({ children }) {
         checkAuth,
         isAuthenticated: !!user,
         sessionExpired,
+        sessionExpiredDetail,
     };
 
     return (
