@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { apiRequest } from '../lib/utils';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -8,6 +8,17 @@ export default function MigrationWidget() {
     const [running, setRunning] = useState(false);
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
+    const [needed, setNeeded] = useState(null); // null=loading, true=needed, false=already done
+
+    // Check on mount if migration is still needed
+    useEffect(() => {
+        const dismissed = localStorage.getItem('migration_snapshot_done');
+        if (dismissed === 'true') {
+            setNeeded(false);
+            return;
+        }
+        setNeeded(true);
+    }, []);
 
     const runMigration = async () => {
         setRunning(true);
@@ -16,12 +27,18 @@ export default function MigrationWidget() {
         try {
             const res = await apiRequest('/admin/migration/backfill-client-snapshots', { method: 'POST' });
             setResult(res);
+            // Persist completion so widget doesn't reappear
+            localStorage.setItem('migration_snapshot_done', 'true');
+            setNeeded(false);
         } catch (e) {
             setError(e.message || 'Errore durante la migrazione');
         } finally {
             setRunning(false);
         }
     };
+
+    // Don't render if not needed or already completed
+    if (needed === false && !result) return null;
 
     return (
         <Card className="border-blue-200" data-testid="migration-widget">
