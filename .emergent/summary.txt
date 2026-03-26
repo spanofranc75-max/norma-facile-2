@@ -1,143 +1,138 @@
 <analysis>**original_problem_statement**: 
-The user is upgrading NormaFacile 2.0 to support a multi-tenant SaaS architecture (Step 1 isolation completed), fixing critical AI-driven Preventivo calculation errors, resolving UI bugs related to client dropdowns, and initiating a 4-sprint Governance/Administrative hardening roadmap (currently executing Sprint 1).
+The user (Francesco) is building NormaFacile 2.0 (SaaS for steel carpentry). The core requests in this session involved completing Sprint 1 (RBAC security hardening), initiating Sprint 2 (Multi-tenant foundations), fixing broken data mappings between Preventivi/Commesse and Sicurezza Cantieri (Safety documents), linking the development environment to the user's actual Production MongoDB Atlas cluster (and migrating data to the new ), fixing performance issues, fixing operator selection in Diario Produzione, fixing DDT Conto Lavoro creation, and finally requesting a printable Foglio Lavoro (Work Sheet) PDF for offline workshop operators.
 
-**User's preferred language**: Italian (You MUST INSTRUCT the next agent to respond in Italian).
+**User's preferred language**: Italian (You MUST INSTRUCT the next agent to respond in Italian only).
 
 **what currently exists?** 
-A full-stack React/FastAPI/MongoDB application. Step 1 of Multi-Tenant isolation is complete ( added to all collections, backward compatible with existing cookie-auth). The AI Preventivatore uses GPT-4o to accurately calculate weights for grigliati/lamiera, exclude conto lavoro costs, and factor in manual labor hours (ore stimate). An administrative audit has been performed, and the codebase is currently undergoing Sprint 1 of a security hardening phase (RBAC + Auditing).
+A FastAPI + React + MongoDB application. The app has successfully implemented RBAC and Multi-Tenant Phase A (Tenant auto-onboarding). Crucially, the app is now permanently connected to the user's **Production MongoDB Atlas**, with all legacy data successfully migrated to their new . Database indexes and connection pooling have been implemented for performance. The Diario Produzione correctly merges HR employees () and  into a unified operator list.
 
 **Last working item**:
-    - **Last item agent was working**: Executing Sprint 1 — Stabilizzazione rapida. The agent just took a DB backup () and instantiated the new  file to implement Role-Based Access Control (RBAC) decorators.
+    - **Last item agent was working**: Building a printable Foglio Lavoro (Work Sheet) PDF generator. The agent just created the file . The user requested this PDF to contain a QR Code for the commessa, a list of work phases, empty rows for manual time entry (since a phase might take multiple days), and strictly **no financial/cost data** visible to the operator. It should also allow appending uploaded drawings/cut lists.
     - **Status**: IN PROGRESS
-    - **Agent Testing Done**: N (For this specific Sprint 1 task)
-    - **Which testing method agent to use?**: backend testing agent (due to security implications of RBAC and audit logging).
+    - **Agent Testing Done**: N
+    - **Which testing method agent to use?**: backend testing agent (to verify PDF generation) and manual verification via python -c / curl to ensure the PDF writes correctly. Frontend screenshot testing to ensure the download button is visible in the Commessa view.
     - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-  Issue 1: Sprint 1 - RBAC & Audit Hardening (P0)
-  Issue 2: Rotazione chiavi sensibili (P1)
+  Issue 1: Foglio Lavoro PDF Generation (P0)
+  Issue 2: Sprint 2 - Multi-Tenant Phase B (P1)
 
   Issues Detail:
-  - Issue 1: Sprint 1 - RBAC & Audit Hardening
-     - **Attempted fixes**: Created . DB Backup was successfully taken.
+  - Issue 1: Foglio Lavoro PDF Generation
+     - **Attempted fixes**: Created . Verified , , and  libraries are installed.
      - **Next debug checklist**: 
-        1. Complete  in .
-        2. Apply decorator to critical routes (, , , ). Ensure it returns a clear 403 on failure.
-        3. Modify  in  to include  in every log.
-        4. Write and execute a one-off script () to remove the ~19 test users that are not tied to an active tenant.
-        5. Verify E2E Invoice creation flow to ensure RBAC and Audit don't break existing features.
-     - **Why fix this issue and what will be achieved with the fix?**: Protects multi-tenant data, provides clear auditability, and secures administrative endpoints from unauthorized access.
+        1. Write the PDF generation logic in  using Weasyprint or Reportlab.
+        2. Create the FastAPI endpoint in  or a dedicated route to trigger the download.
+        3. Add a Stampa Foglio Lavoro button in the frontend Commessa UI.
+        4. Ensure it pulls uploaded documents (disegni, distinte) linked to the commessa and appends them if possible.
+     - **Why fix this issue and what will be achieved with the fix?**: Allows workshop operators who do not want to use the web app to track time manually on paper.
      - **Status**: IN PROGRESS
      - **Is recurring issue?**: N
-     - **Should Test frontend/backend/both after fix?**: both (Backend for enforcement, Frontend to ensure no false 403s block regular users).
-     - **Blocked on other issue**: None.
-  
-  - Issue 2: Rotazione chiavi sensibili
-     - **Attempted fixes**: The agent cleaned up  and removed  from tracking, but identified that keys were historically exposed in 37 past commits.
-     - **Next debug checklist**: Remind user to manually rotate , , and  keys in their Railway production environment and external portals.
-     - **Why fix this issue and what will be achieved with the fix?**: Security/Preventing quota theft.
-     - **Status**: USER VERIFICATION PENDING
-     - **Is recurring issue?**: N
-     - **Should Test frontend/backend/both after fix?**: NA
+     - **Should Test frontend/backend/both after fix?**: both
      - **Blocked on other issue**: None.
 
 **In progress Task List**:
-  Task 1: Sprint 1 Deliverables
-  - **Where to resume**: 
-  - **What will be achieved with this?**: Centralized security and logging before introducing multi-tenant business logic in future sprints.
-  - **Status**: IN PROGRESS
-  - **Should Test frontend/backend/both after fix?**: both
-  - **Blocked on something**: None.
+  Task 1: Sprint 2 - Multi-Tenant Phase B
+     - **Where to resume**: Updating the remaining 27 backend service files.
+     - **What will be achieved with this?**: Ensuring all database read/write queries enforce  filtering, completing the multi-tenant data isolation.
+     - **Status**: NOT STARTED (Deferred to fix critical production bugs first).
+     - **Should Test frontend/backend/both after fix?**: both (Heavy backend testing needed).
+     - **Blocked on something**: Blocked by Issue 1 (Foglio Lavoro PDF) as per user's immediate priority.
 
 **Upcoming and Future Tasks**
     Upcoming Tasks:
-    - (P1) Sprint 2: Integrazione backup per tenant, Onboarding tenant e contatori isolati, Service files multi-tenant.
-    - (P1) Sprint 3: Messa a punto flussi di produzione (Preventivo -> Commessa -> 1090 -> DDT -> DoP/CE).
-    - (P2) Sprint 4: CI/CD, Observability (Logging JSON), Piano Rollback.
-    
+    - (P1) Sprint 2 Phase B: Update 27 service files with  filter.
+    - (P1) Sprint 2 Phase C: Backup scheduler per tenant, RBAC on new onboarding routes.
+    - (P2) Sprint 2 Phase D: Documentation update ().
+    - (P2) Sprint 3: JSON logging, admin dashboard for tenants.
     Future Tasks:
-    - (P3) Stripe Integration.
+    - (P3) Sprint 4: CSRF, input sanitization, rate limiting per-tenant, GDPR.
+    - (P3) Stripe integration.
     - (P3) Product Tour.
-    - (P3) Registro Comunicazioni.
 
 **Completed work in this session**
-- Multi-Tenant Step 1 Data Isolation: added  and migration startup scripts (DONE).
-- Fix Analisi AI Preventivo (4 correzioni): accurate grigliato weight, conto lavoro zeroing, specchiature extraction, ore stimate field added to UI and prompt (DONE).
-- Bug Fix: Dropdown Clienti Vuoto on Invoice page (Modified backend  to handle  for FIC imported clients) (DONE).
-- Bug Fix:  repeating after navigation (Fixed via React  + API checking instead of memory state) (DONE).
-- Security:  cleanup and removal of  from git tracking (DONE).
-- DB Backup for Sprint 1 generated at  (DONE).
-- Administrative Governance Audit generated at  (DONE).
+- Sprint 1 RBAC implementation across 76 route files (636 endpoints) (DONE)
+- Audit Trail updated to include  (DONE)
+- Fixed Sicurezza Cantiere pre-fill logic (Address, Client, Commessa data now map correctly) (DONE)
+- Sprint 2 Phase A: Tenant CRUD, Admin auto-onboarding, isolated counters (DONE)
+- Connected Preview to Production MongoDB Atlas & migrated legacy data () to user's  (DONE)
+- Added Database Connection Pooling & built 30+ missing indexes in Atlas, fixing severe performance lag (DONE)
+- Fixed Diario Produzione operator list by merging  and  collections (DONE)
+- Fixed DDT Conto Lavoro creation by correcting mismatched frontend/backend API endpoint names (DONE)
+- Created  to serve as a permanent source of truth for the environment state (DONE)
 
 **Earlier issues found/mentioned but not fixed**
-None currently.
+None.
 
 **Known issue recurrence from previous fork**
-  - Issue recurrence in previous fork: None directly blocking, but watch out for MongoDB  operator usage inside  update payloads (Agent previously broke DB updates by trying to insert  as a string value instead of using it purely for matching). Stick to simple  for insertions.
+  - Issue recurrence in previous fork: Disconnect between staging vs production environments.
+  - Recurrence count: 3
+  - Status: RESOLVED (Agent connected the development preview directly to the user's Production MongoDB Atlas and established  to prevent future confusion).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Multi-Tenancy**: Data isolation is enforced via a dynamic  startup script that ensures  exists.  is a helper function. DO NOT USE  operators for database INSERT/UPDATE operations, only for READ filters.
-- **Cookie Auth**: Application uses MongoDB cookie sessions. User explicitly rejected JWT.
+- **MongoDB Atlas Integration**: The app no longer relies on a volatile local database. It directly accesses the user's Atlas cluster. All data operations MUST handle .
+- **Operator Mapping**: For Diario Produzione, the API dynamically merges the  (HR) and  collections to form the  list.
 
 **key DB schema**
   - : 
-  - ALL Collections: Now require  field.
-  - : Added  (Float).
-  - : {user_id, action, target_type, timestamp, ...} -> *Needs  added*.
+  - : 
+  -  / : Sources for workshop operators.
 
 **changes in tech stack**
-  - None. Sticking to FastAPI + MongoDB + React.
+  - **Database Migration**: Shifted entirely from local Kubernetes MongoDB to external MongoDB Atlas.
 
 **All files of reference**
-  -  (Just created, needs implementation)
-  -  (Needs  implementation)
-  - , , ,  (Need  decorators)
-  -  (AI logic updated)
+  -  (CRITICAL: Read this to understand the environment setup).
+  -  (Current focus for next agent).
+  -  (For reference on how operators are mapped).
 
 **Areas that need refactoring**:
-  -  script needs to be written and run to clear out old test accounts polluting the DB.
+  - The separation between  (HR), , and  is currently handled via a runtime merge in the API. In the future, this might need a unified schema.
 
 **key api endpoints**
-  - : Modified to return both  and  statuses to support legacy FattureInCloud imports.
-  - : Reads new  property.
+  -  (Returns merged HR and welders).
+  -  (Fixed endpoint mapping).
 
 **Critical Info for New Agent**
-  - **SPRINT 1 FOCUS**: You are actively working on Sprint 1 of the Administrative Governance roadmap. Implement the RBAC decorator, apply it, update the audit trail, clean test users, and run a full Invoice E2E test.
-  - **MONGODB CAUTION**: When writing queries, remember that users imported from FIC might have  fields (e.g., ). Also, never insert query operators like  into the DB using .
-  - **GITHUB COMMITS**: Remind the user to use the Save to GitHub UI button to persist the changes safely before initiating deployment platforms like Railway.
+  - **DATABASE**: The app is connected to the user's PRODUCTION database. Treat the data with care. Do not drop collections.
+  - **TENANT ID**: Ensure  is applied to all new inserts. The user's specific  is dynamically pulled from their session.
+  - **DEPLOYMENT**: When code is ready, direct the user to click Save to GitHub. Vercel automatically deploys the  branch to production. You do not need to manage Railway or Vercel directly.
 
 **documents and test reports created in this job**
-  -  (Crucial roadmap document)
-  - , ,  (Tests verifying Multi-tenant, AI bugs, and dropdown bugs).
+  - 
+  - 
+  -  (Sprint 1)
+  -  (Cantiere Fix)
+  -  (Sprint 2 Phase A)
 
-**Last 10 User Messages and any pending HUMAN messages**
- 1. User reported bug: Clients dropdown empty on invoice page.
- 2. User asked to check git tracking of  files.
- 3. User asked to implement 4 fixes for AI Preventivatore.
- 4. User approved the AI fix plan.
- 5. User provided video showing Clients dropdown STILL missing in production.
- 6. User asked for a full administrative/governance Diagnosis.
- 7. User asked why dropdown still missing after tenant_match fix (Agent found  issue).
- 8. User complained that  reappears after navigation.
- 9. User asked to proceed with Sprint 1 of the Diagnosis roadmap.
- 10. User provided final checklist for Sprint 1 and gave the green light. Agent took a backup and touched . -> *This is where you pick up*.
+**Last 10 User Messages and any pending HUMAN messages** 
+ 1. User reported staging vs production data mismatch.
+ 2. Agent investigated and connected to User's MongoDB Atlas.
+ 3. User complained about app slowness.
+ 4. Agent added connection pool and 30 DB indexes.
+ 5. User reported Diario Produzione operators were disabled/missing.
+ 6. Agent merged HR  and  into the endpoint.
+ 7. User reported DDT Conto Lavoro was giving Not Found.
+ 8. Agent fixed frontend API calls to match backend routes.
+ 9. User requested a printable Foglio Lavoro PDF for offline operators (QR code, phases list, blank rows for days, no financial data).
+ 10. Agent created  but hasn't implemented it yet. -> *Next agent picks up here.*
 
 **Project Health Check:**
-Healthy. The preview URL is fully functional with multi-tenant Step 1 data isolation running.
+Healthy. Connected to external Atlas DB.
 
-**3rd Party Integrations**
- - OpenAI GPT-4o — uses Emergent LLM Key (Core to Preventivatore logic).
- - FattureInCloud — requires User API Key.
- - Resend — requires User API Key.
+**3rd Party Integrations** 
+ - OpenAI GPT-4o — uses Emergent LLM Key
+ - MongoDB Atlas — requires User DB credentials (Already configured in )
+ - Vercel — Auto-deploy via GitHub.
 
 **Testing status**
-  - Testing agent used after significant changes: YES (Iterations 258, 259, 260)
+  - Testing agent used after significant changes: YES (Sprint 1, Cantiere Fix, Sprint 2 Phase A all passed 100%).
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None
-  - Known regressions: None currently.
+  - Known regressions: None.
 
 **What agent forgot to execute**
-  - The previous agent just created  but hasn't written the code or applied it yet. You need to complete Task 1, 2, 3, and 4 of Sprint 1.</analysis>
+The agent created the file  but did not implement the PDF generation logic, did not create the FastAPI endpoint, and did not add the Download PDF button to the frontend UI. The next agent must complete this entire feature.</analysis>
