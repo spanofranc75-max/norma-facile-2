@@ -29,6 +29,15 @@ Francesco Spano' — Steel Project Design Srls
 
 ### Completato in questa sessione
 
+34. **Email Destinatari Multipli con Checkbox** (26 Mar 2026):
+    - Dialog email mostra checkbox per ogni destinatario (email standard, PEC, contatti)
+    - Email standard pre-selezionata come default (NON PEC)
+    - Pulsante "Aggiungi email" per email manuali
+    - Pulsante invio mostra conteggio destinatari ("Conferma invio a N")
+    - Backend: `preview-email` ritorna `all_recipients` array, `send-email` gestisce `to_emails` array
+    - Fix 3 bug: variabile `ccEmails` indefinita, sovrascrittura `cc_list`, logica disabilitazione pulsante
+    - 17/17 test passati + UI Playwright (iteration_266)
+
 30. **DDT Numerazione Progressiva e Modificabile**:
     - Contatore atomico per tipo (DDT-2026-XXXX vendita, CL-2026-XXXX conto lavoro, RCL-2026-XXXX rientro)
     - Numero modificabile sia in creazione che in modifica DDT
