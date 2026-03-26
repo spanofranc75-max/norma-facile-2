@@ -47,7 +47,11 @@ async def get_clients(
     
     # Status filter
     if status:
-        query["status"] = status
+        if status == "active":
+            # "active" means all non-archived: includes explicit "active" AND null/missing
+            query["status"] = {"$in": ["active", None]}
+        else:
+            query["status"] = status
     elif not include_archived:
         query["status"] = {"$in": ["active", None]}
     
