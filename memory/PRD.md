@@ -49,6 +49,16 @@ Francesco Spano' — Steel Project Design Srls
     - `stato_fatturazione`: completo/parziale/non_fatturato
     - 20/20 test backend + tutti test UI Playwright (iteration_267)
 
+36. **Nuovo Cliente Rapido da Rilievo** (26 Mar 2026):
+    - Dialog "Nuovo Cliente Rapido" accessibile tramite "+" accanto al selettore clienti nel rilievo
+    - Campi minimi: Ragione Sociale (o Cognome/Nome per persona fisica), Cellulare, Email, Indirizzo, Comune, Provincia, Note
+    - Checkbox "Persona Fisica" alterna tra i due formati
+    - Auto-selezione del cliente creato nel dropdown
+    - Propagazione automatica dell'indirizzo al campo "Località/Indirizzo" del rilievo
+    - Note prefissate con "[Dati parziali da rilievo]" per tracciare dati incompleti
+    - Fix gestione 401: redirect automatico al login quando la sessione scade
+    - 13/13 test backend + tutti test UI Playwright (iteration_268)
+
 30. **DDT Numerazione Progressiva e Modificabile**:
     - Contatore atomico per tipo (DDT-2026-XXXX vendita, CL-2026-XXXX conto lavoro, RCL-2026-XXXX rientro)
     - Numero modificabile sia in creazione che in modifica DDT
