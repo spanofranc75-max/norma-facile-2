@@ -127,14 +127,14 @@ async def save_ddt(data: DDTSaveRequest):
     """Save DDT bolt data (from AI analysis or manual entry) to DB."""
     now = datetime.now(timezone.utc)
 
-    # Get admin_id from commessa if not provided
+    # Get admin_id and tenant_id from commessa
     admin_id = data.admin_id
-    if not admin_id:
-        commessa = await db.commesse.find_one(
-            {"commessa_id": data.commessa_id}, {"_id": 0, "user_id": 1}
-        )
-        if commessa:
-            admin_id = commessa["user_id"]
+    commessa = await db.commesse.find_one(
+        {"commessa_id": data.commessa_id}, {"_id": 0, "user_id": 1, "tenant_id": 1}
+    )
+    tenant_id = commessa.get("tenant_id") if commessa else None
+    if not admin_id and commessa:
+        admin_id = commessa["user_id"]
 
     # Enrich with torque values
     from services.montaggio_service import get_torque_nm
@@ -158,6 +158,7 @@ async def save_ddt(data: DDTSaveRequest):
         "bulloni": bulloni_enriched,
         "foto_ddt_doc_id": data.foto_ddt_doc_id or "",
         "source": data.source,
+        "tenant_id": tenant_id,
         "analyzed_at": now.isoformat(),
         "created_at": now.isoformat(),
     }
@@ -215,14 +216,14 @@ async def save_diario_montaggio(data: DiarioMontaggioRequest):
     """Save a complete assembly diary entry."""
     now = datetime.now(timezone.utc)
 
-    # Get admin_id from commessa if not provided
+    # Get admin_id and tenant_id from commessa
     admin_id = data.admin_id
-    if not admin_id:
-        commessa = await db.commesse.find_one(
-            {"commessa_id": data.commessa_id}, {"_id": 0, "user_id": 1}
-        )
-        if commessa:
-            admin_id = commessa["user_id"]
+    commessa = await db.commesse.find_one(
+        {"commessa_id": data.commessa_id}, {"_id": 0, "user_id": 1, "tenant_id": 1}
+    )
+    tenant_id = commessa.get("tenant_id") if commessa else None
+    if not admin_id and commessa:
+        admin_id = commessa["user_id"]
 
     montaggio_id = f"mtg_{uuid.uuid4().hex[:10]}"
     doc = {
@@ -230,6 +231,7 @@ async def save_diario_montaggio(data: DiarioMontaggioRequest):
         "commessa_id": data.commessa_id,
         "voce_id": data.voce_id or "",
         "admin_id": admin_id,
+        "tenant_id": tenant_id,
         "operatore_id": data.operatore_id,
         "operatore_nome": data.operatore_nome,
         "serraggi": [s.model_dump() for s in data.serraggi],
@@ -277,7 +279,7 @@ async def upload_foto_montaggio(
 ):
     """Upload a mandatory assembly photo (joints or anchors)."""
     commessa = await db.commesse.find_one(
-        {"commessa_id": commessa_id}, {"_id": 0, "user_id": 1, "numero": 1}
+        {"commessa_id": commessa_id}, {"_id": 0, "user_id": 1, "numero": 1, "tenant_id": 1}
     )
     if not commessa:
         raise HTTPException(404, "Commessa non trovata")
@@ -297,6 +299,7 @@ async def upload_foto_montaggio(
         "doc_id": doc_id,
         "commessa_id": commessa_id,
         "user_id": commessa["user_id"],
+        "tenant_id": commessa.get("tenant_id"),
         "nome_file": clean_name,
         "tipo": "foto_montaggio",
         "content_type": file.content_type or "image/jpeg",
@@ -375,11 +378,12 @@ async def create_variante(data: VarianteCreate):
 
     now = datetime.now(timezone.utc)
 
-    # Get admin_id
+    # Get admin_id and tenant_id
     commessa = await db.commesse.find_one(
-        {"commessa_id": data.commessa_id}, {"_id": 0, "user_id": 1, "numero": 1}
+        {"commessa_id": data.commessa_id}, {"_id": 0, "user_id": 1, "numero": 1, "tenant_id": 1}
     )
     admin_id = commessa["user_id"] if commessa else ""
+    tenant_id = commessa.get("tenant_id") if commessa else None
 
     var_id = f"var_{uuid.uuid4().hex[:10]}"
     doc = {
@@ -387,6 +391,7 @@ async def create_variante(data: VarianteCreate):
         "commessa_id": data.commessa_id,
         "voce_id": data.voce_id or "",
         "admin_id": admin_id,
+        "tenant_id": tenant_id,
         "operatore_id": data.operatore_id,
         "operatore_nome": data.operatore_nome,
         "descrizione": data.descrizione.strip(),

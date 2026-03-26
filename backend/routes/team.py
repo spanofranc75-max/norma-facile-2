@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 
 router = APIRouter(prefix="/team", tags=["team"])
 logger = logging.getLogger(__name__)
@@ -90,13 +90,13 @@ async def list_team_members(user: dict = Depends(get_current_user)):
 
     # Active members
     members = await db.users.find(
-        {"$or": [{"user_id": admin_id}, {"team_owner_id": admin_id}]},
+        {"$or": [{"user_id": admin_id}, {"team_owner_id": admin_id}], "tenant_id": tenant_match(user)},
         {"_id": 0, "user_id": 1, "email": 1, "name": 1, "picture": 1, "role": 1, "created_at": 1, "last_login": 1},
     ).to_list(50)
 
     # Pending invites (not yet logged in)
     invites = await db.team_invites.find(
-        {"admin_id": admin_id, "status": "pending"},
+        {"admin_id": admin_id, "status": "pending", "tenant_id": tenant_match(user)},
         {"_id": 0},
     ).to_list(50)
 
@@ -119,11 +119,11 @@ async def invite_member(data: InviteRequest, user: dict = Depends(get_current_us
     admin_id = user["user_id"]
 
     # Check if already invited or already a member
-    existing_invite = await db.team_invites.find_one({"admin_id": admin_id, "email": email, "status": "pending"})
+    existing_invite = await db.team_invites.find_one({"admin_id": admin_id, "email": email, "status": "pending", "tenant_id": tenant_match(user)})
     if existing_invite:
         raise HTTPException(400, "Questo utente è già stato invitato")
 
-    existing_user = await db.users.find_one({"email": email, "team_owner_id": admin_id})
+    existing_user = await db.users.find_one({"email": email, "team_owner_id": admin_id, "tenant_id": tenant_match(user)})
     if existing_user:
         raise HTTPException(400, "Questo utente fa già parte del team")
 
@@ -134,6 +134,7 @@ async def invite_member(data: InviteRequest, user: dict = Depends(get_current_us
         "name": data.name or "",
         "role": data.role,
         "status": "pending",
+        "tenant_id": tenant_match(user),
         "created_at": datetime.now(timezone.utc),
     }
     await db.team_invites.insert_one(invite)
@@ -156,7 +157,7 @@ async def update_member_role(member_user_id: str, data: UpdateRoleRequest, user:
         raise HTTPException(400, "Non puoi cambiare il tuo stesso ruolo")
 
     result = await db.users.update_one(
-        {"user_id": member_user_id, "team_owner_id": user["user_id"]},
+        {"user_id": member_user_id, "team_owner_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"$set": {"role": data.role, "updated_at": datetime.now(timezone.utc)}},
     )
     if result.matched_count == 0:
@@ -173,7 +174,7 @@ async def remove_member(member_user_id: str, user: dict = Depends(get_current_us
     if member_user_id == user["user_id"]:
         raise HTTPException(400, "Non puoi rimuovere te stesso")
 
-    result = await db.users.delete_one({"user_id": member_user_id, "team_owner_id": user["user_id"]})
+    result = await db.users.delete_one({"user_id": member_user_id, "team_owner_id": user["user_id"], "tenant_id": tenant_match(user)})
     if result.deleted_count == 0:
         raise HTTPException(404, "Membro non trovato")
 
@@ -188,7 +189,7 @@ async def revoke_invite(invite_id: str, user: dict = Depends(get_current_user)):
     """Revoke a pending invite."""
     await _ensure_admin(user)
 
-    result = await db.team_invites.delete_one({"invite_id": invite_id, "admin_id": user["user_id"]})
+    result = await db.team_invites.delete_one({"invite_id": invite_id, "admin_id": user["user_id"], "tenant_id": tenant_match(user)})
     if result.deleted_count == 0:
         raise HTTPException(404, "Invito non trovato")
 

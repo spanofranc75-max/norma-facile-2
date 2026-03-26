@@ -1,7 +1,7 @@
 """Routes — Profili Documentali per Committente (D6)."""
 
 from fastapi import APIRouter, Depends, HTTPException
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.rbac import require_role
 from services.profili_committente_service import (
     crea_profilo, crea_profilo_da_pacchetto, get_profilo,
@@ -15,12 +15,12 @@ router = APIRouter(prefix="/profili-committente", tags=["Profili Committente D6"
 
 @router.get("")
 async def api_list_profili(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
-    return await list_profili(user["user_id"])
+    return await list_profili(user["user_id"], tenant_id=tenant_match(user))
 
 
 @router.post("")
 async def api_crea_profilo(data: dict, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
-    result = await crea_profilo(user["user_id"], data)
+    result = await crea_profilo(user["user_id"], data, tenant_id=tenant_match(user))
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])
     await log_activity(user, "create", "profilo_committente", result["profile_id"],
@@ -40,6 +40,7 @@ async def api_crea_da_pacchetto(
         user["user_id"], pack_id,
         client_name=data.get("client_name", ""),
         description=data.get("description", ""),
+        tenant_id=tenant_match(user),
     )
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])
@@ -52,13 +53,13 @@ async def api_crea_da_pacchetto(
 @router.get("/suggest/{commessa_id}")
 async def api_suggest_profilo(commessa_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Suggest a profile matching the client of a commessa."""
-    profilo = await suggerisci_profilo(user["user_id"], commessa_id)
+    profilo = await suggerisci_profilo(user["user_id"], commessa_id, tenant_id=tenant_match(user))
     return {"suggested_profile": profilo}
 
 
 @router.get("/{profile_id}")
 async def api_get_profilo(profile_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
-    profilo = await get_profilo(profile_id, user["user_id"])
+    profilo = await get_profilo(profile_id, user["user_id"], tenant_id=tenant_match(user))
     if not profilo:
         raise HTTPException(status_code=404, detail="Profilo non trovato")
     return profilo
@@ -66,7 +67,7 @@ async def api_get_profilo(profile_id: str, user: dict = Depends(require_role("ad
 
 @router.put("/{profile_id}")
 async def api_update_profilo(profile_id: str, data: dict, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
-    result = await update_profilo(profile_id, user["user_id"], data)
+    result = await update_profilo(profile_id, user["user_id"], data, tenant_id=tenant_match(user))
     if not result:
         raise HTTPException(status_code=404, detail="Profilo non trovato")
     await log_activity(user, "update", "profilo_committente", profile_id,
@@ -77,8 +78,8 @@ async def api_update_profilo(profile_id: str, data: dict, user: dict = Depends(r
 
 @router.delete("/{profile_id}")
 async def api_delete_profilo(profile_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
-    profilo = await get_profilo(profile_id, user["user_id"])
-    if not await delete_profilo(profile_id, user["user_id"]):
+    profilo = await get_profilo(profile_id, user["user_id"], tenant_id=tenant_match(user))
+    if not await delete_profilo(profile_id, user["user_id"], tenant_id=tenant_match(user)):
         raise HTTPException(status_code=404, detail="Profilo non trovato")
     await log_activity(user, "delete", "profilo_committente", profile_id,
                        label=(profilo or {}).get("client_name", ""))
@@ -97,6 +98,7 @@ async def api_applica_profilo(
         commessa_id=data.get("commessa_id", ""),
         cantiere_id=data.get("cantiere_id", ""),
         label=data.get("label", ""),
+        tenant_id=tenant_match(user),
     )
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])

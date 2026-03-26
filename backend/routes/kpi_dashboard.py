@@ -16,7 +16,7 @@ from collections import defaultdict
 from fastapi import APIRouter, Depends
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.rbac import require_role
 
 router = APIRouter(prefix="/kpi", tags=["kpi"])
@@ -25,6 +25,14 @@ logger = logging.getLogger(__name__)
 
 async def _get_uid(user: dict) -> str:
     return user.get("team_owner_id", user["user_id"]) if user.get("role") != "admin" else user["user_id"]
+
+
+def _tq(user: dict, uid: str, extra: dict = None) -> dict:
+    """Build tenant-filtered query base."""
+    q = {"user_id": uid, "tenant_id": tenant_match(user)}
+    if extra:
+        q.update(extra)
+    return q
 
 
 @router.get("/accuracy-score")
@@ -36,7 +44,7 @@ async def accuracy_score(user: dict = Depends(require_role("admin", "amministraz
     uid = await _get_uid(user)
 
     commesse = await db.commesse.find(
-        {"user_id": uid, "stato": {"$in": ["chiuso", "fatturato", "consegnato"]}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "stato": {"$in": ["chiuso", "fatturato", "consegnato"]}},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1,
          "ore_preventivate": 1, "importo_totale": 1, "value": 1,
          "budget": 1, "predittivo": 1, "created_at": 1}
@@ -60,7 +68,7 @@ async def accuracy_score(user: dict = Depends(require_role("admin", "amministraz
 
         # Costi reali da fatture acquisto collegate
         fatture = await db.invoices.find(
-            {"user_id": uid, "riferimento_commessa": cid, "document_type": "fattura_acquisto"},
+            {"user_id": uid, "tenant_id": tenant_match(user), "riferimento_commessa": cid, "document_type": "fattura_acquisto"},
             {"_id": 0, "totals": 1}
         ).to_list(100)
         costo_reale = sum((f.get("totals") or {}).get("subtotal", 0) for f in fatture)
@@ -90,7 +98,7 @@ async def accuracy_score(user: dict = Depends(require_role("admin", "amministraz
         if importo > 0 and (ore_reali > 0 or costo_reale > 0):
             costo_totale_reale = costo_reale
             # Add labor cost (use company hourly rate)
-            cost_doc = await db.company_costs.find_one({"user_id": uid}, {"_id": 0})
+            cost_doc = await db.company_costs.find_one({"user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0})
             costo_orario = (cost_doc or {}).get("costo_orario_pieno", 35)
             costo_totale_reale += ore_reali * costo_orario
             marginalita = round((importo - costo_totale_reale) / importo * 100, 1) if importo > 0 else 0
@@ -149,7 +157,7 @@ async def trend_accuracy(user: dict = Depends(require_role("admin", "amministraz
     uid = await _get_uid(user)
 
     commesse = await db.commesse.find(
-        {"user_id": uid, "stato": {"$in": ["chiuso", "fatturato", "consegnato"]}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "stato": {"$in": ["chiuso", "fatturato", "consegnato"]}},
         {"_id": 0, "commessa_id": 1, "ore_preventivate": 1, "created_at": 1}
     ).sort("created_at", 1).to_list(500)
 
@@ -200,11 +208,11 @@ async def trend_accuracy(user: dict = Depends(require_role("admin", "amministraz
 async def marginalita(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Marginalita reale per commessa."""
     uid = await _get_uid(user)
-    cost_doc = await db.company_costs.find_one({"user_id": uid}, {"_id": 0})
+    cost_doc = await db.company_costs.find_one({"user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0})
     costo_orario = (cost_doc or {}).get("costo_orario_pieno", 35)
 
     commesse = await db.commesse.find(
-        {"user_id": uid},
+        {"user_id": uid, "tenant_id": tenant_match(user)},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1,
          "importo_totale": 1, "value": 1, "status": 1, "stato": 1}
     ).sort("created_at", -1).limit(50).to_list(50)
@@ -223,7 +231,7 @@ async def marginalita(user: dict = Depends(require_role("admin", "amministrazion
 
         # Costi materiali
         fatture = await db.invoices.find(
-            {"user_id": uid, "riferimento_commessa": cid, "document_type": "fattura_acquisto"},
+            {"user_id": uid, "tenant_id": tenant_match(user), "riferimento_commessa": cid, "document_type": "fattura_acquisto"},
             {"_id": 0, "totals": 1}
         ).to_list(100)
         costo_mat = sum((f.get("totals") or {}).get("subtotal", 0) for f in fatture)
@@ -255,7 +263,7 @@ async def ritardi_fornitori(user: dict = Depends(require_role("admin", "amminist
     uid = await _get_uid(user)
 
     all_ops = await db.commesse_ops.find(
-        {"user_id": uid, "conto_lavoro": {"$exists": True, "$ne": []}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "conto_lavoro": {"$exists": True, "$ne": []}},
         {"_id": 0, "commessa_id": 1, "conto_lavoro": 1}
     ).to_list(200)
 
@@ -305,7 +313,7 @@ async def tempi_medi(user: dict = Depends(require_role("admin", "amministrazione
     uid = await _get_uid(user)
 
     commesse = await db.commesse.find(
-        {"user_id": uid, "peso_totale_kg": {"$gt": 0}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "peso_totale_kg": {"$gt": 0}},
         {"_id": 0, "commessa_id": 1, "numero": 1, "peso_totale_kg": 1,
          "normativa_tipo": 1, "classe_exc": 1}
     ).to_list(500)
@@ -366,22 +374,22 @@ async def kpi_overview(user: dict = Depends(require_role("admin", "amministrazio
     uid = await _get_uid(user)
 
     # Counts
-    n_commesse = await db.commesse.count_documents({"user_id": uid})
-    n_chiuse = await db.commesse.count_documents({"user_id": uid, "stato": {"$in": ["chiuso", "fatturato", "consegnato"]}})
-    n_preventivi = await db.preventivi.count_documents({"user_id": uid})
-    n_predittivi = await db.preventivi.count_documents({"user_id": uid, "predittivo": True})
-    n_fatture = await db.invoices.count_documents({"user_id": uid, "document_type": {"$ne": "fattura_acquisto"}})
+    n_commesse = await db.commesse.count_documents({"user_id": uid, "tenant_id": tenant_match(user)})
+    n_chiuse = await db.commesse.count_documents({"user_id": uid, "tenant_id": tenant_match(user), "stato": {"$in": ["chiuso", "fatturato", "consegnato"]}})
+    n_preventivi = await db.preventivi.count_documents({"user_id": uid, "tenant_id": tenant_match(user)})
+    n_predittivi = await db.preventivi.count_documents({"user_id": uid, "tenant_id": tenant_match(user), "predittivo": True})
+    n_fatture = await db.invoices.count_documents({"user_id": uid, "tenant_id": tenant_match(user), "document_type": {"$ne": "fattura_acquisto"}})
 
     # Total revenue
     fatture = await db.invoices.find(
-        {"user_id": uid, "document_type": {"$ne": "fattura_acquisto"}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "document_type": {"$ne": "fattura_acquisto"}},
         {"_id": 0, "totals.total_document": 1}
     ).to_list(1000)
     fatturato = sum((f.get("totals") or {}).get("total_document", 0) for f in fatture)
 
     # Active C/L
     ops_with_cl = await db.commesse_ops.find(
-        {"user_id": uid, "conto_lavoro": {"$exists": True}},
+        {"user_id": uid, "tenant_id": tenant_match(user), "conto_lavoro": {"$exists": True}},
         {"_id": 0, "conto_lavoro": 1}
     ).to_list(200)
     cl_attivi = 0

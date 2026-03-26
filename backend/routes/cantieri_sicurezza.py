@@ -10,7 +10,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import Optional, List
 
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.rbac import require_role
 from core.rate_limiter import limiter
 from services.cantieri_sicurezza_service import (
@@ -65,7 +65,7 @@ class AggiornaCantiereSicurezzaRequest(BaseModel):
 
 @router.post("/cantieri-sicurezza")
 async def api_crea_cantiere(body: CreaCantiereSicurezzaRequest, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
-    result = await crea_cantiere(user["user_id"], body.commessa_id, body.pre_fill)
+    result = await crea_cantiere(user["user_id"], body.commessa_id, body.pre_fill, tenant_id=tenant_match(user))
     await log_activity(user, "create", "cantiere_sicurezza", result.get("cantiere_id", ""),
                        label=result.get("nome_cantiere", "Nuovo cantiere"),
                        commessa_id=body.commessa_id or "")
@@ -74,12 +74,12 @@ async def api_crea_cantiere(body: CreaCantiereSicurezzaRequest, user: dict = Dep
 
 @router.get("/cantieri-sicurezza")
 async def api_list_cantieri(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
-    return await list_cantieri(user["user_id"])
+    return await list_cantieri(user["user_id"], tenant_id=tenant_match(user))
 
 
 @router.get("/cantieri-sicurezza/{cantiere_id}")
 async def api_get_cantiere(cantiere_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
-    doc = await get_cantiere(cantiere_id, user["user_id"])
+    doc = await get_cantiere(cantiere_id, user["user_id"], tenant_id=tenant_match(user))
     if not doc:
         raise HTTPException(status_code=404, detail="Cantiere sicurezza non trovato")
     return doc
@@ -87,7 +87,7 @@ async def api_get_cantiere(cantiere_id: str, user: dict = Depends(require_role("
 
 @router.get("/cantieri-sicurezza/commessa/{commessa_id}")
 async def api_get_cantieri_by_commessa(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
-    return await get_cantieri_by_commessa(commessa_id, user["user_id"])
+    return await get_cantieri_by_commessa(commessa_id, user["user_id"], tenant_id=tenant_match(user))
 
 
 @router.put("/cantieri-sicurezza/{cantiere_id}")
@@ -95,7 +95,7 @@ async def api_aggiorna_cantiere(cantiere_id: str, body: AggiornaCantiereSicurezz
     updates = body.model_dump(exclude_none=True)
     if not updates:
         raise HTTPException(status_code=400, detail="Nessun campo da aggiornare")
-    result = await aggiorna_cantiere(cantiere_id, user["user_id"], updates)
+    result = await aggiorna_cantiere(cantiere_id, user["user_id"], updates, tenant_id=tenant_match(user))
     if not result:
         raise HTTPException(status_code=404, detail="Cantiere sicurezza non trovato")
     # R0: Auto-sync obblighi if substantive fields changed
@@ -115,8 +115,8 @@ async def api_aggiorna_cantiere(cantiere_id: str, body: AggiornaCantiereSicurezz
 
 @router.delete("/cantieri-sicurezza/{cantiere_id}")
 async def api_elimina_cantiere(cantiere_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
-    doc = await get_cantiere(cantiere_id, user["user_id"])
-    if not await elimina_cantiere(cantiere_id, user["user_id"]):
+    doc = await get_cantiere(cantiere_id, user["user_id"], tenant_id=tenant_match(user))
+    if not await elimina_cantiere(cantiere_id, user["user_id"], tenant_id=tenant_match(user)):
         raise HTTPException(status_code=404, detail="Cantiere sicurezza non trovato")
     await log_activity(user, "delete", "cantiere_sicurezza", cantiere_id,
                        label=doc.get("nome_cantiere", "") if doc else "",
@@ -126,7 +126,7 @@ async def api_elimina_cantiere(cantiere_id: str, user: dict = Depends(require_ro
 
 @router.get("/cantieri-sicurezza/{cantiere_id}/gate")
 async def api_gate_pos(cantiere_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
-    doc = await get_cantiere(cantiere_id, user["user_id"])
+    doc = await get_cantiere(cantiere_id, user["user_id"], tenant_id=tenant_match(user))
     if not doc:
         raise HTTPException(status_code=404, detail="Cantiere sicurezza non trovato")
     return calcola_gate_pos(doc)
@@ -139,7 +139,7 @@ async def api_ai_precompila(request: Request, cantiere_id: str, user: dict = Dep
     result = await ai_precompila_cantiere(cantiere_id, user["user_id"])
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])
-    doc = await get_cantiere(cantiere_id, user["user_id"])
+    doc = await get_cantiere(cantiere_id, user["user_id"], tenant_id=tenant_match(user))
     await log_activity(user, "ai_precompile", "cantiere_sicurezza", cantiere_id,
                        label=f"AI precompilazione POS",
                        commessa_id=(doc or {}).get("parent_commessa_id", "") or (doc or {}).get("commessa_id", ""),
@@ -160,7 +160,7 @@ async def api_genera_pos(
     result = await genera_pos_docx(cantiere_id, user["user_id"], mode=mode)
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])
-    doc = await get_cantiere(cantiere_id, user["user_id"])
+    doc = await get_cantiere(cantiere_id, user["user_id"], tenant_id=tenant_match(user))
     await log_activity(user, "generate_docx", "cantiere_sicurezza", cantiere_id,
                        label=f"POS v{result['generazione']['versione']}",
                        commessa_id=(doc or {}).get("parent_commessa_id", "") or (doc or {}).get("commessa_id", ""),
@@ -182,7 +182,7 @@ async def api_genera_pos(
 @router.get("/cantieri-sicurezza/{cantiere_id}/pos-generazioni")
 async def api_pos_generazioni(cantiere_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Get POS generation history for a cantiere."""
-    doc = await get_cantiere(cantiere_id, user["user_id"])
+    doc = await get_cantiere(cantiere_id, user["user_id"], tenant_id=tenant_match(user))
     if not doc:
         raise HTTPException(status_code=404, detail="Cantiere non trovato")
     return {

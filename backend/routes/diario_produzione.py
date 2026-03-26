@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.rbac import require_role
 
 router = APIRouter(prefix="/commesse", tags=["diario-produzione"])
@@ -74,7 +74,7 @@ async def list_diario(
 ):
     """List diary entries for a commessa, optionally filtered."""
     admin_id = await _get_team_admin_id(user)
-    query = {"commessa_id": cid, "admin_id": admin_id}
+    query = {"commessa_id": cid, "admin_id": admin_id, "tenant_id": tenant_match(user)}
     if mese:
         query["data"] = {"$regex": f"^{mese}"}
     if fase:
@@ -109,6 +109,7 @@ async def create_diario_entry(cid: str, entry: DiarioEntry, user: dict = Depends
         "wps_usata": entry.wps_usata or "",
         "note_collaudo": entry.note_collaudo or "",
         "created_by": user["user_id"],
+        "tenant_id": tenant_match(user),
         "created_at": now.isoformat(),
         "updated_at": now.isoformat(),
     }
@@ -160,7 +161,7 @@ async def update_diario_entry(
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     result = await db[DIARIO_COLL].update_one(
-        {"entry_id": entry_id, "commessa_id": cid, "admin_id": admin_id},
+        {"entry_id": entry_id, "commessa_id": cid, "admin_id": admin_id, "tenant_id": tenant_match(user)},
         {"$set": updates},
     )
     if result.matched_count == 0:
@@ -175,7 +176,7 @@ async def delete_diario_entry(cid: str, entry_id: str, user: dict = Depends(requ
     """Delete a work session entry."""
     admin_id = await _get_team_admin_id(user)
     result = await db[DIARIO_COLL].delete_one(
-        {"entry_id": entry_id, "commessa_id": cid, "admin_id": admin_id}
+        {"entry_id": entry_id, "commessa_id": cid, "admin_id": admin_id, "tenant_id": tenant_match(user)}
     )
     if result.deleted_count == 0:
         raise HTTPException(404, "Voce diario non trovata")
@@ -190,11 +191,11 @@ async def get_diario_riepilogo(cid: str, user: dict = Depends(require_role("admi
     admin_id = await _get_team_admin_id(user)
 
     entries = await db[DIARIO_COLL].find(
-        {"commessa_id": cid, "admin_id": admin_id}, {"_id": 0}
+        {"commessa_id": cid, "admin_id": admin_id, "tenant_id": tenant_match(user)}, {"_id": 0}
     ).to_list(1000)
 
     # Get company hourly cost
-    cost_doc = await db.company_costs.find_one({"user_id": admin_id}, {"_id": 0})
+    cost_doc = await db.company_costs.find_one({"user_id": admin_id, "tenant_id": tenant_match(user)}, {"_id": 0})
     costo_orario = cost_doc.get("costo_orario_pieno", 0) if cost_doc else 0
 
     # Get estimated hours from production phases
@@ -298,14 +299,14 @@ async def list_operatori(cid: str, user: dict = Depends(require_role("admin", "u
     
     # 1. Load from operatori collection (legacy)
     ops_raw = await db[OPERATORI_COLL].find(
-        {"admin_id": admin_id}, {"_id": 0}
+        {"admin_id": admin_id, "tenant_id": tenant_match(user)}, {"_id": 0}
     ).sort("nome", 1).to_list(200)
     
     seen_names = {o.get("nome", "").strip().lower() for o in ops_raw}
     
     # 2. Load from welders collection (Anagrafica Operai — primary source)
     welders = await db["welders"].find(
-        {"user_id": admin_id, "is_active": True}, {"_id": 0}
+        {"user_id": admin_id, "is_active": True, "tenant_id": tenant_match(user)}, {"_id": 0}
     ).sort("name", 1).to_list(200)
     
     for w in welders:
@@ -322,7 +323,7 @@ async def list_operatori(cid: str, user: dict = Depends(require_role("admin", "u
     
     # 3. Load from dipendenti collection (Risorse Umane HR)
     dipendenti = await db["dipendenti"].find(
-        {"user_id": admin_id, "attivo": True}, {"_id": 0}
+        {"user_id": admin_id, "attivo": True, "tenant_id": tenant_match(user)}, {"_id": 0}
     ).sort("nome", 1).to_list(200)
     
     for dip in dipendenti:
@@ -351,6 +352,7 @@ async def create_operatore(cid: str, data: OperatoreInput, user: dict = Depends(
         "admin_id": admin_id,
         "nome": data.nome.strip(),
         "mansione": data.mansione.strip() if data.mansione else "",
+        "tenant_id": tenant_match(user),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     await db[OPERATORI_COLL].insert_one(doc)
@@ -363,7 +365,7 @@ async def create_operatore(cid: str, data: OperatoreInput, user: dict = Depends(
 async def delete_operatore(cid: str, op_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Delete an operator."""
     admin_id = await _get_team_admin_id(user)
-    result = await db[OPERATORI_COLL].delete_one({"op_id": op_id, "admin_id": admin_id})
+    result = await db[OPERATORI_COLL].delete_one({"op_id": op_id, "admin_id": admin_id, "tenant_id": tenant_match(user)})
     if result.deleted_count == 0:
         raise HTTPException(404, "Operatore non trovato")
     return {"message": "Operatore eliminato"}
@@ -395,7 +397,7 @@ async def add_patentino(cid: str, op_id: str, data: PatentinoInput, user: dict =
     }
 
     result = await db[OPERATORI_COLL].update_one(
-        {"op_id": op_id, "admin_id": admin_id},
+        {"op_id": op_id, "admin_id": admin_id, "tenant_id": tenant_match(user)},
         {"$push": {"patentini": patentino}}
     )
     if result.matched_count == 0:
@@ -408,7 +410,7 @@ async def remove_patentino(cid: str, op_id: str, pat_id: str, user: dict = Depen
     """Remove a welding certificate from an operator."""
     admin_id = await _get_team_admin_id(user)
     result = await db[OPERATORI_COLL].update_one(
-        {"op_id": op_id, "admin_id": admin_id},
+        {"op_id": op_id, "admin_id": admin_id, "tenant_id": tenant_match(user)},
         {"$pull": {"patentini": {"pat_id": pat_id}}}
     )
     if result.matched_count == 0:

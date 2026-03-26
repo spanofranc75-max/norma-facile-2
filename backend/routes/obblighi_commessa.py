@@ -8,7 +8,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional
 
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.rbac import require_role
 from services.obblighi_commessa_service import (
     get_obbligo, list_obblighi, update_obbligo,
@@ -35,6 +35,7 @@ async def api_list_obblighi(
     return await list_obblighi(
         user["user_id"], commessa_id, status, severity,
         source_module, category, blocking_level,
+        tenant_id=tenant_match(user),
     )
 
 
@@ -43,7 +44,7 @@ async def api_list_obblighi(
 @router.post("/obblighi/sync/{commessa_id}")
 async def api_sync_obblighi(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Trigger manual sync of obligations for a commessa."""
-    result = await sync_obblighi_commessa(commessa_id, user["user_id"])
+    result = await sync_obblighi_commessa(commessa_id, user["user_id"], tenant_id=tenant_match(user))
     if result.get("error"):
         raise HTTPException(status_code=404, detail=result["error"])
     await log_activity(user, "sync_complete", "obbligo", commessa_id,
@@ -71,26 +72,27 @@ async def api_obblighi_commessa(
     """Get obligations for a specific commessa."""
     return await list_obblighi(
         user["user_id"], commessa_id, status, severity, source_module,
+        tenant_id=tenant_match(user),
     )
 
 
 @router.get("/obblighi/bloccanti/{commessa_id}")
 async def api_bloccanti(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Get only blocking obligations for a commessa."""
-    return await get_bloccanti(commessa_id=commessa_id, user_id=user["user_id"])
+    return await get_bloccanti(commessa_id, user["user_id"], tenant_id=tenant_match(user))
 
 
 @router.get("/obblighi/summary/{commessa_id}")
 async def api_summary(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Get obligation summary counts for a commessa."""
-    return await get_summary(commessa_id=commessa_id, user_id=user["user_id"])
+    return await get_summary(user["user_id"], commessa_id, tenant_id=tenant_match(user))
 
 
 # ─── Generic by ID (MUST be LAST) ───
 
 @router.get("/obblighi/{obbligo_id}")
 async def api_get_obbligo(obbligo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
-    obl = await get_obbligo(obbligo_id, user["user_id"])
+    obl = await get_obbligo(obbligo_id, user["user_id"], tenant_id=tenant_match(user))
     if not obl:
         raise HTTPException(status_code=404, detail="Obbligo non trovato")
     return obl
@@ -98,8 +100,8 @@ async def api_get_obbligo(obbligo_id: str, user: dict = Depends(require_role("ad
 
 @router.patch("/obblighi/{obbligo_id}")
 async def api_update_obbligo(obbligo_id: str, updates: dict, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
-    before = await get_obbligo(obbligo_id, user["user_id"])
-    obl = await update_obbligo(obbligo_id, user["user_id"], updates)
+    before = await get_obbligo(obbligo_id, user["user_id"], tenant_id=tenant_match(user))
+    obl = await update_obbligo(obbligo_id, user["user_id"], updates, tenant_id=tenant_match(user))
     if not obl:
         raise HTTPException(status_code=404, detail="Obbligo non trovato")
     # Log meaningful changes

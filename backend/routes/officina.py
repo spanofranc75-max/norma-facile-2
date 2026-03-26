@@ -74,7 +74,7 @@ async def _get_officina_context(commessa_id: str, voce_id: str = None):
     commessa = await db.commesse.find_one(
         {"commessa_id": commessa_id},
         {"_id": 0, "commessa_id": 1, "numero": 1, "title": 1, "oggetto": 1,
-         "normativa_tipo": 1, "user_id": 1, "stato": 1}
+         "normativa_tipo": 1, "user_id": 1, "stato": 1, "tenant_id": 1}
     )
     if not commessa:
         raise HTTPException(404, "Commessa non trovata")
@@ -243,6 +243,7 @@ async def timer_action(commessa_id: str, data: TimerAction, voce_id: str = ""):
             "voce_id": voce_key,
             "normativa_tipo": normativa,
             "admin_id": commessa["user_id"],
+            "tenant_id": commessa.get("tenant_id"),
             "operatore_id": data.operatore_id,
             "operatore_nome": data.operatore_nome,
             "status": "running",
@@ -315,6 +316,7 @@ async def timer_action(commessa_id: str, data: TimerAction, voce_id: str = ""):
             "entry_id": entry_id,
             "commessa_id": commessa_id,
             "admin_id": commessa["user_id"],
+            "tenant_id": commessa.get("tenant_id"),
             "data": now.strftime("%Y-%m-%d"),
             "fase": "produzione",
             "ore": ore,
@@ -385,6 +387,7 @@ async def upload_foto_smart(
         "doc_id": doc_id,
         "commessa_id": commessa_id,
         "user_id": commessa["user_id"],
+        "tenant_id": commessa.get("tenant_id"),
         "nome_file": clean_name,
         "tipo": tipo,
         "content_type": file.content_type or "image/jpeg",
@@ -433,6 +436,7 @@ async def submit_checklist(commessa_id: str, data: ChecklistSubmit, voce_id: str
         "voce_id": voce_id or "",
         "normativa_tipo": normativa,
         "admin_id": commessa["user_id"],
+        "tenant_id": commessa.get("tenant_id"),
         "operatore_id": data.operatore_id,
         "operatore_nome": data.operatore_nome,
         "items": [item.model_dump() for item in data.items],
@@ -454,6 +458,7 @@ async def submit_checklist(commessa_id: str, data: ChecklistSubmit, voce_id: str
             alert = {
                 "alert_id": f"alert_{uuid.uuid4().hex[:10]}",
                 "admin_id": commessa["user_id"],
+                "tenant_id": commessa.get("tenant_id"),
                 "commessa_id": commessa_id,
                 "commessa_numero": commessa.get("numero", ""),
                 "voce_id": voce_id or "",
@@ -476,6 +481,7 @@ async def submit_checklist(commessa_id: str, data: ChecklistSubmit, voce_id: str
                 "commessa_id": commessa_id,
                 "commessa_numero": commessa.get("numero", ""),
                 "admin_id": commessa["user_id"],
+                "tenant_id": commessa.get("tenant_id"),
                 "voce_id": voce_id or "",
                 "tipo": "checklist_nok",
                 "descrizione": f"Controllo '{label}' NON superato",

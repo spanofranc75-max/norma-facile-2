@@ -3,7 +3,7 @@ Does NOT alter any commessa data schema. Only provides data for the UI to auto-p
 from datetime import date
 from fastapi import APIRouter, Depends
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.rbac import require_role
 
 router = APIRouter(prefix="/smart-assign", tags=["smart-assign"])
@@ -17,7 +17,7 @@ async def get_welders_for_assign(user: dict = Depends(require_role("admin", "uff
     from datetime import timedelta
     threshold_str = (date.today() + timedelta(days=30)).isoformat()
 
-    welders = await db.welders.find({"is_active": True}, {"_id": 0}).to_list(200)
+    welders = await db.welders.find({"is_active": True, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}).to_list(200)
     result = []
     for w in welders:
         quals = w.get("qualifications", [])
@@ -74,7 +74,7 @@ async def get_instruments_for_assign(user: dict = Depends(require_role("admin", 
     threshold_str = (date.today() + timedelta(days=30)).isoformat()
 
     instruments = await db.instruments.find(
-        {"status": {"$nin": ["fuori_uso"]}},
+        {"status": {"$nin": ["fuori_uso"]}, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
     ).to_list(200)
 

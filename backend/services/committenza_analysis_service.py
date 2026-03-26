@@ -53,7 +53,7 @@ DOC_CATEGORIES = [
 # ═══════════════════════════════════════════════════════════════
 
 async def crea_package(user_id: str, commessa_id: str, title: str = "",
-                       document_refs: list = None) -> dict:
+                       document_refs: list = None, tenant_id: str = None) -> dict:
     """Create an analysis package referencing existing docs from the archive."""
     commessa = await db.commesse.find_one(
         {"commessa_id": commessa_id, "user_id": user_id}, {"_id": 0, "commessa_id": 1, "title": 1}
@@ -100,20 +100,20 @@ async def crea_package(user_id: str, commessa_id: str, title: str = "",
     return package
 
 
-async def get_package(package_id: str, user_id: str) -> Optional[dict]:
+async def get_package(package_id: str, user_id: str, tenant_id: str = None) -> Optional[dict]:
     return await db.pacchetti_committenza.find_one(
         {"package_id": package_id, "user_id": user_id}, {"_id": 0}
     )
 
 
-async def list_packages(user_id: str, commessa_id: str = None) -> list:
+async def list_packages(user_id: str, commessa_id: str = None, tenant_id: str = None) -> list:
     query = {"user_id": user_id}
     if commessa_id:
         query["commessa_id"] = commessa_id
     return await db.pacchetti_committenza.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
 
 
-async def add_doc_to_package(package_id: str, user_id: str, doc_id: str, category: str = "altro") -> dict:
+async def add_doc_to_package(package_id: str, user_id: str, doc_id: str, category: str = "altro", tenant_id: str = None) -> dict:
     """Add an existing archive document to a package."""
     package = await get_package(package_id, user_id)
     if not package:
@@ -145,7 +145,7 @@ async def add_doc_to_package(package_id: str, user_id: str, doc_id: str, categor
     return await get_package(package_id, user_id)
 
 
-async def remove_doc_from_package(package_id: str, user_id: str, doc_id: str) -> dict:
+async def remove_doc_from_package(package_id: str, user_id: str, doc_id: str, tenant_id: str = None) -> dict:
     """Remove a document reference from a package."""
     await db.pacchetti_committenza.update_one(
         {"package_id": package_id, "user_id": user_id},
@@ -265,7 +265,7 @@ def _parse_json_response(text: str) -> dict:
     return json.loads(cleaned)
 
 
-async def _gather_system_context(commessa_id: str, user_id: str) -> str:
+async def _gather_system_context(commessa_id: str, user_id: str, tenant_id: str = None) -> str:
     """Gather preventivo/istruttoria/commessa context for comparison."""
     parts = []
 
@@ -321,7 +321,7 @@ async def _gather_system_context(commessa_id: str, user_id: str) -> str:
     return "\n".join(parts) if parts else "Nessun dato di sistema disponibile."
 
 
-async def _gather_documents_text(package: dict, user_id: str) -> str:
+async def _gather_documents_text(package: dict, user_id: str, tenant_id: str = None) -> str:
     """Extract text content from documents in the package."""
     parts = []
     for ref in package.get("document_refs", []):
@@ -359,7 +359,7 @@ async def _gather_documents_text(package: dict, user_id: str) -> str:
     return "\n".join(parts) if parts else "Nessun documento disponibile."
 
 
-async def analizza_committenza(package_id: str, user_id: str) -> dict:
+async def analizza_committenza(package_id: str, user_id: str, tenant_id: str = None) -> dict:
     """C1.2: Run AI analysis on a committenza package."""
     package = await get_package(package_id, user_id)
     if not package:
@@ -479,20 +479,20 @@ def _calc_overall_confidence(ai_result: dict) -> float:
 #  C1.3 — REVIEW UMANA
 # ═══════════════════════════════════════════════════════════════
 
-async def get_analysis(analysis_id: str, user_id: str) -> Optional[dict]:
+async def get_analysis(analysis_id: str, user_id: str, tenant_id: str = None) -> Optional[dict]:
     return await db.analisi_committenza.find_one(
         {"analysis_id": analysis_id, "user_id": user_id}, {"_id": 0}
     )
 
 
-async def list_analyses(user_id: str, commessa_id: str = None) -> list:
+async def list_analyses(user_id: str, commessa_id: str = None, tenant_id: str = None) -> list:
     query = {"user_id": user_id}
     if commessa_id:
         query["commessa_id"] = commessa_id
     return await db.analisi_committenza.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
 
 
-async def review_analysis(analysis_id: str, user_id: str, review_data: dict) -> dict:
+async def review_analysis(analysis_id: str, user_id: str, review_data: dict, tenant_id: str = None) -> dict:
     """Apply human review to an analysis.
     review_data: {
         obligations_review: [{code, confirmed, note}],
@@ -562,7 +562,7 @@ async def review_analysis(analysis_id: str, user_id: str, review_data: dict) -> 
     return await get_analysis(analysis_id, user_id)
 
 
-async def approve_analysis(analysis_id: str, user_id: str) -> dict:
+async def approve_analysis(analysis_id: str, user_id: str, tenant_id: str = None) -> dict:
     """Approve analysis and generate official_snapshot from confirmed items."""
     analysis = await get_analysis(analysis_id, user_id)
     if not analysis:
@@ -601,7 +601,7 @@ async def approve_analysis(analysis_id: str, user_id: str) -> dict:
 #  C1.4 — GENERAZIONE OBBLIGHI NEL REGISTRO
 # ═══════════════════════════════════════════════════════════════
 
-async def genera_obblighi_da_analisi(analysis_id: str, user_id: str) -> dict:
+async def genera_obblighi_da_analisi(analysis_id: str, user_id: str, tenant_id: str = None) -> dict:
     """Generate obligations in Registro Obblighi from approved analysis snapshot."""
     analysis = await get_analysis(analysis_id, user_id)
     if not analysis:

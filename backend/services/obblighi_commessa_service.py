@@ -33,7 +33,7 @@ STATI_CHIUSI = {"completato", "chiuso", "non_applicabile"}
 #  CRUD BASE
 # ═══════════════════════════════════════════════════════════════
 
-async def get_obbligo(obbligo_id: str, user_id: str) -> Optional[dict]:
+async def get_obbligo(obbligo_id: str, user_id: str, tenant_id: str = None) -> Optional[dict]:
     return await db.obblighi_commessa.find_one(
         {"obbligo_id": obbligo_id, "user_id": user_id}, {"_id": 0}
     )
@@ -42,7 +42,7 @@ async def get_obbligo(obbligo_id: str, user_id: str) -> Optional[dict]:
 async def list_obblighi(user_id: str, commessa_id: str = None,
                          status: str = None, severity: str = None,
                          source_module: str = None, category: str = None,
-                         blocking_level: str = None) -> list:
+                         blocking_level: str = None, tenant_id: str = None) -> list:
     query = {"user_id": user_id}
     if commessa_id:
         query["commessa_id"] = commessa_id
@@ -61,7 +61,7 @@ async def list_obblighi(user_id: str, commessa_id: str = None,
     ).to_list(500)
 
 
-async def update_obbligo(obbligo_id: str, user_id: str, updates: dict) -> Optional[dict]:
+async def update_obbligo(obbligo_id: str, user_id: str, updates: dict, tenant_id: str = None) -> Optional[dict]:
     allowed = {"status", "owner_role", "owner_user_id", "due_date", "sla_source", "resolution_note"}
     filtered = {k: v for k, v in updates.items() if k in allowed}
     if not filtered:
@@ -79,7 +79,7 @@ async def update_obbligo(obbligo_id: str, user_id: str, updates: dict) -> Option
     return await get_obbligo(obbligo_id, user_id)
 
 
-async def get_summary(user_id: str, commessa_id: str) -> dict:
+async def get_summary(user_id: str, commessa_id: str, tenant_id: str = None) -> dict:
     pipeline = [
         {"$match": {"user_id": user_id, "commessa_id": commessa_id}},
         {"$group": {
@@ -99,7 +99,7 @@ async def get_summary(user_id: str, commessa_id: str) -> dict:
     return {"total": 0, "bloccanti": 0, "aperti": 0, "chiusi": 0, "da_verificare": 0}
 
 
-async def get_bloccanti(user_id: str, commessa_id: str) -> list:
+async def get_bloccanti(user_id: str, commessa_id: str, tenant_id: str = None) -> list:
     return await db.obblighi_commessa.find(
         {"user_id": user_id, "commessa_id": commessa_id, "blocking_level": "hard_block",
          "status": {"$in": list(STATI_APERTI)}},
@@ -166,7 +166,7 @@ def _make_obbligo(commessa_id: str, user_id: str, *,
     }
 
 
-async def sync_obblighi_commessa(commessa_id: str, user_id: str) -> dict:
+async def sync_obblighi_commessa(commessa_id: str, user_id: str, tenant_id: str = None) -> dict:
     """
     Master sync: reads all source modules, generates expected obligations,
     compares with DB, creates/updates/closes as needed.
@@ -213,7 +213,7 @@ async def sync_obblighi_commessa(commessa_id: str, user_id: str) -> dict:
     return stats
 
 
-async def _reconcile(commessa_id: str, user_id: str, expected: list) -> dict:
+async def _reconcile(commessa_id: str, user_id: str, expected: list, tenant_id: str = None) -> dict:
     """Compare expected obligations with DB, create/update/close."""
     now = datetime.now(timezone.utc).isoformat()
 
@@ -311,7 +311,7 @@ async def _reconcile(commessa_id: str, user_id: str, expected: list) -> dict:
 #  SOURCE A: EVIDENCE GATE (emissioni documentali)
 # ═══════════════════════════════════════════════════════════════
 
-async def _collect_evidence_gate(commessa: dict, user_id: str) -> list:
+async def _collect_evidence_gate(commessa: dict, user_id: str, tenant_id: str = None) -> list:
     """Collect obligations from Evidence Gate blockers on emissions."""
     obligations = []
     cid = commessa["commessa_id"]
@@ -389,7 +389,7 @@ async def _collect_evidence_gate(commessa: dict, user_id: str) -> list:
 #  SOURCE B: GATE POS (sicurezza cantiere)
 # ═══════════════════════════════════════════════════════════════
 
-async def _collect_gate_pos(commessa: dict, user_id: str) -> list:
+async def _collect_gate_pos(commessa: dict, user_id: str, tenant_id: str = None) -> list:
     """Collect obligations from Gate POS blockers."""
     obligations = []
     cid = commessa["commessa_id"]
@@ -462,7 +462,7 @@ SOGGETTI_OBBLIGATORI_MAP = {
 }
 
 
-async def _collect_soggetti(commessa: dict, user_id: str) -> list:
+async def _collect_soggetti(commessa: dict, user_id: str, tenant_id: str = None) -> list:
     """Collect obligations for missing mandatory subjects."""
     obligations = []
     cid = commessa["commessa_id"]
@@ -505,7 +505,7 @@ async def _collect_soggetti(commessa: dict, user_id: str) -> list:
 #  SOURCE D: ISTRUTTORIA (domande residue, segmentazione)
 # ═══════════════════════════════════════════════════════════════
 
-async def _collect_istruttoria(commessa: dict, user_id: str) -> list:
+async def _collect_istruttoria(commessa: dict, user_id: str, tenant_id: str = None) -> list:
     """Collect obligations from istruttoria issues."""
     obligations = []
     cid = commessa["commessa_id"]
@@ -596,7 +596,7 @@ async def _collect_istruttoria(commessa: dict, user_id: str) -> list:
 #  SOURCE E: RAMI NORMATIVI
 # ═══════════════════════════════════════════════════════════════
 
-async def _collect_rami(commessa: dict, user_id: str) -> list:
+async def _collect_rami(commessa: dict, user_id: str, tenant_id: str = None) -> list:
     """Collect obligations from normative branch issues."""
     obligations = []
     cid = commessa["commessa_id"]
@@ -636,7 +636,7 @@ async def _collect_rami(commessa: dict, user_id: str) -> list:
 #  SOURCE F: DOCUMENTI ARCHIVIO SCADUTI / IN SCADENZA (Fase 2)
 # ═══════════════════════════════════════════════════════════════
 
-async def _collect_documenti_scadenza(commessa: dict, user_id: str) -> list:
+async def _collect_documenti_scadenza(commessa: dict, user_id: str, tenant_id: str = None) -> list:
     """Collect obligations from expired or expiring archive documents linked to this commessa."""
     from datetime import timedelta
     obligations = []
@@ -708,7 +708,7 @@ async def _collect_documenti_scadenza(commessa: dict, user_id: str) -> list:
 #  SOURCE G: PACCHETTI DOCUMENTALI — DOCUMENTI MANCANTI (Fase 2)
 # ═══════════════════════════════════════════════════════════════
 
-async def _collect_pacchetti_documentali(commessa: dict, user_id: str) -> list:
+async def _collect_pacchetti_documentali(commessa: dict, user_id: str, tenant_id: str = None) -> list:
     """Collect obligations from document packages with missing/expired items."""
     obligations = []
     cid = commessa["commessa_id"]
@@ -771,7 +771,7 @@ async def _collect_pacchetti_documentali(commessa: dict, user_id: str) -> list:
 #  SOURCE H: VERIFICA COMMITTENZA — OBBLIGHI CONFERMATI (Fase 2)
 # ═══════════════════════════════════════════════════════════════
 
-async def _collect_committenza(commessa: dict, user_id: str) -> list:
+async def _collect_committenza(commessa: dict, user_id: str, tenant_id: str = None) -> list:
     """Collect obligations from approved committenza analyses."""
     obligations = []
     cid = commessa["commessa_id"]

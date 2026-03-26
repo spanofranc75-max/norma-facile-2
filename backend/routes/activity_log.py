@@ -4,7 +4,7 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, Query
 from core.database import db
-from core.security import get_current_user
+from core.security import get_current_user, tenant_match
 from core.rbac import require_role
 from services.audit_trail import COLLECTION, ENTITY_TYPES, ACTION_TYPES
 
@@ -84,8 +84,8 @@ async def list_activity_log(
     if user.get("role") not in ("admin", "amministrazione"):
         return {"items": [], "total": 0, "message": "Accesso non autorizzato"}
 
-    query = {}
-    conditions = []
+    query = {"tenant_id": tenant_match(user)}
+    conditions = [{"tenant_id": tenant_match(user)}]
 
     if entity_type:
         conditions.append({"entity_type": entity_type})
@@ -134,13 +134,14 @@ async def activity_log_stats(user: dict = Depends(require_role("admin"))):
     today_str = now.strftime("%Y-%m-%d")
     week_ago = (now - timedelta(days=7)).isoformat()
 
-    total = await db[COLLECTION].count_documents({})
-    today_count = await db[COLLECTION].count_documents({"timestamp": {"$gte": today_str}})
-    week_count = await db[COLLECTION].count_documents({"timestamp": {"$gte": week_ago}})
+    tid = tenant_match(user)
+    total = await db[COLLECTION].count_documents({"tenant_id": tid})
+    today_count = await db[COLLECTION].count_documents({"tenant_id": tid, "timestamp": {"$gte": today_str}})
+    week_count = await db[COLLECTION].count_documents({"tenant_id": tid, "timestamp": {"$gte": week_ago}})
 
     # Top users this week
     pipeline = [
-        {"$match": {"timestamp": {"$gte": week_ago}}},
+        {"$match": {"tenant_id": tid, "timestamp": {"$gte": week_ago}}},
         {"$group": {"_id": "$user_name", "count": {"$sum": 1}}},
         {"$sort": {"count": -1}},
         {"$limit": 5},
@@ -149,7 +150,7 @@ async def activity_log_stats(user: dict = Depends(require_role("admin"))):
 
     # Top entity types this week
     pipeline_entities = [
-        {"$match": {"timestamp": {"$gte": week_ago}}},
+        {"$match": {"tenant_id": tid, "timestamp": {"$gte": week_ago}}},
         {"$group": {"_id": "$entity_type", "count": {"$sum": 1}}},
         {"$sort": {"count": -1}},
         {"$limit": 5},

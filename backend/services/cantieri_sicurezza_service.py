@@ -608,9 +608,11 @@ def _new_cantiere_template(cantiere_id: str, user_id: str, commessa_id: Optional
     }
 
 
-async def crea_cantiere(user_id: str, commessa_id: Optional[str] = None, pre_fill: Optional[dict] = None) -> dict:
+async def crea_cantiere(user_id: str, commessa_id: Optional[str] = None, pre_fill: Optional[dict] = None, tenant_id: str = None) -> dict:
     cantiere_id = f"cant_{uuid.uuid4().hex[:12]}"
     doc = _new_cantiere_template(cantiere_id, user_id, commessa_id)
+    if tenant_id:
+        doc["tenant_id"] = tenant_id
 
     # Pre-fill from commessa + client + preventivo
     if commessa_id:
@@ -743,16 +745,25 @@ def _set_soggetto(soggetti: list, ruolo: str, nome: str = "", telefono: str = ""
     })
 
 
-async def get_cantiere(cantiere_id: str, user_id: str) -> Optional[dict]:
-    return await db.cantieri_sicurezza.find_one({"cantiere_id": cantiere_id, "user_id": user_id}, {"_id": 0})
+async def get_cantiere(cantiere_id: str, user_id: str, tenant_id: str = None) -> Optional[dict]:
+    q = {"cantiere_id": cantiere_id, "user_id": user_id}
+    if tenant_id:
+        q["tenant_id"] = tenant_id
+    return await db.cantieri_sicurezza.find_one(q, {"_id": 0})
 
 
-async def get_cantieri_by_commessa(commessa_id: str, user_id: str) -> list:
-    return await db.cantieri_sicurezza.find({"parent_commessa_id": commessa_id, "user_id": user_id}, {"_id": 0}).to_list(100)
+async def get_cantieri_by_commessa(commessa_id: str, user_id: str, tenant_id: str = None) -> list:
+    q = {"parent_commessa_id": commessa_id, "user_id": user_id}
+    if tenant_id:
+        q["tenant_id"] = tenant_id
+    return await db.cantieri_sicurezza.find(q, {"_id": 0}).to_list(100)
 
 
-async def list_cantieri(user_id: str) -> list:
-    cantieri = await db.cantieri_sicurezza.find({"user_id": user_id}, {"_id": 0}).sort("created_at", -1).to_list(200)
+async def list_cantieri(user_id: str, tenant_id: str = None) -> list:
+    q = {"user_id": user_id}
+    if tenant_id:
+        q["tenant_id"] = tenant_id
+    cantieri = await db.cantieri_sicurezza.find(q, {"_id": 0}).sort("created_at", -1).to_list(200)
     # Enrich with commessa/client info for list display
     for c in cantieri:
         # If client_name not stored, try to resolve from commessa
@@ -775,14 +786,16 @@ async def list_cantieri(user_id: str) -> list:
     return cantieri
 
 
-async def aggiorna_cantiere(cantiere_id: str, user_id: str, updates: dict) -> Optional[dict]:
+async def aggiorna_cantiere(cantiere_id: str, user_id: str, updates: dict, tenant_id: str = None) -> Optional[dict]:
     for key in ["cantiere_id", "user_id", "_id", "created_at"]:
         updates.pop(key, None)
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()
 
+    q = {"cantiere_id": cantiere_id, "user_id": user_id}
+    if tenant_id:
+        q["tenant_id"] = tenant_id
     result = await db.cantieri_sicurezza.find_one_and_update(
-        {"cantiere_id": cantiere_id, "user_id": user_id},
-        {"$set": updates}, return_document=True,
+        q, {"$set": updates}, return_document=True,
     )
     if not result:
         return None
@@ -794,8 +807,11 @@ async def aggiorna_cantiere(cantiere_id: str, user_id: str, updates: dict) -> Op
     return result
 
 
-async def elimina_cantiere(cantiere_id: str, user_id: str) -> bool:
-    r = await db.cantieri_sicurezza.delete_one({"cantiere_id": cantiere_id, "user_id": user_id})
+async def elimina_cantiere(cantiere_id: str, user_id: str, tenant_id: str = None) -> bool:
+    q = {"cantiere_id": cantiere_id, "user_id": user_id}
+    if tenant_id:
+        q["tenant_id"] = tenant_id
+    r = await db.cantieri_sicurezza.delete_one(q)
     return r.deleted_count > 0
 
 

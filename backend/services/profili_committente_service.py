@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 #  CRUD — Profili Committente
 # ═══════════════════════════════════════════════════════════════
 
-async def crea_profilo(user_id: str, data: dict) -> dict:
+async def crea_profilo(user_id: str, data: dict, tenant_id: str = None) -> dict:
     """Create a new document profile for a client."""
     profile_id = f"prof_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc).isoformat()
@@ -47,7 +47,7 @@ async def crea_profilo(user_id: str, data: dict) -> dict:
     return profilo
 
 
-async def crea_profilo_da_pacchetto(user_id: str, pack_id: str, client_name: str, description: str = "") -> dict:
+async def crea_profilo_da_pacchetto(user_id: str, pack_id: str, client_name: str, description: str = "", tenant_id: str = None) -> dict:
     """Create a profile from an existing package's items (semi-automatic creation)."""
     pack = await db.pacchetti_documentali.find_one(
         {"pack_id": pack_id, "user_id": user_id}, {"_id": 0}
@@ -98,21 +98,21 @@ async def crea_profilo_da_pacchetto(user_id: str, pack_id: str, client_name: str
     return profilo
 
 
-async def get_profilo(profile_id: str, user_id: str) -> Optional[dict]:
+async def get_profilo(profile_id: str, user_id: str, tenant_id: str = None) -> Optional[dict]:
     doc = await db.profili_committente.find_one(
         {"profile_id": profile_id, "user_id": user_id}, {"_id": 0}
     )
     return doc
 
 
-async def list_profili(user_id: str) -> list:
+async def list_profili(user_id: str, tenant_id: str = None) -> list:
     cursor = db.profili_committente.find(
         {"user_id": user_id}, {"_id": 0}
     ).sort("updated_at", -1)
     return await cursor.to_list(200)
 
 
-async def update_profilo(profile_id: str, user_id: str, updates: dict) -> Optional[dict]:
+async def update_profilo(profile_id: str, user_id: str, updates: dict, tenant_id: str = None) -> Optional[dict]:
     allowed = {"client_name", "client_id", "description", "rules", "notes", "warnings"}
     filtered = {k: v for k, v in updates.items() if k in allowed}
     if not filtered:
@@ -128,7 +128,7 @@ async def update_profilo(profile_id: str, user_id: str, updates: dict) -> Option
     return result
 
 
-async def delete_profilo(profile_id: str, user_id: str) -> bool:
+async def delete_profilo(profile_id: str, user_id: str, tenant_id: str = None) -> bool:
     result = await db.profili_committente.delete_one(
         {"profile_id": profile_id, "user_id": user_id}
     )
@@ -139,7 +139,7 @@ async def delete_profilo(profile_id: str, user_id: str) -> bool:
 #  Applica Profilo — crea pacchetto documentale da profilo
 # ═══════════════════════════════════════════════════════════════
 
-async def applica_profilo(user_id: str, profile_id: str, commessa_id: str, cantiere_id: str = "", label: str = "") -> dict:
+async def applica_profilo(user_id: str, profile_id: str, commessa_id: str, cantiere_id: str = "", label: str = "", tenant_id: str = None) -> dict:
     """Apply a profile to create a new document package for a commessa."""
     profilo = await get_profilo(profile_id, user_id)
     if not profilo:
@@ -254,7 +254,7 @@ async def applica_profilo(user_id: str, profile_id: str, commessa_id: str, canti
 #  Suggerisci Profilo — per un committente di una commessa
 # ═══════════════════════════════════════════════════════════════
 
-async def suggerisci_profilo(user_id: str, commessa_id: str) -> Optional[dict]:
+async def suggerisci_profilo(user_id: str, commessa_id: str, tenant_id: str = None) -> Optional[dict]:
     """Suggest a profile matching the client of a given commessa."""
     commessa = await db.commesse.find_one(
         {"commessa_id": commessa_id, "user_id": user_id},
@@ -288,7 +288,7 @@ async def suggerisci_profilo(user_id: str, commessa_id: str) -> Optional[dict]:
 
 # ── Helpers ──
 
-async def _get_assigned_workers(user_id: str, cantiere_id: str = None) -> list:
+async def _get_assigned_workers(user_id: str, cantiere_id: str = None, tenant_id: str = None) -> list:
     if not cantiere_id:
         return []
     cantiere = await db.cantieri_sicurezza.find_one(
@@ -299,7 +299,7 @@ async def _get_assigned_workers(user_id: str, cantiere_id: str = None) -> list:
     return cantiere.get("lavoratori_coinvolti", [])
 
 
-async def _get_assigned_equipment(user_id: str, cantiere_id: str = None) -> list:
+async def _get_assigned_equipment(user_id: str, cantiere_id: str = None, tenant_id: str = None) -> list:
     if not cantiere_id:
         return []
     cantiere = await db.cantieri_sicurezza.find_one(

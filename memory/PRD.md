@@ -43,6 +43,12 @@ Francesco Spano' — Steel Project Design Srls
 32. **Bug Fix SDI Preview**:
     - Corretto mapping dati in SdiPreviewDialog (numero, client_name, totale, iva, P.IVA, SDI code)
 
+
+33. **Sprint 2 Fase B — Multi-Tenant Data Isolation (13 route + 4 service files)**:
+    - Route aggiornate: diario_produzione, team, kpi_dashboard, activity_log, montaggio, officina, smart_assign, cantieri_sicurezza, committenza, profili_committente, obblighi_commessa
+    - Service aggiornati: cantieri_sicurezza_service, committenza_analysis_service, profili_committente_service, obblighi_commessa_service
+    - Tutte le query DB ora filtrano per `tenant_id`, tutti gli insert includono `tenant_id`
+
 29. **Foglio Lavoro PDF — Stampabile per officina**:
     - Endpoint `GET /api/commesse/{id}/foglio-lavoro` genera PDF con QR code, tabella fasi produzione (11 fasi x 3 righe ciascuna), spazio firma e note
     - Nessun dato finanziario visibile (no prezzi, no totali)
