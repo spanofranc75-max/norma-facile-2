@@ -29,6 +29,20 @@ Francesco Spano' — Steel Project Design Srls
 
 ### Completato in questa sessione
 
+30. **DDT Numerazione Progressiva e Modificabile**:
+    - Contatore atomico per tipo (DDT-2026-XXXX vendita, CL-2026-XXXX conto lavoro, RCL-2026-XXXX rientro)
+    - Numero modificabile sia in creazione che in modifica DDT
+    - Inizializzazione automatica contatori da dati esistenti al startup
+    - 28/29 test passati (iteration_265)
+
+31. **Fatture Collegate alla Commessa**:
+    - Endpoint GET/POST/DELETE per collegare/scollegare fatture a una commessa
+    - Sezione "Fatture Collegate" nella sidebar della CommessaHubPage
+    - Dialog per selezionare e collegare multiple fatture
+
+32. **Bug Fix SDI Preview**:
+    - Corretto mapping dati in SdiPreviewDialog (numero, client_name, totale, iva, P.IVA, SDI code)
+
 29. **Foglio Lavoro PDF — Stampabile per officina**:
     - Endpoint `GET /api/commesse/{id}/foglio-lavoro` genera PDF con QR code, tabella fasi produzione (11 fasi x 3 righe ciascuna), spazio firma e note
     - Nessun dato finanziario visibile (no prezzi, no totali)
