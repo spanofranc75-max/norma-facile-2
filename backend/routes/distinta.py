@@ -5,6 +5,7 @@ from typing import Optional, List
 import uuid
 from datetime import datetime, timezone
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from models.distinta import (
     DistintaCreate, DistintaUpdate, DistintaResponse, DistintaListResponse,
@@ -122,7 +123,7 @@ async def get_distinte(
     status: Optional[DistintaStatus] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if rilievo_id:
@@ -143,7 +144,7 @@ async def get_distinte(
 
 
 @router.get("/{distinta_id}", response_model=DistintaResponse)
-async def get_distinta(distinta_id: str, user: dict = Depends(get_current_user)):
+async def get_distinta(distinta_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     doc = await db.distinte.find_one({"distinta_id": distinta_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Distinta non trovata")
@@ -152,7 +153,7 @@ async def get_distinta(distinta_id: str, user: dict = Depends(get_current_user))
 
 
 @router.post("/", response_model=DistintaResponse, status_code=201)
-async def create_distinta(data: DistintaCreate, user: dict = Depends(get_current_user)):
+async def create_distinta(data: DistintaCreate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     distinta_id = f"dist_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
 
@@ -187,7 +188,7 @@ async def create_distinta(data: DistintaCreate, user: dict = Depends(get_current
 
 
 @router.put("/{distinta_id}", response_model=DistintaResponse)
-async def update_distinta(distinta_id: str, data: DistintaUpdate, user: dict = Depends(get_current_user)):
+async def update_distinta(distinta_id: str, data: DistintaUpdate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     existing = await db.distinte.find_one({"distinta_id": distinta_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not existing:
         raise HTTPException(404, "Distinta non trovata")
@@ -224,7 +225,7 @@ async def update_distinta(distinta_id: str, data: DistintaUpdate, user: dict = D
 
 
 @router.delete("/{distinta_id}")
-async def delete_distinta(distinta_id: str, user: dict = Depends(get_current_user)):
+async def delete_distinta(distinta_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     result = await db.distinte.delete_one({"distinta_id": distinta_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     if result.deleted_count == 0:
         raise HTTPException(404, "Distinta non trovata")
@@ -235,7 +236,7 @@ async def delete_distinta(distinta_id: str, user: dict = Depends(get_current_use
 # ── Bar Calculation ──────────────────────────────────────────────
 
 @router.post("/{distinta_id}/calcola-barre", response_model=BarCalculationResponse)
-async def calcola_barre(distinta_id: str, user: dict = Depends(get_current_user)):
+async def calcola_barre(distinta_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Calculate how many 6m bars are needed for each profile."""
     doc = await db.distinte.find_one({"distinta_id": distinta_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
@@ -254,7 +255,7 @@ async def calcola_barre(distinta_id: str, user: dict = Depends(get_current_user)
 # ── PDF: Lista Taglio ────────────────────────────────────────────
 
 @router.get("/{distinta_id}/lista-taglio-pdf")
-async def get_lista_taglio_pdf(distinta_id: str, user: dict = Depends(get_current_user)):
+async def get_lista_taglio_pdf(distinta_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Generate and download the cutting list PDF for the workshop."""
     doc = await db.distinte.find_one({"distinta_id": distinta_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
@@ -277,7 +278,7 @@ async def get_lista_taglio_pdf(distinta_id: str, user: dict = Depends(get_curren
 async def ottimizza_taglio(
     distinta_id: str,
     params: OptimizerRequest = OptimizerRequest(),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     """Run the advanced cutting optimizer (FFD bin-packing) on the BOM."""
     doc = await db.distinte.find_one(
@@ -299,7 +300,7 @@ async def get_ottimizza_taglio_pdf(
     distinta_id: str,
     bar_length_mm: int = Query(6000, ge=1000, le=18000),
     kerf_mm: float = Query(3, ge=0, le=10),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     """Generate the optimized cutting plan PDF."""
     doc = await db.distinte.find_one(
@@ -327,7 +328,7 @@ async def get_ottimizza_taglio_pdf(
 # ── Import from Rilievo ──────────────────────────────────────────
 
 @router.get("/rilievo-data/{rilievo_id}")
-async def get_rilievo_import_data(rilievo_id: str, user: dict = Depends(get_current_user)):
+async def get_rilievo_import_data(rilievo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Fetch a rilievo and extract all parseable dimensions for BOM import."""
     import re
 
@@ -426,7 +427,7 @@ async def get_rilievo_import_data(rilievo_id: str, user: dict = Depends(get_curr
 
 
 @router.post("/{distinta_id}/import-rilievo/{rilievo_id}")
-async def import_from_rilievo(distinta_id: str, rilievo_id: str, user: dict = Depends(get_current_user)):
+async def import_from_rilievo(distinta_id: str, rilievo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Import data from a rilievo into the distinta. Links rilievo and sets client."""
     distinta = await db.distinte.find_one(
         {"distinta_id": distinta_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}

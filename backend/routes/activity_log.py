@@ -4,7 +4,8 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, Query
 from core.database import db
-from core.security import get_current_user, tenant_match
+from core.security import get_current_user
+from core.rbac import require_role
 from services.audit_trail import COLLECTION, ENTITY_TYPES, ACTION_TYPES
 
 router = APIRouter(prefix="/activity-log", tags=["activity-log"])
@@ -77,7 +78,7 @@ async def list_activity_log(
     search: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin")),
 ):
     """Paginated, filtered activity log. Admin only."""
     if user.get("role") not in ("admin", "amministrazione"):
@@ -124,7 +125,7 @@ async def list_activity_log(
 
 
 @router.get("/stats")
-async def activity_log_stats(user: dict = Depends(get_current_user)):
+async def activity_log_stats(user: dict = Depends(require_role("admin"))):
     """Summary statistics for the audit trail dashboard card."""
     if user.get("role") not in ("admin", "amministrazione"):
         return {}

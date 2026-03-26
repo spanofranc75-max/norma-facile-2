@@ -10,6 +10,7 @@ from io import BytesIO
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from routes.commessa_ops_common import (
     COLL, DOC_COLL, get_commessa_or_404, ensure_ops_fields,
     ts, new_id, push_event, build_update_with_event,
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("/{cid}/ops")
-async def get_commessa_ops(cid: str, user: dict = Depends(get_current_user)):
+async def get_commessa_ops(cid: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Get all operational data for a commessa: procurement, production, subcontracting, deliveries, documents."""
     doc = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
@@ -63,7 +64,7 @@ class BatchUpdate(BaseModel):
     numero_certificato: Optional[str] = None
 
 @router.patch("/{cid}/material-batches/{batch_id}")
-async def update_material_batch(cid: str, batch_id: str, data: BatchUpdate, user: dict = Depends(get_current_user)):
+async def update_material_batch(cid: str, batch_id: str, data: BatchUpdate, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Update editable fields on a material batch."""
     update_fields = {k: v for k, v in data.dict().items() if v is not None}
     if not update_fields:
@@ -79,7 +80,7 @@ async def update_material_batch(cid: str, batch_id: str, data: BatchUpdate, user
 
 
 @router.get("/{cid}/scheda-rintracciabilita-pdf")
-async def scheda_rintracciabilita_pdf(cid: str, user: dict = Depends(get_current_user)):
+async def scheda_rintracciabilita_pdf(cid: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Generate the EN 1090 Materials Traceability Sheet PDF for a commessa."""
     from fastapi.responses import StreamingResponse
     from services.pdf_scheda_rintracciabilita import generate_scheda_rintracciabilita_pdf
@@ -133,7 +134,7 @@ async def scheda_rintracciabilita_pdf(cid: str, user: dict = Depends(get_current
 
 
 @router.get("/{commessa_id}/fascicolo-tecnico-completo")
-async def download_super_fascicolo(commessa_id: str, user: dict = Depends(get_current_user)):
+async def download_super_fascicolo(commessa_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Generate the complete unified Technical Dossier (Fascicolo Tecnico Unico).
     Aggregates: Dossier + Riesame/ITT + Materials/CAM/Green + Welding + CE/DoP."""
     from services.pdf_super_fascicolo import generate_super_fascicolo
@@ -166,7 +167,7 @@ class ConsegnaCreate(BaseModel):
 
 
 @router.post("/{cid}/consegne")
-async def crea_consegna(cid: str, data: ConsegnaCreate, user: dict = Depends(get_current_user)):
+async def crea_consegna(cid: str, data: ConsegnaCreate, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Create a new delivery (consegna) for this commessa.
     Auto-creates a DDT linked to the commessa and marks DoP + CE as generated."""
     comm = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
@@ -319,7 +320,7 @@ async def crea_consegna(cid: str, data: ConsegnaCreate, user: dict = Depends(get
 
 
 @router.get("/{cid}/consegne/{consegna_id}/pacchetto-pdf")
-async def download_pacchetto_consegna(cid: str, consegna_id: str, user: dict = Depends(get_current_user)):
+async def download_pacchetto_consegna(cid: str, consegna_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Generate combined PDF: DDT + DoP + Etichetta CE for a delivery."""
     from pypdf import PdfWriter, PdfReader
     from services.pdf_fascicolo_tecnico import generate_dop_pdf, generate_ce_pdf
@@ -472,7 +473,7 @@ class PrelievoMagazzinoRequest(BaseModel):
 
 
 @router.post("/{cid}/preleva-da-magazzino")
-async def preleva_da_magazzino(cid: str, data: PrelievoMagazzinoRequest, user: dict = Depends(get_current_user)):
+async def preleva_da_magazzino(cid: str, data: PrelievoMagazzinoRequest, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Withdraw material from warehouse stock and assign cost to commessa."""
     comm = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)

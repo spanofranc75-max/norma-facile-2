@@ -10,6 +10,7 @@ import uuid
 
 from core.database import get_database
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 
 router = APIRouter(prefix="/commesse/{commessa_id}/voci", tags=["voci_lavoro"])
 db = get_database()
@@ -30,7 +31,7 @@ class VoceUpdate(BaseModel):
 
 
 @router.get("/")
-async def list_voci(commessa_id: str, user=Depends(get_current_user)):
+async def list_voci(commessa_id: str, user=Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Lista voci di lavoro di una commessa."""
     voci = await db.voci_lavoro.find(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -40,7 +41,7 @@ async def list_voci(commessa_id: str, user=Depends(get_current_user)):
 
 
 @router.post("/")
-async def create_voce(commessa_id: str, body: VoceCreate, user=Depends(get_current_user)):
+async def create_voce(commessa_id: str, body: VoceCreate, user=Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Crea una nuova voce di lavoro."""
     # Verifica che la commessa esista
     commessa = await db.commesse.find_one(
@@ -74,7 +75,7 @@ async def create_voce(commessa_id: str, body: VoceCreate, user=Depends(get_curre
 
 
 @router.put("/{voce_id}")
-async def update_voce(commessa_id: str, voce_id: str, body: VoceUpdate, user=Depends(get_current_user)):
+async def update_voce(commessa_id: str, voce_id: str, body: VoceUpdate, user=Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Aggiorna una voce di lavoro."""
     update_fields = {}
     if body.descrizione is not None:
@@ -105,7 +106,7 @@ async def update_voce(commessa_id: str, voce_id: str, body: VoceUpdate, user=Dep
 
 
 @router.delete("/{voce_id}")
-async def delete_voce(commessa_id: str, voce_id: str, user=Depends(get_current_user)):
+async def delete_voce(commessa_id: str, voce_id: str, user=Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Elimina una voce di lavoro."""
     result = await db.voci_lavoro.delete_one(
         {"voce_id": voce_id, "commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}

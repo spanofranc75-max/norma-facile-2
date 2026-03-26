@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 
 router = APIRouter(prefix="/commesse", tags=["sal"])
 logger = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ async def _get_commessa(cid: str, uid: str, tid: str = "default"):
 
 
 @router.get("/{cid}/sal")
-async def calcola_sal(cid: str, user: dict = Depends(get_current_user)):
+async def calcola_sal(cid: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     """
     Calcola lo Stato Avanzamento Lavori corrente basato su:
     - Ore lavorate (diario produzione) vs ore preventivate
@@ -140,7 +141,7 @@ async def calcola_sal(cid: str, user: dict = Depends(get_current_user)):
 
 
 @router.post("/{cid}/sal/acconto")
-async def crea_acconto(cid: str, data: AccontoCreate, user: dict = Depends(get_current_user)):
+async def crea_acconto(cid: str, data: AccontoCreate, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Crea un acconto (fattura SAL) basato sulla percentuale di avanzamento."""
     commessa = await _get_commessa(cid, user["user_id"], user["tenant_id"])
 
@@ -201,7 +202,7 @@ async def crea_acconto(cid: str, data: AccontoCreate, user: dict = Depends(get_c
 
 
 @router.post("/{cid}/sal/acconto/{acconto_id}/fattura")
-async def genera_fattura_da_acconto(cid: str, acconto_id: str, user: dict = Depends(get_current_user)):
+async def genera_fattura_da_acconto(cid: str, acconto_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Genera una fattura proforma/acconto dal SAL."""
     commessa = await _get_commessa(cid, user["user_id"], user["tenant_id"])
     acconto = await db.sal_acconti.find_one(
@@ -270,7 +271,7 @@ async def genera_fattura_da_acconto(cid: str, acconto_id: str, user: dict = Depe
 
 
 @router.get("/{cid}/sal/storico")
-async def storico_sal(cid: str, user: dict = Depends(get_current_user)):
+async def storico_sal(cid: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Storico completo SAL e acconti per la commessa."""
     await _get_commessa(cid, user["user_id"], user["tenant_id"])
     acconti = await db.sal_acconti.find(

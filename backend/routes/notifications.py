@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from typing import Optional
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from services.notification_scheduler import run_expiration_check, check_welder_expirations, check_instrument_expirations, send_payment_alert, check_payment_expirations
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
@@ -30,7 +31,7 @@ DEFAULT_PREFS = {
 
 
 @router.get("/preferences")
-async def get_notification_preferences(user: dict = Depends(get_current_user)):
+async def get_notification_preferences(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Get current user's notification preferences."""
     prefs = user.get("notification_preferences") or {}
     merged = {**DEFAULT_PREFS, **prefs}
@@ -41,7 +42,7 @@ async def get_notification_preferences(user: dict = Depends(get_current_user)):
 @router.put("/preferences")
 async def update_notification_preferences(
     data: NotificationPreferences,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina")),
 ):
     """Update current user's notification preferences."""
     prefs = data.model_dump()
@@ -53,7 +54,7 @@ async def update_notification_preferences(
 
 
 @router.get("/status")
-async def get_watchdog_status(user: dict = Depends(get_current_user)):
+async def get_watchdog_status(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Get the current status: last check, pending alerts, etc."""
     # Last check
     last_log = await db.notification_logs.find_one(
@@ -78,7 +79,7 @@ async def get_watchdog_status(user: dict = Depends(get_current_user)):
 
 
 @router.post("/check-now")
-async def trigger_manual_check(user: dict = Depends(get_current_user)):
+async def trigger_manual_check(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Manually trigger an expiration check and send emails if needed."""
     result = await run_expiration_check(manual=True)
     # Strip _id if it was added by mongo insert
@@ -87,7 +88,7 @@ async def trigger_manual_check(user: dict = Depends(get_current_user)):
 
 
 @router.get("/history")
-async def get_notification_history(user: dict = Depends(get_current_user)):
+async def get_notification_history(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Get last 20 notification checks."""
     logs = await db.notification_logs.find(
         {}, {"_id": 0}
@@ -97,14 +98,14 @@ async def get_notification_history(user: dict = Depends(get_current_user)):
 
 
 @router.post("/test-scadenze")
-async def test_payment_alert(user: dict = Depends(get_current_user)):
+async def test_payment_alert(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Manually trigger payment deadline alert email."""
     result = await send_payment_alert(manual=True)
     return result
 
 
 @router.get("/scadenze-preview")
-async def preview_payment_alerts(user: dict = Depends(get_current_user)):
+async def preview_payment_alerts(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Preview what the payment alert email would contain (without sending)."""
     data = await check_payment_expirations()
     # Filter to current user only

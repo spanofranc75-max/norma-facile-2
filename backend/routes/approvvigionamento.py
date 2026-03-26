@@ -10,6 +10,7 @@ from io import BytesIO
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from routes.commessa_ops_common import (
     COLL, get_commessa_or_404, ensure_ops_fields,
     ts, new_id, push_event, build_update_with_event, logger,
@@ -78,7 +79,7 @@ class ArrivoMateriale(BaseModel):
 # ── Routes ──
 
 @router.post("/{cid}/approvvigionamento/richieste")
-async def create_richiesta_preventivo(cid: str, data: RichiestaPreventivo, user: dict = Depends(get_current_user)):
+async def create_richiesta_preventivo(cid: str, data: RichiestaPreventivo, user: dict = Depends(require_role("admin", "amministrazione"))):
     await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     righe_dict = [r.model_dump() if hasattr(r, 'model_dump') else r.dict() for r in (data.righe or [])]
@@ -110,7 +111,7 @@ async def create_richiesta_preventivo(cid: str, data: RichiestaPreventivo, user:
 
 
 @router.put("/{cid}/approvvigionamento/richieste/{rdp_id}")
-async def update_richiesta(cid: str, rdp_id: str, stato: str = Form(...), importo: Optional[float] = Form(None), user: dict = Depends(get_current_user)):
+async def update_richiesta(cid: str, rdp_id: str, stato: str = Form(...), importo: Optional[float] = Form(None), user: dict = Depends(require_role("admin", "amministrazione"))):
     await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     upd = {"approvvigionamento.richieste.$[elem].stato": stato, "approvvigionamento.richieste.$[elem].data_risposta": ts().isoformat()}
@@ -122,7 +123,7 @@ async def update_richiesta(cid: str, rdp_id: str, stato: str = Form(...), import
 
 
 @router.post("/{cid}/approvvigionamento/ordini")
-async def create_ordine_fornitore(cid: str, data: OrdineFornitore, user: dict = Depends(get_current_user)):
+async def create_ordine_fornitore(cid: str, data: OrdineFornitore, user: dict = Depends(require_role("admin", "amministrazione"))):
     await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     righe_dict = [r.model_dump() if hasattr(r, 'model_dump') else (r.dict() if hasattr(r, 'dict') else r) for r in (data.righe or [])]
@@ -161,7 +162,7 @@ async def create_ordine_fornitore(cid: str, data: OrdineFornitore, user: dict = 
 
 
 @router.put("/{cid}/approvvigionamento/ordini/{ordine_id}")
-async def update_ordine(cid: str, ordine_id: str, stato: str = Form(...), user: dict = Depends(get_current_user)):
+async def update_ordine(cid: str, ordine_id: str, stato: str = Form(...), user: dict = Depends(require_role("admin", "amministrazione"))):
     await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     upd = {"approvvigionamento.ordini.$[elem].stato": stato}
@@ -173,7 +174,7 @@ async def update_ordine(cid: str, ordine_id: str, stato: str = Form(...), user: 
 
 
 @router.post("/{cid}/approvvigionamento/arrivi")
-async def register_arrivo_materiale(cid: str, data: ArrivoMateriale, user: dict = Depends(get_current_user)):
+async def register_arrivo_materiale(cid: str, data: ArrivoMateriale, user: dict = Depends(require_role("admin", "amministrazione"))):
     doc = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     materiali_dict = []
@@ -265,7 +266,7 @@ async def link_certificato_to_materiale(
     cid: str, arrivo_id: str, mat_idx: int,
     certificato_doc_id: str = Form(None), numero_colata: str = Form(None),
     qualita_materiale: str = Form(None), fornitore_materiale: str = Form(None),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     doc = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
@@ -330,7 +331,7 @@ async def link_certificato_to_materiale(
 
 
 @router.put("/{cid}/approvvigionamento/arrivi/{arrivo_id}/verifica")
-async def verifica_arrivo(cid: str, arrivo_id: str, user: dict = Depends(get_current_user)):
+async def verifica_arrivo(cid: str, arrivo_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     await db[COLL].update_one(
@@ -345,7 +346,7 @@ async def verifica_arrivo(cid: str, arrivo_id: str, user: dict = Depends(get_cur
 # ── PDF & Email ──
 
 @router.get("/{cid}/approvvigionamento/richieste/{rdp_id}/pdf")
-async def get_rdp_pdf(cid: str, rdp_id: str, user: dict = Depends(get_current_user)):
+async def get_rdp_pdf(cid: str, rdp_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     doc = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     approv = doc.get("approvvigionamento", {})
@@ -361,7 +362,7 @@ async def get_rdp_pdf(cid: str, rdp_id: str, user: dict = Depends(get_current_us
 
 
 @router.get("/{cid}/approvvigionamento/richieste/{rdp_id}/preview-email")
-async def preview_rdp_email(cid: str, rdp_id: str, user: dict = Depends(get_current_user)):
+async def preview_rdp_email(cid: str, rdp_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     doc = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     approv = doc.get("approvvigionamento", {})
@@ -383,7 +384,7 @@ async def preview_rdp_email(cid: str, rdp_id: str, user: dict = Depends(get_curr
 
 
 @router.post("/{cid}/approvvigionamento/richieste/{rdp_id}/send-email")
-async def send_rdp_email_endpoint(cid: str, rdp_id: str, payload: dict = None, user: dict = Depends(get_current_user)):
+async def send_rdp_email_endpoint(cid: str, rdp_id: str, payload: dict = None, user: dict = Depends(require_role("admin", "amministrazione"))):
     doc = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     approv = doc.get("approvvigionamento", {})
@@ -429,7 +430,7 @@ async def send_rdp_email_endpoint(cid: str, rdp_id: str, payload: dict = None, u
 
 
 @router.get("/{cid}/approvvigionamento/ordini/{ordine_id}/pdf")
-async def get_oda_pdf(cid: str, ordine_id: str, user: dict = Depends(get_current_user)):
+async def get_oda_pdf(cid: str, ordine_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     doc = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     approv = doc.get("approvvigionamento", {})
@@ -445,7 +446,7 @@ async def get_oda_pdf(cid: str, ordine_id: str, user: dict = Depends(get_current
 
 
 @router.get("/{cid}/approvvigionamento/ordini/{ordine_id}/preview-email")
-async def preview_oda_email(cid: str, ordine_id: str, user: dict = Depends(get_current_user)):
+async def preview_oda_email(cid: str, ordine_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     doc = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     approv = doc.get("approvvigionamento", {})
@@ -467,7 +468,7 @@ async def preview_oda_email(cid: str, ordine_id: str, user: dict = Depends(get_c
 
 
 @router.post("/{cid}/approvvigionamento/ordini/{ordine_id}/send-email")
-async def send_oda_email_endpoint(cid: str, ordine_id: str, payload: dict = None, user: dict = Depends(get_current_user)):
+async def send_oda_email_endpoint(cid: str, ordine_id: str, payload: dict = None, user: dict = Depends(require_role("admin", "amministrazione"))):
     doc = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     approv = doc.get("approvvigionamento", {})

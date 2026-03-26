@@ -6,6 +6,7 @@ from enum import Enum
 import uuid
 from datetime import datetime, timezone
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 import logging
 
@@ -84,7 +85,7 @@ async def list_articoli(
     categoria: Optional[ArticoloCategoria] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))
 ):
     """List articoli with optional search and category filter."""
     query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
@@ -108,7 +109,7 @@ async def list_articoli(
 async def search_articoli(
     q: str = Query(..., min_length=1),
     limit: int = Query(10, ge=1, le=50),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))
 ):
     """Fast search for autocomplete in invoice editor."""
     query = {
@@ -131,7 +132,7 @@ async def search_articoli(
 @router.get("/{articolo_id}", response_model=ArticoloResponse)
 async def get_articolo(
     articolo_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))
 ):
     """Get single articolo."""
     item = await db.articoli.find_one(
@@ -146,7 +147,7 @@ async def get_articolo(
 @router.post("/", response_model=ArticoloResponse, status_code=201)
 async def create_articolo(
     data: ArticoloCreate,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))
 ):
     """Create a new articolo."""
     # Check for duplicate code
@@ -175,7 +176,7 @@ async def create_articolo(
 async def update_articolo(
     articolo_id: str,
     data: ArticoloUpdate,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))
 ):
     """Update an articolo."""
     existing = await db.articoli.find_one(
@@ -214,7 +215,7 @@ async def update_articolo(
 @router.delete("/{articolo_id}")
 async def delete_articolo(
     articolo_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))
 ):
     """Delete an articolo."""
     result = await db.articoli.delete_one(
@@ -228,7 +229,7 @@ async def delete_articolo(
 @router.post("/bulk-import")
 async def bulk_import_articoli(
     items: List[ArticoloCreate],
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))
 ):
     """Bulk import articoli (from received invoices)."""
     now = datetime.now(timezone.utc)

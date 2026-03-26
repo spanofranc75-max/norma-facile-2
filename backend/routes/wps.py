@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, Query
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 
 router = APIRouter(prefix="/wps", tags=["wps"])
 
@@ -183,7 +184,7 @@ async def suggest_wps(
     thickness: float = Query(..., description="Spessore (mm)"),
     joint_type: str = Query("BW", description="Tipo giunto"),
     exec_class: str = Query("EXC2", description="Classe esecuzione"),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     """Auto-suggest WPS parameters based on EN 1090 rules."""
     proc_info = WELDING_PROCESSES.get(process)
@@ -257,7 +258,7 @@ async def suggest_wps(
 # ── CRUD ──
 
 @router.post("/")
-async def create_wps(data: WPSCreate, user: dict = Depends(get_current_user)):
+async def create_wps(data: WPSCreate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Create a new WPS document."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -283,7 +284,7 @@ async def create_wps(data: WPSCreate, user: dict = Depends(get_current_user)):
 
 @router.get("/")
 async def list_wps(
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
     status: Optional[str] = None,
     commessa_id: Optional[str] = None,
 ):
@@ -303,7 +304,7 @@ async def list_wps(
 
 
 @router.get("/{wps_id}")
-async def get_wps(wps_id: str, user: dict = Depends(get_current_user)):
+async def get_wps(wps_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Get a single WPS document."""
     doc = await db.wps_documents.find_one(
         {"wps_id": wps_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -314,7 +315,7 @@ async def get_wps(wps_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.put("/{wps_id}")
-async def update_wps(wps_id: str, data: WPSUpdate, user: dict = Depends(get_current_user)):
+async def update_wps(wps_id: str, data: WPSUpdate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Update a WPS document."""
     update_dict = {k: v for k, v in data.model_dump().items() if v is not None}
     update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -333,7 +334,7 @@ async def update_wps(wps_id: str, data: WPSUpdate, user: dict = Depends(get_curr
 
 
 @router.delete("/{wps_id}")
-async def delete_wps(wps_id: str, user: dict = Depends(get_current_user)):
+async def delete_wps(wps_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Delete a WPS document."""
     result = await db.wps_documents.delete_one(
         {"wps_id": wps_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}

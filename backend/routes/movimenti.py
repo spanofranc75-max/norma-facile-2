@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 
 router = APIRouter(prefix="/movimenti", tags=["movimenti"])
 
@@ -38,7 +39,7 @@ class RiconciliaRequest(BaseModel):
 # ─── IMPORT CSV ──────────────────────────────────────────────────────────────
 
 @router.post("/import-csv")
-async def import_csv(file: UploadFile = File(...), conto: str = Query("Banca MPS"), user: dict = Depends(get_current_user)):
+async def import_csv(file: UploadFile = File(...), conto: str = Query("Banca MPS"), user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Import movimenti da CSV estratto conto. Formato: data;descrizione;dare;avere;saldo (sep ; o ,)."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -175,7 +176,7 @@ async def list_movimenti(
     search: Optional[str] = Query(None),
     skip: int = Query(0),
     limit: int = Query(200),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico")),
 ):
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -218,7 +219,7 @@ async def list_movimenti(
 # ─── SCADENZE CANDIDATE PER RICONCILIAZIONE ─────────────────────────────────
 
 @router.get("/{movimento_id}/scadenze-candidate")
-async def get_scadenze_candidate(movimento_id: str, user: dict = Depends(get_current_user)):
+async def get_scadenze_candidate(movimento_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Restituisce scadenze aperte con importo simile (±10%) per riconciliazione manuale."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -314,7 +315,7 @@ async def get_scadenze_candidate(movimento_id: str, user: dict = Depends(get_cur
 # ─── RICONCILIA MANUALE ─────────────────────────────────────────────────────
 
 @router.patch("/{movimento_id}/riconcilia")
-async def riconcilia_movimento(movimento_id: str, body: RiconciliaRequest, user: dict = Depends(get_current_user)):
+async def riconcilia_movimento(movimento_id: str, body: RiconciliaRequest, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Collega un movimento bancario a una scadenza e aggiorna lo stato pagamento."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -399,7 +400,7 @@ async def riconcilia_movimento(movimento_id: str, body: RiconciliaRequest, user:
 # ─── AUTO RICONCILIA ─────────────────────────────────────────────────────────
 
 @router.post("/auto-riconcilia")
-async def auto_riconcilia(user: dict = Depends(get_current_user)):
+async def auto_riconcilia(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Matching automatico: importo esatto + fornitore/cliente nella descrizione."""
     uid = user["user_id"]
     tid = user["tenant_id"]

@@ -18,10 +18,7 @@ class Settings(BaseModel):
     mongo_url: str = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
     db_name: str = os.environ.get('DB_NAME', 'test_database')
 
-    # Auth
-    jwt_secret: str = os.environ.get('JWT_SECRET', '')
-    jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 1440
+    # Auth (cookie-based sessions, no JWT)
     session_expire_days: int = 7
     emergent_auth_url: str = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
 

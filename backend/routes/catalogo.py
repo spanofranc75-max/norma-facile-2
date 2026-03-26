@@ -6,6 +6,7 @@ from enum import Enum
 import uuid
 from datetime import datetime, timezone
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 import logging
 
@@ -73,7 +74,7 @@ async def list_profiles(
     search: Optional[str] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico")),
 ):
     """List user's custom profiles with optional filters."""
     query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
@@ -100,7 +101,7 @@ async def list_profiles(
 
 
 @router.post("/", status_code=201)
-async def create_profile(data: UserProfileCreate, user: dict = Depends(get_current_user)):
+async def create_profile(data: UserProfileCreate, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Create a new custom profile."""
     # Check duplicate code
     existing = await db.user_profiles.find_one(
@@ -135,7 +136,7 @@ async def create_profile(data: UserProfileCreate, user: dict = Depends(get_curre
 
 
 @router.get("/{profile_id}")
-async def get_profile(profile_id: str, user: dict = Depends(get_current_user)):
+async def get_profile(profile_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Get a single custom profile."""
     doc = await db.user_profiles.find_one(
         {"profile_id": profile_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -150,7 +151,7 @@ async def get_profile(profile_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.put("/{profile_id}")
-async def update_profile(profile_id: str, data: UserProfileUpdate, user: dict = Depends(get_current_user)):
+async def update_profile(profile_id: str, data: UserProfileUpdate, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Update a custom profile."""
     existing = await db.user_profiles.find_one(
         {"profile_id": profile_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -183,7 +184,7 @@ async def update_profile(profile_id: str, data: UserProfileUpdate, user: dict = 
 
 
 @router.delete("/{profile_id}")
-async def delete_profile(profile_id: str, user: dict = Depends(get_current_user)):
+async def delete_profile(profile_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Delete a custom profile."""
     result = await db.user_profiles.delete_one(
         {"profile_id": profile_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
@@ -197,7 +198,7 @@ async def delete_profile(profile_id: str, user: dict = Depends(get_current_user)
 # ── Bulk Price Update ────────────────────────────────────────────
 
 @router.post("/bulk-price-update")
-async def bulk_price_update(data: BulkPriceUpdate, user: dict = Depends(get_current_user)):
+async def bulk_price_update(data: BulkPriceUpdate, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Increase/decrease all prices by a percentage. Useful when steel prices spike."""
     query = {"user_id": user["user_id"], "tenant_id": tenant_match(user), "price_m": {"$ne": None, "$gt": 0}}
     if data.category:
@@ -228,7 +229,7 @@ async def bulk_price_update(data: BulkPriceUpdate, user: dict = Depends(get_curr
 async def get_merged_catalog(
     category: Optional[str] = None,
     search: Optional[str] = None,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico")),
 ):
     """Get merged catalog: standard profiles + user custom profiles.
     Used by the Distinta editor for profile selection.

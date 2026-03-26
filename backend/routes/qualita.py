@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 
 router = APIRouter(tags=["qualita"])
@@ -45,7 +46,7 @@ class NCUpdate(BaseModel):
 # ── CONTROLLI VISIVI ──
 
 @router.post("/controlli-visivi")
-async def create_controllo_visivo(data: ControlloVisivoCreate, user: dict = Depends(get_current_user)):
+async def create_controllo_visivo(data: ControlloVisivoCreate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """
     Registra un Controllo Visivo finale (obbligatorio per EN 1090 e EN 13241).
     Se esito = 👎, crea automaticamente una Non Conformità + alert admin.
@@ -101,7 +102,7 @@ async def create_controllo_visivo(data: ControlloVisivoCreate, user: dict = Depe
 
 
 @router.get("/controlli-visivi/{commessa_id}")
-async def list_controlli_visivi(commessa_id: str, user: dict = Depends(get_current_user)):
+async def list_controlli_visivi(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Lista controlli visivi per una commessa."""
     controlli = await db[CONTROLLI_COLL].find(
         {"commessa_id": commessa_id},
@@ -111,7 +112,7 @@ async def list_controlli_visivi(commessa_id: str, user: dict = Depends(get_curre
 
 
 @router.get("/controlli-visivi/{commessa_id}/check")
-async def check_controlli_completi(commessa_id: str, user: dict = Depends(get_current_user)):
+async def check_controlli_completi(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """
     Verifica se tutti i controlli visivi obbligatori sono stati completati.
     Usato dal Pulsante Magico per decidere se generare il PDF.
@@ -228,7 +229,7 @@ async def _create_nc(
 
 
 @router.get("/registro-nc/{commessa_id}")
-async def list_nc(commessa_id: str, user: dict = Depends(get_current_user)):
+async def list_nc(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Lista Non Conformità per una commessa."""
     ncs = await db[NC_COLL].find(
         {"commessa_id": commessa_id},
@@ -238,7 +239,7 @@ async def list_nc(commessa_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.get("/registro-nc")
-async def list_all_nc(user: dict = Depends(get_current_user), stato: str = None):
+async def list_all_nc(user: dict = Depends(require_role("admin", "ufficio_tecnico")), stato: str = None):
     """Lista tutte le NC dell'utente."""
     query = {"admin_id": user["user_id"]}
     if stato:
@@ -248,7 +249,7 @@ async def list_all_nc(user: dict = Depends(get_current_user), stato: str = None)
 
 
 @router.patch("/registro-nc/{nc_id}")
-async def update_nc(nc_id: str, data: NCUpdate, user: dict = Depends(get_current_user)):
+async def update_nc(nc_id: str, data: NCUpdate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Aggiorna una NC (chiusura, azione correttiva, ecc.)."""
     now = datetime.now(timezone.utc)
     updates = {"updated_at": now.isoformat()}

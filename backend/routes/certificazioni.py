@@ -5,6 +5,7 @@ from typing import Optional
 import uuid
 from datetime import datetime, timezone
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from models.certificazione import (
     CertificazioneCreate, CertificazioneUpdate, CertificazioneResponse,
@@ -41,7 +42,7 @@ async def get_certificazioni(
     status: Optional[CertStatus] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if status:
@@ -61,7 +62,7 @@ async def get_certificazioni(
 
 
 @router.get("/{cert_id}", response_model=CertificazioneResponse)
-async def get_certificazione(cert_id: str, user: dict = Depends(get_current_user)):
+async def get_certificazione(cert_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     doc = await db.certificazioni.find_one({"cert_id": cert_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Certificazione non trovata")
@@ -70,7 +71,7 @@ async def get_certificazione(cert_id: str, user: dict = Depends(get_current_user
 
 
 @router.post("/", response_model=CertificazioneResponse, status_code=201)
-async def create_certificazione(data: CertificazioneCreate, user: dict = Depends(get_current_user)):
+async def create_certificazione(data: CertificazioneCreate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     cert_id = f"cert_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
 
@@ -99,7 +100,7 @@ async def create_certificazione(data: CertificazioneCreate, user: dict = Depends
 
 
 @router.put("/{cert_id}", response_model=CertificazioneResponse)
-async def update_certificazione(cert_id: str, data: CertificazioneUpdate, user: dict = Depends(get_current_user)):
+async def update_certificazione(cert_id: str, data: CertificazioneUpdate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     existing = await db.certificazioni.find_one({"cert_id": cert_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not existing:
         raise HTTPException(404, "Certificazione non trovata")
@@ -126,7 +127,7 @@ async def update_certificazione(cert_id: str, data: CertificazioneUpdate, user: 
 
 
 @router.delete("/{cert_id}")
-async def delete_certificazione(cert_id: str, user: dict = Depends(get_current_user)):
+async def delete_certificazione(cert_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     result = await db.certificazioni.delete_one({"cert_id": cert_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     if result.deleted_count == 0:
         raise HTTPException(404, "Certificazione non trovata")
@@ -135,7 +136,7 @@ async def delete_certificazione(cert_id: str, user: dict = Depends(get_current_u
 
 
 @router.get("/{cert_id}/fascicolo-pdf")
-async def get_fascicolo_pdf(cert_id: str, user: dict = Depends(get_current_user)):
+async def get_fascicolo_pdf(cert_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Generate DOP + CE Label PDF. Validates before generating."""
     doc = await db.certificazioni.find_one({"cert_id": cert_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
@@ -180,7 +181,7 @@ async def calculate_thermal(inp: ThermalInput):
 # ── CE Validation ────────────────────────────────────────────────
 
 @router.post("/{cert_id}/validate")
-async def validate_certificazione(cert_id: str, user: dict = Depends(get_current_user)):
+async def validate_certificazione(cert_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Validate a certification before PDF generation."""
     doc = await db.certificazioni.find_one({"cert_id": cert_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:

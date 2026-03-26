@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 
 router = APIRouter(prefix="/attrezzature", tags=["attrezzature"])
@@ -44,7 +45,7 @@ class AttrezzaturaUpdate(BaseModel):
 
 
 @router.post("")
-async def create_attrezzatura(data: AttrezzaturaCreate, user: dict = Depends(get_current_user)):
+async def create_attrezzatura(data: AttrezzaturaCreate, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Registra una nuova attrezzatura con data di taratura."""
     if data.tipo not in TIPI_ATTREZZATURA:
         raise HTTPException(400, f"Tipo non valido. Valori: {TIPI_ATTREZZATURA}")
@@ -74,7 +75,7 @@ async def create_attrezzatura(data: AttrezzaturaCreate, user: dict = Depends(get
 
 
 @router.get("")
-async def list_attrezzature(user: dict = Depends(get_current_user), tipo: str = ""):
+async def list_attrezzature(user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina")), tipo: str = ""):
     """Lista tutte le attrezzature dell'utente (filtro opzionale per tipo)."""
     query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if tipo:
@@ -100,7 +101,7 @@ async def list_attrezzature(user: dict = Depends(get_current_user), tipo: str = 
 
 
 @router.patch("/{attr_id}")
-async def update_attrezzatura(attr_id: str, data: AttrezzaturaUpdate, user: dict = Depends(get_current_user)):
+async def update_attrezzatura(attr_id: str, data: AttrezzaturaUpdate, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Aggiorna i dati di un'attrezzatura."""
     updates = {"updated_at": datetime.now(timezone.utc).isoformat()}
     for field in ["modello", "numero_serie", "marca", "data_taratura", "prossima_taratura", "note"]:
@@ -118,7 +119,7 @@ async def update_attrezzatura(attr_id: str, data: AttrezzaturaUpdate, user: dict
 
 
 @router.delete("/{attr_id}")
-async def delete_attrezzatura(attr_id: str, user: dict = Depends(get_current_user)):
+async def delete_attrezzatura(attr_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Elimina un'attrezzatura."""
     result = await db[ATTR_COLL].delete_one({"attr_id": attr_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     if result.deleted_count == 0:
@@ -129,7 +130,7 @@ async def delete_attrezzatura(attr_id: str, user: dict = Depends(get_current_use
 # ── CHECK TARATURA per il modulo serraggio ──
 
 @router.get("/check-taratura")
-async def check_taratura_chiavi(user: dict = Depends(get_current_user)):
+async def check_taratura_chiavi(user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """
     Verifica se ci sono chiavi dinamometriche con taratura scaduta.
     Usato dal modulo serraggio nel Diario di Montaggio.

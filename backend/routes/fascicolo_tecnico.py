@@ -8,6 +8,7 @@ from typing import Optional, List, Dict, Any
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/fascicolo-tecnico", tags=["fascicolo_tecnico"])
@@ -244,7 +245,7 @@ async def _get_context(cid: str, user: dict):
 
 # ── GET/PUT fascicolo data ──
 @router.get("/{cid}")
-async def get_fascicolo_data(cid: str, user: dict = Depends(get_current_user)):
+async def get_fascicolo_data(cid: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     commessa = await _get_commessa(cid, user["user_id"], user["tenant_id"])
     company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
     ft = commessa.get("fascicolo_tecnico", {})
@@ -406,7 +407,7 @@ async def get_fascicolo_data(cid: str, user: dict = Depends(get_current_user)):
 
 
 @router.put("/{cid}")
-async def update_fascicolo_data(cid: str, data: FascicoloData, user: dict = Depends(get_current_user)):
+async def update_fascicolo_data(cid: str, data: FascicoloData, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     await _get_commessa(cid, user["user_id"], user["tenant_id"])
     update = {k: v for k, v in data.dict().items() if v is not None}
     update["updated_at"] = datetime.now(timezone.utc).isoformat()
@@ -419,7 +420,7 @@ async def update_fascicolo_data(cid: str, data: FascicoloData, user: dict = Depe
 
 # ── PDF endpoints ──
 @router.get("/{cid}/dop-pdf")
-async def dop_pdf(cid: str, user: dict = Depends(get_current_user)):
+async def dop_pdf(cid: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     from services.pdf_fascicolo_tecnico import generate_dop_pdf
     commessa, company, client_name, ft = await _get_context(cid, user)
     buf = generate_dop_pdf(company, commessa, client_name, ft)
@@ -428,7 +429,7 @@ async def dop_pdf(cid: str, user: dict = Depends(get_current_user)):
 
 
 @router.get("/{cid}/ce-pdf")
-async def ce_pdf(cid: str, user: dict = Depends(get_current_user)):
+async def ce_pdf(cid: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     from services.pdf_fascicolo_tecnico import generate_ce_pdf
     commessa, company, client_name, ft = await _get_context(cid, user)
     buf = generate_ce_pdf(company, commessa, client_name, ft)
@@ -437,7 +438,7 @@ async def ce_pdf(cid: str, user: dict = Depends(get_current_user)):
 
 
 @router.get("/{cid}/piano-controllo-pdf")
-async def piano_controllo_pdf(cid: str, user: dict = Depends(get_current_user)):
+async def piano_controllo_pdf(cid: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     from services.pdf_fascicolo_tecnico import generate_piano_controllo_pdf
     commessa, company, client_name, ft = await _get_context(cid, user)
     if not ft.get("fasi"):
@@ -449,7 +450,7 @@ async def piano_controllo_pdf(cid: str, user: dict = Depends(get_current_user)):
 
 
 @router.get("/{cid}/rapporto-vt-pdf")
-async def rapporto_vt_pdf(cid: str, user: dict = Depends(get_current_user)):
+async def rapporto_vt_pdf(cid: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     from services.pdf_fascicolo_tecnico import generate_rapporto_vt_pdf
     commessa, company, client_name, ft = await _get_context(cid, user)
     buf = generate_rapporto_vt_pdf(company, commessa, client_name, ft)
@@ -458,7 +459,7 @@ async def rapporto_vt_pdf(cid: str, user: dict = Depends(get_current_user)):
 
 
 @router.get("/{cid}/registro-saldatura-pdf")
-async def registro_saldatura_pdf(cid: str, user: dict = Depends(get_current_user)):
+async def registro_saldatura_pdf(cid: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     from services.pdf_fascicolo_tecnico import generate_registro_saldatura_pdf
     commessa, company, client_name, ft = await _get_context(cid, user)
     buf = generate_registro_saldatura_pdf(company, commessa, client_name, ft)
@@ -467,7 +468,7 @@ async def registro_saldatura_pdf(cid: str, user: dict = Depends(get_current_user
 
 
 @router.get("/{cid}/riesame-tecnico-pdf")
-async def riesame_tecnico_pdf(cid: str, user: dict = Depends(get_current_user)):
+async def riesame_tecnico_pdf(cid: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     from services.pdf_fascicolo_tecnico import generate_riesame_tecnico_pdf
     commessa, company, client_name, ft = await _get_context(cid, user)
     buf = generate_riesame_tecnico_pdf(company, commessa, client_name, ft)
@@ -476,7 +477,7 @@ async def riesame_tecnico_pdf(cid: str, user: dict = Depends(get_current_user)):
 
 
 @router.get("/{cid}/fascicolo-completo-pdf")
-async def fascicolo_completo_pdf(cid: str, docs: str = "dop,ce,piano,vt,registro,riesame", user: dict = Depends(get_current_user)):
+async def fascicolo_completo_pdf(cid: str, docs: str = "dop,ce,piano,vt,registro,riesame", user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Generate a combined PDF with all selected Fascicolo Tecnico documents."""
     from services.pdf_fascicolo_tecnico import (
         generate_dop_pdf, generate_ce_pdf, generate_piano_controllo_pdf,

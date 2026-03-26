@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 
 router = APIRouter(prefix="/admin/cleanup", tags=["admin"])
 logger = logging.getLogger(__name__)
@@ -24,7 +25,7 @@ async def _ensure_admin(user: dict):
 
 
 @router.get("/preview")
-async def preview_cleanup(user: dict = Depends(get_current_user)):
+async def preview_cleanup(user: dict = Depends(require_role("admin"))):
     """Preview what would be deleted in a cleanup."""
     await _ensure_admin(user)
 
@@ -51,7 +52,7 @@ async def preview_cleanup(user: dict = Depends(get_current_user)):
 
 
 @router.post("/execute")
-async def execute_cleanup(data: CleanupRequest, user: dict = Depends(get_current_user)):
+async def execute_cleanup(data: CleanupRequest, user: dict = Depends(require_role("admin"))):
     """Execute database cleanup. Deletes all operational/test data."""
     await _ensure_admin(user)
 

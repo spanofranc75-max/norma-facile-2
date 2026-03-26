@@ -3,12 +3,13 @@ from datetime import date, timedelta
 from fastapi import APIRouter, Depends
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 
 router = APIRouter(prefix="/quality-hub", tags=["quality-hub"])
 
 
 @router.get("/summary")
-async def quality_hub_summary(user: dict = Depends(get_current_user)):
+async def quality_hub_summary(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Aggregated quality status from all 4 modules."""
     today = date.today()
     today_str = today.isoformat()

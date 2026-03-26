@@ -9,6 +9,7 @@ import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from core.rate_limiter import limiter
 from services.ai_compliance_engine import analizza_preventivo_completo
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("/set")
-async def get_validation_set(user: dict = Depends(get_current_user)):
+async def get_validation_set(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Restituisce il set di validazione con gli esiti attesi."""
     items = []
     for pid, gt in VALIDATION_SET.items():
@@ -37,7 +38,7 @@ async def get_validation_set(user: dict = Depends(get_current_user)):
 
 @router.post("/run/{preventivo_id}")
 @limiter.limit("10/minute")
-async def run_single_validation(request: Request, preventivo_id: str, user: dict = Depends(get_current_user)):
+async def run_single_validation(request: Request, preventivo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Esegue la validazione su un singolo preventivo."""
     if preventivo_id not in VALIDATION_SET:
         raise HTTPException(400, "Preventivo non presente nel set di validazione")
@@ -99,7 +100,7 @@ async def run_single_validation(request: Request, preventivo_id: str, user: dict
 
 @router.post("/run-batch")
 @limiter.limit("5/minute")
-async def run_batch_validation(request: Request, body: dict = None, user: dict = Depends(get_current_user)):
+async def run_batch_validation(request: Request, body: dict = None, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Esegue la validazione su tutto il set (o un sottoinsieme).
     Body opzionale: {"preventivo_ids": ["prev_xxx", ...]}
     """
@@ -181,7 +182,7 @@ async def run_batch_validation(request: Request, body: dict = None, user: dict =
 
 
 @router.get("/results")
-async def get_validation_results(user: dict = Depends(get_current_user)):
+async def get_validation_results(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Recupera tutti i risultati di validazione salvati."""
     docs = await db.validazioni_p1.find(
         {"user_id": user["user_id"], "tenant_id": tenant_match(user), "scorecard": {"$exists": True}},

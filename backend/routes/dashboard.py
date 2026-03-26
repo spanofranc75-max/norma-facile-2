@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from datetime import datetime, timezone, timedelta, date
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from services.profiles_data import calculate_bars_needed
 
@@ -15,7 +16,7 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
 @router.get("/stats")
-async def get_dashboard_stats(user: dict = Depends(get_current_user)):
+async def get_dashboard_stats(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     uid = user["user_id"]
     tid = user["tenant_id"]
     now = datetime.now(timezone.utc)
@@ -145,7 +146,7 @@ async def get_dashboard_stats(user: dict = Depends(get_current_user)):
 
 
 @router.get("/system-health")
-async def get_system_health(user: dict = Depends(get_current_user)):
+async def get_system_health(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """System integrity check — shows DB health, data consistency, recent audit activity."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -232,7 +233,7 @@ async def get_system_health(user: dict = Depends(get_current_user)):
 
 
 @router.get("/compliance-docs")
-async def get_compliance_docs_status(user: dict = Depends(get_current_user)):
+async def get_compliance_docs_status(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Stato conformita documenti aziendali + allegati POS con previsione 30 giorni."""
     from models.company_doc import GLOBAL_DOC_TYPES, ALLEGATI_POS_TYPES
     today = date.today()
@@ -378,7 +379,7 @@ async def get_compliance_docs_status(user: dict = Depends(get_current_user)):
 
 
 @router.get("/fascicolo-aziendale")
-async def download_fascicolo_aziendale(user: dict = Depends(get_current_user)):
+async def download_fascicolo_aziendale(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Scarica ZIP con tutti i documenti aziendali globali (DURC, Visura, DVR, etc.)."""
     upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "company_docs")
     global_docs = await db.company_documents.find(
@@ -422,7 +423,7 @@ async def download_fascicolo_aziendale(user: dict = Depends(get_current_user)):
 
 
 @router.get("/commessa-compliance/{commessa_id}")
-async def check_commessa_compliance(commessa_id: str, user: dict = Depends(get_current_user)):
+async def check_commessa_compliance(commessa_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Validazione preventiva: i documenti aziendali coprono la durata della commessa?"""
     from models.company_doc import GLOBAL_DOC_TYPES
 
@@ -493,7 +494,7 @@ async def check_commessa_compliance(commessa_id: str, user: dict = Depends(get_c
         "bloccanti": bloccanti,
         "checks": checks,
     }
-async def get_compliance_overview(user: dict = Depends(get_current_user)):
+async def get_compliance_overview(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Dashboard widget: EN 1090 compliance status for all commesse with fascicolo tecnico data."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -574,7 +575,7 @@ async def get_compliance_overview(user: dict = Depends(get_current_user)):
 # ── Officina Quality Score (SRA) ────────────────────────────────
 
 @router.get("/quality-score")
-async def get_quality_score(user: dict = Depends(get_current_user)):
+async def get_quality_score(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Calculate Officina Quality Score (0-100) — adaptive based on user's actual workflow."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -759,7 +760,7 @@ async def get_quality_score(user: dict = Depends(get_current_user)):
 
 
 @router.get("/semaforo")
-async def get_commesse_semaforo(user: dict = Depends(get_current_user)):
+async def get_commesse_semaforo(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Traffic light view of active commesse: green/yellow/red based on deadline proximity."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -847,7 +848,7 @@ async def get_commesse_semaforo(user: dict = Depends(get_current_user)):
 
 
 @router.get("/fascicolo/{client_id}")
-async def get_fascicolo_cantiere(client_id: str, user: dict = Depends(get_current_user)):
+async def get_fascicolo_cantiere(client_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Aggregate all documents for a client into a 'Fascicolo Cantiere' (Project Dossier)."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -974,7 +975,7 @@ async def get_fascicolo_cantiere(client_id: str, user: dict = Depends(get_curren
 @router.get("/ebitda")
 async def get_ebitda(
     year: int = None,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))
 ):
     """Get EBITDA financial analysis: Revenue vs Costs by month."""
     uid = user["user_id"]
@@ -1123,7 +1124,7 @@ IVA_QUARTERS = [
 @router.get("/cruscotto-finanziario")
 async def get_cruscotto_finanziario(
     year: int = None,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))
 ):
     """
     Torre di Controllo Finanziaria — Ciclo Attivo + Passivo integrati.
@@ -1350,7 +1351,7 @@ async def get_cruscotto_finanziario(
 
 
 @router.get("/morning-briefing")
-async def morning_briefing(user: dict = Depends(get_current_user)):
+async def morning_briefing(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Morning Briefing: scadenze oggi/domani, pagamenti in ritardo, commesse in allarme, azioni da fare."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -1531,7 +1532,7 @@ async def morning_briefing(user: dict = Depends(get_current_user)):
 
 # ── Executive Dashboard Multi-Normativa ─────────────────────────
 @router.get("/executive")
-async def get_executive_dashboard(user: dict = Depends(get_current_user)):
+async def get_executive_dashboard(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Dashboard Executive: vista aggregata multi-normativa (1090 / 13241 / Generico).
     Ogni commessa viene classificata per le normative presenti nelle sue voci_lavoro.
     Una commessa mista appare in piu settori."""
@@ -1797,7 +1798,7 @@ async def get_executive_dashboard(user: dict = Depends(get_current_user)):
 # ── Dashboard Cantiere Multilivello ──────────────────────────────
 
 @router.get("/cantiere-multilivello")
-async def get_cantiere_multilivello(user: dict = Depends(get_current_user)):
+async def get_cantiere_multilivello(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Dashboard Cantiere Multilivello — aggregazione obblighi, POS, emissioni, pacchetti, committenza."""
     uid = user["user_id"]
     tid = user["tenant_id"]

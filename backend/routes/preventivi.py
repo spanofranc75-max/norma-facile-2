@@ -9,6 +9,7 @@ from typing import Optional, List
 import uuid
 from datetime import datetime, timezone
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from core.engine.thermal import ThermalValidator, ThermalInput
 from core.engine.climate_zones import ClimateZone, ZONE_LIMITS
@@ -232,7 +233,7 @@ def run_compliance(lines: list) -> dict:
 async def create_preventivo_from_distinta(
     distinta_id: str,
     markup_percent: float = Query(30.0, ge=0, le=200),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico")),
 ):
     """Create a Preventivo from a Distinta (BOM). Applies markup to material cost."""
     uid = user["user_id"]
@@ -369,7 +370,7 @@ async def list_preventivi(
     status: Optional[str] = None,
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico")),
 ):
     query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if client_id:
@@ -430,7 +431,7 @@ async def list_preventivi(
 
 
 @router.get("/{prev_id}")
-async def get_preventivo(prev_id: str, user: dict = Depends(get_current_user)):
+async def get_preventivo(prev_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Preventivo non trovato")
@@ -468,7 +469,7 @@ async def get_preventivo(prev_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.post("/", status_code=201)
-async def create_preventivo(data: PreventivoCreate, user: dict = Depends(get_current_user)):
+async def create_preventivo(data: PreventivoCreate, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     from services.client_snapshot import build_snapshot
     prev_id = f"prev_{uuid.uuid4().hex[:10]}"
     now = datetime.now(timezone.utc)
@@ -558,7 +559,7 @@ async def create_preventivo(data: PreventivoCreate, user: dict = Depends(get_cur
 
 
 @router.put("/{prev_id}")
-async def update_preventivo(prev_id: str, data: PreventivoUpdate, user: dict = Depends(get_current_user)):
+async def update_preventivo(prev_id: str, data: PreventivoUpdate, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     existing = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not existing:
         raise HTTPException(404, "Preventivo non trovato")
@@ -621,7 +622,7 @@ async def update_preventivo(prev_id: str, data: PreventivoUpdate, user: dict = D
 
 
 @router.delete("/{prev_id}")
-async def delete_preventivo(prev_id: str, user: dict = Depends(get_current_user)):
+async def delete_preventivo(prev_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """
     Soft-delete: cambia stato in 'eliminato' invece di rimuovere.
     Il numero progressivo rimane visibile nella lista (come fatture annullate).
@@ -651,7 +652,7 @@ async def delete_preventivo(prev_id: str, user: dict = Depends(get_current_user)
 
 
 @router.patch("/{prev_id}/hide-from-planning")
-async def hide_preventivo_from_planning(prev_id: str, user: dict = Depends(get_current_user)):
+async def hide_preventivo_from_planning(prev_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Nasconde il preventivo dal Planning Cantieri per questo utente."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -669,7 +670,7 @@ async def hide_preventivo_from_planning(prev_id: str, user: dict = Depends(get_c
 # ── Clone Preventivo ─────────────────────────────────────────────
 
 @router.post("/{prev_id}/clone", status_code=201)
-async def clone_preventivo(prev_id: str, user: dict = Depends(get_current_user)):
+async def clone_preventivo(prev_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Clone a preventivo: copies all fields except ID, number, date, status.
     New preventivo gets fresh numbering, today's date, and status 'bozza'.
     """
@@ -771,7 +772,7 @@ async def clone_preventivo(prev_id: str, user: dict = Depends(get_current_user))
 # ── Compliance Check ─────────────────────────────────────────────
 
 @router.post("/{prev_id}/check-compliance")
-async def check_compliance(prev_id: str, user: dict = Depends(get_current_user)):
+async def check_compliance(prev_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Run NormaCore thermal compliance on all lines with thermal data."""
     doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
@@ -796,7 +797,7 @@ async def check_compliance(prev_id: str, user: dict = Depends(get_current_user))
 # ── Convert to Invoice ───────────────────────────────────────────
 
 @router.post("/{prev_id}/convert-to-invoice")
-async def convert_to_invoice(prev_id: str, user: dict = Depends(get_current_user)):
+async def convert_to_invoice(prev_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Convert an accepted preventivo into a Fattura (invoice).
     Imports all lines, client, and notes automatically.
     """
@@ -969,7 +970,7 @@ async def convert_to_invoice(prev_id: str, user: dict = Depends(get_current_user
 # ── Progressive Invoicing (Acconto / SAL / Saldo) ─────────────────
 
 @router.get("/{prev_id}/invoicing-status")
-async def get_invoicing_status(prev_id: str, user: dict = Depends(get_current_user)):
+async def get_invoicing_status(prev_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Get the invoicing progress for a preventivo — how much has been billed.
     REGOLA: si lavora SEMPRE sull'imponibile (base senza IVA). L'IVA si aggiunge solo in fattura.
     """
@@ -1025,7 +1026,7 @@ async def get_invoicing_status(prev_id: str, user: dict = Depends(get_current_us
 
 
 @router.post("/{prev_id}/progressive-invoice")
-async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceRequest, user: dict = Depends(get_current_user)):
+async def create_progressive_invoice(prev_id: str, body: ProgressiveInvoiceRequest, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Create a progressive invoice (acconto, SAL, or saldo) from a preventivo.
     REGOLA FONDAMENTALE: percentuali e importi si calcolano SEMPRE sull'IMPONIBILE.
     L'IVA viene aggiunta solo come riga di calcolo finale sulla fattura.
@@ -1304,7 +1305,7 @@ def fmtEur_py(v):
 # ── PDF Generation ───────────────────────────────────────────────
 
 @router.get("/{prev_id}/pdf")
-async def get_preventivo_pdf(prev_id: str, user: dict = Depends(get_current_user)):
+async def get_preventivo_pdf(prev_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Generate PDF quote with commercial offer + technical annex."""
     doc = await db.preventivi.find_one({"preventivo_id": prev_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
@@ -1334,7 +1335,7 @@ async def get_preventivo_pdf(prev_id: str, user: dict = Depends(get_current_user
 # ── Send Preventivo via Email ──
 
 @router.get("/{prev_id}/preview-email")
-async def preview_preventivo_email(prev_id: str, user: dict = Depends(get_current_user)):
+async def preview_preventivo_email(prev_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Preview email that would be sent for a preventivo."""
     doc = await db.preventivi.find_one(
         {"preventivo_id": prev_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -1401,7 +1402,7 @@ async def preview_preventivo_email(prev_id: str, user: dict = Depends(get_curren
 
 
 @router.post("/{prev_id}/send-email")
-async def send_preventivo_email(prev_id: str, payload: dict = None, user: dict = Depends(get_current_user)):
+async def send_preventivo_email(prev_id: str, payload: dict = None, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Generate PDF and send preventivo via email to client."""
     payload = payload or {}
     doc = await db.preventivi.find_one(

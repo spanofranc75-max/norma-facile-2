@@ -59,6 +59,7 @@ async def log_activity(
             "user_id": user.get("user_id", "system"),
             "user_name": user.get("name", user.get("email", "Sistema")),
             "user_email": user.get("email", ""),
+            "tenant_id": user.get("tenant_id", "default"),
             "action": action,
             "entity_type": entity_type,
             "entity_id": str(entity_id),

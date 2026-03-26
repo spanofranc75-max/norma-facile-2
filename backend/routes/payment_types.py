@@ -5,6 +5,7 @@ import uuid
 import calendar
 from datetime import datetime, timezone, timedelta, date
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from models.payment_type import (
     PaymentTypeCreate, PaymentTypeUpdate, PaymentTypeResponse, PaymentTypeListResponse,
@@ -54,7 +55,7 @@ def enrich_response(doc: dict) -> dict:
 async def get_payment_types(
     search: Optional[str] = Query(None),
     tipo: Optional[str] = Query(None),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione")),
 ):
     q = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if search:
@@ -73,7 +74,7 @@ async def get_payment_types(
 
 
 @router.get("/{pt_id}", response_model=PaymentTypeResponse)
-async def get_payment_type(pt_id: str, user: dict = Depends(get_current_user)):
+async def get_payment_type(pt_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     doc = await db[COLLECTION].find_one(
         {"payment_type_id": pt_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
@@ -84,7 +85,7 @@ async def get_payment_type(pt_id: str, user: dict = Depends(get_current_user)):
 
 @router.post("/", response_model=PaymentTypeResponse, status_code=201)
 async def create_payment_type(
-    data: PaymentTypeCreate, user: dict = Depends(get_current_user)
+    data: PaymentTypeCreate, user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     dup = await db[COLLECTION].find_one(
         {"user_id": user["user_id"], "tenant_id": tenant_match(user), "codice": data.codice}
@@ -111,7 +112,7 @@ async def create_payment_type(
 
 @router.put("/{pt_id}", response_model=PaymentTypeResponse)
 async def update_payment_type(
-    pt_id: str, data: PaymentTypeUpdate, user: dict = Depends(get_current_user)
+    pt_id: str, data: PaymentTypeUpdate, user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     existing = await db[COLLECTION].find_one(
         {"payment_type_id": pt_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
@@ -129,7 +130,7 @@ async def update_payment_type(
 
 
 @router.delete("/{pt_id}")
-async def delete_payment_type(pt_id: str, user: dict = Depends(get_current_user)):
+async def delete_payment_type(pt_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     result = await db[COLLECTION].delete_one(
         {"payment_type_id": pt_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
@@ -141,7 +142,7 @@ async def delete_payment_type(pt_id: str, user: dict = Depends(get_current_user)
 
 @router.post("/{pt_id}/simulate", response_model=SimulateResponse)
 async def simulate_deadlines(
-    pt_id: str, req: SimulateRequest, user: dict = Depends(get_current_user)
+    pt_id: str, req: SimulateRequest, user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Simulate payment deadlines given an invoice date and amount."""
     doc = await db[COLLECTION].find_one(
@@ -210,7 +211,7 @@ async def simulate_deadlines(
 
 
 @router.post("/seed-defaults")
-async def seed_default_payment_types(user: dict = Depends(get_current_user)):
+async def seed_default_payment_types(user: dict = Depends(require_role("admin", "amministrazione"))):
     """Seed common Italian payment types if none exist."""
     count = await db[COLLECTION].count_documents({"user_id": user["user_id"], "tenant_id": tenant_match(user)})
     if count > 0:

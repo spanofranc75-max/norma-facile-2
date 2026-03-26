@@ -13,7 +13,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse
 
 from core.database import db
-from core.security import get_current_user, tenant_match
+from core.security import get_current_user
+from core.rbac import require_role
 from services.client_snapshot import build_snapshot
 
 router = APIRouter(prefix="/admin/migration", tags=["migration"])
@@ -120,7 +121,7 @@ async def run_snapshot_via_link(key: str = Query(...)):
 
 
 @router.post("/backfill-client-snapshots")
-async def backfill_client_snapshots(user: dict = Depends(get_current_user)):
+async def backfill_client_snapshots(user: dict = Depends(require_role("admin"))):
     """Add client_snapshot to all documents that don't have one yet.
     
     This reads the current client data and stores it as a snapshot.
@@ -188,7 +189,7 @@ async def backfill_client_snapshots(user: dict = Depends(get_current_user)):
 
 
 @router.get("/snapshot-status")
-async def snapshot_status(user: dict = Depends(get_current_user)):
+async def snapshot_status(user: dict = Depends(require_role("admin"))):
     """Check how many documents have/lack client_snapshot."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -211,7 +212,7 @@ async def snapshot_status(user: dict = Depends(get_current_user)):
 
 
 @router.post("/set-default-client-status")
-async def set_default_client_status(user: dict = Depends(get_current_user)):
+async def set_default_client_status(user: dict = Depends(require_role("admin"))):
     """Set status='active' on all clients that don't have a status field yet."""
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Solo admin possono eseguire migrazioni")

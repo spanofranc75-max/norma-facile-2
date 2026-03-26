@@ -18,6 +18,7 @@ from typing import Optional
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 
 router = APIRouter(prefix="/registro-saldatura", tags=["registro-saldatura"])
 logger = logging.getLogger(__name__)
@@ -35,7 +36,7 @@ class RigaSaldatura(BaseModel):
 
 
 @router.get("/{commessa_id}")
-async def list_registro(commessa_id: str, user: dict = Depends(get_current_user)):
+async def list_registro(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Lista completa del registro saldatura per la commessa."""
     commessa = await db.commesse.find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -90,7 +91,7 @@ async def list_registro(commessa_id: str, user: dict = Depends(get_current_user)
 
 
 @router.post("/{commessa_id}")
-async def add_riga(commessa_id: str, data: RigaSaldatura, user: dict = Depends(get_current_user)):
+async def add_riga(commessa_id: str, data: RigaSaldatura, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Aggiungi una riga al registro saldatura."""
     commessa = await db.commesse.find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0, "commessa_id": 1}
@@ -154,7 +155,7 @@ async def add_riga(commessa_id: str, data: RigaSaldatura, user: dict = Depends(g
 
 
 @router.put("/{commessa_id}/{riga_id}")
-async def update_riga(commessa_id: str, riga_id: str, data: RigaSaldatura, user: dict = Depends(get_current_user)):
+async def update_riga(commessa_id: str, riga_id: str, data: RigaSaldatura, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Aggiorna una riga del registro (es. esito VT dopo controllo)."""
     existing = await db.registro_saldatura.find_one(
         {"riga_id": riga_id, "commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -180,7 +181,7 @@ async def update_riga(commessa_id: str, riga_id: str, data: RigaSaldatura, user:
 
 
 @router.delete("/{commessa_id}/{riga_id}")
-async def delete_riga(commessa_id: str, riga_id: str, user: dict = Depends(get_current_user)):
+async def delete_riga(commessa_id: str, riga_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Elimina una riga dal registro."""
     result = await db.registro_saldatura.delete_one(
         {"riga_id": riga_id, "commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
@@ -191,7 +192,7 @@ async def delete_riga(commessa_id: str, riga_id: str, user: dict = Depends(get_c
 
 
 @router.get("/{commessa_id}/saldatori-idonei")
-async def saldatori_idonei(commessa_id: str, processo: str = "135", user: dict = Depends(get_current_user)):
+async def saldatori_idonei(commessa_id: str, processo: str = "135", user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Filtra saldatori con patentino valido per il processo richiesto."""
     today = date.today()
     welders = await db.welders.find(

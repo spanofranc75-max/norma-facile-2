@@ -10,6 +10,7 @@ Fili conduttori:
 from datetime import date
 from fastapi import APIRouter, Depends
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 
 router = APIRouter(prefix="/scadenziario-manutenzioni", tags=["manutenzioni"])
@@ -48,7 +49,7 @@ URGENZA_ORD = {"scaduto": 0, "in_scadenza": 1, "prossimo": 2, "ok": 3, "sconosci
 
 
 @router.get("")
-async def get_scadenziario(user: dict = Depends(get_current_user)):
+async def get_scadenziario(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     uid = user["user_id"]
     tid = user["tenant_id"]
 

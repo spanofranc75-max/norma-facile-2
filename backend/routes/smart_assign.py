@@ -3,13 +3,14 @@ Does NOT alter any commessa data schema. Only provides data for the UI to auto-p
 from datetime import date
 from fastapi import APIRouter, Depends
 from core.database import db
-from core.security import get_current_user, tenant_match
+from core.security import get_current_user
+from core.rbac import require_role
 
 router = APIRouter(prefix="/smart-assign", tags=["smart-assign"])
 
 
 @router.get("/welders")
-async def get_welders_for_assign(user: dict = Depends(get_current_user)):
+async def get_welders_for_assign(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Returns welders with qualification status for Fascicolo Tecnico assignment."""
     today_str = date.today().isoformat()
     threshold_30 = date.today().replace(day=date.today().day)
@@ -66,7 +67,7 @@ async def get_welders_for_assign(user: dict = Depends(get_current_user)):
 
 
 @router.get("/instruments")
-async def get_instruments_for_assign(user: dict = Depends(get_current_user)):
+async def get_instruments_for_assign(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Returns instruments with calibration status for Piano Controlli assignment."""
     today_str = date.today().isoformat()
     from datetime import timedelta

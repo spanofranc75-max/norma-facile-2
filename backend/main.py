@@ -274,8 +274,6 @@ async def lifespan(app: FastAPI):
 
     # 0. Security checks — fail fast on missing secrets
     from core.config import settings
-    if not settings.jwt_secret or len(settings.jwt_secret) < 32:
-        raise RuntimeError("JWT_SECRET mancante o troppo corto (min 32 caratteri). Impostare in .env")
     if not settings.emergent_llm_key:
         logger.warning("EMERGENT_LLM_KEY non configurata — moduli AI non funzioneranno")
     if not settings.resend_api_key:

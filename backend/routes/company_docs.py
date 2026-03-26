@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Q
 from fastapi.responses import FileResponse
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from models.company_doc import (
     CompanyDocumentResponse,
     CompanyDocumentList,
@@ -51,7 +52,7 @@ def _doc_to_response(doc: dict) -> dict:
 async def list_documents(
     category: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione")),
 ):
     query = {}
     if category and category in CATEGORIES:
@@ -74,7 +75,7 @@ async def upload_document(
     title: str = Form(...),
     category: str = Form("altro"),
     tags: str = Form(""),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione")),
 ):
     if category not in CATEGORIES:
         raise HTTPException(400, f"Categoria non valida. Valide: {CATEGORIES}")
@@ -121,7 +122,7 @@ async def upload_revision(
     doc_id: str,
     file: UploadFile = File(...),
     note: str = Form(""),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione")),
 ):
     """Upload a new revision of an existing document, archiving the current version."""
     doc = await db.company_documents.find_one({"doc_id": doc_id}, {"_id": 0})
@@ -180,7 +181,7 @@ async def upload_revision(
 
 
 @router.get("/{doc_id}/versions", response_model=VersionListResponse)
-async def get_versions(doc_id: str, user: dict = Depends(get_current_user)):
+async def get_versions(doc_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Get all versions of a document including current."""
     doc = await db.company_documents.find_one({"doc_id": doc_id}, {"_id": 0})
     if not doc:
@@ -210,7 +211,7 @@ async def get_versions(doc_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.get("/{doc_id}/versions/{version_num}/download")
-async def download_version(doc_id: str, version_num: int, user: dict = Depends(get_current_user)):
+async def download_version(doc_id: str, version_num: int, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Download a specific version of a document."""
     doc = await db.company_documents.find_one({"doc_id": doc_id}, {"_id": 0})
     if not doc:
@@ -242,7 +243,7 @@ async def download_version(doc_id: str, version_num: int, user: dict = Depends(g
 
 
 @router.get("/{doc_id}/download")
-async def download_document(doc_id: str, user: dict = Depends(get_current_user)):
+async def download_document(doc_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     doc = await db.company_documents.find_one({"doc_id": doc_id}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Documento non trovato")
@@ -259,7 +260,7 @@ async def download_document(doc_id: str, user: dict = Depends(get_current_user))
 
 
 @router.delete("/{doc_id}")
-async def delete_document(doc_id: str, user: dict = Depends(get_current_user)):
+async def delete_document(doc_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     doc = await db.company_documents.find_one({"doc_id": doc_id}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Documento non trovato")
@@ -283,7 +284,7 @@ async def delete_document(doc_id: str, user: dict = Depends(get_current_user)):
 # ── Global Security Documents (DURC, Visura, White List, Patente a Crediti) ──
 
 @router.get("/sicurezza-globali")
-async def list_global_docs(user: dict = Depends(get_current_user)):
+async def list_global_docs(user: dict = Depends(require_role("admin", "amministrazione"))):
     """Lista documenti aziendali globali per sicurezza/POS con info scadenze."""
     from models.company_doc import GLOBAL_DOC_TYPES
     docs = await db.company_documents.find(
@@ -360,7 +361,7 @@ async def upload_global_doc(
     doc_type: str,
     file: UploadFile = File(...),
     scadenza: Optional[str] = Form(None),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione")),
 ):
     """Carica/aggiorna un documento globale di sicurezza."""
     from models.company_doc import GLOBAL_DOC_TYPES
@@ -425,7 +426,7 @@ async def upload_global_doc(
 async def update_global_doc_scadenza(
     doc_type: str,
     body: dict,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione")),
 ):
     """Aggiorna la data di scadenza di un documento globale senza re-upload."""
     from models.company_doc import GLOBAL_DOC_TYPES
@@ -449,7 +450,7 @@ async def update_global_doc_scadenza(
 # ── Allegati Tecnici POS (Rumore, Vibrazioni, MMC) ──
 
 @router.get("/allegati-pos")
-async def list_allegati_pos(user: dict = Depends(get_current_user)):
+async def list_allegati_pos(user: dict = Depends(require_role("admin", "amministrazione"))):
     """Lista allegati tecnici POS con stato inclusione."""
     from models.company_doc import ALLEGATI_POS_TYPES
     docs = await db.company_documents.find(
@@ -493,7 +494,7 @@ async def upload_allegato_pos(
     doc_type: str,
     file: UploadFile = File(...),
     includi_pos: Optional[str] = Form("true"),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione")),
 ):
     """Carica/aggiorna un allegato tecnico POS."""
     from models.company_doc import ALLEGATI_POS_TYPES
@@ -558,7 +559,7 @@ async def upload_allegato_pos(
 async def toggle_allegato_pos(
     doc_type: str,
     body: dict,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione")),
 ):
     """Aggiorna il flag 'includi_pos' di un allegato tecnico."""
     from models.company_doc import ALLEGATI_POS_TYPES
@@ -580,7 +581,7 @@ async def toggle_allegato_pos(
 
 
 @router.delete("/allegati-pos/{doc_type}")
-async def delete_allegato_pos(doc_type: str, user: dict = Depends(get_current_user)):
+async def delete_allegato_pos(doc_type: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Elimina un allegato tecnico POS."""
     from models.company_doc import ALLEGATI_POS_TYPES
     if doc_type not in ALLEGATI_POS_TYPES:
@@ -601,7 +602,7 @@ async def delete_allegato_pos(doc_type: str, user: dict = Depends(get_current_us
 
 
 @router.delete("/sicurezza-globali/{doc_type}")
-async def delete_global_doc(doc_type: str, user: dict = Depends(get_current_user)):
+async def delete_global_doc(doc_type: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Elimina un documento globale di sicurezza."""
     from models.company_doc import GLOBAL_DOC_TYPES
     if doc_type not in GLOBAL_DOC_TYPES:

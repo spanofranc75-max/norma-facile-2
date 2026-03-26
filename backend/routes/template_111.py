@@ -16,6 +16,7 @@ from fastapi.responses import Response
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 
 router = APIRouter(prefix="/template-111", tags=["template-111"])
 logger = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ async def _get_company_data(user_id: str) -> dict:
 
 
 @router.get("/preview/{commessa_id}")
-async def preview_template_111(commessa_id: str, user: dict = Depends(get_current_user)):
+async def preview_template_111(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Preview data for the template."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -85,7 +86,7 @@ async def preview_template_111(commessa_id: str, user: dict = Depends(get_curren
 
 
 @router.get("/pdf/{commessa_id}")
-async def download_template_111_pdf(commessa_id: str, user: dict = Depends(get_current_user)):
+async def download_template_111_pdf(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Generate and download the PDF template."""
     uid = user["user_id"]
     tid = user["tenant_id"]

@@ -12,6 +12,7 @@ from io import BytesIO
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from routes.commessa_ops_common import (
     COLL, DOC_COLL, get_commessa_or_404, ensure_ops_fields,
     ts, new_id, push_event, build_update_with_event,
@@ -33,7 +34,7 @@ async def upload_document(
     file: UploadFile = File(...),
     tipo: str = Form("altro"),
     note: str = Form(""),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico")),
 ):
     """Upload a document to the commessa repository."""
     await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
@@ -70,7 +71,7 @@ async def upload_document(
 
 
 @router.get("/{cid}/documenti")
-async def list_documents(cid: str, user: dict = Depends(get_current_user)):
+async def list_documents(cid: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """List all documents for a commessa (without file content)."""
     await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     docs = await db[DOC_COLL].find(
@@ -81,7 +82,7 @@ async def list_documents(cid: str, user: dict = Depends(get_current_user)):
 
 
 @router.get("/{cid}/documenti/{doc_id}/download")
-async def download_document(cid: str, doc_id: str, user: dict = Depends(get_current_user)):
+async def download_document(cid: str, doc_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Download a document."""
     doc = await db[DOC_COLL].find_one(
         {"doc_id": doc_id, "commessa_id": cid, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
@@ -97,7 +98,7 @@ async def download_document(cid: str, doc_id: str, user: dict = Depends(get_curr
 
 
 @router.delete("/{cid}/documenti/{doc_id}")
-async def delete_document(cid: str, doc_id: str, user: dict = Depends(get_current_user)):
+async def delete_document(cid: str, doc_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     # ══════════════════════════════════════════════════════════════════════
     # ⚠️ CASCADE DELETE BLINDATA — NON TOCCARE ⚠️
     # Quando si elimina un certificato, DEVONO essere eliminati anche:
@@ -184,7 +185,7 @@ async def delete_document(cid: str, doc_id: str, user: dict = Depends(get_curren
 # ══════════════════════════════════════════════════════════════════
 
 @router.post("/{cid}/documenti/{doc_id}/parse-certificato")
-async def parse_certificato_31(cid: str, doc_id: str, user: dict = Depends(get_current_user)):
+async def parse_certificato_31(cid: str, doc_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Use GPT-4o Vision to extract data from a 3.1 material certificate.
     Supports PDF (converts to image) and image files.
     """
@@ -493,7 +494,7 @@ class ConfirmProfiliRequest(BaseModel):
 
 
 @router.post("/{cid}/documenti/{doc_id}/confirm-profili")
-async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, user: dict = Depends(get_current_user)):
+async def confirm_profili(cid: str, doc_id: str, data: ConfirmProfiliRequest, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """
     Step 2 of certificate analysis: User confirms which profiles to import.
     Only selected profiles create material_batches and CAM lotti.
@@ -1094,7 +1095,7 @@ async def _match_profili_to_commesse(
 # ══════════════════════════════════════════════════════════════════
 
 @router.post("/{cid}/documenti/{doc_id}/parse-ddt")
-async def parse_ddt_fornitore(cid: str, doc_id: str, user: dict = Depends(get_current_user)):
+async def parse_ddt_fornitore(cid: str, doc_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Use Claude Sonnet 4 Vision to extract structured data from a supplier DDT.
     Returns extracted metadata + dry-run OdA matching per materiale.
     """
@@ -1285,7 +1286,7 @@ class ConfirmDDTRequest(BaseModel):
 
 
 @router.post("/{cid}/documenti/{doc_id}/confirm-ddt")
-async def confirm_ddt(cid: str, doc_id: str, data: ConfirmDDTRequest, user: dict = Depends(get_current_user)):
+async def confirm_ddt(cid: str, doc_id: str, data: ConfirmDDTRequest, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """
     Step 2 of DDT analysis: User confirms which materials to register.
     Creates an arrival record in the commessa with OdA linking.

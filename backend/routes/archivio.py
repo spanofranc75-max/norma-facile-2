@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 
 router = APIRouter(prefix="/archivio", tags=["archivio"])
@@ -33,7 +34,7 @@ class ExportRequest(BaseModel):
 
 
 @router.post("/export")
-async def export_archivio(data: ExportRequest, user: dict = Depends(get_current_user)):
+async def export_archivio(data: ExportRequest, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """
     Generate a ZIP archive with all documents organized by Year/Client/Commessa.
     Returns the ZIP as a streaming download.
@@ -180,7 +181,7 @@ async def export_archivio(data: ExportRequest, user: dict = Depends(get_current_
 
 
 @router.get("/exports")
-async def list_exports(user: dict = Depends(get_current_user)):
+async def list_exports(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """List previous exports."""
     exports = await db[EXPORT_COLL].find(
         {"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -189,7 +190,7 @@ async def list_exports(user: dict = Depends(get_current_user)):
 
 
 @router.get("/stats")
-async def get_archivio_stats(user: dict = Depends(get_current_user)):
+async def get_archivio_stats(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Get archivio stats for the export UI: available years and clients."""
     commesse = await db.commesse.find(
         {"user_id": user["user_id"], "tenant_id": tenant_match(user)},

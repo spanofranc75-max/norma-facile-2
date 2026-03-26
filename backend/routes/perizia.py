@@ -8,6 +8,7 @@ import base64
 import logging
 from datetime import datetime, timezone
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from core.rate_limiter import limiter
 from models.perizia import PeriziaCreate, PeriziaUpdate, CODICI_DANNO, CODICI_DANNO_MAP
@@ -287,7 +288,7 @@ def calc_voci_costo(data: dict) -> list:
 # ── Archivio Sinistri (Stats Dashboard) ──
 
 @router.get("/archivio/stats")
-async def archivio_stats(user: dict = Depends(get_current_user)):
+async def archivio_stats(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Return aggregated stats for the Archivio Sinistri dashboard."""
     q = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     total_count = await db[COLLECTION].count_documents(q)
@@ -364,7 +365,7 @@ async def archivio_stats(user: dict = Depends(get_current_user)):
 async def list_perizie(
     status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     q = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if status:
@@ -383,7 +384,7 @@ async def list_perizie(
 # ── Get One ──
 
 @router.get("/{perizia_id}")
-async def get_perizia(perizia_id: str, user: dict = Depends(get_current_user)):
+async def get_perizia(perizia_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     doc = await db[COLLECTION].find_one(
         {"perizia_id": perizia_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
@@ -395,7 +396,7 @@ async def get_perizia(perizia_id: str, user: dict = Depends(get_current_user)):
 # ── Create ──
 
 @router.post("/", status_code=201)
-async def create_perizia(data: PeriziaCreate, user: dict = Depends(get_current_user)):
+async def create_perizia(data: PeriziaCreate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     perizia_id = f"per_{uuid.uuid4().hex[:12]}"
     number = await next_perizia_number(user["user_id"])
     now = datetime.now(timezone.utc)
@@ -461,7 +462,7 @@ async def create_perizia(data: PeriziaCreate, user: dict = Depends(get_current_u
 # ── Update ──
 
 @router.put("/{perizia_id}")
-async def update_perizia(perizia_id: str, data: PeriziaUpdate, user: dict = Depends(get_current_user)):
+async def update_perizia(perizia_id: str, data: PeriziaUpdate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     existing = await db[COLLECTION].find_one(
         {"perizia_id": perizia_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
@@ -524,7 +525,7 @@ async def update_perizia(perizia_id: str, data: PeriziaUpdate, user: dict = Depe
 # ── Delete ──
 
 @router.delete("/{perizia_id}")
-async def delete_perizia(perizia_id: str, user: dict = Depends(get_current_user)):
+async def delete_perizia(perizia_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     result = await db[COLLECTION].delete_one(
         {"perizia_id": perizia_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
@@ -554,7 +555,7 @@ def _upload_perizia_photo(user_id: str, file_data: bytes, filename: str, content
 async def upload_foto_perizia(
     perizia_id: str,
     file: UploadFile = File(...),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     """Upload a single photo to object storage and add to perizia."""
     doc = await db[COLLECTION].find_one(
@@ -594,7 +595,7 @@ async def upload_foto_perizia(
 
 
 @router.delete("/{perizia_id}/foto/{foto_id}")
-async def delete_foto_perizia(perizia_id: str, foto_id: str, user: dict = Depends(get_current_user)):
+async def delete_foto_perizia(perizia_id: str, foto_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Remove a photo from the perizia (object storage reference)."""
     result = await db[COLLECTION].update_one(
         {"perizia_id": perizia_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -606,7 +607,7 @@ async def delete_foto_perizia(perizia_id: str, foto_id: str, user: dict = Depend
 
 
 @router.get("/foto-proxy/{path:path}")
-async def proxy_foto_perizia(path: str, user: dict = Depends(get_current_user)):
+async def proxy_foto_perizia(path: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Proxy a photo from object storage."""
     try:
         data, content_type = get_object(path)
@@ -619,7 +620,7 @@ async def proxy_foto_perizia(path: str, user: dict = Depends(get_current_user)):
 async def collega_perizia_a_commessa(
     perizia_id: str,
     payload: dict,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     """Link a perizia to an existing commessa (bidirectional)."""
     uid = user["user_id"]
@@ -652,7 +653,7 @@ async def collega_perizia_a_commessa(
 # ── AI Photo Analysis ──
 
 @router.post("/{perizia_id}/analyze-photos")
-async def analyze_photos(perizia_id: str, user: dict = Depends(get_current_user)):
+async def analyze_photos(perizia_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Analyze uploaded photos using GPT-4o vision to detect damage."""
     doc = await db[COLLECTION].find_one(
         {"perizia_id": perizia_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -807,7 +808,7 @@ Scrivi in italiano formale, tono professionale e tecnico. Non usare markdown."""
 
 @router.post("/{perizia_id}/genera-lettera")
 @limiter.limit("10/minute")
-async def genera_lettera(request: Request, perizia_id: str, user: dict = Depends(get_current_user)):
+async def genera_lettera(request: Request, perizia_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Generate the formal technical cover letter for the insurance assessor using AI."""
     doc = await db[COLLECTION].find_one(
         {"perizia_id": perizia_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -947,7 +948,7 @@ Responsabile Tecnico delle Commesse
 # ── Recalculate Cost Items ──
 
 @router.post("/{perizia_id}/recalc")
-async def recalculate_costs(perizia_id: str, user: dict = Depends(get_current_user)):
+async def recalculate_costs(perizia_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Recalculate cost items based on current perizia data."""
     doc = await db[COLLECTION].find_one(
         {"perizia_id": perizia_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -978,7 +979,7 @@ async def recalculate_costs(perizia_id: str, user: dict = Depends(get_current_us
 # ── PDF ──
 
 @router.get("/{perizia_id}/pdf")
-async def get_perizia_pdf(perizia_id: str, user: dict = Depends(get_current_user)):
+async def get_perizia_pdf(perizia_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     doc = await db[COLLECTION].find_one(
         {"perizia_id": perizia_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
@@ -1001,7 +1002,7 @@ async def get_perizia_pdf(perizia_id: str, user: dict = Depends(get_current_user
 # ── Ponte Perizia → Preventivatore ──
 
 @router.post("/{perizia_id}/genera-preventivo")
-async def genera_preventivo_da_perizia(perizia_id: str, user: dict = Depends(get_current_user)):
+async def genera_preventivo_da_perizia(perizia_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Ponte Perizia → Preventivatore: trasferisce i dati della perizia in un nuovo preventivo."""
     perizia = await db[COLLECTION].find_one(
         {"perizia_id": perizia_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}

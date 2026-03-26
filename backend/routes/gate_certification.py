@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from models.gate_certification import (
     GateCertificationCreate, GateCertificationUpdate,
@@ -31,7 +32,7 @@ DEFAULT_RISCHI = [
 @router.post("/")
 async def create_gate_certification(
     data: GateCertificationCreate,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Create a gate certification record for a commessa."""
     # Verify commessa exists
@@ -100,7 +101,7 @@ async def create_gate_certification(
 
 
 @router.get("/{commessa_id}")
-async def get_gate_certification(commessa_id: str, user: dict = Depends(get_current_user)):
+async def get_gate_certification(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Get gate certification for a commessa."""
     doc = await db.gate_certifications.find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -114,7 +115,7 @@ async def get_gate_certification(commessa_id: str, user: dict = Depends(get_curr
 async def update_gate_certification(
     cert_id: str,
     data: GateCertificationUpdate,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Update gate certification data."""
     existing = await db.gate_certifications.find_one(
@@ -157,7 +158,7 @@ def _gate_pdf_css():
 
 
 @router.get("/{commessa_id}/dop-pdf")
-async def generate_dop_pdf(commessa_id: str, user: dict = Depends(get_current_user)):
+async def generate_dop_pdf(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Generate Declaration of Performance (DoP) PDF per EN 13241."""
     cert = await db.gate_certifications.find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -235,7 +236,7 @@ async def generate_dop_pdf(commessa_id: str, user: dict = Depends(get_current_us
 
 
 @router.get("/{commessa_id}/ce-label-pdf")
-async def generate_ce_label_pdf(commessa_id: str, user: dict = Depends(get_current_user)):
+async def generate_ce_label_pdf(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Generate CE Label PDF for the gate."""
     cert = await db.gate_certifications.find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -278,7 +279,7 @@ async def generate_ce_label_pdf(commessa_id: str, user: dict = Depends(get_curre
 
 
 @router.get("/{commessa_id}/maintenance-pdf")
-async def generate_maintenance_register_pdf(commessa_id: str, user: dict = Depends(get_current_user)):
+async def generate_maintenance_register_pdf(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Generate empty Maintenance Register (Registro Manutenzione) for motorized gates."""
     cert = await db.gate_certifications.find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -339,7 +340,7 @@ async def generate_maintenance_register_pdf(commessa_id: str, user: dict = Depen
 
 
 @router.get("/{commessa_id}/dichiarazione-ce-pdf")
-async def generate_ce_declaration_pdf(commessa_id: str, user: dict = Depends(get_current_user)):
+async def generate_ce_declaration_pdf(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Generate CE Declaration (Dichiarazione CE di Conformita) for motorized gate assembly."""
     cert = await db.gate_certifications.find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}

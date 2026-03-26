@@ -4,6 +4,7 @@ from typing import Optional
 import uuid
 from datetime import datetime, timezone
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from models.client import (
     ClientCreate, ClientUpdate
@@ -40,7 +41,7 @@ async def get_clients(
     include_archived: bool = Query(False, description="Include archived/blocked clients"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))
 ):
     """Get all clients for current user with optional search and type filter."""
     query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
@@ -81,7 +82,7 @@ async def get_clients(
 @router.get("/{client_id}")
 async def get_client(
     client_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))
 ):
     """Get a specific client by ID."""
     client = await db.clients.find_one(
@@ -98,7 +99,7 @@ async def get_client(
 @router.post("/", status_code=201)
 async def create_client(
     client_data: ClientCreate,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))
 ):
     """Create a new client. Pydantic validates and strips null values automatically."""
     raw = client_data.model_dump()
@@ -162,7 +163,7 @@ async def create_client(
 async def update_client(
     client_id: str,
     update_data: ClientUpdate,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))
 ):
     """Update an existing client."""
     # Check client exists
@@ -212,7 +213,7 @@ async def update_client(
 @router.delete("/{client_id}")
 async def delete_client(
     client_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))
 ):
     """Delete a client."""
     uid = user["user_id"]
@@ -255,7 +256,7 @@ async def delete_client(
 @router.post("/{client_id}/promote")
 async def promote_to_cliente_fornitore(
     client_id: str,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico")),
 ):
     """Promote a cliente or fornitore to cliente_fornitore."""
     existing = await db.clients.find_one(
@@ -276,7 +277,7 @@ async def promote_to_cliente_fornitore(
 
 
 @router.post("/{client_id}/archive")
-async def archive_client(client_id: str, user: dict = Depends(get_current_user)):
+async def archive_client(client_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Archive a client — not usable for new documents, but visible in history."""
     existing = await db.clients.find_one(
         {"client_id": client_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0, "business_name": 1, "status": 1}
@@ -294,7 +295,7 @@ async def archive_client(client_id: str, user: dict = Depends(get_current_user))
 
 
 @router.post("/{client_id}/block")
-async def block_client(client_id: str, user: dict = Depends(get_current_user)):
+async def block_client(client_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Block a client — fully locked."""
     existing = await db.clients.find_one(
         {"client_id": client_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0, "business_name": 1}
@@ -312,7 +313,7 @@ async def block_client(client_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.post("/{client_id}/reactivate")
-async def reactivate_client(client_id: str, user: dict = Depends(get_current_user)):
+async def reactivate_client(client_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Reactivate a previously archived or blocked client."""
     existing = await db.clients.find_one(
         {"client_id": client_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0, "business_name": 1}
@@ -330,7 +331,7 @@ async def reactivate_client(client_id: str, user: dict = Depends(get_current_use
 
 
 @router.post("/{client_id}/set-successor")
-async def set_successor(client_id: str, successor_id: str = Query(...), user: dict = Depends(get_current_user)):
+async def set_successor(client_id: str, successor_id: str = Query(...), user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Link a successor client to this one (for client succession tracking)."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -354,7 +355,7 @@ async def set_successor(client_id: str, successor_id: str = Query(...), user: di
 # ── Email Log per Cliente ──
 
 @router.get("/{client_id}/email-log")
-async def get_client_email_log(client_id: str, user: dict = Depends(get_current_user)):
+async def get_client_email_log(client_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Get all emails sent to documents linked to this client."""
     uid = user["user_id"]
     tid = user["tenant_id"]

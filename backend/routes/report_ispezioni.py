@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 
 router = APIRouter(prefix="/report-ispezioni", tags=["report-ispezioni"])
 logger = logging.getLogger(__name__)
@@ -80,7 +81,7 @@ class ReportApprova(BaseModel):
 
 
 @router.get("/{commessa_id}")
-async def get_report_ispezioni(commessa_id: str, user: dict = Depends(get_current_user)):
+async def get_report_ispezioni(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Stato del report ispezioni con dati salvati."""
     commessa = await db.commesse.find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -148,7 +149,7 @@ async def get_report_ispezioni(commessa_id: str, user: dict = Depends(get_curren
 
 
 @router.post("/{commessa_id}")
-async def save_report_ispezioni(commessa_id: str, data: ReportSaveData, user: dict = Depends(get_current_user)):
+async def save_report_ispezioni(commessa_id: str, data: ReportSaveData, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Salva i risultati delle ispezioni."""
     commessa = await db.commesse.find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0, "commessa_id": 1}
@@ -186,7 +187,7 @@ async def save_report_ispezioni(commessa_id: str, data: ReportSaveData, user: di
 
 
 @router.post("/{commessa_id}/approva")
-async def approva_report(commessa_id: str, data: ReportApprova, user: dict = Depends(get_current_user)):
+async def approva_report(commessa_id: str, data: ReportApprova, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Firma e approva il report. Immutabile dopo approvazione."""
     saved = await db.report_ispezioni.find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -220,7 +221,7 @@ async def approva_report(commessa_id: str, data: ReportApprova, user: dict = Dep
 
 
 @router.get("/{commessa_id}/pdf")
-async def download_report_pdf(commessa_id: str, user: dict = Depends(get_current_user)):
+async def download_report_pdf(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Genera PDF del rapporto ispezioni."""
     uid = user["user_id"]
     tid = user["tenant_id"]

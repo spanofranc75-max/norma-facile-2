@@ -5,6 +5,7 @@ from typing import Optional
 import uuid
 from datetime import datetime, timezone
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from models.ddt import DDTCreate, DDTUpdate
 from services.audit_trail import log_activity
@@ -21,7 +22,7 @@ COLLECTION = "ddt_documents"
 async def ddt_stats(
     year: Optional[int] = Query(None),
     month: Optional[int] = Query(None),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione")),
 ):
     """KPI cards and monthly shipping report for DDT register."""
     uid = user["user_id"]
@@ -154,7 +155,7 @@ async def list_ddt(
     date_to: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione")),
 ):
     q = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if ddt_type:
@@ -213,7 +214,7 @@ async def get_causali():
 
 
 @router.get("/{ddt_id}")
-async def get_ddt(ddt_id: str, user: dict = Depends(get_current_user)):
+async def get_ddt(ddt_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     doc = await db[COLLECTION].find_one(
         {"ddt_id": ddt_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
@@ -232,7 +233,7 @@ async def get_ddt(ddt_id: str, user: dict = Depends(get_current_user)):
 # ── Create ──
 
 @router.post("/", status_code=201)
-async def create_ddt(data: DDTCreate, user: dict = Depends(get_current_user)):
+async def create_ddt(data: DDTCreate, user: dict = Depends(require_role("admin", "amministrazione"))):
     from services.client_snapshot import build_snapshot
     ddt_id = f"ddt_{uuid.uuid4().hex[:12]}"
     number = await next_ddt_number(user["user_id"], data.ddt_type)
@@ -300,7 +301,7 @@ async def create_ddt(data: DDTCreate, user: dict = Depends(get_current_user)):
 # ── Update ──
 
 @router.put("/{ddt_id}")
-async def update_ddt(ddt_id: str, data: DDTUpdate, user: dict = Depends(get_current_user)):
+async def update_ddt(ddt_id: str, data: DDTUpdate, user: dict = Depends(require_role("admin", "amministrazione"))):
     existing = await db[COLLECTION].find_one(
         {"ddt_id": ddt_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
@@ -370,7 +371,7 @@ async def update_ddt(ddt_id: str, data: DDTUpdate, user: dict = Depends(get_curr
 # ── Delete ──
 
 @router.delete("/{ddt_id}")
-async def delete_ddt(ddt_id: str, user: dict = Depends(get_current_user)):
+async def delete_ddt(ddt_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     # Prima leggi il documento per trovare commessa collegata
     ddt_doc = await db[COLLECTION].find_one(
         {"ddt_id": ddt_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -399,7 +400,7 @@ async def delete_ddt(ddt_id: str, user: dict = Depends(get_current_user)):
 # ── PDF ──
 
 @router.get("/{ddt_id}/pdf")
-async def get_ddt_pdf(ddt_id: str, user: dict = Depends(get_current_user)):
+async def get_ddt_pdf(ddt_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     doc = await db[COLLECTION].find_one(
         {"ddt_id": ddt_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
@@ -421,7 +422,7 @@ async def get_ddt_pdf(ddt_id: str, user: dict = Depends(get_current_user)):
 # ── Send DDT via Email ──
 
 @router.get("/{ddt_id}/preview-email")
-async def preview_ddt_email(ddt_id: str, user: dict = Depends(get_current_user)):
+async def preview_ddt_email(ddt_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Preview email that would be sent for a DDT."""
     doc = await db[COLLECTION].find_one(
         {"ddt_id": ddt_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -480,7 +481,7 @@ async def preview_ddt_email(ddt_id: str, user: dict = Depends(get_current_user))
 
 
 @router.post("/{ddt_id}/send-email")
-async def send_ddt_email(ddt_id: str, payload: dict = None, user: dict = Depends(get_current_user)):
+async def send_ddt_email(ddt_id: str, payload: dict = None, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Generate PDF and send DDT via email to client."""
     payload = payload or {}
     doc = await db[COLLECTION].find_one(
@@ -559,7 +560,7 @@ async def send_ddt_email(ddt_id: str, payload: dict = None, user: dict = Depends
 # ── Convert DDT to Invoice ──
 
 @router.post("/{ddt_id}/convert-to-invoice")
-async def convert_ddt_to_invoice(ddt_id: str, user: dict = Depends(get_current_user)):
+async def convert_ddt_to_invoice(ddt_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Convert a DDT into a Fattura (invoice). Maps lines, client, and totals."""
     doc = await db[COLLECTION].find_one(
         {"ddt_id": ddt_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}

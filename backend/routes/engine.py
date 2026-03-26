@@ -11,6 +11,7 @@ from enum import Enum
 import uuid
 from datetime import datetime, timezone
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from core.rate_limiter import limiter
 from core.engine.climate_zones import ZONE_LIMITS, ClimateZone
@@ -82,7 +83,7 @@ class NormaConfigUpdate(BaseModel):
 @router.get("/norme")
 async def list_norme(
     active_only: bool = True,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """List all norm configurations."""
     query = {}
@@ -96,7 +97,7 @@ async def list_norme(
 @router.get("/norme/{norma_id}")
 async def get_norma(
     norma_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Get a single norm configuration."""
     item = await db.norme_config.find_one({"norma_id": norma_id}, {"_id": 0})
@@ -108,7 +109,7 @@ async def get_norma(
 @router.post("/norme", status_code=201)
 async def create_norma(
     data: NormaConfigCreate,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Create a new norm configuration."""
     existing = await db.norme_config.find_one({"norma_id": data.norma_id}, {"_id": 0})
@@ -131,7 +132,7 @@ async def create_norma(
 async def update_norma(
     norma_id: str,
     data: NormaConfigUpdate,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Update a norm configuration."""
     existing = await db.norme_config.find_one({"norma_id": norma_id}, {"_id": 0})
@@ -155,7 +156,7 @@ async def update_norma(
 @router.delete("/norme/{norma_id}")
 async def delete_norma(
     norma_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Delete a norm configuration."""
     result = await db.norme_config.delete_one({"norma_id": norma_id})
@@ -165,7 +166,7 @@ async def delete_norma(
 
 
 @router.post("/norme/seed")
-async def seed_norme(user: dict = Depends(get_current_user)):
+async def seed_norme(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Seed the database with standard Italian norms."""
     now = datetime.now(timezone.utc)
     norme = _get_seed_norme()
@@ -224,7 +225,7 @@ async def list_componenti(
     tipo: Optional[ComponentType] = None,
     q: Optional[str] = None,
     produttore: Optional[str] = None,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """List components (glass, frames, spacers) with optional filters."""
     query = {}
@@ -244,7 +245,7 @@ async def list_componenti(
 
 
 @router.get("/componenti/{comp_id}")
-async def get_componente(comp_id: str, user: dict = Depends(get_current_user)):
+async def get_componente(comp_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Get a single component."""
     item = await db.componenti.find_one({"comp_id": comp_id}, {"_id": 0})
     if not item:
@@ -255,7 +256,7 @@ async def get_componente(comp_id: str, user: dict = Depends(get_current_user)):
 @router.post("/componenti", status_code=201)
 async def create_componente(
     data: ComponentCreate,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Create a new component."""
     existing = await db.componenti.find_one({"codice": data.codice, "tipo": data.tipo.value}, {"_id": 0})
@@ -280,7 +281,7 @@ async def create_componente(
 async def update_componente(
     comp_id: str,
     data: ComponentUpdate,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Update a component."""
     existing = await db.componenti.find_one({"comp_id": comp_id}, {"_id": 0})
@@ -295,7 +296,7 @@ async def update_componente(
 
 
 @router.delete("/componenti/{comp_id}")
-async def delete_componente(comp_id: str, user: dict = Depends(get_current_user)):
+async def delete_componente(comp_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Delete a component."""
     result = await db.componenti.delete_one({"comp_id": comp_id})
     if result.deleted_count == 0:
@@ -304,7 +305,7 @@ async def delete_componente(comp_id: str, user: dict = Depends(get_current_user)
 
 
 @router.post("/componenti/seed")
-async def seed_componenti(user: dict = Depends(get_current_user)):
+async def seed_componenti(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Seed with standard glass, frame, spacer types."""
     now = datetime.now(timezone.utc)
     components = _get_seed_componenti()
@@ -361,7 +362,7 @@ class ValidateRequest(BaseModel):
 @router.post("/configure")
 async def configure_product(
     req: ConfigureRequest,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Given a product type, return all required norms, fields, and available components."""
     product = req.product_type.lower()
@@ -419,7 +420,7 @@ async def configure_product(
 @router.post("/calculate")
 async def calculate_performance(
     req: CalculateRequest,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Run the calculation engine for a product configuration."""
     norma = await db.norme_config.find_one({"norma_id": req.norma_id}, {"_id": 0})
@@ -472,7 +473,7 @@ async def calculate_performance(
 @router.post("/validate")
 async def validate_product(
     req: ValidateRequest,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Validate a product against a norm's rules."""
     norma = await db.norme_config.find_one({"norma_id": req.norma_id}, {"_id": 0})
@@ -731,7 +732,7 @@ class FascicoloRequest(BaseModel):
 @router.post("/generate-fascicolo")
 async def generate_fascicolo(
     req: FascicoloRequest,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Generate a complete CE fascicolo (DOP + CE Label + User Manual)."""
     # Get norm config
@@ -849,7 +850,7 @@ class PhotoValidationRequest(BaseModel):
 async def validate_installation_photos(
     request: Request,
     req: PhotoValidationRequest,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     """Analyze installation photos with GPT-4o Vision and validate against requirements."""
     if not req.photos_base64:

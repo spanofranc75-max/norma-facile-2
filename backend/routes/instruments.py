@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from models.instrument import InstrumentCreate, InstrumentResponse, InstrumentList
 
 router = APIRouter(prefix="/instruments", tags=["instruments"])
@@ -100,7 +101,7 @@ async def list_instruments(
     type: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     query = {}
     if type and type in VALID_TYPES:
@@ -129,7 +130,7 @@ async def list_instruments(
 @router.post("/", response_model=InstrumentResponse)
 async def create_instrument(
     payload: InstrumentCreate,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     if payload.type not in VALID_TYPES:
         raise HTTPException(400, f"Tipo non valido. Validi: {VALID_TYPES}")
@@ -164,7 +165,7 @@ async def create_instrument(
 async def update_instrument(
     instrument_id: str,
     payload: InstrumentCreate,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     existing = await db.instruments.find_one({"instrument_id": instrument_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not existing:
@@ -194,7 +195,7 @@ async def update_instrument(
 
 
 @router.delete("/{instrument_id}")
-async def delete_instrument(instrument_id: str, user: dict = Depends(get_current_user)):
+async def delete_instrument(instrument_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     existing = await db.instruments.find_one({"instrument_id": instrument_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not existing:
         raise HTTPException(404, "Strumento non trovato")

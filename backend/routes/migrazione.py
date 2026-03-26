@@ -1,6 +1,7 @@
 """Migration endpoint — imports data from the old Norma Facile app."""
 from fastapi import APIRouter, Depends, HTTPException
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 import httpx
 import uuid
@@ -14,7 +15,7 @@ EXPORT_URL = "https://admin-lockdown.preview.emergentagent.com/api/export/migraz
 
 
 @router.post("/importa")
-async def importa_da_vecchia_app(user: dict = Depends(get_current_user)):
+async def importa_da_vecchia_app(user: dict = Depends(require_role("admin"))):
     """Fetch all data from old app and import into current DB."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -351,7 +352,7 @@ async def importa_da_vecchia_app(user: dict = Depends(get_current_user)):
 
 
 @router.get("/stato")
-async def stato_migrazione(user: dict = Depends(get_current_user)):
+async def stato_migrazione(user: dict = Depends(require_role("admin"))):
     """Check how many migrated records exist."""
     uid = user["user_id"]
     tid = user["tenant_id"]

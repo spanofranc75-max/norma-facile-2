@@ -15,6 +15,7 @@ from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException
 
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 
 logger = logging.getLogger(__name__)
@@ -53,7 +54,7 @@ class UpdatePreventivoPricesInput(BaseModel):
 # ── Endpoints ──
 
 @router.get("/{prev_id}/rdp")
-async def list_rdp(prev_id: str, user: dict = Depends(get_current_user)):
+async def list_rdp(prev_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """List all RdP for a preventivo."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -71,7 +72,7 @@ async def list_rdp(prev_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.post("/{prev_id}/rdp")
-async def create_rdp(prev_id: str, data: CreateRdpRequest, user: dict = Depends(get_current_user)):
+async def create_rdp(prev_id: str, data: CreateRdpRequest, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Create a new RdP (supplier quote request) from preventivo lines."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -124,7 +125,7 @@ async def create_rdp(prev_id: str, data: CreateRdpRequest, user: dict = Depends(
 
 
 @router.put("/{prev_id}/rdp/{rdp_id}/response")
-async def record_rdp_response(prev_id: str, rdp_id: str, data: RdpResponseInput, user: dict = Depends(get_current_user)):
+async def record_rdp_response(prev_id: str, rdp_id: str, data: RdpResponseInput, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Record supplier's price response."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -168,7 +169,7 @@ async def record_rdp_response(prev_id: str, rdp_id: str, data: RdpResponseInput,
 
 
 @router.post("/{prev_id}/rdp/{rdp_id}/apply-prices")
-async def apply_rdp_prices_to_preventivo(prev_id: str, rdp_id: str, data: UpdatePreventivoPricesInput, user: dict = Depends(get_current_user)):
+async def apply_rdp_prices_to_preventivo(prev_id: str, rdp_id: str, data: UpdatePreventivoPricesInput, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Apply supplier prices + markup to the preventivo lines."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -247,7 +248,7 @@ async def apply_rdp_prices_to_preventivo(prev_id: str, rdp_id: str, data: Update
 
 
 @router.post("/{prev_id}/rdp/{rdp_id}/convert-oda")
-async def convert_rdp_to_oda(prev_id: str, rdp_id: str, user: dict = Depends(get_current_user)):
+async def convert_rdp_to_oda(prev_id: str, rdp_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Convert an RdP to an OdA (Ordine di Acquisto) in the linked commessa."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -331,7 +332,7 @@ async def convert_rdp_to_oda(prev_id: str, rdp_id: str, user: dict = Depends(get
 
 
 @router.delete("/{prev_id}/rdp/{rdp_id}")
-async def delete_rdp(prev_id: str, rdp_id: str, user: dict = Depends(get_current_user)):
+async def delete_rdp(prev_id: str, rdp_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Delete an RdP."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -344,7 +345,7 @@ async def delete_rdp(prev_id: str, rdp_id: str, user: dict = Depends(get_current
 # ── PDF Generation ──
 
 @router.get("/{prev_id}/rdp/{rdp_id}/pdf")
-async def download_rdp_pdf(prev_id: str, rdp_id: str, user: dict = Depends(get_current_user)):
+async def download_rdp_pdf(prev_id: str, rdp_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Generate a professional PDF for the RdP to send to the supplier."""
     from fastapi.responses import StreamingResponse
     from io import BytesIO

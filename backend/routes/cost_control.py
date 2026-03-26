@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from services.invoice_line_processor import match_article, update_article_inventory, create_article_from_line
 from services.cost_calculator import calc_hourly_cost, calc_commessa_margin
 
@@ -65,7 +66,7 @@ class OreCommessaInput(BaseModel):
 # ── Company Costs Configuration ──────────────────────────────────
 
 @router.get("/company-costs")
-async def get_company_costs(user: dict = Depends(get_current_user)):
+async def get_company_costs(user: dict = Depends(require_role("admin", "amministrazione"))):
     """Get company cost configuration and calculated hourly rate."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -99,7 +100,7 @@ async def get_company_costs(user: dict = Depends(get_current_user)):
 
 
 @router.put("/company-costs")
-async def update_company_costs(data: CompanyCostsInput, user: dict = Depends(get_current_user)):
+async def update_company_costs(data: CompanyCostsInput, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Save/update company cost configuration."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -134,7 +135,7 @@ async def update_company_costs(data: CompanyCostsInput, user: dict = Depends(get
 # ── Log Hours to Commessa ────────────────────────────────────────
 
 @router.post("/commesse/{commessa_id}/ore")
-async def log_hours_to_commessa(commessa_id: str, data: OreCommessaInput, user: dict = Depends(get_current_user)):
+async def log_hours_to_commessa(commessa_id: str, data: OreCommessaInput, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Log worked hours to a commessa."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -257,7 +258,7 @@ def _generate_mock_invoices(user_id: str):
 # ── Endpoints ────────────────────────────────────────────────────
 
 @router.get("/invoices/pending")
-async def get_pending_invoices(user: dict = Depends(get_current_user)):
+async def get_pending_invoices(user: dict = Depends(require_role("admin", "amministrazione"))):
     """Get pending (unprocessed) real invoices from fatture_ricevute."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -298,7 +299,7 @@ async def get_pending_invoices(user: dict = Depends(get_current_user)):
 
 
 @router.get("/invoices/processed")
-async def get_processed_invoices(user: dict = Depends(get_current_user)):
+async def get_processed_invoices(user: dict = Depends(require_role("admin", "amministrazione"))):
     """Get already processed (assigned) cost entries."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -310,7 +311,7 @@ async def get_processed_invoices(user: dict = Depends(get_current_user)):
 
 
 @router.post("/invoices/{invoice_id}/assign")
-async def assign_invoice_cost(invoice_id: str, data: CostAssignment, user: dict = Depends(get_current_user)):
+async def assign_invoice_cost(invoice_id: str, data: CostAssignment, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Assign costs from an invoice to a commessa, magazzino, or spese generali."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -443,7 +444,7 @@ async def assign_invoice_cost(invoice_id: str, data: CostAssignment, user: dict 
 
 
 @router.get("/commessa/{commessa_id}")
-async def get_commessa_costs(commessa_id: str, user: dict = Depends(get_current_user)):
+async def get_commessa_costs(commessa_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Get all costs assigned to a specific commessa, with financial analysis."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -487,7 +488,7 @@ async def get_commessa_costs(commessa_id: str, user: dict = Depends(get_current_
 
 
 @router.get("/commesse-search")
-async def search_commesse_for_costs(q: str = "", user: dict = Depends(get_current_user)):
+async def search_commesse_for_costs(q: str = "", user: dict = Depends(require_role("admin", "amministrazione"))):
     """Search commesse for the cost assignment dropdown."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -505,7 +506,7 @@ async def search_commesse_for_costs(q: str = "", user: dict = Depends(get_curren
 # ── Smart Article Matching ───────────────────────────────────────
 
 @router.post("/invoices/{invoice_id}/match-articles")
-async def match_invoice_articles(invoice_id: str, user: dict = Depends(get_current_user)):
+async def match_invoice_articles(invoice_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Smart match invoice lines to existing articles in catalog."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -542,7 +543,7 @@ async def match_invoice_articles(invoice_id: str, user: dict = Depends(get_curre
 # ── Per-Row Allocation ───────────────────────────────────────────
 
 @router.post("/invoices/{invoice_id}/assign-rows")
-async def assign_invoice_rows(invoice_id: str, data: RowAllocationRequest, user: dict = Depends(get_current_user)):
+async def assign_invoice_rows(invoice_id: str, data: RowAllocationRequest, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Assign individual invoice rows to different destinations (magazzino, commessa, generale)."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -654,7 +655,7 @@ async def assign_invoice_rows(invoice_id: str, data: RowAllocationRequest, user:
 # ── Margin Analysis ──────────────────────────────────────────────
 
 @router.get("/margin-analysis")
-async def margin_analysis(user: dict = Depends(get_current_user)):
+async def margin_analysis(user: dict = Depends(require_role("admin", "amministrazione"))):
     """Get margin analysis for all commesse — includes labor cost at full hourly rate."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -713,14 +714,14 @@ async def margin_analysis(user: dict = Depends(get_current_user)):
 # ── Full Margin Analysis (v2 — all cost sources) ─────────────────
 
 @router.get("/margin-full")
-async def margin_analysis_full(user: dict = Depends(get_current_user)):
+async def margin_analysis_full(user: dict = Depends(require_role("admin", "amministrazione"))):
     """Full margin analysis for ALL commesse, aggregating all cost sources."""
     from services.margin_service import get_all_margins
     return await get_all_margins(user["user_id"])
 
 
 @router.get("/commessa/{commessa_id}/margin-full")
-async def commessa_margin_full(commessa_id: str, user: dict = Depends(get_current_user)):
+async def commessa_margin_full(commessa_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Full margin detail for a single commessa."""
     from services.margin_service import get_commessa_margin_full
     result = await get_commessa_margin_full(commessa_id, user["user_id"])
@@ -730,7 +731,7 @@ async def commessa_margin_full(commessa_id: str, user: dict = Depends(get_curren
 
 
 @router.get("/commessa/{commessa_id}/predict")
-async def commessa_predict(commessa_id: str, user: dict = Depends(get_current_user)):
+async def commessa_predict(commessa_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Predictive margin analysis for a commessa based on historical data."""
     from services.margin_service import predict_margin
     result = await predict_margin(commessa_id, user["user_id"])

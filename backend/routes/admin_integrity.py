@@ -5,7 +5,8 @@ a proper admin API with report storage and history.
 """
 from fastapi import APIRouter, Depends, HTTPException
 from core.database import db
-from core.security import get_current_user, tenant_match
+from core.security import get_current_user
+from core.rbac import require_role
 from datetime import datetime, timezone
 import logging
 import uuid
@@ -280,7 +281,7 @@ async def _check_legacy():
 
 
 @router.post("/run")
-async def run_integrity_check(user: dict = Depends(get_current_user)):
+async def run_integrity_check(user: dict = Depends(require_role("admin"))):
     """Execute a full data integrity check and store the report."""
     _require_admin(user)
 
@@ -341,7 +342,7 @@ async def run_integrity_check(user: dict = Depends(get_current_user)):
 
 
 @router.get("/latest")
-async def get_latest_report(user: dict = Depends(get_current_user)):
+async def get_latest_report(user: dict = Depends(require_role("admin"))):
     """Get the most recent data integrity report."""
     _require_admin(user)
 
@@ -358,7 +359,7 @@ async def get_latest_report(user: dict = Depends(get_current_user)):
 
 
 @router.get("/history")
-async def get_report_history(user: dict = Depends(get_current_user), limit: int = 10):
+async def get_report_history(user: dict = Depends(require_role("admin")), limit: int = 10):
     """Get history of past data integrity reports (summary only)."""
     _require_admin(user)
 

@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from services.audit_trail import log_activity
 
 router = APIRouter(prefix="/commesse", tags=["commesse"])
@@ -225,7 +226,7 @@ async def list_commesse(
     search: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina")),
 ):
     q = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if status:
@@ -253,7 +254,7 @@ async def list_commesse(
 
 
 @router.post("/", status_code=201)
-async def create_commessa(data: CommessaCreate, user: dict = Depends(get_current_user)):
+async def create_commessa(data: CommessaCreate, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     from services.client_snapshot import build_snapshot
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -323,7 +324,7 @@ async def get_stati_meta():
 
 
 @router.get("/board/view")
-async def get_board_view(user: dict = Depends(get_current_user)):
+async def get_board_view(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Return all commesse grouped by Kanban status for the board.
     Also includes accepted quotes (preventivi accettati) without a linked commessa.
     """
@@ -388,7 +389,7 @@ async def get_board_view(user: dict = Depends(get_current_user)):
 
 
 @router.get("/{commessa_id}")
-async def get_commessa(commessa_id: str, user: dict = Depends(get_current_user)):
+async def get_commessa(commessa_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     doc = await db[COLLECTION].find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )
@@ -399,7 +400,7 @@ async def get_commessa(commessa_id: str, user: dict = Depends(get_current_user))
 
 
 @router.put("/{commessa_id}")
-async def update_commessa(commessa_id: str, data: CommessaUpdate, user: dict = Depends(get_current_user)):
+async def update_commessa(commessa_id: str, data: CommessaUpdate, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     uid = user["user_id"]
     tid = user["tenant_id"]
     existing = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": uid, "tenant_id": tenant_match(user)})
@@ -423,7 +424,7 @@ async def update_commessa(commessa_id: str, data: CommessaUpdate, user: dict = D
 
 
 @router.delete("/{commessa_id}")
-async def delete_commessa(commessa_id: str, user: dict = Depends(get_current_user)):
+async def delete_commessa(commessa_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     doc = await db[COLLECTION].find_one({"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0, "moduli": 1, "numero": 1})
     if not doc:
         raise HTTPException(404, "Commessa non trovata")
@@ -447,7 +448,7 @@ async def delete_commessa(commessa_id: str, user: dict = Depends(get_current_use
 async def update_commessa_status(
     commessa_id: str,
     new_status: str = Body(..., embed=True),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina")),
 ):
     """Update Kanban status — called on drag & drop. Does NOT change lifecycle stato."""
     uid = user["user_id"]
@@ -483,7 +484,7 @@ class ChecklistToggle(BaseModel):
 async def toggle_checklist_item(
     commessa_id: str, item_key: str,
     body: ChecklistToggle,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))
 ):
     """Toggle a single checklist item. Uses $set puntuale."""
     uid = user["user_id"]
@@ -512,7 +513,7 @@ async def toggle_checklist_item(
 
 
 @router.post("/{commessa_id}/eventi")
-async def emit_event(commessa_id: str, req: EventoRequest, user: dict = Depends(get_current_user)):
+async def emit_event(commessa_id: str, req: EventoRequest, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Emit a lifecycle event. Validates state transition rules."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -615,7 +616,7 @@ MODULE_FIELDS = {
 
 
 @router.get("/{commessa_id}/available-modules")
-async def get_available_modules(commessa_id: str, tipo: str = "preventivo", user: dict = Depends(get_current_user)):
+async def get_available_modules(commessa_id: str, tipo: str = "preventivo", user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Get available modules of a given type for linking to a commessa."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -680,7 +681,7 @@ async def get_available_modules(commessa_id: str, tipo: str = "preventivo", user
 
 
 @router.post("/{commessa_id}/link-module")
-async def link_module(commessa_id: str, req: LinkModuleRequest, user: dict = Depends(get_current_user)):
+async def link_module(commessa_id: str, req: LinkModuleRequest, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Link a module (preventivo, fattura, etc.) to this commessa."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -732,7 +733,7 @@ async def link_module(commessa_id: str, req: LinkModuleRequest, user: dict = Dep
 
 
 @router.post("/{commessa_id}/unlink-module")
-async def unlink_module(commessa_id: str, req: LinkModuleRequest, user: dict = Depends(get_current_user)):
+async def unlink_module(commessa_id: str, req: LinkModuleRequest, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Unlink a module from this commessa."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -765,7 +766,7 @@ async def unlink_module(commessa_id: str, req: LinkModuleRequest, user: dict = D
 # ── Hub View (aggregated) ────────────────────────────────────────
 
 @router.get("/{commessa_id}/hub")
-async def get_commessa_hub(commessa_id: str, user: dict = Depends(get_current_user)):
+async def get_commessa_hub(commessa_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Full hub view: commessa + all linked modules fetched from their collections."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -932,7 +933,7 @@ def analyze_preventivo_content(preventivo: dict):
 # ── Analyze Preventivo (for frontend conflict detection) ─────────
 
 @router.get("/analyze-preventivo/{preventivo_id}")
-async def analyze_preventivo_endpoint(preventivo_id: str, user: dict = Depends(get_current_user)):
+async def analyze_preventivo_endpoint(preventivo_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Analyze a preventivo's lines and detect normativa conflicts (EN 1090 vs EN 13241)."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -1116,7 +1117,7 @@ async def _create_single_commessa(preventivo, user, normativa_override=None, ite
 
 
 @router.post("/from-preventivo/{preventivo_id}")
-async def create_commessa_from_preventivo(preventivo_id: str, user: dict = Depends(get_current_user)):
+async def create_commessa_from_preventivo(preventivo_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Create a commessa from a Preventivo — auto-links the preventivo module.
     Smart Quote Analysis: auto-detects normativa (EN 1090 vs EN 13241) and azionamento from content.
     """
@@ -1129,7 +1130,7 @@ async def create_commessa_from_preventivo(preventivo_id: str, user: dict = Depen
 
 
 @router.post("/from-preventivo/{preventivo_id}/generica")
-async def create_commessa_generica(preventivo_id: str, user: dict = Depends(get_current_user)):
+async def create_commessa_generica(preventivo_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Create a generic commessa (no NF number, no normativa) for tracking OdA etc.
     Used for non-structural work that still needs order tracking and planning.
     """
@@ -1213,7 +1214,7 @@ class SplitCommessaRequest(BaseModel):
     commesse: List[SplitCommessaConfig]
 
 @router.post("/from-preventivo/{preventivo_id}/split")
-async def create_split_commesse(preventivo_id: str, body: SplitCommessaRequest, user: dict = Depends(get_current_user)):
+async def create_split_commesse(preventivo_id: str, body: SplitCommessaRequest, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Create multiple commesse from a single Preventivo (split by normativa).
     Each commessa gets only the items assigned to it.
     """
@@ -1270,7 +1271,7 @@ CHIUSURA_DIRETTA_ALLOWED = [
 async def complete_commessa_simple(
     commessa_id: str,
     note: Optional[str] = Body(None, embed=True),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina")),
 ):
     """Close a commessa directly without going through certification/production steps."""
     uid = user["user_id"]
@@ -1324,7 +1325,7 @@ async def complete_commessa_simple(
 # ── Dossier Unico di Commessa ────────────────────────────────────
 
 @router.get("/{commessa_id}/dossier")
-async def generate_commessa_dossier(commessa_id: str, user: dict = Depends(get_current_user)):
+async def generate_commessa_dossier(commessa_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
     """Generate the professional Technical Dossier (Fascicolo Tecnico).
     Replaces the old event-log dossier with the full EN 1090 document."""
     from services.pdf_super_fascicolo import generate_super_fascicolo

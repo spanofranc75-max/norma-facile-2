@@ -19,6 +19,7 @@ from weasyprint import HTML
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 
 router = APIRouter(prefix="/riesame", tags=["riesame-tecnico"])
 logger = logging.getLogger(__name__)
@@ -361,7 +362,7 @@ class RiesameApprova(BaseModel):
 
 
 @router.get("/{commessa_id}")
-async def get_riesame(commessa_id: str, user: dict = Depends(get_current_user)):
+async def get_riesame(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Stato del riesame tecnico con check selettivi per normativa."""
     commessa = await db.commesse.find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -458,7 +459,7 @@ async def get_riesame(commessa_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.post("/{commessa_id}")
-async def save_riesame(commessa_id: str, data: RiesameNote, user: dict = Depends(get_current_user)):
+async def save_riesame(commessa_id: str, data: RiesameNote, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Salva i check manuali e le note del riesame (non ancora approvato)."""
     commessa = await db.commesse.find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0, "commessa_id": 1}
@@ -493,7 +494,7 @@ async def save_riesame(commessa_id: str, data: RiesameNote, user: dict = Depends
 
 
 @router.post("/{commessa_id}/approva")
-async def approva_riesame(commessa_id: str, data: RiesameApprova, user: dict = Depends(get_current_user)):
+async def approva_riesame(commessa_id: str, data: RiesameApprova, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Firma e approva il riesame tecnico. Immutabile dopo approvazione."""
     commessa = await db.commesse.find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -564,7 +565,7 @@ async def approva_riesame(commessa_id: str, data: RiesameApprova, user: dict = D
 
 
 @router.get("/{commessa_id}/pdf")
-async def genera_pdf_riesame(commessa_id: str, user: dict = Depends(get_current_user)):
+async def genera_pdf_riesame(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Genera il PDF Verbale di Riesame Tecnico."""
     commessa = await db.commesse.find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}

@@ -10,7 +10,8 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import Optional, List
 
-from core.security import get_current_user, tenant_match
+from core.security import get_current_user
+from core.rbac import require_role
 from core.rate_limiter import limiter
 from services.cantieri_sicurezza_service import (
     crea_cantiere, get_cantiere, get_cantieri_by_commessa, list_cantieri,
@@ -63,7 +64,7 @@ class AggiornaCantiereSicurezzaRequest(BaseModel):
 # ═══════════════════════════════════════════════════════════════════
 
 @router.post("/cantieri-sicurezza")
-async def api_crea_cantiere(body: CreaCantiereSicurezzaRequest, user: dict = Depends(get_current_user)):
+async def api_crea_cantiere(body: CreaCantiereSicurezzaRequest, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     result = await crea_cantiere(user["user_id"], body.commessa_id, body.pre_fill)
     await log_activity(user, "create", "cantiere_sicurezza", result.get("cantiere_id", ""),
                        label=result.get("nome_cantiere", "Nuovo cantiere"),
@@ -72,12 +73,12 @@ async def api_crea_cantiere(body: CreaCantiereSicurezzaRequest, user: dict = Dep
 
 
 @router.get("/cantieri-sicurezza")
-async def api_list_cantieri(user: dict = Depends(get_current_user)):
+async def api_list_cantieri(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     return await list_cantieri(user["user_id"])
 
 
 @router.get("/cantieri-sicurezza/{cantiere_id}")
-async def api_get_cantiere(cantiere_id: str, user: dict = Depends(get_current_user)):
+async def api_get_cantiere(cantiere_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     doc = await get_cantiere(cantiere_id, user["user_id"])
     if not doc:
         raise HTTPException(status_code=404, detail="Cantiere sicurezza non trovato")
@@ -85,12 +86,12 @@ async def api_get_cantiere(cantiere_id: str, user: dict = Depends(get_current_us
 
 
 @router.get("/cantieri-sicurezza/commessa/{commessa_id}")
-async def api_get_cantieri_by_commessa(commessa_id: str, user: dict = Depends(get_current_user)):
+async def api_get_cantieri_by_commessa(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     return await get_cantieri_by_commessa(commessa_id, user["user_id"])
 
 
 @router.put("/cantieri-sicurezza/{cantiere_id}")
-async def api_aggiorna_cantiere(cantiere_id: str, body: AggiornaCantiereSicurezzaRequest, user: dict = Depends(get_current_user)):
+async def api_aggiorna_cantiere(cantiere_id: str, body: AggiornaCantiereSicurezzaRequest, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     updates = body.model_dump(exclude_none=True)
     if not updates:
         raise HTTPException(status_code=400, detail="Nessun campo da aggiornare")
@@ -113,7 +114,7 @@ async def api_aggiorna_cantiere(cantiere_id: str, body: AggiornaCantiereSicurezz
 
 
 @router.delete("/cantieri-sicurezza/{cantiere_id}")
-async def api_elimina_cantiere(cantiere_id: str, user: dict = Depends(get_current_user)):
+async def api_elimina_cantiere(cantiere_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     doc = await get_cantiere(cantiere_id, user["user_id"])
     if not await elimina_cantiere(cantiere_id, user["user_id"]):
         raise HTTPException(status_code=404, detail="Cantiere sicurezza non trovato")
@@ -124,7 +125,7 @@ async def api_elimina_cantiere(cantiere_id: str, user: dict = Depends(get_curren
 
 
 @router.get("/cantieri-sicurezza/{cantiere_id}/gate")
-async def api_gate_pos(cantiere_id: str, user: dict = Depends(get_current_user)):
+async def api_gate_pos(cantiere_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     doc = await get_cantiere(cantiere_id, user["user_id"])
     if not doc:
         raise HTTPException(status_code=404, detail="Cantiere sicurezza non trovato")
@@ -133,7 +134,7 @@ async def api_gate_pos(cantiere_id: str, user: dict = Depends(get_current_user))
 
 @router.post("/cantieri-sicurezza/{cantiere_id}/ai-precompila")
 @limiter.limit("10/minute")
-async def api_ai_precompila(request: Request, cantiere_id: str, user: dict = Depends(get_current_user)):
+async def api_ai_precompila(request: Request, cantiere_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """S3 — AI precompilation of safety cantiere from commessa/istruttoria/preventivo data."""
     result = await ai_precompila_cantiere(cantiere_id, user["user_id"])
     if result.get("error"):
@@ -153,7 +154,7 @@ async def api_genera_pos(
     request: Request,
     cantiere_id: str,
     mode: str = "bozza_revisione",
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     """S4 — Generate POS DOCX draft from cantiere data."""
     result = await genera_pos_docx(cantiere_id, user["user_id"], mode=mode)
@@ -179,7 +180,7 @@ async def api_genera_pos(
 
 
 @router.get("/cantieri-sicurezza/{cantiere_id}/pos-generazioni")
-async def api_pos_generazioni(cantiere_id: str, user: dict = Depends(get_current_user)):
+async def api_pos_generazioni(cantiere_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Get POS generation history for a cantiere."""
     doc = await get_cantiere(cantiere_id, user["user_id"])
     if not doc:
@@ -193,7 +194,7 @@ async def api_pos_generazioni(cantiere_id: str, user: dict = Depends(get_current
 
 
 @router.get("/ruoli-disponibili")
-async def api_ruoli_disponibili(user: dict = Depends(get_current_user)):
+async def api_ruoli_disponibili(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Lista ruoli disponibili per soggetti commessa/cantiere."""
     return ALL_RUOLI
 
@@ -202,34 +203,34 @@ async def api_ruoli_disponibili(user: dict = Depends(get_current_user)):
 # ═══════════════════════════════════════════════════════════════════
 
 @router.get("/libreria/fasi")
-async def api_fasi_lavoro(normativa: Optional[str] = None, user: dict = Depends(get_current_user)):
+async def api_fasi_lavoro(normativa: Optional[str] = None, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Lista fasi di lavoro, opzionalmente filtrate per normativa."""
     await seed_libreria_v2(user["user_id"])
     return await get_fasi_lavoro(user["user_id"], normativa)
 
 
 @router.get("/libreria/rischi")
-async def api_rischi_sicurezza(categoria: Optional[str] = None, user: dict = Depends(get_current_user)):
+async def api_rischi_sicurezza(categoria: Optional[str] = None, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Lista rischi sicurezza, opzionalmente filtrati per categoria."""
     await seed_libreria_v2(user["user_id"])
     return await get_rischi_sicurezza(user["user_id"], categoria)
 
 
 @router.get("/libreria/dpi-misure")
-async def api_dpi_misure(tipo: Optional[str] = None, user: dict = Depends(get_current_user)):
+async def api_dpi_misure(tipo: Optional[str] = None, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Lista DPI/misure/apprestamenti, opzionalmente filtrati per tipo."""
     await seed_libreria_v2(user["user_id"])
     return await get_dpi_misure(user["user_id"], tipo)
 
 
 @router.post("/libreria/seed")
-async def api_seed_libreria(user: dict = Depends(get_current_user)):
+async def api_seed_libreria(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Forza il seed della libreria a 3 livelli (idempotente)."""
     return await seed_libreria_v2(user["user_id"])
 
 
 @router.post("/libreria/resolve-rischi")
-async def api_resolve_rischi(body: dict, user: dict = Depends(get_current_user)):
+async def api_resolve_rischi(body: dict, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Risolve una lista di codici rischio nei loro dettagli completi."""
     codici = body.get("codici", [])
     if not codici:
@@ -238,7 +239,7 @@ async def api_resolve_rischi(body: dict, user: dict = Depends(get_current_user))
 
 
 @router.post("/libreria/resolve-dpi")
-async def api_resolve_dpi(body: dict, user: dict = Depends(get_current_user)):
+async def api_resolve_dpi(body: dict, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Risolve una lista di codici DPI/misure nei loro dettagli completi."""
     codici = body.get("codici", [])
     if not codici:
@@ -251,7 +252,7 @@ async def api_resolve_dpi(body: dict, user: dict = Depends(get_current_user)):
 # ═══════════════════════════════════════════════════════════════════
 
 @router.get("/libreria-rischi")
-async def api_libreria_rischi_compat(tipo: Optional[str] = None, user: dict = Depends(get_current_user)):
+async def api_libreria_rischi_compat(tipo: Optional[str] = None, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Backward compatible: returns all library entries in flat format."""
     await seed_libreria_v2(user["user_id"])
     if tipo == "fase_lavoro":
@@ -266,11 +267,11 @@ async def api_libreria_rischi_compat(tipo: Optional[str] = None, user: dict = De
 
 
 @router.get("/libreria-rischi/fasi/{normativa}")
-async def api_fasi_normativa_compat(normativa: str, user: dict = Depends(get_current_user)):
+async def api_fasi_normativa_compat(normativa: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     await seed_libreria_v2(user["user_id"])
     return await get_fasi_lavoro(user["user_id"], normativa)
 
 
 @router.post("/libreria-rischi/seed")
-async def api_seed_compat(user: dict = Depends(get_current_user)):
+async def api_seed_compat(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     return await seed_libreria_v2(user["user_id"])

@@ -20,6 +20,7 @@ from pydantic import BaseModel
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.rate_limiter import limiter
 from services.preventivatore_predittivo import (
     analyze_drawing_materials,
@@ -74,7 +75,7 @@ class AnalizzaRigheRequest(BaseModel):
 async def analizza_righe_preventivo(
     request: Request,
     data: AnalizzaRigheRequest,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico")),
 ):
     """Analizza le righe di un preventivo usando AI per estrarre profili, pesi e struttura.
     
@@ -233,13 +234,13 @@ Rispondi SOLO con JSON valido:
 
 
 @router.get("/tabella-ore")
-async def get_tabella_ore(user: dict = Depends(get_current_user)):
+async def get_tabella_ore(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Tabella parametrica ore/kg per tipologia struttura."""
     return {"tabella": TABELLA_ORE_KG}
 
 
 @router.get("/prezzi-storici")
-async def get_prezzi_storici(user: dict = Depends(get_current_user)):
+async def get_prezzi_storici(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Prezzi medi storici da DDT e fatture acquisto."""
     prezzi = await calcola_prezzi_storici(user["user_id"], db)
     return {"prezzi": prezzi}
@@ -250,7 +251,7 @@ async def get_prezzi_storici(user: dict = Depends(get_current_user)):
 async def analyze_drawing(
     request: Request,
     file: UploadFile = File(...),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico")),
 ):
     """Analizza un disegno tecnico caricato e estrae tutti i materiali."""
     content = await file.read()
@@ -331,7 +332,7 @@ async def analyze_drawing(
 
 
 @router.post("/calcola")
-async def calcola(data: CalcolaRequest, user: dict = Depends(get_current_user)):
+async def calcola(data: CalcolaRequest, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Calcola il preventivo predittivo con margini differenziati."""
     # Calculate total weight — from materials or from manual peso_kg_target
     peso_totale = sum(calcola_peso_materiale(m) for m in data.materiali)
@@ -406,7 +407,7 @@ async def calcola(data: CalcolaRequest, user: dict = Depends(get_current_user)):
 
 
 @router.post("/genera-preventivo")
-async def genera_preventivo(data: GeneraPreventivoRequest, user: dict = Depends(get_current_user)):
+async def genera_preventivo(data: GeneraPreventivoRequest, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Genera un preventivo ufficiale dal calcolo predittivo."""
     calcolo = data.calcolo
     riepilogo = calcolo.get("riepilogo", {})
@@ -533,7 +534,7 @@ async def genera_preventivo(data: GeneraPreventivoRequest, user: dict = Depends(
 
 
 @router.post("/accetta/{preventivo_id}")
-async def accetta_e_genera_commessa(preventivo_id: str, user: dict = Depends(get_current_user)):
+async def accetta_e_genera_commessa(preventivo_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """
     Accetta un preventivo predittivo e genera automaticamente la Commessa
     con materiali, ore stimate e budget pre-compilati.
@@ -687,7 +688,7 @@ class ConfrontaRequest(BaseModel):
 
 
 @router.post("/confronta")
-async def confronta_preventivi(data: ConfrontaRequest, user: dict = Depends(get_current_user)):
+async def confronta_preventivi(data: ConfrontaRequest, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """
     Confronta un preventivo generato dall'AI con uno manuale.
     Calcola delta per voce, scostamento percentuale, e confidence score.

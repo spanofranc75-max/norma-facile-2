@@ -13,6 +13,7 @@ import uuid
 import logging
 
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from models.cam import (
     MetodoProduttivo, calcola_cam_commessa, calcola_conformita_cam, calcola_co2_risparmiata,
@@ -89,7 +90,7 @@ async def get_soglie_cam():
 
 
 @router.post("/lotti")
-async def create_lotto_cam(data: LottoMaterialeCAM, user: dict = Depends(get_current_user)):
+async def create_lotto_cam(data: LottoMaterialeCAM, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Crea un nuovo lotto materiale con dati CAM."""
     lotto_id = f"lot_{uuid.uuid4().hex[:10]}"
     
@@ -145,7 +146,7 @@ async def list_lotti_cam(
     commessa_id: Optional[str] = None,
     fornitore: Optional[str] = None,
     solo_conformi: bool = False,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Lista lotti materiali CAM."""
     query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
@@ -163,7 +164,7 @@ async def list_lotti_cam(
 
 
 @router.get("/lotti/{lotto_id}")
-async def get_lotto_cam(lotto_id: str, user: dict = Depends(get_current_user)):
+async def get_lotto_cam(lotto_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Dettaglio singolo lotto CAM."""
     lotto = await db.lotti_cam.find_one(
         {"lotto_id": lotto_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -175,7 +176,7 @@ async def get_lotto_cam(lotto_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.put("/lotti/{lotto_id}")
-async def update_lotto_cam(lotto_id: str, data: LottoMaterialeCAM, user: dict = Depends(get_current_user)):
+async def update_lotto_cam(lotto_id: str, data: LottoMaterialeCAM, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Aggiorna un lotto CAM."""
     existing = await db.lotti_cam.find_one({"lotto_id": lotto_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     if not existing:
@@ -222,7 +223,7 @@ async def update_lotto_cam(lotto_id: str, data: LottoMaterialeCAM, user: dict = 
 
 
 @router.delete("/lotti/{lotto_id}")
-async def delete_lotto_cam(lotto_id: str, user: dict = Depends(get_current_user)):
+async def delete_lotto_cam(lotto_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Elimina un singolo lotto CAM."""
     result = await db.lotti_cam.delete_one({"lotto_id": lotto_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     if result.deleted_count == 0:
@@ -232,7 +233,7 @@ async def delete_lotto_cam(lotto_id: str, user: dict = Depends(get_current_user)
 
 
 @router.delete("/lotti/commessa/{commessa_id}")
-async def delete_all_lotti_cam(commessa_id: str, user: dict = Depends(get_current_user)):
+async def delete_all_lotti_cam(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Elimina tutti i lotti CAM di una commessa."""
     result = await db.lotti_cam.delete_many({"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     logger.info(f"Deleted {result.deleted_count} CAM lotti for commessa {commessa_id}")
@@ -244,7 +245,7 @@ async def delete_all_lotti_cam(commessa_id: str, user: dict = Depends(get_curren
 # ══════════════════════════════════════════════════════════════════
 
 @router.post("/calcola/{commessa_id}")
-async def calcola_cam_per_commessa(commessa_id: str, user: dict = Depends(get_current_user)):
+async def calcola_cam_per_commessa(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """
     Calcola la conformità CAM totale per una commessa.
     Usa i lotti materiali associati alla commessa.
@@ -323,7 +324,7 @@ async def calcola_cam_per_commessa(commessa_id: str, user: dict = Depends(get_cu
 
 
 @router.get("/calcolo/{commessa_id}")
-async def get_calcolo_cam(commessa_id: str, user: dict = Depends(get_current_user)):
+async def get_calcolo_cam(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Recupera l'ultimo calcolo CAM per una commessa."""
     calcolo = await db.calcoli_cam.find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -344,7 +345,7 @@ async def import_cam_da_certificato(
     doc_id: str,
     commessa_id: str,
     peso_kg: float = 0,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """
     Importa dati CAM da un certificato già analizzato con AI.
@@ -403,7 +404,7 @@ def _map_cert_type(cert_str: str | None) -> str:
 # ══════════════════════════════════════════════════════════════════
 
 @router.get("/dichiarazione-pdf/{commessa_id}")
-async def genera_dichiarazione_cam_pdf(commessa_id: str, user: dict = Depends(get_current_user)):
+async def genera_dichiarazione_cam_pdf(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """
     Genera la Dichiarazione di Conformità CAM come PDF.
     Calcola al volo i dati e produce il documento ufficiale.
@@ -461,7 +462,7 @@ async def genera_dichiarazione_cam_pdf(commessa_id: str, user: dict = Depends(ge
 @router.get("/report-aziendale")
 async def report_aziendale_cam(
     anno: Optional[int] = None,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """
     Report riepilogativo CAM multi-commessa con calcolo CO2.
@@ -635,7 +636,7 @@ async def report_aziendale_cam(
 @router.get("/report-aziendale/pdf")
 async def report_aziendale_cam_pdf(
     anno: Optional[int] = None,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Genera il PDF del Bilancio di Sostenibilità Ambientale."""
     # Get report data
@@ -669,7 +670,7 @@ async def report_aziendale_cam_pdf(
 @router.get("/green-certificate/{commessa_id}")
 async def green_certificate_pdf(
     commessa_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Generate a branded Green Certificate PDF for a specific commessa."""
     uid = user["user_id"]
@@ -715,7 +716,7 @@ async def green_certificate_pdf(
     )
 
 @router.get("/archivio-certificati")
-async def get_archivio_certificati(user: dict = Depends(get_current_user)):
+async def get_archivio_certificati(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Get all unassigned certificate profiles from the archive."""
     cursor = db.archivio_certificati.find(
         {"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -726,7 +727,7 @@ async def get_archivio_certificati(user: dict = Depends(get_current_user)):
 
 @router.post("/archivio-certificati/{numero_colata}/assegna")
 async def assegna_archivio_a_commessa(
-    numero_colata: str, commessa_id: str, user: dict = Depends(get_current_user)
+    numero_colata: str, commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Assign an archived certificate profile to a commessa."""
     item = await db.archivio_certificati.find_one(
@@ -773,7 +774,7 @@ async def assegna_archivio_a_commessa(
 # ══════════════════════════════════════════════════════════════════
 
 @router.get("/alert/{commessa_id}")
-async def cam_alert(commessa_id: str, user: dict = Depends(get_current_user)):
+async def cam_alert(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Check CAM compliance status for a commessa BEFORE PDF generation.
     Returns alert level and actionable suggestions."""
     uid = user["user_id"]
@@ -871,7 +872,7 @@ async def cam_alert(commessa_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.get("/report-mensile/pdf")
-async def report_cam_mensile_pdf(user: dict = Depends(get_current_user)):
+async def report_cam_mensile_pdf(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Report CAM Mensile — PDF con trend % riciclato, breakdown commesse, proiezione trimestrale."""
     import html as html_mod
     from weasyprint import HTML as WP_HTML

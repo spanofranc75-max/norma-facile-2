@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from services.commesse_normative_service import (
     get_ramo, crea_ramo,
@@ -56,14 +57,14 @@ class AggiornaEmissioneRequest(BaseModel):
 # ═══════════════════════════════════════════════════════════════════
 
 @router.get("/commesse-normative/{commessa_id}")
-async def list_rami_normativi(commessa_id: str, user: dict = Depends(get_current_user)):
+async def list_rami_normativi(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Lista rami normativi di una commessa (include legacy wrap)."""
     branches = await get_normative_branches(commessa_id, user["user_id"])
     return {"rami": branches, "total": len(branches)}
 
 
 @router.post("/commesse-normative/{commessa_id}", status_code=201)
-async def create_ramo_normativo(commessa_id: str, body: CreaRamoRequest, user: dict = Depends(get_current_user)):
+async def create_ramo_normativo(commessa_id: str, body: CreaRamoRequest, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Crea un ramo normativo manualmente."""
     if body.normativa not in NORMATIVE_VALIDE:
         raise HTTPException(400, f"Normativa non valida. Valori ammessi: {', '.join(NORMATIVE_VALIDE)}")
@@ -89,7 +90,7 @@ async def create_ramo_normativo(commessa_id: str, body: CreaRamoRequest, user: d
 
 
 @router.get("/commesse-normative/{commessa_id}/{ramo_id}")
-async def get_ramo_dettaglio(commessa_id: str, ramo_id: str, user: dict = Depends(get_current_user)):
+async def get_ramo_dettaglio(commessa_id: str, ramo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Dettaglio singolo ramo con emissioni."""
     ramo = await get_ramo(ramo_id, user["user_id"])
     if not ramo or ramo["commessa_id"] != commessa_id:
@@ -104,7 +105,7 @@ async def get_ramo_dettaglio(commessa_id: str, ramo_id: str, user: dict = Depend
 
 
 @router.post("/commesse-normative/genera-da-istruttoria/{preventivo_id}")
-async def genera_rami_da_istruttoria(preventivo_id: str, user: dict = Depends(get_current_user)):
+async def genera_rami_da_istruttoria(preventivo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Auto-genera rami normativi dalla segmentazione confermata di un'istruttoria.
     Idempotente: se i rami esistono, li aggiorna senza duplicare.
 
@@ -173,7 +174,7 @@ async def genera_rami_da_istruttoria(preventivo_id: str, user: dict = Depends(ge
 # ═══════════════════════════════════════════════════════════════════
 
 @router.get("/emissioni/{ramo_id}")
-async def list_emissioni(ramo_id: str, user: dict = Depends(get_current_user)):
+async def list_emissioni(ramo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Lista emissioni di un ramo normativo."""
     ramo = await get_ramo(ramo_id, user["user_id"])
     if not ramo:
@@ -184,7 +185,7 @@ async def list_emissioni(ramo_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.post("/emissioni/{ramo_id}", status_code=201)
-async def create_emissione(ramo_id: str, body: CreaEmissioneRequest, user: dict = Depends(get_current_user)):
+async def create_emissione(ramo_id: str, body: CreaEmissioneRequest, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Crea una nuova emissione documentale. Solo trigger esplicito utente."""
     try:
         emissione = await crea_emissione(
@@ -207,7 +208,7 @@ async def create_emissione(ramo_id: str, body: CreaEmissioneRequest, user: dict 
 
 
 @router.get("/emissioni/{ramo_id}/{emissione_id}")
-async def get_emissione_dettaglio(ramo_id: str, emissione_id: str, user: dict = Depends(get_current_user)):
+async def get_emissione_dettaglio(ramo_id: str, emissione_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Dettaglio singola emissione."""
     emissione = await get_emissione(emissione_id, user["user_id"])
     if not emissione or emissione["ramo_id"] != ramo_id:
@@ -216,7 +217,7 @@ async def get_emissione_dettaglio(ramo_id: str, emissione_id: str, user: dict = 
 
 
 @router.patch("/emissioni/{ramo_id}/{emissione_id}")
-async def update_emissione(ramo_id: str, emissione_id: str, body: AggiornaEmissioneRequest, user: dict = Depends(get_current_user)):
+async def update_emissione(ramo_id: str, emissione_id: str, body: AggiornaEmissioneRequest, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Aggiorna un'emissione (solo se non emessa/annullata)."""
     em = await get_emissione(emissione_id, user["user_id"])
     if not em or em["ramo_id"] != ramo_id:
@@ -243,7 +244,7 @@ async def update_emissione(ramo_id: str, emissione_id: str, body: AggiornaEmissi
 
 
 @router.get("/emissioni/{ramo_id}/{emissione_id}/gate")
-async def get_evidence_gate(ramo_id: str, emissione_id: str, user: dict = Depends(get_current_user)):
+async def get_evidence_gate(ramo_id: str, emissione_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Check Evidence Gate completo per una singola emissione.
     Restituisce: checks[], blockers[], warnings[], completion_percent, emittable."""
     em = await get_emissione(emissione_id, user["user_id"])
@@ -263,7 +264,7 @@ async def get_evidence_gate(ramo_id: str, emissione_id: str, user: dict = Depend
 
 
 @router.post("/emissioni/{ramo_id}/{emissione_id}/emetti")
-async def emetti(ramo_id: str, emissione_id: str, user: dict = Depends(get_current_user)):
+async def emetti(ramo_id: str, emissione_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Emetti l'emissione (solo se Evidence Gate OK)."""
     em = await get_emissione(emissione_id, user["user_id"])
     if not em or em["ramo_id"] != ramo_id:
@@ -293,7 +294,7 @@ async def emetti(ramo_id: str, emissione_id: str, user: dict = Depends(get_curre
 # ═══════════════════════════════════════════════════════════════════
 
 @router.get("/commesse/{commessa_id}/gerarchia")
-async def get_commessa_gerarchia(commessa_id: str, user: dict = Depends(get_current_user)):
+async def get_commessa_gerarchia(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Vista completa: commessa madre + rami + emissioni (struttura ad albero)."""
     try:
         gerarchia = await get_gerarchia(commessa_id, user["user_id"])
@@ -307,7 +308,7 @@ async def get_commessa_gerarchia(commessa_id: str, user: dict = Depends(get_curr
 # ═══════════════════════════════════════════════════════════════════
 
 @router.post("/commesse-normative/{commessa_id}/materializza-legacy")
-async def materializza_legacy(commessa_id: str, user: dict = Depends(get_current_user)):
+async def materializza_legacy(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Converte una commessa legacy in un ramo normativo reale (lazy on-access)."""
     ramo = await materializza_ramo_legacy(commessa_id, user["user_id"])
     if not ramo:

@@ -11,6 +11,7 @@ from io import BytesIO
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from routes.commessa_ops_common import (
     COLL, get_commessa_or_404, ensure_ops_fields,
     ts, new_id, push_event, build_update_with_event,
@@ -55,7 +56,7 @@ class RientroData(BaseModel):
 
 
 @router.post("/{cid}/conto-lavoro")
-async def create_conto_lavoro(cid: str, data: ContoLavoroCreate, user: dict = Depends(get_current_user)):
+async def create_conto_lavoro(cid: str, data: ContoLavoroCreate, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     cl = {
@@ -87,7 +88,7 @@ async def create_conto_lavoro(cid: str, data: ContoLavoroCreate, user: dict = De
 
 
 @router.put("/{cid}/conto-lavoro/{cl_id}")
-async def update_conto_lavoro(cid: str, cl_id: str, data: ContoLavoroUpdate, user: dict = Depends(get_current_user)):
+async def update_conto_lavoro(cid: str, cl_id: str, data: ContoLavoroUpdate, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     comm = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     upd = {"conto_lavoro.$[elem].stato": data.stato}
@@ -183,7 +184,7 @@ async def registra_rientro_cl(
     note_rientro: str = Form(""),
     motivo_non_conformita: str = Form(""),
     certificato_file: Optional[UploadFile] = File(None),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico")),
 ):
     """Register material return from subcontractor with document upload."""
     comm = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
@@ -237,7 +238,7 @@ async def registra_rientro_cl(
 
 # ── Verifica ──
 @router.patch("/{cid}/conto-lavoro/{cl_id}/verifica")
-async def verifica_cl(cid: str, cl_id: str, user: dict = Depends(get_current_user)):
+async def verifica_cl(cid: str, cl_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Verify returned material — closes C/L, updates production phase, links cert to fascicolo."""
     comm = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     cl_list = comm.get("conto_lavoro", [])
@@ -324,7 +325,7 @@ async def verifica_cl(cid: str, cl_id: str, user: dict = Depends(get_current_use
 
 # ── NCR PDF ──
 @router.get("/{cid}/conto-lavoro/{cl_id}/ncr-pdf")
-async def generate_ncr_pdf(cid: str, cl_id: str, user: dict = Depends(get_current_user)):
+async def generate_ncr_pdf(cid: str, cl_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Generate Non-Conformity Report when QC fails."""
     comm = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
@@ -344,7 +345,7 @@ async def generate_ncr_pdf(cid: str, cl_id: str, user: dict = Depends(get_curren
 
 # ── DDT Preview PDF ──
 @router.get("/{cid}/conto-lavoro/{cl_id}/preview-pdf")
-async def preview_cl_pdf(cid: str, cl_id: str, user: dict = Depends(get_current_user)):
+async def preview_cl_pdf(cid: str, cl_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Generate DDT PDF for Conto Lavoro."""
     comm = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     cl_list = comm.get("conto_lavoro", [])
@@ -366,7 +367,7 @@ async def preview_cl_pdf(cid: str, cl_id: str, user: dict = Depends(get_current_
 
 # ── DDT Preview Email ──
 @router.get("/{cid}/conto-lavoro/{cl_id}/preview-email")
-async def preview_cl_email(cid: str, cl_id: str, user: dict = Depends(get_current_user)):
+async def preview_cl_email(cid: str, cl_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Preview email for Conto Lavoro DDT."""
     comm = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     cl_list = comm.get("conto_lavoro", [])
@@ -409,7 +410,7 @@ async def preview_cl_email(cid: str, cl_id: str, user: dict = Depends(get_curren
 
 # ── DDT Send Email ──
 @router.post("/{cid}/conto-lavoro/{cl_id}/send-email")
-async def send_cl_email(cid: str, cl_id: str, payload: dict = None, user: dict = Depends(get_current_user)):
+async def send_cl_email(cid: str, cl_id: str, payload: dict = None, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Send DDT Conto Lavoro via email to the supplier."""
     payload = payload or {}
     comm = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])

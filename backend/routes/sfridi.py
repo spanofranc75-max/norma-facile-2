@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 
 router = APIRouter(prefix="/sfridi", tags=["sfridi"])
@@ -36,7 +37,7 @@ class SfridoPrelievo(BaseModel):
 
 
 @router.post("")
-async def create_sfrido(data: SfridoCreate, user: dict = Depends(get_current_user)):
+async def create_sfrido(data: SfridoCreate, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Ricarica materiale avanzato a magazzino mantenendo il link al certificato 3.1."""
     sfrido_id = f"sfr_{uuid.uuid4().hex[:10]}"
     now = datetime.now(timezone.utc)
@@ -81,7 +82,7 @@ async def create_sfrido(data: SfridoCreate, user: dict = Depends(get_current_use
 
 
 @router.get("")
-async def list_sfridi(user: dict = Depends(get_current_user), stato: str = "disponibile"):
+async def list_sfridi(user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina")), stato: str = "disponibile"):
     """Lista sfridi disponibili a magazzino."""
     query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if stato:
@@ -91,7 +92,7 @@ async def list_sfridi(user: dict = Depends(get_current_user), stato: str = "disp
 
 
 @router.get("/commessa/{commessa_id}")
-async def list_sfridi_commessa(commessa_id: str, user: dict = Depends(get_current_user)):
+async def list_sfridi_commessa(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Lista sfridi originati da una commessa specifica."""
     sfridi = await db[SFRIDI_COLL].find(
         {"commessa_origine": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -101,7 +102,7 @@ async def list_sfridi_commessa(commessa_id: str, user: dict = Depends(get_curren
 
 
 @router.post("/{sfrido_id}/preleva")
-async def preleva_sfrido(sfrido_id: str, data: SfridoPrelievo, user: dict = Depends(get_current_user)):
+async def preleva_sfrido(sfrido_id: str, data: SfridoPrelievo, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Preleva materiale da uno sfrido per una nuova commessa."""
     now = datetime.now(timezone.utc)
 
@@ -136,7 +137,7 @@ async def preleva_sfrido(sfrido_id: str, data: SfridoPrelievo, user: dict = Depe
 
 
 @router.patch("/{sfrido_id}/esaurito")
-async def mark_esaurito(sfrido_id: str, user: dict = Depends(get_current_user)):
+async def mark_esaurito(sfrido_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Segna uno sfrido come esaurito."""
     result = await db[SFRIDI_COLL].update_one(
         {"sfrido_id": sfrido_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},

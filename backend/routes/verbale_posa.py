@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 
 router = APIRouter(prefix="/verbale-posa", tags=["verbale-posa"])
 
@@ -86,7 +87,7 @@ async def _load_commessa_context(commessa_id: str, user_id: str = None) -> dict:
 # ── GET context data for the form ──
 
 @router.get("/context/{commessa_id}")
-async def get_verbale_context(commessa_id: str, user: dict = Depends(get_current_user)):
+async def get_verbale_context(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Load all data needed to populate the verbale form."""
     ctx = await _load_commessa_context(commessa_id, user["user_id"])
     cm = ctx["commessa"]
@@ -158,7 +159,7 @@ async def get_verbale_context(commessa_id: str, user: dict = Depends(get_current
 # ── GET existing verbale ──
 
 @router.get("/{commessa_id}")
-async def get_verbale(commessa_id: str, user: dict = Depends(get_current_user)):
+async def get_verbale(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Get existing verbale for a commessa, if any."""
     doc = await db.verbali_posa.find_one({"commessa_id": commessa_id}, {"_id": 0})
     if not doc:
@@ -176,7 +177,7 @@ async def get_verbale(commessa_id: str, user: dict = Depends(get_current_user)):
 @router.post("/{commessa_id}")
 async def save_verbale(
     commessa_id: str,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
     data_posa: str = Form(""),
     luogo_posa: str = Form(""),
     responsabile: str = Form(""),
@@ -256,7 +257,7 @@ async def save_verbale(
 # ── GENERATE PDF ──
 
 @router.get("/{commessa_id}/pdf")
-async def generate_pdf(commessa_id: str, user: dict = Depends(get_current_user)):
+async def generate_pdf(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Generate the Verbale di Posa PDF."""
     ctx = await _load_commessa_context(commessa_id, user["user_id"])
     verbale = await db.verbali_posa.find_one({"commessa_id": commessa_id}, {"_id": 0})

@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends
 import uuid
 from datetime import datetime, timezone
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from models.company import CompanySettings, CompanySettingsUpdate
 import logging
@@ -28,7 +29,7 @@ def _is_suspicious(business_name: str) -> bool:
 
 
 @router.get("/settings", response_model=CompanySettings)
-async def get_company_settings(user: dict = Depends(get_current_user)):
+async def get_company_settings(user: dict = Depends(require_role("admin", "amministrazione"))):
     """Get company settings for current user."""
     settings = await db.company_settings.find_one(
         {"user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -48,7 +49,7 @@ async def get_company_settings(user: dict = Depends(get_current_user)):
 @router.put("/settings", response_model=CompanySettings)
 async def update_company_settings(
     settings_data: CompanySettingsUpdate,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Update company settings — full overwrite to prevent stale data.
     Includes audit trail (before/after snapshot)."""
@@ -125,7 +126,7 @@ async def update_company_settings(
 
 
 @router.get("/settings/diagnostics")
-async def company_settings_diagnostics(user: dict = Depends(get_current_user)):
+async def company_settings_diagnostics(user: dict = Depends(require_role("admin", "amministrazione"))):
     """Diagnostic endpoint — shows exactly what data is stored for the current user."""
     uid = user["user_id"]
     tid = user["tenant_id"]

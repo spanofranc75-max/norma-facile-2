@@ -8,6 +8,7 @@ import uuid
 import calendar
 from datetime import datetime, timezone, date, timedelta
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from models.invoice import (
     InvoiceCreate, InvoiceUpdate, InvoiceResponse, InvoiceStatusUpdate, ConvertInvoiceRequest, DocumentType, InvoiceStatus
@@ -102,7 +103,7 @@ async def get_invoices(
     year: Optional[int] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Get all invoices with filters."""
     query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
@@ -145,7 +146,7 @@ async def get_invoices(
 async def get_quick_fill_sources(
     q: Optional[str] = Query(None),
     doc_type: Optional[str] = Query(None),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione")),
 ):
     """List preventivi and DDT available for quick fill into an invoice."""
     uid = user["user_id"]
@@ -223,7 +224,7 @@ async def get_quick_fill_sources(
 @router.post("/from-preventivo/{preventivo_id}")
 async def create_invoice_from_preventivo(
     preventivo_id: str,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione")),
 ):
     """Create an Invoice (bozza) from an existing Preventivo. Copies lines, client, notes."""
     from services.client_snapshot import build_snapshot
@@ -374,7 +375,7 @@ async def create_invoice_from_preventivo(
 @router.get("/{invoice_id}")
 async def get_invoice(
     invoice_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Get a specific invoice by ID."""
     invoice = await db.invoices.find_one(
@@ -402,7 +403,7 @@ async def get_invoice(
 @router.post("/", response_model=InvoiceResponse, status_code=201)
 async def create_invoice(
     invoice_data: InvoiceCreate,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Create a new invoice/document."""
     from services.client_snapshot import build_snapshot
@@ -490,7 +491,7 @@ async def create_invoice(
 async def update_invoice(
     invoice_id: str,
     invoice_data: InvoiceUpdate,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Update an existing invoice."""
     existing = await db.invoices.find_one(
@@ -600,7 +601,7 @@ async def update_invoice(
 async def renumber_invoice(
     invoice_id: str,
     data: dict,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Change document number on any invoice regardless of status. For fixing numbering errors."""
     new_number = data.get("document_number", "").strip()
@@ -631,7 +632,7 @@ async def renumber_invoice(
 @router.post("/{invoice_id}/create-nota-credito")
 async def create_nota_credito(
     invoice_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Create a Credit Note (Nota di Credito) from an existing invoice."""
     from services.client_snapshot import build_snapshot
@@ -771,7 +772,7 @@ async def create_nota_credito(
 async def update_invoice_status(
     invoice_id: str,
     status_update: InvoiceStatusUpdate,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Update invoice status."""
     # PUNTO 1 — Verifica body
@@ -849,7 +850,7 @@ async def update_invoice_status(
 
 
 @router.get("/{invoice_id}/scadenze")
-async def get_invoice_scadenze(invoice_id: str, user: dict = Depends(get_current_user)):
+async def get_invoice_scadenze(invoice_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Get payment deadlines for an invoice."""
     doc = await db.invoices.find_one(
         {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -861,7 +862,7 @@ async def get_invoice_scadenze(invoice_id: str, user: dict = Depends(get_current
 
 
 @router.post("/{invoice_id}/scadenze/pagamento")
-async def add_scadenza_pagamento(invoice_id: str, body: dict, user: dict = Depends(get_current_user)):
+async def add_scadenza_pagamento(invoice_id: str, body: dict, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Register a payment against an invoice."""
     inv = await db.invoices.find_one(
         {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -898,7 +899,7 @@ async def add_scadenza_pagamento(invoice_id: str, body: dict, user: dict = Depen
 
 
 @router.delete("/{invoice_id}/scadenze/pagamento/{payment_id}")
-async def delete_scadenza_pagamento(invoice_id: str, payment_id: str, user: dict = Depends(get_current_user)):
+async def delete_scadenza_pagamento(invoice_id: str, payment_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Remove a payment from an invoice."""
     inv = await db.invoices.find_one(
         {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -927,7 +928,7 @@ async def delete_scadenza_pagamento(invoice_id: str, payment_id: str, user: dict
 
 
 @router.post("/{invoice_id}/scadenze/genera")
-async def regenerate_invoice_scadenze(invoice_id: str, user: dict = Depends(get_current_user)):
+async def regenerate_invoice_scadenze(invoice_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     """(Re)generate payment deadlines for an invoice based on client's payment type."""
     doc = await db.invoices.find_one(
         {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -940,7 +941,7 @@ async def regenerate_invoice_scadenze(invoice_id: str, user: dict = Depends(get_
 
 
 @router.post("/sync-scadenze")
-async def sync_all_scadenze(user: dict = Depends(get_current_user)):
+async def sync_all_scadenze(user: dict = Depends(require_role("admin", "amministrazione"))):
     """Generate scadenze_pagamento for all invoices that don't have them.
     Uses client payment type if available, otherwise creates single scadenza from due_date."""
     uid = user["user_id"]
@@ -994,7 +995,7 @@ async def sync_all_scadenze(user: dict = Depends(get_current_user)):
 
 
 @router.patch("/{invoice_id}/scadenze/{rata}/paga")
-async def mark_scadenza_pagata(invoice_id: str, rata: int, user: dict = Depends(get_current_user)):
+async def mark_scadenza_pagata(invoice_id: str, rata: int, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Mark a specific installment as paid."""
     doc = await db.invoices.find_one(
         {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -1024,7 +1025,7 @@ async def mark_scadenza_pagata(invoice_id: str, rata: int, user: dict = Depends(
 @router.post("/convert", response_model=InvoiceResponse)
 async def convert_document(
     convert_request: ConvertInvoiceRequest,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Convert document(s) (e.g., Preventivo -> Fattura, DDT -> Fattura)."""
     if not convert_request.source_ids:
@@ -1128,7 +1129,7 @@ async def convert_document(
 @router.post("/preview-pdf")
 async def preview_invoice_pdf(
     data: dict,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Generate a live PDF preview from unsaved form data."""
     client_id = data.get("client_id")
@@ -1178,7 +1179,7 @@ async def preview_invoice_pdf(
 @router.get("/{invoice_id}/pdf")
 async def get_invoice_pdf(
     invoice_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Generate and download invoice PDF."""
     invoice = await db.invoices.find_one(
@@ -1224,7 +1225,7 @@ async def get_invoice_pdf(
 @router.get("/{invoice_id}/xml")
 async def get_invoice_xml(
     invoice_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Generate and download FatturaPA XML for SDI."""
     invoice = await db.invoices.find_one(
@@ -1279,7 +1280,7 @@ async def get_invoice_xml(
 # ── Send Invoice via Email ──
 
 @router.get("/{invoice_id}/preview-email")
-async def preview_invoice_email(invoice_id: str, user: dict = Depends(get_current_user)):
+async def preview_invoice_email(invoice_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Preview email that would be sent for an invoice."""
     invoice = await db.invoices.find_one(
         {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -1343,7 +1344,7 @@ async def preview_invoice_email(invoice_id: str, user: dict = Depends(get_curren
 
 
 @router.post("/{invoice_id}/send-email")
-async def send_invoice_email(invoice_id: str, payload: dict = None, user: dict = Depends(get_current_user)):
+async def send_invoice_email(invoice_id: str, payload: dict = None, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Generate PDF and send invoice via email to client."""
     payload = payload or {}
     invoice = await db.invoices.find_one(
@@ -1434,7 +1435,7 @@ async def send_invoice_email(invoice_id: str, payload: dict = None, user: dict =
 # ── Send Invoice to SDI ──
 
 @router.post("/{invoice_id}/send-sdi")
-async def send_invoice_to_sdi(invoice_id: str, user: dict = Depends(get_current_user)):
+async def send_invoice_to_sdi(invoice_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Sync invoice to Fatture in Cloud and send to SDI."""
     from core.demo_guard import is_demo_user
     if is_demo_user(user):
@@ -1660,7 +1661,7 @@ async def _handle_fic_409(fic, invoice: dict, fic_data: dict) -> int:
 
 
 @router.get("/{invoice_id}/stato-sdi")
-async def check_invoice_sdi_status(invoice_id: str, user: dict = Depends(get_current_user)):
+async def check_invoice_sdi_status(invoice_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Check SDI status for a sent invoice via Fatture in Cloud."""
     invoice = await db.invoices.find_one(
         {"invoice_id": invoice_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
@@ -1692,7 +1693,7 @@ async def check_invoice_sdi_status(invoice_id: str, user: dict = Depends(get_cur
 @router.delete("/{invoice_id}")
 async def delete_invoice(
     invoice_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """
     Elimina una fattura SOLO se in stato bozza.
@@ -1750,7 +1751,7 @@ async def delete_invoice(
 @router.patch("/{invoice_id}/annulla")
 async def annulla_invoice(
     invoice_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """
     Annulla una fattura emessa.
@@ -1804,7 +1805,7 @@ class ScadenzaPayment(PydanticBaseModel):
 @router.get("/{invoice_id}/scadenze")
 async def get_scadenze(
     invoice_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Get payment schedule and history for an invoice."""
     invoice = await db.invoices.find_one(
@@ -1844,7 +1845,7 @@ async def get_scadenze(
 async def record_payment(
     invoice_id: str,
     payment: ScadenzaPayment,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Record a payment for an invoice."""
     invoice = await db.invoices.find_one(
@@ -1908,7 +1909,7 @@ async def record_payment(
 async def delete_payment(
     invoice_id: str,
     payment_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Delete a recorded payment."""
     invoice = await db.invoices.find_one(
@@ -1955,7 +1956,7 @@ async def delete_payment(
 @router.post("/{invoice_id}/duplicate", response_model=InvoiceResponse)
 async def duplicate_invoice(
     invoice_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Duplicate an existing invoice as a new draft."""
     original = await db.invoices.find_one(
@@ -2010,7 +2011,7 @@ async def duplicate_invoice(
 #  CALL ONCE then remove this endpoint
 # ══════════════════════════════════════════════════════════════════
 @router.delete("/admin/cleanup-9908")
-async def cleanup_bogus_invoice(user: dict = Depends(get_current_user)):
+async def cleanup_bogus_invoice(user: dict = Depends(require_role("admin", "amministrazione"))):
     """
     Removes the bogus invoice 9908/2026 (status annullata, never sent to SDI).
     This is a one-time cleanup endpoint. Remove after use.

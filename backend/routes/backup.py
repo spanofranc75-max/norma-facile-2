@@ -15,6 +15,7 @@ from fastapi.responses import StreamingResponse, FileResponse
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 
 router = APIRouter(prefix="/admin/backup", tags=["backup"])
 logger = logging.getLogger(__name__)
@@ -154,7 +155,7 @@ async def _run_backup_job(backup_id: str, uid: str, user_email: str, tid: str = 
 
 
 @router.post("/start")
-async def start_backup(user: dict = Depends(get_current_user)):
+async def start_backup(user: dict = Depends(require_role("admin"))):
     """Start an async backup job. Returns backup_id for polling."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -178,7 +179,7 @@ async def start_backup(user: dict = Depends(get_current_user)):
 
 
 @router.get("/status/{backup_id}")
-async def get_backup_status(backup_id: str, user: dict = Depends(get_current_user)):
+async def get_backup_status(backup_id: str, user: dict = Depends(require_role("admin"))):
     """Poll backup job status."""
     job = _backup_jobs.get(backup_id)
     if not job or job.get("user_id") != user["user_id"]:
@@ -195,7 +196,7 @@ async def get_backup_status(backup_id: str, user: dict = Depends(get_current_use
 
 
 @router.get("/download/{backup_id}")
-async def download_backup(backup_id: str, user: dict = Depends(get_current_user)):
+async def download_backup(backup_id: str, user: dict = Depends(require_role("admin"))):
     """Download completed backup file."""
     job = _backup_jobs.get(backup_id)
     if not job or job.get("user_id") != user["user_id"]:
@@ -217,7 +218,7 @@ async def download_backup(backup_id: str, user: dict = Depends(get_current_user)
 # ── Legacy export (kept for backward compat) ──
 
 @router.get("/export")
-async def export_backup(user: dict = Depends(get_current_user)):
+async def export_backup(user: dict = Depends(require_role("admin"))):
     """Export a full JSON backup of all user data (synchronous, legacy)."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -283,7 +284,7 @@ async def export_backup(user: dict = Depends(get_current_user)):
 
 
 @router.get("/last")
-async def get_last_backup(user: dict = Depends(get_current_user)):
+async def get_last_backup(user: dict = Depends(require_role("admin"))):
     """Get info about the last backup performed."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -306,7 +307,7 @@ async def get_last_backup(user: dict = Depends(get_current_user)):
 
 
 @router.get("/stats")
-async def get_backup_stats(user: dict = Depends(get_current_user)):
+async def get_backup_stats(user: dict = Depends(require_role("admin"))):
     """Get current data stats (how many records per collection)."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -323,7 +324,7 @@ async def get_backup_stats(user: dict = Depends(get_current_user)):
 
 
 @router.get("/history")
-async def get_backup_history(user: dict = Depends(get_current_user)):
+async def get_backup_history(user: dict = Depends(require_role("admin"))):
     """Get list of all backup logs for the current user."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -349,7 +350,7 @@ async def get_backup_history(user: dict = Depends(get_current_user)):
 async def restore_backup(
     file: UploadFile = File(...),
     mode: str = Form("merge"),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin")),
 ):
     """Restore data from a JSON backup file.
 

@@ -7,7 +7,8 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from core.database import db
-from core.security import get_current_user, tenant_match
+from core.security import get_current_user
+from core.rbac import require_role
 from routes.commessa_ops_common import (
     COLL, get_commessa_or_404, ensure_ops_fields,
     ts, push_event, build_update_with_event,
@@ -27,7 +28,7 @@ DEFAULT_FASI = [
 
 
 @router.post("/{cid}/produzione/init")
-async def init_produzione(cid: str, user: dict = Depends(get_current_user)):
+async def init_produzione(cid: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     doc = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     if doc.get("fasi_produzione"):
@@ -61,7 +62,7 @@ async def init_produzione(cid: str, user: dict = Depends(get_current_user)):
 
 
 @router.get("/{cid}/produzione")
-async def get_produzione(cid: str, user: dict = Depends(get_current_user)):
+async def get_produzione(cid: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     doc = await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     return {"fasi": doc.get("fasi_produzione", []), "conto_lavoro": doc.get("conto_lavoro", [])}
@@ -78,7 +79,7 @@ class FaseUpdate(BaseModel):
 
 
 @router.put("/{cid}/produzione/{fase_tipo}")
-async def update_fase(cid: str, fase_tipo: str, data: FaseUpdate, user: dict = Depends(get_current_user)):
+async def update_fase(cid: str, fase_tipo: str, data: FaseUpdate, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     await get_commessa_or_404(cid, user["user_id"], user["tenant_id"])
     await ensure_ops_fields(cid)
     now = ts().isoformat()

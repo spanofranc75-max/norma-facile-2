@@ -6,6 +6,7 @@ from io import BytesIO
 import uuid
 from datetime import datetime, timezone
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from models.rilievo import (
     RilievoCreate, RilievoUpdate, RilievoResponse, RilievoListResponse,
@@ -28,7 +29,7 @@ async def get_rilievi(
     status: Optional[RilievoStatus] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Get all rilievi for current user with optional filters."""
     query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
@@ -60,7 +61,7 @@ async def get_rilievi(
 @router.get("/{rilievo_id}", response_model=RilievoResponse)
 async def get_rilievo(
     rilievo_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Get a specific rilievo by ID."""
     rilievo = await db.rilievi.find_one(
@@ -84,7 +85,7 @@ async def get_rilievo(
 @router.post("/", response_model=RilievoResponse, status_code=201)
 async def create_rilievo(
     rilievo_data: RilievoCreate,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Create a new rilievo."""
     # Verify client exists
@@ -148,7 +149,7 @@ async def create_rilievo(
 async def update_rilievo(
     rilievo_id: str,
     rilievo_data: RilievoUpdate,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Update an existing rilievo."""
     existing = await db.rilievi.find_one(
@@ -237,7 +238,7 @@ async def update_rilievo(
 @router.delete("/{rilievo_id}")
 async def delete_rilievo(
     rilievo_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Delete a rilievo."""
     result = await db.rilievi.delete_one({
@@ -273,7 +274,7 @@ async def upload_foto_rilievo(
     rilievo_id: str,
     file: UploadFile = File(...),
     caption: str = Form(""),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     """Upload a photo to object storage and add to rilievo."""
     doc = await db.rilievi.find_one(
@@ -310,7 +311,7 @@ async def upload_foto_rilievo(
 
 
 @router.delete("/{rilievo_id}/foto/{photo_id}")
-async def delete_foto_rilievo(rilievo_id: str, photo_id: str, user: dict = Depends(get_current_user)):
+async def delete_foto_rilievo(rilievo_id: str, photo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Remove a photo from the rilievo."""
     result = await db.rilievi.update_one(
         {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -328,7 +329,7 @@ async def upload_sketch_rilievo(
     name: str = Form("Schizzo"),
     dimensions: str = Form("{}"),
     background: Optional[UploadFile] = File(None),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     """Upload a sketch with optional background image to object storage."""
     doc = await db.rilievi.find_one(
@@ -370,7 +371,7 @@ async def upload_sketch_rilievo(
 
 
 @router.delete("/{rilievo_id}/sketch/{sketch_id}")
-async def delete_sketch_rilievo(rilievo_id: str, sketch_id: str, user: dict = Depends(get_current_user)):
+async def delete_sketch_rilievo(rilievo_id: str, sketch_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Remove a sketch from the rilievo."""
     result = await db.rilievi.update_one(
         {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -382,7 +383,7 @@ async def delete_sketch_rilievo(rilievo_id: str, sketch_id: str, user: dict = De
 
 
 @router.get("/foto-proxy/{path:path}")
-async def proxy_foto_rilievo(path: str, user: dict = Depends(get_current_user)):
+async def proxy_foto_rilievo(path: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Proxy a photo/sketch-background from object storage."""
     try:
         data, content_type = get_object(path)
@@ -559,7 +560,7 @@ CALCOLA_FN = {
 
 
 @router.post("/{rilievo_id}/calcola-materiali")
-async def calcola_materiali(rilievo_id: str, user: dict = Depends(get_current_user)):
+async def calcola_materiali(rilievo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Dalla tipologia e misure, calcola lista materiali, peso e superficie."""
     doc = await db.rilievi.find_one(
         {"rilievo_id": rilievo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -586,7 +587,7 @@ async def calcola_materiali(rilievo_id: str, user: dict = Depends(get_current_us
 async def collega_rilievo_a_commessa(
     rilievo_id: str,
     payload: dict,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     """Link a rilievo to an existing commessa (bidirectional)."""
     uid = user["user_id"]
@@ -619,7 +620,7 @@ async def collega_rilievo_a_commessa(
 async def add_sketch(
     rilievo_id: str,
     sketch: SketchData,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Add a sketch to an existing rilievo."""
     existing = await db.rilievi.find_one(
@@ -656,7 +657,7 @@ async def add_sketch(
 async def add_photo(
     rilievo_id: str,
     photo: PhotoData,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Add a photo to an existing rilievo."""
     existing = await db.rilievi.find_one(
@@ -692,7 +693,7 @@ async def add_photo(
 @router.get("/{rilievo_id}/pdf")
 async def get_rilievo_pdf(
     rilievo_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Generate and download rilievo PDF summary."""
     rilievo = await db.rilievi.find_one(

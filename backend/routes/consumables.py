@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 
 router = APIRouter(prefix="/consumables", tags=["consumables"])
 logger = logging.getLogger(__name__)
@@ -222,7 +223,7 @@ async def _auto_assign_to_commesse(batches: list, user_id: str):
 async def list_consumable_batches(
     stato: Optional[str] = Query(None),
     tipo: Optional[str] = Query(None),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina")),
 ):
     """List all consumable batches (optionally filtered by stato or tipo)."""
     filt = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
@@ -235,7 +236,7 @@ async def list_consumable_batches(
 
 
 @router.get("/for-commessa/{commessa_id}")
-async def get_consumables_for_commessa(commessa_id: str, user: dict = Depends(get_current_user)):
+async def get_consumables_for_commessa(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Get consumable batches compatible with a specific commessa.
     Returns both auto-assigned and manually assignable batches.
     """
@@ -280,7 +281,7 @@ async def get_consumables_for_commessa(commessa_id: str, user: dict = Depends(ge
 
 
 @router.post("/")
-async def create_consumable_batch(data: ConsumableBatchCreate, user: dict = Depends(get_current_user)):
+async def create_consumable_batch(data: ConsumableBatchCreate, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Manually create a consumable batch."""
     batch = {
         "batch_id": f"cb_{uuid.uuid4().hex[:12]}",
@@ -312,7 +313,7 @@ async def create_consumable_batch(data: ConsumableBatchCreate, user: dict = Depe
 
 
 @router.put("/{batch_id}")
-async def update_consumable_batch(batch_id: str, data: ConsumableBatchUpdate, user: dict = Depends(get_current_user)):
+async def update_consumable_batch(batch_id: str, data: ConsumableBatchUpdate, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Update a consumable batch (stato, note, quantita)."""
     update_fields = {}
     if data.stato is not None:
@@ -333,7 +334,7 @@ async def update_consumable_batch(batch_id: str, data: ConsumableBatchUpdate, us
 
 
 @router.post("/{batch_id}/assign/{commessa_id}")
-async def assign_batch_to_commessa(batch_id: str, commessa_id: str, user: dict = Depends(get_current_user)):
+async def assign_batch_to_commessa(batch_id: str, commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Manually assign a consumable batch to a commessa."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -365,7 +366,7 @@ async def assign_batch_to_commessa(batch_id: str, commessa_id: str, user: dict =
 
 
 @router.delete("/{batch_id}/assign/{commessa_id}")
-async def unassign_batch_from_commessa(batch_id: str, commessa_id: str, user: dict = Depends(get_current_user)):
+async def unassign_batch_from_commessa(batch_id: str, commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Remove a consumable batch assignment from a commessa."""
     uid = user["user_id"]
     tid = user["tenant_id"]
@@ -379,7 +380,7 @@ async def unassign_batch_from_commessa(batch_id: str, commessa_id: str, user: di
 
 
 @router.delete("/{batch_id}")
-async def delete_consumable_batch(batch_id: str, user: dict = Depends(get_current_user)):
+async def delete_consumable_batch(batch_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Delete a consumable batch."""
     result = await db[COLL].delete_one({"batch_id": batch_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     if result.deleted_count == 0:
@@ -388,7 +389,7 @@ async def delete_consumable_batch(batch_id: str, user: dict = Depends(get_curren
 
 
 @router.post("/analyze-invoice/{fattura_id}")
-async def analyze_invoice_for_consumables(fattura_id: str, user: dict = Depends(get_current_user)):
+async def analyze_invoice_for_consumables(fattura_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Manually trigger consumable analysis for a specific invoice.
     
     Note: fattura_id parameter can be either fr_id or fattura_id field.

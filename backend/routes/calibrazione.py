@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import Optional
 from core.database import db
-from core.security import get_current_user, tenant_match
+from core.security import get_current_user
+from core.rbac import require_role
 from services.ml_calibrazione import (
     calcola_calibrazione,
     applica_calibrazione,
@@ -49,21 +50,21 @@ class FeedbackRequest(BaseModel):
 
 
 @router.get("/status")
-async def calibration_status(user: dict = Depends(get_current_user)):
+async def calibration_status(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Stato attuale della calibrazione ML e statistiche di training."""
     stats = await get_training_stats(db, user["user_id"])
     return stats
 
 
 @router.post("/calcola-fattori")
-async def calcola_fattori(target: TargetParams, user: dict = Depends(get_current_user)):
+async def calcola_fattori(target: TargetParams, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Calcola i fattori correttivi per un progetto target specifico."""
     cal = await calcola_calibrazione(db, user["user_id"], target.model_dump())
     return cal
 
 
 @router.post("/applica")
-async def applica_calibrazione_api(data: CalibrazioneStimaRequest, user: dict = Depends(get_current_user)):
+async def applica_calibrazione_api(data: CalibrazioneStimaRequest, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Applica i fattori di calibrazione a una stima grezza."""
     stima = {
         "ore_totali": data.ore_totali,
@@ -76,7 +77,7 @@ async def applica_calibrazione_api(data: CalibrazioneStimaRequest, user: dict = 
 
 
 @router.post("/feedback")
-async def submit_feedback(data: FeedbackRequest, user: dict = Depends(get_current_user)):
+async def submit_feedback(data: FeedbackRequest, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Registra un progetto completato per migliorare il modello."""
     result = await registra_progetto_completato(db, user["user_id"], data.model_dump())
     return result

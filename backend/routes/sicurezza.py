@@ -23,6 +23,7 @@ from pydantic import BaseModel
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.rate_limiter import limiter
 
 router = APIRouter(prefix="/sicurezza", tags=["sicurezza"])
@@ -63,7 +64,7 @@ async def get_corsi_obbligatori():
 
 
 @router.post("/operatore/{op_id}/corsi")
-async def add_corso_sicurezza(op_id: str, data: CorsoSicurezza, user: dict = Depends(get_current_user)):
+async def add_corso_sicurezza(op_id: str, data: CorsoSicurezza, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Add or update a safety course for an operator."""
     await db.operatori.update_one(
         {"op_id": op_id, "admin_id": user["user_id"]},
@@ -78,7 +79,7 @@ async def add_corso_sicurezza(op_id: str, data: CorsoSicurezza, user: dict = Dep
 
 
 @router.get("/operatore/{op_id}/corsi")
-async def get_corsi_operatore(op_id: str, user: dict = Depends(get_current_user)):
+async def get_corsi_operatore(op_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Get all safety courses for an operator with expiry status."""
     op = await db.operatori.find_one(
         {"op_id": op_id, "admin_id": user["user_id"]},
@@ -168,7 +169,7 @@ async def analyze_dnsh(
     request: Request,
     file: UploadFile = File(...),
     commessa_id: str = Form(""),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     """AI Vision analysis of a document for DNSH/sustainability keywords."""
     content = await file.read()
@@ -213,7 +214,7 @@ async def analyze_dnsh(
 
 
 @router.post("/dnsh/save")
-async def save_dnsh_data(data: dict, user: dict = Depends(get_current_user)):
+async def save_dnsh_data(data: dict, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Save DNSH analysis results for a commessa."""
     now = datetime.now(timezone.utc)
     dnsh_id = f"dnsh_{uuid.uuid4().hex[:10]}"
@@ -238,7 +239,7 @@ async def save_dnsh_data(data: dict, user: dict = Depends(get_current_user)):
 
 
 @router.get("/dnsh/{commessa_id}")
-async def get_dnsh_data(commessa_id: str, user: dict = Depends(get_current_user)):
+async def get_dnsh_data(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Get all DNSH data for a commessa."""
     items = await db[DNSH_COLL].find(
         {"commessa_id": commessa_id}, {"_id": 0}
@@ -317,7 +318,7 @@ async def get_sicurezza_checklist():
 # ══════════════════════════════════════════════════════════════
 
 @router.post("/export-cse/{commessa_id}")
-async def export_cse(commessa_id: str, user: dict = Depends(get_current_user)):
+async def export_cse(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Generate ZIP: DURC, POS, operator certifications, machine certificates."""
     commessa = await db.commesse.find_one(
         {"commessa_id": commessa_id}, {"_id": 0, "numero": 1, "user_id": 1}
@@ -469,14 +470,14 @@ async def create_manutenzione_schedule(data: dict):
 
 
 @router.get("/manutenzioni")
-async def list_manutenzioni(user: dict = Depends(get_current_user)):
+async def list_manutenzioni(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """List all scheduled maintenances."""
     items = await db[MANUTENZIONI_COLL].find({"admin_id": user["user_id"]}, {"_id": 0}).sort("data_scadenza", 1).to_list(200)
     return {"manutenzioni": items}
 
 
 @router.get("/targhe-ce")
-async def list_targhe(user: dict = Depends(get_current_user)):
+async def list_targhe(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """List all CE plates."""
     items = await db[TARGA_COLL].find({"admin_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(100)
     return {"targhe": items}

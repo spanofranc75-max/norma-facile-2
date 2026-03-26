@@ -16,7 +16,8 @@ from collections import defaultdict
 from fastapi import APIRouter, Depends
 
 from core.database import db
-from core.security import get_current_user, tenant_match
+from core.security import get_current_user
+from core.rbac import require_role
 
 router = APIRouter(prefix="/kpi", tags=["kpi"])
 logger = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ async def _get_uid(user: dict) -> str:
 
 
 @router.get("/accuracy-score")
-async def accuracy_score(user: dict = Depends(get_current_user)):
+async def accuracy_score(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """
     Calcola l'Accuracy Score globale del sistema predittivo.
     Confronta ore/costi preventivati vs reali su commesse chiuse.
@@ -143,7 +144,7 @@ async def accuracy_score(user: dict = Depends(get_current_user)):
 
 
 @router.get("/trend-accuracy")
-async def trend_accuracy(user: dict = Depends(get_current_user)):
+async def trend_accuracy(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Trend dell'accuratezza nel tempo (per mese)."""
     uid = await _get_uid(user)
 
@@ -196,7 +197,7 @@ async def trend_accuracy(user: dict = Depends(get_current_user)):
 
 
 @router.get("/marginalita")
-async def marginalita(user: dict = Depends(get_current_user)):
+async def marginalita(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Marginalita reale per commessa."""
     uid = await _get_uid(user)
     cost_doc = await db.company_costs.find_one({"user_id": uid}, {"_id": 0})
@@ -249,7 +250,7 @@ async def marginalita(user: dict = Depends(get_current_user)):
 
 
 @router.get("/ritardi-fornitori")
-async def ritardi_fornitori(user: dict = Depends(get_current_user)):
+async def ritardi_fornitori(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Analisi ritardi conto lavoro per fornitore."""
     uid = await _get_uid(user)
 
@@ -299,7 +300,7 @@ async def ritardi_fornitori(user: dict = Depends(get_current_user)):
 
 
 @router.get("/tempi-medi")
-async def tempi_medi(user: dict = Depends(get_current_user)):
+async def tempi_medi(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Tempi medi lavorazione per tipologia struttura (h/ton)."""
     uid = await _get_uid(user)
 
@@ -360,7 +361,7 @@ async def tempi_medi(user: dict = Depends(get_current_user)):
 
 
 @router.get("/overview")
-async def kpi_overview(user: dict = Depends(get_current_user)):
+async def kpi_overview(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Overview rapida di tutti i KPI principali."""
     uid = await _get_uid(user)
 

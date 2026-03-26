@@ -16,6 +16,7 @@ from weasyprint import HTML
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 
 router = APIRouter(prefix="/manuale", tags=["manuale"])
 logger = logging.getLogger(__name__)
@@ -235,7 +236,7 @@ FAQ = [
 
 
 @router.get("/contenuti")
-async def get_contenuti_manuale(user: dict = Depends(get_current_user)):
+async def get_contenuti_manuale(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Restituisce i capitoli e FAQ del manuale."""
     return {
         "capitoli": [{"id": c["id"], "titolo": c["titolo"], "icona": c["icona"]} for c in CAPITOLI],
@@ -245,7 +246,7 @@ async def get_contenuti_manuale(user: dict = Depends(get_current_user)):
 
 
 @router.get("/genera-pdf")
-async def genera_manuale_pdf(user: dict = Depends(get_current_user)):
+async def genera_manuale_pdf(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Genera il Manuale Utente PDF professionale con logo white-label e QR Code."""
 
     # Load company settings for white-label — always filter by user_id

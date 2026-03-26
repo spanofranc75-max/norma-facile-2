@@ -6,6 +6,7 @@ import logging
 from datetime import datetime, timezone
 
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from models.sopralluogo import (
     SopralluogoCreate, SopralluogoUpdate,
@@ -69,7 +70,7 @@ async def _seed_default_articoli(user_id: str):
 
 
 @router.get("/articoli-catalogo")
-async def list_articoli(user: dict = Depends(get_current_user)):
+async def list_articoli(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """List all articles in the perizia catalog. Seeds defaults if empty."""
     count = await db[ARTICOLI_COLLECTION].count_documents({"user_id": user["user_id"], "tenant_id": tenant_match(user)})
     if count == 0:
@@ -81,7 +82,7 @@ async def list_articoli(user: dict = Depends(get_current_user)):
 
 
 @router.post("/articoli-catalogo")
-async def create_articolo(data: ArticoloPeriziaCreate, user: dict = Depends(get_current_user)):
+async def create_articolo(data: ArticoloPeriziaCreate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     now = datetime.now(timezone.utc).isoformat()
     doc = {
         "articolo_id": f"art_{uuid.uuid4().hex[:8]}",
@@ -96,7 +97,7 @@ async def create_articolo(data: ArticoloPeriziaCreate, user: dict = Depends(get_
 
 
 @router.put("/articoli-catalogo/{articolo_id}")
-async def update_articolo(articolo_id: str, data: ArticoloPeriziaUpdate, user: dict = Depends(get_current_user)):
+async def update_articolo(articolo_id: str, data: ArticoloPeriziaUpdate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     raw = {k: v for k, v in data.model_dump(exclude_unset=True).items()}
     raw["updated_at"] = datetime.now(timezone.utc).isoformat()
     result = await db[ARTICOLI_COLLECTION].find_one_and_update(
@@ -111,7 +112,7 @@ async def update_articolo(articolo_id: str, data: ArticoloPeriziaUpdate, user: d
 
 
 @router.delete("/articoli-catalogo/{articolo_id}")
-async def delete_articolo(articolo_id: str, user: dict = Depends(get_current_user)):
+async def delete_articolo(articolo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     result = await db[ARTICOLI_COLLECTION].delete_one(
         {"articolo_id": articolo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}
     )
@@ -123,7 +124,7 @@ async def delete_articolo(articolo_id: str, user: dict = Depends(get_current_use
 # ── CRUD Sopralluoghi ──
 
 @router.post("/")
-async def create_sopralluogo(data: SopralluogoCreate, user: dict = Depends(get_current_user)):
+async def create_sopralluogo(data: SopralluogoCreate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     doc_number = await next_sopralluogo_number(user["user_id"])
     now = datetime.now(timezone.utc).isoformat()
     doc = {
@@ -151,7 +152,7 @@ async def list_sopralluoghi(
     status: str = "",
     limit: int = Query(50, le=200),
     skip: int = 0,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
     if search:
@@ -183,7 +184,7 @@ async def list_sopralluoghi(
 
 
 @router.get("/{sopralluogo_id}")
-async def get_sopralluogo(sopralluogo_id: str, user: dict = Depends(get_current_user)):
+async def get_sopralluogo(sopralluogo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     doc = await db[COLLECTION].find_one(
         {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0},
@@ -198,7 +199,7 @@ async def get_sopralluogo(sopralluogo_id: str, user: dict = Depends(get_current_
 
 
 @router.put("/{sopralluogo_id}")
-async def update_sopralluogo(sopralluogo_id: str, data: SopralluogoUpdate, user: dict = Depends(get_current_user)):
+async def update_sopralluogo(sopralluogo_id: str, data: SopralluogoUpdate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     raw = {k: v for k, v in data.model_dump(exclude_unset=True).items()}
     raw["updated_at"] = datetime.now(timezone.utc).isoformat()
     result = await db[COLLECTION].find_one_and_update(
@@ -213,7 +214,7 @@ async def update_sopralluogo(sopralluogo_id: str, data: SopralluogoUpdate, user:
 
 
 @router.delete("/{sopralluogo_id}")
-async def delete_sopralluogo(sopralluogo_id: str, user: dict = Depends(get_current_user)):
+async def delete_sopralluogo(sopralluogo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     result = await db[COLLECTION].delete_one({"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     if result.deleted_count == 0:
         raise HTTPException(404, "Sopralluogo non trovato")
@@ -228,7 +229,7 @@ async def upload_foto(
     sopralluogo_id: str,
     file: UploadFile = File(...),
     label: str = Form("foto"),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     doc = await db[COLLECTION].find_one({"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     if not doc:
@@ -260,7 +261,7 @@ async def upload_foto(
 
 
 @router.delete("/{sopralluogo_id}/foto/{foto_id}")
-async def delete_foto(sopralluogo_id: str, foto_id: str, user: dict = Depends(get_current_user)):
+async def delete_foto(sopralluogo_id: str, foto_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     result = await db[COLLECTION].update_one(
         {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"$pull": {"foto": {"foto_id": foto_id}}},
@@ -271,7 +272,7 @@ async def delete_foto(sopralluogo_id: str, foto_id: str, user: dict = Depends(ge
 
 
 @router.get("/foto/{path:path}")
-async def download_foto(path: str, user: dict = Depends(get_current_user)):
+async def download_foto(path: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Download a photo from object storage."""
     try:
         data, content_type = get_object(path)
@@ -283,7 +284,7 @@ async def download_foto(path: str, user: dict = Depends(get_current_user)):
 # ── AI Analysis ──
 
 @router.post("/{sopralluogo_id}/analizza")
-async def analizza_sopralluogo(sopralluogo_id: str, user: dict = Depends(get_current_user)):
+async def analizza_sopralluogo(sopralluogo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Run AI Vision analysis on uploaded photos."""
     doc = await db[COLLECTION].find_one(
         {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -351,7 +352,7 @@ async def analizza_sopralluogo(sopralluogo_id: str, user: dict = Depends(get_cur
 async def genera_preventivo(
     sopralluogo_id: str,
     variante: str = Query("B", description="Variante selezionata: A, B o C"),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     """Generate a draft quote from the AI analysis.
 
@@ -525,7 +526,7 @@ async def genera_preventivo(
 # ── PDF Generation ──
 
 @router.get("/{sopralluogo_id}/pdf")
-async def genera_pdf_perizia(sopralluogo_id: str, user: dict = Depends(get_current_user)):
+async def genera_pdf_perizia(sopralluogo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Generate a PDF perizia report with photos and analysis."""
     doc = await db[COLLECTION].find_one(
         {"sopralluogo_id": sopralluogo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -575,7 +576,7 @@ async def genera_pdf_perizia(sopralluogo_id: str, user: dict = Depends(get_curre
 async def invia_perizia_email(
     sopralluogo_id: str,
     payload: dict = None,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     """Send the perizia PDF to the client via email with custom subject/body."""
     payload = payload or {}

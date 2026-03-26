@@ -10,6 +10,7 @@ import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from core.rate_limiter import limiter
 from services.ai_compliance_engine import analizza_preventivo_completo
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 @router.post("/analizza-preventivo/{preventivo_id}")
 @limiter.limit("10/minute")
-async def analizza_preventivo(request: Request, preventivo_id: str, user: dict = Depends(get_current_user)):
+async def analizza_preventivo(request: Request, preventivo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Fase 1 — Analisi completa del preventivo:
     1A: Estrazione tecnica strutturata (GPT)
     1B: Classificazione normativa + proposta istruttoria (GPT + Rules)
@@ -85,7 +86,7 @@ async def analizza_preventivo(request: Request, preventivo_id: str, user: dict =
 
 
 @router.get("/preventivo/{preventivo_id}")
-async def get_istruttoria_by_preventivo(preventivo_id: str, user: dict = Depends(get_current_user)):
+async def get_istruttoria_by_preventivo(preventivo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Recupera l'istruttoria salvata per un preventivo (se esiste)."""
     doc = await db.istruttorie.find_one(
         {"preventivo_id": preventivo_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -97,7 +98,7 @@ async def get_istruttoria_by_preventivo(preventivo_id: str, user: dict = Depends
 
 
 @router.get("/{istruttoria_id}")
-async def get_istruttoria(istruttoria_id: str, user: dict = Depends(get_current_user)):
+async def get_istruttoria(istruttoria_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Recupera un'istruttoria per ID."""
     doc = await db.istruttorie.find_one(
         {"istruttoria_id": istruttoria_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -109,7 +110,7 @@ async def get_istruttoria(istruttoria_id: str, user: dict = Depends(get_current_
 
 
 @router.post("/{istruttoria_id}/revisione")
-async def revisione_umana(istruttoria_id: str, body: dict, user: dict = Depends(get_current_user)):
+async def revisione_umana(istruttoria_id: str, body: dict, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Override umano tracciato. L'utente corregge/conferma i dati proposti dall'AI.
     Salva sia il valore AI originale sia la correzione umana con chi/quando.
 
@@ -181,7 +182,7 @@ async def revisione_umana(istruttoria_id: str, body: dict, user: dict = Depends(
 
 
 @router.post("/{istruttoria_id}/conferma")
-async def conferma_istruttoria(istruttoria_id: str, user: dict = Depends(get_current_user)):
+async def conferma_istruttoria(istruttoria_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """L'utente conferma l'istruttoria come base per la Fase 2 (generazione commessa).
     Questo checkpoint e obbligatorio prima di generare la commessa pre-istruita.
     Blocca conferma se ci sono blocchi strutturali (es. commessa mista non segmentata)."""
@@ -222,7 +223,7 @@ async def conferma_istruttoria(istruttoria_id: str, user: dict = Depends(get_cur
 
 
 @router.post("/{istruttoria_id}/rispondi")
-async def rispondi_domande(istruttoria_id: str, body: dict, user: dict = Depends(get_current_user)):
+async def rispondi_domande(istruttoria_id: str, body: dict, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Salva le risposte dell'utente alle domande residue generate dall'AI.
 
     Body: {
@@ -312,7 +313,7 @@ async def rispondi_domande(istruttoria_id: str, body: dict, user: dict = Depends
 
 @router.post("/{istruttoria_id}/rispondi-contestuale")
 async def rispondi_domande_contestuali(
-    istruttoria_id: str, body: dict, user: dict = Depends(get_current_user)
+    istruttoria_id: str, body: dict, user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """Salva risposte alle domande contestuali (figlie delle domande base).
 
@@ -371,7 +372,7 @@ async def rispondi_domande_contestuali(
 
 
 @router.get("")
-async def list_istruttorie(user: dict = Depends(get_current_user)):
+async def list_istruttorie(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Lista tutte le istruttorie dell'utente."""
     docs = await db.istruttorie.find(
         {"user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -388,7 +389,7 @@ async def list_istruttorie(user: dict = Depends(get_current_user)):
 
 @router.post("/segmenta/{preventivo_id}")
 @limiter.limit("10/minute")
-async def run_segmentazione(request: Request, preventivo_id: str, user: dict = Depends(get_current_user)):
+async def run_segmentazione(request: Request, preventivo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Esegue la segmentazione per riga del preventivo.
     Analizza ogni riga e propone la normativa applicabile."""
     uid = user["user_id"]
@@ -439,7 +440,7 @@ async def run_segmentazione(request: Request, preventivo_id: str, user: dict = D
 
 
 @router.post("/segmenta/{preventivo_id}/review")
-async def review_segmentazione(preventivo_id: str, body: dict, user: dict = Depends(get_current_user)):
+async def review_segmentazione(preventivo_id: str, body: dict, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Utente conferma/corregge la segmentazione.
     Body: {
         "line_reviews": [
@@ -539,7 +540,7 @@ async def review_segmentazione(preventivo_id: str, body: dict, user: dict = Depe
 # ═══════════════════════════════════════════════════════════════
 
 @router.get("/phase2/eligibility/{preventivo_id}")
-async def check_phase2_eligibility(preventivo_id: str, user: dict = Depends(get_current_user)):
+async def check_phase2_eligibility(preventivo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Verifica se l'istruttoria e' eleggibile per la Phase 2.
     Restituisce allowed=true/false con lista motivi di blocco."""
     uid = user["user_id"]
@@ -558,7 +559,7 @@ async def check_phase2_eligibility(preventivo_id: str, user: dict = Depends(get_
 
 @router.post("/phase2/genera/{preventivo_id}")
 @limiter.limit("10/minute")
-async def genera_commessa_preistruita(request: Request, preventivo_id: str, user: dict = Depends(get_current_user)):
+async def genera_commessa_preistruita(request: Request, preventivo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Genera la commessa pre-istruita revisionata.
     Bloccata se non tutti i criteri di eleggibilita' sono soddisfatti."""
     uid = user["user_id"]
@@ -620,7 +621,7 @@ async def genera_commessa_preistruita(request: Request, preventivo_id: str, user
 
 
 @router.get("/phase2/commessa/{preventivo_id}")
-async def get_commessa_preistruita(preventivo_id: str, user: dict = Depends(get_current_user)):
+async def get_commessa_preistruita(preventivo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Recupera la commessa pre-istruita per un preventivo."""
     uid = user["user_id"]
     tid = user["tenant_id"]

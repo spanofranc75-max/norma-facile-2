@@ -18,6 +18,7 @@ from pydantic import BaseModel
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 
 router = APIRouter(prefix="/fascicolo-tecnico", tags=["dop_frazionata"])
 logger = logging.getLogger(__name__)
@@ -48,7 +49,7 @@ async def _get_commessa(cid: str, uid: str, tid: str = "default"):
 
 
 @router.get("/{cid}/dop-frazionate")
-async def list_dop_frazionate(cid: str, user: dict = Depends(get_current_user)):
+async def list_dop_frazionate(cid: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Lista tutte le DoP frazionate per una commessa."""
     await _get_commessa(cid, user["user_id"], user["tenant_id"])
     dops = await db.dop_frazionate.find(
@@ -60,7 +61,7 @@ async def list_dop_frazionate(cid: str, user: dict = Depends(get_current_user)):
 
 
 @router.post("/{cid}/dop-frazionata")
-async def create_dop_frazionata(cid: str, data: DopFrazionataCreate, user: dict = Depends(get_current_user)):
+async def create_dop_frazionata(cid: str, data: DopFrazionataCreate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Crea una nuova DoP frazionata con suffisso progressivo."""
     commessa = await _get_commessa(cid, user["user_id"], user["tenant_id"])
     numero_commessa = commessa.get("numero", cid)
@@ -175,7 +176,7 @@ async def create_dop_frazionata(cid: str, data: DopFrazionataCreate, user: dict 
 
 
 @router.put("/{cid}/dop-frazionata/{dop_id}")
-async def update_dop_frazionata(cid: str, dop_id: str, data: DopFrazionataUpdate, user: dict = Depends(get_current_user)):
+async def update_dop_frazionata(cid: str, dop_id: str, data: DopFrazionataUpdate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Aggiorna una DoP frazionata."""
     await _get_commessa(cid, user["user_id"], user["tenant_id"])
     dop = await db.dop_frazionate.find_one(
@@ -197,7 +198,7 @@ async def update_dop_frazionata(cid: str, dop_id: str, data: DopFrazionataUpdate
 
 
 @router.delete("/{cid}/dop-frazionata/{dop_id}")
-async def delete_dop_frazionata(cid: str, dop_id: str, user: dict = Depends(get_current_user)):
+async def delete_dop_frazionata(cid: str, dop_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Elimina una DoP frazionata."""
     await _get_commessa(cid, user["user_id"], user["tenant_id"])
     result = await db.dop_frazionate.delete_one(
@@ -209,7 +210,7 @@ async def delete_dop_frazionata(cid: str, dop_id: str, user: dict = Depends(get_
 
 
 @router.get("/{cid}/dop-frazionata/{dop_id}/pdf")
-async def generate_dop_frazionata_pdf(cid: str, dop_id: str, user: dict = Depends(get_current_user)):
+async def generate_dop_frazionata_pdf(cid: str, dop_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Genera il PDF della DoP frazionata."""
     from fastapi.responses import StreamingResponse
     from io import BytesIO
@@ -259,7 +260,7 @@ async def generate_dop_frazionata_pdf(cid: str, dop_id: str, user: dict = Depend
 
 
 @router.post("/{cid}/dop-automatica")
-async def create_dop_automatica(cid: str, user: dict = Depends(get_current_user)):
+async def create_dop_automatica(cid: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Crea una DOP EN 1090 completamente automatica — zero input manuale.
     Raccoglie dati da: Riesame Tecnico, Material Batches, Controllo Finale, Report Ispezioni."""
     commessa = await _get_commessa(cid, user["user_id"], user["tenant_id"])
@@ -476,7 +477,7 @@ async def create_dop_automatica(cid: str, user: dict = Depends(get_current_user)
 
 
 @router.get("/{cid}/etichetta-ce-1090/pdf")
-async def generate_ce_label_1090(cid: str, user: dict = Depends(get_current_user)):
+async def generate_ce_label_1090(cid: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Genera Etichetta CE per EN 1090 — auto-compilata da Riesame e dati commessa."""
     from fastapi.responses import StreamingResponse
     import html as html_mod
@@ -1132,7 +1133,7 @@ def _generate_dop_pdf(dop: dict, commessa: dict, company: dict, client_name: str
 
 
 @router.get("/{cid}/rintracciabilita-totale/pdf")
-async def generate_rintracciabilita_totale_pdf(cid: str, user: dict = Depends(get_current_user)):
+async def generate_rintracciabilita_totale_pdf(cid: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Genera la Scheda di Rintracciabilità Totale per una commessa.
     Mostra il legame: Riga Commessa -> DDT Fornitore -> N. Colata -> Cert. 3.1"""
     from fastapi.responses import StreamingResponse
@@ -1281,7 +1282,7 @@ async def generate_rintracciabilita_totale_pdf(cid: str, user: dict = Depends(ge
 
 
 @router.get("/{cid}/pacco-rina")
-async def download_pacco_rina(cid: str, user: dict = Depends(get_current_user)):
+async def download_pacco_rina(cid: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Genera il Pacco Documenti RINA — ZIP con tutta la documentazione di conformità:
     1. DOP EN 1090 (ultimo generato o auto)
     2. Etichetta CE 1090

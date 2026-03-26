@@ -12,7 +12,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from core.database import db
-from core.security import get_current_user, tenant_match
+from core.security import get_current_user
+from core.rbac import require_role
 
 router = APIRouter(prefix="/commesse", tags=["diario-produzione"])
 logger = logging.getLogger(__name__)
@@ -69,7 +70,7 @@ async def list_diario(
     cid: str,
     mese: Optional[str] = Query(None, description="Filtro mese YYYY-MM"),
     fase: Optional[str] = Query(None, description="Filtro fase"),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina")),
 ):
     """List diary entries for a commessa, optionally filtered."""
     admin_id = await _get_team_admin_id(user)
@@ -84,7 +85,7 @@ async def list_diario(
 
 
 @router.post("/{cid}/diario")
-async def create_diario_entry(cid: str, entry: DiarioEntry, user: dict = Depends(get_current_user)):
+async def create_diario_entry(cid: str, entry: DiarioEntry, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Create a new work session entry."""
     admin_id = await _get_team_admin_id(user)
     now = datetime.now(timezone.utc)
@@ -120,7 +121,7 @@ async def create_diario_entry(cid: str, entry: DiarioEntry, user: dict = Depends
 
 @router.put("/{cid}/diario/{entry_id}")
 async def update_diario_entry(
-    cid: str, entry_id: str, entry: DiarioEntryUpdate, user: dict = Depends(get_current_user)
+    cid: str, entry_id: str, entry: DiarioEntryUpdate, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))
 ):
     """Update a work session entry."""
     admin_id = await _get_team_admin_id(user)
@@ -170,7 +171,7 @@ async def update_diario_entry(
 
 
 @router.delete("/{cid}/diario/{entry_id}")
-async def delete_diario_entry(cid: str, entry_id: str, user: dict = Depends(get_current_user)):
+async def delete_diario_entry(cid: str, entry_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Delete a work session entry."""
     admin_id = await _get_team_admin_id(user)
     result = await db[DIARIO_COLL].delete_one(
@@ -184,7 +185,7 @@ async def delete_diario_entry(cid: str, entry_id: str, user: dict = Depends(get_
 # ── RIEPILOGO ────────────────────────────────────────────────────
 
 @router.get("/{cid}/diario/riepilogo")
-async def get_diario_riepilogo(cid: str, user: dict = Depends(get_current_user)):
+async def get_diario_riepilogo(cid: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Get summary stats: total hours, per phase, per operator, cost analysis."""
     admin_id = await _get_team_admin_id(user)
 
@@ -265,7 +266,7 @@ async def get_diario_riepilogo(cid: str, user: dict = Depends(get_current_user))
 
 @router.put("/{cid}/produzione/{fase_tipo}/ore-preventivate")
 async def set_ore_preventivate(
-    cid: str, fase_tipo: str, data: OrePreventivateInput, user: dict = Depends(get_current_user)
+    cid: str, fase_tipo: str, data: OrePreventivateInput, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))
 ):
     """Set estimated hours for a production phase."""
     result = await db[COLL].update_one(
@@ -285,7 +286,7 @@ class OperatoreInput(BaseModel):
 
 
 @router.get("/{cid}/operatori", tags=["operatori"])
-async def list_operatori(cid: str, user: dict = Depends(get_current_user)):
+async def list_operatori(cid: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """List all operators for the account (shared across commesse)."""
     admin_id = await _get_team_admin_id(user)
     ops = await db[OPERATORI_COLL].find(
@@ -295,7 +296,7 @@ async def list_operatori(cid: str, user: dict = Depends(get_current_user)):
 
 
 @router.post("/{cid}/operatori", tags=["operatori"])
-async def create_operatore(cid: str, data: OperatoreInput, user: dict = Depends(get_current_user)):
+async def create_operatore(cid: str, data: OperatoreInput, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Create a new operator (just name, no email/login needed)."""
     admin_id = await _get_team_admin_id(user)
     op_id = f"op_{uuid.uuid4().hex[:8]}"
@@ -314,7 +315,7 @@ async def create_operatore(cid: str, data: OperatoreInput, user: dict = Depends(
 
 
 @router.delete("/{cid}/operatori/{op_id}", tags=["operatori"])
-async def delete_operatore(cid: str, op_id: str, user: dict = Depends(get_current_user)):
+async def delete_operatore(cid: str, op_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Delete an operator."""
     admin_id = await _get_team_admin_id(user)
     result = await db[OPERATORI_COLL].delete_one({"op_id": op_id, "admin_id": admin_id})
@@ -334,7 +335,7 @@ class PatentinoInput(BaseModel):
 
 
 @router.post("/{cid}/operatori/{op_id}/patentini", tags=["operatori"])
-async def add_patentino(cid: str, op_id: str, data: PatentinoInput, user: dict = Depends(get_current_user)):
+async def add_patentino(cid: str, op_id: str, data: PatentinoInput, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Add a welding certificate to an operator."""
     admin_id = await _get_team_admin_id(user)
     pat_id = f"pat_{uuid.uuid4().hex[:8]}"
@@ -358,7 +359,7 @@ async def add_patentino(cid: str, op_id: str, data: PatentinoInput, user: dict =
 
 
 @router.delete("/{cid}/operatori/{op_id}/patentini/{pat_id}", tags=["operatori"])
-async def remove_patentino(cid: str, op_id: str, pat_id: str, user: dict = Depends(get_current_user)):
+async def remove_patentino(cid: str, op_id: str, pat_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """Remove a welding certificate from an operator."""
     admin_id = await _get_team_admin_id(user)
     result = await db[OPERATORI_COLL].update_one(

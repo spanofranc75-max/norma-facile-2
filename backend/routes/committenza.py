@@ -11,7 +11,8 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import Optional
 
-from core.security import get_current_user, tenant_match
+from core.security import get_current_user
+from core.rbac import require_role
 from core.rate_limiter import limiter
 from services.committenza_analysis_service import (
     DOC_CATEGORIES,
@@ -29,14 +30,14 @@ logger = logging.getLogger(__name__)
 
 # ─── Document Categories ───
 @router.get("/committenza/categorie")
-async def api_get_categories(user: dict = Depends(get_current_user)):
+async def api_get_categories(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     return DOC_CATEGORIES
 
 
 # ─── C1.1: Packages ───
 
 @router.post("/committenza/packages")
-async def api_crea_package(body: dict, user: dict = Depends(get_current_user)):
+async def api_crea_package(body: dict, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     result = await crea_package(
         user["user_id"],
         body.get("commessa_id", ""),
@@ -53,12 +54,12 @@ async def api_crea_package(body: dict, user: dict = Depends(get_current_user)):
 
 
 @router.get("/committenza/packages")
-async def api_list_packages(commessa_id: Optional[str] = None, user: dict = Depends(get_current_user)):
+async def api_list_packages(commessa_id: Optional[str] = None, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     return await list_packages(user["user_id"], commessa_id)
 
 
 @router.get("/committenza/packages/{package_id}")
-async def api_get_package(package_id: str, user: dict = Depends(get_current_user)):
+async def api_get_package(package_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     pkg = await get_package(package_id, user["user_id"])
     if not pkg:
         raise HTTPException(status_code=404, detail="Package non trovato")
@@ -66,7 +67,7 @@ async def api_get_package(package_id: str, user: dict = Depends(get_current_user
 
 
 @router.post("/committenza/packages/{package_id}/documents")
-async def api_add_doc(package_id: str, body: dict, user: dict = Depends(get_current_user)):
+async def api_add_doc(package_id: str, body: dict, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     result = await add_doc_to_package(
         package_id, user["user_id"],
         body.get("doc_id", ""),
@@ -78,7 +79,7 @@ async def api_add_doc(package_id: str, body: dict, user: dict = Depends(get_curr
 
 
 @router.delete("/committenza/packages/{package_id}/documents/{doc_id}")
-async def api_remove_doc(package_id: str, doc_id: str, user: dict = Depends(get_current_user)):
+async def api_remove_doc(package_id: str, doc_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     result = await remove_doc_from_package(package_id, user["user_id"], doc_id)
     if not result:
         raise HTTPException(status_code=404, detail="Package non trovato")
@@ -89,7 +90,7 @@ async def api_remove_doc(package_id: str, doc_id: str, user: dict = Depends(get_
 
 @router.post("/committenza/analizza/{package_id}")
 @limiter.limit("10/minute")
-async def api_analizza(request: Request, package_id: str, user: dict = Depends(get_current_user)):
+async def api_analizza(request: Request, package_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     pkg = await get_package(package_id, user["user_id"])
     result = await analizza_committenza(package_id, user["user_id"])
     if result.get("error"):
@@ -105,12 +106,12 @@ async def api_analizza(request: Request, package_id: str, user: dict = Depends(g
 
 
 @router.get("/committenza/analisi")
-async def api_list_analyses(commessa_id: Optional[str] = None, user: dict = Depends(get_current_user)):
+async def api_list_analyses(commessa_id: Optional[str] = None, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     return await list_analyses(user["user_id"], commessa_id)
 
 
 @router.get("/committenza/analisi/{analysis_id}")
-async def api_get_analysis(analysis_id: str, user: dict = Depends(get_current_user)):
+async def api_get_analysis(analysis_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     analysis = await get_analysis(analysis_id, user["user_id"])
     if not analysis:
         raise HTTPException(status_code=404, detail="Analisi non trovata")
@@ -120,7 +121,7 @@ async def api_get_analysis(analysis_id: str, user: dict = Depends(get_current_us
 # ─── C1.3: Human Review ───
 
 @router.patch("/committenza/analisi/{analysis_id}/review")
-async def api_review(analysis_id: str, body: dict, user: dict = Depends(get_current_user)):
+async def api_review(analysis_id: str, body: dict, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     result = await review_analysis(analysis_id, user["user_id"], body)
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])
@@ -128,7 +129,7 @@ async def api_review(analysis_id: str, body: dict, user: dict = Depends(get_curr
 
 
 @router.post("/committenza/analisi/{analysis_id}/approve")
-async def api_approve(analysis_id: str, user: dict = Depends(get_current_user)):
+async def api_approve(analysis_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     result = await approve_analysis(analysis_id, user["user_id"])
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])
@@ -143,7 +144,7 @@ async def api_approve(analysis_id: str, user: dict = Depends(get_current_user)):
 
 @router.post("/committenza/analisi/{analysis_id}/genera-obblighi")
 @limiter.limit("10/minute")
-async def api_genera_obblighi(request: Request, analysis_id: str, user: dict = Depends(get_current_user)):
+async def api_genera_obblighi(request: Request, analysis_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     result = await genera_obblighi_da_analisi(analysis_id, user["user_id"])
     if result.get("error"):
         raise HTTPException(status_code=400, detail=result["error"])

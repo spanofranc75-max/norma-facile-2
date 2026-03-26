@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from core.rate_limiter import limiter
 from services.smistatore_intelligente import analyze_and_index_document, analyze_drawing_document
@@ -30,7 +31,7 @@ class CreateRdpFromDrawingRequest(BaseModel):
 
 @router.post("/analyze/{doc_id}")
 @limiter.limit("10/minute")
-async def analyze_document(request: Request, doc_id: str, user: dict = Depends(get_current_user)):
+async def analyze_document(request: Request, doc_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """
     Analizza un documento PDF caricato con AI Vision.
     Spacchetta le pagine, estrae metadati (numero colata, materiale, dimensioni),
@@ -75,7 +76,7 @@ async def analyze_document(request: Request, doc_id: str, user: dict = Depends(g
 
 
 @router.get("/index/{commessa_id}")
-async def get_page_index(commessa_id: str, user: dict = Depends(get_current_user)):
+async def get_page_index(commessa_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Get all indexed certificate pages for a commessa."""
     pages = await db.doc_page_index.find(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -93,7 +94,7 @@ async def get_page_index(commessa_id: str, user: dict = Depends(get_current_user
 
 
 @router.get("/scorte")
-async def get_scorte(user: dict = Depends(get_current_user)):
+async def get_scorte(user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """Get all 'scorta' (unmatched) certificate pages across all commesse."""
     scorte = await db.doc_page_index.find(
         {"user_id": user["user_id"], "tenant_id": tenant_match(user), "matching_status": "scorta"},
@@ -105,7 +106,7 @@ async def get_scorte(user: dict = Depends(get_current_user)):
 
 @router.post("/analyze-drawing/{doc_id}")
 @limiter.limit("10/minute")
-async def analyze_drawing(request: Request, doc_id: str, user: dict = Depends(get_current_user)):
+async def analyze_drawing(request: Request, doc_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """
     Analizza un disegno tecnico (PDF/immagine) con AI Vision.
     Estrae la lista di bulloneria (diametro, classe, quantita) e propone una RdP.
@@ -213,7 +214,7 @@ async def analyze_drawing(request: Request, doc_id: str, user: dict = Depends(ge
 
 
 @router.post("/drawing-to-rdp/{doc_id}")
-async def create_rdp_from_drawing(doc_id: str, data: CreateRdpFromDrawingRequest, user: dict = Depends(get_current_user)):
+async def create_rdp_from_drawing(doc_id: str, data: CreateRdpFromDrawingRequest, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico"))):
     """
     Crea una Richiesta di Preventivo (RdP) dalla bulloneria estratta da un disegno.
     Salva la RdP nella sezione approvvigionamento della commessa.

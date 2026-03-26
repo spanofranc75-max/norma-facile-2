@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from routes.report_ispezioni import VT_CHECKS
 
 router = APIRouter(prefix="/controllo-finale", tags=["controllo-finale"])
@@ -217,7 +218,7 @@ class ControlloFinaleApprova(BaseModel):
 
 
 @router.get("/{commessa_id}")
-async def get_controllo_finale(commessa_id: str, user: dict = Depends(get_current_user)):
+async def get_controllo_finale(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Stato della checklist controllo finale con verifiche automatiche."""
     commessa = await db.commesse.find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -290,7 +291,7 @@ async def get_controllo_finale(commessa_id: str, user: dict = Depends(get_curren
 
 
 @router.post("/{commessa_id}")
-async def save_controllo_finale(commessa_id: str, data: ControlloFinaleNote, user: dict = Depends(get_current_user)):
+async def save_controllo_finale(commessa_id: str, data: ControlloFinaleNote, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Salva i check manuali e le note."""
     commessa = await db.commesse.find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0, "commessa_id": 1}
@@ -326,7 +327,7 @@ async def save_controllo_finale(commessa_id: str, data: ControlloFinaleNote, use
 
 
 @router.post("/{commessa_id}/approva")
-async def approva_controllo_finale(commessa_id: str, data: ControlloFinaleApprova, user: dict = Depends(get_current_user)):
+async def approva_controllo_finale(commessa_id: str, data: ControlloFinaleApprova, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Firma e approva il controllo finale. Immutabile dopo approvazione."""
     commessa = await db.commesse.find_one(
         {"commessa_id": commessa_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},

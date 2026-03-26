@@ -7,6 +7,7 @@ import uuid
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, date, timedelta
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 from core.config import settings
 from services.payment_calculator import calc_scadenze_from_supplier
@@ -388,7 +389,7 @@ async def list_fatture_ricevute(
     year: Optional[int] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """List received invoices."""
     query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
@@ -437,7 +438,7 @@ async def list_fatture_ricevute(
 @router.get("/{fr_id}")
 async def get_fattura_ricevuta(
     fr_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Get a single received invoice."""
     item = await db.fatture_ricevute.find_one(
@@ -452,7 +453,7 @@ async def get_fattura_ricevuta(
 @router.post("/", status_code=201)
 async def create_fattura_ricevuta(
     data: FRCreate,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Create a received invoice manually."""
     now = datetime.now(timezone.utc)
@@ -527,7 +528,7 @@ async def create_fattura_ricevuta(
 async def update_fattura_ricevuta(
     fr_id: str,
     data: FRUpdate,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Update a received invoice."""
     existing = await db.fatture_ricevute.find_one(
@@ -552,7 +553,7 @@ async def update_fattura_ricevuta(
 @router.delete("/{fr_id}")
 async def delete_fattura_ricevuta(
     fr_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Delete a received invoice."""
     result = await db.fatture_ricevute.delete_one(
@@ -568,7 +569,7 @@ async def delete_fattura_ricevuta(
 @router.post("/import-xml")
 async def import_xml_fattura(
     file: UploadFile = File(...),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Import a FatturaPA XML file (.xml or .p7m) and create a received invoice."""
     fname = file.filename.lower()
@@ -738,7 +739,7 @@ async def import_xml_fattura(
 @router.post("/import-xml-batch")
 async def import_xml_batch(
     files: List[UploadFile] = File(...),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Import multiple FatturaPA XML files at once."""
     await log_activity(user, "import", "fattura_ricevuta", "", label=f"Batch import {len(files)} file XML")
@@ -898,7 +899,7 @@ async def import_xml_batch(
 @router.post("/preview-xml")
 async def preview_xml_fattura(
     file: UploadFile = File(...),
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Parse a FatturaPA XML file and return preview with payment schedule."""
     fname = file.filename.lower()
@@ -998,7 +999,7 @@ async def preview_xml_fattura(
 @router.post("/{fr_id}/extract-articoli")
 async def extract_articoli(
     fr_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Extract line items from a received invoice into the Catalogo Articoli."""
     fr = await db.fatture_ricevute.find_one(
@@ -1098,7 +1099,7 @@ class FRPayment(BaseModel):
 @router.get("/{fr_id}/pagamenti")
 async def get_fr_pagamenti(
     fr_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Get payment info for a received invoice."""
     fr = await db.fatture_ricevute.find_one(
@@ -1127,7 +1128,7 @@ async def get_fr_pagamenti(
 async def record_fr_payment(
     fr_id: str,
     payment: FRPayment,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Record payment for a received invoice."""
     fr = await db.fatture_ricevute.find_one(
@@ -1192,7 +1193,7 @@ class ImputazioneRequest(BaseModel):
 async def imputa_costi(
     fr_id: str,
     data: ImputazioneRequest,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Assign invoice costs to a commessa or magazzino."""
     fr = await db.fatture_ricevute.find_one(
@@ -1376,7 +1377,7 @@ async def imputa_costi(
 @router.post("/{fr_id}/annulla-imputazione")
 async def annulla_imputazione(
     fr_id: str,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Undo the cost assignment of a received invoice from a commessa.
     Removes the cost entry from the commessa and clears the imputazione on the invoice."""
@@ -1445,7 +1446,7 @@ async def annulla_imputazione(
 
 @router.post("/sync-fic")
 async def sync_fatture_from_fic(
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Sync received invoices from FattureInCloud API."""
     uid = user["user_id"]
@@ -1710,7 +1711,7 @@ async def _sync_fatture_from_fic_impl(user: dict):
 # ── Recalculate due dates for existing invoices ─────────────────
 
 @router.post("/recalc-scadenze")
-async def recalc_scadenze(user: dict = Depends(get_current_user)):
+async def recalc_scadenze(user: dict = Depends(require_role("admin", "amministrazione"))):
     """Recalculate due dates for all received invoices missing scadenze_pagamento, using supplier payment terms.
     Also tries to link unlinked suppliers by P.IVA/CF and bidirectional name matching.
     Verifies existing links and fixes mismatches."""
@@ -1912,7 +1913,7 @@ async def recalc_scadenze(user: dict = Depends(get_current_user)):
 # ── Recalculate single invoice scadenze ──────────────────────────
 
 @router.post("/{fr_id}/recalc-scadenze")
-async def recalc_single_scadenze(fr_id: str, user: dict = Depends(get_current_user)):
+async def recalc_single_scadenze(fr_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
     """Recalculate payment schedule for a single invoice from supplier payment terms."""
     fr = await db.fatture_ricevute.find_one(
         {"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -1950,7 +1951,7 @@ class ScadenzaUpdate(BaseModel):
     pagata: bool = False
 
 @router.put("/{fr_id}/scadenze-pagamento")
-async def update_scadenze_pagamento(fr_id: str, scadenze: List[ScadenzaUpdate], user: dict = Depends(get_current_user)):
+async def update_scadenze_pagamento(fr_id: str, scadenze: List[ScadenzaUpdate], user: dict = Depends(require_role("admin", "amministrazione"))):
     """Manually update the payment schedule for a received invoice."""
     fr = await db.fatture_ricevute.find_one({"fr_id": fr_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0, "fr_id": 1})
     if not fr:
@@ -1974,7 +1975,7 @@ async def update_scadenze_pagamento(fr_id: str, scadenze: List[ScadenzaUpdate], 
 
 @router.get("/scadenziario/dashboard")
 async def get_scadenziario_dashboard(
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "amministrazione"))
 ):
     """Aggregated deadline dashboard: payments, documents, commesse milestones."""
     uid = user["user_id"]
@@ -2220,7 +2221,7 @@ async def export_scadenziario_xlsx(
     stato: Optional[str] = Query(None, description="scaduto | in_scadenza | ok"),
     data_dal: Optional[str] = Query(None),
     data_al: Optional[str] = Query(None),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione")),
 ):
     """Export scadenziario filtrato in formato Excel."""
     from fastapi.responses import StreamingResponse
@@ -2330,7 +2331,7 @@ async def export_scadenziario_pdf(
     stato: Optional[str] = Query(None),
     data_dal: Optional[str] = Query(None),
     data_al: Optional[str] = Query(None),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "amministrazione")),
 ):
     """Export scadenziario filtrato in formato PDF (WeasyPrint)."""
     from fastapi.responses import StreamingResponse

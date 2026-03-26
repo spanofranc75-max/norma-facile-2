@@ -20,6 +20,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from core.database import db
 
 router = APIRouter(prefix="/verbali-itt", tags=["verbali_itt"])
@@ -59,7 +60,7 @@ class VerbaleITTCreate(BaseModel):
 
 
 @router.post("")
-async def create_verbale_itt(data: VerbaleITTCreate, user: dict = Depends(get_current_user)):
+async def create_verbale_itt(data: VerbaleITTCreate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     if data.processo not in PROCESSI_ITT:
         raise HTTPException(400, f"Processo non valido. Valori: {PROCESSI_ITT}")
 
@@ -95,7 +96,7 @@ async def create_verbale_itt(data: VerbaleITTCreate, user: dict = Depends(get_cu
 
 @router.get("")
 async def list_verbali_itt(
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
     processo: str = "",
 ):
     query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
@@ -121,7 +122,7 @@ async def list_verbali_itt(
 
 
 @router.get("/check-validita")
-async def check_validita_itt(user: dict = Depends(get_current_user)):
+async def check_validita_itt(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Verifica quali processi hanno ITT validi — usato dal Riesame Tecnico."""
     today_ = date.today()
     items = await db.verbali_itt.find(
@@ -152,7 +153,7 @@ async def check_validita_itt(user: dict = Depends(get_current_user)):
 
 
 @router.delete("/{itt_id}")
-async def delete_verbale_itt(itt_id: str, user: dict = Depends(get_current_user)):
+async def delete_verbale_itt(itt_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     result = await db.verbali_itt.delete_one({"itt_id": itt_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     if result.deleted_count == 0:
         raise HTTPException(404, "Verbale ITT non trovato")
@@ -160,7 +161,7 @@ async def delete_verbale_itt(itt_id: str, user: dict = Depends(get_current_user)
 
 
 @router.post("/{itt_id}/firma")
-async def firma_verbale_itt(itt_id: str, body: dict, user: dict = Depends(get_current_user)):
+async def firma_verbale_itt(itt_id: str, body: dict, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     nome = body.get("nome", "")
     ruolo = body.get("ruolo", "")
     if not nome:
@@ -180,7 +181,7 @@ async def firma_verbale_itt(itt_id: str, body: dict, user: dict = Depends(get_cu
 
 
 @router.get("/{itt_id}/pdf")
-async def generate_itt_pdf(itt_id: str, user: dict = Depends(get_current_user)):
+async def generate_itt_pdf(itt_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     doc = await db.verbali_itt.find_one(
         {"itt_id": itt_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     )

@@ -8,7 +8,8 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Optional
 
-from core.security import get_current_user, tenant_match
+from core.security import get_current_user
+from core.rbac import require_role
 from services.obblighi_commessa_service import (
     get_obbligo, list_obblighi, update_obbligo,
     get_summary, get_bloccanti, sync_obblighi_commessa,
@@ -28,7 +29,7 @@ async def api_list_obblighi(
     source_module: Optional[str] = None,
     category: Optional[str] = None,
     blocking_level: Optional[str] = None,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     """List obligations with optional filters."""
     return await list_obblighi(
@@ -40,7 +41,7 @@ async def api_list_obblighi(
 # ─── Specific sub-paths BEFORE generic {obbligo_id} ───
 
 @router.post("/obblighi/sync/{commessa_id}")
-async def api_sync_obblighi(commessa_id: str, user: dict = Depends(get_current_user)):
+async def api_sync_obblighi(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Trigger manual sync of obligations for a commessa."""
     result = await sync_obblighi_commessa(commessa_id, user["user_id"])
     if result.get("error"):
@@ -65,7 +66,7 @@ async def api_obblighi_commessa(
     status: Optional[str] = None,
     severity: Optional[str] = None,
     source_module: Optional[str] = None,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     """Get obligations for a specific commessa."""
     return await list_obblighi(
@@ -74,13 +75,13 @@ async def api_obblighi_commessa(
 
 
 @router.get("/obblighi/bloccanti/{commessa_id}")
-async def api_bloccanti(commessa_id: str, user: dict = Depends(get_current_user)):
+async def api_bloccanti(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Get only blocking obligations for a commessa."""
     return await get_bloccanti(commessa_id=commessa_id, user_id=user["user_id"])
 
 
 @router.get("/obblighi/summary/{commessa_id}")
-async def api_summary(commessa_id: str, user: dict = Depends(get_current_user)):
+async def api_summary(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Get obligation summary counts for a commessa."""
     return await get_summary(commessa_id=commessa_id, user_id=user["user_id"])
 
@@ -88,7 +89,7 @@ async def api_summary(commessa_id: str, user: dict = Depends(get_current_user)):
 # ─── Generic by ID (MUST be LAST) ───
 
 @router.get("/obblighi/{obbligo_id}")
-async def api_get_obbligo(obbligo_id: str, user: dict = Depends(get_current_user)):
+async def api_get_obbligo(obbligo_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     obl = await get_obbligo(obbligo_id, user["user_id"])
     if not obl:
         raise HTTPException(status_code=404, detail="Obbligo non trovato")
@@ -96,7 +97,7 @@ async def api_get_obbligo(obbligo_id: str, user: dict = Depends(get_current_user
 
 
 @router.patch("/obblighi/{obbligo_id}")
-async def api_update_obbligo(obbligo_id: str, updates: dict, user: dict = Depends(get_current_user)):
+async def api_update_obbligo(obbligo_id: str, updates: dict, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     before = await get_obbligo(obbligo_id, user["user_id"])
     obl = await update_obbligo(obbligo_id, user["user_id"], updates)
     if not obl:

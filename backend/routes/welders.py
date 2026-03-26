@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Q
 from fastapi.responses import FileResponse
 from core.database import db
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from models.welder import (
     WelderCreate, WelderResponse, WelderList,
 )
@@ -124,7 +125,7 @@ def _compute_stats(docs: list[dict]) -> dict:
 async def list_welders(
     search: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina")),
 ):
     query = {}
     if search:
@@ -172,14 +173,14 @@ def _guess_cert_code(standard: str) -> str:
 # ── Safety Certification Types ──
 
 @router.get("/safety-cert-types")
-async def get_safety_cert_types(user: dict = Depends(get_current_user)):
+async def get_safety_cert_types(user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     return {"cert_types": SAFETY_CERT_TYPES}
 
 
 # ── Matrice Scadenze ──
 
 @router.get("/matrice-scadenze")
-async def matrice_scadenze(user: dict = Depends(get_current_user)):
+async def matrice_scadenze(user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """
     Returns a matrix: rows = workers, columns = cert types.
     Each cell has status: 'valido', 'in_scadenza', 'scaduto', 'mancante'.
@@ -251,7 +252,7 @@ async def matrice_scadenze(user: dict = Depends(get_current_user)):
 # ── POS Worker Selection ──
 
 @router.get("/per-pos")
-async def workers_for_pos(user: dict = Depends(get_current_user)):
+async def workers_for_pos(user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     """
     Return worker list enriched with safety compliance status for POS selection.
     """
@@ -315,7 +316,7 @@ async def workers_for_pos(user: dict = Depends(get_current_user)):
 
 
 @router.get("/{welder_id}", response_model=WelderResponse)
-async def get_welder(welder_id: str, user: dict = Depends(get_current_user)):
+async def get_welder(welder_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     doc = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Saldatore non trovato")
@@ -323,7 +324,7 @@ async def get_welder(welder_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.post("/", response_model=WelderResponse)
-async def create_welder(payload: WelderCreate, user: dict = Depends(get_current_user)):
+async def create_welder(payload: WelderCreate, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     welder_id = f"wld_{uuid.uuid4().hex[:10]}"
     now_iso = datetime.now(timezone.utc).isoformat()
 
@@ -348,7 +349,7 @@ async def create_welder(payload: WelderCreate, user: dict = Depends(get_current_
 
 
 @router.put("/{welder_id}", response_model=WelderResponse)
-async def update_welder(welder_id: str, payload: WelderCreate, user: dict = Depends(get_current_user)):
+async def update_welder(welder_id: str, payload: WelderCreate, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     existing = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not existing:
         raise HTTPException(404, "Saldatore non trovato")
@@ -371,7 +372,7 @@ async def update_welder(welder_id: str, payload: WelderCreate, user: dict = Depe
 
 
 @router.delete("/{welder_id}")
-async def delete_welder(welder_id: str, user: dict = Depends(get_current_user)):
+async def delete_welder(welder_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     doc = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Saldatore non trovato")
@@ -403,7 +404,7 @@ async def add_qualification(
     notes: str = Form(""),
     cert_code: str = Form(""),
     file: Optional[UploadFile] = File(None),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina")),
 ):
     doc = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
@@ -453,7 +454,7 @@ async def add_qualification(
 
 
 @router.delete("/{welder_id}/qualifications/{qual_id}")
-async def delete_qualification(welder_id: str, qual_id: str, user: dict = Depends(get_current_user)):
+async def delete_qualification(welder_id: str, qual_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     doc = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Saldatore non trovato")
@@ -479,7 +480,7 @@ async def delete_qualification(welder_id: str, qual_id: str, user: dict = Depend
 
 
 @router.get("/{welder_id}/qualifications/{qual_id}/download")
-async def download_qualification(welder_id: str, qual_id: str, user: dict = Depends(get_current_user)):
+async def download_qualification(welder_id: str, qual_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico", "officina"))):
     doc = await db.welders.find_one({"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Saldatore non trovato")

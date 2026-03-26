@@ -7,8 +7,8 @@ import uuid
 import logging
 
 from core.database import db
-from routes.auth import get_current_user
-from core.security import tenant_match
+from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from models.fpc import (
     WelderCreate, MaterialBatchCreate, ProjectCreate,
     DEFAULT_FPC_CONTROLS,
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/fpc", tags=["FPC - EN 1090"])
 # ═══════════════════════════════════════════════════════════════
 
 @router.get("/welders")
-async def list_welders(user: dict = Depends(get_current_user)):
+async def list_welders(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     cursor = db.welders.find(
         {"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     ).sort("name", 1)
@@ -36,7 +36,7 @@ async def list_welders(user: dict = Depends(get_current_user)):
 
 
 @router.post("/welders")
-async def create_welder(body: WelderCreate, user: dict = Depends(get_current_user)):
+async def create_welder(body: WelderCreate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     doc = {
         "welder_id": f"wld_{uuid.uuid4().hex[:12]}",
         "user_id": user["user_id"], "tenant_id": tenant_match(user),
@@ -52,7 +52,7 @@ async def create_welder(body: WelderCreate, user: dict = Depends(get_current_use
 
 
 @router.put("/welders/{welder_id}")
-async def update_welder(welder_id: str, body: WelderCreate, user: dict = Depends(get_current_user)):
+async def update_welder(welder_id: str, body: WelderCreate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     result = await db.welders.update_one(
         {"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"$set": {
@@ -68,7 +68,7 @@ async def update_welder(welder_id: str, body: WelderCreate, user: dict = Depends
 
 
 @router.delete("/welders/{welder_id}")
-async def delete_welder(welder_id: str, user: dict = Depends(get_current_user)):
+async def delete_welder(welder_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     result = await db.welders.delete_one({"welder_id": welder_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)})
     if result.deleted_count == 0:
         raise HTTPException(404, "Saldatore non trovato")
@@ -82,7 +82,7 @@ async def delete_welder(welder_id: str, user: dict = Depends(get_current_user)):
 @router.get("/batches")
 async def list_batches(
     commessa_id: Optional[str] = None,
-    user: dict = Depends(get_current_user)
+    user: dict = Depends(require_role("admin", "ufficio_tecnico"))
 ):
     """List material batches, optionally filtered by commessa."""
     query = {"user_id": user["user_id"], "tenant_id": tenant_match(user)}
@@ -100,7 +100,7 @@ async def list_batches(
 
 
 @router.get("/batches/{batch_id}")
-async def get_batch(batch_id: str, user: dict = Depends(get_current_user)):
+async def get_batch(batch_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     doc = await db.material_batches.find_one(
         {"batch_id": batch_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0, "certificate_base64": 0}
@@ -111,7 +111,7 @@ async def get_batch(batch_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.get("/batches/{batch_id}/certificate")
-async def get_batch_certificate(batch_id: str, user: dict = Depends(get_current_user)):
+async def get_batch_certificate(batch_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Download the 3.1 certificate for a batch."""
     doc = await db.material_batches.find_one(
         {"batch_id": batch_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -126,7 +126,7 @@ async def get_batch_certificate(batch_id: str, user: dict = Depends(get_current_
 
 
 @router.post("/batches")
-async def create_batch(body: MaterialBatchCreate, user: dict = Depends(get_current_user)):
+async def create_batch(body: MaterialBatchCreate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     doc = {
         "batch_id": f"bat_{uuid.uuid4().hex[:12]}",
         "user_id": user["user_id"], "tenant_id": tenant_match(user),
@@ -161,7 +161,7 @@ async def create_batch(body: MaterialBatchCreate, user: dict = Depends(get_curre
 
 
 @router.put("/batches/{batch_id}")
-async def update_batch(batch_id: str, body: MaterialBatchCreate, user: dict = Depends(get_current_user)):
+async def update_batch(batch_id: str, body: MaterialBatchCreate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     update = {
         "supplier_name": body.supplier_name,
         "material_type": body.material_type,
@@ -199,7 +199,7 @@ async def update_batch(batch_id: str, body: MaterialBatchCreate, user: dict = De
 
 
 @router.delete("/batches/{batch_id}")
-async def delete_batch(batch_id: str, user: dict = Depends(get_current_user)):
+async def delete_batch(batch_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     # Find the batch first to get colata/commessa for cascade delete
     batch = await db.material_batches.find_one(
         {"batch_id": batch_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -227,7 +227,7 @@ async def delete_batch(batch_id: str, user: dict = Depends(get_current_user)):
 # ═══════════════════════════════════════════════════════════════
 
 @router.post("/projects")
-async def create_project(body: ProjectCreate, user: dict = Depends(get_current_user)):
+async def create_project(body: ProjectCreate, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Convert a preventivo to an FPC project. Requires execution class."""
     if body.execution_class not in ("EXC1", "EXC2", "EXC3", "EXC4"):
         raise HTTPException(400, "Classe di esecuzione non valida (EXC1-EXC4)")
@@ -282,7 +282,7 @@ async def create_project(body: ProjectCreate, user: dict = Depends(get_current_u
 
 
 @router.get("/projects")
-async def list_projects(user: dict = Depends(get_current_user)):
+async def list_projects(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     cursor = db.fpc_projects.find(
         {"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}
     ).sort("created_at", -1)
@@ -290,7 +290,7 @@ async def list_projects(user: dict = Depends(get_current_user)):
 
 
 @router.get("/projects/{project_id}")
-async def get_project(project_id: str, user: dict = Depends(get_current_user)):
+async def get_project(project_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     doc = await db.fpc_projects.find_one(
         {"project_id": project_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
         {"_id": 0}
@@ -312,7 +312,7 @@ async def get_project(project_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.put("/projects/{project_id}/fpc")
-async def update_project_fpc(project_id: str, body: dict, user: dict = Depends(get_current_user)):
+async def update_project_fpc(project_id: str, body: dict, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Update FPC data fields (welder, WPS, controls, batches)."""
     project = await db.fpc_projects.find_one(
         {"project_id": project_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -354,7 +354,7 @@ async def update_project_fpc(project_id: str, body: dict, user: dict = Depends(g
 
 
 @router.post("/projects/{project_id}/assign-batch")
-async def assign_batch_to_line(project_id: str, body: dict, user: dict = Depends(get_current_user)):
+async def assign_batch_to_line(project_id: str, body: dict, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Assign a material batch to a project line item: {line_index, batch_id}."""
     project = await db.fpc_projects.find_one(
         {"project_id": project_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -407,7 +407,7 @@ async def assign_batch_to_line(project_id: str, body: dict, user: dict = Depends
 # ═══════════════════════════════════════════════════════════════
 
 @router.get("/projects/{project_id}/ce-check")
-async def check_ce_readiness(project_id: str, user: dict = Depends(get_current_user)):
+async def check_ce_readiness(project_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Check if all FPC requirements are met for CE label generation."""
     project = await db.fpc_projects.find_one(
         {"project_id": project_id, "user_id": user["user_id"], "tenant_id": tenant_match(user)},
@@ -459,7 +459,7 @@ async def check_ce_readiness(project_id: str, user: dict = Depends(get_current_u
 
 
 @router.post("/projects/{project_id}/generate-ce")
-async def generate_ce_label(project_id: str, user: dict = Depends(get_current_user)):
+async def generate_ce_label(project_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Generate the CE label if all checks pass."""
     # Run check first
     project = await db.fpc_projects.find_one(
@@ -508,7 +508,7 @@ async def generate_ce_label(project_id: str, user: dict = Depends(get_current_us
 # ═══════════════════════════════════════════════════════════════
 
 @router.get("/projects/{project_id}/dossier")
-async def download_dossier(project_id: str, user: dict = Depends(get_current_user)):
+async def download_dossier(project_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Generate and download the complete Technical Dossier (Fascicolo Tecnico)."""
     from services.dossier_generator import generate_dossier
 
@@ -538,7 +538,7 @@ async def download_dossier(project_id: str, user: dict = Depends(get_current_use
 # ═══════════════════════════════════════════════════════════════
 
 @router.post("/batches/link-ddt/{commessa_id}")
-async def link_ddt_to_batches(commessa_id: str, user: dict = Depends(get_current_user)):
+async def link_ddt_to_batches(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """
     Cerca DDT di carico e associa automaticamente le righe ai lotti FPC
     basandosi sulla corrispondenza tra descrizione/colata del DDT e i batch.
@@ -625,7 +625,7 @@ async def link_ddt_to_batches(commessa_id: str, user: dict = Depends(get_current
 
 
 @router.get("/batches/rintracciabilita/{commessa_id}")
-async def scheda_rintracciabilita(commessa_id: str, user: dict = Depends(get_current_user)):
+async def scheda_rintracciabilita(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """
     Scheda Rintracciabilita Materiali auto-compilata.
     Per ogni lotto FPC mostra: materiale, colata, cert 3.1, DDT di origine, posizione disegno.
@@ -677,7 +677,7 @@ async def scheda_rintracciabilita(commessa_id: str, user: dict = Depends(get_cur
 
 
 @router.get("/batches/verifica-coerenza/{commessa_id}")
-async def verifica_coerenza_rintracciabilita(commessa_id: str, user: dict = Depends(get_current_user)):
+async def verifica_coerenza_rintracciabilita(commessa_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """
     Confronta material_batches con DDT per segnalare discrepanze:
     - Colate non corrispondenti

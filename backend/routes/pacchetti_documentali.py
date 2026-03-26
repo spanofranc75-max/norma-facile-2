@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from typing import Optional
 
 from core.security import get_current_user, tenant_match
+from core.rbac import require_role
 from services.pacchetti_documentali_service import (
     get_tipi_documento, upload_documento, list_documenti, get_documento, update_documento,
     get_templates, crea_pacchetto, get_pacchetto, list_pacchetti, verifica_pacchetto,
@@ -29,7 +30,7 @@ logger = logging.getLogger(__name__)
 # ═══════════════════════════════════════════════════════════════
 
 @router.get("/documenti/tipi")
-async def api_tipi_documento(user: dict = Depends(get_current_user)):
+async def api_tipi_documento(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Get document types library."""
     return await get_tipi_documento(user["user_id"])
 
@@ -48,7 +49,7 @@ async def api_upload_documento(
     notes: str = Form(""),
     tags: str = Form(""),
     file: Optional[UploadFile] = File(None),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     """Upload a document to archive."""
     data = {
@@ -86,14 +87,14 @@ async def api_list_documenti(
     entity_id: Optional[str] = None,
     document_type_code: Optional[str] = None,
     status: Optional[str] = None,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     """List documents with optional filters."""
     return await list_documenti(user["user_id"], entity_type, entity_id, document_type_code, status)
 
 
 @router.get("/documenti/{doc_id}")
-async def api_get_documento(doc_id: str, user: dict = Depends(get_current_user)):
+async def api_get_documento(doc_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     doc = await get_documento(doc_id, user["user_id"])
     if not doc:
         raise HTTPException(status_code=404, detail="Documento non trovato")
@@ -101,7 +102,7 @@ async def api_get_documento(doc_id: str, user: dict = Depends(get_current_user))
 
 
 @router.patch("/documenti/{doc_id}")
-async def api_update_documento(doc_id: str, updates: dict, user: dict = Depends(get_current_user)):
+async def api_update_documento(doc_id: str, updates: dict, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     doc = await update_documento(doc_id, user["user_id"], updates)
     if not doc:
         raise HTTPException(status_code=404, detail="Documento non trovato")
@@ -113,13 +114,13 @@ async def api_update_documento(doc_id: str, updates: dict, user: dict = Depends(
 # ═══════════════════════════════════════════════════════════════
 
 @router.get("/pacchetti-documentali/templates")
-async def api_templates(user: dict = Depends(get_current_user)):
+async def api_templates(user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Get available package templates."""
     return await get_templates(user["user_id"])
 
 
 @router.post("/pacchetti-documentali")
-async def api_crea_pacchetto(data: dict, user: dict = Depends(get_current_user)):
+async def api_crea_pacchetto(data: dict, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Create a new document package (from template or manual)."""
     result = await crea_pacchetto(user["user_id"], data)
     await log_activity(user, "create", "pacchetto_documentale", result.get("pack_id", ""),
@@ -132,14 +133,14 @@ async def api_crea_pacchetto(data: dict, user: dict = Depends(get_current_user))
 @router.get("/pacchetti-documentali")
 async def api_list_pacchetti(
     commessa_id: Optional[str] = None,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role("admin", "ufficio_tecnico")),
 ):
     """List document packages."""
     return await list_pacchetti(user["user_id"], commessa_id)
 
 
 @router.get("/pacchetti-documentali/{pack_id}")
-async def api_get_pacchetto(pack_id: str, user: dict = Depends(get_current_user)):
+async def api_get_pacchetto(pack_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     pack = await get_pacchetto(pack_id, user["user_id"])
     if not pack:
         raise HTTPException(status_code=404, detail="Pacchetto non trovato")
@@ -151,7 +152,7 @@ async def api_get_pacchetto(pack_id: str, user: dict = Depends(get_current_user)
 # ═══════════════════════════════════════════════════════════════
 
 @router.post("/pacchetti-documentali/{pack_id}/verifica")
-async def api_verifica_pacchetto(pack_id: str, user: dict = Depends(get_current_user)):
+async def api_verifica_pacchetto(pack_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """D3: Verify package — match items against archive, calculate status."""
     result = await verifica_pacchetto(pack_id, user["user_id"])
     if result.get("error"):
@@ -181,7 +182,7 @@ async def api_verifica_pacchetto(pack_id: str, user: dict = Depends(get_current_
 
 
 @router.patch("/pacchetti-documentali/{pack_id}")
-async def api_update_pacchetto(pack_id: str, updates: dict, user: dict = Depends(get_current_user)):
+async def api_update_pacchetto(pack_id: str, updates: dict, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """Update package fields (recipient, label, etc.)."""
     from core.database import db
     from datetime import datetime, timezone
@@ -204,7 +205,7 @@ async def api_update_pacchetto(pack_id: str, updates: dict, user: dict = Depends
 # ═══════════════════════════════════════════════════════════════
 
 @router.post("/pacchetti-documentali/{pack_id}/prepara-invio")
-async def api_prepara_invio(pack_id: str, user: dict = Depends(get_current_user)):
+async def api_prepara_invio(pack_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """D4: Prepare send — generate email draft + attachment list + warnings."""
     result = await prepara_invio(pack_id, user["user_id"])
     if result.get("error"):
@@ -217,7 +218,7 @@ async def api_prepara_invio(pack_id: str, user: dict = Depends(get_current_user)
 # ═══════════════════════════════════════════════════════════════
 
 @router.post("/pacchetti-documentali/{pack_id}/invia")
-async def api_invia_pacchetto(pack_id: str, send_data: dict, user: dict = Depends(get_current_user)):
+async def api_invia_pacchetto(pack_id: str, send_data: dict, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """D5: Send package email via Resend and log the send."""
     from core.demo_guard import is_demo_user
     if is_demo_user(user):
@@ -236,6 +237,6 @@ async def api_invia_pacchetto(pack_id: str, send_data: dict, user: dict = Depend
 
 
 @router.get("/pacchetti-documentali/{pack_id}/invii")
-async def api_get_invii(pack_id: str, user: dict = Depends(get_current_user)):
+async def api_get_invii(pack_id: str, user: dict = Depends(require_role("admin", "ufficio_tecnico"))):
     """D5: Get send history for a package."""
     return await get_invii(pack_id, user["user_id"])
