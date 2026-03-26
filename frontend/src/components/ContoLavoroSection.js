@@ -71,14 +71,14 @@ export default function ContoLavoroSection({ commessaId, commessaNumero, cl, for
 
     const handleUpdateCL = async (clId, stato) => {
         try {
-            await apiRequest(`/commesse/${commessaId}/conto-lavoro/${clId}/stato`, { method: 'PUT', body: { stato } });
+            await apiRequest(`/commesse/${commessaId}/conto-lavoro/${clId}`, { method: 'PUT', body: { stato } });
             toast.success(`C/L aggiornato: ${stato}`);
             onRefresh?.();
         } catch (e) { toast.error(e.message); }
     };
 
     const handlePreviewClPdf = (clId) => {
-        const url = `${API}/api/commesse/${commessaId}/conto-lavoro/${clId}/ddt-preview`;
+        const url = `${API}/api/commesse/${commessaId}/conto-lavoro/${clId}/preview-pdf`;
         setPdfPreviewTitle(`DDT Conto Lavoro ${clId}`);
         setPdfPreviewUrl(url);
     };
@@ -86,8 +86,8 @@ export default function ContoLavoroSection({ commessaId, commessaNumero, cl, for
     const handleSendClEmail = (clId) => {
         setEmailPreview({
             open: true,
-            previewUrl: `/api/commesse/${commessaId}/conto-lavoro/${clId}/ddt-email-preview`,
-            sendUrl: `/api/commesse/${commessaId}/conto-lavoro/${clId}/ddt-send-email`,
+            previewUrl: `/api/commesse/${commessaId}/conto-lavoro/${clId}/preview-email`,
+            sendUrl: `/api/commesse/${commessaId}/conto-lavoro/${clId}/send-email`,
         });
     };
 
