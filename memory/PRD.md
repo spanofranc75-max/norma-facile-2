@@ -38,6 +38,17 @@ Francesco Spano' — Steel Project Design Srls
     - Fix 3 bug: variabile `ccEmails` indefinita, sovrascrittura `cc_list`, logica disabilitazione pulsante
     - 17/17 test passati + UI Playwright (iteration_266)
 
+35. **Collegamento Preventivi-Fatture con Indicatore** (26 Mar 2026):
+    - Pannello "Documenti Collegati" nella sidebar del preventivo editor
+    - Indicatore fatturato con barra di progresso: verde (completo), arancione (parziale)
+    - FT vanno in + (verde), NC vanno in - (rosso) nell'indicatore
+    - Traccia del collegamento visibile anche nella fattura (badge "P" in lista + sezione "Preventivi Collegati")
+    - Supporto multi-preventivo → singola fattura con importo personalizzabile
+    - Backend: `link-invoice`, `unlink-invoice`, `linked-documents` endpoints
+    - `recalc_preventivo_invoiced` calcola da fonti progressive + manuali
+    - `stato_fatturazione`: completo/parziale/non_fatturato
+    - 20/20 test backend + tutti test UI Playwright (iteration_267)
+
 30. **DDT Numerazione Progressiva e Modificabile**:
     - Contatore atomico per tipo (DDT-2026-XXXX vendita, CL-2026-XXXX conto lavoro, RCL-2026-XXXX rientro)
     - Numero modificabile sia in creazione che in modifica DDT
