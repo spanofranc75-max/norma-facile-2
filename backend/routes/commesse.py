@@ -1300,8 +1300,16 @@ async def get_fatture_collegate(commessa_id: str, user: dict = Depends(require_r
     fatture = await db.invoices.find(
         {"invoice_id": {"$in": fatture_ids}, "tenant_id": tenant_match(user)},
         {"_id": 0, "invoice_id": 1, "document_number": 1, "document_type": 1,
-         "client_business_name": 1, "totals": 1, "status": 1, "issue_date": 1}
+         "client_id": 1, "client_business_name": 1, "client_name": 1,
+         "totals": 1, "status": 1, "issue_date": 1}
     ).to_list(100)
+    # Resolve client names where missing
+    for f in fatture:
+        if not f.get("client_name") and f.get("client_id"):
+            client = await db.clients.find_one(
+                {"client_id": f["client_id"]}, {"_id": 0, "business_name": 1}
+            )
+            f["client_name"] = client.get("business_name", "") if client else ""
     return fatture
 
 

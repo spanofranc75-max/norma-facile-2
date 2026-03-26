@@ -788,7 +788,7 @@ export default function CommessaHubPage() {
                                         <div key={f.invoice_id} className="flex items-center justify-between bg-slate-50 rounded-lg px-2.5 py-1.5 group">
                                             <button className="text-left flex-1" onClick={() => navigate(`/invoices/${f.invoice_id}`)}>
                                                 <span className="text-xs font-mono font-semibold text-[#0055FF]">{f.document_type || 'FT'} {f.document_number}</span>
-                                                <span className="text-[10px] text-slate-400 ml-2">{f.client_business_name || ''}</span>
+                                                <span className="text-[10px] text-slate-400 ml-2">{f.client_name || f.client_business_name || ''}</span>
                                                 <span className="text-[10px] font-mono text-slate-600 ml-2">{fmtEur(f.totals?.total_document || f.totals?.total_to_pay || 0)}</span>
                                             </button>
                                             <button
@@ -1007,11 +1007,11 @@ export default function CommessaHubPage() {
 
                 {/* Link Fattura Dialog */}
                 <Dialog open={linkFatturaOpen} onOpenChange={setLinkFatturaOpen}>
-                    <DialogContent className="max-w-md" data-testid="link-fattura-dialog">
+                    <DialogContent className="max-w-2xl max-h-[85vh]" data-testid="link-fattura-dialog">
                         <DialogHeader>
                             <DialogTitle className="text-[#1E293B]">Collega Fatture alla Commessa</DialogTitle>
                         </DialogHeader>
-                        <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                        <div className="space-y-2 max-h-[55vh] overflow-y-auto">
                             {allInvoices.length === 0 ? (
                                 <p className="text-xs text-slate-400 text-center py-4">Nessuna fattura disponibile da collegare</p>
                             ) : (
@@ -1030,9 +1030,9 @@ export default function CommessaHubPage() {
                                         />
                                         <div className="flex-1 min-w-0">
                                             <span className="text-xs font-mono font-semibold text-[#0055FF]">{inv.document_type || 'FT'} {inv.document_number}</span>
-                                            <span className="text-[10px] text-slate-400 ml-2">{inv.client_business_name || ''}</span>
+                                            <span className="text-xs text-slate-600 ml-2 font-medium">{inv.client_name || inv.client_business_name || ''}</span>
                                         </div>
-                                        <span className="text-xs font-mono text-slate-600">{fmtEur(inv.totals?.total_document || inv.totals?.total_to_pay || 0)}</span>
+                                        <span className="text-xs font-mono text-slate-600 whitespace-nowrap">{fmtEur(inv.totals?.total_document || inv.totals?.total_to_pay || 0)}</span>
                                     </label>
                                 ))
                             )}
