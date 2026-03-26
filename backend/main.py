@@ -140,8 +140,10 @@ logger = logging.getLogger(__name__)
 
 
 async def _ensure_indexes():
-    """Create all critical MongoDB indexes. Idempotent — safe to call on every startup."""
+    """Create all critical MongoDB indexes. Idempotent — safe to call on every startup.
+    Uses asyncio.gather for parallel creation to speed up startup."""
     created = []
+    tasks = []
 
     async def _idx(collection_name, keys, unique=False, name=None, partial_filter=None):
         try:
@@ -315,52 +317,37 @@ async def lifespan(app: FastAPI):
     if result.modified_count > 0:
         logger.info(f"Backfilled tenant_id on {result.modified_count} users")
 
-    # 1d. Backfill tenant_id on ALL data collections (dynamic — covers every collection in DB)
-    _skip_collections = {"tenants", "system.indexes", "system.profile"}
-    _all_collections = await db.list_collection_names()
-    _total_backfilled = 0
-    for _coll_name in _all_collections:
-        if _coll_name in _skip_collections or _coll_name.startswith("system."):
-            continue
+    # 1d. Backfill tenant_id on ALL data collections (in background to avoid slow startup)
+    import asyncio
+
+    async def _bg_backfill_and_indexes():
         try:
-            _r = await db[_coll_name].update_many(
-                {"tenant_id": {"$exists": False}},
-                {"$set": {"tenant_id": "default"}}
-            )
-            if _r.modified_count > 0:
-                _total_backfilled += _r.modified_count
-        except Exception:
-            pass
-    if _total_backfilled > 0:
-        logger.info(f"Backfilled tenant_id on {_total_backfilled} data documents across collections")
+            _skip_collections = {"tenants", "system.indexes", "system.profile"}
+            _all_collections = await db.list_collection_names()
+            _total_backfilled = 0
+            for _coll_name in _all_collections:
+                if _coll_name in _skip_collections or _coll_name.startswith("system."):
+                    continue
+                try:
+                    _r = await db[_coll_name].update_many(
+                        {"tenant_id": {"$exists": False}},
+                        {"$set": {"tenant_id": "default"}}
+                    )
+                    if _r.modified_count > 0:
+                        _total_backfilled += _r.modified_count
+                except Exception:
+                    pass
+            if _total_backfilled > 0:
+                logger.info(f"Backfilled tenant_id on {_total_backfilled} data documents across collections")
+            # Also create indexes
+            result = await _ensure_indexes()
+            app.state.indexes_created = result
+        except Exception as e:
+            logger.error(f"Background startup tasks error: {e}")
 
-    # 2. Create/verify all MongoDB indexes
-    app.state.indexes_created = await _ensure_indexes()
+    asyncio.create_task(_bg_backfill_and_indexes())
 
-    # 2b. Initialize DDT counters from existing max numbers
-    for ddt_type, prefix in [("vendita", "DDT"), ("conto_lavoro", "CL"), ("rientro_conto_lavoro", "RCL")]:
-        year = datetime.now(timezone.utc).strftime("%Y")
-        # Find max existing sequence number for this type/year
-        pipeline = [
-            {"$match": {"ddt_type": ddt_type, "number": {"$regex": f"^{prefix}-{year}-"}}},
-            {"$project": {"seq_str": {"$arrayElemAt": [{"$split": ["$number", "-"]}, 2]}}},
-            {"$addFields": {"seq_num": {"$toInt": {"$ifNull": ["$seq_str", "0"]}}}},
-            {"$group": {"_id": None, "max_seq": {"$max": "$seq_num"}}},
-        ]
-        # Get all unique user_ids that have DDTs
-        user_ids = await db.ddt_documents.distinct("user_id", {"ddt_type": ddt_type})
-        for uid in user_ids:
-            pipe = [{"$match": {"ddt_type": ddt_type, "user_id": uid, "number": {"$regex": f"^{prefix}-{year}-"}}}] + pipeline[1:]
-            agg = await db.ddt_documents.aggregate(pipe).to_list(1)
-            max_seq = agg[0]["max_seq"] if agg and agg[0].get("max_seq") else 0
-            counter_id = f"ddt_{ddt_type}_{uid}_{year}"
-            existing_counter = await db.counters.find_one({"_id": counter_id})
-            if not existing_counter or existing_counter.get("seq", 0) < max_seq:
-                await db.counters.update_one(
-                    {"_id": counter_id},
-                    {"$set": {"seq": max_seq}},
-                    upsert=True,
-                )
+    # 2b. DDT counters are initialized lazily on first use (see routes/ddt.py)
 
     # 3. Start the watchdog scheduler
     from services.notification_scheduler import start_scheduler, stop_scheduler

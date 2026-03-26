@@ -138,10 +138,27 @@ def calc_totals(lines: list, sconto_globale: float = 0, acconto: float = 0) -> d
 
 
 async def next_ddt_number(user_id: str, ddt_type: str) -> str:
-    """Generate next DDT number using atomic counter — no duplicates even if DDTs are deleted."""
+    """Generate next DDT number using atomic counter — no duplicates even if DDTs are deleted.
+    Initializes counter lazily from existing max on first use."""
     prefix = {"vendita": "DDT", "conto_lavoro": "CL", "rientro_conto_lavoro": "RCL"}.get(ddt_type, "DDT")
     year = datetime.now(timezone.utc).strftime("%Y")
     counter_id = f"ddt_{ddt_type}_{user_id}_{year}"
+
+    # Check if counter exists; if not, initialize from existing max
+    existing = await db.counters.find_one({"_id": counter_id})
+    if not existing:
+        pipeline = [
+            {"$match": {"ddt_type": ddt_type, "user_id": user_id, "number": {"$regex": f"^{prefix}-{year}-"}}},
+            {"$project": {"seq_str": {"$arrayElemAt": [{"$split": ["$number", "-"]}, 2]}}},
+            {"$addFields": {"seq_num": {"$toInt": {"$ifNull": ["$seq_str", "0"]}}}},
+            {"$group": {"_id": None, "max_seq": {"$max": "$seq_num"}}},
+        ]
+        agg = await db[COLLECTION].aggregate(pipeline).to_list(1)
+        max_seq = agg[0]["max_seq"] if agg and agg[0].get("max_seq") else 0
+        await db.counters.update_one(
+            {"_id": counter_id}, {"$setOnInsert": {"seq": max_seq}}, upsert=True
+        )
+
     result = await db.counters.find_one_and_update(
         {"_id": counter_id},
         {"$inc": {"seq": 1}},
