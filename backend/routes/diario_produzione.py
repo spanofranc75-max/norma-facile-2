@@ -291,7 +291,8 @@ async def list_operatori(cid: str, user: dict = Depends(require_role("admin", "u
     
     Merges data from:
     - operatori collection (legacy, simple name-only)
-    - dipendenti collection (Risorse Umane, full HR data)
+    - dipendenti collection (Risorse Umane HR)
+    - welders collection (Anagrafica Operai)
     """
     admin_id = await _get_team_admin_id(user)
     
@@ -300,13 +301,29 @@ async def list_operatori(cid: str, user: dict = Depends(require_role("admin", "u
         {"admin_id": admin_id}, {"_id": 0}
     ).sort("nome", 1).to_list(200)
     
-    # 2. Load from dipendenti collection (Risorse Umane)
+    seen_names = {o.get("nome", "").strip().lower() for o in ops_raw}
+    
+    # 2. Load from welders collection (Anagrafica Operai — primary source)
+    welders = await db["welders"].find(
+        {"user_id": admin_id, "is_active": True}, {"_id": 0}
+    ).sort("name", 1).to_list(200)
+    
+    for w in welders:
+        name = w.get("name", "").strip()
+        if name.lower() not in seen_names:
+            ops_raw.append({
+                "op_id": w.get("welder_id", ""),
+                "admin_id": admin_id,
+                "nome": name,
+                "mansione": w.get("role", ""),
+                "source": "welders",
+            })
+            seen_names.add(name.lower())
+    
+    # 3. Load from dipendenti collection (Risorse Umane HR)
     dipendenti = await db["dipendenti"].find(
         {"user_id": admin_id, "attivo": True}, {"_id": 0}
     ).sort("nome", 1).to_list(200)
-    
-    # 3. Merge: convert dipendenti to operatore format, avoid duplicates
-    seen_names = {o.get("nome", "").strip().lower() for o in ops_raw}
     
     for dip in dipendenti:
         full_name = f"{dip.get('nome', '')} {dip.get('cognome', '')}".strip()
