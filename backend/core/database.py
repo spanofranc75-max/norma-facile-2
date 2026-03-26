@@ -5,8 +5,17 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# MongoDB client initialization
-client: AsyncIOMotorClient = AsyncIOMotorClient(settings.mongo_url)
+# MongoDB client with connection pooling optimized for Atlas
+client: AsyncIOMotorClient = AsyncIOMotorClient(
+    settings.mongo_url,
+    maxPoolSize=20,
+    minPoolSize=5,
+    maxIdleTimeMS=30000,
+    connectTimeoutMS=10000,
+    serverSelectionTimeoutMS=10000,
+    retryWrites=True,
+    retryReads=True,
+)
 db: AsyncIOMotorDatabase = client[settings.db_name]
 
 
