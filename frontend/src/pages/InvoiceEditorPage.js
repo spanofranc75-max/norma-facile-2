@@ -41,6 +41,7 @@ import {
     PanelRightOpen,
     Eye,
     Printer,
+    Undo2,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import ArticleSearch from '../components/ArticleSearch';
@@ -527,6 +528,23 @@ export default function InvoiceEditorPage() {
                                 className="border-amber-400 text-amber-600 hover:bg-amber-50 text-xs h-9"
                             >
                                 <Send className="h-3.5 w-3.5 mr-1" /> Invia SDI
+                            </Button>
+                        )}
+                        {isEditing && formData.status === 'emessa' && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                data-testid="btn-revert-bozza"
+                                onClick={async () => {
+                                    try {
+                                        await apiRequest(`/invoices/${invoiceId}/status`, { method: 'PATCH', body: { status: 'bozza' } });
+                                        setFormData(f => ({ ...f, status: 'bozza' }));
+                                        toast.success('Documento riportato in bozza');
+                                    } catch (e) { toast.error(e.message); }
+                                }}
+                                className="border-slate-400 text-slate-600 hover:bg-slate-50 text-xs h-9"
+                            >
+                                <Undo2 className="h-3.5 w-3.5 mr-1" /> Riporta in Bozza
                             </Button>
                         )}
                         <Button

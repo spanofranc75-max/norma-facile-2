@@ -793,7 +793,7 @@ async def update_invoice_status(
     # Define valid transitions
     valid_transitions = {
         "bozza": ["emessa", "annullata"],
-        "emessa": ["inviata_sdi", "pagata", "annullata"],
+        "emessa": ["bozza", "inviata_sdi", "pagata", "annullata"],
         "inviata_sdi": ["accettata", "rifiutata", "pagata"],
         "accettata": ["pagata", "scaduta"],
         "rifiutata": ["bozza"],
