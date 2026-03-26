@@ -63,6 +63,7 @@ import {
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import RilievoViewer3D from '../components/RilievoViewer3D';
+import QuickNewClientDialog from '../components/QuickNewClientDialog';
 import CanvasDraw from 'react-canvas-draw';
 
 // Sketch Editor Component
@@ -688,6 +689,7 @@ export default function RilievoEditorPage() {
     const [sketchDialogOpen, setSketchDialogOpen] = useState(false);
     const [editingSketch, setEditingSketch] = useState(null);
     const [activeTab, setActiveTab] = useState('info');
+    const [quickClientOpen, setQuickClientOpen] = useState(false);
 
     // Fetch clients on mount
     useEffect(() => {
@@ -1124,25 +1126,38 @@ export default function RilievoEditorPage() {
                                     </div>
                                     <div>
                                         <Label className="text-base">Cliente *</Label>
-                                        <Select
-                                            value={formData.client_id || "__none__"}
-                                            onValueChange={(v) => updateField('client_id', v === "__none__" ? "" : v)}
-                                        >
-                                            <SelectTrigger data-testid="select-client" className="h-14 text-base">
-                                                <SelectValue placeholder="Seleziona cliente..." />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="__none__">-- Seleziona cliente --</SelectItem>
-                                                {clients.map(c => (
-                                                    <SelectItem key={c.client_id} value={c.client_id}>
-                                                        {c.business_name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <div className="flex gap-2">
+                                            <Select
+                                                value={formData.client_id || "__none__"}
+                                                onValueChange={(v) => updateField('client_id', v === "__none__" ? "" : v)}
+                                            >
+                                                <SelectTrigger data-testid="select-client" className="h-14 text-base flex-1">
+                                                    <SelectValue placeholder="Seleziona cliente..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="__none__">-- Seleziona cliente --</SelectItem>
+                                                    {clients.map(c => (
+                                                        <SelectItem key={c.client_id} value={c.client_id}>
+                                                            {c.business_name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="h-14 w-14 shrink-0 border-dashed border-blue-300 text-blue-600 hover:bg-blue-50"
+                                                onClick={() => setQuickClientOpen(true)}
+                                                data-testid="btn-quick-new-client"
+                                                title="Nuovo Cliente Rapido"
+                                            >
+                                                <Plus className="h-5 w-5" />
+                                            </Button>
+                                        </div>
                                         {selectedClient && (
                                             <p className="mt-2 text-sm text-slate-500">
-                                                {selectedClient.address}, {selectedClient.city}
+                                                {[selectedClient.address, selectedClient.city].filter(Boolean).join(', ')}
+                                                {selectedClient.cellulare && <span className="ml-2 text-slate-400">Tel: {selectedClient.cellulare}</span>}
                                             </p>
                                         )}
                                     </div>
@@ -1566,6 +1581,21 @@ export default function RilievoEditorPage() {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Quick New Client Dialog */}
+            <QuickNewClientDialog
+                open={quickClientOpen}
+                onOpenChange={setQuickClientOpen}
+                onCreated={(newClient) => {
+                    // Add to clients list and auto-select
+                    setClients(prev => [newClient, ...prev]);
+                    updateField('client_id', newClient.client_id);
+                    // Also pre-fill location if client has address and location is empty
+                    if (newClient.address && !formData.location) {
+                        updateField('location', [newClient.address, newClient.city].filter(Boolean).join(', '));
+                    }
+                }}
+            />
         </DashboardLayout>
     );
 }

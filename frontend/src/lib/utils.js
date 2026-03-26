@@ -59,6 +59,12 @@ export async function apiRequest(endpoint, options = {}) {
     }
     
     if (!response.ok) {
+        // 401 = sessione scaduta o invalida → redirect al login
+        if (response.status === 401 && !endpoint.includes('/auth/')) {
+            sessionStorage.removeItem('nf_was_authenticated');
+            window.location.href = '/';
+            throw new Error('Sessione scaduta — effettua di nuovo il login');
+        }
         let detail = `Errore ${response.status}`;
         try {
             // Leggi il body UNA SOLA VOLTA
