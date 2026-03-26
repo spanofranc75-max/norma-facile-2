@@ -9,7 +9,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://fattura-send.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://fatture-v2.preview.emergentagent.com')
 SESSION_TOKEN = "EN86LIFjhuDb6Hw4fMs736NpccPZYKZ21k18tGgLe2Q"
 
 # Test invoices

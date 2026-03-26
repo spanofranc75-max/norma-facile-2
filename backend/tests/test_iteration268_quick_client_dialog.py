@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from pymongo import MongoClient
 
 # Get URLs from environment
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://fattura-send.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://fatture-v2.preview.emergentagent.com')
 MONGO_URL = os.environ.get('MONGO_URL', '')
 
 # Test user credentials

@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/migrazione", tags=["Migrazione"])
 
-EXPORT_URL = "https://fattura-send.preview.emergentagent.com/api/export/migrazione-completa"
+EXPORT_URL = "https://fatture-v2.preview.emergentagent.com/api/export/migrazione-completa"
 
 
 @router.post("/importa")

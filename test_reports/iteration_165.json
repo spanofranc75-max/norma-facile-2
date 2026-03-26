@@ -100,7 +100,7 @@
     "admin_session_token": "0urNkos478BzSaOHd49sFYF_lmqHn4n6PLLHbVjUaGE",
     "admin_user_id": "user_97c773827822",
     "admin_email": "spano.franc75@gmail.com",
-    "api_url": "https://fattura-send.preview.emergentagent.com"
+    "api_url": "https://fatture-v2.preview.emergentagent.com"
   },
   "retest_needed": false,
   "should_main_agent_self_test": false,

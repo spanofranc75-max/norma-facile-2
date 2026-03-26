@@ -25,7 +25,7 @@ sys.path.insert(0, '/app/backend')
 # Using production URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://fattura-send.preview.emergentagent.com"
+    BASE_URL = "https://fatture-v2.preview.emergentagent.com"
 
 # Test credentials
 TEST_SESSION_TOKEN = "4e8d7be03f734f639e57a76688f33654"
