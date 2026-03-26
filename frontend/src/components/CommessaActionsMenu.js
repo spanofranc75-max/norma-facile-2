@@ -9,14 +9,14 @@ import {
     DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel,
 } from '../components/ui/dropdown-menu';
 import {
-    Download, FileText, Award, Loader2, ChevronDown,
+    Download, FileText, Award, Loader2, ChevronDown, ClipboardList,
 } from 'lucide-react';
 
 export default function CommessaActionsMenu({
     commessaId, commessaNumero, normativaTipo,
     onDownloadDossier, onDownloadPacco, onDownloadTemplate111,
     onDopAutomatica, onEtichettaCE, onRintracciabilita,
-    onCamDichiarazione, onPaccoRina,
+    onCamDichiarazione, onPaccoRina, onDownloadFoglioLavoro,
     generatingDopAuto,
 }) {
     const isEN1090 = normativaTipo === 'EN_1090';
@@ -40,6 +40,11 @@ export default function CommessaActionsMenu({
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={onDownloadTemplate111} data-testid="menu-template-111" className="text-xs cursor-pointer">
                     <Award className="h-3.5 w-3.5 mr-2 text-amber-600" /> Template 111
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-[10px] text-slate-400 uppercase">Officina</DropdownMenuLabel>
+                <DropdownMenuItem onClick={onDownloadFoglioLavoro} data-testid="menu-foglio-lavoro" className="text-xs cursor-pointer">
+                    <ClipboardList className="h-3.5 w-3.5 mr-2 text-orange-600" /> Foglio Lavoro (Stampa)
                 </DropdownMenuItem>
                 {isEN1090 && (
                     <>

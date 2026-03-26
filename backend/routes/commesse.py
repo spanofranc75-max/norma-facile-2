@@ -1357,3 +1357,44 @@ async def generate_commessa_dossier(commessa_id: str, user: dict = Depends(requi
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# ── Foglio Lavoro PDF (stampabile per officina) ──────────────────
+
+@router.get("/{commessa_id}/foglio-lavoro")
+async def download_foglio_lavoro(commessa_id: str, user: dict = Depends(require_role("admin", "amministrazione", "ufficio_tecnico", "officina"))):
+    """Generate and download the printable Foglio Lavoro PDF for workshop operators.
+    Contains QR code, production phases, empty rows for manual time entry.
+    NO financial data is included."""
+    from services.pdf_foglio_lavoro import generate_foglio_lavoro
+    from fastapi.responses import Response
+
+    uid = user["user_id"]
+    doc = await db[COLLECTION].find_one(
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0}
+    )
+    if not doc:
+        raise HTTPException(404, "Commessa non trovata")
+
+    # Fetch company settings for header
+    company = await db.company_settings.find_one(
+        {"user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0}
+    ) or {}
+
+    # Use the app base URL for QR code
+    app_url = "https://app.1090normafacile.it"
+
+    try:
+        pdf_bytes = generate_foglio_lavoro(doc, company, app_url)
+    except Exception as e:
+        logger.error(f"Foglio Lavoro generation error: {e}")
+        raise HTTPException(500, f"Errore generazione Foglio Lavoro: {str(e)}")
+
+    numero = doc.get("numero", commessa_id).replace("/", "-")
+    filename = f"Foglio_Lavoro_{numero}.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

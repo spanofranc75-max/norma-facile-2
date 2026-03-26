@@ -240,6 +240,14 @@ export default function CommessaHubPage() {
         }
     };
 
+    const handleDownloadFoglioLavoro = async () => {
+        try {
+            toast.info('Generazione Foglio Lavoro...');
+            await downloadPdfBlob(`/commesse/${commessaId}/foglio-lavoro`, `Foglio_Lavoro_${hub?.commessa?.numero || commessaId}.pdf`);
+            toast.success('Foglio Lavoro generato');
+        } catch (e) { toast.error(e.message); }
+    };
+
     const handleDownloadDossier = async () => {
         try {
             await downloadPdfBlob(`/commesse/${commessaId}/dossier`, `Dossier_${hub?.commessa?.numero || commessaId}.pdf`);
@@ -396,6 +404,7 @@ export default function CommessaHubPage() {
                             onDownloadTemplate111={handleDownloadTemplate111} onDopAutomatica={handleDopAutomatica}
                             onEtichettaCE={handleEtichettaCE1090} onRintracciabilita={handleRintracciabilitaPdf}
                             onCamDichiarazione={handleCamDichiarazionePdf} onPaccoRina={handlePaccoRina}
+                            onDownloadFoglioLavoro={handleDownloadFoglioLavoro}
                             generatingDopAuto={generatingDopAuto}
                         />
                     </div>
