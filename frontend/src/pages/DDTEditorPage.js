@@ -90,6 +90,7 @@ export default function DDTEditorPage() {
         apiRequest(`/ddt/${ddtId}`).then(data => {
             setForm({
                 ddt_type: data.ddt_type || 'vendita',
+                number: data.number || '',
                 client_id: data.client_id || '',
                 subject: data.subject || '',
                 destinazione: data.destinazione || { ragione_sociale: '', indirizzo: '', cap: '', localita: '', provincia: '', telefono: '', cellulare: '', paese: 'IT' },
@@ -292,6 +293,17 @@ export default function DDTEditorPage() {
                                             {TYPE_OPTIONS.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
+                                </div>
+                                <div>
+                                    <Label className="text-xs">Numero DDT</Label>
+                                    <Input 
+                                        data-testid="input-ddt-number" 
+                                        value={form.number || ddtInfo.number || ''} 
+                                        onChange={e => setForm(f => ({ ...f, number: e.target.value }))}
+                                        placeholder="Auto-generato" 
+                                        className="h-9 text-sm font-mono" 
+                                    />
+                                    {isNew && !form.number && <p className="text-[10px] text-slate-400 mt-0.5">Lascia vuoto per numerazione automatica</p>}
                                 </div>
                                 <div>
                                     <Label className="text-xs">Cliente / Fornitore</Label>

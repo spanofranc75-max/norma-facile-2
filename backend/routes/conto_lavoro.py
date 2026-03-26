@@ -112,10 +112,9 @@ async def update_conto_lavoro(cid: str, cl_id: str, data: ContoLavoroUpdate, use
         cl_item = next((c for c in cl_list if c.get("cl_id") == cl_id), None)
         if cl_item and not cl_item.get("ddt_invio_id"):
             comm_num = comm.get("numero", cid)
-            year = ts().strftime("%Y")
-            ddt_count = await db.ddt_documents.count_documents({"user_id": user["user_id"], "tenant_id": tenant_match(user)})
+            from routes.ddt import next_ddt_number
             ddt_invio_id = f"ddt_{uuid.uuid4().hex[:12]}"
-            ddt_number = f"DDT-{year}-{ddt_count + 1:04d}"
+            ddt_number = await next_ddt_number(user["user_id"], "conto_lavoro")
             tipo_lav = cl_item.get("tipo", "lavorazione")
             fornitore = cl_item.get("fornitore_nome", "")
             lines = []

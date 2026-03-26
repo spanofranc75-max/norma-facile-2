@@ -985,7 +985,22 @@ export default function InvoiceEditorPage() {
             <SdiPreviewDialog
                 open={sdiPreviewOpen}
                 onOpenChange={setSdiPreviewOpen}
-                invoice={formData}
+                invoice={{
+                    ...formData,
+                    invoice_id: invoiceId,
+                    numero: formData.document_number,
+                    client_name: selectedClient?.business_name || '',
+                    totale: totals.total_document || totals.total_to_pay || 0,
+                    total: totals.total_document || totals.total_to_pay || 0,
+                    imponibile: totals.subtotal || 0,
+                    iva: totals.total_vat || 0,
+                    vat: totals.total_vat || 0,
+                    stato: formData.status || 'bozza',
+                    client_piva: selectedClient?.partita_iva || '',
+                    client_cf: selectedClient?.codice_fiscale || '',
+                    client_sdi_code: selectedClient?.codice_sdi || '',
+                    client_pec: selectedClient?.pec || '',
+                }}
                 onSent={() => { setSdiPreviewOpen(false); fetchInvoice(); }}
             />
         </DashboardLayout>

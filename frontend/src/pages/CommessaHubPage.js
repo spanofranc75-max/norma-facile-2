@@ -139,6 +139,11 @@ export default function CommessaHubPage() {
     const [checklistStato, setChecklistStato] = useState({});
     const [vociLavoro, setVociLavoro] = useState([]);
     const [camAlert, setCamAlert] = useState(null);
+    const [fattureCollegate, setFattureCollegate] = useState([]);
+    const [linkFatturaOpen, setLinkFatturaOpen] = useState(false);
+    const [allInvoices, setAllInvoices] = useState([]);
+    const [selectedInvoices, setSelectedInvoices] = useState([]);
+    const [linkingFatture, setLinkingFatture] = useState(false);
 
     const fetchHub = useCallback(async () => {
         try {
@@ -357,6 +362,49 @@ export default function CommessaHubPage() {
         } finally {
             setClosingSimple(false);
         }
+    };
+
+    // Fatture Collegate
+    const fetchFattureCollegate = useCallback(async () => {
+        try {
+            const data = await apiRequest(`/commesse/${commessaId}/fatture-collegate`);
+            setFattureCollegate(data || []);
+        } catch { setFattureCollegate([]); }
+    }, [commessaId]);
+
+    useEffect(() => { fetchFattureCollegate(); }, [fetchFattureCollegate]);
+
+    const openLinkFattura = async () => {
+        setLinkFatturaOpen(true);
+        setSelectedInvoices([]);
+        try {
+            const data = await apiRequest('/invoices/');
+            const linked = fattureCollegate.map(f => f.invoice_id);
+            setAllInvoices((data.invoices || data || []).filter(i => !linked.includes(i.invoice_id)));
+        } catch { setAllInvoices([]); }
+    };
+
+    const handleLinkFatture = async () => {
+        if (!selectedInvoices.length) return;
+        setLinkingFatture(true);
+        try {
+            await apiRequest(`/commesse/${commessaId}/fatture-collegate`, {
+                method: 'POST', body: { invoice_ids: selectedInvoices },
+            });
+            toast.success('Fatture collegate');
+            setLinkFatturaOpen(false);
+            fetchFattureCollegate();
+            fetchHub();
+        } catch (e) { toast.error(e.message); }
+        finally { setLinkingFatture(false); }
+    };
+
+    const handleUnlinkFattura = async (invoiceId) => {
+        try {
+            await apiRequest(`/commesse/${commessaId}/fatture-collegate/${invoiceId}`, { method: 'DELETE' });
+            toast.success('Fattura scollegata');
+            fetchFattureCollegate();
+        } catch (e) { toast.error(e.message); }
     };
 
     if (loading) return (
@@ -713,6 +761,41 @@ export default function CommessaHubPage() {
                         )}
 
                         {/* Timeline */}
+                        {/* ══ Fatture Collegate ══ */}
+                        <Card className="border-gray-200" data-testid="fatture-collegate">
+                            <CardHeader className="py-2 px-4 flex-row items-center justify-between">
+                                <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                                    <Receipt className="h-3.5 w-3.5" /> Fatture Collegate ({fattureCollegate.length})
+                                </CardTitle>
+                                <Button size="sm" variant="ghost" onClick={openLinkFattura} className="h-7 w-7 p-0" data-testid="btn-link-fattura">
+                                    <Plus className="h-3.5 w-3.5" />
+                                </Button>
+                            </CardHeader>
+                            <CardContent className="px-3 pb-3 space-y-1.5">
+                                {fattureCollegate.length === 0 ? (
+                                    <p className="text-[10px] text-slate-400 text-center py-2">Nessuna fattura collegata</p>
+                                ) : (
+                                    fattureCollegate.map(f => (
+                                        <div key={f.invoice_id} className="flex items-center justify-between bg-slate-50 rounded-lg px-2.5 py-1.5 group">
+                                            <button className="text-left flex-1" onClick={() => navigate(`/invoices/${f.invoice_id}`)}>
+                                                <span className="text-xs font-mono font-semibold text-[#0055FF]">{f.document_type || 'FT'} {f.document_number}</span>
+                                                <span className="text-[10px] text-slate-400 ml-2">{f.client_business_name || ''}</span>
+                                                <span className="text-[10px] font-mono text-slate-600 ml-2">{fmtEur(f.totals?.total_document || f.totals?.total_to_pay || 0)}</span>
+                                            </button>
+                                            <button
+                                                onClick={() => handleUnlinkFattura(f.invoice_id)}
+                                                className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 p-1 transition-opacity"
+                                                data-testid={`unlink-fattura-${f.invoice_id}`}
+                                            >
+                                                <XCircle className="h-3.5 w-3.5" />
+                                            </button>
+                                        </div>
+                                    ))
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Timeline */}
                         <Card className="border-gray-200" data-testid="events-timeline">
                             <CardHeader className="bg-[#1E293B] py-2.5 px-4 rounded-t-lg">
                                 <CardTitle className="text-xs font-semibold text-white flex items-center gap-2">
@@ -908,6 +991,52 @@ export default function CommessaHubPage() {
                             >
                                 {closingSimple ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />}
                                 Chiudi Commessa
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Link Fattura Dialog */}
+                <Dialog open={linkFatturaOpen} onOpenChange={setLinkFatturaOpen}>
+                    <DialogContent className="max-w-md" data-testid="link-fattura-dialog">
+                        <DialogHeader>
+                            <DialogTitle className="text-[#1E293B]">Collega Fatture alla Commessa</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                            {allInvoices.length === 0 ? (
+                                <p className="text-xs text-slate-400 text-center py-4">Nessuna fattura disponibile da collegare</p>
+                            ) : (
+                                allInvoices.map(inv => (
+                                    <label key={inv.invoice_id} className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                                        selectedInvoices.includes(inv.invoice_id) ? 'border-[#0055FF] bg-blue-50' : 'border-slate-200 hover:bg-slate-50'
+                                    }`}>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedInvoices.includes(inv.invoice_id)}
+                                            onChange={(e) => {
+                                                if (e.target.checked) setSelectedInvoices(p => [...p, inv.invoice_id]);
+                                                else setSelectedInvoices(p => p.filter(id => id !== inv.invoice_id));
+                                            }}
+                                            className="rounded border-slate-300"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <span className="text-xs font-mono font-semibold text-[#0055FF]">{inv.document_type || 'FT'} {inv.document_number}</span>
+                                            <span className="text-[10px] text-slate-400 ml-2">{inv.client_business_name || ''}</span>
+                                        </div>
+                                        <span className="text-xs font-mono text-slate-600">{fmtEur(inv.totals?.total_document || inv.totals?.total_to_pay || 0)}</span>
+                                    </label>
+                                ))
+                            )}
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" size="sm" onClick={() => setLinkFatturaOpen(false)}>Annulla</Button>
+                            <Button size="sm" disabled={!selectedInvoices.length || linkingFatture}
+                                className="bg-[#0055FF] text-white hover:bg-[#0044CC]"
+                                onClick={handleLinkFatture}
+                                data-testid="btn-confirm-link-fatture"
+                            >
+                                {linkingFatture ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Link2 className="h-3.5 w-3.5 mr-1.5" />}
+                                Collega ({selectedInvoices.length})
                             </Button>
                         </DialogFooter>
                     </DialogContent>

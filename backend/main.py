@@ -337,6 +337,31 @@ async def lifespan(app: FastAPI):
     # 2. Create/verify all MongoDB indexes
     app.state.indexes_created = await _ensure_indexes()
 
+    # 2b. Initialize DDT counters from existing max numbers
+    for ddt_type, prefix in [("vendita", "DDT"), ("conto_lavoro", "CL"), ("rientro_conto_lavoro", "RCL")]:
+        year = datetime.now(timezone.utc).strftime("%Y")
+        # Find max existing sequence number for this type/year
+        pipeline = [
+            {"$match": {"ddt_type": ddt_type, "number": {"$regex": f"^{prefix}-{year}-"}}},
+            {"$project": {"seq_str": {"$arrayElemAt": [{"$split": ["$number", "-"]}, 2]}}},
+            {"$addFields": {"seq_num": {"$toInt": {"$ifNull": ["$seq_str", "0"]}}}},
+            {"$group": {"_id": None, "max_seq": {"$max": "$seq_num"}}},
+        ]
+        # Get all unique user_ids that have DDTs
+        user_ids = await db.ddt_documents.distinct("user_id", {"ddt_type": ddt_type})
+        for uid in user_ids:
+            pipe = [{"$match": {"ddt_type": ddt_type, "user_id": uid, "number": {"$regex": f"^{prefix}-{year}-"}}}] + pipeline[1:]
+            agg = await db.ddt_documents.aggregate(pipe).to_list(1)
+            max_seq = agg[0]["max_seq"] if agg and agg[0].get("max_seq") else 0
+            counter_id = f"ddt_{ddt_type}_{uid}_{year}"
+            existing_counter = await db.counters.find_one({"_id": counter_id})
+            if not existing_counter or existing_counter.get("seq", 0) < max_seq:
+                await db.counters.update_one(
+                    {"_id": counter_id},
+                    {"$set": {"seq": max_seq}},
+                    upsert=True,
+                )
+
     # 3. Start the watchdog scheduler
     from services.notification_scheduler import start_scheduler, stop_scheduler
     start_scheduler()

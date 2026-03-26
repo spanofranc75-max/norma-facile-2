@@ -1259,6 +1259,85 @@ async def create_split_commesse(preventivo_id: str, body: SplitCommessaRequest, 
     }
 
 
+# ── Fatture collegate alla Commessa ─────────────────────────────
+
+@router.get("/{commessa_id}/fatture-collegate")
+async def get_fatture_collegate(commessa_id: str, user: dict = Depends(require_role("admin", "amministrazione"))):
+    """Return list of invoices linked to this commessa."""
+    uid = user["user_id"]
+    doc = await db[COLLECTION].find_one(
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0, "fatture_collegate": 1}
+    )
+    if not doc:
+        raise HTTPException(404, "Commessa non trovata")
+    fatture_ids = doc.get("fatture_collegate") or []
+    if not fatture_ids:
+        return []
+    fatture = await db.invoices.find(
+        {"invoice_id": {"$in": fatture_ids}, "tenant_id": tenant_match(user)},
+        {"_id": 0, "invoice_id": 1, "document_number": 1, "document_type": 1,
+         "client_business_name": 1, "totals": 1, "status": 1, "issue_date": 1}
+    ).to_list(100)
+    return fatture
+
+
+@router.post("/{commessa_id}/fatture-collegate")
+async def link_fatture(
+    commessa_id: str,
+    body: dict = Body(...),
+    user: dict = Depends(require_role("admin", "amministrazione")),
+):
+    """Link one or more invoices to this commessa. Body: { "invoice_ids": ["inv_xxx", ...] }"""
+    uid = user["user_id"]
+    doc = await db[COLLECTION].find_one(
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tenant_match(user)}, {"_id": 0, "commessa_id": 1}
+    )
+    if not doc:
+        raise HTTPException(404, "Commessa non trovata")
+    invoice_ids = body.get("invoice_ids", [])
+    if not invoice_ids:
+        raise HTTPException(400, "Nessuna fattura specificata")
+    # Verify invoices exist
+    existing = await db.invoices.find(
+        {"invoice_id": {"$in": invoice_ids}, "user_id": uid, "tenant_id": tenant_match(user)},
+        {"_id": 0, "invoice_id": 1}
+    ).to_list(100)
+    valid_ids = [e["invoice_id"] for e in existing]
+    if not valid_ids:
+        raise HTTPException(404, "Nessuna fattura trovata")
+    now = datetime.now(timezone.utc)
+    await db[COLLECTION].update_one(
+        {"commessa_id": commessa_id},
+        {"$addToSet": {"fatture_collegate": {"$each": valid_ids}}, "$set": {"updated_at": now}},
+    )
+    # Also update invoices with commessa reference
+    await db.invoices.update_many(
+        {"invoice_id": {"$in": valid_ids}},
+        {"$set": {"commessa_id": commessa_id, "updated_at": now}},
+    )
+    return {"message": f"{len(valid_ids)} fatture collegate", "linked_ids": valid_ids}
+
+
+@router.delete("/{commessa_id}/fatture-collegate/{invoice_id}")
+async def unlink_fattura(
+    commessa_id: str, invoice_id: str,
+    user: dict = Depends(require_role("admin", "amministrazione")),
+):
+    """Remove an invoice link from this commessa."""
+    uid = user["user_id"]
+    now = datetime.now(timezone.utc)
+    await db[COLLECTION].update_one(
+        {"commessa_id": commessa_id, "user_id": uid, "tenant_id": tenant_match(user)},
+        {"$pull": {"fatture_collegate": invoice_id}, "$set": {"updated_at": now}},
+    )
+    await db.invoices.update_one(
+        {"invoice_id": invoice_id},
+        {"$unset": {"commessa_id": ""}, "$set": {"updated_at": now}},
+    )
+    return {"message": "Fattura scollegata"}
+
+
+
 # ── Chiusura Diretta (senza certificazione) ──────────────────────
 
 CHIUSURA_DIRETTA_ALLOWED = [

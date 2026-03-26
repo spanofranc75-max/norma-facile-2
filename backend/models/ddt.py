@@ -31,6 +31,7 @@ class DestinazioneMerce(BaseModel):
 
 class DDTCreate(BaseModel):
     ddt_type: str = Field(default="vendita", description="vendita, conto_lavoro, rientro_conto_lavoro")
+    number: Optional[str] = None  # Optional: override auto-generated number
     client_id: Optional[str] = None
     subject: str = ""
     destinazione: Optional[DestinazioneMerce] = None
@@ -56,6 +57,7 @@ class DDTCreate(BaseModel):
 
 
 class DDTUpdate(BaseModel):
+    number: Optional[str] = None  # Editable number
     ddt_type: Optional[str] = None
     client_id: Optional[str] = None
     subject: Optional[str] = None

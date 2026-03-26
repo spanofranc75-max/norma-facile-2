@@ -138,10 +138,18 @@ def calc_totals(lines: list, sconto_globale: float = 0, acconto: float = 0) -> d
 
 
 async def next_ddt_number(user_id: str, ddt_type: str) -> str:
+    """Generate next DDT number using atomic counter — no duplicates even if DDTs are deleted."""
     prefix = {"vendita": "DDT", "conto_lavoro": "CL", "rientro_conto_lavoro": "RCL"}.get(ddt_type, "DDT")
     year = datetime.now(timezone.utc).strftime("%Y")
-    count = await db[COLLECTION].count_documents({"user_id": user_id, "ddt_type": ddt_type})
-    return f"{prefix}-{year}-{count + 1:04d}"
+    counter_id = f"ddt_{ddt_type}_{user_id}_{year}"
+    result = await db.counters.find_one_and_update(
+        {"_id": counter_id},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=True,
+    )
+    seq = result["seq"]
+    return f"{prefix}-{year}-{seq:04d}"
 
 
 # ── List ──
@@ -236,7 +244,7 @@ async def get_ddt(ddt_id: str, user: dict = Depends(require_role("admin", "ammin
 async def create_ddt(data: DDTCreate, user: dict = Depends(require_role("admin", "amministrazione"))):
     from services.client_snapshot import build_snapshot
     ddt_id = f"ddt_{uuid.uuid4().hex[:12]}"
-    number = await next_ddt_number(user["user_id"], data.ddt_type)
+    number = data.number if data.number else await next_ddt_number(user["user_id"], data.ddt_type)
     now = datetime.now(timezone.utc)
 
     # Build client snapshot + resolve name
@@ -311,7 +319,7 @@ async def update_ddt(ddt_id: str, data: DDTUpdate, user: dict = Depends(require_
     upd = {"updated_at": datetime.now(timezone.utc)}
 
     simple = [
-        "ddt_type", "client_id", "subject", "causale_trasporto", "aspetto_beni",
+        "number", "ddt_type", "client_id", "subject", "causale_trasporto", "aspetto_beni",
         "vettore", "mezzo_trasporto", "porto", "data_ora_trasporto",
         "payment_type_id", "payment_type_label", "stampa_prezzi", "riferimento", "notes", "status",
     ]
