@@ -612,12 +612,84 @@ async def crea_cantiere(user_id: str, commessa_id: Optional[str] = None, pre_fil
     cantiere_id = f"cant_{uuid.uuid4().hex[:12]}"
     doc = _new_cantiere_template(cantiere_id, user_id, commessa_id)
 
-    # Pre-fill from commessa
+    # Pre-fill from commessa + client + preventivo
     if commessa_id:
         commessa = await db.commesse.find_one({"commessa_id": commessa_id, "user_id": user_id}, {"_id": 0})
         if commessa:
-            doc["dati_cantiere"]["attivita_cantiere"] = commessa.get("description", "")
-            _set_soggetto(doc["soggetti"], "COMMITTENTE", nome=commessa.get("client_name", ""))
+            # --- Attivita cantiere ---
+            doc["dati_cantiere"]["attivita_cantiere"] = (
+                commessa.get("oggetto")
+                or commessa.get("description")
+                or commessa.get("title", "")
+            )
+
+            # --- Indirizzo dal campo cantiere della commessa ---
+            cantiere_info = commessa.get("cantiere", {})
+            if isinstance(cantiere_info, dict) and cantiere_info.get("indirizzo"):
+                raw_addr = cantiere_info["indirizzo"]
+                doc["dati_cantiere"]["indirizzo_cantiere"] = raw_addr
+                # Try to parse "Via X, Citta (PROV)" pattern
+                import re
+                m = re.match(r"^(.+?),\s*(.+?)(?:\s*\((\w{2})\))?$", raw_addr)
+                if m:
+                    doc["dati_cantiere"]["indirizzo_cantiere"] = m.group(1).strip()
+                    doc["dati_cantiere"]["citta_cantiere"] = m.group(2).strip()
+                    if m.group(3):
+                        doc["dati_cantiere"]["provincia_cantiere"] = m.group(3).strip()
+
+            # --- Indirizzo dal preventivo (destinazione) ---
+            if not doc["dati_cantiere"].get("indirizzo_cantiere"):
+                prev_id = commessa.get("preventivo_id")
+                if prev_id:
+                    prev = await db.preventivi.find_one(
+                        {"preventivo_id": prev_id, "user_id": user_id},
+                        {"_id": 0, "destinazione": 1, "oggetto": 1}
+                    )
+                    if prev:
+                        dest = prev.get("destinazione", {})
+                        if isinstance(dest, dict):
+                            doc["dati_cantiere"]["indirizzo_cantiere"] = dest.get("indirizzo", "")
+                            doc["dati_cantiere"]["citta_cantiere"] = dest.get("citta", dest.get("comune", ""))
+                            doc["dati_cantiere"]["provincia_cantiere"] = dest.get("provincia", "")
+                        elif isinstance(dest, str) and dest:
+                            doc["dati_cantiere"]["indirizzo_cantiere"] = dest
+                        # Fallback attivita from preventivo oggetto
+                        if not doc["dati_cantiere"]["attivita_cantiere"]:
+                            doc["dati_cantiere"]["attivita_cantiere"] = prev.get("oggetto", "")
+
+            # --- Client data for COMMITTENTE ---
+            client_name = commessa.get("client_name", "")
+            client_id = commessa.get("client_id")
+            if client_id:
+                client = await db.clients.find_one({"client_id": client_id}, {"_id": 0})
+                if client:
+                    client_name = client.get("business_name") or client.get("name", client_name)
+                    # Pre-fill cantiere address from client if still empty
+                    if not doc["dati_cantiere"].get("indirizzo_cantiere"):
+                        addr_street = client.get("address_street", "")
+                        addr_city = client.get("address_city", "")
+                        addr_prov = client.get("address_province", "")
+                        if addr_street:
+                            doc["dati_cantiere"]["indirizzo_cantiere"] = addr_street
+                        if addr_city:
+                            doc["dati_cantiere"]["citta_cantiere"] = addr_city
+                        if addr_prov:
+                            doc["dati_cantiere"]["provincia_cantiere"] = addr_prov
+
+                    _set_soggetto(doc["soggetti"], "COMMITTENTE",
+                                  nome=client_name,
+                                  telefono=client.get("phone", client.get("tel", "")),
+                                  email=client.get("email", client.get("ei_email", "")),
+                                  azienda=client.get("business_name", ""))
+                else:
+                    _set_soggetto(doc["soggetti"], "COMMITTENTE", nome=client_name)
+            elif client_name:
+                _set_soggetto(doc["soggetti"], "COMMITTENTE", nome=client_name)
+
+            # --- Store commessa/client reference for list display ---
+            doc["commessa_numero"] = commessa.get("numero", "")
+            doc["commessa_title"] = commessa.get("title", commessa.get("oggetto", ""))
+            doc["client_name"] = client_name
 
     # Pre-fill from company_settings (figure aziendali)
     company = await db.company_settings.find_one({"user_id": user_id}, {"_id": 0})
@@ -680,7 +752,27 @@ async def get_cantieri_by_commessa(commessa_id: str, user_id: str) -> list:
 
 
 async def list_cantieri(user_id: str) -> list:
-    return await db.cantieri_sicurezza.find({"user_id": user_id}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    cantieri = await db.cantieri_sicurezza.find({"user_id": user_id}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    # Enrich with commessa/client info for list display
+    for c in cantieri:
+        # If client_name not stored, try to resolve from commessa
+        if not c.get("client_name") and c.get("parent_commessa_id"):
+            commessa = await db.commesse.find_one(
+                {"commessa_id": c["parent_commessa_id"], "user_id": user_id},
+                {"_id": 0, "client_name": 1, "client_id": 1, "numero": 1, "title": 1, "oggetto": 1}
+            )
+            if commessa:
+                c["commessa_numero"] = commessa.get("numero", "")
+                c["commessa_title"] = commessa.get("title", commessa.get("oggetto", ""))
+                client_name = commessa.get("client_name", "")
+                if not client_name and commessa.get("client_id"):
+                    client = await db.clients.find_one(
+                        {"client_id": commessa["client_id"]}, {"_id": 0, "business_name": 1, "name": 1}
+                    )
+                    if client:
+                        client_name = client.get("business_name") or client.get("name", "")
+                c["client_name"] = client_name
+    return cantieri
 
 
 async def aggiorna_cantiere(cantiere_id: str, user_id: str, updates: dict) -> Optional[dict]:

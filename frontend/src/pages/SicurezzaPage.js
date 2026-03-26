@@ -112,19 +112,24 @@ export default function SicurezzaPage() {
                                     const gateReady = c.gate_pos_status?.pronto_per_generazione;
                                     const addr = c.dati_cantiere?.indirizzo_cantiere || '';
                                     const city = c.dati_cantiere?.citta_cantiere || '';
-                                    const committente = (c.soggetti || []).find(s => s.ruolo === 'COMMITTENTE')?.nome || '-';
+                                    const committente = c.client_name || (c.soggetti || []).find(s => s.ruolo === 'COMMITTENTE')?.nome || '-';
+                                    const commessaRef = c.commessa_numero || '';
                                     return (
                                         <TableRow key={c.cantiere_id} className="hover:bg-slate-50 cursor-pointer" onClick={() => navigate(`/scheda-cantiere/${c.cantiere_id}`)} data-testid={`cantiere-row-${c.cantiere_id}`}>
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
-                                                    <MapPin className="h-4 w-4 text-slate-400" />
+                                                    <MapPin className="h-4 w-4 text-slate-400 shrink-0" />
                                                     <div>
-                                                        <div className="font-medium">{addr || 'Senza indirizzo'}</div>
-                                                        <div className="text-xs text-slate-500">{city}</div>
+                                                        <div className="font-medium">{addr || city || 'Senza indirizzo'}</div>
+                                                        {city && addr ? <div className="text-xs text-slate-500">{city}{c.dati_cantiere?.provincia_cantiere ? ` (${c.dati_cantiere.provincia_cantiere})` : ''}</div> : null}
+                                                        {commessaRef && <div className="text-xs text-blue-600 font-mono">{commessaRef}</div>}
                                                     </div>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-sm">{committente}</TableCell>
+                                            <TableCell>
+                                                <div className="text-sm font-medium">{committente}</div>
+                                                {c.commessa_title && <div className="text-xs text-slate-500 truncate max-w-[200px]">{c.commessa_title}</div>}
+                                            </TableCell>
                                             <TableCell className="text-center font-mono text-[#0055FF]">{(c.lavoratori_coinvolti || []).length}</TableCell>
                                             <TableCell className="text-center font-mono text-[#0055FF]">{(c.fasi_lavoro_selezionate || []).length}</TableCell>
                                             <TableCell className="text-center">
