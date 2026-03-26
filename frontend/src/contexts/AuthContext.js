@@ -17,13 +17,17 @@ const GOOGLE_SCOPES = 'openid email profile';
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [sessionExpired, setSessionExpired] = useState(false);
 
     const checkAuth = useCallback(async () => {
         try {
             const userData = await apiRequest('/auth/me');
             setUser(userData);
+            setSessionExpired(false);
+            return true;
         } catch (error) {
             setUser(null);
+            return false;
         } finally {
             setLoading(false);
         }
@@ -38,6 +42,22 @@ export function AuthProvider({ children }) {
         }
         checkAuth();
     }, [checkAuth]);
+
+    // Periodic session health check — every 3 minutes
+    useEffect(() => {
+        if (!user) return;
+        const interval = setInterval(async () => {
+            try {
+                await apiRequest('/auth/me');
+            } catch {
+                // Session expired while user was active
+                setSessionExpired(true);
+                setUser(null);
+                sessionStorage.removeItem('nf_was_authenticated');
+            }
+        }, 3 * 60 * 1000);
+        return () => clearInterval(interval);
+    }, [user]);
 
     const login = () => {
         if (GOOGLE_CLIENT_ID) {
@@ -82,6 +102,7 @@ export function AuthProvider({ children }) {
         setAuthUser,
         checkAuth,
         isAuthenticated: !!user,
+        sessionExpired,
     };
 
     return (

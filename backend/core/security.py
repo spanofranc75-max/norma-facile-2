@@ -136,8 +136,14 @@ async def create_session(user_data: dict, response: Response) -> dict:
     # Create session
     expires_at = datetime.now(timezone.utc) + timedelta(days=settings.session_expire_days)
     
-    # Remove old sessions for this user
-    await db.user_sessions.delete_many({"user_id": user_id})
+    # Keep the 3 most recent sessions, delete only the oldest ones
+    existing = await db.user_sessions.find(
+        {"user_id": user_id},
+        {"_id": 1, "created_at": 1}
+    ).sort("created_at", -1).to_list(100)
+    if len(existing) >= 3:
+        old_ids = [s["_id"] for s in existing[2:]]
+        await db.user_sessions.delete_many({"_id": {"$in": old_ids}})
     
     # Create new session with tenant_id
     await db.user_sessions.insert_one({
