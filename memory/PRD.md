@@ -29,6 +29,15 @@ Francesco Spano' — Steel Project Design Srls
 
 ### Completato in questa sessione
 
+27. **Fix collegamenti Cantiere Sicurezza** — Pre-compilazione automatica dalla commessa:
+    - Attività cantiere da commessa.oggetto/description
+    - Indirizzo/Città/Provincia da commessa.cantiere.indirizzo (parsing regex "Via X, Città (PROV)")
+    - Fallback da preventivo.destinazione se indirizzo commessa mancante
+    - Fallback da client address se nessun indirizzo disponibile
+    - COMMITTENTE soggetto pre-compilato con dati cliente (nome, azienda, email, telefono)
+    - Lista cantieri arricchita con commessa_numero, commessa_title, client_name
+    - 10/10 test passati (iteration_262)
+
 26. **Sprint 1 — Hardening Sicurezza** — Implementazione completa:
     - RBAC: `core/rbac.py` con decoratore `@require_role()` applicato a 76/89 route files (636 endpoint protetti)
     - Mapping ruoli: admin (wildcard), amministrazione (fatture/costi/clienti), ufficio_tecnico (tecnico/commesse), officina (produzione), guest (bloccato)
