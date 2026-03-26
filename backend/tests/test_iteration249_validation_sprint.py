@@ -20,7 +20,7 @@ import sys
 # Add backend to path for object_storage import
 sys.path.insert(0, '/app/backend')
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://tenant-isolation-19.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://admin-lockdown.preview.emergentagent.com')
 SESSION_COOKIE = "session_token=test_session_token_for_dev_2026"
 
 # Test IDs from credentials

@@ -1,139 +1,143 @@
-<analysis>**original_problem_statement**:
-The user initially focused on stabilizing and hardening the NormaFacile 2.0 application. This involved fixing critical bugs in the Note di Credito (Credit Note) workflow and resolving deployment failures. The last critical issue identified was a severe data integrity problem: modifying a client's details (e.g., due to a company succession) would retroactively alter all historical documents associated with that client, which is fiscally and operationally incorrect. The user approved a comprehensive plan to fix this by introducing client data snapshots on all documents and adding a status system to manage the client lifecycle (active, archived, blocked).
+<analysis>**original_problem_statement**: 
+The user is upgrading NormaFacile 2.0 to support a multi-tenant SaaS architecture (Step 1 isolation completed), fixing critical AI-driven Preventivo calculation errors, resolving UI bugs related to client dropdowns, and initiating a 4-sprint Governance/Administrative hardening roadmap (currently executing Sprint 1).
 
-**User's preferred language**: Italian. You **MUST** respond in Italian.
+**User's preferred language**: Italian (You MUST INSTRUCT the next agent to respond in Italian).
 
-**what currently exists?**
-The application is a full-stack React/FastAPI app. A major feature to ensure data integrity has just been implemented in the codebase.
--   **Client Snapshot**: Documents (invoices, preventivi, DDT, commesse) now store a  field, a copy of the client's data at the time of document creation. This prevents retroactive changes.
--   **Client Status**: The  collection now has a  field (, , ) and a  Enum in the backend.
--   **API Updates**: New endpoints exist to manage client status (, , ), and the main  endpoint can filter by status. Document creation endpoints now populate the . Document retrieval endpoints prioritize the snapshot for displaying client data.
--   **Frontend Updates**: The Clients page now displays the client's status and P.IVA, includes a toggle to Show archived, and has buttons to manage the client's status. Client selection dropdowns throughout the app now filter out archived clients by default.
--   **Data Migration**: A new, admin-only endpoint () has been created to perform a one-time backfill of snapshots onto existing documents.
+**what currently exists?** 
+A full-stack React/FastAPI/MongoDB application. Step 1 of Multi-Tenant isolation is complete ( added to all collections, backward compatible with existing cookie-auth). The AI Preventivatore uses GPT-4o to accurately calculate weights for grigliati/lamiera, exclude conto lavoro costs, and factor in manual labor hours (ore stimate). An administrative audit has been performed, and the codebase is currently undergoing Sprint 1 of a security hardening phase (RBAC + Auditing).
 
 **Last working item**:
--   **Last item agent was working**: The agent just completed the full implementation of the Client Snapshot and Client Status feature, covering both backend logic and frontend UI changes. This was a large, critical task to fix the data integrity issue.
--   **Status**: USER VERIFICATION PENDING
--   **Agent Testing Done**: Y (A comprehensive set of 16 backend tests and UI verification was performed by the  and passed successfully).
--   **Which testing method agent to use?**: manual testing by curl
--   **User Testing Done**: N
+    - **Last item agent was working**: Executing Sprint 1 — Stabilizzazione rapida. The agent just took a DB backup () and instantiated the new  file to implement Role-Based Access Control (RBAC) decorators.
+    - **Status**: IN PROGRESS
+    - **Agent Testing Done**: N (For this specific Sprint 1 task)
+    - **Which testing method agent to use?**: backend testing agent (due to security implications of RBAC and audit logging).
+    - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
--   There are no pending issues. All remaining work consists of deploying the recent fixes and then moving to planned roadmap tasks.
+  Issue 1: Sprint 1 - RBAC & Audit Hardening (P0)
+  Issue 2: Rotazione chiavi sensibili (P1)
+
+  Issues Detail:
+  - Issue 1: Sprint 1 - RBAC & Audit Hardening
+     - **Attempted fixes**: Created . DB Backup was successfully taken.
+     - **Next debug checklist**: 
+        1. Complete  in .
+        2. Apply decorator to critical routes (, , , ). Ensure it returns a clear 403 on failure.
+        3. Modify  in  to include  in every log.
+        4. Write and execute a one-off script () to remove the ~19 test users that are not tied to an active tenant.
+        5. Verify E2E Invoice creation flow to ensure RBAC and Audit don't break existing features.
+     - **Why fix this issue and what will be achieved with the fix?**: Protects multi-tenant data, provides clear auditability, and secures administrative endpoints from unauthorized access.
+     - **Status**: IN PROGRESS
+     - **Is recurring issue?**: N
+     - **Should Test frontend/backend/both after fix?**: both (Backend for enforcement, Frontend to ensure no false 403s block regular users).
+     - **Blocked on other issue**: None.
+  
+  - Issue 2: Rotazione chiavi sensibili
+     - **Attempted fixes**: The agent cleaned up  and removed  from tracking, but identified that keys were historically exposed in 37 past commits.
+     - **Next debug checklist**: Remind user to manually rotate , , and  keys in their Railway production environment and external portals.
+     - **Why fix this issue and what will be achieved with the fix?**: Security/Preventing quota theft.
+     - **Status**: USER VERIFICATION PENDING
+     - **Is recurring issue?**: N
+     - **Should Test frontend/backend/both after fix?**: NA
+     - **Blocked on other issue**: None.
 
 **In progress Task List**:
--   None.
+  Task 1: Sprint 1 Deliverables
+  - **Where to resume**: 
+  - **What will be achieved with this?**: Centralized security and logging before introducing multi-tenant business logic in future sprints.
+  - **Status**: IN PROGRESS
+  - **Should Test frontend/backend/both after fix?**: both
+  - **Blocked on something**: None.
 
 **Upcoming and Future Tasks**
--   **Upcoming Tasks**:
-    -   **(P0) Deploy Fixes to Production**: The user's production environment (, accessible via ) is running old, buggy code. The agent must guide the user to **Re-deploy changes** on this environment to push all recent fixes (including the Client Snapshot system and the previous Note di Credito bug fix).
-    -   **(P1) Run Data Migration**: After the deployment is successful, the agent must guide the user to execute the data migration script to backfill  data on all historical documents. This is done by calling the new endpoint: .
-    -   **(P2) Create a Quantified Case Study**: Based on the user's real-world usage.
-    -   **(P3) Define Pricing & Packaging**: Flesh out the Pilot, Pro, and Enterprise tiers.
-
--   **Future Tasks**:
-    -   Registro Comunicazioni page for audit trail.
-    -   Implement  relationship and UI warnings for similar client names.
-    -   Stripe integration.
-    -   Product Tour.
-    -   Extend  to more pages.
-    -   Architect for multi-tenancy.
-    -   Build Stability Guard AI feature.
-    -   Migrate Pydantic from v1 to v2.
+    Upcoming Tasks:
+    - (P1) Sprint 2: Integrazione backup per tenant, Onboarding tenant e contatori isolati, Service files multi-tenant.
+    - (P1) Sprint 3: Messa a punto flussi di produzione (Preventivo -> Commessa -> 1090 -> DDT -> DoP/CE).
+    - (P2) Sprint 4: CI/CD, Observability (Logging JSON), Piano Rollback.
+    
+    Future Tasks:
+    - (P3) Stripe Integration.
+    - (P3) Product Tour.
+    - (P3) Registro Comunicazioni.
 
 **Completed work in this session**
--   **Client Data Integrity System (P0)**:
-    -   Added  to , , , and  models and creation logic.
-    -   Added  field and management (//) to the  API and UI.
-    -   Created a  endpoint for data backfilling.
-    -   Updated the Clients page UI and client selectors across the app.
--   **Note di Credito (Credit Note) Line Persistence Bug Fix**: Fixed a critical bug where changes to the lines of a non-draft Credit Note were not being saved.
--   **Deployment Failure Fix**: Diagnosed and fixed a build failure caused by an unresolvable and unused python package () in .
--   **Domain Connection Verified**: Confirmed that the user's custom domain  is active and correctly pointing to the production deployment.
--   **Knowledge Management**: Updated the  file with the latest changes upon user request.
+- Multi-Tenant Step 1 Data Isolation: added  and migration startup scripts (DONE).
+- Fix Analisi AI Preventivo (4 correzioni): accurate grigliato weight, conto lavoro zeroing, specchiature extraction, ore stimate field added to UI and prompt (DONE).
+- Bug Fix: Dropdown Clienti Vuoto on Invoice page (Modified backend  to handle  for FIC imported clients) (DONE).
+- Bug Fix:  repeating after navigation (Fixed via React  + API checking instead of memory state) (DONE).
+- Security:  cleanup and removal of  from git tracking (DONE).
+- DB Backup for Sprint 1 generated at  (DONE).
+- Administrative Governance Audit generated at  (DONE).
 
 **Earlier issues found/mentioned but not fixed**
--   None.
+None currently.
 
 **Known issue recurrence from previous fork**
--   **Deployment Health Check Timeouts**: A previous deployment attempt failed not on the build step, but on the health check, because the backend took too long to start. This is a known risk for the upcoming production deployment, as production environments can sometimes initialize slower than preview ones. If it recurs, a simple retry of the deployment often resolves it.
+  - Issue recurrence in previous fork: None directly blocking, but watch out for MongoDB  operator usage inside  update payloads (Agent previously broke DB updates by trying to insert  as a string value instead of using it purely for matching). Stick to simple  for insertions.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Data Denormalization (Snapshotting)**: The core solution implemented. Instead of joining live with the  collection, documents now store a  dictionary, making them historically accurate and immutable.
--   **State Management (Enum)**: A  enum was added to the backend to manage the client lifecycle (, , ).
--   **User-Triggered Data Migration**: A dedicated, admin-protected API endpoint was created to perform a one-time backfill of  data. This is safer than an automatic startup migration and gives the user control.
+- **Multi-Tenancy**: Data isolation is enforced via a dynamic  startup script that ensures  exists.  is a helper function. DO NOT USE  operators for database INSERT/UPDATE operations, only for READ filters.
+- **Cookie Auth**: Application uses MongoDB cookie sessions. User explicitly rejected JWT.
 
 **key DB schema**
--   **clients**: Now contains a  field (defaults to active) and an optional .
--   **invoices, preventivi, ddt, commesse**: Each now contains a  field, which stores a denormalized copy of the client's key details at the time of creation.
+  - : 
+  - ALL Collections: Now require  field.
+  - : Added  (Float).
+  - : {user_id, action, target_type, timestamp, ...} -> *Needs  added*.
 
 **changes in tech stack**
--   None.
+  - None. Sticking to FastAPI + MongoDB + React.
 
 **All files of reference**
--   
--   
--   
--   
--   
--   
+  -  (Just created, needs implementation)
+  -  (Needs  implementation)
+  - , , ,  (Need  decorators)
+  -  (AI logic updated)
 
 **Areas that need refactoring**:
--   The user has explicitly requested to avoid refactoring. There are multiple  warnings in the frontend related to missing  dependencies that could be cleaned up in the future.
+  -  script needs to be written and run to clear out old test accounts polluting the DB.
 
 **key api endpoints**
--   : **(New)** Triggers the client snapshot data migration for existing documents.
--   : **(New)** Sets a client's status to 'archived'.
--   : **(New)** Sets a client's status to 'blocked'.
--   : **(New)** Sets a client's status to 'active'.
--   : **(Modified)** Logic was changed to allow editing lines on *any* Nota di Credito, regardless of status.
+  - : Modified to return both  and  statuses to support legacy FattureInCloud imports.
+  - : Reads new  property.
 
 **Critical Info for New Agent**
--   **The absolute P0 priority is deploying the latest code to production.** The user's live app at  is running old code with known bugs. The current codebase in this environment has all the fixes.
--   **Deployment Action**: Guide the user to go to their  deployment in the Emergent UI and click **Re-deploy changes**.
--   **Post-Deploy Action**: After a successful deployment, you must guide the user to trigger the data migration. Provide a  command to call  using their new production domain. This is critical for fixing historical data.
--   **User Context**: The user is aware that they have two separate client entries for Infissi Nicastro (father and son) and that the migration should correctly snapshot the data for documents associated with each.
+  - **SPRINT 1 FOCUS**: You are actively working on Sprint 1 of the Administrative Governance roadmap. Implement the RBAC decorator, apply it, update the audit trail, clean test users, and run a full Invoice E2E test.
+  - **MONGODB CAUTION**: When writing queries, remember that users imported from FIC might have  fields (e.g., ). Also, never insert query operators like  into the DB using .
+  - **GITHUB COMMITS**: Remind the user to use the Save to GitHub UI button to persist the changes safely before initiating deployment platforms like Railway.
 
 **documents and test reports created in this job**
--    (Client Snapshot + Status feature verification)
--    (Nota di Credito line persistence bug fix verification)
--    (Updated with latest feature details)
+  -  (Crucial roadmap document)
+  - , ,  (Tests verifying Multi-tenant, AI bugs, and dropdown bugs).
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: Asks if  has been updated with the latest work.
-2.  **User**: Approves the plan to implement client snapshots and status, but with a critical pre-step: ensuring that currently dirtied client data is cleaned up *before* the migration script is run to avoid freezing the incorrect data.
-3.  **User**: Provides screenshots of the father and son client records, confirming they are already separate entities in the database, which simplifies the pre-step. Asks the agent to perform a backup.
-4.  **User**: Agrees to proceed with the agent's updated plan (Pre-step 0 + Phase 1 + Phase 2).
-5.  **User**: Asks about the safety of working on staging vs. production, confirming the agent's advice to finalize fixes on staging and then deploy to production.
-6.  **User**: Identifies the core data integrity problem: changing client data retroactively affects all historical documents.
-7.  **User**: Agrees to fix the Nota di Credito line persistence bug.
-8.  **User**: Reports the bug where deleting lines from a Credit Note and saving does not persist the changes.
-9.  **User**: Confirms the custom domain is connected and asks the agent to verify everything is working.
-10. **User**: Provides logs showing the second deployment failure, which was a health check timeout.
+ 1. User reported bug: Clients dropdown empty on invoice page.
+ 2. User asked to check git tracking of  files.
+ 3. User asked to implement 4 fixes for AI Preventivatore.
+ 4. User approved the AI fix plan.
+ 5. User provided video showing Clients dropdown STILL missing in production.
+ 6. User asked for a full administrative/governance Diagnosis.
+ 7. User asked why dropdown still missing after tenant_match fix (Agent found  issue).
+ 8. User complained that  reappears after navigation.
+ 9. User asked to proceed with Sprint 1 of the Diagnosis roadmap.
+ 10. User provided final checklist for Sprint 1 and gave the green light. Agent took a backup and touched . -> *This is where you pick up*.
 
 **Project Health Check:**
--   **Broken**: The live production environment () is running old code containing critical bugs that have already been fixed in this session's codebase. It requires an immediate re-deployment.
--   **Mocked**: None.
--   **Health**: **STABILIZING**. The application's codebase is now significantly more robust and secure against data integrity issues. The main remaining risk is operational: successfully deploying the new code to the production environment.
+Healthy. The preview URL is fully functional with multi-tenant Step 1 data isolation running.
 
 **3rd Party Integrations**
--   **OpenAI GPT-4o**
--   **Resend**
--   **FattureInCloud**
--   **Emergent Object Storage**
--   **Vercel**
+ - OpenAI GPT-4o — uses Emergent LLM Key (Core to Preventivatore logic).
+ - FattureInCloud — requires User API Key.
+ - Resend — requires User API Key.
 
 **Testing status**
--   **Testing agent used after significant changes**: YES. The last two major features/bugfixes were both validated by the testing agent.
--   **Troubleshoot agent used after agent stuck in loop**: NO
--   **Test files created**: None.
--   **Known regressions**: None.
-
-**Credentials to test flow:**
--   Use the demo login flow by sending a  request to  to get a session cookie for testing.
+  - Testing agent used after significant changes: YES (Iterations 258, 259, 260)
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: None
+  - Known regressions: None currently.
 
 **What agent forgot to execute**
--   The agent performed all requested tasks thoroughly and correctly. It successfully debugged deployment issues, fixed two critical application bugs, and implemented a major data integrity feature, including a safe migration path.</analysis>
+  - The previous agent just created  but hasn't written the code or applied it yet. You need to complete Task 1, 2, 3, and 4 of Sprint 1.</analysis>
