@@ -170,7 +170,32 @@ export default function InvoicesPage() {
     };
 
     const handleSendSDI = async (invoice) => {
-        setSdiPreview({ open: true, invoice });
+        try {
+            // Load full invoice + client data for SDI preview
+            const full = await apiRequest(`/invoices/${invoice.invoice_id}`);
+            let clientData = {};
+            if (full.client_id) {
+                try { clientData = await apiRequest(`/clients/${full.client_id}`); } catch {}
+            }
+            const enriched = {
+                ...full,
+                numero: full.document_number,
+                client_name: clientData.business_name || full.client_business_name || '',
+                totale: full.totals?.total_document || full.totals?.total_to_pay || 0,
+                total: full.totals?.total_document || full.totals?.total_to_pay || 0,
+                imponibile: full.totals?.subtotal || 0,
+                iva: full.totals?.total_vat || 0,
+                vat: full.totals?.total_vat || 0,
+                stato: full.status || 'bozza',
+                client_piva: clientData.partita_iva || '',
+                client_cf: clientData.codice_fiscale || '',
+                client_sdi_code: clientData.codice_sdi || '',
+                client_pec: clientData.pec || '',
+            };
+            setSdiPreview({ open: true, invoice: enriched });
+        } catch (e) {
+            toast.error('Errore caricamento dati fattura');
+        }
     };
 
     const handleChangeStatus = async (invoice, newStatus) => {

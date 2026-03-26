@@ -1516,8 +1516,14 @@ async def _send_sdi_impl(invoice_id: str, user: dict):
                 fic_doc_id = await _handle_fic_409(fic, invoice, fic_data)
             else:
                 detail = extract_fic_error_message(e)
-                logger.error(f"FIC create failed ({e.response.status_code}): {detail}")
-                raise HTTPException(e.response.status_code, f"Errore Fatture in Cloud: {detail}")
+                status_code = e.response.status_code
+                body_text = ""
+                try:
+                    body_text = e.response.text[:500]
+                except Exception:
+                    pass
+                logger.error(f"FIC create failed ({status_code}): {detail} | Body: {body_text}")
+                raise HTTPException(status_code, f"Errore Fatture in Cloud ({status_code}): {detail}")
         except (httpx.TimeoutException, httpx.ConnectError) as e:
             raise HTTPException(503, str(e))
 
