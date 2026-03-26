@@ -29,6 +29,15 @@ Francesco Spano' — Steel Project Design Srls
 
 ### Completato in questa sessione
 
+28. **Sprint 2 Fase A — Multi-Tenant Fondamenta**:
+    - `services/tenant_service.py`: CRUD tenant (create, get, update, deactivate, list) + auto-onboarding
+    - `routes/admin_tenants.py`: API admin (GET/POST/PUT/DELETE /api/admin/tenants/) con RBAC
+    - `services/tenant_counters.py`: Contatori isolati per-tenant (atomici, concurrency-safe)
+    - `security.py`: Auto-onboarding — primo login admin crea tenant automaticamente
+    - Piani: pilot (3 utenti, 50 commesse), pro (10, 500), enterprise (illimitato)
+    - 4 nuovi indici MongoDB (tenants, tenant_counters)
+    - 15/15 test passati (iteration_263)
+
 27. **Fix collegamenti Cantiere Sicurezza** — Pre-compilazione automatica dalla commessa:
     - Attività cantiere da commessa.oggetto/description
     - Indirizzo/Città/Provincia da commessa.cantiere.indirizzo (parsing regex "Via X, Città (PROV)")
