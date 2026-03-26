@@ -56,8 +56,18 @@ Francesco Spano' — Steel Project Design Srls
     - Auto-selezione del cliente creato nel dropdown
     - Propagazione automatica dell'indirizzo al campo "Località/Indirizzo" del rilievo
     - Note prefissate con "[Dati parziali da rilievo]" per tracciare dati incompleti
-    - Fix gestione 401: redirect automatico al login quando la sessione scade
-    - 13/13 test backend + tutti test UI Playwright (iteration_268)
+    - 13/13 test passati + tutti test UI Playwright (iteration_268)
+
+37. **Hardening Sessioni e Gestione Auth** (26 Mar 2026):
+    - **Backend**: Max 5 sessioni per utente (non cancella più tutte), logging creazione/eliminazione
+    - **Backend**: `last_seen_at` tracciato ad ogni verifica, rinnovo automatico quando < 2 giorni alla scadenza
+    - **Backend**: Errori FIC 401/502 mappati a HTTP 502 (mai 401 per servizi esterni)
+    - **Frontend**: Interceptor centralizzato 401 in `apiRequest` → `onAuthExpired` callback
+    - **Frontend**: Schermata "Sessione scaduta" (mai dati vuoti/liste svuotate)
+    - **Frontend**: Health check ogni 3 minuti
+    - **Docs**: Policy sessioni documentata in `/app/docs/SESSION_POLICY.md`
+    - **Test**: `test_session_policy.py` + `test_iteration269_session_management.py`
+    - 21/21 + 8/8 backend test + 6/6 Playwright (iteration_269)
 
 30. **DDT Numerazione Progressiva e Modificabile**:
     - Contatore atomico per tipo (DDT-2026-XXXX vendita, CL-2026-XXXX conto lavoro, RCL-2026-XXXX rientro)
