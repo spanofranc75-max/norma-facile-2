@@ -127,6 +127,7 @@ from routes.profili_committente import router as profili_committente_router
 from routes.notifiche_smart import router as notifiche_smart_router
 from routes.onboarding import router as onboarding_router
 from routes.admin_integrity import router as admin_integrity_router
+from routes.admin_tenants import router as admin_tenants_router
 from routes.demo import router as demo_router
 from routes.content_engine import router as content_engine_router
 
@@ -175,6 +176,12 @@ async def _ensure_indexes():
     await _idx("obblighi_commessa", [("dedupe_key", 1), ("user_id", 1)], unique=True, name="uq_obbligo_dedupe")
     await _idx("obblighi_commessa", [("commessa_id", 1), ("user_id", 1), ("status", 1)], name="idx_obblighi_commessa")
     await _idx("obblighi_commessa", [("user_id", 1), ("blocking_level_sort", 1), ("severity_sort", 1)], name="idx_obblighi_priority")
+
+    # --- Multi-Tenant: Tenants & Counters ---
+    await _idx("tenants", [("tenant_id", 1)], unique=True, name="uq_tenant")
+    await _idx("tenants", [("admin_user_id", 1)], name="idx_tenant_admin")
+    await _idx("tenant_counters", [("counter_id", 1)], unique=True, name="uq_tenant_counter")
+    await _idx("tenant_counters", [("tenant_id", 1)], name="idx_tenant_counter_tid")
 
     # --- Verifica Committenza ---
     await _idx("pacchetti_committenza", [("package_id", 1), ("user_id", 1)], unique=True, name="uq_pkg_committenza")
@@ -466,6 +473,7 @@ app.include_router(profili_committente_router, prefix="/api")
 app.include_router(notifiche_smart_router, prefix="/api")
 app.include_router(onboarding_router, prefix="/api")
 app.include_router(admin_integrity_router, prefix="/api")
+app.include_router(admin_tenants_router)
 app.include_router(demo_router, prefix="/api")
 app.include_router(content_engine_router, prefix="/api")
 

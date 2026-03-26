@@ -120,6 +120,14 @@ async def create_session(user_data: dict, response: Response) -> dict:
             new_user["tenant_id"] = "default"
 
         await db.users.insert_one(new_user)
+
+    # --- Auto-onboarding: ensure admin users get a tenant ---
+    user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    if user_doc and user_doc.get("role") == "admin" and user_doc.get("tenant_id", "default") == "default":
+        from services.tenant_service import ensure_tenant_for_user
+        tenant_id = await ensure_tenant_for_user(user_id, email, user_data.get("name", ""))
+    else:
+        tenant_id = user_doc.get("tenant_id", "default") if user_doc else "default"
     
     # Retrieve tenant_id from user (after possible backfill)
     user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
