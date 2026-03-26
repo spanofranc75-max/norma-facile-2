@@ -176,4 +176,4 @@ Questi Secrets DEVONO essere presenti su ogni deploy:
 
 ---
 
-**Ultimo aggiornamento**: 26 Marzo 2026 — Sessione Sprint 1 + Sprint 2 Fase A
+**Ultimo aggiornamento**: 26 Marzo 2026 — Sessione Sprint 1 + Sprint 2 Fase A + Foglio Lavoro PDF

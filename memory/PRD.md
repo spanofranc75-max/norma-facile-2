@@ -29,6 +29,13 @@ Francesco Spano' — Steel Project Design Srls
 
 ### Completato in questa sessione
 
+29. **Foglio Lavoro PDF — Stampabile per officina**:
+    - Endpoint `GET /api/commesse/{id}/foglio-lavoro` genera PDF con QR code, tabella fasi produzione (11 fasi x 3 righe ciascuna), spazio firma e note
+    - Nessun dato finanziario visibile (no prezzi, no totali)
+    - QR code punta alla scheda produzione della commessa nell'app
+    - Pulsante "Foglio Lavoro (Stampa)" aggiunto nel menu "Genera Documenti" della CommessaHubPage
+    - 12/12 test passati (iteration_264)
+
 28. **Sprint 2 Fase A — Multi-Tenant Fondamenta**:
     - `services/tenant_service.py`: CRUD tenant (create, get, update, deactivate, list) + auto-onboarding
     - `routes/admin_tenants.py`: API admin (GET/POST/PUT/DELETE /api/admin/tenants/) con RBAC
