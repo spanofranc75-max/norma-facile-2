@@ -1454,6 +1454,42 @@ async def send_invoice_email(invoice_id: str, payload: dict = None, user: dict =
     return {"message": f"Email inviata con successo a {', '.join(all_recipients)}", "to": to_email, "cc": cc_list}
 
 
+# ── FIC Credentials Helper (centralizzato — usato da send-sdi e stato-sdi) ──
+
+def _get_fic_credentials(company: dict) -> tuple:
+    """Lettura centralizzata credenziali FIC. DB prima, env fallback.
+    Returns: (fic_token, fic_company_id) or raises HTTPException.
+    """
+    fic_token = (company.get("fic_access_token") if company else None) or os.environ.get("FIC_ACCESS_TOKEN")
+    fic_company_id = (company.get("fic_company_id") if company else None) or os.environ.get("FIC_COMPANY_ID")
+    if not fic_token or not fic_company_id:
+        raise HTTPException(400, "Configura le credenziali Fatture in Cloud in Impostazioni -> Integrazioni")
+    return fic_token, fic_company_id
+
+
+async def _log_sdi_audit(invoice_id: str, document_number: str, action: str,
+                         fic_endpoint: str, response_status: int,
+                         response_summary: str, error_category: str = None,
+                         error_message: str = None, fic_document_id=None,
+                         user_id: str = None):
+    """Logging persistente SDI nel database. Ogni chiamata FIC lascia traccia."""
+    now = datetime.now(timezone.utc)
+    await db.sdi_audit_log.insert_one({
+        "log_id": f"sdi_{uuid.uuid4().hex[:12]}",
+        "invoice_id": invoice_id,
+        "document_number": document_number,
+        "action": action,
+        "fic_endpoint": fic_endpoint,
+        "timestamp": now,
+        "response_status": response_status,
+        "response_summary": str(response_summary)[:500],
+        "error_category": error_category,
+        "error_message": str(error_message)[:500] if error_message else None,
+        "fic_document_id": fic_document_id,
+        "user_id": user_id,
+    })
+
+
 # ── Send Invoice to SDI ──
 
 @router.post("/{invoice_id}/send-sdi")
@@ -1504,11 +1540,8 @@ async def _send_sdi_impl(invoice_id: str, user: dict):
         logger.warning(f"SDI validation failed for {invoice.get('document_number')}: {validation_errors}")
         raise HTTPException(422, error_msg)
 
-    # ── Check FIC credentials ──
-    fic_token = company.get("fic_access_token") or os.environ.get("FIC_ACCESS_TOKEN")
-    fic_company_id = company.get("fic_company_id") or os.environ.get("FIC_COMPANY_ID")
-    if not fic_token or not fic_company_id:
-        raise HTTPException(400, "Configura le credenziali Fatture in Cloud in Impostazioni -> Integrazioni")
+    # ── Check FIC credentials (helper centralizzato) ──
+    fic_token, fic_company_id = _get_fic_credentials(company)
 
     fic = get_fic_client(access_token=fic_token, company_id=int(fic_company_id))
 
@@ -1531,6 +1564,10 @@ async def _send_sdi_impl(invoice_id: str, user: dict):
             result = await fic.create_issued_invoice(fic_data)
             fic_doc_id = result.get("data", {}).get("id")
             logger.info(f"Created FIC document id={fic_doc_id}")
+            await _log_sdi_audit(invoice_id, invoice.get("document_number", ""),
+                                 "create_on_fic", "/issued_documents", 200,
+                                 f"fic_doc_id={fic_doc_id}", fic_document_id=fic_doc_id,
+                                 user_id=user["user_id"])
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 409:
@@ -1545,6 +1582,10 @@ async def _send_sdi_impl(invoice_id: str, user: dict):
                 except Exception:
                     pass
                 logger.error(f"FIC create failed ({fic_status}): {detail} | Body: {body_text}")
+                await _log_sdi_audit(invoice_id, invoice.get("document_number", ""),
+                                     "create_on_fic", "/issued_documents", fic_status,
+                                     body_text, error_category="fic_create_error",
+                                     error_message=detail, user_id=user["user_id"])
                 # Map FIC errors to appropriate HTTP status (never return 401/403 for FIC errors)
                 if fic_status == 401:
                     raise HTTPException(502, f"Token FattureInCloud scaduto o non valido. Genera un nuovo token dal tuo account FattureInCloud (Impostazioni > Connessioni API). Dettaglio: {detail}")
@@ -1555,6 +1596,10 @@ async def _send_sdi_impl(invoice_id: str, user: dict):
                 else:
                     raise HTTPException(422, f"Errore Fatture in Cloud ({fic_status}): {detail}")
         except (httpx.TimeoutException, httpx.ConnectError) as e:
+            await _log_sdi_audit(invoice_id, invoice.get("document_number", ""),
+                                 "create_on_fic", "/issued_documents", 0,
+                                 "", error_category="timeout", error_message=str(e),
+                                 user_id=user["user_id"])
             raise HTTPException(503, str(e))
 
     if not fic_doc_id:
@@ -1564,9 +1609,18 @@ async def _send_sdi_impl(invoice_id: str, user: dict):
     try:
         sdi_result = await fic.send_to_sdi(fic_doc_id)
         logger.info(f"SDI send result for doc {fic_doc_id}: {sdi_result}")
+        await _log_sdi_audit(invoice_id, invoice.get("document_number", ""),
+                             "send_to_sdi", f"/issued_documents/{fic_doc_id}/e_invoice/send",
+                             200, str(sdi_result)[:500], fic_document_id=fic_doc_id,
+                             user_id=user["user_id"])
     except httpx.HTTPStatusError as e:
         detail = extract_fic_error_message(e)
         logger.error(f"SDI send failed ({e.response.status_code}): {detail}")
+        await _log_sdi_audit(invoice_id, invoice.get("document_number", ""),
+                             "send_to_sdi", f"/issued_documents/{fic_doc_id}/e_invoice/send",
+                             e.response.status_code, "", error_category="sdi_send_error",
+                             error_message=detail, fic_document_id=fic_doc_id,
+                             user_id=user["user_id"])
 
         # AUTO-RECOVERY: se la fattura è già stata inviata/è in corso, allinea lo stato locale
         detail_lower = detail.lower()
@@ -1715,20 +1769,44 @@ async def check_invoice_sdi_status(invoice_id: str, user: dict = Depends(require
     if not fic_doc_id:
         raise HTTPException(400, "Documento non ancora sincronizzato con Fatture in Cloud")
 
-    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0})
-    fic_token = company.get("fic_access_token") if company else None
-    fic_company_id = company.get("fic_company_id") if company else None
-    if not fic_token or not fic_company_id:
-        raise HTTPException(400, "Credenziali Fatture in Cloud non configurate")
+    company = await db.company_settings.find_one({"user_id": user["user_id"], "tenant_id": tenant_match(user)}, {"_id": 0}) or {}
+    fic_token, fic_company_id = _get_fic_credentials(company)
 
     try:
         from services.fattureincloud_api import get_fic_client
         fic = get_fic_client(access_token=fic_token, company_id=int(fic_company_id))
         result = await fic.get_sdi_status(int(fic_doc_id))
+
+        # Log SDI status check
+        await _log_sdi_audit(
+            invoice_id=invoice_id,
+            document_number=invoice.get("document_number", ""),
+            action="check_status",
+            fic_endpoint=f"/issued_documents/{fic_doc_id}/e_invoice/xml",
+            response_status=200,
+            response_summary=str(result)[:500],
+            fic_document_id=fic_doc_id,
+            user_id=user["user_id"],
+        )
+
         return {"fic_document_id": fic_doc_id, "status_data": result}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"FIC status check error: {e}")
-        raise HTTPException(500, f"Errore verifica stato: {str(e)}")
+        await _log_sdi_audit(
+            invoice_id=invoice_id,
+            document_number=invoice.get("document_number", ""),
+            action="check_status",
+            fic_endpoint=f"/issued_documents/{fic_doc_id}/e_invoice/xml",
+            response_status=getattr(getattr(e, 'response', None), 'status_code', 0),
+            response_summary="",
+            error_category="unknown",
+            error_message=str(e),
+            fic_document_id=fic_doc_id,
+            user_id=user["user_id"],
+        )
+        raise HTTPException(502, f"Errore verifica stato FIC: {str(e)}")
 
 
 

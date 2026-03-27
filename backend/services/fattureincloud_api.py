@@ -152,7 +152,7 @@ class FattureInCloudClient:
 
     def __init__(self, access_token: Optional[str] = None, company_id: Optional[int] = None):
         self.base_url = FattureInCloudConfig.BASE_URL
-        self.access_token = access_token or settings.sdi_api_key
+        self.access_token = access_token or settings.fic_access_token
         self.company_id = company_id
         self._client = None
 
@@ -335,6 +335,10 @@ def validate_invoice_for_sdi(invoice: dict, client: dict, company: dict) -> list
         errors.append("Destinatario: manca la Citta' del cliente")
     if not client.get("codice_sdi") and not client.get("pec"):
         errors.append("Destinatario: manca il Codice SDI o la PEC del cliente")
+    elif client.get("codice_sdi", "").strip() in ("", "0000000") and not client.get("pec"):
+        errors.append("Destinatario: Codice SDI e '0000000' (generico) e la PEC e vuota. "
+                       "SDI non puo recapitare senza almeno uno dei due. "
+                       "Aggiungi un Codice SDI valido oppure la PEC del cliente.")
 
     # --- DOCUMENTO ---
     lines = invoice.get("lines", [])

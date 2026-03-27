@@ -26,7 +26,7 @@ import { toast } from 'sonner';
 import {
     Plus, MoreHorizontal, Download, RefreshCw, Trash2, Eye, FileCode,
     Copy, CreditCard, CircleDollarSign, CheckCircle2,
-    Mail, Send, Hash, FileText,
+    Mail, Send, Hash, FileText, Search,
 } from 'lucide-react';
 import DashboardLayout from '../components/DashboardLayout';
 import { PDFPreviewModal } from '../components/PDFPreviewModal';
@@ -195,6 +195,22 @@ export default function InvoicesPage() {
             setSdiPreview({ open: true, invoice: enriched });
         } catch (e) {
             toast.error('Errore caricamento dati fattura');
+        }
+    };
+
+    const handleCheckSDIStatus = async (invoice) => {
+        if (!invoice.fic_document_id) {
+            toast.error('Documento non ancora sincronizzato con Fatture in Cloud');
+            return;
+        }
+        try {
+            toast.info('Verifica stato SDI in corso...');
+            const result = await apiRequest(`/invoices/${invoice.invoice_id}/stato-sdi`);
+            const statusData = result.status_data || {};
+            toast.success(`Stato SDI verificato (FIC id: ${result.fic_document_id})`);
+            fetchInvoices();
+        } catch (e) {
+            toast.error(e.message || 'Errore verifica stato SDI');
         }
     };
 
@@ -575,6 +591,11 @@ export default function InvoicesPage() {
                                                             {(inv.document_type === 'FT' || inv.document_type === 'NC') && inv.status !== 'bozza' && (
                                                                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleSendSDI(inv); }} data-testid="btn-send-sdi">
                                                                     <Send className="mr-2 h-4 w-4" />Invia a SDI
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            {inv.status === 'inviata_sdi' && inv.fic_document_id && (
+                                                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCheckSDIStatus(inv); }} data-testid="btn-check-sdi-status">
+                                                                    <Search className="mr-2 h-4 w-4" />Aggiorna Stato SDI
                                                                 </DropdownMenuItem>
                                                             )}
                                                             {/* Registra Incasso — visibile se NON già pagata */}
