@@ -1,145 +1,142 @@
 <analysis>**original_problem_statement**: 
-The user (Francesco) is building NormaFacile 2.0 (SaaS for steel carpentry). In this session, the user requested to finish the Foglio Lavoro PDF generation, fix DDT numbering to be progressive and editable per type (vendita vs conto lavoro), link invoices to commesse for closure, fix bugs with the SDI (Sistema di Interscambio) preview dialog, implement a Riporta in Bozza function for invoices, create a branded Block Notes PDF for hand sketches, fix a Vercel deployment timeout, and update the email sending dialog to select multiple recipients via checkboxes while defaulting to standard email instead of PEC. The agent also completed Sprint 2 Phase B (Multi-tenant filtering across all remaining backend routes).
+The user (Francesco) is building NormaFacile 2.0 (SaaS for steel carpentry). The core issue in this session was a recurring 502/401 error when sending invoices to SDI via FattureInCloud (FIC). After a thorough Root Cause Analysis (RCA), it was determined that the app was using a 24-hour OAuth access token without a refresh mechanism. The user explicitly requested a stable, surgical fix using a non-expiring Personal Token for FIC. 
+Once the SDI integration was successfully fixed and deployed, a **new critical regression** appeared: the user could log in, but all pages showed zero data, and the first interaction triggered a session expired logout. The agent traced this to a CORS issue caused by the deployment environment ( conflicts with ).
 
 **User's preferred language**: Italian (You MUST INSTRUCT the next agent to respond in Italian only).
 
 **what currently exists?** 
-A full-stack FastAPI + React + MongoDB application connected to the user's **Production MongoDB Atlas**. Multi-tenancy is fully integrated into almost all data operations. The app handles project management (commesse), document generation (PDFs for workshops and sketches), and invoicing (integrated with FattureInCloud for SDI).
+A full-stack FastAPI + React + MongoDB application. Features include multi-tenancy, project management, quote-to-invoice linking, and SDI integration via FattureInCloud. The SDI integration now successfully uses a non-expiring Personal Token. The Authentication system has just been surgically migrated from HTTP-only cookies to  tokens stored in  to bypass Kubernetes Ingress CORS restrictions.
 
 **Last working item**:
-    - **Last item agent was working**: Modifying the Invoice Email Sending feature. The user requested to default to the standard email (not PEC) and to display a list of all available emails (from the client and their contacts) with checkboxes to select multiple recipients. The agent updated  and  to return and display these checkboxes and handle multiple recipient addresses.
-    - **Status**: TESTING PENDING
-    - **Agent Testing Done**: N
-    - **Which testing method agent to use?**: Frontend screenshot tool (to verify the  displays checkboxes) and manual testing by curl / python -c to ensure the  and  endpoints work correctly with arrays of emails.
+    - **Last item agent was working**: Migrating the frontend authentication from  (cookies) to  headers (localStorage). The backend and frontend code modifications were completed, but the agent was running final bash tests when the session ended.
+    - **Status**: TESTING PENDING (The code is written, but the end-to-end frontend login flow must be verified).
+    - **Agent Testing Done**: Y (Partially. Backend APIs were tested via bash curl, but frontend E2E is pending).
+    - **Which testing method agent to use?**: Frontend testing agent / Screenshot tool / Manual testing via Browser to verify the login -> dashboard -> data fetch flow.
     - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-  Issue 1: Test Email Recipients Feature (P0)
-  Issue 2: Resolve FIC/SDI 400/501 Error (P1)
+  Issue 1: Authentication / Session Expiry loop post-deployment (P0)
+  Issue 2: Refactor  to Tenant level (P1 - Deferred to Phase 2)
 
   Issues Detail:
-  - Issue 1: Test Email Recipients Feature
-     - **Attempted fixes**: The agent updated the code in  and  but did not test the UI or the backend endpoint before history ended.
+  - Issue 1: Authentication / Session Expiry loop post-deployment
+     - **Attempted fixes**: The agent identified that the Emergent Kubernetes Ingress adds , which browsers reject when combined with  (cookies). The agent modified  to remove  and inject . Modified  and  to save/read the token from . Modified backend  and  to return the  in the JSON response body.
      - **Next debug checklist**: 
-        1. Open an invoice in the frontend and click the email icon.
-        2. Verify that the dialog shows checkboxes for emails and correctly pre-selects the standard email.
-        3. Verify the  endpoint correctly processes the array of emails.
-     - **Why fix this issue and what will be achieved with the fix?**: Allows the user to select multiple specific contacts to receive the courtesy invoice PDF.
+        1. Verify that  correctly extracts the  from the backend response and saves it to .
+        2. Verify that  correctly retrieves the token from  and appends it to the headers for endpoints like  and .
+        3. Test the full login flow in the frontend to ensure the user is not kicked out.
+     - **Why fix this issue and what will be achieved with the fix?**: The user is completely blocked from using the app in production. Fixing this restores access.
      - **Status**: TESTING PENDING
+     - **Is recurring issue?**: Y (Auth instability has been a recurring theme, though this specific CORS cause is new).
+     - **Should Test frontend/backend/both after fix?**: both (Focus on frontend E2E).
+     - **Blocked on other issue**: None
+
+  - Issue 2: Refactor  to Tenant level
+     - **Attempted fixes**: Identified during RCA that FIC credentials are tied to  instead of . User agreed to defer this to Phase 2 to prioritize immediate stability.
+     - **Next debug checklist**: Modify  and  DB schema to query and save by .
+     - **Why fix this issue and what will be achieved with the fix?**: Ensures any admin within the same company can send invoices to SDI using the shared company FIC token.
+     - **Status**: NOT STARTED
      - **Is recurring issue?**: N
      - **Should Test frontend/backend/both after fix?**: both
-     - **Blocked on other issue**: None
-
-  - Issue 2: Resolve FIC/SDI 400/501 Error
-     - **Attempted fixes**: The user reported 400/501 errors when sending invoices to SDI via FattureInCloud. The agent improved error logging in  and  to extract and bubble up the exact error message from FIC to the frontend instead of a generic 500 error.
-     - **Next debug checklist**: 
-        1. Ask the user to try sending the invoice again in production.
-        2. Wait for the user to provide the exact validation error returned by FIC.
-        3. Fix the data mapping in  inside  based on the specific missing or invalid fields.
-     - **Why fix this issue and what will be achieved with the fix?**: Ensures invoices can be successfully transmitted to the Italian revenue agency (SDI).
-     - **Status**: USER VERIFICATION PENDING
-     - **Is recurring issue?**: Y
-     - **Should Test frontend/backend/both after fix?**: backend
-     - **Blocked on other issue**: None
+     - **Blocked on other issue**: Blocked by Issue 1. Do not start until the app is fully stable for 24-48 hours as per user's request.
 
 **In progress Task List**:
-  None. All started tasks from this session were completed. 
+  None. Focus is entirely on the P0 Auth issue.
 
 **Upcoming and Future Tasks**
     Upcoming Tasks:
+    - (P1) Phase 2 of FIC Stabilization: Move FIC credentials to tenant-level, implement automatic backend polling for SDI status updates.
     - (P1) Sprint 2 Phase C: Backup scheduler per tenant, RBAC on new onboarding routes.
     - (P2) Sprint 2 Phase D: Documentation update ().
-    - (P2) Sprint 3: JSON logging, admin dashboard for tenants.
     Future Tasks:
+    - (P2) Sprint 3: JSON logging, admin dashboard for tenants.
     - (P3) Sprint 4: CSRF, input sanitization, rate limiting per-tenant, GDPR.
     - (P3) Stripe integration.
     - (P3) Product Tour.
 
 **Completed work in this session**
-- Foglio Lavoro PDF logic, endpoint, and UI button (DONE)
-- DDT progressive numbering with atomic counters for vendita/conto_lavoro/rientro + editable numbers (DONE)
-- Linked Invoices to Commessa to allow easy closure (DONE)
-- Fixed SDI Preview missing data (enriched payload passed to dialog) (DONE)
-- Sprint 2 Phase B: Updated 13 backend files to enforce  (DONE)
-- Added Riporta in Bozza function for emitted invoices (DONE)
-- Block Notes PDF generation (branded sketchpad) logic, endpoints, and UI buttons (DONE)
-- Fixed Vercel deployment timeout by moving 53 MongoDB index creations and tenant backfills to background tasks during FastAPI startup (DONE)
-- Enlarged Fatture collegate dialog and resolved  dynamically (DONE)
-- Multi-recipient email checkbox logic implemented (Testing pending) (DONE)
+- Comprehensive Root Cause Analysis for FIC SDI integration (DONE - )
+- Replaced 24h OAuth token with permanent Personal Token for FIC (DONE)
+- Centralized FIC credential reading in  (DONE)
+- Fixed  endpoint to use  and parse  JSON correctly instead of crashing on XML (DONE)
+- Added persistent logging () for FIC/SDI operations (DONE)
+- Added Aggiorna Stato SDI button in frontend invoice dropdown (DONE)
+- Migrated auth from Cookies to Bearer tokens in LocalStorage to fix CORS block (CODE WRITTEN, E2E TESTING PENDING)
 
 **Earlier issues found/mentioned but not fixed**
-None.
+None strictly missed, but the user explicitly requested a freeze on all non-auth/SDI features until the system is stable.
 
 **Known issue recurrence from previous fork**
-  - Issue recurrence in previous fork: Deploy timeouts (520 errors) due to heavy synchronous startup tasks.
-  - Recurrence count: 1
-  - Status: RESOLVED (Agent moved DB index creation to background  tasks).
+  - Issue recurrence in previous fork: Authentication / Session Drops.
+  - Recurrence count: 3
+  - Status: IN PROGRESS
+  Note: Auth has broken multiple times. This time it was caused by a CORS conflict ( + ) due to platform ingress rules. The migration to  should resolve it definitively, but it must be rigorously tested.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Background Tasks for Startup**:  uses  to build MongoDB indexes without blocking the HTTP server from responding to . This is crucial for passing Vercel/Kubernetes health checks.
-- **Atomic Counters**: DDT numbering relies on  to guarantee sequential numbers even under concurrent requests.
-- **FattureInCloud API**: Handles the actual mapping and transmission of invoices to the SDI.
+- **Bearer Token Auth**: The app now relies on  injected via  and stored in  by  to avoid CORS preflight failures on the deployment ingress.
+- **FattureInCloud API v2**: Now utilizes a Personal Token (no expiration) instead of standard OAuth to guarantee stability.
 
 **key DB schema**
-  - :  -> Used for , , etc.
-  - : Now supports  transitions from  back to .
+  - : 
+  - : 
+  -  (NEW): 
 
 **changes in tech stack**
-  - None
+  - Transitioned from HTTP-Only Cookies to  Bearer tokens for session management.
 
 **All files of reference**
-  -  (Current focus:  and  logic)
-  -  (Current focus: recipient checkboxes)
-  -  (For debugging upcoming SDI errors)
-  -  (New file)
+  -  (API wrapper - check Bearer logic)
+  -  (Token storage)
+  -  (Token reception)
+  - 
+  - 
+  -  (Detailed RCA on FIC issue)
+  -  (Operational manual for FIC tokens)
 
 **Areas that need refactoring**:
-  -  data mapping () might need adjustments once the exact SDI 400/501 validation errors are surfaced to the user.
+  -  collection is currently tied to . It should be tied to . (Do NOT refactor this until the user approves Phase 2).
 
 **key api endpoints**
-  -  (Returns  array)
-  -  (Accepts  array payload)
-  -  (Generates PDF)
+  -  (Returns )
+  - 
+  - 
+  - 
 
 **Critical Info for New Agent**
-  - **DATABASE**: The app is connected to the user's PRODUCTION database.
-  - **STARTUP TIMEOUTS**: Do NOT add synchronous heavy database operations to  lifespan events. Always use background tasks, otherwise the platform deploy health checks will fail.
-  - **FIC Credentials**: FattureInCloud credentials (, ) only exist in the production environment variables, not in the local development . You cannot test actual SDI sending locally, but you can test the UI and logic up to the API call.
+  - **FREEZE IN EFFECT**: The user explicitly requested: *Freeze totale: non toccare SDI, non toccare feature, non toccare UI non correlata. Analizzare solo il flusso login/sessione del deploy attuale.* You must strictly focus on ensuring the new Bearer token auth flow works perfectly in the frontend.
+  - The previous agent already wrote the code to switch to Bearer tokens (, , ). Your first job is to verify this implementation actually works in the browser environment (use testing tools or manual verification).
+  - The bash error at the very end of the history () was just a testing script parsing error due to multiple concatenated JSON outputs, NOT an API failure.
 
 **documents and test reports created in this job**
-  -  (Foglio Lavoro PDF)
-  -  (DDTs & Fatture collegate)
+  - 
+  - 
   - 
 
 **Last 10 User Messages and any pending HUMAN messages** 
- 1. User asked to finish the previous agent's Foglio Lavoro task. -> *Completed*
- 2. User asked to fix DDT numbering and link invoices/preventivi to commesse for closure. -> *Completed*
- 3. User provided screenshots of the Invio SDI dialog showing 0.00€ and missing data. -> *Completed*
- 4. User approved the plan to proceed with Sprint 2 Phase B. -> *Completed*
- 5. User asked for a way to revert an emitted invoice back to draft (bozza). -> *Completed*
- 6. User requested a printable Block Notes PDF for hand sketches with company info and QR. -> *Completed*
- 7. User reported deploy errors ( on health checks). -> *Agent moved DB indexes to background, Completed*
- 8. User reported 400/501 errors sending to SDI and empty preview when launched from the invoices list. -> *Fixed preview, added error logging to expose exact FIC error.*
- 9. User asked to enlarge the Collega Fatture dialog and show the client's name instead of just the invoice number. -> *Completed*
- 10. User requested the email dialog to default to standard email, show all available emails (client + contacts), and use checkboxes to select recipients. -> *Agent implemented code, next agent must TEST.*
+ 1. User asked for a detailed RCA on FIC/SDI before any code changes. -> *Completed*
+ 2. User reviewed the RCA and chose a manual Personal Token approach (Opzione B) over building an OAuth refresh flow. -> *Completed*
+ 3. User asked for guidance on navigating the FIC dev portal. -> *Guided*
+ 4. User provided the new Personal Token. -> *Agent implemented and tested it successfully.*
+ 5. User deployed the app, but immediately experienced a new bug: login works, but all data is zero, and clicking anything triggers Session Expired. -> *Agent investigated.*
+ 6. User demanded a strict freeze on SDI and features, requesting a surgical fix solely for the auth/session issue. -> *Agent discovered the CORS  conflict with cookies and migrated the codebase to Bearer tokens. Pending final verification.*
 
 **Project Health Check:**
-Healthy. Deploy timeout issue successfully resolved.
+Broken (App login/session flow is currently unverified after the migration from Cookies to Bearer tokens. User is blocked from using the app).
 
 **3rd Party Integrations**
  - OpenAI GPT-4o — uses Emergent LLM Key
- - MongoDB Atlas — requires User DB credentials (Already configured in )
- - Vercel — Auto-deploy via GitHub.
- - FattureInCloud (Invoicing/SDI) — requires User API Key ( in prod environment).
+ - MongoDB Atlas — requires User DB credentials (Configured)
+ - FattureInCloud (Invoicing/SDI) — requires User API Key (Personal Token - Configured and working)
+ - Google OAuth — requires User API Key
 
 **Testing status**
-  - Testing agent used after significant changes: YES (Iterations 264 & 265 passed successfully).
+  - Testing agent used after significant changes: NO (Agent was about to, but context ended).
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: None
-  - Known regressions: None
+  - Known regressions: Cookie-based auth failed in production due to Kubernetes Ingress CORS rules. Migrated to Bearer tokens, needs E2E validation.
 
 **What agent forgot to execute**
-The agent modified  and  to implement the multi-recipient email checkboxes but stopped before validating the UI with the screenshot tool or testing the endpoint with curl. The next agent should immediately test this functionality.</analysis>
+The agent wrote the code for the Bearer token migration but did not fully verify the end-to-end frontend behavior before the session ended. The next agent must validate that the frontend correctly stores the token in  and appends it to  requests without throwing 401s.</analysis>

@@ -29,6 +29,12 @@ export function AuthProvider({ children }) {
     const healthCheckRef = useRef(null);
 
     const checkAuth = useCallback(async () => {
+        const savedToken = localStorage.getItem('session_token');
+        if (!savedToken) {
+            setUser(null);
+            setLoading(false);
+            return false;
+        }
         try {
             const userData = await apiRequest('/auth/me');
             setUser(userData);
@@ -36,6 +42,7 @@ export function AuthProvider({ children }) {
             setSessionExpiredDetail('');
             return true;
         } catch (error) {
+            localStorage.removeItem('session_token');
             setUser(null);
             return false;
         } finally {
@@ -49,6 +56,7 @@ export function AuthProvider({ children }) {
             setSessionExpired(true);
             setSessionExpiredDetail(detail || 'Sessione scaduta');
             setUser(null);
+            localStorage.removeItem('session_token');
             sessionStorage.removeItem('nf_was_authenticated');
         });
         return () => onAuthExpired(null);
@@ -112,6 +120,7 @@ export function AuthProvider({ children }) {
         } catch (error) {
             console.error('Logout error:', error);
         } finally {
+            localStorage.removeItem('session_token');
             setUser(null);
             setSessionExpired(false);
             sessionStorage.removeItem('nf_was_authenticated');
@@ -119,6 +128,9 @@ export function AuthProvider({ children }) {
     };
 
     const setAuthUser = (userData) => {
+        if (userData?.session_token) {
+            localStorage.setItem('session_token', userData.session_token);
+        }
         setUser(userData);
         setLoading(false);
         setSessionExpired(false);

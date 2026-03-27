@@ -36,3 +36,4 @@ class UserResponse(BaseModel):
     role: Optional[str] = "admin"  # Default admin for backward compat
     is_demo: Optional[bool] = False
     tenant_id: Optional[str] = "default"
+    session_token: Optional[str] = None

@@ -7,7 +7,7 @@ import requests
 import os
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://fatture-v2.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://cors-token-migration.preview.emergentagent.com').rstrip('/')
 DEMO_SESSION_TOKEN = "demo_session_token_normafacile"
 
 

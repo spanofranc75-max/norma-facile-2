@@ -20,7 +20,7 @@ from datetime import datetime, timezone, timedelta
 from pymongo import MongoClient
 
 # API URL from environment
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://fatture-v2.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://cors-token-migration.preview.emergentagent.com')
 API_URL = f"{BASE_URL}/api"
 
 # MongoDB connection

@@ -15,7 +15,7 @@ import asyncio
 # Base URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://fatture-v2.preview.emergentagent.com"
+    BASE_URL = "https://cors-token-migration.preview.emergentagent.com"
 
 # Test credentials
 SESSION_TOKEN = "0urNkos478BzSaOHd49sFYF_lmqHn4n6PLLHbVjUaGE"

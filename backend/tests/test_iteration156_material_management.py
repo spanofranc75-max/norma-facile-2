@@ -18,7 +18,7 @@ import os
 import uuid
 from datetime import datetime
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://fatture-v2.preview.emergentagent.com")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://cors-token-migration.preview.emergentagent.com")
 if not BASE_URL.startswith("http"):
     BASE_URL = f"https://{BASE_URL}"
 

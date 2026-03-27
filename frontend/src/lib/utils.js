@@ -19,8 +19,11 @@ export const API_BASE = `${BACKEND_URL}/api`;
  * Apre il blob URL in una nuova tab tramite window.top per uscire dall'iframe.
  */
 export async function downloadPdfBlob(endpoint, filename) {
+    const sessionToken = localStorage.getItem('session_token');
+    const headers = {};
+    if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
     const res = await fetch(`${API_BASE}/auth/download-token`, {
-        method: 'POST', credentials: 'include',
+        method: 'POST', headers,
     });
     if (!res.ok) throw new Error('Errore autenticazione download');
     const { token } = await res.json();
@@ -43,13 +46,18 @@ export function onAuthExpired(callback) {
 export async function apiRequest(endpoint, options = {}) {
     const url = `${API_BASE}${endpoint}`;
     
+    const sessionToken = localStorage.getItem('session_token');
     const config = {
         ...options,
-        credentials: 'include',
         headers: {
             ...options.headers,
         },
     };
+    
+    // Add Authorization header from localStorage
+    if (sessionToken) {
+        config.headers['Authorization'] = `Bearer ${sessionToken}`;
+    }
 
     // Only add Content-Type for requests with a body
     if (options.body && typeof options.body === 'object') {
@@ -149,11 +157,11 @@ export function truncateText(text, maxLength = 100) {
  * @param {string} filename - Suggested filename for download
  */
 export async function downloadFile(url, filename) {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const sessionToken = localStorage.getItem('session_token');
     const headers = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
 
-    const response = await fetch(url, { credentials: 'include', headers });
+    const response = await fetch(url, { headers });
     if (!response.ok) {
         const errText = await response.text().catch(() => '');
         let detail = `HTTP ${response.status}`;

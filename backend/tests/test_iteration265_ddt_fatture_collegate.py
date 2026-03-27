@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 # MongoDB connection
 MONGO_URL = os.environ.get("MONGO_URL", "mongodb+srv://spanofranc75_db_user:NormaFacile2026@cluster0.aypz9f1.mongodb.net/?appName=Cluster0&retryWrites=true&w=majority")
 DB_NAME = os.environ.get("DB_NAME", "normafacile")
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://fatture-v2.preview.emergentagent.com")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://cors-token-migration.preview.emergentagent.com")
 
 # Test data from credentials
 TEST_USER_ID = "user_97c773827822"

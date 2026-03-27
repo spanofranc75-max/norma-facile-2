@@ -18,7 +18,7 @@ import io
 from pypdf import PdfReader
 
 # Configuration from main agent
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://fatture-v2.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://cors-token-migration.preview.emergentagent.com').rstrip('/')
 TEST_TOKEN = "cy0IDr6-Jx0MAbNueH7kJXIblPsw0xN5ihIs7OdjXos"
 TEST_COMMESSA_ID = "com_e8c4810ad476"
 

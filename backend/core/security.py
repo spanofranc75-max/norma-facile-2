@@ -59,7 +59,7 @@ async def create_session(user_data: dict, response: Response) -> dict:
     Returns user document.
     """
     email = user_data.get("email")
-    session_token = user_data.get("session_token")
+    session_token = user_data.get("session_token") or uuid.uuid4().hex
     
     # Check if user exists
     existing_user = await db.users.find_one({"email": email}, {"_id": 0})
@@ -172,6 +172,7 @@ async def create_session(user_data: dict, response: Response) -> dict:
     
     # Get full user data
     user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    user["session_token"] = session_token
     return user
 
 
