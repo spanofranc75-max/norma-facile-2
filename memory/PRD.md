@@ -29,6 +29,14 @@ Francesco Spano' — Steel Project Design Srls
 
 ### Completato in questa sessione
 
+41. **Migrazione Auth da Cookie a Bearer Token** (27 Mar 2026):
+    - Causa: CORS `Access-Control-Allow-Origin: *` di Kubernetes Ingress incompatibile con `credentials: 'include'`
+    - Frontend: `utils.js` → token da `localStorage`, header `Authorization: Bearer`
+    - Frontend: `AuthContext.js` → `setAuthUser` salva token in `localStorage`
+    - Backend: `get_current_user` → legge cookie OPPURE header Bearer (fallback)
+    - Backend: `delete_session` → corretto per leggere anche header Bearer (fix logout)
+    - Test E2E completi: 15/15 backend + tutti frontend passati (iteration_270)
+
 38. **RCA Integrazione Fatture in Cloud / SDI** (27 Mar 2026):
     - Root Cause Analysis completa salvata in `/app/docs/RCA_FIC_SDI.md`
     - Causa certa 502: Token OAuth FIC scaduto (prefisso `a/`, scadenza 24h)
