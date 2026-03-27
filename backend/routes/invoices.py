@@ -1777,19 +1777,38 @@ async def check_invoice_sdi_status(invoice_id: str, user: dict = Depends(require
         fic = get_fic_client(access_token=fic_token, company_id=int(fic_company_id))
         result = await fic.get_sdi_status(int(fic_doc_id))
 
+        # Map FIC ei_status to local invoice status
+        ei_status = result.get("ei_status")
+        status_map = {
+            "sent": "inviata_sdi",
+            "pending": "inviata_sdi",
+            "processing": "inviata_sdi",
+            "attempt": "inviata_sdi",
+            "not_sent": "emessa",
+            "missing": "emessa",
+            "error": "errore_invio",
+            "discarded": "rifiutata",
+        }
+        new_local_status = status_map.get(ei_status)
+        if new_local_status and new_local_status != invoice.get("status"):
+            await db.invoices.update_one(
+                {"invoice_id": invoice_id},
+                {"$set": {"status": new_local_status, "sdi_status": ei_status}}
+            )
+
         # Log SDI status check
         await _log_sdi_audit(
             invoice_id=invoice_id,
             document_number=invoice.get("document_number", ""),
             action="check_status",
-            fic_endpoint=f"/issued_documents/{fic_doc_id}/e_invoice/xml",
+            fic_endpoint=f"/issued_documents/{fic_doc_id}?fieldset=detailed",
             response_status=200,
-            response_summary=str(result)[:500],
+            response_summary=f"ei_status={ei_status}",
             fic_document_id=fic_doc_id,
             user_id=user["user_id"],
         )
 
-        return {"fic_document_id": fic_doc_id, "status_data": result}
+        return {"fic_document_id": fic_doc_id, "ei_status": ei_status, "status_data": result}
     except HTTPException:
         raise
     except Exception as e:

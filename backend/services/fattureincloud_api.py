@@ -255,8 +255,16 @@ class FattureInCloudClient:
                                    idempotency_key=key)
 
     async def get_sdi_status(self, document_id: int) -> Dict[str, Any]:
-        """Get SDI status for a document."""
-        return await self._request("GET", f"/issued_documents/{document_id}/e_invoice/xml")
+        """Get SDI/e-invoice status for a document via detailed fieldset."""
+        result = await self._request("GET", f"/issued_documents/{document_id}", params={"fieldset": "detailed"})
+        data = result.get("data", {})
+        return {
+            "ei_status": data.get("ei_status"),
+            "ei_raw": data.get("ei_raw", {}),
+            "fic_id": data.get("id"),
+            "number": data.get("number"),
+            "date": data.get("date"),
+        }
 
     # ── Received Invoices ──
 
