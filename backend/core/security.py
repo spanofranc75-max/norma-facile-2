@@ -355,8 +355,15 @@ async def create_download_token(user_id: str) -> str:
 async def delete_session(request: Request, response: Response) -> bool:
     """
     Delete user session and clear cookie.
+    Supports both cookie-based and Bearer token auth.
     """
     session_token = request.cookies.get("session_token")
+    
+    # Fallback to Authorization header (Bearer token from localStorage)
+    if not session_token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            session_token = auth_header[7:]
     
     if session_token:
         await db.user_sessions.delete_many({"session_token": session_token})
